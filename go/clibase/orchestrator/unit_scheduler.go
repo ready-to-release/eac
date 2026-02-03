@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/locktracker"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/execution"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -77,6 +80,9 @@ type UnitScheduler struct {
 	tuiRunning   []string
 	tuiCompleted int
 	tuiTotal     int
+
+	// Capacity tracking for three-value model
+	roof int // Hard ceiling - pool size set at scheduler start
 
 	// Tools tracking (protected by toolsMu) - separated by type
 	toolsMu          sync.Mutex
@@ -270,9 +276,10 @@ func (us *UnitScheduler) SetSummaryBuilder(builder SummaryBuilder) {
 	us.summaryBuilder = builder
 }
 
-// CacheVerifier is a function that verifies if a component is cached.
-// Returns (isCached, cacheTime). Used for dependency injection in background detection.
-type CacheVerifier func(workspaceRoot string, spec workunit.UnitSpec, cachedModules map[string]bool, cacheTimes map[string]time.Time) (isCached bool, cacheTime time.Time)
+// CacheVerifier is an alias for execution.CacheVerifier.
+// Kept for backward compatibility with existing code.
+// New code should use execution.CacheVerifier directly.
+type CacheVerifier = execution.CacheVerifier
 
 // SetCacheDetection configures background cache detection for RunUnits.
 // When set, RunUnits will start background detection after creating tabs,
@@ -294,9 +301,9 @@ func (us *UnitScheduler) SetCacheDetection(verifier CacheVerifier, cachedModules
 // Uses I/O-appropriate parallelism (NOT the weighted semaphore - this is lightweight).
 // Updates TUI and marks items as early-cached for worker short-circuit.
 //
-// The verifier function should check cache status for a component and return
+// The verifier interface checks cache status for a component and returns
 // whether it's cached and when. This allows different commands (build, test, etc.)
-// to provide their own cache verification logic.
+// to provide their own cache verification logic via the execution.CacheVerifier interface.
 //
 // Background detection does NOT report to summaryBuilder - workers are the sole
 // source of truth for summarization. This prevents duplicate results.
@@ -329,6 +336,10 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 
 		var wg sync.WaitGroup
 
+		// Create a context for cache verification
+		// Background context is appropriate since detection runs to completion
+		ctx := context.Background()
+
 		for _, spec := range work {
 			wg.Add(1)
 			go func(s workunit.UnitSpec) {
@@ -338,11 +349,16 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 				sem <- struct{}{}
 				defer func() { <-sem }()
 
-				// Use provided verification logic
-				isCached, cacheTime := verifier(us.config.WorkspaceRoot, s, cachedModules, cacheTimes)
+				// Use provided verification logic via interface
+				result, err := verifier.Verify(ctx, s)
+				if err != nil {
+					// Log error but continue - workers will still check cache normally
+					logging.C().Debugf("[cache-detect] verification error for %s: %v", s.ID.Longname(), err)
+					return
+				}
 
-				if isCached {
-					moniker := us.formatMoniker(s)
+				if result.Cached {
+					moniker := s.ID.Longname()
 
 					// 1. Emit event to observers - tab lights up blue
 					us.emit(interfaces.UnitCompletedEvent{
@@ -356,7 +372,7 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 						Module:    s.ID.Module,
 						Component: s.ID.Component,
 						Handler:   s.ID.Tool,
-						CacheTime: cacheTime,
+						CacheTime: result.CacheTime,
 					})
 
 					// NOTE: Do NOT increment tuiCompleted here!
@@ -402,8 +418,7 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 
 	capacity := calculateCapacity(cpuCount, ramGB, configMax, turbo)
 
-	// DEBUG: Log capacity calculation for troubleshooting
-	fmt.Fprintf(os.Stderr, "[scheduler] Capacity calculation: cpuCount=%d ramGB=%d configMax=%d turbo=%.2f → capacity=%d\n",
+	logging.C().Debugf("[scheduler] Capacity calculation: cpuCount=%d ramGB=%d configMax=%d turbo=%.2f → capacity=%d",
 		cpuCount, ramGB, configMax, turbo, capacity)
 
 	return capacity
@@ -416,7 +431,7 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 	// --roof overrides all
 	if roof > 0 {
-		fmt.Fprintf(os.Stderr, "[scheduler] Using explicit roof: %d\n", roof)
+		logging.C().Debugf("[scheduler] Using explicit roof: %d", roof)
 		return roof
 	}
 
@@ -430,20 +445,20 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 
 	base := cpuCount
 	if ramCap < base {
-		fmt.Fprintf(os.Stderr, "[scheduler] RAM-limited: ramCap=%d < cpuCount=%d, using ramCap\n", ramCap, cpuCount)
+		logging.C().Debugf("[scheduler] RAM-limited: ramCap=%d < cpuCount=%d, using ramCap", ramCap, cpuCount)
 		base = ramCap
 	} else {
-		fmt.Fprintf(os.Stderr, "[scheduler] CPU-limited: ramCap=%d ≥ cpuCount=%d, using cpuCount\n", ramCap, cpuCount)
+		logging.C().Debugf("[scheduler] CPU-limited: ramCap=%d >= cpuCount=%d, using cpuCount", ramCap, cpuCount)
 	}
 
 	capacity := int(float64(base) * turbo)
-	fmt.Fprintf(os.Stderr, "[scheduler] Base capacity=%d × turbo=%.2f = %d\n", base, turbo, capacity)
+	logging.C().Debugf("[scheduler] Base capacity=%d x turbo=%.2f = %d", base, turbo, capacity)
 
 	// Cap at RAM limit FIRST (safety), then CPU limit
 	// This prevents turbo from overcommitting memory
 	ramMax := ramGB / 3
 	if capacity > ramMax && ramMax > 0 {
-		fmt.Fprintf(os.Stderr, "[scheduler] Turbo exceeded RAM limit: %d → %d (ramGB=%d)\n", capacity, ramMax, ramGB)
+		logging.C().Debugf("[scheduler] Turbo exceeded RAM limit: %d -> %d (ramGB=%d)", capacity, ramMax, ramGB)
 		capacity = ramMax
 	}
 
@@ -528,14 +543,37 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	var resultsMu sync.Mutex
 	var wg sync.WaitGroup
 
-	// Create work queue (items ordered by weight via LPT heap)
-	queue := NewWorkQueue(work)
+	// Determine layer mode from config:
+	// - Layered=true → LayerModeStrict (module + component + DependsOn enforced)
+	// - Layered=false → LayerModeNone (component + DependsOn only)
+	mode := execution.LayerModeNone
+	if us.config.Layered {
+		mode = execution.LayerModeStrict
+	}
+
+	// Create work queue with LayerPolicy for scheduling
+	queue, err := NewWorkQueueWithPolicy(work, mode)
+	if err != nil {
+		// Circular dependencies are a configuration error.
+		// Return early with error results for all work items.
+		logging.C().Errorf("[scheduler] Failed to create work queue: %v", err)
+		for i, w := range work {
+			results[i] = UnitResult{
+				Module:    w.ID.Module,
+				Component: w.ID.Component,
+				Handler:   w.ID.Tool,
+				ExitCode:  1,
+				Errors:    []string{fmt.Sprintf("circular dependency: %v", err)},
+			}
+		}
+		return results
+	}
 	us.workQueue = queue // Store for stats access
 
 	// Create all tabs as QUEUED upfront (positions are immutable)
 	for _, w := range work {
-		moniker := us.formatMoniker(w)
-		displayName := us.formatDisplayName(w)
+		moniker := w.ID.Longname()
+		displayName := w.Shortname()
 		us.tuiMarkQueued(moniker, displayName, w.Weight)
 	}
 
@@ -563,6 +601,10 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	if capacity > 0 && poolSize > capacity {
 		poolSize = capacity
 	}
+
+	// Store roof (hard ceiling) for three-value capacity model
+	// Roof is the actual peak allocation - workers spawned at start
+	us.roof = poolSize
 
 	// Spawn worker pool - all workers start immediately and compete for queue items
 	// Workers use bin-packing: check available capacity, pop item that fits
@@ -596,22 +638,42 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 				us.emitResourceStatus() // Update TUI Resources pane
 
 				// Update TUI: queued -> running (uses moniker for matching)
-				us.tuiMarkRunning(us.formatMoniker(*spec))
+				us.tuiMarkRunning(spec.ID.Longname())
 
-				// Execute work
-				result := us.executeWorker(*spec, worker)
+				var result UnitResult
 
-				// Release capacity
-				us.semaphore.Release(weight)
-				us.emitResourceStatus() // Update TUI Resources pane
+				// Check if any dependency failed - if so, skip execution and fail immediately
+				if queue.HasFailedDependency(spec.ID) {
+					result = UnitResult{
+						Module:    spec.ID.Module,
+						Component: spec.ID.Component,
+						Handler:   spec.ID.Tool,
+						ExitCode:  1,
+						Errors:    []string{"Skipped: dependency failed"},
+					}
+					// Release capacity immediately since we're not executing
+					us.semaphore.Release(weight)
+					us.emitResourceStatus()
+				} else {
+					// Execute work
+					result = us.executeWorker(*spec, worker)
+
+					// Release capacity
+					us.semaphore.Release(weight)
+					us.emitResourceStatus() // Update TUI Resources pane
+				}
 
 				// Store result by original index
 				resultsMu.Lock()
 				results[spec.Index] = result
 				resultsMu.Unlock()
 
-				// Notify queue that this component is done (unblocks dependents)
-				queue.MarkComplete(spec.ID)
+				// Notify queue: mark as completed or failed based on result
+				if result.ExitCode > 0 {
+					queue.MarkFailed(spec.ID)
+				} else {
+					queue.MarkComplete(spec.ID)
+				}
 
 				// Mark component complete (broadcasts to legacy channels, updates TUI)
 				us.markUnitComplete(*spec, &result)
@@ -625,7 +687,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	// Defensive check: verify queue is fully drained
 	// If items remain, workers exited prematurely (indicates a bug)
 	if remaining := queue.Len(); remaining > 0 {
-		fmt.Fprintf(os.Stderr, "[scheduler] BUG: queue has %d items remaining after all workers exited\n", remaining)
+		logging.C().Warnf("[scheduler] BUG: queue has %d items remaining after all workers exited", remaining)
 	}
 
 	// Close queue
@@ -874,18 +936,6 @@ func (us *UnitScheduler) tuiMarkQueued(moniker, displayName string, weight int) 
 	us.tuiMarkPending(moniker, displayName, weight)
 }
 
-// formatMoniker returns the globally unique ID for a work unit.
-// Uses Longname() to ensure IDs match between init summary and completion callbacks.
-func (us *UnitScheduler) formatMoniker(spec workunit.UnitSpec) string {
-	return spec.ID.Longname()
-}
-
-// formatDisplayName returns the short display name for a work unit.
-// Uses Shortname() for tab labels (module:component).
-func (us *UnitScheduler) formatDisplayName(spec workunit.UnitSpec) string {
-	return spec.Shortname()
-}
-
 // executeWorker runs the actual work for a component.
 // Called by dispatcher after capacity is acquired and dependencies satisfied.
 // This is the core execution extracted from processComponent without dep-waiting or semaphore handling.
@@ -900,8 +950,8 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		Handler:   tool,
 	}
 
-	moniker := us.formatMoniker(spec)
-	displayName := us.formatDisplayName(spec)
+	moniker := spec.ID.Longname()
+	displayName := spec.Shortname()
 
 	// FAST PATH: Check if background already verified cached
 	// This enables fast termination - workers don't re-do cache checks
@@ -1064,11 +1114,17 @@ func (us *UnitScheduler) tuiMarkRunning(moniker string) {
 		Time: time.Now(),
 		ID:   moniker,
 	})
+	pressureTarget := 0
+	if us.semaphore != nil {
+		pressureTarget = us.semaphore.Capacity()
+	}
 	us.emit(interfaces.ProgressUpdateEvent{
-		Time:      time.Now(),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
+		Time:           time.Now(),
+		Running:        running,
+		Completed:      completed,
+		Total:          total,
+		Roof:           us.roof,
+		PressureTarget: pressureTarget,
 	})
 }
 
@@ -1102,11 +1158,17 @@ func (us *UnitScheduler) tuiMarkCompleted(moniker string, exitCode int) {
 		ID:       moniker,
 		ExitCode: exitCode,
 	})
+	pressureTarget := 0
+	if us.semaphore != nil {
+		pressureTarget = us.semaphore.Capacity()
+	}
 	us.emit(interfaces.ProgressUpdateEvent{
-		Time:      time.Now(),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
+		Time:           time.Now(),
+		Running:        running,
+		Completed:      completed,
+		Total:          total,
+		Roof:           us.roof,
+		PressureTarget: pressureTarget,
 	})
 }
 

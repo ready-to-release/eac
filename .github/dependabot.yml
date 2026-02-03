@@ -125,9 +125,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - pdf-render-tool container (python base image)
+  # Docker - pdf-tool container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/pdf-render-tool"
+    directory: "/containers/pdf-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -177,9 +177,9 @@ updates:
       - "dependencies"
       - "python"
 
-  # Python - pdf-render-tool container
+  # Python - pdf-tool container
   - package-ecosystem: "pip"
-    directory: "/containers/pdf-render-tool"
+    directory: "/containers/pdf-tool"
     schedule:
       interval: "weekly"
       day: "monday"

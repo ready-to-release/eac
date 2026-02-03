@@ -1,16 +1,33 @@
 package orchestrator
 
 import (
+	"context"
 	"io"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// testCacheVerifier is a test adapter implementing execution.CacheVerifier
+type testCacheVerifier struct {
+	verify func(spec workunit.UnitSpec) (bool, time.Time)
+}
+
+func (v *testCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) (execution.CacheResult, error) {
+	select {
+	case <-ctx.Done():
+		return execution.CacheResult{}, ctx.Err()
+	default:
+	}
+	cached, cacheTime := v.verify(unit)
+	return execution.CacheResult{Cached: cached, CacheTime: cacheTime}, nil
+}
 
 // TestTuiMarkCompleted_AlwaysIncrements verifies that tuiMarkCompleted always
 // increments the counter, regardless of whether the item was early-cached.
@@ -104,8 +121,10 @@ func TestBackgroundCacheDetection_DoesNotIncrementCounter(t *testing.T) {
 	cachedModules := map[string]bool{"mod1": true}
 	cacheTimes := map[string]time.Time{"mod1": time.Now()}
 
-	verifier := func(wsRoot string, spec workunit.UnitSpec, cached map[string]bool, times map[string]time.Time) (bool, time.Time) {
-		return true, times["mod1"] // All items are cached
+	verifier := &testCacheVerifier{
+		verify: func(spec workunit.UnitSpec) (bool, time.Time) {
+			return true, cacheTimes["mod1"] // All items are cached
+		},
 	}
 
 	// Run background cache detection synchronously by waiting for it to complete
@@ -172,12 +191,14 @@ func TestRunComponents_CounterMatchesTotal(t *testing.T) {
 	// Set up cache detection that marks even-indexed items as cached
 	var detectionCount int32
 	cachedModules := map[string]bool{"mod1": true}
-	verifier := func(wsRoot string, spec workunit.UnitSpec, cached map[string]bool, times map[string]time.Time) (bool, time.Time) {
-		atomic.AddInt32(&detectionCount, 1)
-		// Small delay to increase chance of race with worker
-		time.Sleep(5 * time.Millisecond)
-		// Even indices are "cached"
-		return spec.Index%2 == 0, time.Now()
+	verifier := &testCacheVerifier{
+		verify: func(spec workunit.UnitSpec) (bool, time.Time) {
+			atomic.AddInt32(&detectionCount, 1)
+			// Small delay to increase chance of race with worker
+			time.Sleep(5 * time.Millisecond)
+			// Even indices are "cached"
+			return spec.Index%2 == 0, time.Now()
+		},
 	}
 
 	us.SetCacheDetection(verifier, cachedModules)

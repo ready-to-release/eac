@@ -33,6 +33,10 @@ type Status struct {
 	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
 	TotalLayers int // Total number of layers (0 = not using layers)
 
+	// Capacity tracking (three-value model)
+	Roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
+	PressureTarget int // Dynamic optimal capacity (may be < Roof under memory pressure)
+
 	// Detailed lock tracking info (from locktracker.Registry)
 	Locks []LockStatus // Individual lock states
 

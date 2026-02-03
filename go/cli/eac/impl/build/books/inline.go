@@ -50,7 +50,7 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 			key := fmt.Sprintf("%s:%s", src.Target, insert.Marker)
 			output, ok := outputs[key]
 			if !ok {
-				p.log("    Warning: no output for marker '%s' in %s", insert.Marker, src.Target)
+				p.warn("no output for marker '%s' in %s", insert.Marker, src.Target)
 				continue
 			}
 
@@ -64,7 +64,7 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 
 			// Check if marker exists in content
 			if !markerRe.MatchString(modified) {
-				p.log("    Warning: marker '%s' not found in %s", insert.Marker, src.Target)
+				p.warn("marker '%s' not found in %s", insert.Marker, src.Target)
 				continue
 			}
 

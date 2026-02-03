@@ -32,11 +32,11 @@ func ConvertToEntries(
 			module = extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
 		}
 
-		// Look up the owning module's package types
-		moduleType := ""
+		// Look up the owning module's component types
+		componentTypes := ""
 		if module != "" && moduleRegistry != nil {
 			if mod, exists := moduleRegistry.Get(module); exists {
-				moduleType = mod.GetComponentTypesDisplay()
+				componentTypes = mod.GetComponentTypesDisplay()
 			}
 		}
 
@@ -53,13 +53,13 @@ func ConvertToEntries(
 		moduleDeps := filterTagsByPrefix(test.Tags, "@depm:")
 
 		entries[i] = SuiteTestEntry{
-			Moniker:          moniker,
-			TestName:         test.TestName,
-			Type:             test.Type,
-			FilePath:         test.FilePath,
-			Package:          pkg,
-			Module:           module,
-			ModuleType:       moduleType,
+			Moniker:        moniker,
+			TestName:       test.TestName,
+			Type:           test.Type,
+			FilePath:       test.FilePath,
+			Package:        pkg,
+			Module:         module,
+			ComponentTypes: componentTypes,
 			Level:            levelTags,
 			Verification:     verificationTags,
 			SystemDeps:       systemDeps,

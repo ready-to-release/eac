@@ -9,10 +9,11 @@ import (
 	"strings"
 )
 
-// mergePDFs merges all individual page PDFs into a single document using pypdf
-// Generates a cover page, table of contents, and hierarchical bookmarks
+// MergePDFs merges all individual page PDFs into a single document using pypdf.
+// Generates a cover page, table of contents, and hierarchical bookmarks.
 // bookTitle and bookDescription are used for the cover page content.
-func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription string, logWriter io.Writer, isDinD bool) error {
+// Exported for use by mkdocs/pdf.go handler.
+func MergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription string, logWriter io.Writer, isDinD bool) error {
 	// Get relative paths for Docker
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {

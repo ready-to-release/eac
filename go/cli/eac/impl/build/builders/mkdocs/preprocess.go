@@ -249,7 +249,8 @@ func (h *PreprocessHandler) Build(
 	}
 
 	// Run preprocessing pipeline
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
+	// TODO: Thread CacheConfig through for --skip-cache=asset support
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode, nil)
 	if err := preprocessor.Preprocess(); err != nil {
 		logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return BuildResult{ExitCode: 1}

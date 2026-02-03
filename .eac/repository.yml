@@ -23,7 +23,7 @@ modules:
   - moniker: repository
     name: Repository Root Module
     description: Repository root module including configuration files, build tools, and git settings
-    depends_on: [pdf-render-tool]
+    depends_on: [pdf-tool]
     components:
       # Text/config files without typed extensions
       repo-config:
@@ -65,11 +65,10 @@ modules:
       # gherkin, structurizr auto-inferred from specs/repository/
 
       # Repository report PDF
-      repository-report-base:
-        type: base-site
-      repository-report:
-        type: pdf-render
-        depends_on: [repository-report-base]
+      report:
+        type: docs-pdf
+        config:
+          book: report
 
   - moniker: contracts-bundle
     name: Contract Files Module
@@ -113,15 +112,15 @@ modules:
         root: go/core/specs
       # gherkin, structurizr auto-inferred
 
-  - moniker: pdf-render-tool
+  - moniker: pdf-tool
     name: MkDocs PDF Container
     description: Pre-built Docker container for MkDocs PDF generation (Chromium, Playwright)
     template: container
     components:
-      json: containers/pdf-render-tool
+      json: containers/pdf-tool
       testdata:
         type: testdata
-        root: containers/pdf-render-tool
+        root: containers/pdf-tool
         patterns:
           source: ["*.txt", "overrides/**/*.html"]
 
@@ -143,9 +142,9 @@ modules:
     components:
       json: containers/mermaid-tool
 
-  - moniker: pdf-tool
-    name: PDF Tools Container
-    description: Container for PDF processing tools
+  - moniker: pdf-cli-tool
+    name: PDF CLI Tools Container
+    description: Lightweight container for PDF manipulation (page extraction with poppler-utils)
     template: container
 
   - moniker: nginx-tool
@@ -192,19 +191,14 @@ modules:
       scheme: CalVer
       changelog: release/docs/CHANGELOG.md
       release_type: published
-    depends_on: [repository, site-render-tool, pdf-render-tool]
+    depends_on: [repository, site-render-tool, pdf-tool]
     components:
-      # Base site preprocessing (pure Go, no Docker)
-      # Note: "base-site" name requires explicit book config (doesn't match "{name}-base" pattern)
-      base-site:
-        type: base-site
+      # HTML site (tool chain: preprocess -> site-render-tool)
+      site:
+        type: docs-site
         root: docs
         config:
-          book: site  # Required: component name "base-site" doesn't auto-derive book
-      # HTML site rendering (depends on base-site preprocessing)
-      site:
-        type: site-render
-        depends_on: [base-site]
+          book: site
         amp:
           build: 1.25
       markdown: docs
@@ -225,37 +219,23 @@ modules:
           source: ["LICENSE"]
       # structurizr auto-inferred
 
-      # Diataxis PDF components
-      tutorials-base:
-        type: base-site
+      # Diataxis PDF components (tool chain: preprocess -> pdf-tool)
       tutorials:
-        type: pdf-render
-        depends_on: [tutorials-base]
-      howto-base:
-        type: base-site
+        type: docs-pdf
+        config:
+          book: tutorials
       howto:
-        type: pdf-render
-        depends_on: [howto-base]
-      explanation-base:
-        type: base-site
+        type: docs-pdf
+        config:
+          book: howto
       explanation:
-        type: pdf-render
-        depends_on: [explanation-base]
-      reference-base:
-        type: base-site
+        type: docs-pdf
+        config:
+          book: explanation
       reference:
-        type: pdf-render
-        depends_on: [reference-base]
-      reference-eac-base:
-        type: base-site
-      reference-eac:
-        type: pdf-render
-        depends_on: [reference-eac-base]
-      reference-r2r-base:
-        type: base-site
-      reference-r2r:
-        type: pdf-render
-        depends_on: [reference-r2r-base]
+        type: docs-pdf
+        config:
+          book: reference
 
   - moniker: eac-cli
     name: Go Commands Library
@@ -303,7 +283,7 @@ modules:
           dockerfile: "containers/drawio-tool/Dockerfile"
           platforms: [linux/amd64]
           push: false
-      cgo-tool:
+      cgo:
         type: dockerfile
         root: containers/cgo-tool
       drawio-scripts:

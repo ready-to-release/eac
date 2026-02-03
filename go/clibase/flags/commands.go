@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ready-to-release/eac/go/clibase/environment"
+	"github.com/ready-to-release/eac/go/core/cache"
 )
 
 // Predefined flag configurations for each command.
@@ -75,8 +76,8 @@ type SharedFlags struct {
 	ShowTimings  bool
 
 	// Cache control
-	SkipCache bool // Force full execution (skip incremental cache)
-	SkipDeps  bool // Skip system dependency verification
+	CacheConfig *cache.Config // Fine-grained cache control via --skip-cache=<spec>
+	SkipDeps    bool          // Skip system dependency verification
 
 	// Module control
 	Exclude  string // Module exclusion pattern
@@ -143,7 +144,7 @@ func ParseSharedFlagsWithEnv(config CommandFlagConfig, args []string, env *envir
 
 	// Extract cache flags
 	if parsed.Cache != nil {
-		result.SkipCache = parsed.Cache.SkipCache
+		result.CacheConfig = parsed.Cache.CacheConfig
 		result.SkipDeps = parsed.Cache.SkipDeps
 		result.CacheExplicit = parsed.Cache.CacheExplicit
 		result.DepsExplicit = parsed.Cache.DepsExplicit

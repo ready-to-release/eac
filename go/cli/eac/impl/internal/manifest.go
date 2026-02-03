@@ -4,20 +4,16 @@ package internal
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // ModuleManifest represents the build manifest for a single module.
-// This is stored per-module at out/build/<module>/build.manifest.json and is immutable after creation.
-// The VerifiedUnchangedAt field can be updated by the builder when it verifies the module is up-to-date.
+// This is used as a display/view format aggregated from UoW manifests
+// via GetModuleManifestFromUoWs() in manifest_adapter.go.
 type ModuleManifest struct {
 	BuildID             string         `json:"build_id"`                        // Unique identifier for this build (UUID locally, GitHub run ID in CI)
 	BuildAgent          string         `json:"build_agent"`                     // Build agent type: "ci" or "devbox"
@@ -105,78 +101,6 @@ const BuildAgentCI = "ci"
 // BuildAgentDevbox is the build agent value for local developer builds.
 const BuildAgentDevbox = "devbox"
 
-// NewModuleManifest creates a new module manifest.
-// In CI (GITHUB_RUN_ID set), uses the run ID as BuildID and sets BuildAgent to "ci".
-// Locally, generates a UUID for BuildID and sets BuildAgent to "devbox".
-func NewModuleManifest(moniker, moduleType, gitCommit string) *ModuleManifest {
-	buildID := uuid.New().String()
-	buildAgent := BuildAgentDevbox
-
-	// In CI, use GitHub run ID as build identifier for traceability
-	if runID := os.Getenv("GITHUB_RUN_ID"); runID != "" {
-		buildID = runID
-		buildAgent = BuildAgentCI
-	}
-
-	return &ModuleManifest{
-		BuildID:    buildID,
-		BuildAgent: buildAgent,
-		Moniker:    moniker,
-		Type:       moduleType,
-		BuildTime:  time.Now(),
-		GitCommit:  gitCommit,
-		Version:    manifestVersion,
-	}
-}
-
-// Save writes the manifest to the module's build output directory.
-// The manifest is stored at <moduleBuildDir>/build.manifest.json.
-func (m *ModuleManifest) Save(moduleBuildDir string) error {
-	manifestPath := filepath.Join(moduleBuildDir, manifestFileName)
-
-	// Create directory if it doesn't exist
-	if err := os.MkdirAll(moduleBuildDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create manifest directory: %w", err)
-	}
-
-	// Marshal to JSON with indentation
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
-	}
-
-	// Write to file
-	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write manifest: %w", err)
-	}
-
-	return nil
-}
-
-// LoadModuleManifest loads a module's manifest from its build output directory.
-func LoadModuleManifest(moduleBuildDir string) (*ModuleManifest, error) {
-	manifestPath := filepath.Join(moduleBuildDir, manifestFileName)
-
-	// Check if manifest exists
-	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("manifest not found at %s", manifestPath)
-	}
-
-	// Read file
-	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read manifest: %w", err)
-	}
-
-	// Unmarshal
-	var manifest ModuleManifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
-	}
-
-	return &manifest, nil
-}
-
 // GetRequestedArtifacts returns the list of artifact IDs that were requested to be built.
 func (m *ModuleManifest) GetRequestedArtifacts() []string {
 	return m.RequestedArtifacts
@@ -185,14 +109,6 @@ func (m *ModuleManifest) GetRequestedArtifacts() []string {
 // GetPlatforms returns the platforms this module was built for.
 func (m *ModuleManifest) GetPlatforms() []PlatformInfo {
 	return m.Platforms
-}
-
-// UpdateVerifiedUnchangedAt updates the verification timestamp and saves the manifest.
-// This is the only field that can be updated after initial creation - it records when
-// the builder verified the module was unchanged and didn't need rebuilding.
-func (m *ModuleManifest) UpdateVerifiedUnchangedAt(moduleBuildDir, gitCommit string) error {
-	m.VerifiedUnchangedAt = gitCommit
-	return m.Save(moduleBuildDir)
 }
 
 // HashArtifactFile computes the SHA-256 hash and size of an artifact file.

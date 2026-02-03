@@ -71,9 +71,9 @@ func TestRiskScoringConfig_GetCriticality(t *testing.T) {
 	cfg := DefaultRiskScoringConfig()
 
 	tests := []struct {
-		name       string
-		moduleType string
-		expected   string
+		name     string
+		moniker  string
+		expected string
 	}{
 		{"api module", "api", "high"},
 		{"gateway module", "gateway", "high"},
@@ -87,7 +87,7 @@ func TestRiskScoringConfig_GetCriticality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cfg.GetCriticality(tt.moduleType)
+			got := cfg.GetCriticality(tt.moniker)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

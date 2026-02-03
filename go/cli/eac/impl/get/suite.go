@@ -42,6 +42,22 @@ func GetSuite() int {
 		return 1
 	}
 
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			fmt.Println("Get test suite definition and configuration")
+			fmt.Println("\nUsage: get suite <suite-moniker> [flags]")
+			fmt.Println("\nArguments:")
+			fmt.Println("  suite-moniker    Test suite moniker")
+			fmt.Println("\nFlags:")
+			fmt.Println("  --as-yaml    Output as YAML (default)")
+			fmt.Println("  --as-json    Output as JSON")
+			fmt.Println("  --as-toml    Output as TOML")
+			fmt.Println("  -h, --help   Show this help message")
+			return 0
+		}
+	}
+
 	// Parse arguments - expect suite moniker after "get suite"
 	args := os.Args[1:]
 

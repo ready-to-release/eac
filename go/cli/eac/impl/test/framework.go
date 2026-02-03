@@ -2,6 +2,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/show"
@@ -20,9 +20,11 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/execution"
+	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/core/module-deps"
-	"github.com/ready-to-release/eac/go/core/hash"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/testing"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -31,7 +33,7 @@ import (
 
 func init() {
 	// Register test component-level execution support
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeTest, FlattenModulesToTestUnits)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeTest, ResolveTestUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeTest, testUnitWorker)
 	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeTest, getTestUnitLayers)
 }
@@ -40,7 +42,7 @@ func init() {
 // For spec tests (godog, tscucumber), uses "module:spec:specname" format for TUI tree matching.
 // This format matches the Longname() output from UnitID when Spec is set.
 func getTestUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := FlattenModulesToTestUnits(ctx)
+	layers := ResolveTestUnitSpecs(ctx)
 	result := make([][]string, len(layers))
 	for i, layer := range layers {
 		result[i] = make([]string, len(layer))
@@ -419,8 +421,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		ExecutionOrder: allModules,
 		Layers:         layers,
 	}
-	ctx.ModuleTypes = moduleTypes
-	ctx.Orchestrator.SetModuleTypes(moduleTypes)
+	ctx.ComponentTypesDisplay = moduleTypes
+	ctx.Orchestrator.SetComponentTypesDisplay(moduleTypes)
 
 	// Build init summary
 	buildTestInitSummary(ctx, testCfg)
@@ -463,23 +465,34 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 	// Enable early cache detection for fast TUI feedback
 	// Tabs will progressively "light up" blue as cache hits are detected
 	if len(testCfg.CachedModules) > 0 && ctx.Orchestrator != nil {
-		ctx.Orchestrator.SetCacheDetection(testCacheVerifierFunc(testCfg.CachedModules), testCfg.CachedModules)
+		verifier := &TestCacheVerifier{cachedModules: testCfg.CachedModules}
+		ctx.Orchestrator.SetCacheDetection(verifier, testCfg.CachedModules)
 	}
 
 	return nil
 }
 
-// testCacheVerifierFunc returns a CacheVerifier for test incremental caching.
+// TestCacheVerifier implements execution.CacheVerifier for test commands.
 // Test caching is simpler than build - just checks if module is in cached set.
 // No artifact integrity verification needed since test state is tracked separately.
-func testCacheVerifierFunc(cachedModules map[string]bool) orchestrator.CacheVerifier {
-	return func(workspaceRoot string, spec workunit.UnitSpec, _ map[string]bool, cacheTimes map[string]time.Time) (bool, time.Time) {
-		module := spec.ID.Module
-		if cachedModules[module] {
-			return true, cacheTimes[module]
-		}
-		return false, time.Time{}
+type TestCacheVerifier struct {
+	cachedModules map[string]bool
+}
+
+// Verify implements execution.CacheVerifier.
+func (v *TestCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) (execution.CacheResult, error) {
+	// Check context cancellation
+	select {
+	case <-ctx.Done():
+		return execution.CacheResult{}, ctx.Err()
+	default:
 	}
+
+	module := unit.ID.Module
+	if v.cachedModules[module] {
+		return execution.CacheResult{Cached: true}, nil
+	}
+	return execution.CacheResult{}, nil
 }
 
 // testAfterExecute handles manifest generation and state updates.
@@ -842,7 +855,7 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	}
 
 	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	changeResult, err := stateMgr.DetectTestModuleChanges(moduleTestInfo, testSet, hashProvider, depBuildIDLoader)
+	changeResult, err := stateMgr.DetectTestModuleChanges(moduleTestInfo, testSet, hashProvider, depBuildIDLoader, nil)
 	if err != nil {
 		log.Debugf("Failed to detect test changes: %v", err)
 		return testsByPackage
@@ -947,11 +960,9 @@ func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *Te
 	var sourceFiles []string
 	var buildID string
 
-	// Load build manifest to get BuildID
-	moduleBuildDir := ctx.EACConfig.Repository.BuildOutputPathAbs(ctx.WorkspaceRoot, module)
-	if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
-		buildID = manifest.BuildID
-	}
+	// Get BuildID from UoW manifests
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	buildID = reader.GetBuildID(workunit.ContextBuild, module)
 
 	// Get source files from module definition
 	sourcePatterns := contract.GetGlobPatterns()

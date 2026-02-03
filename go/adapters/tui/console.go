@@ -45,6 +45,10 @@ type ParallelConsole struct {
 	ready    chan struct{} // Signals when TUI is ready
 	done     chan struct{} // Signals when Start() has fully completed (including printSummary)
 
+	// Signals to Model that it should stop listening.
+	// Close this to unblock listenForLines/listenForStatus.
+	modelDone chan struct{}
+
 	// Track multi-writers for cleanup
 	writers []*stream.MultiWriter
 
@@ -82,6 +86,7 @@ func NewParallelConsole(config Config) *ParallelConsole {
 		statusChan:       make(chan console.Status, 10),
 		ready:            make(chan struct{}),
 		done:             make(chan struct{}),
+		modelDone:        make(chan struct{}),
 		// Capture real stdout/stderr before any buffering redirects them
 		realStdout:       os.Stdout,
 		realStderr:       os.Stderr,
@@ -133,8 +138,10 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 			c.config.RunPhaseName,
 			c.lineChan,
 			c.statusChan,
+			c.modelDone, // Termination signal for listeners
 			c.config.ASCIIMode,
 			c.config.SkipTUIDelay,
+			c.config.TUIConfig, // Pass through TUI config (nil uses defaults)
 		)
 	}
 
@@ -371,6 +378,9 @@ func (c *ParallelConsole) Stop() {
 	started := c.started
 	c.mu.Unlock()
 
+	// Signal model to stop listening FIRST - this unblocks the listeners
+	c.closeModelDoneOnce()
+
 	// Close all multi-writers first
 	c.mu.Lock()
 	for _, w := range c.writers {
@@ -410,6 +420,21 @@ func (c *ParallelConsole) Stop() {
 	// Reset terminal state - clear any lingering escape sequences
 	// \033[0m = reset attributes, \033[?25h = show cursor
 	fmt.Fprint(c.realStdout, "\033[0m\033[?25h")
+}
+
+// closeModelDoneOnce safely closes modelDone channel once.
+// Safe to call multiple times from different goroutines.
+// This signals listenForLines/listenForStatus to stop blocking.
+func (c *ParallelConsole) closeModelDoneOnce() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	select {
+	case <-c.modelDone:
+		// Already closed
+	default:
+		close(c.modelDone)
+	}
 }
 
 // NewWriter creates an io.Writer for a module's output.
@@ -754,6 +779,10 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	if stopped || program == nil {
 		return
 	}
+
+	// Signal listeners to stop - they will return linesDoneMsg/statusDoneMsg
+	// This must happen BEFORE sending summary so TUI can exit cleanly
+	c.closeModelDoneOnce()
 
 	if tui3Mode {
 		// Send summary - counts will be derived from model.units[] in updateCells()

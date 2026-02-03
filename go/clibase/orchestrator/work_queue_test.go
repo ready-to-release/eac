@@ -1,13 +1,21 @@
 package orchestrator
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+// LayerMode aliases for test readability
+const (
+	LayerModeNone   = execution.LayerModeNone
+	LayerModeStrict = execution.LayerModeStrict
 )
 
 func TestNewWorkQueue(t *testing.T) {
@@ -148,11 +156,11 @@ func TestWorkQueue_Stats_AfterCompletion(t *testing.T) {
 }
 
 func TestWorkQueue_ConcurrentAccess(t *testing.T) {
-	// Create many items
+	// Create many items with unique component names
 	work := make([]workunit.UnitSpec, 100)
 	for i := 0; i < 100; i++ {
 		work[i] = workunit.UnitSpec{
-			ID:     workunit.UnitID{Module: "mod1", Component: string(rune('a' + i%26))},
+			ID:     workunit.UnitID{Module: "mod1", Component: fmt.Sprintf("comp%d", i)},
 			Weight: i%10 + 1,
 			Index:  i,
 		}
@@ -376,4 +384,184 @@ func TestWorkQueue_PopReadyWithBudget_RespectsDependencies(t *testing.T) {
 	item := <-done
 	require.NotNil(t, item)
 	assert.Equal(t, "light-blocked", item.ID.Component)
+}
+
+// --- Tests for LayerPolicy-based WorkQueue ---
+
+func TestNewWorkQueueWithPolicy_LayerModeNone(t *testing.T) {
+	// LayerModeNone should behave identically to the original DependsOn-only mode
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			Weight:    8,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeNone)
+	require.NoError(t, err)
+	assert.NotNil(t, q)
+
+	// comp1 should be ready (no deps), comp2 blocked
+	item1 := q.PopReady()
+	require.NotNil(t, item1)
+	assert.Equal(t, "comp1", item1.ID.Component)
+
+	// Mark complete and comp2 becomes ready
+	q.MarkComplete(item1.ID)
+
+	item2 := q.PopReady()
+	require.NotNil(t, item2)
+	assert.Equal(t, "comp2", item2.ID.Component)
+}
+
+func TestNewWorkQueueWithPolicy_LayerModeStrict(t *testing.T) {
+	// LayerModeStrict enforces module layers
+	// mod1 has no deps, mod2 depends on mod1
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{
+			ID:     workunit.UnitID{Module: "mod2", Component: "comp1"},
+			Weight: 8,
+			// Cross-module dependency
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeStrict)
+	require.NoError(t, err)
+
+	// mod1:comp1 should be ready (layer 0)
+	item1 := q.PopReady()
+	require.NotNil(t, item1)
+	assert.Equal(t, "mod1", item1.ID.Module)
+
+	// Mark complete - mod2 should now be ready
+	q.MarkComplete(item1.ID)
+
+	item2 := q.PopReady()
+	require.NotNil(t, item2)
+	assert.Equal(t, "mod2", item2.ID.Module)
+}
+
+func TestNewWorkQueueWithPolicy_ModuleLayerOrdering(t *testing.T) {
+	// Three modules: mod1 -> mod2 -> mod3
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{
+			ID:        workunit.UnitID{Module: "mod2", Component: "comp1"},
+			Weight:    2,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+		{
+			ID:        workunit.UnitID{Module: "mod3", Component: "comp1"},
+			Weight:    3,
+			DependsOn: []workunit.UnitID{{Module: "mod2", Component: "comp1"}},
+		},
+	}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeStrict)
+	require.NoError(t, err)
+
+	// Only mod1 should be ready initially
+	stats := q.Stats()
+	assert.Equal(t, 1, stats.Ready)
+	assert.Equal(t, 2, stats.Blocked)
+
+	// Pop mod1
+	item1 := q.PopReady()
+	require.NotNil(t, item1)
+	assert.Equal(t, "mod1", item1.ID.Module)
+	q.MarkComplete(item1.ID)
+
+	// Now mod2 should be ready
+	item2 := q.PopReady()
+	require.NotNil(t, item2)
+	assert.Equal(t, "mod2", item2.ID.Module)
+	q.MarkComplete(item2.ID)
+
+	// Now mod3 should be ready
+	item3 := q.PopReady()
+	require.NotNil(t, item3)
+	assert.Equal(t, "mod3", item3.ID.Module)
+}
+
+func TestNewWorkQueueWithPolicy_ParallelModulesInSameLayer(t *testing.T) {
+	// mod1 and mod2 have no deps - should be in same layer and both ready
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 4},
+		{ID: workunit.UnitID{Module: "mod2", Component: "comp1"}, Weight: 2},
+	}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeStrict)
+	require.NoError(t, err)
+
+	// Both should be ready
+	stats := q.Stats()
+	assert.Equal(t, 2, stats.Ready)
+	assert.Equal(t, 0, stats.Blocked)
+
+	// Should pop heavier one first (LPT)
+	item1 := q.PopReady()
+	require.NotNil(t, item1)
+	assert.Equal(t, "mod1", item1.ID.Module)
+	assert.Equal(t, 4, item1.Weight)
+
+	// Second one still ready without needing to mark first complete
+	item2 := q.PopReady()
+	require.NotNil(t, item2)
+	assert.Equal(t, "mod2", item2.ID.Module)
+}
+
+func TestNewWorkQueueWithPolicy_HasLayerPolicy(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+	}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeStrict)
+	require.NoError(t, err)
+
+	// Queue should have layer policy configured
+	assert.True(t, q.HasLayerPolicy())
+}
+
+func TestNewWorkQueue_BackwardCompatibility(t *testing.T) {
+	// NewWorkQueue (without policy) should still work for backward compatibility
+	// It should default to LayerModeNone behavior
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			Weight:    8,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	q := NewWorkQueue(work)
+
+	// Should work exactly as before
+	item1 := q.PopReady()
+	require.NotNil(t, item1)
+	assert.Equal(t, "comp1", item1.ID.Component)
+
+	q.MarkComplete(item1.ID)
+
+	item2 := q.PopReady()
+	require.NotNil(t, item2)
+	assert.Equal(t, "comp2", item2.ID.Component)
+}
+
+func TestNewWorkQueueWithPolicy_EmptyWork(t *testing.T) {
+	work := []workunit.UnitSpec{}
+
+	q, err := NewWorkQueueWithPolicy(work, LayerModeStrict)
+	require.NoError(t, err)
+	assert.NotNil(t, q)
+	assert.Equal(t, 0, q.Len())
+
+	// PopReady should return nil immediately for empty queue
+	q.Close()
+	item := q.PopReady()
+	assert.Nil(t, item)
 }

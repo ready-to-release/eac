@@ -4,50 +4,51 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/clibase/environment"
+	"github.com/ready-to-release/eac/go/core/cache"
 )
 
 func TestCacheFlagSet_Parse(t *testing.T) {
 	tests := []struct {
-		name          string
-		args          []string
-		wantSkipCache bool
-		wantSkipDeps  bool
-		wantRemaining []string
+		name               string
+		args               []string
+		wantSkipStateCache bool
+		wantSkipDeps       bool
+		wantRemaining      []string
 	}{
 		{
-			name:          "no flags",
-			args:          []string{"module1", "module2"},
-			wantSkipCache: false,
-			wantSkipDeps:  false,
-			wantRemaining: []string{"module1", "module2"},
+			name:               "no flags",
+			args:               []string{"module1", "module2"},
+			wantSkipStateCache: false,
+			wantSkipDeps:       false,
+			wantRemaining:      []string{"module1", "module2"},
 		},
 		{
-			name:          "skip-cache flag",
-			args:          []string{"--skip-cache", "module1"},
-			wantSkipCache: true,
-			wantSkipDeps:  false,
-			wantRemaining: []string{"module1"},
+			name:               "skip-cache flag (no value, skips state)",
+			args:               []string{"--skip-cache", "module1"},
+			wantSkipStateCache: true,
+			wantSkipDeps:       false,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:          "skip-deps flag",
-			args:          []string{"--skip-deps", "module1"},
-			wantSkipCache: false,
-			wantSkipDeps:  true,
-			wantRemaining: []string{"module1"},
+			name:               "skip-deps flag",
+			args:               []string{"--skip-deps", "module1"},
+			wantSkipStateCache: false,
+			wantSkipDeps:       true,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:          "both flags",
-			args:          []string{"--skip-cache", "--skip-deps"},
-			wantSkipCache: true,
-			wantSkipDeps:  true,
-			wantRemaining: nil,
+			name:               "both flags",
+			args:               []string{"--skip-cache", "--skip-deps"},
+			wantSkipStateCache: true,
+			wantSkipDeps:       true,
+			wantRemaining:      nil,
 		},
 		{
-			name:          "other flags pass through",
-			args:          []string{"--skip-cache", "--turbo", "--debug"},
-			wantSkipCache: true,
-			wantSkipDeps:  false,
-			wantRemaining: []string{"--turbo", "--debug"},
+			name:               "other flags pass through",
+			args:               []string{"--skip-cache", "--turbo", "--debug"},
+			wantSkipStateCache: true,
+			wantSkipDeps:       false,
+			wantRemaining:      []string{"--turbo", "--debug"},
 		},
 	}
 
@@ -63,8 +64,8 @@ func TestCacheFlagSet_Parse(t *testing.T) {
 			}
 
 			flags := s.Values()
-			if flags.SkipCache != tt.wantSkipCache {
-				t.Errorf("SkipCache = %v, want %v", flags.SkipCache, tt.wantSkipCache)
+			if flags.CacheConfig.ShouldSkipState() != tt.wantSkipStateCache {
+				t.Errorf("ShouldSkipState() = %v, want %v", flags.CacheConfig.ShouldSkipState(), tt.wantSkipStateCache)
 			}
 			if flags.SkipDeps != tt.wantSkipDeps {
 				t.Errorf("SkipDeps = %v, want %v", flags.SkipDeps, tt.wantSkipDeps)
@@ -82,6 +83,136 @@ func TestCacheFlagSet_Parse(t *testing.T) {
 		})
 	}
 }
+
+func TestCacheFlagSet_ParseSkipCacheWithValue(t *testing.T) {
+	tests := []struct {
+		name                  string
+		args                  []string
+		wantSkipState         bool
+		wantSkipAsset         bool
+		wantSkipLocalRegistry bool
+		wantSkipLocalLayer    bool
+		wantSkipRemoteLayer   bool
+		wantSkipWork          bool
+		wantErr               bool
+	}{
+		{
+			name:          "--skip-cache=state",
+			args:          []string{"--skip-cache=state"},
+			wantSkipState: true,
+		},
+		{
+			name:          "--skip-cache=asset",
+			args:          []string{"--skip-cache=asset"},
+			wantSkipAsset: true,
+		},
+		{
+			name:                  "--skip-cache=local:registry",
+			args:                  []string{"--skip-cache=local:registry"},
+			wantSkipLocalRegistry: true,
+		},
+		{
+			name:               "--skip-cache=local:layer",
+			args:               []string{"--skip-cache=local:layer"},
+			wantSkipLocalLayer: true,
+		},
+		{
+			name:                "--skip-cache=remote:layer",
+			args:                []string{"--skip-cache=remote:layer"},
+			wantSkipRemoteLayer: true,
+		},
+		{
+			name:         "--skip-cache=work",
+			args:         []string{"--skip-cache=work"},
+			wantSkipWork: true,
+		},
+		{
+			name:                  "--skip-cache=local (all local caches)",
+			args:                  []string{"--skip-cache=local"},
+			wantSkipState:         true,
+			wantSkipAsset:         true,
+			wantSkipLocalRegistry: true,
+			wantSkipLocalLayer:    true,
+			wantSkipWork:          true,
+		},
+		{
+			name:                  "--skip-cache=all (everything)",
+			args:                  []string{"--skip-cache=all"},
+			wantSkipState:         true,
+			wantSkipAsset:         true,
+			wantSkipLocalRegistry: true,
+			wantSkipLocalLayer:    true,
+			wantSkipRemoteLayer:   true,
+			wantSkipWork:          true,
+		},
+		{
+			name:                  "--skip-cache=local:registry,local:layer (multiple)",
+			args:                  []string{"--skip-cache=local:registry,local:layer"},
+			wantSkipLocalRegistry: true,
+			wantSkipLocalLayer:    true,
+		},
+		{
+			name:    "--skip-cache=invalid (error)",
+			args:    []string{"--skip-cache=invalid"},
+			wantErr: true,
+		},
+		{
+			name:    "--skip-cache=remote:work (error - work is local-only)",
+			args:    []string{"--skip-cache=remote:work"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewCacheFlagSet()
+			env := &environment.Env{IsLocalConsole: true}
+
+			_, err := s.Parse(tt.args, env)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Parse() expected error but got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("Parse() unexpected error: %v", err)
+				return
+			}
+
+			cfg := s.Values().CacheConfig
+			if cfg.ShouldSkipState() != tt.wantSkipState {
+				t.Errorf("ShouldSkipState() = %v, want %v", cfg.ShouldSkipState(), tt.wantSkipState)
+			}
+			if cfg.ShouldSkipAsset() != tt.wantSkipAsset {
+				t.Errorf("ShouldSkipAsset() = %v, want %v", cfg.ShouldSkipAsset(), tt.wantSkipAsset)
+			}
+			if cfg.ShouldSkipLocalRegistry() != tt.wantSkipLocalRegistry {
+				t.Errorf("ShouldSkipLocalRegistry() = %v, want %v", cfg.ShouldSkipLocalRegistry(), tt.wantSkipLocalRegistry)
+			}
+			if cfg.ShouldSkipLocalLayer() != tt.wantSkipLocalLayer {
+				t.Errorf("ShouldSkipLocalLayer() = %v, want %v", cfg.ShouldSkipLocalLayer(), tt.wantSkipLocalLayer)
+			}
+			if cfg.ShouldSkipRemoteLayer() != tt.wantSkipRemoteLayer {
+				t.Errorf("ShouldSkipRemoteLayer() = %v, want %v", cfg.ShouldSkipRemoteLayer(), tt.wantSkipRemoteLayer)
+			}
+			if cfg.ShouldSkipWork() != tt.wantSkipWork {
+				t.Errorf("ShouldSkipWork() = %v, want %v", cfg.ShouldSkipWork(), tt.wantSkipWork)
+			}
+		})
+	}
+}
+
+func TestCacheFlagSet_CacheConfigNotNil(t *testing.T) {
+	s := NewCacheFlagSet()
+
+	if s.Values().CacheConfig == nil {
+		t.Error("CacheConfig should not be nil after NewCacheFlagSet()")
+	}
+}
+
+// Placeholder to satisfy import
+var _ = cache.LevelLocal
 
 func TestCacheFlagSet_Metadata(t *testing.T) {
 	s := NewCacheFlagSet()
@@ -114,94 +245,94 @@ func TestCacheFlagSet_Metadata(t *testing.T) {
 
 func TestCacheFlagSet_DeclarativeFlags(t *testing.T) {
 	tests := []struct {
-		name              string
-		args              []string
-		wantSkipCache     bool
-		wantCacheExplicit bool
-		wantSkipDeps      bool
-		wantDepsExplicit  bool
-		wantRemaining     []string
+		name               string
+		args               []string
+		wantSkipStateCache bool
+		wantCacheExplicit  bool
+		wantSkipDeps       bool
+		wantDepsExplicit   bool
+		wantRemaining      []string
 	}{
 		{
-			name:              "with-cache explicitly enables caching",
-			args:              []string{"--with-cache", "module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: true,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  false,
-			wantRemaining:     []string{"module1"},
+			name:               "with-cache explicitly enables caching",
+			args:               []string{"--with-cache", "module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  true,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   false,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "no-cache explicitly disables caching",
-			args:              []string{"--no-cache", "module1"},
-			wantSkipCache:     true,
-			wantCacheExplicit: true,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  false,
-			wantRemaining:     []string{"module1"},
+			name:               "no-cache explicitly disables caching (skips state)",
+			args:               []string{"--no-cache", "module1"},
+			wantSkipStateCache: true,
+			wantCacheExplicit:  true,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   false,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "skip-cache is backward compatible alias for no-cache",
-			args:              []string{"--skip-cache", "module1"},
-			wantSkipCache:     true,
-			wantCacheExplicit: true,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  false,
-			wantRemaining:     []string{"module1"},
+			name:               "skip-cache is backward compatible (skips state)",
+			args:               []string{"--skip-cache", "module1"},
+			wantSkipStateCache: true,
+			wantCacheExplicit:  true,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   false,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "with-deps explicitly enables deps",
-			args:              []string{"--with-deps", "module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: false,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  true,
-			wantRemaining:     []string{"module1"},
+			name:               "with-deps explicitly enables deps",
+			args:               []string{"--with-deps", "module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  false,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   true,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "no-deps explicitly disables deps",
-			args:              []string{"--no-deps", "module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: false,
-			wantSkipDeps:      true,
-			wantDepsExplicit:  true,
-			wantRemaining:     []string{"module1"},
+			name:               "no-deps explicitly disables deps",
+			args:               []string{"--no-deps", "module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  false,
+			wantSkipDeps:       true,
+			wantDepsExplicit:   true,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "skip-deps remains compatible",
-			args:              []string{"--skip-deps", "module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: false,
-			wantSkipDeps:      true,
-			wantDepsExplicit:  true,
-			wantRemaining:     []string{"module1"},
+			name:               "skip-deps remains compatible",
+			args:               []string{"--skip-deps", "module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  false,
+			wantSkipDeps:       true,
+			wantDepsExplicit:   true,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "default behavior preserved (no explicit flags)",
-			args:              []string{"module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: false,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  false,
-			wantRemaining:     []string{"module1"},
+			name:               "default behavior preserved (no explicit flags)",
+			args:               []string{"module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  false,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   false,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "all declarative cache flags together",
-			args:              []string{"--with-cache", "--with-deps", "module1"},
-			wantSkipCache:     false,
-			wantCacheExplicit: true,
-			wantSkipDeps:      false,
-			wantDepsExplicit:  true,
-			wantRemaining:     []string{"module1"},
+			name:               "all declarative cache flags together",
+			args:               []string{"--with-cache", "--with-deps", "module1"},
+			wantSkipStateCache: false,
+			wantCacheExplicit:  true,
+			wantSkipDeps:       false,
+			wantDepsExplicit:   true,
+			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:              "mixed legacy and declarative flags",
-			args:              []string{"--no-cache", "--skip-deps", "module1"},
-			wantSkipCache:     true,
-			wantCacheExplicit: true,
-			wantSkipDeps:      true,
-			wantDepsExplicit:  true,
-			wantRemaining:     []string{"module1"},
+			name:               "mixed legacy and declarative flags",
+			args:               []string{"--no-cache", "--skip-deps", "module1"},
+			wantSkipStateCache: true,
+			wantCacheExplicit:  true,
+			wantSkipDeps:       true,
+			wantDepsExplicit:   true,
+			wantRemaining:      []string{"module1"},
 		},
 	}
 
@@ -217,8 +348,8 @@ func TestCacheFlagSet_DeclarativeFlags(t *testing.T) {
 			}
 
 			flags := s.Values()
-			if flags.SkipCache != tt.wantSkipCache {
-				t.Errorf("SkipCache = %v, want %v", flags.SkipCache, tt.wantSkipCache)
+			if flags.CacheConfig.ShouldSkipState() != tt.wantSkipStateCache {
+				t.Errorf("ShouldSkipState() = %v, want %v", flags.CacheConfig.ShouldSkipState(), tt.wantSkipStateCache)
 			}
 			if flags.CacheExplicit != tt.wantCacheExplicit {
 				t.Errorf("CacheExplicit = %v, want %v", flags.CacheExplicit, tt.wantCacheExplicit)

@@ -44,8 +44,8 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 	}
 
 	ctx := &ExecutionContext{
-		Config:      cfg,
-		ModuleTypes: make(map[string]string),
+		Config:                cfg,
+		ComponentTypesDisplay: make(map[string]string),
 	}
 
 	// Phase 1: Initialize

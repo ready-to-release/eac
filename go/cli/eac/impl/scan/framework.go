@@ -29,7 +29,7 @@ import (
 
 func init() {
 	// Register scan component-level execution support
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeScan, FlattenModulesToScanUnits)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeScan, ResolveScanUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeScan, scanUnitWorker)
 	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeScan, getScanUnitLayers)
 }
@@ -37,7 +37,7 @@ func init() {
 // getScanUnitLayers returns component execution layers as string slices for TUI tree building.
 // Each entry uses UnitID.Longname() for consistent formatting with the UnitProvider.
 func getScanUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := FlattenModulesToScanUnits(ctx)
+	layers := ResolveScanUnitSpecs(ctx)
 	if len(layers) == 0 {
 		return nil
 	}
@@ -906,7 +906,7 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 		return hash.Files(ctx.WorkspaceRoot, files)
 	}
 
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextScan, monikers, rule, hashProvider)
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextScan, monikers, rule, hashProvider, nil)
 	if err != nil {
 		log.Debugf("Failed to detect scan changes: %v", err)
 		return

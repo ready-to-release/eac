@@ -142,7 +142,7 @@ func phaseInit(ctx *ExecutionContext) error {
 		MaxConcurrency:       maxConcurrency,
 		Turbo:                turboMultiplier,
 		StatusUpdateInterval: 500, // 500ms for responsive feedback
-		ModuleTypes:          ctx.ModuleTypes,
+		ComponentTypesDisplay: ctx.ComponentTypesDisplay,
 		ShowTimings:          ctx.Config.ShowTimings,
 		DryRun:               ctx.Config.DryRun,
 		TUI:                  ctx.Config.UseTUI, // Always set TUI flag for output suppression (console may be created by registry)
@@ -150,6 +150,7 @@ func phaseInit(ctx *ExecutionContext) error {
 		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
 		TUI3Demo:             ctx.Config.TUI3Demo,
 		SkipTUIDelay:         ctx.Config.SkipTUIDelay,
+		Layered:              ctx.Config.Layered, // Controls LayerMode: true=Strict, false=None
 	}
 
 	// Create orchestrator

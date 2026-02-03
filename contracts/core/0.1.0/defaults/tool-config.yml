@@ -17,7 +17,7 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-render-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
+  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
@@ -165,6 +165,37 @@ system-tools:
   mkdocs-preprocess:
     description: "MkDocs preprocessing (native handler)"
     binary: eac
+
+  #-------------------------------------------------------------------------
+  # AI Analysis Tools (internal AI executor)
+  #-------------------------------------------------------------------------
+  ai-dsl-analyzer:
+    description: "AI-powered Structurizr DSL analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=dsl"]
+    resources:
+      cpus: 3
+
+  ai-specs-analyzer:
+    description: "AI-powered Gherkin specs analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=specs"]
+    resources:
+      cpus: 3
+
+  ai-source-analyzer:
+    description: "AI-powered source code analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=source"]
+    resources:
+      cpus: 4
+
+  ai-docs-analyzer:
+    description: "AI-powered documentation analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=docs"]
+    resources:
+      cpus: 3
 
 #---------------------------------------------------------------------------
 # Container Tools (Docker-based)
@@ -326,8 +357,8 @@ container-tools:
     description: "MkDocs build"
     localPath: containers/site-render-tool
     resources:
-      cpus: 4
-      memory: "4g"
+      cpus: 2       # Reduced: aligned with site-render-tool
+      memory: "1g"  # Reduced from 4GB: MkDocs uses <500MB typically
     command:
       [
         "sh",
@@ -375,12 +406,12 @@ container-tools:
     workdir: /docs
     requirements: [docker]
     resources:
-      cpus: 4
-      memory: "4g"
+      cpus: 2       # Reduced: MkDocs is less CPU-intensive than PDF
+      memory: "1g"  # Reduced from 4GB: MkDocs uses <500MB typically
 
-  pdf-render-tool:
+  pdf-tool:
     description: "MkDocs PDF generation with Playwright"
-    localPath: containers/pdf-render-tool
+    localPath: containers/pdf-tool
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -395,8 +426,9 @@ container-tools:
       ENABLE_PDF_EXPORT: "true"
     requirements: [docker]
     resources:
-      cpus: 4
-      memory: "8g"
+      cpus: 4       # Per-instance limit (assumes 2 concurrent on 8 CPU machine)
+      memory: "4g"  # Per-instance (2 instances = 8GB of 16GB)
+      shm_size: "1536m" # Ramdisk per instance (2 instances share /dev/shm)
 
   # Diagram tools
   drawio:
@@ -615,15 +647,8 @@ component-tools:
     server: static-site
     servers: [static-site, mkdocs-live]
 
-  base-site:
-    builder: mkdocs-preprocess
-    server: static-site
-
-  site-render:
-    builder: site-render-tool
-
-  pdf-render:
-    builder: pdf-render-tool
+  # docs-pdf and docs-site use tool chains defined in component-types.yml
+  # No single builder binding needed - the tools list handles execution order
 
   design:
     server: structurizr-lite
@@ -637,6 +662,19 @@ component-tools:
 
   pwsh:
     tester: pester
+
+  # AI Analysis Components
+  ai-dsl:
+    builder: ai-dsl-analyzer
+
+  ai-specs:
+    builder: ai-specs-analyzer
+
+  ai-source:
+    builder: ai-source-analyzer
+
+  ai-docs:
+    builder: ai-docs-analyzer
 
 #---------------------------------------------------------------------------
 # Environment Overrides

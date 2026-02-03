@@ -73,12 +73,14 @@ func (o *TUIObserver) onUnitCompleted(e interfaces.UnitCompletedEvent) {
 
 func (o *TUIObserver) onProgressUpdate(e interfaces.ProgressUpdateEvent) {
 	o.console.UpdateStatus(Status{
-		Phase:       "Run",
-		Running:     e.Running,
-		Completed:   e.Completed,
-		Total:       e.Total,
-		Layer:       e.CurrentLayer,
-		TotalLayers: e.TotalLayers,
+		Phase:          "Run",
+		Running:        e.Running,
+		Completed:      e.Completed,
+		Total:          e.Total,
+		Layer:          e.CurrentLayer,
+		TotalLayers:    e.TotalLayers,
+		Roof:           e.Roof,
+		PressureTarget: e.PressureTarget,
 	})
 }
 

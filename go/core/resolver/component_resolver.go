@@ -46,7 +46,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 	// Build enabled components map
 	enabledComponents := r.getEnabledComponentsMap(module)
 
-	// Build set of components that will be scheduled (have builders)
+	// Build set of components that will be scheduled (have builders or tool chains)
 	// This prevents deadlocks from build_after dependencies on non-buildable components
 	scheduledComponents := make(map[string]bool)
 	for compName, compType := range enabledComponents {
@@ -54,8 +54,20 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 		if typeConfig == nil || !typeConfig.HasBuilder() {
 			continue
 		}
-		// Use GetHandlerForComponent which uses the resolver with proper bindings
-		// (e.g., component type "book" → tool "mkdocs-build")
+
+		// For tool chain types, check if the first tool has a handler
+		if typeConfig.HasToolChain() {
+			tools := typeConfig.GetTools()
+			if len(tools) > 0 {
+				handler := r.buildBridge.GetHandler(tools[0])
+				if handler != nil {
+					scheduledComponents[compName] = true
+				}
+			}
+			continue
+		}
+
+		// For single-builder types, use GetHandlerForComponent
 		handler := r.buildBridge.GetHandlerForComponent(compType)
 		if handler == nil {
 			continue
@@ -71,26 +83,17 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 			continue
 		}
 
-		// Use GetHandlerForComponent which uses the resolver with proper bindings
-		// (e.g., component type "book" → tool "mkdocs-build" via tool-config.yml bindings)
-		handler := r.buildBridge.GetHandlerForComponent(compType)
+		// Get component type config
+		typeConfig := r.cfg.ComponentTypes.Get(compType)
 
-		// Get the handler's actual name for the tool field
-		actualToolName := ""
-		if handler != nil {
-			actualToolName = handler.Name()
-		}
-
-		// Build dependencies from dependency graph - ONLY for scheduled components
-		// Dependencies on non-buildable components would cause deadlocks
-		var dependsOn []workunit.UnitID
+		// Build external dependencies from dependency graph and component depends_on
+		// These are added to the FIRST tool in a tool chain, or the single tool
+		var externalDeps []toolChainDep
 		for _, depComp := range depGraph.DependsOn(compName) {
-			// Skip dependencies on components that won't be scheduled
 			if !scheduledComponents[depComp] {
 				continue
 			}
-			dependsOn = append(dependsOn, workunit.UnitID{
-				Context:   workunit.ContextBuild,
+			externalDeps = append(externalDeps, toolChainDep{
 				Module:    module.Moniker,
 				Component: depComp,
 				Tool:      r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
@@ -100,20 +103,18 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 		// Add intra-module dependencies from component config (depends_on field)
 		compDependsOn := module.Components.GetComponentDependsOn(compName)
 		for _, depComp := range compDependsOn {
-			// Skip if already in dependsOn or not scheduled
 			if !scheduledComponents[depComp] {
 				continue
 			}
 			alreadyAdded := false
-			for _, existing := range dependsOn {
+			for _, existing := range externalDeps {
 				if existing.Component == depComp {
 					alreadyAdded = true
 					break
 				}
 			}
 			if !alreadyAdded {
-				dependsOn = append(dependsOn, workunit.UnitID{
-					Context:   workunit.ContextBuild,
+				externalDeps = append(externalDeps, toolChainDep{
 					Module:    module.Moniker,
 					Component: depComp,
 					Tool:      r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
@@ -124,23 +125,68 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 		// Build metadata from component config (book, theme, etc.)
 		metadata := r.getComponentMetadata(module, compName)
 
-		spec := workunit.UnitSpec{
-			ID: workunit.UnitID{
-				Context:   workunit.ContextBuild,
-				Module:    module.Moniker,
-				Component: compName,
-				Tool:      actualToolName,
-			},
-			ComponentType: compType,
-			Weight:        r.getWeight(module.Moniker, compName, compType, tool.OperationBuild),
-			Container:     handler.IsContainer(),
-			HostInstalled: !handler.IsContainer(),
-			DependsOn:     dependsOn,
-			Cached:        cachedModules != nil && cachedModules[module.Moniker],
-			Metadata:      metadata,
-		}
+		// Check if this is a tool chain (multiple tools)
+		if typeConfig != nil && typeConfig.HasToolChain() {
+			// Expand tool chain into multiple UnitSpecs
+			toolChainSpecs := expandToolChain(module.Moniker, compName, compType, typeConfig.GetTools(), externalDeps)
+			for _, tcSpec := range toolChainSpecs {
+				// Get handler for this specific tool
+				handler := r.buildBridge.GetHandler(tcSpec.Tool)
+				isContainer := handler != nil && handler.IsContainer()
 
-		specs = append(specs, spec)
+				spec := workunit.UnitSpec{
+					ID: workunit.UnitID{
+						Context:   workunit.ContextBuild,
+						Module:    module.Moniker,
+						Component: compName,
+						Tool:      tcSpec.Tool,
+					},
+					ComponentType: compType,
+					Weight:        r.getToolWeight(module.Moniker, compName, compType),
+					Container:     isContainer,
+					HostInstalled: !isContainer,
+					DependsOn:     tcSpec.DependsOn,
+					Cached:        cachedModules != nil && cachedModules[module.Moniker],
+					Metadata:      metadata,
+				}
+				specs = append(specs, spec)
+			}
+		} else {
+			// Single tool - use existing logic
+			handler := r.buildBridge.GetHandlerForComponent(compType)
+			actualToolName := ""
+			if handler != nil {
+				actualToolName = handler.Name()
+			}
+
+			// Convert externalDeps to []workunit.UnitID
+			var dependsOn []workunit.UnitID
+			for _, dep := range externalDeps {
+				dependsOn = append(dependsOn, workunit.UnitID{
+					Context:   workunit.ContextBuild,
+					Module:    dep.Module,
+					Component: dep.Component,
+					Tool:      dep.Tool,
+				})
+			}
+
+			spec := workunit.UnitSpec{
+				ID: workunit.UnitID{
+					Context:   workunit.ContextBuild,
+					Module:    module.Moniker,
+					Component: compName,
+					Tool:      actualToolName,
+				},
+				ComponentType: compType,
+				Weight:        r.getWeight(module.Moniker, compName, compType, tool.OperationBuild),
+				Container:     handler.IsContainer(),
+				HostInstalled: !handler.IsContainer(),
+				DependsOn:     dependsOn,
+				Cached:        cachedModules != nil && cachedModules[module.Moniker],
+				Metadata:      metadata,
+			}
+			specs = append(specs, spec)
+		}
 	}
 
 	return specs
@@ -229,7 +275,7 @@ func (r *ComponentResolver) ResolveForScan(module *modules.ModuleContract, scanC
 					Extra:     map[string]string{"category": string(category)},
 				},
 				ComponentType: compType,
-				Weight:        r.getScanWeight(toolName),
+				Weight:        r.getScanWeight(module.Moniker, compName, toolName),
 				Container:     true, // All scanners run in containers
 				HostInstalled: false,
 				DependsOn:     []workunit.UnitID{},
@@ -362,6 +408,14 @@ func (r *ComponentResolver) resolveScannerTool(compType string, category ScanCat
 	return ""
 }
 
+// getToolWeight calculates scheduling weight for a specific tool in a tool chain.
+// Uses the component type's resources.cpus as the base weight.
+func (r *ComponentResolver) getToolWeight(moniker, compName, compType string) int {
+	// Use component type's weight (from resources.cpus in component-types.yml)
+	// Tool chains share the component type's weight - they run as a single UOW
+	return r.getWeight(moniker, compName, compType, tool.OperationBuild)
+}
+
 // getWeight calculates scheduling weight for a component.
 // Weight is determined by: component type resources.cpus (default 1) * module-level amplifier.
 func (r *ComponentResolver) getWeight(moniker, compName, compType string, op tool.OperationType) int {
@@ -389,9 +443,48 @@ func (r *ComponentResolver) getWeight(moniker, compName, compType string, op too
 }
 
 // getScanWeight returns the scheduling weight for a scanner tool.
-func (r *ComponentResolver) getScanWeight(toolName string) int {
-	// Scanners are generally lightweight
-	return 1
+// Different scanners have different resource requirements.
+// Weight = base scanner weight × module-level amp.
+func (r *ComponentResolver) getScanWeight(moniker, compName, toolName string) int {
+	// Scanner weights based on resource requirements
+	baseWeight := 1
+	switch toolName {
+	case "semgrep":
+		// SAST can be CPU-intensive on large codebases
+		baseWeight = 2
+	case "trivy-vuln":
+		// Vulnerability scanning involves network requests for DB updates
+		baseWeight = 2
+	case "trivy-sbom":
+		// SBOM generation is relatively lightweight
+		baseWeight = 1
+	case "trivy-secrets":
+		// Secret scanning is relatively fast
+		baseWeight = 1
+	case "trivy-iac":
+		// IaC scanning is moderate
+		baseWeight = 1
+	case "trivy-compliance":
+		// Compliance scanning is moderate
+		baseWeight = 1
+	case "zap":
+		// DAST requires running services, high resource
+		baseWeight = 3
+	}
+
+	// Apply module-level amplifier if configured
+	amp := 1.0
+	if r.cfg.Repository != nil {
+		if module, ok := r.cfg.Repository.GetModule(moniker); ok {
+			amp = module.GetComponentAmp(compName, "scan")
+		}
+	}
+
+	weight := int(math.Ceil(float64(baseWeight) * amp))
+	if weight < 1 {
+		weight = 1
+	}
+	return weight
 }
 
 // getComponentMetadata extracts component config values as metadata.

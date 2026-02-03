@@ -4,6 +4,7 @@ nav:
   - validate.md
   - artifacts.md
   - books.md
+  - config.md
   - contracts.md
   - control-tags.md
   - dependencies.md

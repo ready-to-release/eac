@@ -129,28 +129,28 @@ func TestMkDocsSiteHandler_InAllHandlers(t *testing.T) {
 }
 
 // ============================================================================
-// pdf-render-tool handler tests
+// pdf-tool handler tests
 // ============================================================================
 
 func TestMkDocsPDFHandler_Registered(t *testing.T) {
-	h := GetHandler("pdf-render-tool")
+	h := GetHandler("pdf-tool")
 	if h == nil {
-		t.Fatal("pdf-render-tool handler not registered")
+		t.Fatal("pdf-tool handler not registered")
 	}
 
-	if got := h.Name(); got != "pdf-render-tool" {
-		t.Errorf("handler Name() = %q, want %q", got, "pdf-render-tool")
+	if got := h.Name(); got != "pdf-tool" {
+		t.Errorf("handler Name() = %q, want %q", got, "pdf-tool")
 	}
 }
 
 func TestMkDocsPDFHandler_HasHandler(t *testing.T) {
-	if !HasHandler("pdf-render-tool") {
-		t.Error("HasHandler(\"pdf-render-tool\") = false, want true")
+	if !HasHandler("pdf-tool") {
+		t.Error("HasHandler(\"pdf-tool\") = false, want true")
 	}
 }
 
 func TestMkDocsPDFHandler_Requirements(t *testing.T) {
-	h := GetHandler("pdf-render-tool")
+	h := GetHandler("pdf-tool")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -165,7 +165,7 @@ func TestMkDocsPDFHandler_Requirements(t *testing.T) {
 }
 
 func TestMkDocsPDFHandler_IsContainer(t *testing.T) {
-	h := GetHandler("pdf-render-tool")
+	h := GetHandler("pdf-tool")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -176,7 +176,7 @@ func TestMkDocsPDFHandler_IsContainer(t *testing.T) {
 }
 
 func TestMkDocsPDFHandler_IsHostInstalled(t *testing.T) {
-	h := GetHandler("pdf-render-tool")
+	h := GetHandler("pdf-tool")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -188,7 +188,7 @@ func TestMkDocsPDFHandler_IsHostInstalled(t *testing.T) {
 
 func TestMkDocsPDFHandler_InAllHandlers(t *testing.T) {
 	handlers := GetAllHandlers()
-	if _, exists := handlers["pdf-render-tool"]; !exists {
-		t.Error("pdf-render-tool not found in GetAllHandlers()")
+	if _, exists := handlers["pdf-tool"]; !exists {
+		t.Error("pdf-tool not found in GetAllHandlers()")
 	}
 }

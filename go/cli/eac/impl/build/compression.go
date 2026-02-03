@@ -12,7 +12,7 @@ import (
 
 // ProcessArtifactDerivations handles deriving and compressing artifacts after build.
 // artifacts should be the merged artifacts from cfg.GetBuildArtifacts() - this function
-// does NOT access moduleTypeDef directly to ensure module-level artifacts take priority.
+// does NOT access component type definitions directly to ensure module-level artifacts take priority.
 func ProcessArtifactDerivations(
 	moniker string,
 	artifacts []config.Artifact,

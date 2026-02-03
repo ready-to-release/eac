@@ -48,6 +48,7 @@ type DockerBuildConfig struct {
 	Container  string             `yaml:"container"`            // Container name (references containers/{container}/)
 	Context    string             `yaml:"context"`              // Build context path
 	Dockerfile string             `yaml:"dockerfile,omitempty"` // Path to Dockerfile (default: {context}/Dockerfile)
+	Builder    string             `yaml:"builder,omitempty"`    // Buildx builder name (default: "default" for docker driver)
 	Platforms  []string           `yaml:"platforms,omitempty"`  // Target platforms (e.g., linux/amd64, linux/arm64)
 	Tags       []string           `yaml:"tags"`                 // Image tags
 	Load       bool               `yaml:"load,omitempty"`       // Load image to local Docker daemon

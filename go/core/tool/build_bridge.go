@@ -228,7 +228,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 	}
 
 	// Check if the tool ID is a native handler first
-	// Native handlers take precedence (e.g., mkdocs-preprocess, site-render-tool, pdf-render-tool)
+	// Native handlers take precedence (e.g., mkdocs-preprocess, site-render-tool, pdf-tool)
 	if h, ok := b.nativeHandlers[toolID]; ok {
 		return h
 	}

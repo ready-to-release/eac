@@ -31,7 +31,7 @@ import (
 
 func init() {
 	// Register component-level execution support for lint
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeLint, FlattenModulesToLintUnits)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeLint, ResolveLintUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeLint, lintUnitWorker)
 	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeLint, getLintUnitLayers)
 }
@@ -39,7 +39,7 @@ func init() {
 // getLintUnitLayers returns component execution layers as string slices for TUI tree building.
 // Each entry uses UnitID.Longname() for consistent formatting with the UnitProvider.
 func getLintUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := FlattenModulesToLintUnits(ctx)
+	layers := ResolveLintUnitSpecs(ctx)
 	if len(layers) == 0 {
 		return nil
 	}
@@ -186,7 +186,7 @@ func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lint
 		return hash.Files(ctx.WorkspaceRoot, files)
 	}
 
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextLint, monikers, rule, hashProvider)
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextLint, monikers, rule, hashProvider, nil)
 	if err != nil {
 		log.Debugf("Failed to detect lint changes: %v", err)
 		return
@@ -605,8 +605,8 @@ func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, re
 	manifestPath := filepath.Join(outputDir, "lint.manifest.json")
 
 	manifest := LintManifest{
-		Moniker:         moniker,
-		ModuleType:      ctx.ModuleTypes[moniker],
+		Moniker:        moniker,
+		ComponentTypes: ctx.ComponentTypesDisplay[moniker],
 		GitCommit:       git.GetCommitSHA(ctx.WorkspaceRoot),
 		RunTime:         time.Now(),
 		DurationSeconds: result.Duration.Seconds(),
@@ -625,8 +625,8 @@ func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, re
 
 // LintManifest represents the lint manifest structure.
 type LintManifest struct {
-	Moniker         string    `json:"moniker"`
-	ModuleType      string    `json:"module_type"`
+	Moniker        string `json:"moniker"`
+	ComponentTypes string `json:"component_types"`
 	GitCommit       string    `json:"git_commit"`
 	RunTime         time.Time `json:"run_time"`
 	DurationSeconds float64   `json:"duration_seconds"`

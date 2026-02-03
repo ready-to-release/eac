@@ -2,13 +2,13 @@
 package artifacts
 
 import (
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/utils"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -16,7 +16,7 @@ var log = logging.C()
 
 // ValidateBuildArtifacts validates that build artifacts exist and are up-to-date for the given modules.
 // It performs:
-// 1. Manifest schema validation against the build-manifest contract
+// 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}_{tool}/)
 // 2. Artifact existence validation (files actually exist on disk)
 // 3. Staleness check (source files unchanged since build)
 // Returns ArtifactValidationInfo with details about missing/stale artifacts.
@@ -26,35 +26,57 @@ func ValidateBuildArtifacts(
 	workspaceRoot string,
 	moduleRegistry *modules.Registry,
 ) *initsummary.ArtifactValidationInfo {
-	// Use the manifest loader to validate manifests against schema and check artifacts
-	summary, err := implinternal.LoadAndValidateManifests(workspaceRoot, moduleList, cfg)
-	if err != nil {
-		log.Debugf("Manifest validation error: %v", err)
-		// If we can't validate, report all modules as missing
-		return &initsummary.ArtifactValidationInfo{
-			Validated:      true,
-			ModulesChecked: moduleList,
-			AllPresent:     false,
-			MissingFrom:    moduleList,
-		}
-	}
+	reader := coreoutput.NewReader(workspaceRoot)
 
 	var missingFrom []string
 	missingDetails := make(map[string][]string)
 
-	for _, result := range summary.Results {
-		if result.Error != "" {
-			log.Debugf("Module %s: %s", result.Moniker, result.Error)
-			missingFrom = append(missingFrom, result.Moniker)
-			missingDetails[result.Moniker] = []string{result.Error}
-		} else if !result.SchemaValid {
-			log.Debugf("Module %s: manifest schema invalid", result.Moniker)
-			missingFrom = append(missingFrom, result.Moniker)
-			missingDetails[result.Moniker] = []string{"manifest schema invalid"}
-		} else if !result.ArtifactsValid {
-			log.Debugf("Module %s: missing artifacts %v", result.Moniker, result.MissingArtifacts)
-			missingFrom = append(missingFrom, result.Moniker)
-			missingDetails[result.Moniker] = result.MissingArtifacts
+	// Validate each module using UoW manifests
+	for _, module := range moduleList {
+		// Check if any UoW manifests exist for this module
+		if !reader.HasManifests(workunit.ContextBuild, module) {
+			log.Debugf("Module %s: no UoW manifests found", module)
+			missingFrom = append(missingFrom, module)
+			missingDetails[module] = []string{"no build manifests found"}
+			continue
+		}
+
+		// Get module view to validate all UoWs
+		moduleView, err := reader.GetModule(workunit.ContextBuild, module)
+		if err != nil {
+			log.Debugf("Module %s: failed to read UoW manifests: %v", module, err)
+			missingFrom = append(missingFrom, module)
+			missingDetails[module] = []string{err.Error()}
+			continue
+		}
+
+		// Validate artifacts for each component/UoW
+		var moduleErrors []string
+		for _, comp := range moduleView.Components {
+			for _, uow := range comp.UoWs {
+				result := reader.ValidateUoW(workunit.ContextBuild, module, uow.Component, uow.Tool)
+				if !result.Valid {
+					if len(result.MissingArtifacts) > 0 {
+						for _, missing := range result.MissingArtifacts {
+							moduleErrors = append(moduleErrors, uow.Component+"_"+uow.Tool+": "+missing)
+						}
+					}
+					if len(result.CorruptArtifacts) > 0 {
+						for _, corrupt := range result.CorruptArtifacts {
+							moduleErrors = append(moduleErrors, uow.Component+"_"+uow.Tool+": hash mismatch for "+corrupt)
+						}
+					}
+					if result.Error != nil && len(moduleErrors) == 0 {
+						moduleErrors = append(moduleErrors, result.Error.Error())
+					}
+				}
+			}
+		}
+
+		if len(moduleErrors) > 0 {
+			log.Debugf("Module %s: validation errors %v", module, moduleErrors)
+			missingFrom = append(missingFrom, module)
+			missingDetails[module] = moduleErrors
 		}
 	}
 
@@ -89,7 +111,7 @@ func ValidateBuildArtifacts(
 
 			stateMgr := workunit.NewStateManager(workspaceRoot)
 			rule := workunit.DefaultRules[workunit.ContextBuild]
-			changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
+			changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
 			if err != nil {
 				log.Debugf("Failed to detect changes for staleness check: %v", err)
 			} else if !changeResult.FreshRun {

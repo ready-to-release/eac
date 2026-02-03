@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,23 +21,29 @@ type Preprocessor struct {
 	stagingDir       string
 	logWriter        io.Writer
 	pdfMode          bool
+	warnAsError      bool             // Treat warnings as errors (fail build on warnings)
 	linkTranslator   *LinkTranslator  // Handles source → staging path translations
 	assetCache       *AssetCache      // Persistent cache for expensive operations (mermaid, etc.)
+	cacheConfig      *cache.Config    // Cache control configuration (--skip-cache flag)
 	referencedAssets map[string]bool  // Asset paths referenced by markdown (for lazy copying)
 	fileIndex        *FileIndex       // Pre-built file index to avoid repeated WalkDir calls
+	warnings         []string         // Collected warnings for warnAsError mode
 }
 
 // NewPreprocessor creates a new book preprocessor
 // pdfMode enables PDF-specific processing like link normalization.
-func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
+// cacheConfig controls cache behavior (--skip-cache flag). Pass nil for default behavior.
+func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool, cacheConfig *cache.Config) *Preprocessor {
 	return &Preprocessor{
 		book:           book,
 		workspaceRoot:  workspaceRoot,
 		stagingDir:     stagingDir,
 		logWriter:      logWriter,
 		pdfMode:        pdfMode,
+		warnAsError:    true, // Default: fail build on warnings
 		linkTranslator: NewLinkTranslator(workspaceRoot, stagingDir, logWriter, pdfMode),
-		assetCache:     NewAssetCache(workspaceRoot),
+		assetCache:     NewAssetCache(workspaceRoot, cacheConfig),
+		cacheConfig:    cacheConfig,
 	}
 }
 
@@ -52,7 +59,7 @@ func (p *Preprocessor) Preprocess() error {
 	p.log("  Step 0: Scanning asset references...")
 	if err := p.scanAssetReferences(); err != nil {
 		// Non-fatal: fall back to copying all assets
-		p.log("    Warning: asset scan failed, will copy all assets: %v", err)
+		p.warn("asset scan failed, will copy all assets: %v", err)
 		p.referencedAssets = nil
 	} else if len(p.referencedAssets) > 0 {
 		p.log("    Found %d asset references", len(p.referencedAssets))
@@ -198,12 +205,28 @@ func (p *Preprocessor) Preprocess() error {
 			stats.DrawioHits, stats.DrawioMisses, hitRate)
 	}
 
+	// Check for warnings in warnAsError mode
+	if p.warnAsError && len(p.warnings) > 0 {
+		p.log("❌ Build failed: %d warning(s) treated as errors", len(p.warnings))
+		for i, w := range p.warnings {
+			p.log("   %d. %s", i+1, w)
+		}
+		return fmt.Errorf("preprocessing failed with %d warning(s)", len(p.warnings))
+	}
+
 	return nil
 }
 
 // log writes a formatted message to the log writer.
 func (p *Preprocessor) log(format string, args ...any) {
 	fmt.Fprintf(p.logWriter, format+"\n", args...)
+}
+
+// warn logs a warning and collects it for warnAsError mode.
+func (p *Preprocessor) warn(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	p.log("    Warning: %s", msg)
+	p.warnings = append(p.warnings, msg)
 }
 
 // scanAssetReferences scans source markdown files to find which assets are referenced.

@@ -132,7 +132,7 @@ func reportResults(config *AssessConfig, ar *oscalTypes.AssessmentResults, arPat
 
 		// Calculate risk score
 		likelihood := scoring.CalculateBaseLikelihood(0, 0, 0, notSatisfied)
-		impact := scoring.GetDefaultImpact("service")
+		impact := scoring.GetDefaultImpact(config.Modules[0])
 		riskScore := scoring.ComputeRiskScore(config.Modules[0], likelihood, impact, "Based on control satisfaction")
 
 		assessLog.Info("")

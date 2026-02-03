@@ -60,9 +60,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/git"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
-	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/adapters"
@@ -71,7 +69,9 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -137,7 +137,13 @@ func ensureCommandsBinary(workspaceRoot string) error {
 		return fmt.Errorf("go build: %w", err)
 	}
 
-	fmt.Printf("   ✅ Built: %s (go build: %v, total: %v)\n", outputPath, time.Since(goBuildStart), time.Since(buildStart))
+	totalDuration := time.Since(buildStart)
+	if totalDuration > 500*time.Millisecond {
+		goBuildDuration := time.Since(goBuildStart)
+		fmt.Printf("   ✅ Built: %s (go build: %05.2fs, total: %05.2fs)\n", outputPath, goBuildDuration.Seconds(), totalDuration.Seconds())
+	} else {
+		fmt.Printf("   ✅ Built: %s\n", outputPath)
+	}
 	return nil
 }
 
@@ -251,7 +257,7 @@ func Build() int {
 	monikers := shared.Monikers
 	skipDeps := shared.SkipDeps
 	skipDepm := shared.SkipDepm
-	forceRebuild := shared.SkipCache
+	forceRebuild := shared.CacheConfig.ShouldSkipState()
 	showTimings := shared.ShowTimings
 	debugMode := shared.Debug
 	turbo := shared.Turbo
@@ -352,6 +358,7 @@ func Build() int {
 		SkipTUIDelay:   skipTUIDelay,
 		ShowTimings:    showTimings,
 		DebugMode:      debugMode,
+		CacheConfig:    shared.CacheConfig,
 	}
 
 	// Create build-specific config
@@ -617,7 +624,7 @@ func printBuildUsage() {
 // were built from the same source inputs.
 // Used by --use-existing-depm to skip building modules whose artifacts are present
 // (typically downloaded from previous CI runs).
-func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bool) bool {
+func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool) bool {
 	// Load config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -654,19 +661,29 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
 	buildDir := filepath.Join(workspaceRoot, buildDirRel)
 
-	// First, verify input hash matches (if manifest exists with input hash)
+	// First, verify input hash matches using UoW manifests
 	// This ensures cached artifacts are from the same source code
-	manifest, err := implinternal.LoadModuleManifest(buildDir)
-	if err == nil && manifest.InputHash != "" {
-		// Load module registry for hash computation
-		modRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-		if err == nil {
-			if contract, ok := modRegistry.Get(moniker); ok {
-				currentHash, err := hash.ComputeFromPatterns(workspaceRoot, contract)
-				if err == nil && currentHash != manifest.InputHash {
-					log.Debugf("Module %s: input hash mismatch (cached=%s, current=%s) - need rebuild",
-						moniker, manifest.InputHash[:16], currentHash[:16])
-					return false
+	reader := coreoutput.NewReader(workspaceRoot)
+	if manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker); err == nil && len(manifests) > 0 {
+		// Get input hash from first UoW (they should all have the same source hash)
+		var cachedHash string
+		for _, m := range manifests {
+			if m.InputHash != "" {
+				cachedHash = m.InputHash
+				break
+			}
+		}
+		if cachedHash != "" {
+			// Load module registry for hash computation
+			modRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+			if err == nil {
+				if contract, ok := modRegistry.Get(moniker); ok {
+					currentHash, err := hash.ComputeFromPatterns(workspaceRoot, contract)
+					if err == nil && currentHash != cachedHash {
+						log.Debugf("Module %s: input hash mismatch (cached=%s, current=%s) - need rebuild",
+							moniker, cachedHash[:16], currentHash[:16])
+						return false
+					}
 				}
 			}
 		}
@@ -697,300 +714,6 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	}
 
 	return true
-}
-
-// generateBuildManifest creates per-module manifest files tracking what was built.
-// Each module gets its own immutable manifest at out/build/<module>/build.manifest.json.
-func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResult, moduleTypes map[string]string, executionOrder []string, buildAll bool) error {
-	log.Debugf("generateBuildManifest: ENTERED function")
-	// Get git commit SHA
-	gitCommit := git.GetCommitSHA(workspaceRoot)
-
-	// Load config for artifact resolution
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// Load module registry for input hash computation
-	modRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	if err != nil {
-		log.Warnf("Failed to load module registry for input hash: %v", err)
-		// Continue without input hashes - not fatal
-	}
-
-	// Track current platform
-	currentPlatform := implinternal.PlatformInfo{
-		OS:   runtime.GOOS,
-		Arch: runtime.GOARCH,
-	}
-
-	manifestCount := 0
-
-	log.Debugf("generateBuildManifest: starting with %d results, %d moduleTypes", len(results), len(moduleTypes))
-	for k := range moduleTypes {
-		log.Debugf("generateBuildManifest: moduleType[%s] = %s", k, moduleTypes[k])
-	}
-
-	// Process each successfully built module - create a per-module manifest
-	for _, result := range results {
-		log.Debugf("generateBuildManifest: processing result %s (exitCode=%d)", result.Moniker, result.ExitCode)
-		// Skip failed builds (exit code > 0)
-		// Note: exit code -1 means cached/skipped - still process these as they may need manifest updates
-		if result.ExitCode > 0 {
-			log.Debugf("Skipping %s: build failed (exit code %d)", result.Moniker, result.ExitCode)
-			continue
-		}
-
-		moniker := result.Moniker
-		moduleType, ok := moduleTypes[moniker]
-		if !ok {
-			log.Debugf("Skipping %s: not found in moduleTypes map", moniker)
-			continue
-		}
-
-		// Get module config
-		module, ok := cfg.Repository.GetModule(moniker)
-		if !ok {
-			log.Debugf("Skipping %s: not found in repository config", moniker)
-			continue
-		}
-
-		// Build directory for this module
-		moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
-
-		// Resolve artifacts for current platform
-		artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-			module, moduleBuildDir, currentPlatform.OS, currentPlatform.Arch, cfg,
-		)
-		if err != nil {
-			log.Warnf("Failed to resolve artifacts for %s: %v", moniker, err)
-			continue
-		}
-
-		// Determine which artifacts were requested (filters out UPX in non-CI, etc.)
-		requestedArtifactIDs := implinternal.DetermineRequestedArtifacts(module, buildAll, cfg)
-
-		// Build set of requested IDs for fast lookup
-		requestedSet := make(map[string]bool, len(requestedArtifactIDs))
-		for _, id := range requestedArtifactIDs {
-			requestedSet[id] = true
-		}
-
-		// Convert to ArtifactInfo, filtering to only include requested artifacts
-		artifactInfos := make([]implinternal.ArtifactInfo, 0, len(artifacts))
-		for i := range artifacts {
-			art := &artifacts[i]
-			// Only include artifacts that were actually requested
-			if !requestedSet[art.ID] {
-				continue
-			}
-
-			platform := ""
-			if art.Type == "executable" {
-				platform = fmt.Sprintf("%s-%s", currentPlatform.OS, currentPlatform.Arch)
-			}
-
-			// For image artifacts, use the image reference as the path
-			// (images don't have file paths, they have tags/references)
-			// For file-based artifacts, store relative path from build dir for portability
-			artifactPath := art.ResolvedPath
-			if art.Type == "image" && artifactPath == "" {
-				artifactPath = art.ResolvedName // e.g., "ext-eac:latest"
-			} else if art.Type != "image" && art.ResolvedPath != "" {
-				// Make path relative to module build dir for manifest
-				if relPath, err := filepath.Rel(moduleBuildDir, art.ResolvedPath); err == nil {
-					artifactPath = relPath
-				}
-			}
-
-			// Compute content hash for file-based artifacts (not images or directories)
-			var size int64
-			var sha256Hash string
-			if art.Type != "image" && art.ResolvedPath != "" {
-				// ResolvedPath is already absolute - use it directly for hashing
-				if s, h, err := implinternal.HashArtifactFile(art.ResolvedPath); err == nil {
-					size = s
-					sha256Hash = h
-				}
-			}
-
-			artifactInfo := implinternal.ArtifactInfo{
-				Type:     art.Type,
-				ID:       art.ID,
-				Name:     art.ResolvedName,
-				Path:     artifactPath,
-				Platform: platform,
-				Size:     size,
-				SHA256:   sha256Hash,
-			}
-
-			// For image artifacts, enrich with docker_build config info
-			if art.Type == "image" {
-				enrichImageArtifact(&artifactInfo, module, moniker)
-			}
-
-			artifactInfos = append(artifactInfos, artifactInfo)
-		}
-
-		// Create per-module manifest (immutable - created once per build)
-		manifest := implinternal.NewModuleManifest(moniker, moduleType, gitCommit)
-		manifest.DurationSeconds = result.Duration.Seconds()
-		manifest.RequestedArtifacts = requestedArtifactIDs
-		manifest.Artifacts = artifactInfos
-		manifest.Platforms = []implinternal.PlatformInfo{currentPlatform}
-
-		// Compute input hash for CI cache validation
-		if modRegistry != nil {
-			if contract, ok := modRegistry.Get(moniker); ok {
-				inputHash, err := hash.ComputeFromPatterns(workspaceRoot, contract)
-				if err != nil {
-					log.Debugf("Failed to compute input hash for %s: %v", moniker, err)
-				} else {
-					manifest.InputHash = inputHash
-				}
-			}
-		}
-
-		// Collect all files in build output
-		files, err := implinternal.CollectBuildFiles(moduleBuildDir)
-		if err != nil {
-			log.Warnf("Failed to collect build files for %s: %v", moniker, err)
-		} else {
-			manifest.Files = files
-		}
-
-		// Validate and save manifest to module's build directory
-		if err := manifest.ValidateAndSaveWithRoot(moduleBuildDir, workspaceRoot); err != nil {
-			return fmt.Errorf("failed to validate/save manifest for %s: %w", moniker, err)
-		}
-
-		manifestCount++
-		log.Debugf("Generated manifest for module %s at %s", moniker, moduleBuildDir)
-	}
-
-	log.Debugf("Generated %d module manifests", manifestCount)
-	return nil
-}
-
-// updateSkippedModuleManifests updates the VerifiedUnchangedAt field for modules
-// that were skipped because they were already up-to-date.
-func updateSkippedModuleManifests(workspaceRoot string, skippedModules []string, gitCommit string) {
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		log.Warnf("Failed to load config for manifest update: %v", err)
-		return
-	}
-
-	for _, moniker := range skippedModules {
-		moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
-		manifest, err := implinternal.LoadModuleManifest(moduleBuildDir)
-		if err != nil {
-			// No manifest exists for this module - that's fine, skip it
-			log.Debugf("No manifest for skipped module %s: %v", moniker, err)
-			continue
-		}
-
-		if err := manifest.UpdateVerifiedUnchangedAt(moduleBuildDir, gitCommit); err != nil {
-			log.Warnf("Failed to update verification status for %s: %v", moniker, err)
-		} else {
-			log.Debugf("Updated verification status for %s to %s", moniker, gitCommit)
-		}
-	}
-}
-
-// validateModuleBuildOutputs validates that a module's build produced the expected artifacts.
-func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWriter io.Writer, buildAll bool) error {
-	// Load config
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// Get module
-	module, ok := cfg.Repository.GetModule(moniker)
-	if !ok {
-		return fmt.Errorf("module not found: %s", moniker)
-	}
-
-	// Determine which artifacts were requested for this build
-	// This uses cfg.GetBuildArtifactIDs which correctly handles module-level artifacts
-	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, buildAll, cfg)
-
-	// If no artifacts to validate, nothing to do
-	if len(requestedArtifacts) == 0 {
-		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module\n")
-		return nil
-	}
-
-	// Resolve and validate artifacts
-	// Note: BuildOutputPath returns a relative path, so we need to make it absolute
-	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
-	buildDir := filepath.Join(workspaceRoot, buildDirRel)
-	artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to resolve artifacts: %w", err)
-	}
-
-	// Check if this module has docker_build with push=true
-	// If so, image artifacts are pushed to registry and may not exist locally
-	dockerConfig := module.GetDockerBuildConfig()
-	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
-
-	// Filter artifacts to only those that were requested
-	var requestedArtifactList []implinternal.ResolvedArtifact
-	var requestedMissing, requestedTotal int
-
-	for i := range artifacts {
-		art := &artifacts[i]
-		// Check if this artifact was requested
-		isRequested := false
-		for _, reqID := range requestedArtifacts {
-			if art.ID == reqID {
-				isRequested = true
-				break
-			}
-		}
-
-		if isRequested {
-			requestedArtifactList = append(requestedArtifactList, *art)
-			requestedTotal++
-
-			// For image artifacts with push=true, trust that buildx push succeeded
-			// (buildx would have failed if push failed). The image may not exist locally.
-			if art.Type == "image" && imagesPushedToRegistry {
-				// Image was pushed to registry - trust the build
-				continue
-			}
-
-			if !art.Exists {
-				requestedMissing++
-			}
-		}
-	}
-
-	// Check if any requested artifacts are missing
-	if requestedMissing > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Expected artifacts were not created:\n")
-		for i := range requestedArtifactList {
-			art := &requestedArtifactList[i]
-			if !art.Exists {
-				// Skip image artifacts that were pushed to registry
-				if art.Type == "image" && imagesPushedToRegistry {
-					continue
-				}
-				// Include ❌ so log parser picks up each missing artifact for summary display
-				fmt.Fprintf(logWriter, "  ❌ Missing: %s (%s)\n", art.ID, art.ResolvedPath)
-			}
-		}
-		return fmt.Errorf("build succeeded but %d/%d artifacts missing", requestedMissing, requestedTotal)
-	}
-
-	// Success - all requested artifacts present
-	fmt.Fprintf(logWriter, "  ✅ Validated %d artifact(s) created\n", requestedTotal)
-	return nil
 }
 
 // determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module.

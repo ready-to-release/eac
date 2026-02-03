@@ -5,6 +5,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	tui "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
 )
 
 // Global timeout configuration (loaded at startup).
@@ -200,6 +202,29 @@ func TUIExitCountdownDuration() time.Duration {
 // PortReservationTTL returns the port reservation TTL.
 func PortReservationTTL() time.Duration {
 	return Timeouts().TUI.PortReservation.D()
+}
+
+// TUIConfig returns the TUI configuration from global timeouts.
+// This creates a TUIConfig struct suitable for passing to console.NewModel.
+func TUIConfig() *tui.TUIConfig {
+	t := Timeouts()
+	return &tui.TUIConfig{
+		// Timeouts
+		MetricsInterval:  t.TUI.MetricsInterval.D(),
+		MinDisplayTime:   t.TUI.MinDisplayTime.D(),
+		ExitCountdown:    t.TUI.ExitCountdown.D(),
+		FreezeCountdown:  t.TUI.FreezeCountdown.D(),
+		AutoScrollResume: t.TUI.AutoScrollResume.D(),
+
+		// Layout
+		MaxTabs:           t.TUILayout.MaxTabs,
+		DefaultColumns:    t.TUILayout.DefaultColumns,
+		MinColumns:        t.TUILayout.MinColumns,
+		MaxColumns:        t.TUILayout.MaxColumns,
+		BufferSizePane:    t.TUILayout.BufferSizePane,
+		BufferSizeResults: t.TUILayout.BufferSizeResults,
+		BufferSizeUoW:     t.TUILayout.BufferSizeUoW,
+	}
 }
 
 // ============================================================================

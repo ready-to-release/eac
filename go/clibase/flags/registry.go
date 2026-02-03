@@ -10,9 +10,16 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
+// GlobalFlags are flags that are valid for all commands.
+// Commands using ValidateFlagsFromRegistry automatically accept these flags.
+var GlobalFlags = []registry.FlagMetadata{
+	{Name: "help", Shorthand: "-h", Type: "bool", Usage: "Show help for command"},
+}
+
 // ValidateFlagsFromRegistry validates command-line flags against registry metadata.
 // It automatically detects the calling command using runtime.Caller() and validates
 // the provided arguments against the command's registered flag metadata.
+// Global flags (--help, -h) are always accepted.
 //
 // Returns an error if:
 // - Unable to detect calling command
@@ -85,8 +92,9 @@ func ValidateFlagsFromRegistry(args []string) error {
 		parsedFlags[normalizedName] = flagValue
 	}
 
-	// Validate parsed flags against registry metadata
-	if err := validateParsedFlags(parsedFlags, cmd.Flags); err != nil {
+	// Validate parsed flags against registry metadata (including global flags)
+	allFlags := append(cmd.Flags, GlobalFlags...)
+	if err := validateParsedFlags(parsedFlags, allFlags); err != nil {
 		return err
 	}
 

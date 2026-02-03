@@ -114,7 +114,7 @@ func (p *Preprocessor) cleanupUnreferencedAssets() error {
 		// Delete unreferenced asset
 		if err := os.Remove(path); err != nil {
 			if !os.IsNotExist(err) {
-				p.log("    Warning: failed to delete unreferenced asset %s: %v",
+				p.warn("failed to delete unreferenced asset %s: %v",
 					filepath.Base(path), err)
 			}
 		} else {

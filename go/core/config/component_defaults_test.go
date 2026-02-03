@@ -28,103 +28,34 @@ func TestDeriveBookName(t *testing.T) {
 	}
 }
 
-func TestDeriveBaseSiteName(t *testing.T) {
-	tests := []struct {
-		name       string
-		compName   string
-		components ModuleComponents
-		want       string
-	}{
-		{
-			name:     "tutorials finds tutorials-base",
-			compName: "tutorials",
-			components: ModuleComponents{
-				"tutorials-base": &ComponentEntry{Type: "base-site"},
-				"tutorials":      &ComponentEntry{Type: "pdf-render"},
-			},
-			want: "tutorials-base",
-		},
-		{
-			name:     "site finds base-site as fallback",
-			compName: "site",
-			components: ModuleComponents{
-				"base-site": &ComponentEntry{Type: "base-site"},
-				"site":      &ComponentEntry{Type: "site-render"},
-			},
-			want: "base-site",
-		},
-		{
-			name:     "no matching base component",
-			compName: "orphan",
-			components: ModuleComponents{
-				"orphan": &ComponentEntry{Type: "pdf-render"},
-			},
-			want: "",
-		},
-		{
-			name:     "prefers specific over fallback",
-			compName: "tutorials",
-			components: ModuleComponents{
-				"tutorials-base": &ComponentEntry{Type: "base-site"},
-				"base-site":      &ComponentEntry{Type: "base-site"},
-				"tutorials":      &ComponentEntry{Type: "pdf-render"},
-			},
-			want: "tutorials-base",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := deriveBaseSiteName(tt.compName, tt.components)
-			if got != tt.want {
-				t.Errorf("deriveBaseSiteName(%q, ...) = %q, want %q", tt.compName, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestApplyComponentDefaults(t *testing.T) {
-	// Create a module with base-site and pdf-render components
+	// Create a module with docs-pdf component
 	m := &Module{
 		Moniker: "books",
 		Components: ModuleComponents{
-			"tutorials-base": &ComponentEntry{Type: "base-site"},
-			"tutorials":      &ComponentEntry{Type: "pdf-render"},
+			"tutorials-pdf": &ComponentEntry{Type: "docs-pdf"},
 		},
 	}
 
 	// Create component type defaults
-	baseSiteDefaults := &ComponentTypeDefaults{
+	docsPdfDefaults := &ComponentTypeDefaults{
 		BookFromName: true,
-	}
-	pdfRenderDefaults := &ComponentTypeDefaults{
-		AutoBaseSite: true,
 		Theme:        "dark",
 	}
 
-	// Apply defaults for base-site
-	baseSiteCT := &ComponentType{Defaults: baseSiteDefaults}
-	entry := m.Components["tutorials-base"]
-	m.applyComponentDefaults("tutorials-base", entry, baseSiteCT)
+	// Apply defaults for docs-pdf
+	docsPdfCT := &ComponentType{Defaults: docsPdfDefaults}
+	entry := m.Components["tutorials-pdf"]
+	m.applyComponentDefaults("tutorials-pdf", entry, docsPdfCT)
 
-	// Verify book was derived
-	if entry.Config == nil || entry.Config["book"] != "tutorials" {
-		t.Errorf("Expected book='tutorials', got %v", entry.Config)
-	}
-
-	// Apply defaults for pdf-render
-	pdfRenderCT := &ComponentType{Defaults: pdfRenderDefaults}
-	entry2 := m.Components["tutorials"]
-	m.applyComponentDefaults("tutorials", entry2, pdfRenderCT)
-
-	// Verify depends_on was auto-added
-	if len(entry2.DependsOn) != 1 || entry2.DependsOn[0] != "tutorials-base" {
-		t.Errorf("Expected depends_on=['tutorials-base'], got %v", entry2.DependsOn)
+	// Verify book was derived (strips -pdf suffix)
+	if entry.Config == nil || entry.Config["book"] != "tutorials-pdf" {
+		t.Errorf("Expected book='tutorials-pdf', got %v", entry.Config)
 	}
 
 	// Verify theme was set
-	if entry2.Config == nil || entry2.Config["theme"] != "dark" {
-		t.Errorf("Expected theme='dark', got %v", entry2.Config)
+	if entry.Config["theme"] != "dark" {
+		t.Errorf("Expected theme='dark', got %v", entry.Config)
 	}
 }
 
@@ -164,164 +95,6 @@ func TestComponentEntryConfigMethods(t *testing.T) {
 	}
 }
 
-func TestInjectPrerequisiteComponents(t *testing.T) {
-	t.Run("injects base-site for pdf-render when missing", func(t *testing.T) {
-		m := &Module{
-			Moniker: "books",
-			Components: ModuleComponents{
-				"tutorials": &ComponentEntry{Type: "pdf-render"},
-			},
-		}
-
-		// Component types config with inject_prerequisite
-		compTypes := &ComponentTypesConfig{
-			ComponentTypes: map[string]*ComponentType{
-				"pdf-render": {
-					Defaults: &ComponentTypeDefaults{
-						InjectPrerequisite: "base-site",
-					},
-				},
-				"base-site": {
-					Defaults: &ComponentTypeDefaults{
-						BookFromName: true,
-					},
-				},
-			},
-		}
-
-		// Inject prerequisites
-		m.injectPrerequisiteComponents(compTypes)
-
-		// Verify tutorials-base was injected
-		if !m.Components.HasComponent("tutorials-base") {
-			t.Fatal("Expected tutorials-base to be injected")
-		}
-
-		// Verify injected component has correct type
-		injected := m.Components["tutorials-base"]
-		if injected.Type != "base-site" {
-			t.Errorf("Expected type='base-site', got %q", injected.Type)
-		}
-
-		// Verify injected component has book config
-		if injected.Config == nil || injected.Config["book"] != "tutorials" {
-			t.Errorf("Expected config.book='tutorials', got %v", injected.Config)
-		}
-
-		// Verify render component has depends_on set
-		render := m.Components["tutorials"]
-		if len(render.DependsOn) != 1 || render.DependsOn[0] != "tutorials-base" {
-			t.Errorf("Expected depends_on=['tutorials-base'], got %v", render.DependsOn)
-		}
-	})
-
-	t.Run("skips injection when prerequisite already exists", func(t *testing.T) {
-		m := &Module{
-			Moniker: "books",
-			Components: ModuleComponents{
-				"tutorials-base": &ComponentEntry{
-					Type:   "base-site",
-					Config: map[string]string{"book": "custom-book"},
-				},
-				"tutorials": &ComponentEntry{Type: "pdf-render"},
-			},
-		}
-
-		compTypes := &ComponentTypesConfig{
-			ComponentTypes: map[string]*ComponentType{
-				"pdf-render": {
-					Defaults: &ComponentTypeDefaults{
-						InjectPrerequisite: "base-site",
-					},
-				},
-			},
-		}
-
-		m.injectPrerequisiteComponents(compTypes)
-
-		// Verify existing component was not modified
-		existing := m.Components["tutorials-base"]
-		if existing.Config["book"] != "custom-book" {
-			t.Errorf("Existing component should not be modified, got book=%q", existing.Config["book"])
-		}
-	})
-
-	t.Run("handles nil component types", func(t *testing.T) {
-		m := &Module{
-			Moniker: "books",
-			Components: ModuleComponents{
-				"tutorials": &ComponentEntry{Type: "pdf-render"},
-			},
-		}
-
-		// Should not panic with nil compTypes
-		m.injectPrerequisiteComponents(nil)
-
-		// Should not inject anything
-		if m.Components.HasComponent("tutorials-base") {
-			t.Error("Should not inject when compTypes is nil")
-		}
-	})
-
-	t.Run("multiple render components get individual prerequisites", func(t *testing.T) {
-		m := &Module{
-			Moniker: "books",
-			Components: ModuleComponents{
-				"tutorials": &ComponentEntry{Type: "pdf-render"},
-				"howto":     &ComponentEntry{Type: "pdf-render"},
-				"reference": &ComponentEntry{Type: "site-render"},
-			},
-		}
-
-		compTypes := &ComponentTypesConfig{
-			ComponentTypes: map[string]*ComponentType{
-				"pdf-render": {
-					Defaults: &ComponentTypeDefaults{
-						InjectPrerequisite: "base-site",
-					},
-				},
-				"site-render": {
-					Defaults: &ComponentTypeDefaults{
-						InjectPrerequisite: "base-site",
-					},
-				},
-			},
-		}
-
-		m.injectPrerequisiteComponents(compTypes)
-
-		// Verify all three base components were injected
-		expected := []string{"tutorials-base", "howto-base", "reference-base"}
-		for _, name := range expected {
-			if !m.Components.HasComponent(name) {
-				t.Errorf("Expected %s to be injected", name)
-			}
-		}
-	})
-}
-
-func TestDerivePrerequisiteName(t *testing.T) {
-	tests := []struct {
-		compName   string
-		prereqType string
-		want       string
-	}{
-		{"tutorials", "base-site", "tutorials-base"},
-		{"howto", "base-site", "howto-base"},
-		{"reference", "base-site", "reference-base"},
-		{"foo", "other-type", "foo-other-type"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.compName+"_"+tt.prereqType, func(t *testing.T) {
-			got := derivePrerequisiteName(tt.compName, tt.prereqType)
-			if got != tt.want {
-				t.Errorf("derivePrerequisiteName(%q, %q) = %q, want %q",
-					tt.compName, tt.prereqType, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestComponentTypeDefaultsArtifactPattern(t *testing.T) {
 	tests := []struct {

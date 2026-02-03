@@ -118,9 +118,9 @@ func (h *DockerHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 	isCI := os.Getenv("CI") == "true"
 
 	if isCI {
-		return buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath, tags, logWriter)
+		return buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath, tags, logWriter, opts)
 	}
-	return buildDockerLocal(workspaceRoot, outputDir, dockerfilePath, tags, logWriter)
+	return buildDockerLocal(workspaceRoot, outputDir, dockerfilePath, tags, logWriter, opts)
 }
 
 // buildDockerTags generates the list of tags for a Docker image.
@@ -144,49 +144,37 @@ func buildDockerTags(moniker string, module interfaces.ModuleContractPort) []str
 	return tags
 }
 
-// buildDockerLocal builds a Docker image locally using BuildKit for cache support.
-func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
-	// Check for Docker-in-Docker mode
-	isDinD := IsDockerInDocker()
-	var contextPath, dockerfileArg string
+// buildDockerLocal builds a Docker image locally using buildx with the docker driver.
+// Always uses buildx for consistent behavior and BuildKit features.
+func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer, opts BuildOptions) int {
+	// Always use buildx with the default builder (docker driver).
+	// The docker driver builds directly in Docker daemon - no slow tarball export.
+	// This avoids the docker-container driver which requires exporting images.
+	args := []string{"buildx", "build", "--builder", "default"}
 
-	if isDinD {
-		// In DinD mode, the Docker daemon runs on the host but the client runs in the container.
-		// The client needs to tar up the build context locally before sending to the daemon.
-		// We use the container's mounted path (workspaceRoot = /var/task) as context because
-		// the client can access it. The daemon receives the tarred context and builds locally.
-		Logln(logWriter, "   Docker-in-Docker: using container path %s", workspaceRoot)
-		contextPath = workspaceRoot
-		dockerfileArg = dockerfilePath
-	} else {
-		contextPath = workspaceRoot
-		dockerfileArg = dockerfilePath
+	// Apply cache flags from CacheConfig
+	if opts.CacheConfig != nil {
+		// --skip-cache=local:layer -> --no-cache (bypass BuildKit layer cache)
+		if opts.CacheConfig.ShouldForceNoCacheDocker() {
+			args = append(args, "--no-cache")
+			Logln(logWriter, "   Cache: --no-cache (local:layer skipped)")
+		}
+		// --skip-cache=local:registry -> --pull (force fresh base images)
+		if opts.CacheConfig.ShouldForcePull() {
+			args = append(args, "--pull")
+			Logln(logWriter, "   Cache: --pull (local:registry skipped)")
+		}
 	}
 
-	// Build docker command with all tags
-	// In DinD mode, use regular 'docker build' instead of 'docker buildx build' because
-	// buildx is not always available in container images. Regular build with BuildKit
-	// still supports --mount=type=cache directives in Dockerfiles.
-	var args []string
-	if isDinD {
-		args = []string{"build"}
-	} else {
-		args = []string{"buildx", "build"}
-	}
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfileArg)
-	if !isDinD {
-		// --load is buildx-specific flag to load image into local docker daemon
-		args = append(args, "--load")
-	}
-	args = append(args, contextPath)
+	args = append(args, "-f", dockerfilePath)
+	// --load loads the image into local docker daemon (required for buildx)
+	args = append(args, "--load")
+	args = append(args, workspaceRoot)
 
-	Logln(logWriter, "   Context: %s", contextPath)
-	Logln(logWriter, "   Dockerfile: %s", dockerfileArg)
-
-	// Use buildx (when available) to enable BuildKit cache mounts (RUN --mount=type=cache)
+	// Use buildx to enable BuildKit cache mounts (RUN --mount=type=cache)
 	// This significantly speeds up subsequent builds by caching Go modules and build artifacts
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 
@@ -210,7 +198,7 @@ func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []st
 }
 
 // buildDockerCI builds a Docker image in CI with multi-platform support.
-func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
+func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer, opts BuildOptions) int {
 	// Default CI platforms
 	ciPlatforms := "linux/amd64,linux/arm64"
 
@@ -218,15 +206,37 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 	isGitHubActions := os.Getenv("GITHUB_ACTIONS") == "true"
 
 	// Build docker command with all tags for single-platform
+	// Use default builder (docker driver) for single-platform - faster than docker-container driver
 	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
-	args := []string{"buildx", "build", "--platform", "linux/amd64"}
+	args := []string{"buildx", "build", "--builder", "default", "--platform", "linux/amd64"}
+
+	// Apply cache flags from CacheConfig
+	if opts.CacheConfig != nil {
+		// --skip-cache=local:layer -> --no-cache (bypass BuildKit layer cache)
+		if opts.CacheConfig.ShouldForceNoCacheDocker() {
+			args = append(args, "--no-cache")
+			Logln(logWriter, "   Cache: --no-cache (local:layer skipped)")
+		}
+		// --skip-cache=local:registry -> --pull (force fresh base images)
+		if opts.CacheConfig.ShouldForcePull() {
+			args = append(args, "--pull")
+			Logln(logWriter, "   Cache: --pull (local:registry skipped)")
+		}
+	}
+
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
 	args = append(args, "-f", dockerfilePath)
 
 	// Only use GitHub Actions cache when actually running in GitHub Actions
-	if isGitHubActions {
+	// --skip-cache=remote:layer disables GHA cache
+	useGHACache := isGitHubActions
+	if opts.CacheConfig != nil && opts.CacheConfig.ShouldSkipRemoteLayer() {
+		useGHACache = false
+		Logln(logWriter, "   Cache: GHA cache disabled (remote:layer skipped)")
+	}
+	if useGHACache {
 		args = append(args, "--cache-from", "type=gha", "--cache-to", "type=gha,mode=max")
 	}
 
@@ -246,13 +256,25 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 
 	// Build multi-platform with all tags
 	args = []string{"buildx", "build", "--platform", ciPlatforms}
+
+	// Apply cache flags from CacheConfig
+	if opts.CacheConfig != nil {
+		if opts.CacheConfig.ShouldForceNoCacheDocker() {
+			args = append(args, "--no-cache")
+		}
+		if opts.CacheConfig.ShouldForcePull() {
+			args = append(args, "--pull")
+		}
+	}
+
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
 	args = append(args, "-f", dockerfilePath)
 
 	// Only use GitHub Actions cache when actually running in GitHub Actions
-	if isGitHubActions {
+	// unless --skip-cache=remote:layer is set
+	if useGHACache {
 		args = append(args, "--cache-from", "type=gha")
 	}
 

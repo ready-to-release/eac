@@ -172,11 +172,14 @@ func extractFromZAPScan(zapFile string) []VulnerabilityInput {
 
 // BuildModuleContext builds context about the module for AI analysis.
 func BuildModuleContext(moduleName string, registry *modules.Registry, satisfiedControls []string) ModuleContext {
+	// Determine criticality by module moniker (from risk-config.yml, falls back to _default)
+	criticality := GetRiskScoringConfig().GetCriticality(moduleName)
+
 	if registry == nil {
 		// Return default context if registry not available
 		return ModuleContext{
-			ModuleType:       "service",
-			Criticality:      "medium",
+			ComponentType:    "service",
+			Criticality:      criticality,
 			ExistingControls: satisfiedControls,
 		}
 	}
@@ -185,37 +188,27 @@ func BuildModuleContext(moduleName string, registry *modules.Registry, satisfied
 	module, exists := registry.Get(moduleName)
 	if !exists || module == nil {
 		return ModuleContext{
-			ModuleType:       "service",
-			Criticality:      "medium",
+			ComponentType:    "service",
+			Criticality:      criticality,
 			ExistingControls: satisfiedControls,
 		}
 	}
 
-	// Extract primary package type for risk assessment
-	// Use first buildable package type for criticality determination
-	moduleType := "service" // default
+	// Extract primary component type for context (informational only)
+	componentType := "service" // default
 	if module.HasComponent("go") {
-		moduleType = "go"
+		componentType = "go"
 	} else if module.HasComponent("typescript") {
-		moduleType = "typescript"
+		componentType = "typescript"
 	} else if module.HasComponent("dockerfile") {
-		moduleType = "dockerfile"
+		componentType = "dockerfile"
 	}
 
-	// Determine criticality based on package type
-	criticality := determineCriticality(moduleType)
-
 	return ModuleContext{
-		ModuleType:       moduleType,
+		ComponentType:    componentType,
 		Criticality:      criticality,
 		ExistingControls: satisfiedControls,
 	}
-}
-
-// determineCriticality maps module type to criticality level.
-// Uses configurable mappings from risk-config.yml.
-func determineCriticality(moduleType string) string {
-	return GetRiskScoringConfig().GetCriticality(moduleType)
 }
 
 // Helper functions

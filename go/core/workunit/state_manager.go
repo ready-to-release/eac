@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/cache"
 )
 
 // StateManager handles persistence of unit states.
@@ -55,7 +57,13 @@ func (m *StateManager) Save(state *UnitState) error {
 // NeedsExecution determines if a unit needs to be executed based on its
 // cached state and the provided invalidation rule.
 // Returns (true, reason) if execution is needed, (false, "") otherwise.
-func (m *StateManager) NeedsExecution(spec UnitSpec, rule InvalidationRule, currentHash string) (bool, string) {
+// If cacheConfig is provided and state cache is skipped, always returns true.
+func (m *StateManager) NeedsExecution(spec UnitSpec, rule InvalidationRule, currentHash string, cacheConfig *cache.Config) (bool, string) {
+	// If state cache is skipped, always execute
+	if cacheConfig != nil && cacheConfig.ShouldSkipState() {
+		return true, "cache skipped (--skip-cache=state)"
+	}
+
 	state, err := m.Load(spec.ID)
 	if err != nil {
 		return true, "no prior state"
@@ -112,13 +120,24 @@ type HashProvider func(spec UnitSpec) (string, error)
 // DetectChanges performs batch change detection for multiple units.
 // Uses the provided HashProvider to compute current hashes.
 // Returns which units need execution and which are up-to-date.
-func (m *StateManager) DetectChanges(specs []UnitSpec, rule InvalidationRule, hashProvider HashProvider) (*ChangeResult, error) {
+// If cacheConfig is provided and state cache is skipped, all units are marked as changed.
+func (m *StateManager) DetectChanges(specs []UnitSpec, rule InvalidationRule, hashProvider HashProvider, cacheConfig *cache.Config) (*ChangeResult, error) {
 	start := time.Now()
 	result := &ChangeResult{
 		ChangeReasons: make(map[string]string),
 	}
 
 	if len(specs) == 0 {
+		result.DetectionTime = time.Since(start)
+		return result, nil
+	}
+
+	// If state cache is skipped, all units need execution
+	if cacheConfig != nil && cacheConfig.ShouldSkipState() {
+		for _, spec := range specs {
+			result.Changed = append(result.Changed, spec)
+			result.ChangeReasons[spec.ID.Longname()] = "cache skipped (--skip-cache=state)"
+		}
 		result.DetectionTime = time.Since(start)
 		return result, nil
 	}
@@ -156,7 +175,7 @@ func (m *StateManager) DetectChanges(specs []UnitSpec, rule InvalidationRule, ha
 			}
 		}
 
-		needsExec, reason := m.NeedsExecution(spec, rule, currentHash)
+		needsExec, reason := m.NeedsExecution(spec, rule, currentHash, cacheConfig)
 		if needsExec {
 			result.Changed = append(result.Changed, spec)
 			result.ChangeReasons[spec.ID.Longname()] = reason
@@ -244,13 +263,24 @@ type ModuleHashProvider func(module string) (string, error)
 // DetectModuleChanges performs change detection at module granularity.
 // This is a convenience method that wraps per-unit state checks into module-level results.
 // For each module, it creates a representative unit ID and checks its state.
-func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule InvalidationRule, hashProvider ModuleHashProvider) (*ModuleChangeResult, error) {
+// If cacheConfig is provided and state cache is skipped, all modules are marked as changed.
+func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule InvalidationRule, hashProvider ModuleHashProvider, cacheConfig *cache.Config) (*ModuleChangeResult, error) {
 	start := time.Now()
 	result := &ModuleChangeResult{
 		ChangeReasons: make(map[string]string),
 	}
 
 	if len(modules) == 0 {
+		result.DetectionTime = time.Since(start)
+		return result, nil
+	}
+
+	// If state cache is skipped, all modules need execution
+	if cacheConfig != nil && cacheConfig.ShouldSkipState() {
+		result.ChangedModules = append(result.ChangedModules, modules...)
+		for _, module := range modules {
+			result.ChangeReasons[module] = "cache skipped (--skip-cache=state)"
+		}
 		result.DetectionTime = time.Since(start)
 		return result, nil
 	}
@@ -303,7 +333,7 @@ func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule I
 			}
 		}
 
-		needsExec, reason := m.NeedsExecution(spec, rule, currentHash)
+		needsExec, reason := m.NeedsExecution(spec, rule, currentHash, cacheConfig)
 		if needsExec {
 			result.ChangedModules = append(result.ChangedModules, module)
 			result.ChangeReasons[module] = reason
@@ -374,11 +404,13 @@ type TestChangeResult struct {
 // DetectTestModuleChanges performs test-set-aware change detection for modules.
 // For unit tests (L0/L1): only direct module changes trigger retest.
 // For integration tests (L2+): direct AND transitive dependency changes trigger retest.
+// If cacheConfig is provided and state cache is skipped, all modules are marked as needing test.
 func (m *StateManager) DetectTestModuleChanges(
 	moduleInfo map[string]TestModuleInfo,
 	testSet TestSet,
 	hashProvider ModuleHashProvider,
 	loadDepBuildID DependencyBuildIDLoader,
+	cacheConfig *cache.Config,
 ) (*TestChangeResult, error) {
 	start := time.Now()
 	rule := GetRuleForTestSet(testSet)
@@ -389,6 +421,17 @@ func (m *StateManager) DetectTestModuleChanges(
 	}
 
 	if len(moduleInfo) == 0 {
+		result.DetectionTime = time.Since(start)
+		return result, nil
+	}
+
+	// If state cache is skipped, all modules need testing
+	if cacheConfig != nil && cacheConfig.ShouldSkipState() {
+		for moniker := range moduleInfo {
+			result.ModulesNeedingTest = append(result.ModulesNeedingTest, moniker)
+			result.ChangeReasons[moniker] = "cache skipped (--skip-cache=state)"
+		}
+		sort.Strings(result.ModulesNeedingTest)
 		result.DetectionTime = time.Since(start)
 		return result, nil
 	}

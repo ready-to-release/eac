@@ -32,7 +32,7 @@
   <a href="https://github.com/ready-to-release/eac/releases?q=howto+pdf"><img src="https://img.shields.io/badge/how--to-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="howto"></a>
   <a href="https://github.com/ready-to-release/eac/releases?q=explanation+pdf"><img src="https://img.shields.io/badge/explanation-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="explanation"></a>
   <a href="https://github.com/ready-to-release/eac/releases?q=specifications+pdf"><img src="https://img.shields.io/badge/specifications-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="specifications"></a>
-  <a href="https://github.com/ready-to-release/eac/releases?q=repository-report+pdf"><img src="https://img.shields.io/badge/repo--report-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="repository-report"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=report+pdf"><img src="https://img.shields.io/badge/repo--report-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="report"></a>
 </p>
 
 ---

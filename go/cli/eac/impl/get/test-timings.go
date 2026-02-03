@@ -74,6 +74,24 @@ func GetTestTimings() int {
 		return 1
 	}
 
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			fmt.Println("Get test timing metrics from test output logs")
+			fmt.Println("\nUsage: get test-timings [flags]")
+			fmt.Println("\nFlags:")
+			fmt.Println("  --as-yaml    Output as YAML (default)")
+			fmt.Println("  --as-json    Output as JSON")
+			fmt.Println("  --as-toml    Output as TOML")
+			fmt.Println("  -h, --help   Show this help message")
+			fmt.Println("\nOutput:")
+			fmt.Println("  Per-scenario timing data with duration and status")
+			fmt.Println("  Aggregated statistics by module")
+			fmt.Println("  Overall summary with total/passed/failed tests")
+			return 0
+		}
+	}
+
 	return GetTestTimingsFiltered(nil)
 }
 

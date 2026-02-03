@@ -17,7 +17,7 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-render-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
+  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
@@ -378,9 +378,9 @@ container-tools:
       cpus: 4
       memory: "4g"
 
-  pdf-render-tool:
+  pdf-tool:
     description: "MkDocs PDF generation with Playwright"
-    localPath: containers/pdf-render-tool
+    localPath: containers/pdf-tool
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -623,7 +623,7 @@ component-tools:
     builder: site-render-tool
 
   pdf-render:
-    builder: pdf-render-tool
+    builder: pdf-tool
 
   design:
     server: structurizr-lite

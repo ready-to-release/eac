@@ -70,6 +70,51 @@ type Config struct {
 	RunPhaseName string // Custom name for Run phase (e.g., "building")
 	CommandName  string // Name of the command being run
 	CommandType  string // "build", "test", "lint", "scan", "interactive"
+
+	// Advanced Configuration (optional)
+	TUIConfig *TUIConfig // Timeout and layout configuration (nil = use defaults)
+}
+
+// TUIConfig holds all configurable TUI parameters.
+// This is passed to console.NewModel to avoid global state and enable testing.
+type TUIConfig struct {
+	// Timeouts
+	MetricsInterval  time.Duration // How often to refresh CPU/memory metrics (default: 500ms)
+	MinDisplayTime   time.Duration // Minimum time to show completion state (default: 1500ms)
+	ExitCountdown    time.Duration // Exit countdown duration (default: 10s)
+	FreezeCountdown  time.Duration // Extended countdown when Freeze clicked (default: 120s)
+	AutoScrollResume time.Duration // Auto-scroll resume delay (default: 8s)
+
+	// Layout
+	MaxTabs           int // Maximum visible tabs before scrolling (default: 36)
+	DefaultColumns    int // Default number of tab columns (default: 4)
+	MinColumns        int // Minimum tab columns (default: 2)
+	MaxColumns        int // Maximum tab columns (default: 6)
+	BufferSizePane    int // Buffer size for each pane (default: 500)
+	BufferSizeResults int // Buffer size for results (default: 100)
+	BufferSizeUoW     int // Buffer size per UoW (default: 200)
+}
+
+// DefaultTUIConfig returns the default TUI configuration.
+// These values match the current hardcoded values in the console.
+func DefaultTUIConfig() *TUIConfig {
+	return &TUIConfig{
+		// Timeouts
+		MetricsInterval:  500 * time.Millisecond,
+		MinDisplayTime:   1500 * time.Millisecond,
+		ExitCountdown:    10 * time.Second,
+		FreezeCountdown:  120 * time.Second,
+		AutoScrollResume: 8 * time.Second,
+
+		// Layout
+		MaxTabs:           36,
+		DefaultColumns:    4,
+		MinColumns:        2,
+		MaxColumns:        6,
+		BufferSizePane:    500,
+		BufferSizeResults: 100,
+		BufferSizeUoW:     200,
+	}
 }
 
 // Level represents the severity level of an output line.
@@ -100,6 +145,16 @@ type Status struct {
 	Total       int
 	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
 	TotalLayers int // Total number of layers (0 = not using layers)
+
+	// Capacity tracking for the three-value model:
+	// - Running: sum of weights currently executing (derived from UoW states)
+	// - Roof: hard ceiling - actual peak allocation (workers spawned at start)
+	// - PressureTarget: dynamic optimal capacity based on RAM/CPU
+	//
+	// Display: "Cap: ●●●●●●●●●●●●●●●●●●●●●●●● 24/24 [▼16]"
+	//          where 24/24 = running/roof, [▼16] = pressure target
+	Roof           int // Hard ceiling - peak allocation (set at scheduler start)
+	PressureTarget int // Dynamic optimal capacity (may be < Roof under memory pressure)
 
 	// Detailed lock tracking info (from locktracker.Registry)
 	Locks []LockStatus // Individual lock states

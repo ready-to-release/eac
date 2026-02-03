@@ -407,9 +407,9 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
 	result.Duration = time.Since(startTime)
 
-	// Set module type from config if available
-	if o.config.ModuleTypes != nil {
-		if t, ok := o.config.ModuleTypes[item.Moniker]; ok {
+	// Set component type from config if available
+	if o.config.ComponentTypesDisplay != nil {
+		if t, ok := o.config.ComponentTypesDisplay[item.Moniker]; ok {
 			result.Type = t
 		}
 	}
@@ -832,10 +832,10 @@ func (o *Orchestrator) SetWorker(worker WorkerFunc) {
 	o.worker = worker
 }
 
-// SetModuleTypes updates the module types map in the config.
-// Useful when module types are determined after orchestrator creation.
-func (o *Orchestrator) SetModuleTypes(moduleTypes map[string]string) {
-	o.config.ModuleTypes = moduleTypes
+// SetComponentTypesDisplay updates the component types display map in the config.
+// Useful when component types are determined after orchestrator creation.
+func (o *Orchestrator) SetComponentTypesDisplay(componentTypes map[string]string) {
+	o.config.ComponentTypesDisplay = componentTypes
 }
 
 // SetMaxConcurrency updates the maximum concurrency for subsequent Run calls.

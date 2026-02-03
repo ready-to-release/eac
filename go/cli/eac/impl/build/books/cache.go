@@ -7,14 +7,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // AssetCache provides content-addressable caching for expensive operations
 // like mermaid SVG rendering. Uses SHA256 hashing for cache keys.
 type AssetCache struct {
-	cacheRoot string
-	stats     CacheStats
+	cacheRoot   string
+	cacheConfig *cache.Config
+	stats       CacheStats
 }
 
 // CacheStats tracks cache hit/miss statistics for reporting
@@ -46,17 +48,27 @@ type DrawioCacheKey struct {
 
 // NewAssetCache creates a new asset cache rooted at docs/assets/cache
 // This cache is git-tracked for CI optimization (pre-rendered mermaid diagrams)
-func NewAssetCache(workspaceRoot string) *AssetCache {
+// cacheConfig controls whether to skip the cache (--skip-cache=asset).
+func NewAssetCache(workspaceRoot string, cacheConfig *cache.Config) *AssetCache {
 	return &AssetCache{
-		cacheRoot: paths.DocsCachePath(workspaceRoot),
+		cacheRoot:   paths.DocsCachePath(workspaceRoot),
+		cacheConfig: cacheConfig,
 	}
 }
 
 // GetMermaid checks if a mermaid SVG is already cached
 // Returns: (cachePath, cacheHit)
+// If --skip-cache=asset is set, always returns cache miss to force regeneration.
 func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 	hash := c.hashMermaid(key)
 	cachePath := paths.MermaidCachePath(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
+
+	// Skip cache if --skip-cache=asset is set
+	if c.cacheConfig != nil && c.cacheConfig.ShouldSkipAsset() {
+		c.stats.MermaidMisses++
+		log.Debugf("cache: mermaid SKIP (--skip-cache=asset) block=%d hash=%s", key.BlockIndex, hash[:8])
+		return cachePath, false
+	}
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.MermaidHits++
@@ -107,9 +119,17 @@ func HashMermaidKey(key MermaidCacheKey) string {
 
 // GetDrawio checks if an optimized drawio PNG is already cached
 // Returns: (cachePath, cacheHit)
+// If --skip-cache=asset is set, always returns cache miss to force regeneration.
 func (c *AssetCache) GetDrawio(key DrawioCacheKey) (string, bool) {
 	hash := c.hashDrawio(key)
 	cachePath := paths.DrawioCachePath(c.cacheRoot, key.SourcePath, hash)
+
+	// Skip cache if --skip-cache=asset is set
+	if c.cacheConfig != nil && c.cacheConfig.ShouldSkipAsset() {
+		c.stats.DrawioMisses++
+		log.Debugf("cache: drawio SKIP (--skip-cache=asset) hash=%s", hash[:8])
+		return cachePath, false
+	}
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.DrawioHits++

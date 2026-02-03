@@ -331,16 +331,35 @@ func buildExecutionTreeFromUnits(ctx *ExecutionContext, s *initsummary.Summary) 
 		return nil
 	}
 
+	// Initialize Extra map if needed
+	if ctx.Config.Extra == nil {
+		ctx.Config.Extra = make(map[string]interface{})
+	}
+
+	// First check if UnitSpecs are cached (populated by UnitLayersProvider during phaseVerify)
+	// This ensures we use the same data that was used for component layers
+	// Check both the command-specific cache key (e.g., "componentWorkLayers" for build)
+	// and the generic cache key used by this function
+	if cached, ok := ctx.Config.Extra["componentWorkLayers"].([][]workunit.UnitSpec); ok && len(cached) > 0 {
+		return buildTreeFromUnitSpecs(s.ExecutionLayers, cached)
+	}
+	if cached, ok := ctx.Config.Extra["unitSpecsCache"].([][]workunit.UnitSpec); ok && len(cached) > 0 {
+		return buildTreeFromUnitSpecs(s.ExecutionLayers, cached)
+	}
+
 	// Try to get UoWs from UnitProvider for proper ID generation
 	provider := GetUnitProvider(ctx.Config.Type)
 	if provider != nil {
 		unitLayers := provider(ctx)
 		if len(unitLayers) > 0 {
+			// Cache for subsequent calls (e.g., from scheduler if called again)
+			ctx.Config.Extra["unitSpecsCache"] = unitLayers
 			return buildTreeFromUnitSpecs(s.ExecutionLayers, unitLayers)
 		}
 	}
 
 	// Fallback: build from ComponentExecutionLayers strings (legacy path)
+	// Note: This path uses hardcoded Weight=1 and simplified ID format
 	return buildTreeFromStrings(s)
 }
 

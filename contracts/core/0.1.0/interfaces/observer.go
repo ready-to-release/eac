@@ -131,6 +131,10 @@ type ProgressUpdateEvent struct {
 	Total        int
 	CurrentLayer int // 0 if not using layers
 	TotalLayers  int // 0 if not using layers
+
+	// Capacity tracking (three-value model)
+	Roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
+	PressureTarget int // Dynamic optimal capacity (may be < Roof under memory pressure)
 }
 
 func (e ProgressUpdateEvent) EventType() string    { return "progress_update" }

@@ -23,9 +23,10 @@ func init() {
 	// RegisterHandler(&MkDocsHandler{})
 }
 
-// resolveHostRepoRoot returns the correct repo root path for Docker operations.
+// ResolveHostRepoRoot returns the correct repo root path for Docker operations.
 // In Docker-in-Docker mode, uses R2R_HOST_REPOROOT environment variable if set.
-func resolveHostRepoRoot(containerRoot string, logWriter io.Writer) string {
+// Exported for use by mkdocs/pdf.go handler.
+func ResolveHostRepoRoot(containerRoot string, logWriter io.Writer) string {
 	if !IsDockerInDocker() {
 		return containerRoot
 	}
@@ -89,17 +90,15 @@ func formatDockerShm(containerMemory int64) string {
 }
 
 // getEffectiveWeight returns the scheduling weight for a component type.
-// Returns the tool's Resources.CPUs if available, otherwise default of 4.
+// Returns the component type's resources.cpus from component-types.yml.
 func getEffectiveWeight(componentType string) int {
-	bridge := tool.GlobalBuildBridge()
-	if bridge != nil {
-		if t := bridge.ResolveTool(componentType, tool.OperationBuild); t != nil {
-			if t.Resources != nil && t.Resources.CPUs > 0 {
-				return t.Resources.CPUs
-			}
+	cfg := config.Global()
+	if cfg != nil && cfg.ComponentTypes != nil {
+		if ct := cfg.ComponentTypes.Get(componentType); ct != nil {
+			return ct.GetWeight()
 		}
 	}
-	return 4 // default for PDF builds
+	return 1 // default weight
 }
 
 // calculateWeightedMemory calculates container memory allocation based on weight.
@@ -158,15 +157,15 @@ type mkdocsDockerConfig struct {
 }
 
 // getMkDocsDockerConfig resolves docker configuration from module first, then type, then defaults.
-// For PDF builds, always use pdf-render-tool container (module config only applies to site builds).
+// For PDF builds, always use pdf-tool container (module config only applies to site builds).
 // For site builds, module docker_build config is respected.
 func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string, isPDF bool) mkdocsDockerConfig {
 	// Defaults based on output type
 	// Use :local tag for local builds to match what buildx creates
 	var defaultImage, defaultContainer string
 	if isPDF {
-		defaultImage = "pdf-render-tool:local"
-		defaultContainer = "pdf-render-tool"
+		defaultImage = "pdf-tool:local"
+		defaultContainer = "pdf-tool"
 	} else {
 		defaultImage = "site-render-tool:local"
 		defaultContainer = "site-render-tool"
@@ -178,7 +177,7 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 	}
 
 	// For PDF builds, always use the PDF container - don't let module config override
-	// PDF requires specific plugins (mkdocs-exporter, playwright) only in pdf-render-tool container
+	// PDF requires specific plugins (mkdocs-exporter, playwright) only in pdf-tool container
 	if isPDF {
 		cfg.ContextPath = filepath.Join(workspaceRoot, "containers", cfg.ContainerDir)
 		cfg.DockerfilePath = filepath.Join(cfg.ContextPath, "Dockerfile")
@@ -400,7 +399,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	}
 
 	// For Docker-in-Docker: use host path for volume mount
-	hostRepoRoot := resolveHostRepoRoot(workspaceRoot, logWriter)
+	hostRepoRoot := ResolveHostRepoRoot(workspaceRoot, logWriter)
 	isDinD := IsDockerInDocker()
 
 	// Get docker configuration from module first, then type, then defaults
@@ -512,7 +511,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 // - Devbox: Build from Dockerfile if stale
 // - CI: Pull from GHCR
 func ensureMkDocsImage(imageName, workspaceRoot, contextPath string, logWriter io.Writer) error {
-	// Extract container name from image (e.g., "pdf-render-tool:local" -> "pdf-render-tool")
+	// Extract container name from image (e.g., "pdf-tool:local" -> "pdf-tool")
 	containerName := strings.Split(imageName, ":")[0]
 
 	// Create ImageManager for local container handling
@@ -623,7 +622,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
 	// For Docker-in-Docker: use host path for volume mount
-	hostRepoRoot := resolveHostRepoRoot(workspaceRoot, logWriter)
+	hostRepoRoot := ResolveHostRepoRoot(workspaceRoot, logWriter)
 	isDinD := IsDockerInDocker()
 
 	// Get docker configuration from module first, then type, then defaults (PDF mode)
@@ -734,7 +733,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 
 	Logln(logWriter, "📄 Merging individual PDFs...")
 
-	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription, logWriter, isDinD); err != nil {
+	if err := MergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription, logWriter, isDinD); err != nil {
 		Logln(logWriter, "❌ PDF merge failed: %v", err)
 		return 1
 	}

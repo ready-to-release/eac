@@ -37,8 +37,8 @@ func TestExtractVulnerabilityFindings_EmptySecurityResults(t *testing.T) {
 func TestBuildModuleContext_NilRegistry(t *testing.T) {
 	ctx := BuildModuleContext("test-module", nil, []string{"ac-2", "ac-3"})
 
-	assert.Equal(t, "service", ctx.ModuleType)
-	assert.Equal(t, "medium", ctx.Criticality)
+	assert.Equal(t, "service", ctx.ComponentType)
+	assert.Equal(t, "medium", ctx.Criticality) // Uses _default from config
 	assert.Equal(t, []string{"ac-2", "ac-3"}, ctx.ExistingControls)
 }
 
@@ -47,8 +47,8 @@ func TestBuildModuleContext_ModuleNotFound(t *testing.T) {
 
 	ctx := BuildModuleContext("nonexistent", registry, []string{"ac-2"})
 
-	assert.Equal(t, "service", ctx.ModuleType)
-	assert.Equal(t, "medium", ctx.Criticality)
+	assert.Equal(t, "service", ctx.ComponentType)
+	assert.Equal(t, "medium", ctx.Criticality) // Uses _default from config
 	assert.Equal(t, []string{"ac-2"}, ctx.ExistingControls)
 }
 
@@ -68,66 +68,10 @@ func TestBuildModuleContext_WithModule(t *testing.T) {
 
 	ctx := BuildModuleContext("api-gateway", registry, []string{"ia-2", "ia-5"})
 
-	// Module type is determined by component type (go), criticality defaults to medium
-	assert.Equal(t, "go", ctx.ModuleType)
-	assert.Equal(t, "medium", ctx.Criticality)
+	// Component type is determined by component (go), criticality is looked up by moniker
+	assert.Equal(t, "go", ctx.ComponentType)
+	assert.Equal(t, "medium", ctx.Criticality) // Uses _default (api-gateway not in config)
 	assert.Equal(t, []string{"ia-2", "ia-5"}, ctx.ExistingControls)
-}
-
-func TestDetermineCriticality(t *testing.T) {
-	tests := []struct {
-		name       string
-		moduleType string
-		expected   string
-	}{
-		{
-			name:       "API is high criticality",
-			moduleType: "api",
-			expected:   "high",
-		},
-		{
-			name:       "Gateway is high criticality",
-			moduleType: "gateway",
-			expected:   "high",
-		},
-		{
-			name:       "Service is high criticality",
-			moduleType: "service",
-			expected:   "high",
-		},
-		{
-			name:       "Core is medium criticality",
-			moduleType: "core",
-			expected:   "medium",
-		},
-		{
-			name:       "Library is medium criticality",
-			moduleType: "library",
-			expected:   "medium",
-		},
-		{
-			name:       "CLI is low criticality",
-			moduleType: "cli",
-			expected:   "low",
-		},
-		{
-			name:       "Tool is low criticality",
-			moduleType: "tool",
-			expected:   "low",
-		},
-		{
-			name:       "Unknown defaults to medium",
-			moduleType: "unknown",
-			expected:   "medium",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := determineCriticality(tt.moduleType)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }
 
 func TestMapGoSecSeverity(t *testing.T) {

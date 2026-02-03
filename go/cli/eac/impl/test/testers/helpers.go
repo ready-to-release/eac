@@ -139,35 +139,6 @@ func GenerateGherkinSummaryMarkdown(moniker, workspaceRoot, outputDir string, lo
 	Writeln(logWriter, "✅ Generated: %s", appendixPath)
 }
 
-// GenerateUnitTestSummaryMarkdown generates summary_unit.md from go test output.
-func GenerateUnitTestSummaryMarkdown(moniker, moduleType, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
-	summaryPath := filepath.Join(outputDir, "summary_unit.md")
-
-	var summary string
-	summary += "## Unit Test Summary\n\n"
-	summary += fmt.Sprintf("**Module**: %s\n", moniker)
-	summary += fmt.Sprintf("**Type**: %s\n", moduleType)
-
-	if exitCode == 0 {
-		summary += "**Status**: ✅ Passed\n\n"
-	} else {
-		summary += "**Status**: ❌ Failed\n\n"
-	}
-
-	summary += "### Test Output\n\n"
-	summary += "```\n"
-	summary += testOutput
-	summary += "\n```\n"
-
-	// Write summary_unit.md
-	if err := os.WriteFile(summaryPath, []byte(summary), 0o644); err != nil {
-		Writeln(logWriter, "Warning: failed to write summary_unit.md: %v", err)
-		return
-	}
-
-	Writeln(logWriter, "✅ Generated: %s", summaryPath)
-}
-
 // FindModulesWithResults finds all subdirectories containing cucumber.json.
 func FindModulesWithResults(testRunDir string) ([]string, error) {
 	entries, err := os.ReadDir(testRunDir)

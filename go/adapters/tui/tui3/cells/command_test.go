@@ -37,9 +37,9 @@ func TestCommandCell_Render(t *testing.T) {
 			modules:  []string{"contracts", "core", "eac-cli", "docs", "ai-adapter", "tui-adapter"},
 			width:    40,
 			// 40 - 4 = 36 max before truncation
-			// "build contracts core" = 24 <= 36
-			// "build contracts core eac-cli" = 38 > 36, truncate
-			expected: "build contracts core ...",
+			// "build contracts core eac-cli docs" = 33 <= 36, fits
+			// "build contracts core eac-cli docs ai-adapter" = 44 > 36, truncate
+			expected: "build contracts core eac-cli docs ...",
 		},
 		{
 			name:     "truncate very narrow",

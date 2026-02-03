@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -336,7 +337,7 @@ func TestStateManager_NeedsExecution_NoStateExists(t *testing.T) {
 	}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	needs, reason := manager.NeedsExecution(spec, rule, "current-hash")
+	needs, reason := manager.NeedsExecution(spec, rule, "current-hash", nil)
 
 	assert.True(t, needs, "Should need execution when no prior state exists")
 	assert.Equal(t, "no prior state", reason)
@@ -367,7 +368,7 @@ func TestStateManager_NeedsExecution_PreviousFailure(t *testing.T) {
 	spec := UnitSpec{ID: unitID}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:same-hash")
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:same-hash", nil)
 
 	assert.True(t, needs, "Should need execution when previous run failed")
 	assert.Equal(t, "previous failure", reason)
@@ -398,7 +399,7 @@ func TestStateManager_NeedsExecution_PreviousFailure_RuleDisabled(t *testing.T) 
 	spec := UnitSpec{ID: unitID}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: false} // OnFailure disabled
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:same-hash")
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:same-hash", nil)
 
 	assert.False(t, needs, "Should NOT need execution when OnFailure is false")
 	assert.Empty(t, reason)
@@ -428,7 +429,7 @@ func TestStateManager_NeedsExecution_SourceChanged(t *testing.T) {
 	spec := UnitSpec{ID: unitID}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash") // Different hash
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash", nil) // Different hash
 
 	assert.True(t, needs, "Should need execution when source hash changed")
 	assert.Equal(t, "source changed", reason)
@@ -458,7 +459,7 @@ func TestStateManager_NeedsExecution_SourceChanged_RuleDisabled(t *testing.T) {
 	spec := UnitSpec{ID: unitID}
 	rule := InvalidationRule{OnSourceChange: false, OnFailure: true} // OnSourceChange disabled
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash")
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash", nil)
 
 	assert.False(t, needs, "Should NOT need execution when OnSourceChange is false")
 	assert.Empty(t, reason)
@@ -488,7 +489,7 @@ func TestStateManager_NeedsExecution_ValidCacheHit(t *testing.T) {
 	spec := UnitSpec{ID: unitID}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:current-hash") // Same hash
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:current-hash", nil) // Same hash
 
 	assert.False(t, needs, "Should NOT need execution when cache is valid")
 	assert.Empty(t, reason, "Reason should be empty when no execution needed")
@@ -522,10 +523,113 @@ func TestStateManager_NeedsExecution_AllRulesDisabled(t *testing.T) {
 		OnFailure:      false,
 	}
 
-	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash")
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:new-hash", nil)
 
 	assert.False(t, needs, "Should NOT need execution when all rules disabled")
 	assert.Empty(t, reason)
+}
+
+func TestStateManager_NeedsExecution_CacheSkipped(t *testing.T) {
+	tmpDir := t.TempDir()
+	manager := NewStateManager(tmpDir)
+
+	unitID := UnitID{
+		Context:   ContextBuild,
+		Module:    "cached-module",
+		Component: "go",
+		Tool:      "go",
+	}
+
+	// Save a successful state with same hash
+	validState := &UnitState{
+		ID:         unitID,
+		SourceHash: "sha256:current-hash",
+		Passed:     true,
+		ExecutedAt: time.Now(),
+	}
+	err := manager.Save(validState)
+	require.NoError(t, err)
+
+	spec := UnitSpec{ID: unitID}
+	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
+
+	// Create cache config that skips state
+	cacheConfig := cache.NewConfig()
+	cacheConfig.Skip(cache.Spec{Level: cache.LevelLocal, Type: cache.TypeState})
+
+	needs, reason := manager.NeedsExecution(spec, rule, "sha256:current-hash", cacheConfig)
+
+	assert.True(t, needs, "Should need execution when cache is skipped")
+	assert.Equal(t, "cache skipped (--skip-cache=state)", reason)
+}
+
+func TestStateManager_DetectChanges_CacheSkipped(t *testing.T) {
+	tmpDir := t.TempDir()
+	manager := NewStateManager(tmpDir)
+
+	// Save state for all specs
+	for _, module := range []string{"mod-a", "mod-b"} {
+		state := &UnitState{
+			ID:         UnitID{Context: ContextBuild, Module: module, Component: "go", Tool: "go"},
+			SourceHash: "hash-" + module,
+			Passed:     true,
+			ExecutedAt: time.Now(),
+		}
+		err := manager.Save(state)
+		require.NoError(t, err)
+	}
+
+	specs := []UnitSpec{
+		{ID: UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"}},
+		{ID: UnitID{Context: ContextBuild, Module: "mod-b", Component: "go", Tool: "go"}},
+	}
+	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
+
+	// Hash provider that returns matching hashes (would normally be cache hit)
+	hashProvider := func(spec UnitSpec) (string, error) {
+		return "hash-" + spec.ID.Module, nil
+	}
+
+	// Create cache config that skips state
+	cacheConfig := cache.NewConfig()
+	cacheConfig.Skip(cache.Spec{Level: cache.LevelAll, Type: cache.TypeState})
+
+	result, err := manager.DetectChanges(specs, rule, hashProvider, cacheConfig)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 2, "All specs should need execution when cache is skipped")
+	assert.Empty(t, result.UpToDate, "No specs should be up-to-date when cache is skipped")
+	assert.Equal(t, "cache skipped (--skip-cache=state)", result.ChangeReasons[specs[0].ID.Longname()])
+}
+
+func TestStateManager_DetectModuleChanges_CacheSkipped(t *testing.T) {
+	tmpDir := t.TempDir()
+	manager := NewStateManager(tmpDir)
+
+	// Save state for all modules
+	for _, module := range []string{"mod-a", "mod-b"} {
+		err := manager.SaveModuleResult(ContextLint, module, true, "hash-"+module)
+		require.NoError(t, err)
+	}
+
+	modules := []string{"mod-a", "mod-b"}
+	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
+
+	// Hash provider that returns matching hashes (would normally be cache hit)
+	hashProvider := func(module string) (string, error) {
+		return "hash-" + module, nil
+	}
+
+	// Create cache config that skips state
+	cacheConfig := cache.NewConfig()
+	cacheConfig.SkipAll()
+
+	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, cacheConfig)
+	require.NoError(t, err)
+
+	assert.Len(t, result.ChangedModules, 2, "All modules should need execution when cache is skipped")
+	assert.Empty(t, result.UpToDateModules, "No modules should be up-to-date when cache is skipped")
+	assert.Equal(t, "cache skipped (--skip-cache=state)", result.ChangeReasons["mod-a"])
 }
 
 // =============================================================================
@@ -673,7 +777,7 @@ func TestStateManager_DetectChanges_FreshRun(t *testing.T) {
 	}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	result, err := manager.DetectChanges(specs, rule, nil)
+	result, err := manager.DetectChanges(specs, rule, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, result.FreshRun, "Should be a fresh run")
@@ -709,7 +813,7 @@ func TestStateManager_DetectChanges_MixedState(t *testing.T) {
 		return "hash-b", nil
 	}
 
-	result, err := manager.DetectChanges(specs, rule, hashProvider)
+	result, err := manager.DetectChanges(specs, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.False(t, result.FreshRun)
@@ -723,7 +827,7 @@ func TestStateManager_DetectChanges_EmptySpecs(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	result, err := manager.DetectChanges(nil, InvalidationRule{}, nil)
+	result, err := manager.DetectChanges(nil, InvalidationRule{}, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, result.FreshRun)
@@ -894,7 +998,7 @@ func TestStateManager_DetectModuleChanges_FreshRun(t *testing.T) {
 	modules := []string{"mod-a", "mod-b", "mod-c"}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, nil)
+	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, result.FreshRun)
@@ -920,7 +1024,7 @@ func TestStateManager_DetectModuleChanges_MixedState(t *testing.T) {
 		return "hash-b", nil
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider)
+	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.False(t, result.FreshRun)
@@ -945,7 +1049,7 @@ func TestStateManager_DetectModuleChanges_SourceChanged(t *testing.T) {
 		return "new-hash", nil // Different hash = needs execution
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider)
+	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.Len(t, result.ChangedModules, 1)
@@ -967,7 +1071,7 @@ func TestStateManager_DetectModuleChanges_PreviousFailure(t *testing.T) {
 		return "hash-a", nil // Same hash but previous failure
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider)
+	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.Len(t, result.ChangedModules, 1)

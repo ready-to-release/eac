@@ -48,14 +48,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/runners"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/platform"
@@ -87,6 +88,9 @@ type TestConfig struct {
 	Turbo        bool // --turbo flag to increase parallelism
 	Roof         int  // --roof flag to limit max parallel capacity
 	ForceRetest  bool // --skip-cache flag to bypass incremental testing
+
+	// Cache Configuration
+	CacheConfig *cache.Config // Fine-grained cache control
 }
 
 // TestExecutionContext holds shared state for parallel test execution.
@@ -155,7 +159,8 @@ func Test() int {
 		SkipTUIDelay:   cfg.SkipTUIDelay,
 		DebugMode:      cfg.DebugMode,
 		ShowTimings:    cfg.ShowTimings,
-		SkipResolve:    true, // Test command manages its own execution plan
+		SkipResolve:    true,            // Test command manages its own execution plan
+		CacheConfig:    cfg.CacheConfig, // Fine-grained cache control
 	}
 
 	testCfg := &TestFrameworkConfig{
@@ -220,8 +225,9 @@ func parseTestArgs(args []string) *TestConfig {
 		SkipTUIDelay: shared.SkipTUIDelay,
 		Turbo:        shared.Turbo,
 		Roof:         shared.MaxConcurrency,
-		ForceRetest:  shared.SkipCache,
+		ForceRetest:  shared.CacheConfig.ShouldSkipState(),
 		Parallel:     parallel,
+		CacheConfig:  shared.CacheConfig,
 
 		// From test-specific flags
 		SuiteName: testFlags.SuiteName,

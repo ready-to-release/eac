@@ -2,11 +2,12 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal"
-	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/execution"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -21,13 +22,41 @@ type CacheCheckResult struct {
 	Handler   string    // Tool/handler name
 }
 
-// CacheVerifierFunc returns a function compatible with orchestrator.CacheVerifier.
-// This adapts VerifyComponentCache for use with StartBackgroundCacheDetection.
-func CacheVerifierFunc() func(workspaceRoot string, spec workunit.UnitSpec, cachedModules map[string]bool, cacheTimes map[string]time.Time) (bool, time.Time) {
-	return func(workspaceRoot string, spec workunit.UnitSpec, cachedModules map[string]bool, cacheTimes map[string]time.Time) (bool, time.Time) {
-		result := VerifyComponentCache(workspaceRoot, spec, cachedModules, cacheTimes)
-		return result.IsCached, result.CacheTime
+// BuildCacheVerifier implements execution.CacheVerifier for build commands.
+// It verifies cache status by checking:
+// 1. Pre-computed cachedModules set (from incremental detection)
+// 2. Module manifest existence
+// 3. Artifact integrity via hash comparison
+type BuildCacheVerifier struct {
+	workspaceRoot string
+	cachedModules map[string]bool
+	cacheTimes    map[string]time.Time
+}
+
+// NewBuildCacheVerifier creates a new BuildCacheVerifier.
+func NewBuildCacheVerifier(workspaceRoot string, cachedModules map[string]bool, cacheTimes map[string]time.Time) *BuildCacheVerifier {
+	return &BuildCacheVerifier{
+		workspaceRoot: workspaceRoot,
+		cachedModules: cachedModules,
+		cacheTimes:    cacheTimes,
 	}
+}
+
+// Verify implements execution.CacheVerifier.
+// It checks if a work unit's output is cached and valid.
+func (v *BuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) (execution.CacheResult, error) {
+	// Check context cancellation
+	select {
+	case <-ctx.Done():
+		return execution.CacheResult{}, ctx.Err()
+	default:
+	}
+
+	result := VerifyComponentCache(v.workspaceRoot, unit, v.cachedModules, v.cacheTimes)
+	return execution.CacheResult{
+		Cached:    result.IsCached,
+		CacheTime: result.CacheTime,
+	}, nil
 }
 
 // VerifyComponentCache checks if a component's module is cached and verifies artifact integrity.
@@ -69,11 +98,10 @@ func VerifyComponentCache(
 		return result
 	}
 
-	// 2. Load manifest from build output
-	moduleBuildDir := paths.BuildOutputPath(workspaceRoot, module)
-	manifest, err := internal.LoadModuleManifest(moduleBuildDir)
-	if err != nil {
-		// No manifest - trust source hash check (which already passed during init)
+	// 2. Check UoW manifests and verify artifact integrity
+	reader := coreoutput.NewReader(workspaceRoot)
+	if !reader.HasManifests(workunit.ContextBuild, module) {
+		// No manifests - trust source hash check (which already passed during init)
 		// This is a valid cache hit
 		result.IsCached = true
 		result.CacheTime = cacheTimes[module]
@@ -81,7 +109,7 @@ func VerifyComponentCache(
 	}
 
 	// 3. Verify artifact integrity (hash check)
-	if err := manifest.VerifyArtifactsIntegrity(moduleBuildDir); err != nil {
+	if err := reader.VerifyModuleIntegrity(workunit.ContextBuild, module); err != nil {
 		// Artifacts changed - not actually cached
 		// Don't modify cachedModules here - that's the worker's job
 		return result

@@ -107,6 +107,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9 h1:MezMYV7mFI0y67AI7XMLzKVY6u29kqYp446JFp6jIIs=
 github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9/go.mod h1:TWsYXPb4Q/GxtFzNq4tfa31fpNVotgYJq2M59yuU3Z0=
+github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0-20260202144134-d0b6883b9564 h1:iVzZCpuxrr0UVG+7uiDQ8+Jkj/DkqmAzNuJsDzbMG6w=
+github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0-20260202144134-d0b6883b9564/go.mod h1:XBubDcXX2L7lh/3VXtQ4elJwZxdfujkD1xIrbFbz1dk=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 h1:KRzFb2m7YtdldCEkzs6KqmJw4nqEVZGK7IN2kJkjTuQ=

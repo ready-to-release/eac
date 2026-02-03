@@ -42,6 +42,14 @@ func GetBuildDeps() int {
 		return 1
 	}
 
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			printBuildDepsUsage()
+			return 0
+		}
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "build-deps"
 
 	// Parse module moniker and flags from args
@@ -201,4 +209,21 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 	}
 
 	return strings.Join(buildDeps, ","), nil
+}
+
+func printBuildDepsUsage() {
+	fmt.Println("Get build dependencies for a module")
+	fmt.Println()
+	fmt.Println("Usage: get build-deps <module> [flags]")
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("  module    Module moniker to get build dependencies for")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  --format <type>    Output format (shell, space, yaml, json)")
+	fmt.Println("  -h, --help         Show this help message")
+	fmt.Println()
+	fmt.Println("Output:")
+	fmt.Println("  YAML list of module build dependencies, aggregated from the module")
+	fmt.Println("  and all its transitive dependencies.")
 }

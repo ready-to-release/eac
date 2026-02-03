@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal"
-	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/artifacts"
+	"github.com/ready-to-release/eac/go/core/adapters"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/git"
@@ -30,14 +31,14 @@ import (
 
 func init() {
 	// Register component-level execution support
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeBuild, FlattenModulesToUnits)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeBuild, ResolveUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeBuild, buildUnitWorker)
 	cmdframework.SetUoWCountProvider(getBuildUoWCount)
 	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeBuild, getBuildUnitLayers)
 }
 
 // getCachedUnitWork returns cached component work layers, computing once if needed.
-// This avoids duplicate calls to FlattenModulesToUnits during startup.
+// This avoids duplicate calls to ResolveUnitSpecs during startup.
 func getCachedUnitWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	// Check if already cached in Extra
 	if ctx.Config.Extra == nil {
@@ -48,7 +49,7 @@ func getCachedUnitWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec
 	}
 
 	// Compute and cache
-	layers := FlattenModulesToUnits(ctx)
+	layers := ResolveUnitSpecs(ctx)
 	ctx.Config.Extra["componentWorkLayers"] = layers
 	return layers
 }
@@ -123,6 +124,7 @@ type buildContext struct {
 	cachedModules    map[string]bool      // Modules that are up-to-date (cache hits)
 	cacheTimes       map[string]time.Time // When cached modules were last built
 	componentWeights map[string]int       // Component weights: "module:component" -> weight
+	tracker          *coreoutput.InMemoryTracker // UoW manifest tracker
 }
 
 // RunBuildWithFramework executes build using the cmdframework.
@@ -172,6 +174,11 @@ func buildAfterInit(ctx *cmdframework.ExecutionContext) error {
 		SetOutputDir(paths.OutBuildRelPath)
 
 	ctx.InitSummary = summary
+
+	// Initialize UoW tracker for manifest generation
+	bctx := ctx.Config.Extra["buildContext"].(*buildContext)
+	bctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, workunit.ContextBuild)
+
 	return nil
 }
 
@@ -201,8 +208,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 					continue
 				}
 				// For deps, check if artifacts exist
-				moduleType := ctx.ModuleTypes[m]
-				if hasExistingArtifacts(m, moduleType, ctx.WorkspaceRoot, buildCfg.BuildAll) {
+				if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.BuildAll) {
 					log.Debugf("Skipping dep %s (artifacts exist)", m)
 				} else {
 					filteredLayer = append(filteredLayer, m)
@@ -231,7 +237,8 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		// Enable early cache detection for fast TUI feedback
 		// Tabs will progressively "light up" blue as cache hits are detected
 		if len(bctx.cachedModules) > 0 && ctx.Orchestrator != nil {
-			ctx.Orchestrator.SetCacheDetection(CacheVerifierFunc(), bctx.cachedModules)
+			verifier := NewBuildCacheVerifier(ctx.WorkspaceRoot, bctx.cachedModules, bctx.cacheTimes)
+			ctx.Orchestrator.SetCacheDetection(verifier, bctx.cachedModules)
 		}
 	}
 
@@ -310,7 +317,7 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		return hash.Files(ctx.WorkspaceRoot, files)
 	}
 
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
 	if err != nil {
 		log.Debugf("Failed to detect changes: %v", err)
 		return
@@ -437,47 +444,8 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		log.Debugf("buildAfterExecute: processAllArtifactDerivations took %v", time.Since(start))
 	}
 
-	// Check if any cached modules are missing manifests (e.g., after module rename)
-	// If so, we need to generate manifests even if nothing was newly built
-	needsManifestGeneration := anyBuilt
-	if !needsManifestGeneration && len(bctx.cachedModules) > 0 {
-		cfg, cfgErr := config.Load(config.DefaultLoadOptions())
-		if cfgErr == nil {
-			for moniker := range bctx.cachedModules {
-				moduleBuildDir := cfg.Repository.BuildOutputPathAbs(ctx.WorkspaceRoot, moniker)
-				manifestPath := filepath.Join(moduleBuildDir, "build.manifest.json")
-				if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-					needsManifestGeneration = true
-					log.Debugf("Cached module %s missing manifest, will generate", moniker)
-					break
-				}
-			}
-		}
-	}
-
-	// Generate build manifest - for newly built modules or cached modules missing manifests
-	log.Debugf("buildAfterExecute: needsManifestGeneration=%v", needsManifestGeneration)
-	if needsManifestGeneration {
-		start := time.Now()
-		log.Debugf("buildAfterExecute: calling generateBuildManifest")
-		if err := generateBuildManifest(ctx.WorkspaceRoot, ctx.Results, ctx.ModuleTypes,
-			ctx.GetExecutionMonikers(), buildCfg.BuildAll); err != nil {
-			return fmt.Errorf("failed to generate build manifest: %w", err)
-		}
-		log.Debugf("buildAfterExecute: generateBuildManifest took %v", time.Since(start))
-	}
-
-	// Update cached module manifests
-	if !ctx.Config.DryRun && len(bctx.cachedModules) > 0 {
-		start := time.Now()
-		gitCommit := getGitCommit(ctx.WorkspaceRoot)
-		var cachedList []string
-		for m := range bctx.cachedModules {
-			cachedList = append(cachedList, m)
-		}
-		updateSkippedModuleManifests(ctx.WorkspaceRoot, cachedList, gitCommit)
-		log.Debugf("buildAfterExecute: updateSkippedModuleManifests took %v", time.Since(start))
-	}
+	// NOTE: Legacy manifest generation removed - UoW manifests are now written
+	// during build execution via InMemoryTracker (see buildUnitWorker)
 
 	// Update incremental build state - only if something was actually built
 	if !ctx.Config.DryRun && anyBuilt {
@@ -615,29 +583,23 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 			return -1 // -1 = skipped/cached = blue in TUI
 		}
 
-		// Verify manifest artifacts are intact before declaring cache hit
-		// If manifest doesn't exist, trust the source hash check (which already passed)
-		// Only fail cache if manifest exists AND integrity check fails (actual tampering)
-		moduleBuildDir := paths.BuildOutputPath(ctx.WorkspaceRoot, module)
-		manifest, err := internal.LoadModuleManifest(moduleBuildDir)
-		if err != nil {
-			// No manifest - trust source hash, allow cache hit
-			log.Debugf("Cache hit (no manifest to verify): %v", err)
+		// Verify UoW manifest artifacts are intact before declaring cache hit
+		// If no manifests exist, trust the source hash check (which already passed)
+		// Only fail cache if manifests exist AND integrity check fails (actual tampering)
+		reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+		if !reader.HasManifests(workunit.ContextBuild, module) {
+			// No manifests - trust source hash, allow cache hit
+			log.Debugf("Cache hit (no manifests to verify)")
 			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
 			return -1 // -1 = skipped/cached = blue in TUI
 		}
 
-		// Manifest exists - verify artifact integrity
-		if err := manifest.VerifyArtifactsIntegrity(moduleBuildDir); err != nil {
+		// Manifests exist - verify artifact integrity
+		if err := reader.VerifyModuleIntegrity(workunit.ContextBuild, module); err != nil {
 			output.Writeln(logWriter, "Cache miss: %v", err)
 			// Fall through to build - clear cache flag so other components don't skip
 			delete(bctx.cachedModules, module)
 		} else {
-			// Valid cache hit - update verification timestamp
-			gitCommit := getGitCommit(ctx.WorkspaceRoot)
-			if updateErr := manifest.UpdateVerifiedUnchangedAt(moduleBuildDir, gitCommit); updateErr != nil {
-				log.Debugf("Failed to update verified timestamp: %v", updateErr)
-			}
 			output.Writeln(logWriter, "⏭️  Cached (verified)")
 			return -1 // -1 = skipped/cached = blue in TUI
 		}
@@ -672,7 +634,7 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 
 	// Skip if dependency and artifacts exist (--use-existing-depm)
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
-		if hasExistingArtifacts(module, ctx.ModuleTypes[module], ctx.WorkspaceRoot, buildCfg.BuildAll) {
+		if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.BuildAll) {
 			output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
 			return 0
 		}
@@ -696,8 +658,18 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		defer locking.ReleaseTracked(lockFile)
 	}
 
-	// Get the handler for this component
-	handler := getHandlerForComponent(moduleContract, compName, builderName)
+	// Get the handler for this component/tool
+	// For tool chain components, builderName is the tool name (e.g., "pdf-tool")
+	// and we need to get the handler directly by name
+	var handler builders.Handler
+	if builderName != "" {
+		// Try to get handler directly by tool name (for tool chain components)
+		handler = builders.GetHandler(builderName)
+	}
+	if handler == nil {
+		// Fall back to component-based handler lookup
+		handler = getHandlerForComponent(moduleContract, compName, builderName)
+	}
 	if handler == nil {
 		output.Writeln(logWriter, "Error: no handler found for component %s in module %s", component, module)
 		return 1
@@ -727,7 +699,8 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		Component:          compName, // Pass original component name for component-level parallelism
 		Reproducible:       buildCfg.ResolveReproducible(),
 		ForceRebuild:       ctx.Config.ForceRebuild,
-		Weight:             weight, // Resource multiplier for container builds
+		Weight:             weight,            // Resource multiplier for container builds
+		CacheConfig:        ctx.Config.CacheConfig, // Fine-grained cache control
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -749,6 +722,19 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		return 1
 	}
 
+	// Create UoW ID and record start
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextBuild,
+		Module:    module,
+		Component: compName,
+		Tool:      handler.Name(),
+	}
+	if bctx.tracker != nil {
+		if err := bctx.tracker.RecordStart(unitID); err != nil {
+			log.Debugf("Failed to record UoW start for %s: %v", unitID.Longname(), err)
+		}
+	}
+
 	// Build the component
 	// Use component-level output directory: out/build/<module>/<component>/<builder>
 	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
@@ -758,14 +744,45 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// -1 = skipped (cached), 0 = success, >0 = failure
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
+		// Record failure manifest
+		if bctx.tracker != nil {
+			manifest := &coreoutput.UoWManifest{
+				ExitCode:   exitCode,
+				ExecutedAt: time.Now().UTC(),
+				Version:    "1.0.0",
+			}
+			if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
+				log.Debugf("Failed to record UoW completion for %s: %v", unitID.Longname(), err)
+			}
+		}
 		return exitCode
 	}
 	if exitCode == -1 {
 		output.Writeln(logWriter, "⏭️  Component %s unchanged (cached)", compName)
+		// Record cache hit - validate and return existing manifest
+		if bctx.tracker != nil {
+			if _, err := bctx.tracker.RecordCacheHit(unitID); err != nil {
+				log.Debugf("Cache validation for %s: %v", unitID.Longname(), err)
+			}
+		}
 		return exitCode // Pass through -1 so TUI shows blue
 	}
 
 	output.Writeln(logWriter, "✅ Component %s built successfully", compName)
+
+	// Record successful completion with artifacts
+	if bctx.tracker != nil {
+		artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
+		manifest := &coreoutput.UoWManifest{
+			ExitCode:   exitCode,
+			ExecutedAt: time.Now().UTC(),
+			Artifacts:  artifacts,
+			Version:    "1.0.0",
+		}
+		if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
+			log.Debugf("Failed to record UoW completion for %s: %v", unitID.Longname(), err)
+		}
+	}
 
 	// Atomically update build state for this module immediately after success
 	// This ensures interrupted builds preserve cache for completed modules
@@ -830,20 +847,6 @@ func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.Art
 
 // buildDepsVerifier verifies system dependencies for build.
 func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
-	// Get unique module types
-	moduleTypes := make(map[string]bool)
-	for _, moniker := range ctx.GetExecutionMonikers() {
-		if t, ok := ctx.ModuleTypes[moniker]; ok {
-			moduleTypes[t] = true
-		}
-	}
-
-	// Convert to slice for verification
-	var types []string
-	for t := range moduleTypes {
-		types = append(types, t)
-	}
-
 	_, status := verifyBuildDependenciesQuiet(ctx.GetExecutionMonikers(), ctx.ModuleReport)
 	return &status
 }
@@ -851,4 +854,67 @@ func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStat
 // getGitCommit retrieves git commit SHA.
 func getGitCommit(workspaceRoot string) string {
 	return git.GetCommitSHA(workspaceRoot)
+}
+
+// collectUoWArtifacts collects artifact information from the build output directory.
+// It lists files in the output directory and computes their hashes.
+func collectUoWArtifacts(outputDir string, handler builders.Handler, modulePort interfaces.ModuleContractPort, workspaceRoot string) []coreoutput.Artifact {
+	// Get expected artifacts from handler
+	expectedPaths := handler.ListArtifacts(modulePort, workspaceRoot)
+	if len(expectedPaths) == 0 {
+		return nil
+	}
+
+	var artifacts []coreoutput.Artifact
+	for _, relPath := range expectedPaths {
+		fullPath := filepath.Join(outputDir, relPath)
+
+		// Check if file exists
+		info, err := os.Stat(fullPath)
+		if err != nil || info.IsDir() {
+			continue
+		}
+
+		// Compute hash
+		size, hashHex, err := coreoutput.HashFile(fullPath)
+		if err != nil {
+			log.Debugf("Failed to hash artifact %s: %v", relPath, err)
+			continue
+		}
+
+		artifacts = append(artifacts, coreoutput.Artifact{
+			ID:     filepath.Base(relPath),
+			Path:   relPath,
+			SHA256: "sha256:" + hashHex,
+			Size:   size,
+			Type:   inferArtifactType(relPath),
+		})
+	}
+
+	return artifacts
+}
+
+// inferArtifactType infers the artifact type from its file path.
+func inferArtifactType(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".exe", "":
+		if strings.Contains(path, "windows") || strings.HasSuffix(path, ".exe") {
+			return "executable"
+		}
+		// Check if it's likely a binary (no extension on linux/darwin)
+		return "binary"
+	case ".tar", ".gz", ".tgz", ".zip":
+		return "archive"
+	case ".pdf":
+		return "document"
+	case ".html":
+		return "html"
+	case ".json":
+		return "data"
+	case ".log", ".txt":
+		return "text"
+	default:
+		return "file"
+	}
 }

@@ -42,6 +42,15 @@ func GetApprovalComments() int {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
+
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			printApprovalCommentsUsage()
+			return 0
+		}
+	}
+
 	// Parse arguments - expect module after "get approval-comments"
 	args := os.Args[1:]
 
@@ -99,4 +108,30 @@ func GetApprovalComments() int {
 	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 		return reports.GetApprovalComments(workspaceRoot, module, version, includeAllReviews, branch)
 	})
+}
+
+func printApprovalCommentsUsage() {
+	fmt.Println("Get PR approval comments for a module")
+	fmt.Println()
+	fmt.Println("Usage: get approval-comments <module> [version] [flags]")
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("  module     Module moniker to get approval comments for")
+	fmt.Println("  version    Optional version number (default: Unreleased)")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  --as-yaml              Output as YAML (default)")
+	fmt.Println("  --as-json              Output as JSON")
+	fmt.Println("  --as-toml              Output as TOML")
+	fmt.Println("  --include-all-reviews  Include all review states (not just APPROVED)")
+	fmt.Println("  --branch <name>        Branch to query (default: trunk branch from config)")
+	fmt.Println("  -h, --help             Show this help message")
+	fmt.Println()
+	fmt.Println("Output:")
+	fmt.Println("  YAML/JSON/TOML representation of PR approval comments including:")
+	fmt.Println("    - module: Module moniker")
+	fmt.Println("    - version: Version number or \"Unreleased\"")
+	fmt.Println("    - total_prs: Number of PRs with spec files")
+	fmt.Println("    - total_approvals: Total number of approval reviews")
+	fmt.Println("    - approvals: Array of approval reviews with PR details")
 }

@@ -23,13 +23,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/clibase/services"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
-	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -44,27 +45,15 @@ func init() {
 
 // Serve starts the server for a module.
 func Serve() int {
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		log.Errorf("Error: failed to find repository root: %v", err)
-		return 1
-	}
-
-	// Initialize tool system for tool-config.yml access
-	configRoot := filepath.Join(workspaceRoot, ".eac")
-	if err := tool.InitializeGlobalBridges(workspaceRoot, configRoot); err != nil {
-		log.Debugf("Tool bridge initialization skipped: %v", err)
-		// Continue - tool config is optional for basic functionality
-	}
-
 	args := os.Args[2:] // Skip program name and "serve"
 
-	// Validate flags
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+	// Validate flags early (before services init for fast feedback)
+	if err := flags.ValidateFlagsFromRegistry(args); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
 
+	// Parse flags to get debug mode for services initialization
 	var moduleMoniker string
 	var noBrowser bool
 	port := 0
@@ -121,11 +110,24 @@ func Serve() int {
 		}
 	}
 
+	// Initialize services (replaces manual workspace, config, tools, logging setup)
+	svc, err := services.New(interfaces.SimpleServicesOptions{
+		InitTools: true,
+		DebugMode: debug,
+	})
+	if err != nil {
+		log.Errorf("Error: failed to initialize services: %v", err)
+		return 1
+	}
+	defer svc.Close()
+
+	workspaceRoot := svc.WorkspaceRoot()
+
 	if moduleMoniker == "" {
 		log.Error("Error: module name is required")
 		log.Info("")
 		log.Info("Usage: eac serve <module> [flags]")
-		if modules := listServableModules(workspaceRoot); len(modules) > 0 {
+		if modules := listServableModulesFromConfig(svc.RawConfig()); len(modules) > 0 {
 			log.Info("")
 			log.Info("Available modules:")
 			for _, m := range modules {
@@ -135,14 +137,8 @@ func Serve() int {
 		return 1
 	}
 
-	// Initialize logger
-	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
-		log.Warnf("Failed to configure logging: %v", err)
-	}
-	defer logging.CloseLogging()
-
 	// Resolve module configuration
-	moduleConfig, err := resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook)
+	moduleConfig, err := resolveModuleConfigFromEAC(svc.RawConfig(), workspaceRoot, moduleMoniker, namedBook)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
@@ -194,9 +190,7 @@ func Serve() int {
 			}
 
 			if rebuild {
-				log.Infof("Rebuilding %s...", moduleMoniker)
-				if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
-					log.Errorf("Build failed: %v", err)
+				if !rebuildModule(workspaceRoot, moduleMoniker) {
 					return 1
 				}
 			}
@@ -211,22 +205,8 @@ func Serve() int {
 	}
 
 	// Check staleness and auto-rebuild if needed
-	if rebuild {
-		log.Infof("Rebuilding %s...", moduleMoniker)
-		if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
-			log.Errorf("Build failed: %v", err)
-			return 1
-		}
-	} else {
-		needsBuild, reason := checkStaleness(workspaceRoot, moduleConfig)
-		if needsBuild {
-			log.Infof("Build is stale: %s", reason)
-			log.Infof("Building %s...", moduleMoniker)
-			if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
-				log.Errorf("Build failed: %v", err)
-				return 1
-			}
-		}
+	if !rebuildIfNeeded(workspaceRoot, moduleConfig, rebuild) {
+		return 1
 	}
 
 	// Start container
@@ -267,15 +247,10 @@ type ModuleServeConfig struct {
 	IsSite        bool
 }
 
-// resolveModuleConfig resolves serve configuration for a module.
-func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*ModuleServeConfig, error) {
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if err := cfg.LoadRepository(false); err != nil {
-		return nil, fmt.Errorf("failed to load repository: %w", err)
+// resolveModuleConfigFromEAC resolves serve configuration for a module using pre-loaded config.
+func resolveModuleConfigFromEAC(cfg *config.EACConfig, workspaceRoot, moduleMoniker, namedBook string) (*ModuleServeConfig, error) {
+	if cfg == nil || cfg.Repository == nil {
+		return nil, fmt.Errorf("config not loaded")
 	}
 
 	module, exists := cfg.Repository.GetModule(moduleMoniker)
@@ -398,14 +373,9 @@ func getServableItems(module *config.Module) []servableItem {
 	return items
 }
 
-// listServableModules returns modules that can be served.
-func listServableModules(workspaceRoot string) []string {
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
-	if err != nil {
-		return nil
-	}
-
-	if err := cfg.LoadRepository(false); err != nil {
+// listServableModulesFromConfig returns modules that can be served using pre-loaded config.
+func listServableModulesFromConfig(cfg *config.EACConfig) []string {
+	if cfg == nil || cfg.Repository == nil {
 		return nil
 	}
 
@@ -418,6 +388,34 @@ func listServableModules(workspaceRoot string) []string {
 		}
 	}
 	return modules
+}
+
+// rebuildModule triggers a build for the module.
+// Returns true if successful, false otherwise.
+// Logs are emitted directly.
+func rebuildModule(workspaceRoot, moduleMoniker string) bool {
+	log.Infof("Rebuilding %s...", moduleMoniker)
+	if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
+		log.Errorf("Build failed: %v", err)
+		return false
+	}
+	return true
+}
+
+// rebuildIfNeeded triggers a rebuild if forceRebuild is true or build is stale.
+// Returns true if we should continue (no build needed or build succeeded).
+// Returns false if build was needed and failed.
+func rebuildIfNeeded(workspaceRoot string, moduleConfig *ModuleServeConfig, forceRebuild bool) bool {
+	if forceRebuild {
+		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker)
+	}
+
+	needsBuild, reason := checkStaleness(workspaceRoot, moduleConfig)
+	if needsBuild {
+		log.Infof("Build is stale: %s", reason)
+		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker)
+	}
+	return true
 }
 
 // checkStaleness checks if the module build is stale.
@@ -471,7 +469,7 @@ func runBuild(workspaceRoot, moduleMoniker string) error {
 }
 
 // handleStop stops the running server.
-func handleStop(workspaceRoot, containerName, moduleMoniker string) int {
+func handleStop(_, containerName, moduleMoniker string) int {
 	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
@@ -605,9 +603,9 @@ func (c *DockerClient) OpenBrowserWithFallback(url string) (bool, error) {
 	return docker.OpenBrowserWithFallback(url)
 }
 
-// StreamLogs streams container logs.
+// StreamLogs streams container logs to stdout/stderr.
+// Blocks until the context is cancelled or the container stops.
 func (c *DockerClient) StreamLogs() error {
-	// Not implemented in simplified version
-	return nil
+	return docker.StreamContainerLogs(c.ctx, c.containerName)
 }
 

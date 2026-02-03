@@ -7,11 +7,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
-// FlattenModulesToUnits converts module layers to component work layers.
+// ResolveUnitSpecs converts module layers to component work layers.
 // Each module is expanded to its buildable components with weight and dependency info.
 // Uses ComponentResolver for consistent component-to-tool mapping.
 // Returns nil if no buildable components are found.
-func FlattenModulesToUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.ComponentTypes == nil {
 		return nil

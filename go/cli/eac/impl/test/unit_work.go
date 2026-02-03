@@ -15,14 +15,14 @@ import (
 
 var componentWorkLog = logging.C()
 
-// FlattenModulesToTestUnits converts TestsByPackage to component work layers.
+// ResolveTestUnitSpecs converts TestsByPackage to component work layers.
 // Returns two layers: parallel tests first, sequential tests second.
 // Returns nil if no tests to execute.
 // Work items are created for each unique component:tool combination,
 // allowing parallel execution of different test types (gotest, godog) within the same package.
 //
 // Test keys use the same format as build/lint/scan: "module:component:tool".
-func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
@@ -55,7 +55,7 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 		// Module mapping is configured via test-impl component in component-types.yml
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
 		if moduleMoniker == "" {
-			componentWorkLog.Warnf("FlattenModulesToTestUnits: no module found for pkgPath=%s, skipping", pkgPath)
+			componentWorkLog.Warnf("ResolveTestUnitSpecs: no module found for pkgPath=%s, skipping", pkgPath)
 			continue
 		}
 

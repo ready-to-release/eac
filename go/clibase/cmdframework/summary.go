@@ -373,7 +373,7 @@ func generateModuleTUISummary(ctx *ExecutionContext, totalTime time.Duration) *t
 	var moduleResults []moduleResult
 
 	for _, result := range results {
-		components := ctx.ModuleTypes[result.Moniker]
+		components := ctx.ComponentTypesDisplay[result.Moniker]
 		if components == "" {
 			components = "unknown"
 		}

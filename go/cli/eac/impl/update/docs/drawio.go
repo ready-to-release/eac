@@ -26,8 +26,8 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 
 	fmt.Fprintln(logWriter, "Updating drawio image cache...")
 
-	// Create asset cache
-	cache := books.NewAssetCache(repoRoot)
+	// Create asset cache (nil = use cache normally)
+	cache := books.NewAssetCache(repoRoot, nil)
 
 	// Scan docs/ for drawio images
 	docsDir := paths.DocsSourcePath(repoRoot)

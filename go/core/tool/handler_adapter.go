@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/core/cache"
 )
 
 // BuildHandler is the interface for build handlers.
@@ -43,14 +44,15 @@ type BuildHandler interface {
 // BuildOptions contains flags for controlling the build process.
 // This matches the existing builders.BuildOptions structure.
 type BuildOptions struct {
-	TidyFirst          bool     // Run go mod tidy before building
-	Version            string   // Version to inject via ldflags
-	DryRun             bool     // Simulate build without actually running it
-	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
-	Component          string   // Specific component to build (empty = all components)
-	Reproducible       bool     // Force rebuild of MkDocs HTML even if staging unchanged (CI mode)
-	ForceRebuild       bool     // Force full rebuild, ignore cache (--rebuild flag)
-	Weight             int      // Resource multiplier for container builds (default: 1)
+	TidyFirst          bool          // Run go mod tidy before building
+	Version            string        // Version to inject via ldflags
+	DryRun             bool          // Simulate build without actually running it
+	RequestedArtifacts []string      // Specific artifact IDs to build (empty = default artifacts, "*" = all)
+	Component          string        // Specific component to build (empty = all components)
+	Reproducible       bool          // Force rebuild of MkDocs HTML even if staging unchanged (CI mode)
+	ForceRebuild       bool          // Force full rebuild, ignore cache (--rebuild flag)
+	Weight             int           // Resource multiplier for container builds (default: 1)
+	CacheConfig        *cache.Config // Cache control configuration (--skip-cache flag)
 }
 
 // ToolHandlerAdapter wraps a ToolDefinition to implement BuildHandler.

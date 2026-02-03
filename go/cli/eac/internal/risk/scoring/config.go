@@ -123,9 +123,9 @@ func wrapRiskScoringPort(port interface{}) *RiskScoringConfig {
 	return DefaultRiskScoringConfig()
 }
 
-// GetImpact returns the impact rating for a module type.
-func (c *RiskScoringConfig) GetImpact(moduleType string) int {
-	if v, ok := c.Impact[moduleType]; ok {
+// GetImpact returns the impact rating for a module moniker.
+func (c *RiskScoringConfig) GetImpact(moniker string) int {
+	if v, ok := c.Impact[moniker]; ok {
 		return v
 	}
 	if v, ok := c.Impact["_default"]; ok {
@@ -134,9 +134,9 @@ func (c *RiskScoringConfig) GetImpact(moduleType string) int {
 	return 3
 }
 
-// GetCriticality returns the criticality level for a module type.
-func (c *RiskScoringConfig) GetCriticality(moduleType string) string {
-	if v, ok := c.Criticality[moduleType]; ok {
+// GetCriticality returns the criticality level for a module moniker.
+func (c *RiskScoringConfig) GetCriticality(moniker string) string {
+	if v, ok := c.Criticality[moniker]; ok {
 		return v
 	}
 	if v, ok := c.Criticality["_default"]; ok {
