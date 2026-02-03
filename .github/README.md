@@ -65,11 +65,16 @@
 <h2 align="center">The Transformation</h2>
 
 <p align="center">
+<em>Agent-Ready by Design</em>
+</p>
+
+<p align="center">
 <sub><del>Word documents</del> → <strong>Executable specs</strong></sub><br>
 <sub><del>Wiki pages</del> → <strong>Generated from code</strong></sub><br>
 <sub><del>Manual checklists</del> → <strong>Automated gates</strong></sub><br>
 <sub><del>Audit spreadsheets</del> → <strong>Git history</strong></sub><br>
-<sub><del>Months of release/audit prep</del> → <strong>Always ready</strong></sub>
+<sub><del>Months of release/audit prep</del> → <strong>Always ready</strong></sub><br>
+<sub><del>Documents agents can't read</del> → <strong>Machine-enforceable infrastructure</strong></sub>
 </p>
 
 <p align="center">
@@ -82,7 +87,8 @@
 
 <p align="center">
 <strong>One commit. Validated build. Auditable release.</strong><br>
-<sub>Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.</sub>
+<sub>Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.</sub><br>
+<sub>Infrastructure where intelligent agents can safely read, validate, and act.</sub>
 </p>
 
 ---
@@ -186,6 +192,10 @@ The difference isn't less compliance—it's <strong>automated compliance</strong
 <a href="https://dora.dev/capabilities/version-control/">DORA</a> proves elite performers store <strong>everything</strong> in version control.<br>
 <sub>Not just code—configurations, infrastructure, specifications, tests, and deployment automation.</sub><br>
 <a href="https://dora.dev/capabilities/streamlining-change-approval/">Research shows</a> heavyweight approvals increase risk. <strong>Elite teams have both—speed and compliance.</strong>
+</p>
+
+<p align="center">
+<strong>And in the AI era:</strong> EAC provides the automated validation gates and machine-enforceable specifications that ensure AI-generated code across the full SDLC operates under rigorous oversight - preventing the technical debt, vulnerabilities, and hallucinated requirements that occur when AI bypasses proper architecture practices.
 </p>
 
 <p align="center">
