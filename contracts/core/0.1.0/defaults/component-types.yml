@@ -185,6 +185,7 @@ component-types:
   # Runs in container for cross-platform consistency
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
+    builder: scripts
     scanners: [secrets]
     requirements: [docker]
     files:
@@ -196,6 +197,7 @@ component-types:
   # Runs in container for cross-platform consistency (no host bash required)
   bash:
     extensions: [".sh", ".bash"]
+    builder: scripts
     scanners: [secrets]
     requirements: [docker]
     files:

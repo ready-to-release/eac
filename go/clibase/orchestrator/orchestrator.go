@@ -43,8 +43,9 @@ type Orchestrator struct {
 	tuiRunning     []string
 	tuiCompleted   int
 	tuiTotal       int
-	tuiLayer       int // Current layer (1-indexed, 0 = not using layers)
-	tuiTotalLayers int // Total layers (0 = not using layers)
+	tuiLayer       int  // Current layer (1-indexed, 0 = not using layers)
+	tuiTotalLayers int  // Total layers (0 = not using layers)
+	tuiStarted     bool // True once StartTUI has been called
 
 	// Component results from last execution (for detailed reporting)
 	lastUnitResults []UnitResult
@@ -686,6 +687,14 @@ func (o *Orchestrator) IsTUIEnabled() bool {
 	return o.config.TUI
 }
 
+// IsTUIStarted returns whether StartTUI has been called.
+// When TUI is enabled but not started, WriteInit should output to console.
+func (o *Orchestrator) IsTUIStarted() bool {
+	o.tuiMu.Lock()
+	defer o.tuiMu.Unlock()
+	return o.tuiStarted
+}
+
 // phaseWriter implements io.Writer and forwards all writes to a specific phase.
 type phaseWriter struct {
 	orch  *Orchestrator
@@ -817,6 +826,10 @@ func (o *Orchestrator) StartTUI() {
 	o.tuiConsole.StartAsync(o.tuiCtx)
 	// Set initial phase to Init
 	o.SetPhase(tui.PhaseInit)
+	// Mark TUI as started so WriteInit knows to skip console output
+	o.tuiMu.Lock()
+	o.tuiStarted = true
+	o.tuiMu.Unlock()
 }
 
 // GetOrchestratorOut returns the writer for orchestrator-level output.

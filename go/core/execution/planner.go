@@ -228,12 +228,20 @@ func (p *LayerPlanner) computeComponentLayers(units []workunit.UnitSpec) ([][]wo
 	}
 
 	// Build unit dependency graph (only for units within this set)
+	// First, detect and report duplicates - UoW longnames must be unique
 	unitSet := make(map[string]bool)
 	unitByLongname := make(map[string]workunit.UnitSpec)
+	var duplicates []string
 	for _, u := range units {
 		key := u.ID.Longname()
+		if unitSet[key] {
+			duplicates = append(duplicates, key)
+		}
 		unitSet[key] = true
 		unitByLongname[key] = u
+	}
+	if len(duplicates) > 0 {
+		return nil, fmt.Errorf("duplicate unit longnames detected (UoW IDs must be unique): %v", duplicates)
 	}
 
 	// Compute in-degrees based on dependencies within this unit set

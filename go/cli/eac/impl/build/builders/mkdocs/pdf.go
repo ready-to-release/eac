@@ -57,8 +57,9 @@ func (h *PDFRenderHandler) ValidateModule(module interfaces.ModuleContractPort, 
 }
 
 // ListArtifacts returns artifact paths that would be produced.
+// PDFs are output to site/pdf/ directory by mkdocs-exporter.
 func (h *PDFRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
-	return []string{"pdf/", ".manifest.json"}
+	return []string{"site/pdf/"}
 }
 
 // IsContainer returns true as PDF rendering requires Docker.

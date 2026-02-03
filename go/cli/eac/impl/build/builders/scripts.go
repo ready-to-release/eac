@@ -8,12 +8,17 @@ import (
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/core/adapters"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	RegisterHandler(&ScriptsHandler{})
+	h := &ScriptsHandler{}
+	// Register in builders registry (legacy code paths)
+	RegisterHandler(h)
+	// Register in tool bridge (for component resolver)
+	tool.GlobalBuildBridge().RegisterNativeHandler(h)
 }
 
 // ScriptsHandler copies script files from source to build output.
@@ -21,7 +26,7 @@ type ScriptsHandler struct{}
 
 func (h *ScriptsHandler) Name() string { return "scripts" }
 
-func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_package"} }
+func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_package", "pwsh", "bash"} }
 
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
