@@ -195,7 +195,7 @@ The difference isn't less compliance—it's <strong>automated compliance</strong
 </p>
 
 <p align="center">
-<strong>And in the AI era:</strong> EAC provides the automated validation gates and machine-enforceable specifications that ensure AI-generated code across the full SDLC operates under rigorous oversight - preventing the technical debt, vulnerabilities, and hallucinated requirements that occur when AI bypasses proper architecture practices.
+<strong>And in the AI era:</strong> EAC enforces automated validation and machine-checkable rules so AI-generated code stays governed - preventing technical debt, vulnerabilities, and hallucinated requirements.
 </p>
 
 <p align="center">
