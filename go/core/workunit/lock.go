@@ -3,8 +3,10 @@ package workunit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -215,22 +217,19 @@ func (u UnitID) TryBreakStaleLock(root string) bool {
 	}
 
 	// Check if the process is still alive
-	// On Unix, sending signal 0 checks process existence without killing it
-	// On Windows, this uses a different mechanism
-	process, err := os.FindProcess(info.PID)
+	// On Unix, sending signal 0 checks process existence without killing it.
+	// We use syscall.Signal(0) because process.Signal(nil) is not reliable
+	// or supported on all platforms/Go versions for this purpose.
+	err := syscall.Kill(info.PID, 0)
 	if err != nil {
-		// Can't find process - lock is stale
-		_ = u.UnlockWithRoot(root)
-		return true
+		// If err is ESRCH, the process definitely doesn't exist.
+		// For other errors (like EPERM), the process might exist but we can't signal it.
+		// We only break the lock if we are sure the process is gone.
+		if errors.Is(err, syscall.ESRCH) {
+			_ = u.UnlockWithRoot(root)
+			return true
+		}
 	}
 
-	// Try to signal the process (signal 0 = check if alive)
-	err = process.Signal(os.Signal(nil))
-	if err != nil {
-		// Process doesn't exist - lock is stale
-		_ = u.UnlockWithRoot(root)
-		return true
-	}
-
-	return false // Process is still alive
+	return false // Process is still alive (or we can't tell)
 }
