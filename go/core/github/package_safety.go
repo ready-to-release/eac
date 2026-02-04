@@ -111,6 +111,9 @@ func (c *PackageSafetyChecker) Assess(version PackageVersion) VersionAssessment 
 			if err != nil {
 				continue // Invalid pattern, skip it
 			}
+			if !matched && strings.Contains(tag, "/") && pattern == "*" {
+				matched = true
+			}
 			if matched {
 				assessment.Protected = true
 				assessment.Reason = ReasonTagMatchesPreserve
@@ -164,6 +167,9 @@ func (c *PackageSafetyChecker) Assess(version PackageVersion) VersionAssessment 
 			matched, err := filepath.Match(pattern, tag)
 			if err != nil {
 				continue // Invalid pattern, skip it
+			}
+			if !matched && strings.Contains(tag, "/") && pattern == "*" {
+				matched = true
 			}
 			if matched {
 				hasPruneMatch = true
