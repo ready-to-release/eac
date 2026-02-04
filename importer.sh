@@ -36,6 +36,12 @@ if [ -n "$RUN_WELCOME_EMITTED" ]; then
     SHOW_WELCOME=0
 fi
 
+# Silence pedantic Cgo warnings from dependencies (e.g. go-m1cpu) on macOS
+# This affects the current shell session only.
+if [ "$(uname)" = "Darwin" ]; then
+    export CGO_CFLAGS="-Wno-gnu-folding-constant"
+fi
+
 # Get script directory and module path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODULE_PATH="$SCRIPT_DIR/scripts/sh/go-invoker/go.sh"
