@@ -67,7 +67,7 @@ system-tools:
       pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
     version: ">=0.10"
     resources:
-      cpus: 4
+      cpus: 1       # Lightweight: container builds are I/O-bound, not CPU-bound
     requirements: [docker]
 
   npm:
@@ -357,8 +357,8 @@ container-tools:
     description: "MkDocs build"
     localPath: containers/site-render-tool
     resources:
-      cpus: 2       # Reduced: aligned with site-render-tool
-      memory: "1g"  # Reduced from 4GB: MkDocs uses <500MB typically
+      cpus: 4       # Site building with plugins can be CPU-intensive
+      memory: "1g"
     command:
       [
         "sh",
@@ -406,8 +406,8 @@ container-tools:
     workdir: /docs
     requirements: [docker]
     resources:
-      cpus: 2       # Reduced: MkDocs is less CPU-intensive than PDF
-      memory: "1g"  # Reduced from 4GB: MkDocs uses <500MB typically
+      cpus: 4       # Site rendering with plugins can be CPU-intensive
+      memory: "1g"
 
   pdf-tool:
     description: "MkDocs PDF generation with Playwright"
@@ -426,9 +426,9 @@ container-tools:
       ENABLE_PDF_EXPORT: "true"
     requirements: [docker]
     resources:
-      cpus: 4       # Per-instance limit (assumes 2 concurrent on 8 CPU machine)
-      memory: "4g"  # Per-instance (2 instances = 8GB of 16GB)
-      shm_size: "1536m" # Ramdisk per instance (2 instances share /dev/shm)
+      cpus: 4       # Per-instance limit
+      memory: "4g"  # Per-instance (fits in 6GB Docker limit with shm)
+      shm_size: "1g" # Ramdisk for Chromium rendering
 
   # Diagram tools
   drawio:

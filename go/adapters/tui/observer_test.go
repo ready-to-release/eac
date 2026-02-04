@@ -365,9 +365,10 @@ func TestTUIObserverResourceStatusEvent_DockerZeroCapacity(t *testing.T) {
 	}
 	status := mock.statusCalls[0]
 
-	// Zero capacity means Docker is effectively unavailable
-	if status.DockerAvailable {
-		t.Error("Expected DockerAvailable=false when docker-scheduler capacity is 0")
+	// Docker scheduler exists, so it's available (even with 0 capacity during init)
+	// This allows slow machines to show Docker as available before pool is fully initialized
+	if !status.DockerAvailable {
+		t.Error("Expected DockerAvailable=true when docker-scheduler resource exists (even with 0 capacity)")
 	}
 	if status.DockerMemPercent != 0 {
 		t.Errorf("Expected DockerMemPercent 0, got %.1f", status.DockerMemPercent)

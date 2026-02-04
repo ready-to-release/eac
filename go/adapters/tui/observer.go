@@ -99,9 +99,13 @@ func (o *TUIObserver) onResourceStatus(e interfaces.ResourceStatusEvent) {
 		}
 
 		// Check for docker-scheduler to extract docker memory metrics
-		if r.Name == "docker-scheduler" && r.Capacity > 0 {
+		// Mark as available when resource exists (even with 0 capacity during init)
+		// Only calculate percentage when capacity > 0 to avoid division by zero
+		if r.Name == "docker-scheduler" {
 			dockerAvailable = true
-			dockerMemPercent = float64(r.Used) / float64(r.Capacity) * 100
+			if r.Capacity > 0 {
+				dockerMemPercent = float64(r.Used) / float64(r.Capacity) * 100
+			}
 		}
 	}
 

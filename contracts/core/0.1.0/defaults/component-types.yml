@@ -73,7 +73,7 @@ component-types:
     build_after: [structurizr, markdown, docs-assets]
     requirements: [docker]
     resources:
-      cpus: 2
+      cpus: 4       # Site building with plugins can be CPU-intensive
 
   # Docs PDF component - unified handler for PDF documentation builds
   # Single handler that combines preprocessing (native Go) + PDF rendering (container)
@@ -85,7 +85,7 @@ component-types:
     requirements: [docker]
     resources:
       cpus: 4       # Keep: observed 285% CPU usage (effectively 3 cores)
-      memory: 4g    # Increased for large PDF aggregation
+      memory: 4g    # Fits in 6GB Docker limit with shm headroom
     defaults:
       theme: dark
     cache:
@@ -101,8 +101,8 @@ component-types:
     build_after: [structurizr, markdown, docs-assets]
     requirements: [docker]
     resources:
-      cpus: 2       # Reduced: MkDocs is less CPU-intensive than PDF
-      memory: 1g    # Reduced from 4GB: MkDocs uses <500MB typically
+      cpus: 4       # Site building with plugins can be CPU-intensive
+      memory: 1g
     cache:
       key_sources: [sources.hash, config.hash, container.hash]
       artifacts_cacheable: true

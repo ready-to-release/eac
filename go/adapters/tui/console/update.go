@@ -131,6 +131,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
+		// Initialize capacity tracking from WeightedCapacity
+		// This ensures roof/pressureTarget have sensible defaults before first progress event
+		// Fixes race condition where first render happens before ProgressUpdateEvent on slow machines
+		if msg.Summary != nil && msg.Summary.WeightedCapacity > 0 {
+			m.roof = msg.Summary.WeightedCapacity
+			m.pressureTarget = msg.Summary.WeightedCapacity
+		}
 		return m, nil
 
 	case SummaryDataMsg:
@@ -280,9 +288,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Update Docker memory metrics only if explicitly set (preserve across partial updates)
+		// dockerAvailable is "sticky" - once Docker becomes available, it stays available
+		// This handles slow machines where Docker pool may initialize after first status events
 		if status.DockerAvailable {
 			m.cachedDockerMemPercent = status.DockerMemPercent
-			m.dockerAvailable = status.DockerAvailable
+			m.dockerAvailable = true // sticky - never reset to false
 		}
 
 		// Update container instance counts (for Containers lamps)

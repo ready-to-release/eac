@@ -467,12 +467,22 @@ func (r *ComponentResolver) getWeight(moniker, compName, compType string, op too
 		}
 	}
 
+	// Fall back to component type's weight if tool didn't provide one
+	// This handles native handlers (e.g., pdf, site) that aren't in the tool registry
+	var typeConfig *config.ComponentType
+	if r.cfg != nil && r.cfg.ComponentTypes != nil {
+		typeConfig = r.cfg.ComponentTypes.Get(compType)
+		if baseWeight == 1 && typeConfig != nil {
+			if typeWeight := typeConfig.GetWeight(); typeWeight > 1 {
+				baseWeight = typeWeight
+			}
+		}
+	}
+
 	// Apply component-type amplifier if configured
 	compTypeAmp := 1.0
-	if r.cfg != nil && r.cfg.ComponentTypes != nil {
-		if typeConfig := r.cfg.ComponentTypes.Get(compType); typeConfig != nil {
-			compTypeAmp = typeConfig.GetAmp()
-		}
+	if typeConfig != nil {
+		compTypeAmp = typeConfig.GetAmp()
 	}
 
 	// Apply module-level amplifier if configured
