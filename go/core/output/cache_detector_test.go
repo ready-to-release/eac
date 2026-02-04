@@ -1,0 +1,818 @@
+package output
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/ready-to-release/eac/go/core/workunit"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// =============================================================================
+// UoWChangeResult Type Tests
+// =============================================================================
+
+func TestUoWChangeResult_FieldsExist(t *testing.T) {
+	// Verify UoWChangeResult has required fields
+	result := &UoWChangeResult{
+		Changed:       []workunit.UnitID{},
+		UpToDate:      []workunit.UnitID{},
+		ChangeReasons: map[string]string{},
+		FreshRun:      false,
+		DetectionTime: time.Duration(0),
+	}
+
+	assert.NotNil(t, result.Changed)
+	assert.NotNil(t, result.UpToDate)
+	assert.NotNil(t, result.ChangeReasons)
+	assert.False(t, result.FreshRun)
+	assert.Zero(t, result.DetectionTime)
+}
+
+// =============================================================================
+// DetectUoWChanges Tests
+// =============================================================================
+
+func TestDetectUoWChanges_FreshRun_NoManifests(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:current-hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.True(t, result.FreshRun, "should detect fresh run when no manifests exist")
+	assert.Len(t, result.Changed, 2, "all UoWs should be changed on fresh run")
+	assert.Empty(t, result.UpToDate, "no UoWs should be up-to-date on fresh run")
+
+	// Verify change reasons
+	for _, id := range expectedUoWs {
+		reason, ok := result.ChangeReasons[id.Longname()]
+		assert.True(t, ok, "should have reason for %s", id.Longname())
+		assert.Contains(t, reason, "fresh run")
+	}
+}
+
+func TestDetectUoWChanges_AllCached_HashesMatch(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifests with specific input hashes
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2.InputHash = "sha256:hash-docker"
+	f.saveManifest(m2)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+	}
+
+	// Return matching hashes
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		if id.Component == "go" {
+			return "sha256:hash-go", nil
+		}
+		return "sha256:hash-docker", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.False(t, result.FreshRun)
+	assert.Empty(t, result.Changed, "no UoWs should be changed when hashes match")
+	assert.Len(t, result.UpToDate, 2, "all UoWs should be up-to-date")
+}
+
+func TestDetectUoWChanges_PartialCached_SomeHashesDiffer(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifests with specific input hashes
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2.InputHash = "sha256:hash-docker-old" // Will differ
+	f.saveManifest(m2)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+	}
+
+	// Go hash matches, docker hash differs
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		if id.Component == "go" {
+			return "sha256:hash-go", nil
+		}
+		return "sha256:hash-docker-new", nil // Changed!
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.False(t, result.FreshRun)
+	assert.Len(t, result.Changed, 1, "one UoW should be changed")
+	assert.Len(t, result.UpToDate, 1, "one UoW should be up-to-date")
+
+	// Docker should be changed
+	assert.Equal(t, "docker", result.Changed[0].Component)
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "source changed")
+
+	// Go should be up-to-date
+	assert.Equal(t, "go", result.UpToDate[0].Component)
+}
+
+func TestDetectUoWChanges_MissingManifest_MarkedAsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create only one manifest
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+	// docker manifest is missing
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash-go", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.False(t, result.FreshRun, "not a fresh run since go manifest exists")
+	assert.Len(t, result.Changed, 1, "missing manifest should be changed")
+	assert.Len(t, result.UpToDate, 1, "existing manifest should be up-to-date")
+
+	// Docker should be changed due to missing manifest
+	assert.Equal(t, "docker", result.Changed[0].Component)
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "no prior manifest")
+}
+
+func TestDetectUoWChanges_PreviousFailure_MarkedAsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifest with exit code indicating failure
+	m1 := f.createUoWManifestWithExitCode(workunit.ContextBuild, "core", "go", "go", 1)
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	// Hash matches but previous run failed
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash-go", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "previously failed UoW should be changed")
+	assert.Empty(t, result.UpToDate)
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "previous failure")
+}
+
+func TestDetectUoWChanges_InvalidArtifacts_MarkedAsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifest with artifacts, but corrupt the artifacts
+	m1 := f.createUoWManifestWithArtifacts(workunit.ContextBuild, "core", "go", "go", map[string][]byte{
+		"binary": []byte("original content"),
+	})
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	// Now corrupt the artifact
+	artifactPath := filepath.Join(f.workspaceRoot, "out", "build", "core", "go_go", "binary")
+	err := os.WriteFile(artifactPath, []byte("modified content"), 0644)
+	require.NoError(t, err)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	// Hash matches
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash-go", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "UoW with corrupt artifacts should be changed")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "artifacts invalid")
+}
+
+func TestDetectUoWChanges_EmptyExpectedList_ReturnsEmpty(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	expectedUoWs := []workunit.UnitID{}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Empty(t, result.Changed)
+	assert.Empty(t, result.UpToDate)
+	assert.False(t, result.FreshRun)
+}
+
+func TestDetectUoWChanges_HashProviderError_MarkedAsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	// Hash provider returns error
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "", assert.AnError
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "UoW with hash error should be changed")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "hash error")
+}
+
+func TestDetectUoWChanges_RecordsDetectionTime(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	// Detection time can be 0 on fast machines - just verify it's non-negative
+	assert.GreaterOrEqual(t, result.DetectionTime, time.Duration(0), "detection time should be non-negative")
+}
+
+func TestDetectUoWChanges_AllContexts(t *testing.T) {
+	contexts := []workunit.Context{
+		workunit.ContextBuild,
+		workunit.ContextTest,
+		workunit.ContextLint,
+		workunit.ContextScan,
+	}
+
+	for _, ctx := range contexts {
+		t.Run(string(ctx), func(t *testing.T) {
+			f := newTestFixture(t)
+			reader := NewReader(f.workspaceRoot)
+
+			m1 := f.createUoWManifest(ctx, "core", "go", "tool")
+			m1.InputHash = "sha256:hash"
+			f.saveManifest(m1)
+
+			expectedUoWs := []workunit.UnitID{
+				{Context: ctx, Module: "core", Component: "go", Tool: "tool"},
+			}
+
+			getInputHash := func(id workunit.UnitID) (string, error) {
+				return "sha256:hash", nil
+			}
+
+			result, err := reader.DetectUoWChanges(ctx, expectedUoWs, getInputHash)
+			require.NoError(t, err)
+
+			assert.Empty(t, result.Changed)
+			assert.Len(t, result.UpToDate, 1)
+		})
+	}
+}
+
+// =============================================================================
+// IsModuleChanged Tests
+// =============================================================================
+
+func TestIsModuleChanged_NoManifests_ReturnsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	changed, reason, err := reader.IsModuleChanged(workunit.ContextBuild, "core", getInputHash)
+	require.NoError(t, err)
+
+	assert.True(t, changed, "module with no manifests should be changed")
+	assert.Contains(t, reason, "no prior manifest")
+}
+
+func TestIsModuleChanged_AllUoWsCached_ReturnsNotChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifests with matching hashes
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2.InputHash = "sha256:hash-docker"
+	f.saveManifest(m2)
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		if id.Component == "go" {
+			return "sha256:hash-go", nil
+		}
+		return "sha256:hash-docker", nil
+	}
+
+	changed, reason, err := reader.IsModuleChanged(workunit.ContextBuild, "core", getInputHash)
+	require.NoError(t, err)
+
+	assert.False(t, changed, "module with all cached UoWs should not be changed")
+	assert.Empty(t, reason)
+}
+
+func TestIsModuleChanged_OneUoWChanged_ReturnsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifests - one will have different hash
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2.InputHash = "sha256:hash-docker-old"
+	f.saveManifest(m2)
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		if id.Component == "go" {
+			return "sha256:hash-go", nil
+		}
+		return "sha256:hash-docker-new", nil // Different!
+	}
+
+	changed, reason, err := reader.IsModuleChanged(workunit.ContextBuild, "core", getInputHash)
+	require.NoError(t, err)
+
+	assert.True(t, changed, "module with one changed UoW should be changed")
+	assert.Contains(t, reason, "source changed")
+}
+
+func TestIsModuleChanged_PreviousFailure_ReturnsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifest with failure exit code
+	m1 := f.createUoWManifestWithExitCode(workunit.ContextBuild, "core", "go", "go", 1)
+	m1.InputHash = "sha256:hash-go"
+	f.saveManifest(m1)
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash-go", nil
+	}
+
+	changed, reason, err := reader.IsModuleChanged(workunit.ContextBuild, "core", getInputHash)
+	require.NoError(t, err)
+
+	assert.True(t, changed, "module with failed UoW should be changed")
+	assert.Contains(t, reason, "previous failure")
+}
+
+func TestIsModuleChanged_DifferentContext_IndependentResults(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create build manifest (cached)
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	f.saveManifest(buildManifest)
+
+	// Test context has no manifests
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	// Build context should be cached
+	buildChanged, _, err := reader.IsModuleChanged(workunit.ContextBuild, "core", getInputHash)
+	require.NoError(t, err)
+	assert.False(t, buildChanged, "build should be cached")
+
+	// Test context should be changed (no manifests)
+	testChanged, _, err := reader.IsModuleChanged(workunit.ContextTest, "core", getInputHash)
+	require.NoError(t, err)
+	assert.True(t, testChanged, "test should be changed (no manifests)")
+}
+
+// =============================================================================
+// Test Fixture Helpers (additional)
+// =============================================================================
+
+// saveManifest writes a modified manifest back to disk
+func (f *testFixture) saveManifest(manifest *UoWManifest) {
+	f.t.Helper()
+
+	dirName := manifest.Component + "_" + manifest.Tool
+	manifestDir := filepath.Join(f.workspaceRoot, "out", string(manifest.Context), manifest.Module, dirName)
+	err := os.MkdirAll(manifestDir, 0755)
+	require.NoError(f.t, err)
+
+	manifestPath := filepath.Join(manifestDir, "uow.manifest.json")
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	require.NoError(f.t, err)
+	err = os.WriteFile(manifestPath, data, 0644)
+	require.NoError(f.t, err)
+}
+
+// =============================================================================
+// UoWManifest Metadata Tests
+// =============================================================================
+
+func TestUoWManifest_MetadataField_Serialization(t *testing.T) {
+	manifest := &UoWManifest{
+		Context:   workunit.ContextTest,
+		Module:    "core",
+		Component: "go",
+		Tool:      "gotest",
+		ExitCode:  0,
+		InputHash: "sha256:hash",
+		Metadata: map[string]string{
+			"testset":  "unit",
+			"build_id": "abc123",
+		},
+	}
+
+	// Serialize to JSON
+	data, err := json.Marshal(manifest)
+	require.NoError(t, err)
+
+	// Deserialize
+	var loaded UoWManifest
+	err = json.Unmarshal(data, &loaded)
+	require.NoError(t, err)
+
+	assert.Equal(t, "unit", loaded.Metadata["testset"])
+	assert.Equal(t, "abc123", loaded.Metadata["build_id"])
+}
+
+func TestUoWManifest_MetadataField_OmittedWhenEmpty(t *testing.T) {
+	manifest := &UoWManifest{
+		Context:   workunit.ContextBuild,
+		Module:    "core",
+		Component: "go",
+		Tool:      "go",
+		ExitCode:  0,
+		InputHash: "sha256:hash",
+		// No Metadata
+	}
+
+	data, err := json.Marshal(manifest)
+	require.NoError(t, err)
+
+	// Should not contain "metadata" key when empty
+	assert.NotContains(t, string(data), "metadata")
+}
+
+func TestUoWManifest_MetadataField_LoadFromDisk(t *testing.T) {
+	f := newTestFixture(t)
+
+	// Create manifest with metadata
+	manifest := &UoWManifest{
+		Context:    workunit.ContextTest,
+		Module:     "core",
+		Component:  "go",
+		Tool:       "gotest",
+		ExitCode:   0,
+		InputHash:  "sha256:hash",
+		ExecutedAt: time.Now().UTC().Truncate(time.Second),
+		Duration:   30 * time.Second,
+		OutputHash: "sha256:output",
+		Version:    "1.0.0",
+		Metadata: map[string]string{
+			"testset":  "integration",
+			"build_id": "def456",
+		},
+	}
+	f.saveManifest(manifest)
+
+	// Load using reader
+	reader := NewReader(f.workspaceRoot)
+	loaded, err := reader.GetUoW(workunit.ContextTest, "core", "go", "gotest")
+	require.NoError(t, err)
+
+	assert.Equal(t, "integration", loaded.Metadata["testset"])
+	assert.Equal(t, "def456", loaded.Metadata["build_id"])
+}
+
+// =============================================================================
+// Edge Cases
+// =============================================================================
+
+func TestDetectUoWChanges_ConcurrentSafe(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifests
+	for i := 0; i < 10; i++ {
+		m := f.createUoWManifest(workunit.ContextBuild, "core", "comp"+string(rune('0'+i)), "tool")
+		m.InputHash = "sha256:hash"
+		f.saveManifest(m)
+	}
+
+	var expectedUoWs []workunit.UnitID
+	for i := 0; i < 10; i++ {
+		expectedUoWs = append(expectedUoWs, workunit.UnitID{
+			Context:   workunit.ContextBuild,
+			Module:    "core",
+			Component: "comp" + string(rune('0'+i)),
+			Tool:      "tool",
+		})
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	// Run detection multiple times concurrently
+	done := make(chan bool)
+	for i := 0; i < 5; i++ {
+		go func() {
+			result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+			assert.NoError(t, err)
+			assert.Len(t, result.UpToDate, 10)
+			done <- true
+		}()
+	}
+
+	for i := 0; i < 5; i++ {
+		<-done
+	}
+}
+
+func TestDetectUoWChanges_NoArtifacts_StillValid(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create manifest with no artifacts (valid for lint)
+	m1 := f.createUoWManifest(workunit.ContextLint, "core", "go", "golangci-lint")
+	m1.InputHash = "sha256:hash"
+	m1.Artifacts = []Artifact{} // Empty artifacts
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextLint, Module: "core", Component: "go", Tool: "golangci-lint"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextLint, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Empty(t, result.Changed, "UoW with no artifacts but matching hash should be cached")
+	assert.Len(t, result.UpToDate, 1)
+}
+
+func TestDetectUoWChanges_NilHashProvider_AllChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1.InputHash = "sha256:hash"
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	// nil hash provider - should treat as hash error or always changed
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, nil)
+	require.NoError(t, err)
+
+	// With nil hash provider, we can't verify the hash, so should be changed
+	assert.Len(t, result.Changed, 1)
+}
+
+// =============================================================================
+// Integration with Existing Reader Tests
+// =============================================================================
+
+func TestDetectUoWChanges_ConsistentWithValidateUoW(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create valid manifest with artifacts
+	m1 := f.createUoWManifestWithArtifacts(workunit.ContextBuild, "core", "go", "go", map[string][]byte{
+		"binary": []byte("content"),
+	})
+	m1.InputHash = "sha256:hash"
+	f.saveManifest(m1)
+
+	// ValidateUoW should return valid
+	validationResult := reader.ValidateUoW(workunit.ContextBuild, "core", "go", "go")
+	assert.True(t, validationResult.Valid, "ValidateUoW should return valid")
+
+	// DetectUoWChanges should return up-to-date
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	changeResult, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Empty(t, changeResult.Changed, "DetectUoWChanges should be consistent with ValidateUoW")
+	assert.Len(t, changeResult.UpToDate, 1)
+}
+
+// =============================================================================
+// NoOp Manifest Tests
+// =============================================================================
+
+func TestDetectUoWChanges_NoOpManifest_AlwaysUpToDate(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create NoOp manifest (module with no buildable components)
+	m1 := f.createUoWManifest(workunit.ContextBuild, "templates", "none", "")
+	m1.NoOp = true
+	m1.InputHash = "" // NoOp UoWs have empty input hash
+	m1.OutputHash = ""
+	m1.Artifacts = nil
+	m1.Metadata = map[string]string{"reason": "no buildable components"}
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "templates", Component: "none", Tool: ""},
+	}
+
+	// Hash provider shouldn't even be called for NoOp UoWs
+	hashCalled := false
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		hashCalled = true
+		return "sha256:should-not-matter", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.False(t, hashCalled, "hash provider should not be called for NoOp UoWs")
+	assert.Empty(t, result.Changed, "NoOp UoW should be up-to-date")
+	assert.Len(t, result.UpToDate, 1, "NoOp UoW should be in up-to-date list")
+}
+
+func TestDetectUoWChanges_NoOpManifest_WithFailure_MarkedAsChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create NoOp manifest with failure exit code
+	m1 := f.createUoWManifestWithExitCode(workunit.ContextBuild, "templates", "none", "", 1)
+	m1.NoOp = true
+	m1.InputHash = ""
+	f.saveManifest(m1)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "templates", Component: "none", Tool: ""},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "failed NoOp UoW should be marked as changed")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "previous failure")
+}
+
+func TestIsModuleChanged_NoOpManifest_ReturnsNotChanged(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create NoOp manifest
+	m1 := f.createUoWManifest(workunit.ContextBuild, "templates", "none", "")
+	m1.NoOp = true
+	m1.InputHash = ""
+	f.saveManifest(m1)
+
+	// nil hash provider - should still work for NoOp
+	changed, reason, err := reader.IsModuleChanged(workunit.ContextBuild, "templates", nil)
+	require.NoError(t, err)
+
+	assert.False(t, changed, "module with NoOp UoW should not be changed")
+	assert.Empty(t, reason)
+}
+
+func TestDetectUoWChanges_MixedNoOpAndRegular(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Create a NoOp manifest
+	m1 := f.createUoWManifest(workunit.ContextTest, "templates", "none", "none")
+	m1.NoOp = true
+	m1.InputHash = ""
+	m1.Metadata = map[string]string{"reason": "no tests for module"}
+	f.saveManifest(m1)
+
+	// Create a regular manifest
+	m2 := f.createUoWManifest(workunit.ContextTest, "core", "go", "gotest")
+	m2.InputHash = "sha256:hash-core"
+	f.saveManifest(m2)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextTest, Module: "templates", Component: "none", Tool: "none"},
+		{Context: workunit.ContextTest, Module: "core", Component: "go", Tool: "gotest"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		if id.Module == "core" {
+			return "sha256:hash-core", nil // Matches
+		}
+		return "", nil // Shouldn't be called for NoOp
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextTest, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Empty(t, result.Changed, "both UoWs should be up-to-date")
+	assert.Len(t, result.UpToDate, 2)
+}
+
+func TestDetectUoWChanges_NoOpInAllContexts(t *testing.T) {
+	contexts := []struct {
+		ctx    workunit.Context
+		reason string
+	}{
+		{workunit.ContextBuild, "no buildable components"},
+		{workunit.ContextTest, "no tests for module"},
+		{workunit.ContextLint, "no lintable components"},
+		{workunit.ContextScan, "component type not scannable"},
+	}
+
+	for _, tc := range contexts {
+		t.Run(string(tc.ctx), func(t *testing.T) {
+			f := newTestFixture(t)
+			reader := NewReader(f.workspaceRoot)
+
+			m1 := f.createUoWManifest(tc.ctx, "placeholder", "none", "none")
+			m1.NoOp = true
+			m1.InputHash = ""
+			m1.Metadata = map[string]string{"reason": tc.reason}
+			f.saveManifest(m1)
+
+			expectedUoWs := []workunit.UnitID{
+				{Context: tc.ctx, Module: "placeholder", Component: "none", Tool: "none"},
+			}
+
+			result, err := reader.DetectUoWChanges(tc.ctx, expectedUoWs, nil)
+			require.NoError(t, err)
+
+			assert.Empty(t, result.Changed, "NoOp UoW in %s context should be up-to-date", tc.ctx)
+			assert.Len(t, result.UpToDate, 1)
+		})
+	}
+}

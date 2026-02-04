@@ -14,17 +14,61 @@ import (
 
 var log = logging.C()
 
+// filterToExpected returns only manifests matching the expected UoWs list.
+// If expected is nil or empty, returns all manifests unchanged.
+func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.UnitID) []*coreoutput.UoWManifest {
+	if len(expected) == 0 {
+		return manifests
+	}
+
+	// Build set of expected component_tool keys
+	expectedSet := make(map[string]bool)
+	for _, id := range expected {
+		key := id.Component + "_" + id.Tool
+		expectedSet[key] = true
+	}
+
+	var filtered []*coreoutput.UoWManifest
+	for _, m := range manifests {
+		key := m.Component + "_" + m.Tool
+		if expectedSet[key] {
+			filtered = append(filtered, m)
+		} else {
+			log.Debugf("Filtering out orphaned manifest: %s/%s_%s", m.Module, m.Component, m.Tool)
+		}
+	}
+	return filtered
+}
+
 // ValidateBuildArtifacts validates that build artifacts exist and are up-to-date for the given modules.
 // It performs:
 // 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}_{tool}/)
 // 2. Artifact existence validation (files actually exist on disk)
 // 3. Staleness check (source files unchanged since build)
 // Returns ArtifactValidationInfo with details about missing/stale artifacts.
+//
+// Note: This function checks ALL manifests on disk. If you want to filter to only
+// currently-expected UoWs (to ignore orphaned manifests from removed components),
+// use ValidateBuildArtifactsWithExpected instead.
 func ValidateBuildArtifacts(
 	moduleList []string,
 	cfg *config.EACConfig,
 	workspaceRoot string,
 	moduleRegistry *modules.Registry,
+) *initsummary.ArtifactValidationInfo {
+	return ValidateBuildArtifactsWithExpected(moduleList, cfg, workspaceRoot, moduleRegistry, nil)
+}
+
+// ValidateBuildArtifactsWithExpected validates build artifacts, optionally filtering to expected UoWs.
+// If expectedUoWs is nil, all manifests on disk are checked (legacy behavior).
+// If expectedUoWs is provided, only manifests matching those UoWs are checked for staleness,
+// preventing false positives from orphaned manifests left by removed component types.
+func ValidateBuildArtifactsWithExpected(
+	moduleList []string,
+	cfg *config.EACConfig,
+	workspaceRoot string,
+	moduleRegistry *modules.Registry,
+	expectedUoWs map[string][]workunit.UnitID,
 ) *initsummary.ArtifactValidationInfo {
 	reader := coreoutput.NewReader(workspaceRoot)
 
@@ -80,18 +124,15 @@ func ValidateBuildArtifacts(
 		}
 	}
 
-	// Check for staleness using workunit StateManager change detection
+	// Check for staleness using UoW manifest input hashes
 	var staleModules []string
 	staleReasons := make(map[string]string)
 
 	if moduleRegistry != nil {
-		// Build list of modules with contracts
-		var monikers []string
+		// Build map of current source hashes per module
 		moduleFiles := make(map[string][]string)
 		for _, moniker := range moduleList {
 			if contract, ok := moduleRegistry.Get(moniker); ok {
-				monikers = append(monikers, moniker)
-				// Expand glob patterns to get source files
 				files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
 				if err == nil {
 					moduleFiles[moniker] = files
@@ -99,33 +140,52 @@ func ValidateBuildArtifacts(
 			}
 		}
 
-		if len(monikers) > 0 {
-			// Create hash provider
-			hashProvider := func(module string) (string, error) {
-				files, ok := moduleFiles[module]
-				if !ok {
-					return "", nil
-				}
-				return hash.Files(workspaceRoot, files)
+		// Check each module's UoW manifests for staleness
+		for _, moniker := range moduleList {
+			// Skip modules already in missingFrom (no artifacts)
+			if utils.Contains(missingFrom, moniker) {
+				continue
 			}
 
-			stateMgr := workunit.NewStateManager(workspaceRoot)
-			rule := workunit.DefaultRules[workunit.ContextBuild]
-			changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
+			// Get all UoW manifests for this module
+			manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker)
+			if err != nil || len(manifests) == 0 {
+				// No manifests = skip (already checked for missing)
+				continue
+			}
+
+			// Filter to expected UoWs if provided (ignores orphaned manifests)
+			if expectedUoWs != nil {
+				manifests = filterToExpected(manifests, expectedUoWs[moniker])
+				if len(manifests) == 0 {
+					// No expected manifests found for this module
+					continue
+				}
+			}
+
+			// Compute current input hash
+			files, ok := moduleFiles[moniker]
+			if !ok || len(files) == 0 {
+				continue
+			}
+
+			currentHash, err := hash.Files(workspaceRoot, files)
 			if err != nil {
-				log.Debugf("Failed to detect changes for staleness check: %v", err)
-			} else if !changeResult.FreshRun {
-				// Report changed modules as stale (they need rebuild)
-				for _, moniker := range changeResult.ChangedModules {
-					// Only report as stale if artifacts are present (otherwise it's already in missingFrom)
-					if !utils.Contains(missingFrom, moniker) {
-						staleModules = append(staleModules, moniker)
-						if reason, ok := changeResult.ChangeReasons[moniker]; ok {
-							staleReasons[moniker] = reason
-						} else {
-							staleReasons[moniker] = "source files changed since build"
-						}
-					}
+				continue
+			}
+
+			// Check if any manifest has a mismatched input hash
+			for _, manifest := range manifests {
+				// Skip manifests with empty InputHash (legacy artifacts from pre-UoW-cache)
+				if manifest.InputHash == "" {
+					log.Debugf("Skipping manifest with empty InputHash: %s/%s_%s",
+						moniker, manifest.Component, manifest.Tool)
+					continue
+				}
+				if manifest.InputHash != currentHash {
+					staleModules = append(staleModules, moniker)
+					staleReasons[moniker] = "source files changed since build"
+					break
 				}
 			}
 		}

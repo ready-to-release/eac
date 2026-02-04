@@ -4,7 +4,7 @@
 
 How the `release/` folder structure organizes release artifacts for **published and bundle modules**, and how this differs from internal modules that store changelogs in their module roots.
 
-**Related**: See [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) for complete release type system documentation.
+**Related**: See [Understanding Release Types](../../../../reference/eac/continuous-delivery/release-types.md) for complete release type system documentation.
 
 ---
 
@@ -146,7 +146,7 @@ Module contracts in `.eac/repository.yml` define where each module's changelog l
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
-See [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) for details on each type.
+See [Understanding Release Types](../../../../reference/eac/continuous-delivery/release-types.md) for details on each type.
 
 ### Published Module Path Convention
 

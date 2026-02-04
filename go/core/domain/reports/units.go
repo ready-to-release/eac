@@ -7,8 +7,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
+
+var log = logging.C()
 
 // UnitInfo represents a resolved unit of work with status information.
 type UnitInfo struct {
@@ -61,6 +64,24 @@ type CacheStatus struct {
 	Reason string `json:"reason,omitempty" yaml:"reason,omitempty"`
 }
 
+// SkippedComponent represents a component that was skipped (no handler configured).
+type SkippedComponent struct {
+	// Module is the module moniker
+	Module string `json:"module" yaml:"module"`
+
+	// Component is the component name
+	Component string `json:"component" yaml:"component"`
+
+	// ComponentType is the component type from module.yml
+	ComponentType string `json:"component_type" yaml:"component_type"`
+
+	// Reason explains why this component was skipped
+	Reason string `json:"reason" yaml:"reason"`
+
+	// ConfigHint suggests what config to add
+	ConfigHint string `json:"config_hint,omitempty" yaml:"config_hint,omitempty"`
+}
+
 // UnitReport contains the full unit report for a framework.
 type UnitReport struct {
 	// Framework is the framework type (build, test, lint, scan)
@@ -68,6 +89,9 @@ type UnitReport struct {
 
 	// Units is the list of all resolved units
 	Units []*UnitInfo `json:"units" yaml:"units"`
+
+	// Skipped lists components without handlers for this framework
+	Skipped []*SkippedComponent `json:"skipped,omitempty" yaml:"skipped,omitempty"`
 
 	// Summary contains aggregate statistics
 	Summary *UnitSummary `json:"summary" yaml:"summary"`
@@ -96,13 +120,15 @@ func GetUnits(workspaceRoot string, framework Framework) (*UnitReport, error) {
 	// Load config
 	cfg := config.Global()
 
-	// Collect all units
+	// Collect all units and skipped components
 	var units []*UnitInfo
+	var skipped []*SkippedComponent
 	stateMgr := workunit.NewStateManager(workspaceRoot)
 
 	for _, mod := range moduleReport.Modules {
-		modUnits := resolveUnitsFromConfig(mod, framework, cfg, workspaceRoot, stateMgr)
+		modUnits, modSkipped := resolveUnitsFromConfig(mod, framework, cfg, workspaceRoot, stateMgr)
 		units = append(units, modUnits...)
+		skipped = append(skipped, modSkipped...)
 	}
 
 	// Sort units by module, then component, then tool
@@ -116,23 +142,34 @@ func GetUnits(workspaceRoot string, framework Framework) (*UnitReport, error) {
 		return units[i].Tool < units[j].Tool
 	})
 
+	// Sort skipped by module, then component
+	sort.Slice(skipped, func(i, j int) bool {
+		if skipped[i].Module != skipped[j].Module {
+			return skipped[i].Module < skipped[j].Module
+		}
+		return skipped[i].Component < skipped[j].Component
+	})
+
 	// Build summary
 	summary := buildUnitSummary(units)
 
 	return &UnitReport{
 		Framework: framework,
 		Units:     units,
+		Skipped:   skipped,
 		Summary:   summary,
 	}, nil
 }
 
 // resolveUnitsFromConfig resolves units using config information directly.
 // This doesn't require build handlers to be registered.
-func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cfg *config.EACConfig, workspaceRoot string, stateMgr *workunit.StateManager) []*UnitInfo {
+// Returns both resolved units and skipped components (those without handlers).
+func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cfg *config.EACConfig, workspaceRoot string, stateMgr *workunit.StateManager) ([]*UnitInfo, []*SkippedComponent) {
 	var units []*UnitInfo
+	var skipped []*SkippedComponent
 
 	if cfg == nil {
-		return units
+		return units, skipped
 	}
 
 	for compName := range mod.Components {
@@ -149,15 +186,41 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 			if typeConfig != nil && typeConfig.HasBuilder() {
 				unit := createUnitInfo(mod, compName, compType, typeConfig.Builder, workunit.ContextBuild, workspaceRoot, stateMgr)
 				units = append(units, unit)
+			} else {
+				skipped = append(skipped, &SkippedComponent{
+					Module:        mod.Moniker,
+					Component:     compName,
+					ComponentType: compType,
+					Reason:        "no builder configured",
+					ConfigHint:    "add 'builder' to component-types.yml for type '" + compType + "'",
+				})
 			}
 
 		case FrameworkLint:
-			if cfg.LintProviders != nil {
+			if typeConfig != nil && typeConfig.IsLintable() {
 				providers := cfg.LintProviders.GetProvidersForComponentType(compType)
-				for _, provider := range providers {
-					unit := createUnitInfo(mod, compName, compType, provider, workunit.ContextLint, workspaceRoot, stateMgr)
-					units = append(units, unit)
+				if len(providers) > 0 {
+					for _, provider := range providers {
+						unit := createUnitInfo(mod, compName, compType, provider, workunit.ContextLint, workspaceRoot, stateMgr)
+						units = append(units, unit)
+					}
+				} else {
+					skipped = append(skipped, &SkippedComponent{
+						Module:        mod.Moniker,
+						Component:     compName,
+						ComponentType: compType,
+						Reason:        "lintable but no providers configured",
+						ConfigHint:    "add lint provider mapping in lint-providers.yml for type '" + compType + "'",
+					})
 				}
+			} else {
+				skipped = append(skipped, &SkippedComponent{
+					Module:        mod.Moniker,
+					Component:     compName,
+					ComponentType: compType,
+					Reason:        "component type not lintable",
+					ConfigHint:    "add 'lintable: true' to component-types.yml for type '" + compType + "'",
+				})
 			}
 
 		case FrameworkScan:
@@ -168,25 +231,28 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 					unit.HostInstalled = false
 					units = append(units, unit)
 				}
+			} else {
+				skipped = append(skipped, &SkippedComponent{
+					Module:        mod.Moniker,
+					Component:     compName,
+					ComponentType: compType,
+					Reason:        "no scanners configured",
+					ConfigHint:    "add 'scanners' to component-types.yml for type '" + compType + "'",
+				})
 			}
 
 		case FrameworkTest:
-			// Test units require runtime discovery
-			// We can show testable components but actual test discovery is complex
-			testableTypes := map[string]bool{
-				"go":         true,
-				"gherkin":    true,
-				"typescript": true,
-				"python":     true,
-			}
-			if testableTypes[compType] {
+			// Check if component type is testable
+			if typeConfig != nil && typeConfig.IsTestable() {
 				unit := createUnitInfo(mod, compName, compType, "test", workunit.ContextTest, workspaceRoot, stateMgr)
 				units = append(units, unit)
 			}
+			// Note: non-testable components are not reported as skipped since
+			// most component types (markdown, yaml, etc.) are not expected to have tests
 		}
 	}
 
-	return units
+	return units, skipped
 }
 
 // createUnitInfo creates a UnitInfo for a component.

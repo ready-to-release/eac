@@ -219,12 +219,11 @@ func TestParseSharedFlags_Defaults(t *testing.T) {
 
 func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 	tests := []struct {
-		name              string
-		args              []string
-		wantCacheExplicit bool
-		wantDepsExplicit  bool
+		name                 string
+		args                 []string
+		wantCacheExplicit    bool
+		wantDepsExplicit     bool
 		wantParallelExplicit bool
-		wantLayeredExplicit  bool
 		wantTUIExplicit      bool
 	}{
 		{
@@ -233,7 +232,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -242,7 +240,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: true,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -251,7 +248,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: true,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -260,7 +256,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: true,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -269,7 +264,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  true,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -278,7 +272,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: true,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -287,25 +280,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: true,
-			wantLayeredExplicit:  false,
-			wantTUIExplicit:      false,
-		},
-		{
-			name:              "layered sets LayeredExplicit",
-			args:              []string{"--layered", "module1"},
-			wantCacheExplicit: false,
-			wantDepsExplicit:  false,
-			wantParallelExplicit: false,
-			wantLayeredExplicit:  true,
-			wantTUIExplicit:      false,
-		},
-		{
-			name:              "unlayered sets LayeredExplicit",
-			args:              []string{"--unlayered", "module1"},
-			wantCacheExplicit: false,
-			wantDepsExplicit:  false,
-			wantParallelExplicit: false,
-			wantLayeredExplicit:  true,
 			wantTUIExplicit:      false,
 		},
 		{
@@ -314,7 +288,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      true,
 		},
 		{
@@ -323,16 +296,14 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			wantCacheExplicit: false,
 			wantDepsExplicit:  false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
 			wantTUIExplicit:      true,
 		},
 		{
 			name:              "all declarative flags",
-			args:              []string{"--with-cache", "--with-deps", "--parallel", "--layered", "--no-tui", "module1"},
+			args:              []string{"--with-cache", "--with-deps", "--parallel", "--no-tui", "module1"},
 			wantCacheExplicit: true,
 			wantDepsExplicit:  true,
 			wantParallelExplicit: true,
-			wantLayeredExplicit:  true,
 			wantTUIExplicit:      true,
 		},
 	}
@@ -353,9 +324,6 @@ func TestParseSharedFlags_DeclarativeState(t *testing.T) {
 			}
 			if flags.ParallelExplicit != tt.wantParallelExplicit {
 				t.Errorf("ParallelExplicit = %v, want %v", flags.ParallelExplicit, tt.wantParallelExplicit)
-			}
-			if flags.LayeredExplicit != tt.wantLayeredExplicit {
-				t.Errorf("LayeredExplicit = %v, want %v", flags.LayeredExplicit, tt.wantLayeredExplicit)
 			}
 			if flags.TUIExplicit != tt.wantTUIExplicit {
 				t.Errorf("TUIExplicit = %v, want %v", flags.TUIExplicit, tt.wantTUIExplicit)

@@ -109,12 +109,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Pre-register all tabs from ExecutionTree
 		// This ensures tabs are constant after init - only state changes, no additions
 		if msg.Summary != nil && len(msg.Summary.ExecutionTree) > 0 {
-			for _, layer := range msg.Summary.ExecutionTree {
-				for _, module := range layer.Modules {
-					for _, uow := range module.UoWs {
-						// Use full ID (Longname) for matching, DisplayName for tab labels
-						m.GetOrCreateUoWState(uow.ID, uow.DisplayName, uow.Weight)
-					}
+			for _, module := range msg.Summary.ExecutionTree {
+				for _, uow := range module.UoWs {
+					// Use full ID (Longname) for matching, DisplayName for tab labels
+					m.GetOrCreateUoWState(uow.ID, uow.DisplayName, uow.Weight)
 				}
 			}
 
@@ -127,7 +125,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Summary != nil && len(msg.Summary.PlannedTools) > 0 {
 			for _, tool := range msg.Summary.PlannedTools {
 				if tool.IsContainer {
-					m.plannedContainers = append(m.plannedContainers, tool.Name)
+					m.plannedContainerTools = append(m.plannedContainerTools, tool.Name)
 				} else {
 					m.plannedSystemTools = append(m.plannedSystemTools, tool.Name)
 				}
@@ -240,8 +238,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.running = status.Running
 		m.completed = status.Completed
 		m.total = status.Total
-		m.layer = status.Layer
-		m.totalLayers = status.TotalLayers
 
 		// Update capacity tracking (three-value model)
 		// Only update if non-zero to preserve values across partial status updates
@@ -262,9 +258,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.locks = status.Locks
 		}
 
-		// Update active tools (planned tools set at init, only active state changes)
-		m.activeContainers = status.ActiveContainers
-		m.activeSystemTools = status.ActiveSystemTools
+		// Update active tools only if provided (preserve across partial status updates)
+		// Different observer events send partial Status - don't let progress updates wipe tool status
+		if len(status.ActiveContainerTools) > 0 || len(status.UsedContainerTools) > 0 {
+			m.activeContainerTools = status.ActiveContainerTools
+			// Track seen containers (containers that have been used at least once)
+			for _, c := range status.ActiveContainerTools {
+				if !containsString(m.seenContainerTools, c) {
+					m.seenContainerTools = append(m.seenContainerTools, c)
+				}
+			}
+		}
+		if len(status.ActiveSystemTools) > 0 || len(status.UsedSystemTools) > 0 {
+			m.activeSystemTools = status.ActiveSystemTools
+			// Track seen system tools (tools that have been used at least once)
+			for _, t := range status.ActiveSystemTools {
+				if !containsString(m.seenSystemTools, t) {
+					m.seenSystemTools = append(m.seenSystemTools, t)
+				}
+			}
+		}
+
+		// Update Docker memory metrics only if explicitly set (preserve across partial updates)
+		if status.DockerAvailable {
+			m.cachedDockerMemPercent = status.DockerMemPercent
+			m.dockerAvailable = status.DockerAvailable
+		}
+
+		// Update container instance counts (for Containers lamps)
+		// Only update if provided - totalContainerCount should never decrease
+		if status.TotalContainerCount > 0 || status.RunningContainerCount > 0 {
+			m.runningContainerCount = status.RunningContainerCount
+			// Total should only increase (lamps persist)
+			if status.TotalContainerCount > m.totalContainerCount {
+				m.totalContainerCount = status.TotalContainerCount
+			}
+		}
 
 		if !m.statusDone {
 			return m, m.listenForStatus()
@@ -487,14 +516,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "0":
 		// Reserved - no aggregate view
 	case "t":
-		// Toggle between TabGrid and Tree view
-		if m.viewMode == ViewModeTabGrid {
-			m.viewMode = ViewModeTree
-		} else {
-			m.viewMode = ViewModeTabGrid
-		}
-		// Reset scroll offset when switching views (different layouts)
-		m.tabsScrollOffset = 0
+		// Tree view removed - only tab grid view is supported
 	case "m":
 		// Toggle mouse mode: ON = scrolling/clicking, OFF = text selection
 		m.mouseMode = !m.mouseMode
@@ -646,7 +668,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Resources pane layout (0-indexed Y coordinates):
 		// Y = InitLines:     Resources header (contains freeze-button)
 		// Y = InitLines + 1: Content line 1 (timer, cpu, mem, jobs)
-		// Y = InitLines + 2: Content line 2 (uow, tools, layer)
+		// Y = InitLines + 2: Content line 2 (uow, tools)
 		// Y = InitLines + 3: Resources footer
 
 		resourcesStartY := metrics.InitLines // Header line
@@ -655,9 +677,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		// Column boundaries (matching renderResourcesPane)
 		const (
-			col1End = 38        // timer+CPU or UoW
-			col2End = 38 + 3 + 24 // + separator + Mem/Tools
-			col3End = 38 + 3 + 24 + 3 + 20 // + separator + Jobs/Layer
+			col1End = 38              // timer+CPU or UoW
+			col2End = 38 + 3 + 24     // + separator + Mem/Tools
+			col3End = 38 + 3 + 24 + 3 // + separator for Jobs
 		)
 
 		// Check header line for freeze button
@@ -687,14 +709,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return ""
 		}
 
-		// Check content line 2: uow, tools, layer
+		// Check content line 2: uow, tools
 		if y == contentLine2Y {
 			if x < col1End {
 				return "res-uow"
 			} else if x < col2End {
 				return "res-tools"
-			} else if x < col3End {
-				return "res-layer"
 			}
 			return ""
 		}
@@ -744,73 +764,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Account for scroll offset - add it to get the actual content row
 		row += m.tabsScrollOffset
 
-		// Tree view mode - each line maps to a component (need to track line->moniker mapping)
-		if m.viewMode == ViewModeTree {
-			// Build line-to-moniker mapping (matches renderTreeContent logic)
-			var lineToMoniker []string
-
-			// Check if we should use ExecutionTree or fallback (same logic as renderTreeContent)
-			useExecutionTree := false
-			if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-				matchedTabs := 0
-				tabMap := make(map[string]bool)
-				for _, tab := range tabs {
-					tabMap[tab.Moniker] = true
-				}
-				for _, layer := range m.initSummary.ExecutionTree {
-					for _, module := range layer.Modules {
-						for _, uow := range module.UoWs {
-							if tabMap[uow.ID] {
-								matchedTabs++
-							}
-						}
-					}
-				}
-				useExecutionTree = matchedTabs > 0 && matchedTabs >= len(tabs)/2
-			}
-
-			if useExecutionTree {
-				// Tree from ExecutionTree
-				for layerIdx, layer := range m.initSummary.ExecutionTree {
-					lineToMoniker = append(lineToMoniker, "") // Layer header line
-					for _, module := range layer.Modules {
-						lineToMoniker = append(lineToMoniker, "") // Module line
-						for _, uow := range module.UoWs {
-							lineToMoniker = append(lineToMoniker, uow.ID) // Component line
-						}
-					}
-					if layerIdx < len(m.initSummary.ExecutionTree)-1 {
-						lineToMoniker = append(lineToMoniker, "") // Spacing between layers
-					}
-				}
-			} else {
-				// Fallback: group tabs by module
-				moduleGroups := make(map[string][]*UoWState)
-				var uowOrder []string
-				for _, tab := range tabs {
-					parts := strings.SplitN(tab.Moniker, ":", 2)
-					moduleName := parts[0]
-					if _, exists := moduleGroups[moduleName]; !exists {
-						uowOrder = append(uowOrder, moduleName)
-					}
-					moduleGroups[moduleName] = append(moduleGroups[moduleName], tab)
-				}
-
-				for _, moduleName := range uowOrder {
-					lineToMoniker = append(lineToMoniker, "") // Module line
-					for _, tab := range moduleGroups[moduleName] {
-						lineToMoniker = append(lineToMoniker, tab.Moniker) // Component line
-					}
-				}
-			}
-
-			if row < len(lineToMoniker) {
-				return lineToMoniker[row]
-			}
-			return ""
-		}
-
-		// Tab grid mode - compact single-line tabs, grouped by layer
+		// Tab grid mode - compact single-line tabs
 		// Use configured tab columns (matches renderTabGridContent)
 		const tabWidth = 15
 		tabsPerRow := m.tabColumns
@@ -821,72 +775,14 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			tabsPerRow = 6
 		}
 
-		// Build a map from moniker to tab state for quick lookup
-		tabMap := make(map[string]*UoWState)
-		for _, t := range tabs {
-			tabMap[t.Moniker] = t
-		}
-
 		// Calculate column from X (accounting for left border and tab width)
 		col := (x - 1) / tabWidth
 		if col < 0 || col >= tabsPerRow {
 			return ""
 		}
 
-		// Check if layer grouping is used (same logic as renderTabGridContent)
-		useLayerGrouping := false
-		if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-			matchedTabs := 0
-			for _, layer := range m.initSummary.ExecutionTree {
-				for _, module := range layer.Modules {
-					for _, uow := range module.UoWs {
-						if _, ok := tabMap[uow.ID]; ok {
-							matchedTabs++
-						}
-					}
-				}
-			}
-			useLayerGrouping = matchedTabs > 0 && matchedTabs >= len(tabs)/2
-		}
-
-		// Handle layer-grouped layout
-		if useLayerGrouping {
-			currentLine := 0
-			for _, layer := range m.initSummary.ExecutionTree {
-				// Layer header takes 1 line
-				currentLine++
-
-				// Collect tabs for this layer
-				var layerTabs []*UoWState
-				for _, module := range layer.Modules {
-					for _, uow := range module.UoWs {
-						if state, ok := tabMap[uow.ID]; ok {
-							layerTabs = append(layerTabs, state)
-						}
-					}
-				}
-
-				// Each row of tabs takes 1 line (compact layout)
-				numRows := (len(layerTabs) + tabsPerRow - 1) / tabsPerRow
-				layerEndLine := currentLine + numRows
-
-				if row >= currentLine && row < layerEndLine {
-					// Click is within this layer's tab area
-					localRow := row - currentLine
-					tabIdx := localRow*tabsPerRow + col
-					if tabIdx >= 0 && tabIdx < len(layerTabs) {
-						return layerTabs[tabIdx].Moniker
-					}
-					return ""
-				}
-
-				currentLine = layerEndLine
-			}
-			return ""
-		}
-
-		// Fallback: flat list (no layer grouping)
-		tabRow := row // 1 line per row (compact)
+		// Flat list - 1 line per row (compact)
+		tabRow := row
 		numTabRows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
 		if tabRow >= numTabRows {
 			return ""
@@ -910,49 +806,17 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// Scrolling over tabs/tree pane (left side)
 			// Calculate max scroll based on content
 			tabs := m.GetVisibleTabs()
-			maxScroll := 0
-			if m.viewMode == ViewModeTree {
-				// Tree view: count lines
-				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-					for layerIdx, layer := range m.initSummary.ExecutionTree {
-						maxScroll++ // Layer header
-						for _, module := range layer.Modules {
-							maxScroll++ // Module line
-							maxScroll += len(module.UoWs)
-						}
-						if layerIdx < len(m.initSummary.ExecutionTree)-1 {
-							maxScroll++ // Spacing
-						}
-					}
-				} else {
-					// Fallback count
-					maxScroll = len(tabs) * 2
-				}
-			} else {
-				// Tab grid: count lines (layer header + 1 line per row of compact tabs)
-				// Uses configured tab columns (adjustable with left/right arrows)
-				tabsPerRow := m.tabColumns
-				if tabsPerRow < 1 {
-					tabsPerRow = 1
-				}
-				if tabsPerRow > 6 {
-					tabsPerRow = 6
-				}
-				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-					for _, layer := range m.initSummary.ExecutionTree {
-						maxScroll++ // Layer header
-						layerUoWs := 0
-						for _, module := range layer.Modules {
-							layerUoWs += len(module.UoWs)
-						}
-						rows := (layerUoWs + tabsPerRow - 1) / tabsPerRow
-						maxScroll += rows // 1 line per row (compact)
-					}
-				} else {
-					rows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
-					maxScroll = rows
-				}
+			// Tab grid: count lines (1 line per row of compact tabs)
+			// Uses configured tab columns (adjustable with left/right arrows)
+			tabsPerRow := m.tabColumns
+			if tabsPerRow < 1 {
+				tabsPerRow = 1
 			}
+			if tabsPerRow > 6 {
+				tabsPerRow = 6
+			}
+			rows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
+			maxScroll := rows
 			// Leave some visible content (at least 5 lines)
 			maxScroll -= 5
 			if maxScroll < 0 {
@@ -1290,4 +1154,14 @@ func (m Model) getPaneAtPosition(y int) int {
 // IsDone returns true if both line and status channels are done.
 func (m Model) IsDone() bool {
 	return m.linesDone && m.statusDone
+}
+
+// containsString checks if a slice contains a string.
+func containsString(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }

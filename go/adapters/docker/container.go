@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,6 +18,13 @@ import (
 
 	containerport "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/adapters/docker/util"
+)
+
+// Retry configuration constants.
+const (
+	maxRetries   = 3
+	initialDelay = 100 * time.Millisecond
+	maxDelay     = 2 * time.Second
 )
 
 // Compile-time interface check.
@@ -43,11 +51,58 @@ func NewContainerAdapterWithClient(client DockerClient) *ContainerAdapter {
 }
 
 // Execute runs a container and waits for completion.
+// It includes retry logic with exponential backoff for transient errors
+// such as Windows file locks and Docker cleanup race conditions.
 func (a *ContainerAdapter) Execute(ctx context.Context, config *containerport.ContainerConfig) (*containerport.ContainerResult, error) {
 	if config == nil {
 		return nil, fmt.Errorf("container config is nil")
 	}
 
+	var lastResult *containerport.ContainerResult
+	var lastErr error
+	delay := initialDelay
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		result, err := a.executeOnce(ctx, config)
+
+		if err == nil && result != nil && result.ExitCode == 0 {
+			return result, nil
+		}
+
+		lastResult = result
+		lastErr = err
+
+		// Check if this is a retryable error
+		if !isRetryableError(err, result) {
+			return result, err
+		}
+
+		// Don't retry on last attempt
+		if attempt == maxRetries {
+			break
+		}
+
+		// Log retry attempt
+		if config.LogWriter != nil {
+			fmt.Fprintf(config.LogWriter, "[container] Attempt %d/%d failed, retrying in %v...\n",
+				attempt, maxRetries, delay)
+		}
+
+		// Wait with exponential backoff
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+
+		delay = min(delay*2, maxDelay)
+	}
+
+	return lastResult, lastErr
+}
+
+// executeOnce runs a container a single time without retry.
+func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerport.ContainerConfig) (*containerport.ContainerResult, error) {
 	start := time.Now()
 
 	// Apply timeout if specified
@@ -150,6 +205,11 @@ func (a *ContainerAdapter) Execute(ctx context.Context, config *containerport.Co
 
 	// Ensure cleanup on any exit
 	defer func() {
+		// Add small delay before cleanup on Windows to allow file handles to release
+		if runtime.GOOS == "windows" {
+			time.Sleep(50 * time.Millisecond)
+		}
+
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
 		_ = a.client.ContainerStop(cleanupCtx, containerID, container.StopOptions{})                //nolint:errcheck
@@ -209,6 +269,51 @@ func (a *ContainerAdapter) Execute(ctx context.Context, config *containerport.Co
 		Stderr:   stderr.Bytes(),
 		Duration: duration,
 	}, nil
+}
+
+// isRetryableError determines if an error should trigger a retry.
+// Windows file locks and transient container errors are retryable.
+func isRetryableError(err error, result *containerport.ContainerResult) bool {
+	// Success is not retryable
+	if err == nil && result != nil && result.ExitCode == 0 {
+		return false
+	}
+
+	// Check for known retryable patterns in stderr
+	if result != nil {
+		stderr := string(result.Stderr)
+		retryablePatterns := []string{
+			"The process cannot access the file", // Windows file lock
+			"text file busy",                     // Unix file lock
+			"resource temporarily unavailable",   // Transient resource issue
+			"Cannot delete",                      // Windows cleanup issue
+			"EBUSY",                              // Node.js file busy error
+		}
+		for _, pattern := range retryablePatterns {
+			if strings.Contains(stderr, pattern) {
+				return true
+			}
+		}
+	}
+
+	// Check error message for transient Docker errors
+	if err != nil {
+		errStr := err.Error()
+		// Check for container conflict errors
+		if strings.Contains(errStr, "container already exists") {
+			return true
+		}
+		// Check for network errors (e.g., "network not found", "network bridge not found")
+		if strings.Contains(errStr, "network") && strings.Contains(errStr, "not found") {
+			return true
+		}
+		// Check for removal issues
+		if strings.Contains(errStr, "unable to remove") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Build builds a container image from a Containerfile/Dockerfile.

@@ -13,7 +13,7 @@ import (
 // within the same module.
 // Uses ComponentResolver for consistent component-to-tool mapping.
 // Returns nil if no scannable components are found.
-func ResolveScanUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveScanUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil {
 		return nil
@@ -61,25 +61,16 @@ func ResolveScanUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 		allWork = append(allWork, specs...)
 	}
 
-	if len(allWork) == 0 {
-		return nil
-	}
-
-	// Return as single layer (scans run in parallel)
-	return [][]workunit.UnitSpec{allWork}
+	return allWork
 }
 
 // CountScanComponents returns the total number of scan component work items.
-func CountScanComponents(layers [][]workunit.UnitSpec) int {
-	count := 0
-	for _, layer := range layers {
-		count += len(layer)
-	}
-	return count
+func CountScanComponents(units []workunit.UnitSpec) int {
+	return len(units)
 }
 
 // getScanUoWCount returns the total number of scannable UoWs (units of work).
 func getScanUoWCount(ctx *cmdframework.ExecutionContext) int {
-	layers := ResolveScanUnitSpecs(ctx)
-	return CountScanComponents(layers)
+	units := ResolveScanUnitSpecs(ctx)
+	return CountScanComponents(units)
 }

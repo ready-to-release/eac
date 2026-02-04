@@ -91,7 +91,6 @@ func TestUnitQueuedEvent(t *testing.T) {
 		Component:   "go",
 		Handler:     "go",
 		Weight:      4,
-		Layer:       1,
 	}
 
 	if got := e.EventType(); got != "unit_queued" {
@@ -140,12 +139,10 @@ func TestUnitCompletedEvent(t *testing.T) {
 func TestProgressUpdateEvent(t *testing.T) {
 	now := time.Now()
 	e := ProgressUpdateEvent{
-		Time:         now,
-		Running:      []string{"build:eac-core:go:go", "build:eac-cli:go:go"},
-		Completed:    5,
-		Total:        10,
-		CurrentLayer: 2,
-		TotalLayers:  3,
+		Time:      now,
+		Running:   []string{"build:eac-core:go:go", "build:eac-cli:go:go"},
+		Completed: 5,
+		Total:     10,
 	}
 
 	if got := e.EventType(); got != "progress_update" {
@@ -177,8 +174,8 @@ func TestToolStatusEvent(t *testing.T) {
 	now := time.Now()
 	e := ToolStatusEvent{
 		Time:             now,
-		ActiveContainers: []string{"docker"},
-		UsedContainers:   []string{"docker", "podman"},
+		ActiveContainerTools: []string{"docker"},
+		UsedContainerTools:   []string{"docker", "podman"},
 		ActiveSystem:     []string{"go"},
 		UsedSystem:       []string{"go", "golangci-lint"},
 	}
@@ -239,11 +236,9 @@ func TestInitSummaryEvent(t *testing.T) {
 		RequestedModules: 2,
 		ResolvedModules:  5,
 		TotalUnits:       12,
-		Layers: []LayerInfo{
-			{Modules: []ModuleInfo{
-				{Name: "eac-core", Units: []UnitInfo{
-					{ID: "build:eac-core:go:go", DisplayName: "eac-core:go", Weight: 4},
-				}},
+		Modules: []ModuleInfo{
+			{Name: "eac-core", Units: []UnitInfo{
+				{ID: "build:eac-core:go:go", DisplayName: "eac-core:go", Weight: 4},
 			}},
 		},
 		Parallelism: ParallelismInfo{

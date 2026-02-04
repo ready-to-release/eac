@@ -17,10 +17,10 @@ import (
 	"path/filepath"
 	"time"
 
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -315,7 +315,7 @@ func formatSlice(items []string) string {
 
 // deriveBuildStatus determines build status from UoW manifests.
 // Status is derived as:
-// - "success" if UoW manifests exist and have artifacts
+// - "success" if UoW manifests exist and have artifacts (or NoOp UoWs)
 // - "failure" if manifests are missing or have no artifacts.
 func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 	// Get workspace root for absolute path
@@ -325,16 +325,34 @@ func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 		return "failure"
 	}
 
-	// Use UoW adapter to get manifest for display
-	manifest, err := implinternal.GetModuleManifestFromUoWs(
-		workspaceRoot, workunit.ContextBuild, moduleName, "")
-	if err != nil || manifest == nil {
+	// Use coreoutput.Reader to get module view directly
+	reader := coreoutput.NewReader(workspaceRoot)
+	moduleView, err := reader.GetModule(workunit.ContextBuild, moduleName)
+	if err != nil || moduleView == nil {
 		// No manifest = failure
 		return "failure"
 	}
 
-	// Check if manifest has artifacts
-	if len(manifest.Artifacts) == 0 {
+	// Check if module has any artifacts or is a NoOp module
+	hasArtifacts := false
+	isNoOp := false
+	for _, comp := range moduleView.Components {
+		for _, uow := range comp.UoWs {
+			if uow.NoOp {
+				isNoOp = true
+			}
+			if len(uow.Artifacts) > 0 {
+				hasArtifacts = true
+			}
+		}
+	}
+
+	// NoOp modules (no buildable components) are successful
+	if isNoOp {
+		return "success"
+	}
+
+	if !hasArtifacts {
 		return "failure"
 	}
 

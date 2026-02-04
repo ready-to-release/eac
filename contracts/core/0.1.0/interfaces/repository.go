@@ -91,13 +91,7 @@ type FileInfo struct {
 
 // ExecutionPlanPort provides execution planning.
 type ExecutionPlanPort interface {
-	// Layers returns the execution layers (for layered execution).
-	Layers() [][]string
-
 	// All returns all monikers in execution order.
 	All() []string
-
-	// IsLayered returns true if the plan uses layers.
-	IsLayered() bool
 }
 

@@ -57,28 +57,88 @@ lint-providers:
     options:
       auto_fix: true
 
-  # Future lint providers (uncomment when ready)
-  #
-  # yamllint:
-  #   description: YAML file linter
-  #   command: yamllint
-  #   input_mode: files
-  #   config_files: [.yamllint.yml, .yamllint.yaml]
-  #   system_dependency: yamllint
-  #   applies_to: [yaml]
-  #
-  # shellcheck:
-  #   description: Shell script static analysis
-  #   command: shellcheck
-  #   input_mode: files
-  #   config_files: [.shellcheckrc]
-  #   system_dependency: shellcheck
-  #   applies_to: [bash]
-  #
-  # psscriptanalyzer:
-  #   description: PowerShell static code checker
-  #   command: Invoke-ScriptAnalyzer
-  #   input_mode: files
-  #   config_files: [PSScriptAnalyzerSettings.psd1]
-  #   system_dependency: psscriptanalyzer
-  #   applies_to: [pwsh]
+  # YAML Linter - yamllint
+  yamllint:
+    description: YAML file linter
+    command: yamllint
+    input_mode: files
+    config_files:
+      - .yamllint.yml
+      - .yamllint.yaml
+      - .yamllint
+    system_dependency: yamllint
+    applies_to: [yaml, workflows]
+    options:
+      auto_fix: false
+
+  # Dockerfile Linter - hadolint
+  hadolint:
+    description: Dockerfile linter (best practices)
+    command: hadolint
+    input_mode: files
+    config_files:
+      - .hadolint.yaml
+      - .hadolint.yml
+    system_dependency: hadolint
+    applies_to: [dockerfile]
+    options:
+      auto_fix: false
+
+  # JSON Linter - jsonlint
+  jsonlint:
+    description: JSON syntax and style linter
+    command: jsonlint
+    input_mode: files
+    config_files: []
+    system_dependency: jsonlint
+    applies_to: [json]
+    options:
+      auto_fix: false
+
+  # Shell Script Linter - shellcheck
+  shellcheck:
+    description: Shell script static analysis
+    command: shellcheck
+    input_mode: files
+    config_files:
+      - .shellcheckrc
+    system_dependency: shellcheck
+    applies_to: [bash]
+    options:
+      auto_fix: false
+
+  # PowerShell Linter - PSScriptAnalyzer
+  psscriptanalyzer:
+    description: PowerShell static code checker
+    command: Invoke-ScriptAnalyzer
+    input_mode: files
+    config_files:
+      - PSScriptAnalyzerSettings.psd1
+    system_dependency: psscriptanalyzer
+    applies_to: [pwsh]
+    options:
+      auto_fix: true
+
+  # Gherkin Linter - gherkin-lint
+  gherkin-lint:
+    description: Gherkin/Cucumber feature file linter
+    command: gherkin-lint
+    input_mode: files
+    config_files:
+      - .gherkin-lintrc
+      - .gherkin-lintrc.json
+    system_dependency: gherkin-lint
+    applies_to: [gherkin]
+    options:
+      auto_fix: false
+
+  # Structurizr DSL Linter - validates architecture diagrams
+  structurizr-cli:
+    description: Structurizr DSL syntax validator
+    command: structurizr-cli
+    input_mode: files
+    config_files: []
+    system_dependency: structurizr-cli
+    applies_to: [structurizr]
+    options:
+      auto_fix: false

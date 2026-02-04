@@ -642,3 +642,278 @@ func TestCheckModuleCIValidityWithAPI_MultipleModules(t *testing.T) {
 		})
 	}
 }
+
+// ============================================================================
+// Tests for topological sort ordering (CI dependencies)
+// ============================================================================
+
+func TestComputeCIDispatchOrder_NoDeps(t *testing.T) {
+	// Modules with no CI deps should be sorted alphabetically
+	modules := []string{"core", "docs", "contracts-bundle"}
+	ciDeps := map[string][]string{} // No deps
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	// Should be alphabetically sorted when no deps
+	expected := []string{"contracts-bundle", "core", "docs"}
+	if !slicesEqual(result, expected) {
+		t.Errorf("expected %v, got %v", expected, result)
+	}
+}
+
+func TestComputeCIDispatchOrder_SimpleDep(t *testing.T) {
+	// ext-eac depends on r2r-cli
+	modules := []string{"ext-eac", "r2r-cli", "core"}
+	ciDeps := map[string][]string{
+		"ext-eac": {"r2r-cli"},
+	}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	// r2r-cli must come before ext-eac
+	r2rIdx := indexOf(result, "r2r-cli")
+	extIdx := indexOf(result, "ext-eac")
+	if r2rIdx == -1 || extIdx == -1 {
+		t.Fatalf("missing modules in result: %v", result)
+	}
+	if r2rIdx >= extIdx {
+		t.Errorf("r2r-cli (idx %d) should come before ext-eac (idx %d), got %v", r2rIdx, extIdx, result)
+	}
+}
+
+func TestComputeCIDispatchOrder_MultipleDepsOnSameModule(t *testing.T) {
+	// ext-eac, r2r-installer, implicit-cli all depend on r2r-cli
+	modules := []string{"ext-eac", "r2r-installer", "implicit-cli", "r2r-cli", "core"}
+	ciDeps := map[string][]string{
+		"ext-eac":       {"r2r-cli"},
+		"r2r-installer": {"r2r-cli"},
+		"implicit-cli":  {"r2r-cli"},
+	}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	// r2r-cli must come before all three dependents
+	r2rIdx := indexOf(result, "r2r-cli")
+	for _, dep := range []string{"ext-eac", "r2r-installer", "implicit-cli"} {
+		depIdx := indexOf(result, dep)
+		if depIdx == -1 {
+			t.Fatalf("missing %s in result: %v", dep, result)
+		}
+		if r2rIdx >= depIdx {
+			t.Errorf("r2r-cli (idx %d) should come before %s (idx %d), got %v", r2rIdx, dep, depIdx, result)
+		}
+	}
+}
+
+func TestComputeCIDispatchOrder_DepNotInDispatchSet(t *testing.T) {
+	// ext-eac depends on r2r-cli, but r2r-cli is NOT in dispatch set
+	// (maybe it was skipped because it has valid CI)
+	modules := []string{"ext-eac", "core"}
+	ciDeps := map[string][]string{
+		"ext-eac": {"r2r-cli"}, // r2r-cli not in modules list
+	}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	// ext-eac should still be included, dep is ignored since not in dispatch set
+	if len(result) != 2 {
+		t.Errorf("expected 2 modules, got %d: %v", len(result), result)
+	}
+	if indexOf(result, "ext-eac") == -1 {
+		t.Errorf("ext-eac should be in result: %v", result)
+	}
+}
+
+func TestComputeCIDispatchOrder_EmptyList(t *testing.T) {
+	modules := []string{}
+	ciDeps := map[string][]string{}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %v", result)
+	}
+}
+
+func TestComputeCIDispatchOrder_SingleModule(t *testing.T) {
+	modules := []string{"core"}
+	ciDeps := map[string][]string{}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	if len(result) != 1 || result[0] != "core" {
+		t.Errorf("expected [core], got %v", result)
+	}
+}
+
+func TestComputeCIDispatchOrder_Deterministic(t *testing.T) {
+	// Multiple runs should produce the same order
+	modules := []string{"ext-eac", "r2r-cli", "core", "docs", "r2r-installer"}
+	ciDeps := map[string][]string{
+		"ext-eac":       {"r2r-cli"},
+		"r2r-installer": {"r2r-cli"},
+	}
+
+	first := computeCIDispatchOrder(modules, ciDeps)
+	for i := 0; i < 10; i++ {
+		result := computeCIDispatchOrder(modules, ciDeps)
+		if !slicesEqual(result, first) {
+			t.Errorf("non-deterministic: run 1 got %v, run %d got %v", first, i+2, result)
+		}
+	}
+}
+
+func TestComputeCIDispatchOrder_ChainedDeps(t *testing.T) {
+	// A -> B -> C (A depends on B, B depends on C)
+	modules := []string{"A", "B", "C"}
+	ciDeps := map[string][]string{
+		"A": {"B"},
+		"B": {"C"},
+	}
+
+	result := computeCIDispatchOrder(modules, ciDeps)
+
+	// Order must be C, B, A
+	cIdx := indexOf(result, "C")
+	bIdx := indexOf(result, "B")
+	aIdx := indexOf(result, "A")
+
+	if cIdx >= bIdx || bIdx >= aIdx {
+		t.Errorf("expected C < B < A, got %v (C=%d, B=%d, A=%d)", result, cIdx, bIdx, aIdx)
+	}
+}
+
+func TestFilterCIDispatch_OrderedByDeps(t *testing.T) {
+	// Test that filterCIDispatch returns modules in dependency order
+	mockStatus := map[string]bool{
+		"r2r-cli": false, // needs dispatch
+		"ext-eac": false, // needs dispatch, depends on r2r-cli
+		"core":    false, // needs dispatch, no deps
+	}
+
+	ciDeps := map[string][]string{
+		"ext-eac": {"r2r-cli"},
+	}
+
+	result, err := filterCIDispatchWithDeps("", "r2r-cli ext-eac core", "abc123", mockStatus, "", ciDeps)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// r2r-cli should come before ext-eac in dispatch list
+	r2rIdx := indexOf(result.Dispatch, "r2r-cli")
+	extIdx := indexOf(result.Dispatch, "ext-eac")
+
+	if r2rIdx == -1 || extIdx == -1 {
+		t.Fatalf("missing modules in dispatch: %v", result.Dispatch)
+	}
+	if r2rIdx >= extIdx {
+		t.Errorf("r2r-cli should come before ext-eac, got %v", result.Dispatch)
+	}
+}
+
+func TestFilterCIDispatch_CIDependenciesField(t *testing.T) {
+	// Test that CIDependencies field is populated correctly
+	mockStatus := map[string]bool{
+		"r2r-cli": false,
+		"ext-eac": false,
+	}
+
+	ciDeps := map[string][]string{
+		"ext-eac": {"r2r-cli"},
+	}
+
+	result, err := filterCIDispatchWithDeps("", "r2r-cli ext-eac", "abc123", mockStatus, "", ciDeps)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// CIDependencies should contain ext-eac -> [r2r-cli] (filtered to dispatch set)
+	if result.CIDependencies == nil {
+		t.Fatal("CIDependencies should not be nil")
+	}
+	deps, ok := result.CIDependencies["ext-eac"]
+	if !ok {
+		t.Errorf("expected ext-eac in CIDependencies, got %v", result.CIDependencies)
+	}
+	if len(deps) != 1 || deps[0] != "r2r-cli" {
+		t.Errorf("expected ext-eac deps [r2r-cli], got %v", deps)
+	}
+}
+
+func TestFilterCIDispatch_TotalModulesField(t *testing.T) {
+	mockStatus := map[string]bool{
+		"mod1": false, // dispatch
+		"mod2": true,  // skip
+		"mod3": false, // dispatch
+	}
+
+	result, err := filterCIDispatchWithDeps("", "mod1 mod2 mod3", "abc123", mockStatus, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// TotalModules should be 3 (dispatch + skipped)
+	if result.TotalModules != 3 {
+		t.Errorf("expected TotalModules=3, got %d", result.TotalModules)
+	}
+}
+
+func TestCIDispatchResult_NewFields(t *testing.T) {
+	// Test that the new fields are properly populated
+	result := CIDispatchResult{
+		Dispatch: []string{"core", "r2r-cli", "ext-eac"},
+		Skipped:  []string{"docs"},
+		Reasons: map[string]string{
+			"core":    "directly_changed",
+			"r2r-cli": "mock:no_valid_ci",
+			"ext-eac": "mock:no_valid_ci",
+			"docs":    "mock:valid_ci_at_head",
+		},
+		CIDependencies: map[string][]string{
+			"ext-eac": {"r2r-cli"},
+		},
+		HeadSHA:      "abc123def456",
+		TotalModules: 4,
+	}
+
+	if len(result.Dispatch) != 3 {
+		t.Errorf("Dispatch length = %d, want 3", len(result.Dispatch))
+	}
+	if len(result.Skipped) != 1 {
+		t.Errorf("Skipped length = %d, want 1", len(result.Skipped))
+	}
+	if result.TotalModules != 4 {
+		t.Errorf("TotalModules = %d, want 4", result.TotalModules)
+	}
+	if len(result.CIDependencies) != 1 {
+		t.Errorf("CIDependencies length = %d, want 1", len(result.CIDependencies))
+	}
+	deps, ok := result.CIDependencies["ext-eac"]
+	if !ok || len(deps) != 1 || deps[0] != "r2r-cli" {
+		t.Errorf("CIDependencies[ext-eac] = %v, want [r2r-cli]", deps)
+	}
+}
+
+// Helper functions for tests
+
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func indexOf(slice []string, item string) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+	return -1
+}

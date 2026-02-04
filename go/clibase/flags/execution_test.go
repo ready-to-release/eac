@@ -138,7 +138,7 @@ func TestExecutionFlagSet_Metadata(t *testing.T) {
 	}
 
 	flags := s.Flags()
-	// Now includes parallel, sequential, layered, unlayered in addition to existing flags
+	// Includes parallel, sequential, turbo, roof flags
 	if len(flags) < 3 {
 		t.Errorf("Flags() returned %d flags, want at least 3", len(flags))
 	}
@@ -146,9 +146,6 @@ func TestExecutionFlagSet_Metadata(t *testing.T) {
 	flagNames := make(map[string]bool)
 	for _, f := range flags {
 		flagNames[f.Name] = true
-	}
-	if !flagNames["unlayered-build"] {
-		t.Error("Expected 'unlayered-build' flag")
 	}
 	if !flagNames["turbo"] {
 		t.Error("Flags() missing turbo flag")
@@ -160,94 +157,39 @@ func TestExecutionFlagSet_Metadata(t *testing.T) {
 
 func TestExecutionFlagSet_DeclarativeFlags(t *testing.T) {
 	tests := []struct {
-		name                string
-		args                []string
-		wantRoof            int
-		wantUnlayered       bool
+		name                 string
+		args                 []string
+		wantRoof             int
 		wantParallelExplicit bool
-		wantLayeredExplicit  bool
-		wantRemaining       []string
-		wantErr             bool
+		wantRemaining        []string
+		wantErr              bool
 	}{
 		{
 			name:                 "parallel explicitly enables parallel mode",
 			args:                 []string{"--parallel", "module1"},
 			wantRoof:             0, // unchanged, parallel is default
-			wantUnlayered:        false,
 			wantParallelExplicit: true,
-			wantLayeredExplicit:  false,
 			wantRemaining:        []string{"module1"},
 		},
 		{
 			name:                 "sequential sets roof=1",
 			args:                 []string{"--sequential", "module1"},
 			wantRoof:             1, // sequential = roof 1
-			wantUnlayered:        false,
 			wantParallelExplicit: true, // sequential means explicit parallel choice
-			wantLayeredExplicit:  false,
-			wantRemaining:        []string{"module1"},
-		},
-		{
-			name:                 "layered as short alias for layered-build",
-			args:                 []string{"--layered", "module1"},
-			wantRoof:             0,
-			wantUnlayered:        false, // layered = NOT unlayered
-			wantParallelExplicit: false,
-			wantLayeredExplicit:  true,
-			wantRemaining:        []string{"module1"},
-		},
-		{
-			name:                 "unlayered as short alias for unlayered-build",
-			args:                 []string{"--unlayered", "module1"},
-			wantRoof:             0,
-			wantUnlayered:        true,
-			wantParallelExplicit: false,
-			wantLayeredExplicit:  true,
-			wantRemaining:        []string{"module1"},
-		},
-		{
-			name:                 "unlayered-build still works (backward compat)",
-			args:                 []string{"--unlayered-build", "module1"},
-			wantRoof:             0,
-			wantUnlayered:        true,
-			wantParallelExplicit: false,
-			wantLayeredExplicit:  true, // --unlayered-build also sets explicit
 			wantRemaining:        []string{"module1"},
 		},
 		{
 			name:                 "default behavior preserved (no flags)",
 			args:                 []string{"module1"},
 			wantRoof:             0,
-			wantUnlayered:        false,
 			wantParallelExplicit: false,
-			wantLayeredExplicit:  false,
-			wantRemaining:        []string{"module1"},
-		},
-		{
-			name:                 "all declarative execution flags together",
-			args:                 []string{"--parallel", "--layered", "module1"},
-			wantRoof:             0,
-			wantUnlayered:        false,
-			wantParallelExplicit: true,
-			wantLayeredExplicit:  true,
-			wantRemaining:        []string{"module1"},
-		},
-		{
-			name:                 "sequential and unlayered for CI",
-			args:                 []string{"--sequential", "--unlayered", "module1"},
-			wantRoof:             1,
-			wantUnlayered:        true,
-			wantParallelExplicit: true,
-			wantLayeredExplicit:  true,
 			wantRemaining:        []string{"module1"},
 		},
 		{
 			name:                 "turbo still works with declarative flags",
 			args:                 []string{"--turbo", "--parallel", "module1"},
 			wantRoof:             0,
-			wantUnlayered:        false,
 			wantParallelExplicit: true,
-			wantLayeredExplicit:  false,
 			wantRemaining:        []string{"module1"},
 		},
 	}
@@ -275,14 +217,8 @@ func TestExecutionFlagSet_DeclarativeFlags(t *testing.T) {
 			if flags.Roof != tt.wantRoof {
 				t.Errorf("Roof = %v, want %v", flags.Roof, tt.wantRoof)
 			}
-			if flags.UnlayeredBuild != tt.wantUnlayered {
-				t.Errorf("UnlayeredBuild = %v, want %v", flags.UnlayeredBuild, tt.wantUnlayered)
-			}
 			if flags.ParallelExplicit != tt.wantParallelExplicit {
 				t.Errorf("ParallelExplicit = %v, want %v", flags.ParallelExplicit, tt.wantParallelExplicit)
-			}
-			if flags.LayeredExplicit != tt.wantLayeredExplicit {
-				t.Errorf("LayeredExplicit = %v, want %v", flags.LayeredExplicit, tt.wantLayeredExplicit)
 			}
 
 			if len(remaining) != len(tt.wantRemaining) {
@@ -306,19 +242,16 @@ func TestExecutionFlagSet_DeclarativeFlagSetInterface(t *testing.T) {
 
 	// Test DeclarativeFlags() returns expected definitions
 	defs := s.DeclarativeFlags()
-	if len(defs) != 2 {
-		t.Errorf("DeclarativeFlags() returned %d definitions, want 2", len(defs))
+	if len(defs) != 1 {
+		t.Errorf("DeclarativeFlags() returned %d definitions, want 1", len(defs))
 	}
 
 	// Check behavior definitions
 	var parallelDef *DeclarativeFlagDef
-	var layeredDef *DeclarativeFlagDef
 	for i := range defs {
 		switch defs[i].Behavior {
 		case "parallel":
 			parallelDef = &defs[i]
-		case "layered":
-			layeredDef = &defs[i]
 		}
 	}
 
@@ -334,16 +267,6 @@ func TestExecutionFlagSet_DeclarativeFlagSetInterface(t *testing.T) {
 	if !parallelDef.DefaultOn {
 		t.Error("parallel should be DefaultOn=true")
 	}
-
-	if layeredDef == nil {
-		t.Fatal("DeclarativeFlags() missing layered behavior")
-	}
-	if layeredDef.EnableFlag != "--layered" {
-		t.Errorf("layered EnableFlag = %v, want --layered", layeredDef.EnableFlag)
-	}
-	if layeredDef.DisableFlag != "--unlayered" {
-		t.Errorf("layered DisableFlag = %v, want --unlayered", layeredDef.DisableFlag)
-	}
 }
 
 func TestExecutionFlagSet_GetDeclarativeState(t *testing.T) {
@@ -351,7 +274,7 @@ func TestExecutionFlagSet_GetDeclarativeState(t *testing.T) {
 	env := &environment.Env{IsLocalConsole: true}
 
 	// Parse with explicit sequential setting
-	_, err := s.Parse([]string{"--sequential", "--unlayered"}, env)
+	_, err := s.Parse([]string{"--sequential"}, env)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -363,15 +286,6 @@ func TestExecutionFlagSet_GetDeclarativeState(t *testing.T) {
 	}
 	if !parallelState.ExplicitlyOff {
 		t.Error("parallel should be ExplicitlyOff (sequential was set)")
-	}
-
-	// Test GetDeclarativeState for layered
-	layeredState := s.GetDeclarativeState("layered")
-	if layeredState == nil {
-		t.Fatal("GetDeclarativeState(layered) returned nil")
-	}
-	if !layeredState.ExplicitlyOff {
-		t.Error("layered should be ExplicitlyOff (unlayered was set)")
 	}
 
 	// Test unknown behavior returns nil

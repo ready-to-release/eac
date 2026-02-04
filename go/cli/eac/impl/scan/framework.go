@@ -22,6 +22,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/manifest"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -31,24 +32,6 @@ func init() {
 	// Register scan component-level execution support
 	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeScan, ResolveScanUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeScan, scanUnitWorker)
-	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeScan, getScanUnitLayers)
-}
-
-// getScanUnitLayers returns component execution layers as string slices for TUI tree building.
-// Each entry uses UnitID.Longname() for consistent formatting with the UnitProvider.
-func getScanUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := ResolveScanUnitSpecs(ctx)
-	if len(layers) == 0 {
-		return nil
-	}
-	result := make([][]string, len(layers))
-	for i, layer := range layers {
-		result[i] = make([]string, len(layer))
-		for j, work := range layer {
-			result[i][j] = work.ID.Longname()
-		}
-	}
-	return result
 }
 
 // NOTE: Scanner-specific semaphores removed - parallelism is now controlled by
@@ -83,9 +66,15 @@ type ScanModuleResult struct {
 
 // scanContext holds scan-specific state during execution.
 type scanContext struct {
-	cachedModules map[string]bool  // Modules that are up-to-date (cache hits)
-	scanResults   map[string]bool  // module -> passed (true = all scanners passed)
-	mu            sync.Mutex       // Protects scanResults map for concurrent access
+	cachedModules map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
+	cacheTimes    map[string]time.Time // Module-level cache times for TUI
+	scanResults   map[string]bool      // module -> passed (true = all scanners passed)
+	mu            sync.Mutex           // Protects scanResults map for concurrent access
+
+	// UoW-level cache tracking
+	cachedUoWs    map[string]bool      // UoW longname -> cached
+	uowCacheTimes map[string]time.Time // UoW longname -> cache time
+	tracker       *coreoutput.InMemoryTracker
 }
 
 // ScanWorker is the function signature for scanner-specific work.
@@ -142,94 +131,45 @@ func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		log.Warnf("Failed to aggregate scan manifests: %v", err)
 	}
 
-	// Update incremental scan state (devbox only)
-	if !environments.IsCI() && !ctx.Config.DryRun {
-		sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
-		if sctx != nil {
-			updateScanState(ctx, sctx)
+	// UoW manifests are written immediately in writeUoWScanManifest via RecordComplete
+	// No explicit flush needed
+
+	// Assert all UoWs have valid manifests (skip in dry-run mode)
+	if !ctx.Config.DryRun {
+		if err := assertScanManifestsExist(ctx); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// updateScanState updates the scan state after execution.
-// This follows the build pattern - computing moduleFiles fresh rather than storing in context.
-func updateScanState(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
-	// Collect successfully scanned modules (exit code 0 or -1 for cached)
-	scannedModules := make(map[string]bool)
-	for _, result := range ctx.Results {
-		if result.ExitCode == 0 || result.ExitCode == -1 {
-			// Check if we have an explicit result recorded
-			sctx.mu.Lock()
-			if passed, ok := sctx.scanResults[result.Moniker]; ok {
-				scannedModules[result.Moniker] = passed
-			} else {
-				// Default: exit code 0 means passed
-				scannedModules[result.Moniker] = result.ExitCode == 0
-			}
-			sctx.mu.Unlock()
-		}
+// assertScanManifestsExist verifies that all expected UoWs have valid manifests.
+// This catches cases where manifest generation was broken or never implemented.
+func assertScanManifestsExist(ctx *cmdframework.ExecutionContext) error {
+	units := ResolveScanUnitSpecs(ctx)
+	if len(units) == 0 {
+		return nil
 	}
 
-	// Also include component results (for component-level execution)
-	for _, result := range ctx.UnitResults {
-		if result.ExitCode == 0 || result.ExitCode == -1 {
-			// Check if we have an explicit result recorded
-			sctx.mu.Lock()
-			if passed, ok := sctx.scanResults[result.Module]; ok {
-				scannedModules[result.Module] = passed
-			} else {
-				// For component results, check if any failed
-				if existing, exists := scannedModules[result.Module]; exists {
-					// Keep false if already failed
-					if !existing {
-						scannedModules[result.Module] = false
-					}
-				} else {
-					scannedModules[result.Module] = result.ExitCode == 0
-				}
-			}
-			sctx.mu.Unlock()
-		}
-	}
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	var missing []string
 
-	if len(scannedModules) == 0 {
-		log.Debugf("[SCAN-CACHE] No scanned modules to update state for")
-		return
-	}
-
-	log.Debugf("[SCAN-CACHE] Updating state for %d modules", len(scannedModules))
-	for moniker, passed := range scannedModules {
-		log.Debugf("[SCAN-CACHE] Module %s: passed=%v", moniker, passed)
-	}
-
-	// Update state using StateManager
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	for moniker, passed := range scannedModules {
-		contract, ok := ctx.ModuleRegistry.Get(moniker)
-		if !ok {
-			continue
-		}
-
-		// Get source files and compute hash
-		patterns := contract.GetGlobPatterns()
-		files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+	for _, spec := range units {
+		// Check if manifest exists for this UoW
+		_, err := reader.GetUoW(workunit.ContextScan, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
 		if err != nil {
-			log.Debugf("[SCAN-CACHE] Failed to expand patterns for %s: %v", moniker, err)
-			continue
-		}
-
-		sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
-		if err != nil {
-			log.Debugf("[SCAN-CACHE] Failed to hash files for %s: %v", moniker, err)
-			continue
-		}
-
-		if err := stateMgr.SaveModuleResult(workunit.ContextScan, moniker, passed, sourceHash); err != nil {
-			log.Warnf("Failed to update scan state for %s: %v", moniker, err)
+			missing = append(missing, spec.ID.Longname())
+			log.Debugf("[SCAN-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
 		}
 	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("scan completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
+	}
+
+	log.Debugf("[SCAN-ASSERT] All %d UoW manifests verified", len(units))
+	return nil
 }
 
 // recordScanResult records the result of a scan for state tracking.
@@ -270,10 +210,29 @@ func scanUnitWorker(ctx *cmdframework.ExecutionContext, moniker, component strin
 	// Get scan context for caching
 	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
 
-	// Check incremental cache first - if module is cached, skip immediately (blue in TUI)
-	if sctx != nil && sctx.cachedModules != nil && sctx.cachedModules[moniker] {
+	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
+	parts := strings.SplitN(component, ":", 2)
+	compName := parts[0]
+	scannerTypeStr := ""
+	if len(parts) == 2 {
+		scannerTypeStr = parts[1]
+	}
+
+	// Build UnitID for UoW-level cache lookup
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextScan,
+		Module:    moniker,
+		Component: compName,
+		Tool:      scannerTypeStr,
+	}
+
+	// Check UoW-level cache first
+	isCached := sctx != nil && sctx.cachedUoWs != nil && sctx.cachedUoWs[unitID.Longname()]
+	log.Debugf("[SCAN-UOW-CACHE] Component worker for %s: unitID=%s, isCached=%v", component, unitID.Longname(), isCached)
+
+	if isCached {
 		if ctx.Config.DryRun {
-			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", moniker)
+			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", unitID.Longname())
 		} else {
 			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
 		}
@@ -287,12 +246,10 @@ func scanUnitWorker(ctx *cmdframework.ExecutionContext, moniker, component strin
 		return 1
 	}
 
-	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
-	parts := strings.SplitN(component, ":", 2)
-	compName := parts[0]
-	scannerTypeStr := ""
-	if len(parts) == 2 {
-		scannerTypeStr = parts[1]
+	// Validate component parameter parsing
+	if compName == "" {
+		output.Writeln(logWriter, "Error: invalid component format: %s", component)
+		return 1
 	}
 
 	// Get component type for this component
@@ -385,6 +342,9 @@ func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 	output.Writeln(logWriter, "%s Running %s scanner on %s/%s...", emoji, scannerType, moniker, component)
 	scanStart := time.Now()
 
+	// Compute input hash for UoW manifest (before scanning)
+	inputHash, _ := computeScanInputHash(ctx, module)
+
 	// Create scan config for this scanner
 	scanCfg := &ScanFrameworkConfig{
 		ScannerType:  scannerType,
@@ -414,7 +374,59 @@ func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 	// Record successful scan result
 	recordScanResult(sctx, moniker, true)
 
+	// Write UoW manifest for incremental cache
+	if sctx != nil && !environments.IsCI() {
+		writeUoWScanManifest(ctx, sctx, moniker, component, string(scannerType), inputHash, scanStart)
+	}
+
 	return 0
+}
+
+// computeScanInputHash computes the input hash for a module's scan.
+func computeScanInputHash(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract) (string, error) {
+	patterns := module.GetGlobPatterns()
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+	if err != nil {
+		return "", err
+	}
+	return hash.Files(ctx.WorkspaceRoot, files)
+}
+
+// writeUoWScanManifest writes a UoW manifest for a successful scan.
+func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext, moniker, component, tool, inputHash string, startTime time.Time) {
+	// Initialize tracker if needed
+	sctx.mu.Lock()
+	if sctx.tracker == nil {
+		sctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, workunit.ContextScan)
+	}
+	tracker := sctx.tracker
+	sctx.mu.Unlock()
+
+	// Build UnitID for the tracker
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextScan,
+		Module:    moniker,
+		Component: component,
+		Tool:      tool,
+	}
+
+	// Create and record the manifest
+	manifest := &coreoutput.UoWManifest{
+		Context:    workunit.ContextScan,
+		Module:     moniker,
+		Component:  component,
+		Tool:       tool,
+		InputHash:  inputHash,
+		ExecutedAt: startTime,
+		ExitCode:   0, // Success
+		Duration:   time.Since(startTime),
+	}
+
+	if err := tracker.RecordComplete(unitID, manifest); err != nil {
+		log.Debugf("[SCAN-UOW-CACHE] Failed to write UoW manifest for %s/%s:%s: %v", moniker, component, tool, err)
+	} else {
+		log.Debugf("[SCAN-UOW-CACHE] Wrote UoW manifest for %s/%s:%s", moniker, component, tool)
+	}
 }
 
 // logScannerConfig logs scanner-specific configuration for visibility.
@@ -682,8 +694,7 @@ func buildScanInitSummary(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrame
 			DebugMode: ctx.Config.DebugMode,
 			UseTUI:    ctx.Config.UseTUI,
 		}).
-		SetOutputDir(scanCfg.ScanOutDir).
-		SetFlatExecution(!ctx.Config.Layered)
+		SetOutputDir(scanCfg.ScanOutDir)
 
 	ctx.InitSummary = summary
 }
@@ -756,7 +767,6 @@ func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, m
 		OutputDir:   "out/scan",
 		LogFileName: fmt.Sprintf("%s.log", scannerType),
 		Monikers:    monikers,
-		Layered:     true, // Scan respects module dependency layers
 		UseTUI:      useTUI,
 		TUIHeight:   tuiHeight,
 		DebugMode:   debug,
@@ -846,6 +856,8 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	// Clear scan state if --skip-cache
+	// Note: This clears legacy state. UoW manifests are left intact but the
+	// UoW-based detection respects the ForceRebuild flag in the worker.
 	if ctx.Config.ForceRebuild {
 		stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
 		if err := stateMgr.ClearContext(workunit.ContextScan); err != nil {
@@ -854,74 +866,74 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		return nil
 	}
 
-	// Incremental scan detection (devbox only, not CI)
+	// UoW-based incremental scan detection (devbox only, not CI)
 	// Also run in dry-run mode to show which modules would be scanned/skipped
 	if !environments.IsCI() && sctx != nil {
-		detectIncrementalScanChanges(ctx, sctx)
+		detectUoWIncrementalScanChanges(ctx, sctx)
 	}
 
 	return nil
 }
 
-// detectIncrementalScanChanges detects which modules need rescanning.
-// Instead of filtering modules from the execution plan, it stores which modules
-// are cached so the component worker can skip them with -1 (blue in TUI).
-// This follows the same pattern as build's detectIncrementalChanges.
-func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
+// detectUoWIncrementalScanChanges performs UoW-level incremental scan detection.
+// Instead of checking at module granularity, it checks each component:tool UoW.
+// This enables partial caching - some components can be cached while others rescan.
+func detectUoWIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
 	startTime := time.Now()
 	defer func() {
 		ctx.SetChangeDetectionTiming(time.Since(startTime))
 	}()
 
-	// Collect modules for change detection
-	monikers := ctx.GetExecutionMonikers()
-	if len(monikers) == 0 {
+	// Get all expected UoWs from resolved unit specs
+	units := ResolveScanUnitSpecs(ctx)
+	if len(units) == 0 {
 		return
 	}
 
-	// Build module files map for hash computation
+	// Build list of expected UoWs
+	expectedUoWs := make([]workunit.UnitID, len(units))
+	for i, spec := range units {
+		expectedUoWs[i] = spec.ID
+	}
+
+	// Collect module files for hash computation
 	moduleFiles := make(map[string][]string)
-	for _, moniker := range monikers {
-		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
+	for _, id := range expectedUoWs {
+		if _, ok := moduleFiles[id.Module]; ok {
+			continue // Already collected
+		}
+		if contract, ok := ctx.ModuleRegistry.Get(id.Module); ok {
 			patterns := contract.GetGlobPatterns()
 			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
 			if err != nil {
-				log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
+				log.Debugf("Failed to expand patterns for %s: %v", id.Module, err)
 				continue
 			}
-			moduleFiles[moniker] = files
+			moduleFiles[id.Module] = files
 		}
 	}
 
-	// Use StateManager for change detection
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	rule := workunit.DefaultRules[workunit.ContextScan]
+	// Use shared helpers for change detection and aggregation
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	getInputHash := coreoutput.InputHashProvider(hash.NewModuleInputHashProvider(ctx.WorkspaceRoot, moduleFiles))
 
-	// Create hash provider that computes hash from expanded files
-	hashProvider := func(module string) (string, error) {
-		files, ok := moduleFiles[module]
-		if !ok {
-			return "", fmt.Errorf("no files for module %s", module)
-		}
-		return hash.Files(ctx.WorkspaceRoot, files)
-	}
-
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextScan, monikers, rule, hashProvider, nil)
+	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextScan, expectedUoWs, getInputHash)
 	if err != nil {
-		log.Debugf("Failed to detect scan changes: %v", err)
+		log.Debugf("Failed to detect UoW changes: %v", err)
 		return
 	}
 
-	log.Debugf("[SCAN-CACHE] DetectChanges result: FreshRun=%v Changed=%d UpToDate=%d",
-		changeResult.FreshRun, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
-	for moniker, reason := range changeResult.ChangeReasons {
-		log.Debugf("[SCAN-CACHE] Changed: %s -> %s", moniker, reason)
+	// Log change detection results
+	log.Debugf("[SCAN-UOW-CACHE] DetectUoWChanges result: FreshRun=%v Changed=%d UpToDate=%d",
+		aggResult.UoWResult.FreshRun, len(aggResult.UoWResult.Changed), len(aggResult.UoWResult.UpToDate))
+	for longname, reason := range aggResult.UoWResult.ChangeReasons {
+		log.Debugf("[SCAN-UOW-CACHE] Changed: %s -> %s", longname, reason)
 	}
 
 	detectionTime := time.Since(startTime)
 
-	if changeResult.FreshRun {
-		log.Debugf("Fresh scan detected, all modules will scan")
+	if aggResult.UoWResult.FreshRun {
+		log.Debugf("Fresh scan detected (UoW mode), all components will scan")
 		if ctx.InitSummary != nil {
 			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 				Enabled:       true,
@@ -932,50 +944,41 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 		return
 	}
 
-	// Build set of changed modules
-	changedSet := make(map[string]bool)
-	for _, m := range changeResult.ChangedModules {
-		changedSet[m] = true
+	// Copy aggregated results to context
+	sctx.cachedUoWs = aggResult.CachedUoWs
+	sctx.uowCacheTimes = aggResult.UoWCacheTimes
+	sctx.cachedModules = aggResult.CachedModules
+	sctx.cacheTimes = aggResult.ModuleCacheTimes
+
+	// Log module-level aggregation
+	agg := workunit.NewUoWAggregator(expectedUoWs)
+	for _, id := range aggResult.UoWResult.UpToDate {
+		agg.MarkCached(id)
+	}
+	for module := range aggResult.CachedModules {
+		total, cached := agg.Stats(module)
+		log.Debugf("[SCAN-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
+			module, cached, total, true)
+	}
+	for _, module := range aggResult.ChangedModules {
+		total, cached := agg.Stats(module)
+		log.Debugf("[SCAN-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
+			module, cached, total, false)
 	}
 
-	// Build set of cached modules (modules that are up-to-date)
-	// These will be skipped at the component worker level, not filtered from the plan.
-	sctx.cachedModules = make(map[string]bool)
-	var changedList []string
-	var cachedList []string
-
-	for _, moniker := range monikers {
-		if changedSet[moniker] {
-			changedList = append(changedList, moniker)
-		} else {
-			sctx.cachedModules[moniker] = true
-			cachedList = append(cachedList, moniker)
-		}
-	}
-
+	// Report incremental detection in init summary
 	if ctx.InitSummary != nil {
 		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 			Enabled:       true,
 			DetectionTime: detectionTime,
-			Changed:       changedList,
-			UpToDate:      cachedList,
+			Changed:       aggResult.ChangedModules,
+			UpToDate:      aggResult.UpToDateModules,
 			FreshBuild:    false,
 		})
 	}
 
-	log.Debugf("Incremental scan: %d modules to scan, %d cached (will show blue in TUI)",
-		len(changedList), len(cachedList))
-
-	// Debug: Log the cached modules map keys
-	if len(sctx.cachedModules) > 0 {
-		var keys []string
-		for k := range sctx.cachedModules {
-			keys = append(keys, k)
-		}
-		log.Debugf("[SCAN-CACHE] cachedModules set with %d entries: %v", len(keys), keys)
-	} else {
-		log.Debugf("[SCAN-CACHE] cachedModules is empty or nil")
-	}
+	log.Debugf("Incremental (UoW mode): %d modules to scan, %d cached, %d UoWs cached",
+		len(aggResult.ChangedModules), len(aggResult.UpToDateModules), len(sctx.cachedUoWs))
 }
 
 // multiScanWorker runs all configured scanners for a single module.
@@ -1169,8 +1172,7 @@ func buildMultiScanInitSummary(ctx *cmdframework.ExecutionContext, scanners []in
 			DebugMode: ctx.Config.DebugMode,
 			UseTUI:    ctx.Config.UseTUI,
 		}).
-		SetOutputDir(ctx.EACConfig.Repository.Paths.Out.Scan).
-		SetFlatExecution(!ctx.Config.Layered)
+		SetOutputDir(ctx.EACConfig.Repository.Paths.Out.Scan)
 	// Component count is set in multiScanAfterResolve after ModuleRegistry is available
 
 	ctx.InitSummary = summary

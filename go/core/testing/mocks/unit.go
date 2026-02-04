@@ -90,6 +90,8 @@ type MockUnitSpec struct {
 	ContainerVal     bool
 	CachedVal        bool
 	DependsOnVal     []interfaces.UnitIDPort
+	HostWeightVal    int
+	DockerWeightVal  int
 }
 
 func (m *MockUnitSpec) GetID() interfaces.UnitIDPort         { return m.IDVal }
@@ -98,6 +100,28 @@ func (m *MockUnitSpec) GetWeight() int                  { return m.WeightVal }
 func (m *MockUnitSpec) IsContainer() bool               { return m.ContainerVal }
 func (m *MockUnitSpec) IsCached() bool                  { return m.CachedVal }
 func (m *MockUnitSpec) GetDependsOn() []interfaces.UnitIDPort { return m.DependsOnVal }
+func (m *MockUnitSpec) GetPoolAllocation() interfaces.PoolAllocationPort {
+	return &MockPoolAllocation{
+		hostWeight:   m.HostWeightVal,
+		dockerWeight: m.DockerWeightVal,
+	}
+}
+
+// MockPoolAllocation implements interfaces.PoolAllocationPort for testing.
+type MockPoolAllocation struct {
+	hostWeight   int
+	dockerWeight int
+}
+
+func (m *MockPoolAllocation) GetHostWeight() int   { return m.hostWeight }
+func (m *MockPoolAllocation) GetDockerWeight() int { return m.dockerWeight }
+func (m *MockPoolAllocation) IsContainer() bool    { return m.dockerWeight > 0 }
+func (m *MockPoolAllocation) TotalWeight() int {
+	if m.dockerWeight > m.hostWeight {
+		return m.dockerWeight
+	}
+	return m.hostWeight
+}
 
 // NewMockUnitSpec creates a MockUnitSpec with a fluent builder pattern.
 func NewMockUnitSpec(module, component string) *MockUnitSpec {
@@ -136,6 +160,16 @@ func (m *MockUnitSpec) WithCached(c bool) *MockUnitSpec {
 
 func (m *MockUnitSpec) WithDependsOn(deps ...interfaces.UnitIDPort) *MockUnitSpec {
 	m.DependsOnVal = deps
+	return m
+}
+
+func (m *MockUnitSpec) WithHostWeight(w int) *MockUnitSpec {
+	m.HostWeightVal = w
+	return m
+}
+
+func (m *MockUnitSpec) WithDockerWeight(w int) *MockUnitSpec {
+	m.DockerWeightVal = w
 	return m
 }
 

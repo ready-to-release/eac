@@ -373,4 +373,4 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 ### Reference
 
 - [EAC Commands](../commands/index.md) - Complete command reference
-- [Decision Records](../../repository/decision-records/index.md) - Architectural decisions
+- [Decision Records](../decision-records/index.md) - Architectural decisions

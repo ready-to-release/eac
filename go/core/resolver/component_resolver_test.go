@@ -1,10 +1,30 @@
 package resolver
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/domain"
+	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/stretchr/testify/assert"
 )
+
+// mockExecutor implements tool.Executor for testing.
+type mockExecutor struct{}
+
+func (m *mockExecutor) Execute(ctx context.Context, t *tool.ToolDefinition, execCtx *tool.ExecutionContext) (*tool.ExecutionResult, error) {
+	return &tool.ExecutionResult{ExitCode: 0}, nil
+}
+
+func (m *mockExecutor) Validate(t *tool.ToolDefinition) error {
+	return nil
+}
+
+func (m *mockExecutor) Close() error {
+	return nil
+}
 
 // =============================================================================
 // Regression Test: Deadlock Prevention (L0)
@@ -302,4 +322,267 @@ func TestExpandToolChain_EmptyTools(t *testing.T) {
 
 	specs = expandToolChain("mod", "comp", "empty", []string{}, nil)
 	assert.Nil(t, specs, "zero-length tools should return nil")
+}
+
+// =============================================================================
+// Weight Calculation Tests
+// =============================================================================
+//
+// These tests validate the new weight calculation formula:
+// weight = tool.Resources.CPUs * componentType.Amp * module.amp
+//
+// The weight is derived from tool resources (not component type resources).
+
+// TestGetWeight_FromToolResources validates that weight is derived from tool resources.
+func TestGetWeight_FromToolResources(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolCPUs      int    // Tool resources.cpus
+		compTypeAmp   float64 // ComponentType.Amp
+		wantWeight    int
+	}{
+		{
+			name:        "tool with 2 CPUs no amp = weight 2",
+			toolCPUs:    2,
+			compTypeAmp: 0, // 0 means default 1.0
+			wantWeight:  2,
+		},
+		{
+			name:        "tool with 4 CPUs no amp = weight 4",
+			toolCPUs:    4,
+			compTypeAmp: 0,
+			wantWeight:  4,
+		},
+		{
+			name:        "tool with 2 CPUs and amp 1.5 = weight 3",
+			toolCPUs:    2,
+			compTypeAmp: 1.5,
+			wantWeight:  3, // ceil(2 * 1.5) = 3
+		},
+		{
+			name:        "tool with 4 CPUs and amp 0.5 = weight 2",
+			toolCPUs:    4,
+			compTypeAmp: 0.5,
+			wantWeight:  2, // ceil(4 * 0.5) = 2
+		},
+		{
+			name:        "tool with 0 CPUs (nil resources) = weight 1",
+			toolCPUs:    0, // Means nil resources
+			compTypeAmp: 0,
+			wantWeight:  1, // Default weight
+		},
+		{
+			name:        "tool with 0 CPUs and amp 2.0 = weight 2",
+			toolCPUs:    0,
+			compTypeAmp: 2.0,
+			wantWeight:  2, // ceil(1 * 2.0) = 2 (base default is 1)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create tool registry with a test tool
+			registry := tool.NewRegistry()
+			registry.SetVerifier(func(t *tool.ToolDefinition) bool { return true })
+
+			toolDef := &tool.ToolDefinition{
+				ID:     "test-builder",
+				Type:   tool.ToolTypeSystem,
+				Binary: "test",
+			}
+			if tt.toolCPUs > 0 {
+				toolDef.Resources = &tool.ToolResources{CPUs: tt.toolCPUs}
+			}
+			if err := registry.Register(toolDef); err != nil {
+				t.Fatalf("Failed to register tool: %v", err)
+			}
+
+			// Create resolver with component-tools mapping
+			toolResolver := tool.NewResolver(registry)
+			toolResolver.LoadProjectConfig(map[string]*tool.ToolAssignment{
+				"test-type": {Builder: "test-builder"},
+			})
+
+			// Create build bridge with mock executor
+			bridge := tool.NewBuildBridge()
+			bridge.SetToolSystem(registry, toolResolver, &mockExecutor{})
+
+			// Create config with component type
+			cfg := &config.EACConfig{
+				ComponentTypes: &config.ComponentTypesConfig{
+					ComponentTypes: map[string]*config.ComponentType{
+						"test-type": {
+							Builder: "test-builder",
+							Amp:     tt.compTypeAmp,
+						},
+					},
+				},
+			}
+
+			// Create component resolver
+			resolver := NewComponentResolverWithConfig(cfg, bridge)
+
+			// Create module with the test component
+			module := modules.NewModuleContract(domain.BaseContract{
+				Moniker: "test-module",
+				Components: domain.ModuleComponents{
+					"test-comp": &domain.ComponentEntry{
+						Type: "test-type",
+						Root: ".",
+					},
+				},
+			}, "/workspace")
+
+			// Resolve specs
+			specs := resolver.ResolveForBuild(module, nil)
+
+			// Find the spec for our test component
+			var foundSpec bool
+			for _, spec := range specs {
+				if spec.ID.Component == "test-comp" {
+					foundSpec = true
+					assert.Equal(t, tt.wantWeight, spec.Weight,
+						"Weight should be calculated from tool resources * amp")
+				}
+			}
+
+			if !foundSpec && tt.toolCPUs > 0 {
+				t.Error("Expected to find spec for test-comp")
+			}
+		})
+	}
+}
+
+// TestPoolAllocation_FromToolType validates that PoolAllocation is set directly
+// based on the tool type (container vs system).
+func TestPoolAllocation_FromToolType(t *testing.T) {
+	tests := []struct {
+		name             string
+		toolType         tool.ToolType
+		toolCPUs         int
+		compTypeAmp      float64
+		wantHostWeight   int
+		wantDockerWeight int
+		wantIsContainer  bool
+	}{
+		{
+			name:             "container tool uses both pools",
+			toolType:         tool.ToolTypeContainer,
+			toolCPUs:         4,
+			compTypeAmp:      0, // default 1.0
+			wantHostWeight:   4,
+			wantDockerWeight: 4,
+			wantIsContainer:  true,
+		},
+		{
+			name:             "system tool uses host only",
+			toolType:         tool.ToolTypeSystem,
+			toolCPUs:         2,
+			compTypeAmp:      0,
+			wantHostWeight:   2,
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+		{
+			name:             "container tool with amp 2.0",
+			toolType:         tool.ToolTypeContainer,
+			toolCPUs:         2,
+			compTypeAmp:      2.0,
+			wantHostWeight:   4, // 2 * 2.0 = 4
+			wantDockerWeight: 4,
+			wantIsContainer:  true,
+		},
+		{
+			name:             "system tool with amp 1.5",
+			toolType:         tool.ToolTypeSystem,
+			toolCPUs:         2,
+			compTypeAmp:      1.5,
+			wantHostWeight:   3, // ceil(2 * 1.5) = 3
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create tool registry
+			registry := tool.NewRegistry()
+			registry.SetVerifier(func(t *tool.ToolDefinition) bool { return true })
+
+			toolDef := &tool.ToolDefinition{
+				ID:   "test-builder",
+				Type: tt.toolType,
+			}
+			if tt.toolType == tool.ToolTypeSystem {
+				toolDef.Binary = "test"
+			} else {
+				toolDef.Image = "test"
+				toolDef.Tag = "v1.0.0"
+			}
+			if tt.toolCPUs > 0 {
+				toolDef.Resources = &tool.ToolResources{CPUs: tt.toolCPUs}
+			}
+			if err := registry.Register(toolDef); err != nil {
+				t.Fatalf("Failed to register tool: %v", err)
+			}
+
+			// Create resolver with component-tools mapping
+			toolResolver := tool.NewResolver(registry)
+			toolResolver.LoadProjectConfig(map[string]*tool.ToolAssignment{
+				"test-type": {Builder: "test-builder"},
+			})
+
+			// Create build bridge
+			bridge := tool.NewBuildBridge()
+			bridge.SetToolSystem(registry, toolResolver, &mockExecutor{})
+
+			// Create config with component type
+			cfg := &config.EACConfig{
+				ComponentTypes: &config.ComponentTypesConfig{
+					ComponentTypes: map[string]*config.ComponentType{
+						"test-type": {
+							Builder: "test-builder",
+							Amp:     tt.compTypeAmp,
+						},
+					},
+				},
+			}
+
+			// Create component resolver
+			resolver := NewComponentResolverWithConfig(cfg, bridge)
+
+			// Create module
+			module := modules.NewModuleContract(domain.BaseContract{
+				Moniker: "test-module",
+				Components: domain.ModuleComponents{
+					"test-comp": &domain.ComponentEntry{
+						Type: "test-type",
+						Root: ".",
+					},
+				},
+			}, "/workspace")
+
+			// Resolve specs
+			specs := resolver.ResolveForBuild(module, nil)
+
+			// Find spec and verify PoolAllocation
+			var foundSpec bool
+			for _, spec := range specs {
+				if spec.ID.Component == "test-comp" {
+					foundSpec = true
+					alloc := spec.GetPoolAllocation()
+					assert.Equal(t, tt.wantHostWeight, alloc.HostWeight,
+						"HostWeight should match")
+					assert.Equal(t, tt.wantDockerWeight, alloc.DockerWeight,
+						"DockerWeight should match (container uses both pools, system uses host only)")
+					assert.Equal(t, tt.wantIsContainer, alloc.IsContainer(),
+						"IsContainer() should reflect tool type")
+				}
+			}
+
+			if !foundSpec {
+				t.Error("Expected to find spec for test-comp")
+			}
+		})
+	}
 }

@@ -237,10 +237,10 @@ func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 
 // SetupMockAI creates the mock AI response file for testing.
 func SetupMockAI(ctx *TestContext, response string) error {
-	if err := CreateDirectory(ctx, ".r2r/test"); err != nil {
+	if err := CreateDirectory(ctx, ".eac/test"); err != nil {
 		return err
 	}
-	return CreateFile(ctx, ".r2r/test/ai-mock.txt", response)
+	return CreateFile(ctx, ".eac/test/ai-mock.txt", response)
 }
 
 // SetupMockAIFromAsset loads a mock response from assets and sets it up.

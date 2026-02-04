@@ -45,17 +45,11 @@ func TestTUIHooksImpl_ReceiveUoWs_StoresData(t *testing.T) {
 	hooks := NewTUIHooks(nil)
 
 	data := interfaces.UoWData{
-		Flat: true,
-		Layers: []interfaces.UoWLayer{
+		Modules: []interfaces.UoWModule{
 			{
-				Index: 0,
-				Modules: []interfaces.UoWModule{
-					{
-						Name: "test-module",
-						Units: []interfaces.UoWUnit{
-							{ID: "build:test:go:go", DisplayName: "test:go", Weight: 1},
-						},
-					},
+				Name: "test-module",
+				Units: []interfaces.UoWUnit{
+					{ID: "build:test:go:go", DisplayName: "test:go", Weight: 1},
 				},
 			},
 		},
@@ -65,14 +59,11 @@ func TestTUIHooksImpl_ReceiveUoWs_StoresData(t *testing.T) {
 
 	// Verify data is stored
 	stored := hooks.GetUoWData()
-	if !stored.Flat {
-		t.Error("expected Flat=true")
+	if len(stored.Modules) != 1 {
+		t.Errorf("expected 1 module, got %d", len(stored.Modules))
 	}
-	if len(stored.Layers) != 1 {
-		t.Errorf("expected 1 layer, got %d", len(stored.Layers))
-	}
-	if stored.Layers[0].Modules[0].Name != "test-module" {
-		t.Errorf("expected module name %q, got %q", "test-module", stored.Layers[0].Modules[0].Name)
+	if stored.Modules[0].Name != "test-module" {
+		t.Errorf("expected module name %q, got %q", "test-module", stored.Modules[0].Name)
 	}
 }
 
@@ -134,8 +125,8 @@ func TestTUIHooksImpl_ConcurrentReceiveUoWs(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(idx int) {
 			data := interfaces.UoWData{
-				Layers: []interfaces.UoWLayer{
-					{Index: idx},
+				Modules: []interfaces.UoWModule{
+					{Name: "module-" + string(rune('a'+idx))},
 				},
 			}
 			hooks.ReceiveUoWs(data)
@@ -150,8 +141,8 @@ func TestTUIHooksImpl_ConcurrentReceiveUoWs(t *testing.T) {
 
 	// Should have some data stored (doesn't matter which one wins)
 	stored := hooks.GetUoWData()
-	if len(stored.Layers) != 1 {
-		t.Errorf("expected 1 layer, got %d", len(stored.Layers))
+	if len(stored.Modules) != 1 {
+		t.Errorf("expected 1 module, got %d", len(stored.Modules))
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 // Uses ComponentResolver for consistent component-to-tool mapping.
 // Work items are created for each unique module:component:provider combination.
 // Returns nil if no lintable components are found.
-func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.LintProviders == nil {
 		return nil
@@ -33,7 +33,6 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 	// Create component resolver for unified resolution
 	compResolver := resolver.NewComponentResolver()
 
-	// Lint runs in parallel (no layers), so treat all modules as single layer
 	var componentWork []workunit.UnitSpec
 	globalIndex := 0
 
@@ -77,19 +76,10 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 		}
 	}
 
-	if len(componentWork) == 0 {
-		return nil
-	}
-
-	// Return as single layer (lint runs in parallel)
-	return [][]workunit.UnitSpec{componentWork}
+	return componentWork
 }
 
 // CountLintComponents returns the total number of lintable component work items.
-func CountLintComponents(layers [][]workunit.UnitSpec) int {
-	count := 0
-	for _, layer := range layers {
-		count += len(layer)
-	}
-	return count
+func CountLintComponents(units []workunit.UnitSpec) int {
+	return len(units)
 }

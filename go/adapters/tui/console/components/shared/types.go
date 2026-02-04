@@ -110,13 +110,7 @@ type UnitDetails struct {
 	Dependencies []string
 }
 
-// ExecutionLayer represents a single execution layer with its modules.
-type ExecutionLayer struct {
-	Index   int
-	Modules []ExecutionModule
-}
-
-// ExecutionModule represents a module and its units of work within a layer.
+// ExecutionModule represents a module and its units of work.
 type ExecutionModule struct {
 	Name string
 	UoWs []UoWEntry

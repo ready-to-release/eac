@@ -16,7 +16,6 @@ func TestHelpTextMap(t *testing.T) {
 		"res-jobs",
 		"res-uow",
 		"res-tools",
-		"res-layer",
 		"freeze-button",
 	}
 
@@ -39,17 +38,16 @@ func TestRenderSelectedHelp(t *testing.T) {
 	m := Model{width: 120}
 
 	tests := []struct {
-		zoneID       string
-		helpText     string
-		expectLabel  string
+		zoneID      string
+		helpText    string
+		expectLabel string
 	}{
 		{"res-timer", "Elapsed time since execution started", "Timer:"},
 		{"res-cpu", "CPU usage per core", "CPU:"},
 		{"res-mem", "Memory usage", "Memory:"},
-		{"res-jobs", "Active container jobs", "Containers:"},
-		{"res-uow", "Unit of Work counts", "UoW:"},
+		{"res-jobs", "Active container jobs", "Tools:"},
+		{"res-uow", "Unit of Work counts", "Active:"},
 		{"res-tools", "Tool lamps", "Tools:"},
-		{"res-layer", "Current execution layer", "Layer:"},
 		{"freeze-button", "Click to pause auto-exit", "Freeze:"},
 	}
 

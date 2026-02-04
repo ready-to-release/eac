@@ -3,6 +3,7 @@ package registry
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -293,4 +294,215 @@ func TestFlagMetadataBackwardCompatibility(t *testing.T) {
 	if flag.IsBehaviorFlag() {
 		t.Error("Expected IsBehaviorFlag() to return false for regular flag")
 	}
+}
+
+// TestGetSubcommands tests the GetSubcommands function.
+func TestGetSubcommands(t *testing.T) {
+	// Save and restore original registry
+	originalRegistry := commandRegistry
+	defer func() { commandRegistry = originalRegistry }()
+
+	// Set up test registry with mock registrations
+	commandRegistry = map[string]*CommandRegistration{
+		"get": {
+			ActualCommand: "get",
+			CanonicalName: "get",
+			Short:         "Retrieve repository data",
+			IsParent:      true,
+		},
+		"get modules": {
+			ActualCommand: "get modules",
+			CanonicalName: "get-modules",
+			Short:         "Get all module contracts",
+		},
+		"get files": {
+			ActualCommand: "get files",
+			CanonicalName: "get-files",
+			Short:         "Get repository files",
+		},
+		"get dependencies": {
+			ActualCommand: "get dependencies",
+			CanonicalName: "get-dependencies",
+			Short:         "Get module dependency graph",
+		},
+		"show": {
+			ActualCommand: "show",
+			CanonicalName: "show",
+			Short:         "Show information",
+			IsParent:      true,
+		},
+		"show modules": {
+			ActualCommand: "show modules",
+			CanonicalName: "show-modules",
+			Short:         "Show modules in tree format",
+		},
+	}
+
+	t.Run("returns subcommands for parent", func(t *testing.T) {
+		subs := GetSubcommands("get")
+		if len(subs) != 3 {
+			t.Errorf("Expected 3 subcommands for 'get', got %d", len(subs))
+		}
+	})
+
+	t.Run("returns sorted results", func(t *testing.T) {
+		subs := GetSubcommands("get")
+		if len(subs) < 2 {
+			t.Fatal("Need at least 2 subcommands for sort test")
+		}
+		// Should be sorted alphabetically by ActualCommand
+		for i := 1; i < len(subs); i++ {
+			if subs[i-1].ActualCommand > subs[i].ActualCommand {
+				t.Errorf("Results not sorted: %q > %q", subs[i-1].ActualCommand, subs[i].ActualCommand)
+			}
+		}
+	})
+
+	t.Run("returns empty for nonexistent parent", func(t *testing.T) {
+		subs := GetSubcommands("nonexistent")
+		if len(subs) != 0 {
+			t.Errorf("Expected 0 subcommands for nonexistent parent, got %d", len(subs))
+		}
+	})
+
+	t.Run("does not include parent in results", func(t *testing.T) {
+		subs := GetSubcommands("get")
+		for _, sub := range subs {
+			if sub.ActualCommand == "get" {
+				t.Error("Parent command should not be included in subcommands")
+			}
+		}
+	})
+
+	t.Run("excludes nested subcommands", func(t *testing.T) {
+		// Add a nested subcommand temporarily
+		commandRegistry["get files tree"] = &CommandRegistration{
+			ActualCommand: "get files tree",
+			CanonicalName: "get-files-tree",
+			Short:         "Show files as tree",
+		}
+		defer delete(commandRegistry, "get files tree")
+
+		subs := GetSubcommands("get")
+		for _, sub := range subs {
+			if sub.ActualCommand == "get files tree" {
+				t.Error("Nested subcommand should not be included")
+			}
+		}
+	})
+}
+
+// TestIsValidSubcommand tests the IsValidSubcommand function.
+func TestIsValidSubcommand(t *testing.T) {
+	// Save and restore original registry
+	originalRegistry := commandRegistry
+	defer func() { commandRegistry = originalRegistry }()
+
+	// Set up test registry
+	commandRegistry = map[string]*CommandRegistration{
+		"get": {
+			ActualCommand: "get",
+			IsParent:      true,
+		},
+		"get modules": {
+			ActualCommand: "get modules",
+			Short:         "Get all module contracts",
+		},
+		"get files": {
+			ActualCommand: "get files",
+			Short:         "Get repository files",
+		},
+	}
+
+	t.Run("returns true for valid subcommand", func(t *testing.T) {
+		if !IsValidSubcommand("get", "modules") {
+			t.Error("Expected IsValidSubcommand('get', 'modules') to be true")
+		}
+		if !IsValidSubcommand("get", "files") {
+			t.Error("Expected IsValidSubcommand('get', 'files') to be true")
+		}
+	})
+
+	t.Run("returns false for invalid subcommand", func(t *testing.T) {
+		if IsValidSubcommand("get", "nonexistent") {
+			t.Error("Expected IsValidSubcommand('get', 'nonexistent') to be false")
+		}
+	})
+
+	t.Run("returns false for invalid parent", func(t *testing.T) {
+		if IsValidSubcommand("nonexistent", "modules") {
+			t.Error("Expected IsValidSubcommand('nonexistent', 'modules') to be false")
+		}
+	})
+
+	t.Run("returns false for empty subcommand", func(t *testing.T) {
+		if IsValidSubcommand("get", "") {
+			t.Error("Expected IsValidSubcommand('get', '') to be false")
+		}
+	})
+}
+
+// TestGetSubcommandNames tests the GetSubcommandNames function.
+func TestGetSubcommandNames(t *testing.T) {
+	// Save and restore original registry
+	originalRegistry := commandRegistry
+	defer func() { commandRegistry = originalRegistry }()
+
+	// Set up test registry
+	commandRegistry = map[string]*CommandRegistration{
+		"get": {
+			ActualCommand: "get",
+			IsParent:      true,
+		},
+		"get modules": {
+			ActualCommand: "get modules",
+			Short:         "Get all module contracts",
+		},
+		"get files": {
+			ActualCommand: "get files",
+			Short:         "Get repository files",
+		},
+		"get dependencies": {
+			ActualCommand: "get dependencies",
+			Short:         "Get module dependency graph",
+		},
+	}
+
+	t.Run("returns just subcommand names", func(t *testing.T) {
+		names := GetSubcommandNames("get")
+		if len(names) != 3 {
+			t.Errorf("Expected 3 names, got %d", len(names))
+		}
+
+		// Check that names don't include parent prefix
+		for _, name := range names {
+			if strings.HasPrefix(name, "get ") {
+				t.Errorf("Name should not have parent prefix: %q", name)
+			}
+		}
+	})
+
+	t.Run("returns empty for nonexistent parent", func(t *testing.T) {
+		names := GetSubcommandNames("nonexistent")
+		if len(names) != 0 {
+			t.Errorf("Expected 0 names for nonexistent parent, got %d", len(names))
+		}
+	})
+
+	t.Run("contains expected names", func(t *testing.T) {
+		names := GetSubcommandNames("get")
+		expected := map[string]bool{"modules": false, "files": false, "dependencies": false}
+
+		for _, name := range names {
+			if _, ok := expected[name]; ok {
+				expected[name] = true
+			}
+		}
+
+		for name, found := range expected {
+			if !found {
+				t.Errorf("Expected to find %q in names", name)
+			}
+		}
+	})
 }

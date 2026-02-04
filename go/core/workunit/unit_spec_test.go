@@ -475,3 +475,85 @@ func TestUnitSpec_CachedCanBeSetToTrue(t *testing.T) {
 
 	assert.True(t, spec.Cached)
 }
+
+// =============================================================================
+// UnitSpec PoolAllocation Tests
+// =============================================================================
+
+func TestUnitSpec_GetPoolAllocation_ExplicitAllocation(t *testing.T) {
+	spec := NewBuildSpec("mod", "go", "go")
+	spec.PoolAllocation.HostWeight = 4
+	spec.PoolAllocation.DockerWeight = 2
+
+	alloc := spec.GetPoolAllocation()
+
+	assert.Equal(t, 4, alloc.HostWeight)
+	assert.Equal(t, 2, alloc.DockerWeight)
+	assert.True(t, alloc.IsContainer())
+}
+
+func TestUnitSpec_GetPoolAllocation_LegacyDerivation(t *testing.T) {
+	tests := []struct {
+		name            string
+		weight          int
+		container       bool
+		wantHostWeight  int
+		wantDockerWeight int
+		wantIsContainer bool
+	}{
+		{
+			name:             "host only - weight 2",
+			weight:           2,
+			container:        false,
+			wantHostWeight:   2,
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+		{
+			name:             "container - weight 4",
+			weight:           4,
+			container:        true,
+			wantHostWeight:   4,
+			wantDockerWeight: 4,
+			wantIsContainer:  true,
+		},
+		{
+			name:             "default weight",
+			weight:           1,
+			container:        false,
+			wantHostWeight:   1,
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := NewBuildSpec("mod", "comp", "tool")
+			spec.Weight = tt.weight
+			spec.Container = tt.container
+			// Leave PoolAllocation zero - should derive from legacy fields
+
+			alloc := spec.GetPoolAllocation()
+
+			assert.Equal(t, tt.wantHostWeight, alloc.HostWeight)
+			assert.Equal(t, tt.wantDockerWeight, alloc.DockerWeight)
+			assert.Equal(t, tt.wantIsContainer, alloc.IsContainer())
+		})
+	}
+}
+
+func TestUnitSpec_GetPoolAllocation_ExplicitTakesPrecedence(t *testing.T) {
+	spec := NewBuildSpec("mod", "go", "go")
+	spec.Weight = 2
+	spec.Container = true
+	// Set explicit allocation - should override legacy derivation
+	spec.PoolAllocation.HostWeight = 6
+	spec.PoolAllocation.DockerWeight = 3
+
+	alloc := spec.GetPoolAllocation()
+
+	// Should use explicit values, not derived from Weight/Container
+	assert.Equal(t, 6, alloc.HostWeight)
+	assert.Equal(t, 3, alloc.DockerWeight)
+}

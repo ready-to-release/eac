@@ -64,9 +64,7 @@ func TestNullUoWDataHook_DoesNotPanic(t *testing.T) {
 	// Should not panic with any data
 	hook.ReceiveUoWs(UoWData{})
 	hook.ReceiveUoWs(UoWData{
-		Layers: []UoWLayer{
-			{Index: 0, Modules: []UoWModule{{Name: "test"}}},
-		},
+		Modules: []UoWModule{{Name: "test"}},
 	})
 }
 

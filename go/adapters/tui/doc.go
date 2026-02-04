@@ -56,6 +56,6 @@
 //   - Phase, PhaseInit, PhaseRun, PhaseSummary
 //   - PhaseStatus, PhasePending, PhaseActive, PhaseComplete, PhaseFailed
 //   - SummaryData, InitSummary, InitSummaryFlags
-//   - ExecutionLayer, ExecutionModule, PlannedTool
+//   - ExecutionModule, PlannedTool
 //   - SubcommandInfo
 package tui

@@ -15,7 +15,7 @@ version validation, artifact building, and release creation.
 
 Internal modules and modules with `release_type: none` do not trigger releases.
 
-See [Understanding Release Types](../../../repository/continuous-delivery/release-types.md) for details.
+See [Understanding Release Types](../release-types.md) for details.
 
 ## Release Workflow Pattern
 

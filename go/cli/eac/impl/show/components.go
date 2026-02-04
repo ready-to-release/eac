@@ -242,7 +242,7 @@ func printComponentsByType(components []*reports.ComponentInfo) {
 	fmt.Println("")
 }
 
-// printComponentsByModule prints components grouped by module, organized by layer.
+// printComponentsByModule prints components grouped by module in execution order.
 func printComponentsByModule(components []*reports.ComponentInfo, execPlan *repository.ExecutionPlan) {
 	fmt.Println("## Components by Module")
 	fmt.Println("")
@@ -253,49 +253,32 @@ func printComponentsByModule(components []*reports.ComponentInfo, execPlan *repo
 		byModule[comp.Moniker] = append(byModule[comp.Moniker], comp)
 	}
 
-	// Iterate by layers with layer headings
-	for layerIdx, layer := range execPlan.Layers {
-		// Check if any modules in this layer have components
-		hasComponents := false
-		for _, module := range layer {
-			if _, ok := byModule[module]; ok {
-				hasComponents = true
-				break
-			}
-		}
-		if !hasComponents {
+	// Iterate in execution order
+	for _, module := range execPlan.ExecutionOrder {
+		comps, ok := byModule[module]
+		if !ok || len(comps) == 0 {
 			continue
 		}
 
-		// Add layer heading
-		fmt.Printf("### Layer %d\n\n", layerIdx)
+		fmt.Printf("### %s\n\n", module)
 
-		for _, module := range layer {
-			comps, ok := byModule[module]
-			if !ok || len(comps) == 0 {
-				continue
-			}
+		tb := render.NewTableBuilder().
+			WithHeaders("Component", "Type", "Root", "Build", "Lint", "Test", "Scan")
 
-			fmt.Printf("#### %s\n\n", module)
-
-			tb := render.NewTableBuilder().
-				WithHeaders("Component", "Type", "Root", "Build", "Lint", "Test", "Scan")
-
-			for _, comp := range comps {
-				tb.AddRow(
-					comp.Component,
-					comp.Type,
-					Code(comp.Root),
-					phaseIcon(comp.Phases != nil && comp.Phases.Build != nil && comp.Phases.Build.Enabled),
-					phaseIcon(comp.Phases != nil && comp.Phases.Lint != nil && comp.Phases.Lint.Enabled),
-					phaseIcon(comp.Phases != nil && comp.Phases.Test != nil && comp.Phases.Test.Enabled),
-					phaseIcon(comp.Phases != nil && comp.Phases.Scan != nil && comp.Phases.Scan.Enabled),
-				)
-			}
-
-			fmt.Println(tb.Build())
-			fmt.Println("")
+		for _, comp := range comps {
+			tb.AddRow(
+				comp.Component,
+				comp.Type,
+				Code(comp.Root),
+				phaseIcon(comp.Phases != nil && comp.Phases.Build != nil && comp.Phases.Build.Enabled),
+				phaseIcon(comp.Phases != nil && comp.Phases.Lint != nil && comp.Phases.Lint.Enabled),
+				phaseIcon(comp.Phases != nil && comp.Phases.Test != nil && comp.Phases.Test.Enabled),
+				phaseIcon(comp.Phases != nil && comp.Phases.Scan != nil && comp.Phases.Scan.Enabled),
+			)
 		}
+
+		fmt.Println(tb.Build())
+		fmt.Println("")
 	}
 }
 

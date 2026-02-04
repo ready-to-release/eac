@@ -93,6 +93,57 @@ func RenderCapacityLamps(running, roof int, asciiMode bool) (filled, empty strin
 	return strings.Repeat(filledChar, filledCount), strings.Repeat(emptyChar, emptyCount)
 }
 
+// RenderActiveLamps returns lamp strings for the Active display with 3 states.
+// Uses a fixed 16 lamps normalized to the roof capacity.
+// - active: filled lamps for currently running (filled orange)
+// - loft: unfilled lamps for available capacity within pressure target (unfilled orange)
+// - blocked: unfilled lamps for capacity above pressure target (grey/unallocatable)
+func RenderActiveLamps(running, pressureTarget, roof int, asciiMode bool) (active, loft, blocked string) {
+	filledChar := "●"
+	emptyChar := "○"
+	if asciiMode {
+		filledChar = "#"
+		emptyChar = "o"
+	}
+
+	// Handle edge cases
+	if roof <= 0 {
+		return "", "", strings.Repeat(emptyChar, stableLampsCount)
+	}
+
+	// Normalize to stableLampsCount lamps
+	// Scale factor: how many "units" each lamp represents
+	scale := float64(roof) / float64(stableLampsCount)
+
+	// Calculate lamp counts (normalized to 16)
+	activeLamps := int(float64(running)/scale + 0.5)
+	if activeLamps > stableLampsCount {
+		activeLamps = stableLampsCount
+	}
+	if activeLamps < 0 {
+		activeLamps = 0
+	}
+
+	// Pressure target lamps (cap at roof)
+	targetLamps := int(float64(pressureTarget)/scale + 0.5)
+	if targetLamps > stableLampsCount {
+		targetLamps = stableLampsCount
+	}
+	if targetLamps < activeLamps {
+		targetLamps = activeLamps
+	}
+
+	// Loft = available within pressure target
+	loftLamps := targetLamps - activeLamps
+
+	// Blocked = above pressure target (unallocatable)
+	blockedLamps := stableLampsCount - targetLamps
+
+	return strings.Repeat(filledChar, activeLamps),
+		strings.Repeat(emptyChar, loftLamps),
+		strings.Repeat(emptyChar, blockedLamps)
+}
+
 // FormatCapacityDisplay formats the capacity display string.
 // Format: "●●●●●●○○○○ 6/10" or "●●●●●●●●●● 24/24 [▼16]" under pressure.
 func FormatCapacityDisplay(info CapacityInfo, asciiMode bool) string {

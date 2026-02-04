@@ -496,34 +496,3 @@ func TestLabelValue(t *testing.T) {
 	}
 }
 
-func TestLayerHeader(t *testing.T) {
-	tests := []struct {
-		name     string
-		layerNum int
-	}{
-		{
-			name:     "layer 0",
-			layerNum: 0,
-		},
-		{
-			name:     "layer 1",
-			layerNum: 1,
-		},
-		{
-			name:     "layer 10",
-			layerNum: 10,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := LayerHeader(tt.layerNum)
-			// Verify it contains the layer number
-			if got == "" {
-				t.Errorf("LayerHeader(%d) returned empty string", tt.layerNum)
-			}
-			// The styled output should contain "Layer" somewhere
-			// Note: This may be styled so exact matching is difficult
-		})
-	}
-}

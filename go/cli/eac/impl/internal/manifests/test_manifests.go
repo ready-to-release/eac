@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/git"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
 
@@ -294,7 +295,7 @@ func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir str
 		}
 
 		// Get file size and hash
-		size, sha256, hashErr := implinternal.HashArtifactFile(path)
+		size, sha256, hashErr := coreoutput.HashFile(path)
 		if hashErr != nil {
 			return nil // Skip files that can't be hashed
 		}

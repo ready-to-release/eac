@@ -1,6 +1,7 @@
 # Workflows
 
 Session Start
+
 1. Read `agent.md`.
 2. Read `junie/README.md`.
 3. Read all `junie/rules/*.md`.
@@ -8,6 +9,7 @@ Session Start
 5. Apply precedence from `junie/overrides.md`.
 
 Mode Selection
+
 - Prefer minimal mode needed:
   - Quick Q&A → [CHAT]
   - Repo analysis/advice without edits → [ADVANCED_CHAT]
@@ -17,6 +19,7 @@ Mode Selection
   - Environment/setup tasks → [SETUP]
 
 External Workflows Awareness & Non‑duplication
+
 - Source of truth for Claude workflows lives under `.claude/`:
   - Agents: `.claude/agents/*.md`
   - Commands (slash workflows): `.claude/commands/*.md`
@@ -32,10 +35,12 @@ External Workflows Awareness & Non‑duplication
   - Keep execution non‑interactive and scoped.
 
 Task Switching Protocol
+
 - When a task is completed or the user changes topic/scope, pause to confirm whether to commit current work before proceeding.
 - Recommend small, atomic commits with descriptive messages.
 - Offer to stage only the relevant files/modules.
 
 Verification
+
 - When changes are made, run the smallest sufficient verification (tests/build) required by the change risk.
 - Never submit with failing builds/tests without explicit user approval.

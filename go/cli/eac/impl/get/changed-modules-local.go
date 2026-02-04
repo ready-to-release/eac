@@ -25,6 +25,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -75,53 +76,50 @@ func GetChangedModulesLocal() int {
 	})
 }
 
-// detectLocalChanges detects which modules need rebuilding based on build state.
-// Uses workunit.StateManager.DetectModuleChanges for change detection.
+// detectLocalChanges detects which modules need rebuilding based on UoW manifests.
+// Uses DiskOutputReader to check UoW-level cache state aggregated to module level.
 func detectLocalChanges(workspaceRoot string, requestedModules []string) (*LocalChangedModulesResult, error) {
+	startTime := time.Now()
+
 	// Load module registry
 	reg, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build list of modules to check and their files
-	var monikers []string
-	moduleFiles := make(map[string][]string)
-
+	// Collect contracts to check
+	var contracts []*modules.ModuleContract
 	if len(requestedModules) > 0 {
-		// Only check requested modules
 		for _, moniker := range requestedModules {
 			contract, ok := reg.Get(moniker)
 			if !ok {
 				fmt.Fprintf(os.Stderr, "Warning: module not found: %s\n", moniker)
 				continue
 			}
-			monikers = append(monikers, moniker)
-			// Debug: print module patterns
-			if os.Getenv("DEBUG_CACHE_CMD") != "" {
-				patterns := contract.GetGlobPatterns()
-				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
-			}
-			// Expand glob patterns to get source files
-			files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
-			if err == nil {
-				moduleFiles[moniker] = files
-			}
+			contracts = append(contracts, contract)
 		}
 	} else {
-		// Check all modules
-		for _, contract := range reg.All() {
-			monikers = append(monikers, contract.Moniker)
-			// Debug: print module patterns
-			if os.Getenv("DEBUG_CACHE_CMD") != "" {
-				patterns := contract.GetGlobPatterns()
-				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", contract.Moniker, patterns)
-			}
-			// Expand glob patterns to get source files
-			files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
-			if err == nil {
-				moduleFiles[contract.Moniker] = files
-			}
+		contracts = reg.All()
+	}
+
+	// Build list of modules to check and their files
+	var monikers []string
+	moduleFiles := make(map[string][]string)
+
+	for _, contract := range contracts {
+		moniker := contract.Moniker
+		monikers = append(monikers, moniker)
+
+		// Debug: print module patterns
+		if os.Getenv("DEBUG_CACHE_CMD") != "" {
+			patterns := contract.GetGlobPatterns()
+			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
+		}
+
+		// Expand glob patterns to get source files
+		files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
+		if err == nil {
+			moduleFiles[moniker] = files
 		}
 	}
 
@@ -132,34 +130,82 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		}
 	}
 
-	// Create hash provider for change detection
-	hashProvider := func(module string) (string, error) {
-		files, ok := moduleFiles[module]
-		if !ok {
-			return "", fmt.Errorf("no files for module %s", module)
-		}
-		return hash.Files(workspaceRoot, files)
-	}
+	// Use DiskOutputReader for UoW-based change detection
+	reader := coreoutput.NewReader(workspaceRoot)
 
-	// Use workunit StateManager for change detection
-	stateMgr := workunit.NewStateManager(workspaceRoot)
-	rule := workunit.DefaultRules[workunit.ContextBuild]
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
-	if err != nil {
-		return nil, err
+	var changedModules []string
+	var upToDateModules []string
+	changeReasons := make(map[string]string)
+	isFreshBuild := true
+
+	for _, moniker := range monikers {
+		// Get all UoW manifests for this module
+		manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker)
+		if err != nil || len(manifests) == 0 {
+			// No manifests = module needs build
+			changedModules = append(changedModules, moniker)
+			changeReasons[moniker] = "no build manifests found"
+			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: no manifests\n", moniker)
+			}
+			continue
+		}
+
+		// At least one module has manifests, so it's not a fresh build
+		isFreshBuild = false
+
+		// Compute current input hash for the module
+		files, ok := moduleFiles[moniker]
+		if !ok || len(files) == 0 {
+			changedModules = append(changedModules, moniker)
+			changeReasons[moniker] = "no source files found"
+			continue
+		}
+
+		currentHash, err := hash.Files(workspaceRoot, files)
+		if err != nil {
+			changedModules = append(changedModules, moniker)
+			changeReasons[moniker] = fmt.Sprintf("hash error: %v", err)
+			continue
+		}
+
+		// Check if all manifests have matching input hash
+		// A module needs rebuild if ANY UoW has a mismatched hash
+		needsRebuild := false
+		var mismatchReason string
+		for _, manifest := range manifests {
+			if manifest.InputHash != currentHash {
+				needsRebuild = true
+				mismatchReason = fmt.Sprintf("input hash mismatch in %s:%s", manifest.Component, manifest.Tool)
+				break
+			}
+		}
+
+		if needsRebuild {
+			changedModules = append(changedModules, moniker)
+			changeReasons[moniker] = mismatchReason
+			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: %s\n", moniker, mismatchReason)
+			}
+		} else {
+			upToDateModules = append(upToDateModules, moniker)
+			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: up to date\n", moniker)
+			}
+		}
 	}
 
 	// Debug: print results
 	if os.Getenv("DEBUG_CACHE_CMD") != "" {
 		fmt.Fprintf(os.Stderr, "[DEBUG cmd] changed=%v upToDate=%v reasons=%v\n",
-			changeResult.ChangedModules, changeResult.UpToDateModules, changeResult.ChangeReasons)
+			changedModules, upToDateModules, changeReasons)
 	}
 
 	return &LocalChangedModulesResult{
-		Modules:       changeResult.ChangedModules,
-		UpToDate:      changeResult.UpToDateModules,
-		ChangeReasons: changeResult.ChangeReasons,
-		IsFreshBuild:  changeResult.FreshRun,
-		DetectionTime: changeResult.DetectionTime.Round(time.Millisecond).String(),
+		Modules:       changedModules,
+		UpToDate:      upToDateModules,
+		ChangeReasons: changeReasons,
+		IsFreshBuild:  isFreshBuild,
+		DetectionTime: time.Since(startTime).Round(time.Millisecond).String(),
 	}, nil
 }

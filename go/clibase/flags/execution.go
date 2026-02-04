@@ -10,13 +10,11 @@ import (
 
 // ExecutionFlags holds parallelism and execution control flags.
 type ExecutionFlags struct {
-	Turbo          bool // --turbo: Enable turbo mode (+25% parallelism)
-	Roof           int  // --roof N: Max parallel capacity (0=auto, 1=sequential)
-	UnlayeredBuild bool // --unlayered-build, --unlayered: Disable layered execution
+	Turbo bool // --turbo: Enable turbo mode (+25% parallelism)
+	Roof  int  // --roof N: Max parallel capacity (0=auto, 1=sequential)
 
 	// Declarative tracking fields
 	ParallelExplicit bool // True if --parallel or --sequential was used
-	LayeredExplicit  bool // True if --layered or --unlayered was used
 }
 
 // ExecutionFlagSet implements FlagSet for execution control flags.
@@ -69,25 +67,6 @@ func (s *ExecutionFlagSet) Flags() []FlagDef {
 			Usage:             "Disable parallel execution (equivalent to --roof 1)",
 			MutuallyExclusive: []string{"parallel"},
 		},
-		{
-			Name:    "layered",
-			Type:    "bool",
-			Default: "true",
-			Usage:   "Enable layered/dependency-ordered execution (default, for self-documenting CI)",
-		},
-		{
-			Name:              "unlayered",
-			Type:              "bool",
-			Default:           "false",
-			Usage:             "Disable layered execution (run all modules in parallel)",
-			MutuallyExclusive: []string{"layered"},
-		},
-		{
-			Name:    "unlayered-build",
-			Type:    "bool",
-			Default: "false",
-			Usage:   "Disable layered execution (legacy alias for --unlayered)",
-		},
 	}
 }
 
@@ -125,22 +104,6 @@ func (s *ExecutionFlagSet) parseFlag(arg string, args []string, i int) (consumed
 	case "--sequential":
 		s.flags.Roof = 1 // Sequential = roof 1
 		s.flags.ParallelExplicit = true
-		return true, 0, nil
-
-	// Declarative layered flags
-	case "--layered":
-		s.flags.UnlayeredBuild = false
-		s.flags.LayeredExplicit = true
-		return true, 0, nil
-	case "--unlayered":
-		s.flags.UnlayeredBuild = true
-		s.flags.LayeredExplicit = true
-		return true, 0, nil
-
-	// Legacy layered flag (backward compat)
-	case "--unlayered-build":
-		s.flags.UnlayeredBuild = true
-		s.flags.LayeredExplicit = true
 		return true, 0, nil
 
 	case "--roof":
@@ -193,18 +156,7 @@ func (s *ExecutionFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 			},
 			DefaultOn:   true,
 			EnvAware:    false,
-			Description: "Parallel execution of modules within layers",
-		},
-		{
-			Behavior:    "layered",
-			EnableFlag:  "--layered",
-			DisableFlag: "--unlayered",
-			LegacyFlags: []LegacyFlagMapping{
-				{LegacyFlag: "--unlayered-build", MapsTo: "disable"},
-			},
-			DefaultOn:   true,
-			EnvAware:    false,
-			Description: "Layered/dependency-ordered execution of modules",
+			Description: "Parallel execution of work units",
 		},
 	}
 }
@@ -221,12 +173,6 @@ func (s *ExecutionFlagSet) GetDeclarativeState(behavior string) *DeclarativeStat
 			ExplicitlyOn:  s.flags.ParallelExplicit && !isSequential,
 			ExplicitlyOff: s.flags.ParallelExplicit && isSequential,
 		}
-	case "layered":
-		return &DeclarativeState{
-			Behavior:      "layered",
-			ExplicitlyOn:  s.flags.LayeredExplicit && !s.flags.UnlayeredBuild,
-			ExplicitlyOff: s.flags.LayeredExplicit && s.flags.UnlayeredBuild,
-		}
 	default:
 		return nil
 	}
@@ -236,6 +182,5 @@ func (s *ExecutionFlagSet) GetDeclarativeState(behavior string) *DeclarativeStat
 func (s *ExecutionFlagSet) AllDeclarativeStates() []*DeclarativeState {
 	return []*DeclarativeState{
 		s.GetDeclarativeState("parallel"),
-		s.GetDeclarativeState("layered"),
 	}
 }

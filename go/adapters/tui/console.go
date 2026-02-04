@@ -15,9 +15,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	tuicontract "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/adapters/tui/console"
+	"github.com/ready-to-release/eac/go/adapters/tui/demo"
+	"github.com/ready-to-release/eac/go/adapters/tui/demo/cells"
 	"github.com/ready-to-release/eac/go/adapters/tui/stream"
-	"github.com/ready-to-release/eac/go/adapters/tui/tui3"
-	"github.com/ready-to-release/eac/go/adapters/tui/tui3/cells"
 	"golang.org/x/term"
 )
 
@@ -41,7 +41,7 @@ type ParallelConsole struct {
 	mu       sync.Mutex
 	started  bool
 	stopped  bool
-	tui3Mode bool          // True when using experimental tui3 layout
+	demoMode bool          // True when using experimental demo layout
 	ready    chan struct{} // Signals when TUI is ready
 	done     chan struct{} // Signals when Start() has fully completed (including printSummary)
 
@@ -120,7 +120,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 	if c.config.TUI3Demo {
 		// Use experimental tui3 layout
 		c.mu.Lock()
-		c.tui3Mode = true
+		c.demoMode = true
 		c.mu.Unlock()
 
 		width, height, _ := term.GetSize(int(os.Stdout.Fd()))
@@ -130,7 +130,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		if height <= 0 {
 			height = 40
 		}
-		model = tui3.NewModel(width, height, c.config.RunPhaseName, c.config.ASCIIMode)
+		model = demo.NewModel(width, height, c.config.RunPhaseName, c.config.ASCIIMode)
 	} else {
 		// Use standard console model
 		model = console.NewModel(
@@ -274,7 +274,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 	}
 
 	// Store final model for post-exit summary
-	// Handle both console.Model and tui3.Model
+	// Handle both console.Model and demo.Model
 	switch m := finalModel.(type) {
 	case console.Model:
 		c.mu.Lock()
@@ -282,7 +282,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		c.mu.Unlock()
 		// Print plain-text summary after alt screen is restored
 		c.printSummary(&m)
-	case tui3.Model:
+	case demo.Model:
 		// tui3 handles its own final view rendering in View()
 		// For now, just print completion message
 		fmt.Fprintln(c.realStdout, "Execution complete.")
@@ -296,14 +296,14 @@ func (c *ParallelConsole) convertLines() {
 	for line := range c.contractLineChan {
 		c.mu.Lock()
 		stopped := c.stopped
-		tui3Mode := c.tui3Mode
+		demoMode := c.demoMode
 		c.mu.Unlock()
 
 		if stopped {
 			return
 		}
 
-		if tui3Mode {
+		if demoMode {
 			// Convert to tui3 output line message
 			level := cells.LineLevelInfo
 			if line.Level == tuicontract.LevelWarn {
@@ -312,7 +312,7 @@ func (c *ParallelConsole) convertLines() {
 				level = cells.LineLevelError
 			}
 
-			c.sendAsync(tui3.OutputLineMsg{
+			c.sendAsync(demo.OutputLineMsg{
 				Line: cells.OutputLine{
 					Text:   line.Text,
 					Source: line.Source,
@@ -453,25 +453,17 @@ func (c *ParallelConsole) NewWriter(source string, logWriter io.Writer) io.Write
 func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 	c.mu.Lock()
 	stopped := c.stopped
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
 	if stopped {
 		return
 	}
 
-	if tui3Mode {
-		// Send tui3 layer update
-		if status.TotalLayers > 0 {
-			c.sendAsync(tui3.LayerUpdateMsg{
-				Current: status.Layer,
-				Total:   status.TotalLayers,
-			})
-		}
-
+	if demoMode {
 		// Send tool status updates for containers
-		for _, name := range status.ActiveContainers {
-			c.sendAsync(tui3.ToolActiveMsg{
+		for _, name := range status.ActiveContainerTools {
+			c.sendAsync(demo.ToolActiveMsg{
 				Name:        name,
 				IsContainer: true,
 			})
@@ -479,7 +471,7 @@ func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 
 		// Send tool status updates for system tools
 		for _, name := range status.ActiveSystemTools {
-			c.sendAsync(tui3.ToolActiveMsg{
+			c.sendAsync(demo.ToolActiveMsg{
 				Name:        name,
 				IsContainer: false,
 			})
@@ -501,17 +493,21 @@ func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 	}
 
 	consoleStatus := console.Status{
-		Phase:             status.Phase,
-		Running:           status.Running,
-		Completed:         status.Completed,
-		Total:             status.Total,
-		Layer:             status.Layer,
-		TotalLayers:       status.TotalLayers,
-		Locks:             locks,
-		ActiveContainers:  status.ActiveContainers,
-		UsedContainers:    status.UsedContainers,
-		ActiveSystemTools: status.ActiveSystemTools,
-		UsedSystemTools:   status.UsedSystemTools,
+		Phase:                     status.Phase,
+		Running:                   status.Running,
+		Completed:                 status.Completed,
+		Total:                     status.Total,
+		Roof:                      status.Roof,
+		PressureTarget:            status.PressureTarget,
+		Locks:                     locks,
+		ActiveContainerTools:      status.ActiveContainerTools,
+		UsedContainerTools:        status.UsedContainerTools,
+		ActiveSystemTools:         status.ActiveSystemTools,
+		UsedSystemTools:           status.UsedSystemTools,
+		DockerMemPercent:          status.DockerMemPercent,
+		DockerAvailable:           status.DockerAvailable,
+		RunningContainerCount:     status.RunningContainerCount,
+		TotalContainerCount:       status.TotalContainerCount,
 	}
 
 	select {
@@ -521,18 +517,27 @@ func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 	}
 }
 
+// StatusRefreshInterval returns how often the orchestrator should send status updates.
+// This keeps the TUI responsive even during idle periods.
+func (c *ParallelConsole) StatusRefreshInterval() time.Duration {
+	if c.config.TUIConfig != nil && c.config.TUIConfig.StatusRefreshInterval > 0 {
+		return c.config.TUIConfig.StatusRefreshInterval
+	}
+	return tuicontract.DefaultTUIConfig().StatusRefreshInterval
+}
+
 // SendLine directly sends a line to the console.
 func (c *ParallelConsole) SendLine(line tuicontract.Line) {
 	c.mu.Lock()
 	stopped := c.stopped
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
 	if stopped {
 		return
 	}
 
-	if tui3Mode {
+	if demoMode {
 		// Convert to tui3 output line message
 		level := cells.LineLevelInfo
 		if line.Level == tuicontract.LevelWarn {
@@ -541,7 +546,7 @@ func (c *ParallelConsole) SendLine(line tuicontract.Line) {
 			level = cells.LineLevelError
 		}
 
-		c.sendAsync(tui3.OutputLineMsg{
+		c.sendAsync(demo.OutputLineMsg{
 			Line: cells.OutputLine{
 				Text:   line.Text,
 				Source: line.Source,
@@ -696,11 +701,11 @@ func (c *ParallelConsole) WriteResult(text string) {
 // Uses sendCritical because state changes must not be dropped.
 func (c *ParallelConsole) StartUoW(moniker, displayName string, weight int) {
 	c.mu.Lock()
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
-	if tui3Mode {
-		c.sendCritical(tui3.UnitStartMsg{
+	if demoMode {
+		c.sendCritical(demo.UnitStartMsg{
 			Moniker:     moniker,
 			DisplayName: displayName,
 			Weight:      weight,
@@ -720,11 +725,11 @@ func (c *ParallelConsole) StartUoW(moniker, displayName string, weight int) {
 // Uses sendCritical because state changes must not be dropped.
 func (c *ParallelConsole) MarkUoWRunning(moniker string) {
 	c.mu.Lock()
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
-	if tui3Mode {
-		c.sendCritical(tui3.UnitRunningMsg{
+	if demoMode {
+		c.sendCritical(demo.UnitRunningMsg{
 			Moniker: moniker,
 		})
 		return
@@ -746,11 +751,11 @@ func (c *ParallelConsole) MarkUoWComplete(moniker string, exitCode int) {
 // Uses sendCritical because state changes must not be dropped.
 func (c *ParallelConsole) MarkUoWCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string) {
 	c.mu.Lock()
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
-	if tui3Mode {
-		c.sendCritical(tui3.UnitCompleteMsg{
+	if demoMode {
+		c.sendCritical(demo.UnitCompleteMsg{
 			Moniker:  moniker,
 			ExitCode: exitCode,
 		})
@@ -773,7 +778,7 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
 	program := c.program
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
 	if stopped || program == nil {
@@ -784,10 +789,10 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	// This must happen BEFORE sending summary so TUI can exit cleanly
 	c.closeModelDoneOnce()
 
-	if tui3Mode {
+	if demoMode {
 		// Send summary - counts will be derived from model.units[] in updateCells()
 		// The SummaryData here just signals that we're done and provides duration
-		program.Send(tui3.SummaryMsg{
+		program.Send(demo.SummaryMsg{
 			Data: &cells.SummaryData{
 				Duration: data.TotalTime,
 			},
@@ -796,7 +801,7 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 		// Send quit after a short delay to allow final UI update
 		go func() {
 			time.Sleep(500 * time.Millisecond)
-			program.Send(tui3.QuitMsg{})
+			program.Send(demo.QuitMsg{})
 		}()
 		return
 	}
@@ -814,80 +819,65 @@ func (c *ParallelConsole) SetInitSummary(summary *InitSummary) {
 
 	// Check if we're in tui3 mode
 	c.mu.Lock()
-	tui3Mode := c.tui3Mode
+	demoMode := c.demoMode
 	c.mu.Unlock()
 
-	if tui3Mode {
+	if demoMode {
 		// Pre-populate all units from ExecutionTree for tui3
 		// Use sendCritical because unit registration must not be dropped
-		var tui3Layers [][]string
-		for _, layer := range summary.ExecutionTree {
-			var layerUnits []string
-			for _, module := range layer.Modules {
-				for _, uow := range module.UoWs {
-					// Add unit in pending state with short display name for tabs
-					c.sendCritical(tui3.UnitStartMsg{
-						Moniker:     uow.ID,
-						DisplayName: uow.DisplayName,
-						Weight:      uow.Weight,
-					})
-					layerUnits = append(layerUnits, uow.ID)
-				}
+		for _, module := range summary.ExecutionTree {
+			for _, uow := range module.UoWs {
+				// Add unit in pending state with short display name for tabs
+				c.sendCritical(demo.UnitStartMsg{
+					Moniker:     uow.ID,
+					DisplayName: uow.DisplayName,
+					Weight:      uow.Weight,
+				})
 			}
-			if len(layerUnits) > 0 {
-				tui3Layers = append(tui3Layers, layerUnits)
-			}
-		}
-
-		// Send layer organization for selector
-		// Use sendCritical because layer structure must not be dropped
-		if len(tui3Layers) > 0 {
-			c.sendCritical(tui3.SetLayersMsg{Layers: tui3Layers})
 		}
 		return
 	}
 
 	// Standard console mode - convert to console.InitSummary
-	layers := make([]console.ExecutionLayer, len(summary.ExecutionTree))
-	for i, layer := range summary.ExecutionTree {
-		modules := make([]console.ExecutionModule, len(layer.Modules))
-		for j, mod := range layer.Modules {
-			// Convert UoWs preserving ID (for matching), DisplayName (for display), and Weight
-			uows := make([]console.UoWEntry, len(mod.UoWs))
-			for k, uow := range mod.UoWs {
-				uows[k] = console.UoWEntry{
-					ID:          uow.ID,
-					DisplayName: uow.DisplayName,
-					Weight:      uow.Weight,
-				}
-			}
-			modules[j] = console.ExecutionModule{
-				Name: mod.Name,
-				UoWs: uows,
+	modules := make([]console.ExecutionModule, len(summary.ExecutionTree))
+	for i, mod := range summary.ExecutionTree {
+		// Convert UoWs preserving ID (for matching), DisplayName (for display), and Weight
+		uows := make([]console.UoWEntry, len(mod.UoWs))
+		for k, uow := range mod.UoWs {
+			uows[k] = console.UoWEntry{
+				ID:          uow.ID,
+				DisplayName: uow.DisplayName,
+				Weight:      uow.Weight,
 			}
 		}
-		layers[i] = console.ExecutionLayer{Modules: modules}
+		modules[i] = console.ExecutionModule{
+			Name: mod.Name,
+			UoWs: uows,
+		}
+	}
+
+	// Convert PlannedTools
+	plannedTools := make([]console.PlannedTool, len(summary.PlannedTools))
+	for i, tool := range summary.PlannedTools {
+		plannedTools[i] = console.PlannedTool{
+			Name:        tool.Name,
+			IsContainer: tool.IsContainer,
+		}
 	}
 
 	c.sendAsync(console.InitSummaryMsg{
 		Summary: &console.InitSummary{
-			Command:               summary.Command,
-			ExecutionContext:      summary.ExecutionContext,
-			RequestedModules:      summary.RequestedModules,
-			CalculatedModules:     summary.CalculatedModules,
-			AddedDepm:             summary.AddedDepm,
-			UoWCount:              summary.UoWCount,
-			ExecutionTree:         layers,
-			LayerCount:            summary.LayerCount,
-			LayerSizes:            summary.LayerSizes,
-			ComponentsPerModLayer: summary.ComponentsPerModLayer,
-			FlatExecution:         summary.FlatExecution,
-			ComponentLayers:       summary.ComponentLayers,
-			ComponentLayerCount:   summary.ComponentLayerCount,
-			ParallelismMode:       summary.ParallelismMode,
-			EffectiveWorkers:      summary.EffectiveWorkers,
-			TurboBoost:            summary.TurboBoost,
-			WeightedCapacity:      summary.WeightedCapacity,
+			Command:             summary.Command,
+			ExecutionContext:    summary.ExecutionContext,
+			RequestedModules:    summary.RequestedModules,
+			CalculatedModules:   summary.CalculatedModules,
+			AddedDepm:           summary.AddedDepm,
+			UoWCount:            summary.UoWCount,
+			ExecutionTree:       modules,
+			ParallelismMode:     summary.ParallelismMode,
+			EffectiveWorkers:    summary.EffectiveWorkers,
+			TurboBoost:          summary.TurboBoost,
+			WeightedCapacity:    summary.WeightedCapacity,
 			Flags: console.InitSummaryFlags{
 				TidyFirst:    summary.Flags.TidyFirst,
 				ForceRebuild: summary.Flags.ForceRebuild,
@@ -915,6 +905,7 @@ func (c *ParallelConsole) SetInitSummary(summary *InitSummary) {
 			TestDiscovered:      summary.TestDiscovered,
 			TestOSFiltered:      summary.TestOSFiltered,
 			OutputDir:           summary.OutputDir,
+			PlannedTools:        plannedTools,
 		},
 	})
 }

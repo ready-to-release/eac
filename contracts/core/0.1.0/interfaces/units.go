@@ -42,10 +42,12 @@ type UnitSpecPort interface {
 	// GetComponentType returns the component type from component-types.yml
 	GetComponentType() string
 
-	// GetWeight returns the scheduling weight for resource allocation
+	// GetWeight returns the scheduling weight for resource allocation.
+	// Deprecated: Use GetPoolAllocation().GetHostWeight() for scheduling.
 	GetWeight() int
 
-	// IsContainer returns whether this runs in Docker
+	// IsContainer returns whether this runs in Docker.
+	// Deprecated: Use GetPoolAllocation().IsContainer() instead.
 	IsContainer() bool
 
 	// IsCached returns whether execution should be skipped
@@ -53,6 +55,31 @@ type UnitSpecPort interface {
 
 	// GetDependsOn returns work units that must complete first (within module)
 	GetDependsOn() []UnitIDPort
+
+	// GetPoolAllocation returns the resource pool allocation for this spec.
+	// Returns HostWeight and DockerWeight for dual-pool scheduling.
+	GetPoolAllocation() PoolAllocationPort
+}
+
+// PoolAllocationPort describes the resource pools a work unit needs.
+// This interface provides read-only access to pool allocation data.
+type PoolAllocationPort interface {
+	// GetHostWeight returns the weight to acquire from the host pool.
+	// All work units consume host resources.
+	GetHostWeight() int
+
+	// GetDockerWeight returns the weight to acquire from the docker pool.
+	// Only container tools consume docker resources.
+	// Zero means host-only execution.
+	GetDockerWeight() int
+
+	// IsContainer returns true if this allocation requires docker resources.
+	IsContainer() bool
+
+	// TotalWeight returns the effective scheduling weight.
+	// For bin-packing, this is the maximum of HostWeight and DockerWeight
+	// since both must be satisfied simultaneously.
+	TotalWeight() int
 }
 
 // UnitResultPort represents the outcome of executing a unit of work.

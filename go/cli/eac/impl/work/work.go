@@ -30,17 +30,6 @@ func init() {
 	registry.Register(Work)
 }
 
-// subcommands defines all available work subcommands.
-var subcommands = []tui.SubcommandInfo{
-	{Name: "create", Description: "Create new workspace for parallel development"},
-	{Name: "list", Description: "List all workspaces and their status"},
-	{Name: "remove", Description: "Remove workspace and optionally delete branches"},
-	{Name: "commit", Description: "Commit changes with AI-generated messages"},
-	{Name: "pull", Description: "Sync workspace with latest main via rebase"},
-	{Name: "merge", Description: "Merge workspace to main (squash by default)"},
-	{Name: "pr", Description: "Create pull request with AI-generated description"},
-}
-
 // printHelp prints the help for the work command using registry metadata.
 func printHelp() {
 	reg := registry.GetCommand("work")
@@ -66,24 +55,23 @@ func Work() int {
 		return 1
 	}
 
-	// Check for valid subcommand
-	switch args[0] {
-	case "create", "list", "commit", "pull", "merge", "pr", "remove":
+	// Check for valid subcommand using dynamic discovery from registry
+	if registry.IsValidSubcommand("work", args[0]) {
 		// Handled by separate registrations in respective files
 		return 0
-	default:
-		log.Errorf("Error: unknown subcommand: %s", args[0])
-		log.Info("")
-		printHelp()
-		return 1
 	}
+
+	log.Errorf("Error: unknown subcommand: %s", args[0])
+	log.Info("")
+	printHelp()
+	return 1
 }
 
 // runInteractiveTUI shows the interactive TUI for subcommand selection.
 // Uses the new SelectorConsole pattern: TUI just picks a command, caller executes.
 func runInteractiveTUI() int {
-	// Convert subcommands to CommandOptions
-	options := tui.SubcommandsToOptions(subcommands)
+	// Get options dynamically from registry
+	options := tui.SubcommandsFromRegistry("work")
 
 	// Run the selector - it shows the list, user picks, returns selection
 	selected, args, cancelled := selector.RunSelector(context.Background(), options)

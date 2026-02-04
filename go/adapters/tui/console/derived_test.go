@@ -466,6 +466,101 @@ func TestRenderCapacityLamps(t *testing.T) {
 	}
 }
 
+func TestRenderActiveLamps(t *testing.T) {
+	tests := []struct {
+		name           string
+		running        int
+		pressureTarget int
+		roof           int
+		asciiMode      bool
+		wantActive     int // Expected active (filled) lamp count
+		wantLoft       int // Expected loft (unfilled orange) lamp count
+		wantBlocked    int // Expected blocked (grey) lamp count
+	}{
+		{
+			name:           "no pressure - half capacity",
+			running:        8,
+			pressureTarget: 16,
+			roof:           16,
+			wantActive:     8,
+			wantLoft:       8,
+			wantBlocked:    0,
+		},
+		{
+			name:           "under pressure - some blocked",
+			running:        4,
+			pressureTarget: 12,
+			roof:           16,
+			wantActive:     4,
+			wantLoft:       8,
+			wantBlocked:    4,
+		},
+		{
+			name:           "full active",
+			running:        16,
+			pressureTarget: 16,
+			roof:           16,
+			wantActive:     16,
+			wantLoft:       0,
+			wantBlocked:    0,
+		},
+		{
+			name:           "empty - all loft",
+			running:        0,
+			pressureTarget: 16,
+			roof:           16,
+			wantActive:     0,
+			wantLoft:       16,
+			wantBlocked:    0,
+		},
+		{
+			name:           "severe pressure - mostly blocked",
+			running:        2,
+			pressureTarget: 4,
+			roof:           16,
+			wantActive:     2,
+			wantLoft:       2,
+			wantBlocked:    12,
+		},
+		{
+			name:           "zero roof",
+			running:        0,
+			pressureTarget: 0,
+			roof:           0,
+			wantActive:     0,
+			wantLoft:       0,
+			wantBlocked:    16,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			active, loft, blocked := RenderActiveLamps(tt.running, tt.pressureTarget, tt.roof, tt.asciiMode)
+
+			// Count runes (Unicode lamps are multi-byte)
+			activeCount := len([]rune(active))
+			loftCount := len([]rune(loft))
+			blockedCount := len([]rune(blocked))
+
+			if activeCount != tt.wantActive {
+				t.Errorf("active count: got %d, want %d", activeCount, tt.wantActive)
+			}
+			if loftCount != tt.wantLoft {
+				t.Errorf("loft count: got %d, want %d", loftCount, tt.wantLoft)
+			}
+			if blockedCount != tt.wantBlocked {
+				t.Errorf("blocked count: got %d, want %d", blockedCount, tt.wantBlocked)
+			}
+
+			// Total should always be 16
+			total := activeCount + loftCount + blockedCount
+			if total != 16 {
+				t.Errorf("total lamps: got %d, want 16", total)
+			}
+		})
+	}
+}
+
 func TestFormatCapacityDisplay(t *testing.T) {
 	tests := []struct {
 		name           string

@@ -109,25 +109,22 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	}
 
 	// Filter to only modules with workflow files
-	filteredPlan, err := r.filterModulesWithWorkflows(plan)
-	if err != nil {
-		return err
-	}
+	filteredOrder := r.filterModulesWithWorkflows(plan.ExecutionOrder)
 
-	if len(filteredPlan.ExecutionOrder) == 0 {
+	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")
 		return nil
 	}
 
 	log.Info("")
-	log.Info("Execution plan:")
-	for i, layer := range filteredPlan.Layers {
-		log.Infof("  Layer %d: %v", i, layer)
+	log.Info("Execution order:")
+	for i, moniker := range filteredOrder {
+		log.Infof("  %d. %s", i+1, moniker)
 	}
 	log.Info("")
 
-	// Execute layers sequentially
-	return r.executeLayers(filteredPlan, ref)
+	// Execute modules sequentially in dependency order
+	return r.executeSequential(filteredOrder, ref)
 }
 
 // RunAllPipelines runs all modules in the repository.
@@ -141,25 +138,22 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	}
 
 	// Filter to only modules with workflow files
-	filteredPlan, err := r.filterModulesWithWorkflows(plan)
-	if err != nil {
-		return err
-	}
+	filteredOrder := r.filterModulesWithWorkflows(plan.ExecutionOrder)
 
-	if len(filteredPlan.ExecutionOrder) == 0 {
+	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")
 		return nil
 	}
 
 	log.Info("")
-	log.Info("Execution plan:")
-	for i, layer := range filteredPlan.Layers {
-		log.Infof("  Layer %d: %v", i, layer)
+	log.Info("Execution order:")
+	for i, moniker := range filteredOrder {
+		log.Infof("  %d. %s", i+1, moniker)
 	}
 	log.Info("")
 
-	// Execute layers sequentially
-	return r.executeLayers(filteredPlan, ref)
+	// Execute modules sequentially in dependency order
+	return r.executeSequential(filteredOrder, ref)
 }
 
 // RunAllChangedPipelines detects changed modules and runs their pipelines.
@@ -227,56 +221,45 @@ func getCurrentBranch(repoPath string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// executeLayers executes pipeline layers sequentially, with parallel execution within each layer.
-func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
-	for layerIdx, layer := range plan.Layers {
+// executeSequential executes pipeline modules sequentially in dependency order.
+// Each module waits for completion before the next starts (if wait is enabled).
+func (r *PipelineRunner) executeSequential(order []string, ref string) error {
+	for idx, moniker := range order {
 		log.Info("================================================")
-		log.Infof("Executing Layer %d: %v", layerIdx, layer)
+		log.Infof("Executing [%d/%d]: %s", idx+1, len(order), moniker)
 		log.Info("================================================")
 		log.Info("")
 
-		// Start all workflows in this layer (parallel)
-		runIDs := make(map[string]string) // moniker -> runID
-		for _, moniker := range layer {
-			workflowFile := moniker + ".yaml"
-			log.Infof("Triggering workflow: %s", workflowFile)
+		workflowFile := moniker + ".yaml"
+		log.Infof("Triggering workflow: %s", workflowFile)
 
-			runID, err := r.ghCLI.TriggerWorkflow(workflowFile, ref)
-			if err != nil {
-				return fmt.Errorf("failed to trigger %s: %w", moniker, err)
-			}
-
-			runIDs[moniker] = runID
-			log.Infof("  Started %s (run %s)", moniker, runID)
+		runID, err := r.ghCLI.TriggerWorkflow(workflowFile, ref)
+		if err != nil {
+			return fmt.Errorf("failed to trigger %s: %w", moniker, err)
 		}
 
-		log.Info("")
+		log.Infof("  Started %s (run %s)", moniker, runID)
 
-		// Wait for all workflows in this layer to complete (if wait is enabled)
+		// Wait for workflow to complete (if wait is enabled)
 		if r.wait {
-			for _, moniker := range layer {
-				runID := runIDs[moniker]
-				log.Infof("Waiting for %s (run %s)...", moniker, runID)
+			log.Infof("Waiting for %s (run %s)...", moniker, runID)
 
-				var err error
-				if r.timeout > 0 {
-					err = r.ghCLI.WatchRunWithTimeout(runID, r.timeout)
-				} else {
-					err = r.ghCLI.WatchRun(runID)
-				}
-
-				if err != nil {
-					return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
-				}
-
-				log.Infof("  ✅ %s completed", moniker)
+			var err error
+			if r.timeout > 0 {
+				err = r.ghCLI.WatchRunWithTimeout(runID, r.timeout)
+			} else {
+				err = r.ghCLI.WatchRun(runID)
 			}
+
+			if err != nil {
+				return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
+			}
+
+			log.Infof("  ✅ %s completed", moniker)
 		} else {
-			log.Info("Pipelines started (not waiting for completion)")
+			log.Info("Pipeline started (not waiting for completion)")
 		}
 
-		log.Info("")
-		log.Infof("✅ Layer %d completed successfully", layerIdx)
 		log.Info("")
 	}
 
@@ -287,33 +270,17 @@ func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 	return nil
 }
 
-// filterModulesWithWorkflows filters the execution plan to only include modules with workflow files.
-func (r *PipelineRunner) filterModulesWithWorkflows(plan *repository.ExecutionPlan) (*repository.ExecutionPlan, error) {
+// filterModulesWithWorkflows filters the execution order to only include modules with workflow files.
+func (r *PipelineRunner) filterModulesWithWorkflows(order []string) []string {
 	workflowsDir := filepath.Join(r.repoPath, paths.GitHubDir, paths.WorkflowsDir)
 
-	filtered := &repository.ExecutionPlan{
-		Layers:         [][]string{},
-		ExecutionOrder: []string{},
-		LayerCount:     0,
-	}
-
-	for _, layer := range plan.Layers {
-		filteredLayer := []string{}
-
-		for _, moniker := range layer {
-			workflowFile := filepath.Join(workflowsDir, moniker+".yaml")
-			if _, err := os.Stat(workflowFile); err == nil {
-				filteredLayer = append(filteredLayer, moniker)
-				filtered.ExecutionOrder = append(filtered.ExecutionOrder, moniker)
-			}
-		}
-
-		if len(filteredLayer) > 0 {
-			filtered.Layers = append(filtered.Layers, filteredLayer)
+	var filtered []string
+	for _, moniker := range order {
+		workflowFile := filepath.Join(workflowsDir, moniker+".yaml")
+		if _, err := os.Stat(workflowFile); err == nil {
+			filtered = append(filtered, moniker)
 		}
 	}
 
-	filtered.LayerCount = len(filtered.Layers)
-
-	return filtered, nil
+	return filtered
 }

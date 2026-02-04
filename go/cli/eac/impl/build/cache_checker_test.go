@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,109 +9,127 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVerifyComponentCache_NotInCachedSet(t *testing.T) {
+func TestUoWBuildCacheVerifier_NotInCachedSet(t *testing.T) {
+	verifier := NewUoWBuildCacheVerifier("/tmp/workspace", nil, nil, nil)
+
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
+			Context:   workunit.ContextBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
 		},
 	}
 
-	// Module not in cached set
-	result := VerifyComponentCache("/tmp/workspace", spec, nil, nil)
-
-	assert.False(t, result.IsCached)
-	assert.Equal(t, "test-module:go:go", result.Moniker)
-	assert.Equal(t, "test-module", result.Module)
-	assert.Equal(t, "go", result.Component)
-	assert.Equal(t, "go", result.Handler)
+	result, err := verifier.Verify(context.Background(), spec)
+	assert.NoError(t, err)
+	assert.False(t, result.Cached)
 }
 
-func TestVerifyComponentCache_EmptyCachedModules(t *testing.T) {
+func TestUoWBuildCacheVerifier_EmptyMaps(t *testing.T) {
+	verifier := NewUoWBuildCacheVerifier("/tmp/workspace", map[string]bool{}, map[string]time.Time{}, map[string]bool{})
+
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
+			Context:   workunit.ContextBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
 		},
 	}
 
-	// Empty cached modules map
-	result := VerifyComponentCache("/tmp/workspace", spec, map[string]bool{}, nil)
-
-	assert.False(t, result.IsCached)
+	result, err := verifier.Verify(context.Background(), spec)
+	assert.NoError(t, err)
+	assert.False(t, result.Cached)
 }
 
-func TestVerifyComponentCache_ModuleNotCached(t *testing.T) {
+func TestUoWBuildCacheVerifier_UoWNotCached(t *testing.T) {
+	cachedUoWs := map[string]bool{
+		"build:other-module:go:go": true,
+	}
+
+	verifier := NewUoWBuildCacheVerifier("/tmp/workspace", cachedUoWs, nil, nil)
+
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
+			Context:   workunit.ContextBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
 		},
 	}
 
-	// Different module is cached, not this one
-	cachedModules := map[string]bool{
-		"other-module": true,
-	}
-
-	result := VerifyComponentCache("/tmp/workspace", spec, cachedModules, nil)
-
-	assert.False(t, result.IsCached)
+	result, err := verifier.Verify(context.Background(), spec)
+	assert.NoError(t, err)
+	assert.False(t, result.Cached)
 }
 
-func TestVerifyComponentCache_CachedNoManifest(t *testing.T) {
-	spec := workunit.UnitSpec{
-		ID: workunit.UnitID{
-			Module:    "test-module",
-			Component: "go",
-			Tool:      "go",
-		},
-	}
-
+func TestUoWBuildCacheVerifier_FallbackToModuleCache(t *testing.T) {
+	// UoW not in cache, but module is
 	cachedModules := map[string]bool{
 		"test-module": true,
 	}
+
+	verifier := NewUoWBuildCacheVerifier("/tmp/workspace", nil, nil, cachedModules)
+
+	spec := workunit.UnitSpec{
+		ID: workunit.UnitID{
+			Context:   workunit.ContextBuild,
+			Module:    "test-module",
+			Component: "go",
+			Tool:      "go",
+		},
+	}
+
+	result, err := verifier.Verify(context.Background(), spec)
+	assert.NoError(t, err)
+	assert.True(t, result.Cached) // Falls back to module-level cache
+}
+
+func TestUoWBuildCacheVerifier_CachedNoManifest(t *testing.T) {
 	cacheTime := time.Now().Add(-1 * time.Hour)
-	cacheTimes := map[string]time.Time{
-		"test-module": cacheTime,
+	cachedUoWs := map[string]bool{
+		"build:test-module:go:go": true,
+	}
+	uowCacheTimes := map[string]time.Time{
+		"build:test-module:go:go": cacheTime,
 	}
 
 	// Non-existent workspace path means no manifest
-	result := VerifyComponentCache("/nonexistent/workspace", spec, cachedModules, cacheTimes)
+	verifier := NewUoWBuildCacheVerifier("/nonexistent/workspace", cachedUoWs, uowCacheTimes, nil)
 
+	spec := workunit.UnitSpec{
+		ID: workunit.UnitID{
+			Context:   workunit.ContextBuild,
+			Module:    "test-module",
+			Component: "go",
+			Tool:      "go",
+		},
+	}
+
+	result, err := verifier.Verify(context.Background(), spec)
+	assert.NoError(t, err)
 	// Should be cached (trust source hash when no manifest)
-	assert.True(t, result.IsCached)
+	assert.True(t, result.Cached)
 	assert.Equal(t, cacheTime, result.CacheTime)
-	assert.Equal(t, "test-module:go:go", result.Moniker)
 }
 
-func TestVerifyComponentCache_MonikerFormatWithTool(t *testing.T) {
+func TestUoWBuildCacheVerifier_ContextCancelled(t *testing.T) {
+	verifier := NewUoWBuildCacheVerifier("/tmp/workspace", nil, nil, nil)
+
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Module:    "eac-cli",
-			Component: "docs",
-			Tool:      "mkdocs",
+			Context:   workunit.ContextBuild,
+			Module:    "test-module",
+			Component: "go",
+			Tool:      "go",
 		},
 	}
 
-	result := VerifyComponentCache("/tmp/workspace", spec, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
 
-	assert.Equal(t, "eac-cli:docs:mkdocs", result.Moniker)
-}
-
-func TestVerifyComponentCache_MonikerFormatWithoutTool(t *testing.T) {
-	spec := workunit.UnitSpec{
-		ID: workunit.UnitID{
-			Module:    "eac-cli",
-			Component: "docs",
-			Tool:      "",
-		},
-	}
-
-	result := VerifyComponentCache("/tmp/workspace", spec, nil, nil)
-
-	assert.Equal(t, "eac-cli:docs", result.Moniker)
+	_, err := verifier.Verify(ctx, spec)
+	assert.Error(t, err)
+	assert.Equal(t, context.Canceled, err)
 }

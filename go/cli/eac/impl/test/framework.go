@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/show"
@@ -35,32 +36,6 @@ func init() {
 	// Register test component-level execution support
 	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeTest, ResolveTestUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeTest, testUnitWorker)
-	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeTest, getTestUnitLayers)
-}
-
-// getTestUnitLayers returns the component execution layers as string slices.
-// For spec tests (godog, tscucumber), uses "module:spec:specname" format for TUI tree matching.
-// This format matches the Longname() output from UnitID when Spec is set.
-func getTestUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := ResolveTestUnitSpecs(ctx)
-	result := make([][]string, len(layers))
-	for i, layer := range layers {
-		result[i] = make([]string, len(layer))
-		for j, work := range layer {
-			if work.ID.Spec != "" {
-				// Spec test: use Longname() which returns "module:spec:specname"
-				result[i][j] = work.ID.Longname()
-			} else if work.ID.Tool != "" {
-				// Regular test with tool: "module:component:tool"
-				result[i][j] = fmt.Sprintf("%s:%s:%s", work.ID.Module, work.ID.Component, work.ID.Tool)
-			} else {
-				// Regular test without tool: "module:component"
-				// (testType is already included in component as "path:testType")
-				result[i][j] = fmt.Sprintf("%s:%s", work.ID.Module, work.ID.Component)
-			}
-		}
-	}
-	return result
 }
 
 // TestFrameworkConfig holds test-specific configuration for the framework.
@@ -88,8 +63,14 @@ type TestFrameworkConfig struct {
 	// Stats for summary
 	Stats *testSelectionStats
 
-	// Incremental state
-	CachedModules map[string]bool // Modules that are up-to-date (cache hits)
+	// UoW-level incremental state
+	CachedUoWs    map[string]bool      // UoW longname -> cached
+	UoWCacheTimes map[string]time.Time // UoW longname -> cache time
+	Tracker       *coreoutput.InMemoryTracker
+
+	// Module-level incremental state (aggregated from UoWs for TUI compatibility)
+	CachedModules map[string]bool      // Modules that are up-to-date (cache hits)
+	CacheTimes    map[string]time.Time // Module-level cache times for TUI
 
 	// Component mapping for clean directory names
 	// Maps "cleanComponent" (e.g., "docs-drawio-cache/godog") to full pkgPath
@@ -338,9 +319,9 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		return nil
 	}
 
-	// Incremental test detection (devbox only)
+	// UoW-based incremental test detection (devbox only)
 	if !environments.IsCI() && !testCfg.ForceRetest && !ctx.Config.DryRun {
-		testsByPackage = filterIncrementalTests(ctx, testCfg, testsByPackage)
+		testsByPackage = detectUoWIncrementalTestChanges(ctx, testCfg, testsByPackage)
 		testCfg.TestsByPackage = testsByPackage
 	}
 
@@ -394,24 +375,15 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	testCfg.SuiteTagFilter = buildSuiteTagFilter(suite)
 
 	// Convert package paths to module monikers for TUI tree building.
-	// ExecutionPlan.Layers must contain monikers (not paths) so buildTreeFromUnitSpecs
+	// ExecutionPlan.ExecutionOrder must contain monikers (not paths) so buildTreeFromUnitSpecs
 	// can match them with UnitSpec.ID.Module for proper tab pre-filling.
 	parallelModules := extractUniqueModulesFromPaths(parallelPaths, testCfg.ModuleMapper)
 	sequentialModules := extractUniqueModulesFromPaths(sequentialPaths, testCfg.ModuleMapper)
 
-	// Remove modules that appear in both layers (keep in parallel only)
+	// Remove modules that appear in both lists (keep in parallel only)
 	sequentialModules = removeExistingModules(sequentialModules, parallelModules)
 
-	// Build layers (only include non-empty layers)
-	var layers [][]string
-	if len(parallelModules) > 0 {
-		layers = append(layers, parallelModules)
-	}
-	if len(sequentialModules) > 0 {
-		layers = append(layers, sequentialModules)
-	}
-
-	// All modules for execution order
+	// All modules for execution order (parallel first, then sequential)
 	var allModules []string
 	allModules = append(allModules, parallelModules...)
 	allModules = append(allModules, sequentialModules...)
@@ -419,7 +391,6 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Set up execution plan with module monikers
 	ctx.ExecutionPlan = &repository.ExecutionPlan{
 		ExecutionOrder: allModules,
-		Layers:         layers,
 	}
 	ctx.ComponentTypesDisplay = moduleTypes
 	ctx.Orchestrator.SetComponentTypesDisplay(moduleTypes)
@@ -464,19 +435,29 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 
 	// Enable early cache detection for fast TUI feedback
 	// Tabs will progressively "light up" blue as cache hits are detected
-	if len(testCfg.CachedModules) > 0 && ctx.Orchestrator != nil {
-		verifier := &TestCacheVerifier{cachedModules: testCfg.CachedModules}
+	if (len(testCfg.CachedUoWs) > 0 || len(testCfg.CachedModules) > 0) && ctx.Orchestrator != nil {
+		verifier := &TestCacheVerifier{
+			cachedUoWs:    testCfg.CachedUoWs,
+			uowCacheTimes: testCfg.UoWCacheTimes,
+			cachedModules: testCfg.CachedModules,
+		}
 		ctx.Orchestrator.SetCacheDetection(verifier, testCfg.CachedModules)
+
+		// Pass cache times if available
+		if len(testCfg.CacheTimes) > 0 {
+			ctx.Orchestrator.SetCacheTimes(testCfg.CacheTimes)
+		}
 	}
 
 	return nil
 }
 
 // TestCacheVerifier implements execution.CacheVerifier for test commands.
-// Test caching is simpler than build - just checks if module is in cached set.
-// No artifact integrity verification needed since test state is tracked separately.
+// Uses UoW-level cache for fine-grained test caching.
 type TestCacheVerifier struct {
-	cachedModules map[string]bool
+	cachedUoWs    map[string]bool      // UoW longname -> cached
+	uowCacheTimes map[string]time.Time // UoW longname -> cache time
+	cachedModules map[string]bool      // Module-level cache (aggregated from UoWs for TUI)
 }
 
 // Verify implements execution.CacheVerifier.
@@ -488,10 +469,21 @@ func (v *TestCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) 
 	default:
 	}
 
-	module := unit.ID.Module
-	if v.cachedModules[module] {
+	longname := unit.ID.Longname()
+
+	// Check UoW-level cache first
+	if v.cachedUoWs != nil && v.cachedUoWs[longname] {
+		return execution.CacheResult{
+			Cached:    true,
+			CacheTime: v.uowCacheTimes[longname],
+		}, nil
+	}
+
+	// Fall back to module-level check for backwards compatibility
+	if v.cachedModules != nil && v.cachedModules[unit.ID.Module] {
 		return execution.CacheResult{Cached: true}, nil
 	}
+
 	return execution.CacheResult{}, nil
 }
 
@@ -556,16 +548,47 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		log.Infof("Aggregated CTRF report: %s", path)
 	}
 
-	// Update incremental test state (devbox only)
-	if !environments.IsCI() && ctx.ModuleRegistry != nil {
-		updateTestState(ctx, testCfg, results)
-	}
+	// UoW manifests are written immediately in writeUoWTestManifest via RecordComplete
+	// No explicit state update needed here
 
 	// Show timing analysis if requested
 	if ctx.Config.ShowTimings {
 		showTestTimings(ctx, testCfg)
 	}
 
+	// Assert all UoWs have valid manifests
+	if err := assertTestManifestsExist(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// assertTestManifestsExist verifies that all expected UoWs have valid manifests.
+// This catches cases where manifest generation was broken or never implemented.
+func assertTestManifestsExist(ctx *cmdframework.ExecutionContext) error {
+	specs := ResolveTestUnitSpecs(ctx)
+	if len(specs) == 0 {
+		return nil
+	}
+
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	var missing []string
+
+	for _, spec := range specs {
+		// Check if manifest exists for this UoW
+		_, err := reader.GetUoW(workunit.ContextTest, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
+		if err != nil {
+			missing = append(missing, spec.ID.Longname())
+			log.Debugf("[TEST-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("test completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
+	}
+
+	log.Debugf("[TEST-ASSERT] All %d UoW manifests verified", len(specs))
 	return nil
 }
 
@@ -618,19 +641,32 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		testType = component[idx+1:]
 	}
 
+	// Build UnitID for UoW-level cache lookup
+	toolName := testType
+	if toolName == "" {
+		toolName = "none"
+	}
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextTest,
+		Module:    module,
+		Component: componentName,
+		Tool:      toolName,
+	}
+
+	// Check UoW-level cache first
+	isCached := testCfg.CachedUoWs != nil && testCfg.CachedUoWs[unitID.Longname()]
+	log.Debugf("[TEST-UOW-CACHE] Test worker for %s: unitID=%s, isCached=%v", component, unitID.Longname(), isCached)
+
+	if isCached {
+		fmt.Fprintf(logWriter, "⏭️  Cached (unchanged)\n")
+		return -1 // -1 = skipped/cached = blue in TUI
+	}
+
 	// Look up pkgPath from component mapping
 	pkgPath, ok := testCfg.ComponentToPkgPath[componentName]
 	if !ok {
 		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for component %s\n", componentName)
 		return 1
-	}
-
-	// Check incremental cache - if module is cached, skip immediately (blue in TUI)
-	log.Debugf("[TUI-CACHE] Test worker for %s: CachedModules=%v, isCached=%v",
-		module, testCfg.CachedModules != nil, testCfg.CachedModules != nil && testCfg.CachedModules[module])
-	if testCfg.CachedModules != nil && testCfg.CachedModules[module] {
-		fmt.Fprintf(logWriter, "⏭️  Cached (unchanged)\n")
-		return -1 // -1 = skipped/cached = blue in TUI
 	}
 
 	tests := testCfg.ExecCtx.testsByPackage[pkgPath]
@@ -647,6 +683,14 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 			return 0
 		}
 	}
+
+	// Compute input hash before running tests
+	var inputHash string
+	if contract, ok := ctx.ModuleRegistry.Get(module); ok {
+		inputHash, _ = computeTestInputHash(ctx, contract)
+	}
+
+	startTime := time.Now()
 
 	// Run tests - UoW manages log file, we just write to logWriter
 	// Use the componentName as result key for aggregation
@@ -665,11 +709,14 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		TestsSkipped: result.TestsSkipped,
 	})
 
-	// Atomically update test state for this module immediately after completion
-	// This ensures interrupted runs still preserve cache for completed modules
+	// Write UoW manifest for incremental cache
 	passed := !result.PackageFailed && result.TestsFailed == 0
-	if err := updateModuleTestStateAtomic(ctx, testCfg, module, passed); err != nil {
-		log.Debugf("Failed to update test state for %s: %v", module, err)
+	exitCode := 0
+	if !passed {
+		exitCode = 1
+	}
+	if !environments.IsCI() {
+		writeUoWTestManifest(ctx, testCfg, unitID, inputHash, startTime, exitCode)
 	}
 
 	if result.PackageFailed || result.TestsFailed > 0 {
@@ -757,11 +804,15 @@ func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFram
 		return nil
 	}
 
-	artifactValidation := artifacts.ValidateBuildArtifacts(
+	// Get expected build UoWs to filter validation (ignores orphaned manifests)
+	expectedBuildUoWs := getExpectedBuildUoWs(ctx)
+
+	artifactValidation := artifacts.ValidateBuildArtifactsWithExpected(
 		stats.ModulesInScope,
 		ctx.EACConfig,
 		ctx.WorkspaceRoot,
 		ctx.ModuleRegistry,
+		expectedBuildUoWs,
 	)
 
 	if artifactValidation.AllValid() {
@@ -821,7 +872,27 @@ func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFram
 	return cmdframework.NewInformationalExit("build required")
 }
 
-func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) map[string][]testing.TestReference {
+// getExpectedBuildUoWs returns the expected build UoWs for each module.
+// This is used to filter artifact validation to only check manifests for currently-configured
+// components, preventing false positives from orphaned manifests left by removed component types.
+func getExpectedBuildUoWs(ctx *cmdframework.ExecutionContext) map[string][]workunit.UnitID {
+	// Use build command's resolver to get expected build UoWs
+	buildSpecs := build.ResolveUnitSpecs(ctx)
+	if len(buildSpecs) == 0 {
+		return nil
+	}
+
+	result := make(map[string][]workunit.UnitID)
+	for _, spec := range buildSpecs {
+		result[spec.ID.Module] = append(result[spec.ID.Module], spec.ID)
+	}
+	return result
+}
+
+// detectUoWIncrementalTestChanges performs UoW-level incremental test detection.
+// Instead of checking at module granularity, it checks each component:tool UoW.
+// This enables partial caching - some test components can be cached while others retest.
+func detectUoWIncrementalTestChanges(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) map[string][]testing.TestReference {
 	startTime := time.Now()
 	defer func() {
 		ctx.SetChangeDetectionTiming(time.Since(startTime))
@@ -833,72 +904,105 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return testsByPackage
 	}
 
-	moduleTestInfo, depBuildIDLoader := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
-
-	// Determine test set from suite L-tags
-	testSet := workunit.TestSetUnit // Default to unit
-	var ltags []string
-	if ctx.EACConfig != nil && ctx.EACConfig.Testing != nil {
-		ltags = ctx.EACConfig.Testing.GetSuiteLTags(testCfg.SuiteName)
-		testSet = workunit.ClassifyTestByTags(ltags)
+	// Get all expected UoWs from resolved unit specs
+	specs := ResolveTestUnitSpecs(ctx)
+	if len(specs) == 0 {
+		return testsByPackage
 	}
-	log.Debugf("[TUI-CACHE] Incremental detection: suite=%s ltags=%v testSet=%s moduleCount=%d",
-		testCfg.SuiteName, ltags, testSet, len(moduleTestInfo))
 
-	// Create hash provider for source files
-	hashProvider := func(module string) (string, error) {
-		info, ok := moduleTestInfo[module]
-		if !ok {
-			return "", fmt.Errorf("no info for module %s", module)
+	// Build list of expected UoWs
+	var expectedUoWs []workunit.UnitID
+	for _, spec := range specs {
+		expectedUoWs = append(expectedUoWs, spec.ID)
+	}
+
+	if len(expectedUoWs) == 0 {
+		return testsByPackage
+	}
+
+	// Collect module files for hash computation
+	moduleFiles := make(map[string][]string)
+	for _, id := range expectedUoWs {
+		if _, ok := moduleFiles[id.Module]; ok {
+			continue // Already collected
 		}
-		return hash.Files(ctx.WorkspaceRoot, info.SourceFiles)
+		if contract, ok := ctx.ModuleRegistry.Get(id.Module); ok {
+			patterns := contract.GetGlobPatterns()
+			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+			if err != nil {
+				log.Debugf("Failed to expand patterns for %s: %v", id.Module, err)
+				continue
+			}
+			moduleFiles[id.Module] = files
+		}
 	}
 
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	changeResult, err := stateMgr.DetectTestModuleChanges(moduleTestInfo, testSet, hashProvider, depBuildIDLoader, nil)
+	// Use shared helpers for change detection and aggregation
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	getInputHash := coreoutput.InputHashProvider(hash.NewModuleInputHashProvider(ctx.WorkspaceRoot, moduleFiles))
+
+	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextTest, expectedUoWs, getInputHash)
 	if err != nil {
-		log.Debugf("Failed to detect test changes: %v", err)
+		log.Debugf("Failed to detect UoW changes: %v", err)
 		return testsByPackage
 	}
 
-	if changeResult.FreshRun {
-		log.Debugf("[TUI-CACHE] Test incremental: FreshRun=true, no cache available")
+	// Log change detection results
+	log.Debugf("[TEST-UOW-CACHE] DetectUoWChanges result: FreshRun=%v Changed=%d UpToDate=%d",
+		aggResult.UoWResult.FreshRun, len(aggResult.UoWResult.Changed), len(aggResult.UoWResult.UpToDate))
+	for longname, reason := range aggResult.UoWResult.ChangeReasons {
+		log.Debugf("[TEST-UOW-CACHE] Changed: %s -> %s", longname, reason)
+	}
+
+	detectionTime := time.Since(startTime)
+
+	if aggResult.UoWResult.FreshRun {
+		log.Debugf("Fresh test detected (UoW mode), all tests will run")
+		if ctx.InitSummary != nil {
+			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+				Enabled:       true,
+				DetectionTime: detectionTime,
+				FreshBuild:    true,
+			})
+		}
 		return testsByPackage
 	}
 
-	// Build set of modules that need testing
-	changedSet := make(map[string]bool)
-	for _, m := range changeResult.ModulesNeedingTest {
-		changedSet[m] = true
-		if reason, ok := changeResult.ChangeReasons[m]; ok {
-			log.Debugf("[TUI-CACHE] Module needs test: %s reason=%s", m, reason)
-		}
+	// Copy aggregated results to test config
+	testCfg.CachedUoWs = aggResult.CachedUoWs
+	testCfg.UoWCacheTimes = aggResult.UoWCacheTimes
+	testCfg.CachedModules = aggResult.CachedModules
+	testCfg.CacheTimes = aggResult.ModuleCacheTimes
+
+	// Log module-level aggregation
+	agg := workunit.NewUoWAggregator(expectedUoWs)
+	for _, id := range aggResult.UoWResult.UpToDate {
+		agg.MarkCached(id)
 	}
-	log.Debugf("[TUI-CACHE] Detection result: needsTest=%d upToDate=%d",
-		len(changeResult.ModulesNeedingTest), len(changeResult.UpToDateModules))
-
-	// Build set of cached modules (modules that are up-to-date)
-	// These will be skipped at the component worker level, not filtered from the plan.
-	// This keeps all packages visible in the TUI.
-	testCfg.CachedModules = make(map[string]bool)
-	var changedCount, cachedCount int
-
-	for pkgPath := range testsByPackage {
-		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
-		if changedSet[moduleMoniker] {
-			changedCount++
-			log.Debugf("[TUI-CACHE] Test incremental: pkgPath=%s -> module=%s (CHANGED)", pkgPath, moduleMoniker)
-		} else {
-			testCfg.CachedModules[moduleMoniker] = true
-			cachedCount++
-			log.Debugf("[TUI-CACHE] Test incremental: pkgPath=%s -> module=%s (CACHED)", pkgPath, moduleMoniker)
-		}
+	for module := range aggResult.CachedModules {
+		total, cached := agg.Stats(module)
+		log.Debugf("[TEST-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
+			module, cached, total, true)
+	}
+	for _, module := range aggResult.ChangedModules {
+		total, cached := agg.Stats(module)
+		log.Debugf("[TEST-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
+			module, cached, total, false)
 	}
 
-	if cachedCount > 0 {
-		log.Debugf("Incremental test: %d packages to test, %d cached (will show blue in TUI)",
-			changedCount, cachedCount)
+	// Report incremental detection in init summary
+	if ctx.InitSummary != nil {
+		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+			Enabled:       true,
+			DetectionTime: detectionTime,
+			Changed:       aggResult.ChangedModules,
+			UpToDate:      aggResult.UpToDateModules,
+			FreshBuild:    false,
+		})
 	}
+
+	log.Debugf("Incremental (UoW mode): %d modules to test, %d cached, %d UoWs cached",
+		len(aggResult.ChangedModules), len(aggResult.UpToDateModules), len(testCfg.CachedUoWs))
 
 	// Return ALL packages - filtering happens at component worker level
 	return testsByPackage
@@ -941,109 +1045,6 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 	ctx.InitSummary = summary
 }
 
-// updateModuleTestStateAtomic updates test state for a single module immediately after completion.
-// This ensures interrupted runs preserve cache for completed modules (atomic caching).
-func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, module string, passed bool) error {
-	if ctx.ModuleRegistry == nil {
-		log.Debugf("[ATOMIC-STATE] ModuleRegistry is nil for module=%s", module)
-		return nil
-	}
-
-	contract, exists := ctx.ModuleRegistry.Get(module)
-	if !exists {
-		log.Debugf("[ATOMIC-STATE] Module not found in registry: module=%s", module)
-		return nil
-	}
-	log.Debugf("[ATOMIC-STATE] Updating test state for module=%s passed=%v", module, passed)
-
-	// Build module info for just this module
-	var sourceFiles []string
-	var buildID string
-
-	// Get BuildID from UoW manifests
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	buildID = reader.GetBuildID(workunit.ContextBuild, module)
-
-	// Get source files from module definition
-	sourcePatterns := contract.GetGlobPatterns()
-	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, sourcePatterns)
-	if err == nil {
-		for _, f := range files {
-			if !isTestFile(f) {
-				sourceFiles = append(sourceFiles, f)
-			}
-		}
-	}
-
-	// Determine test set from suite L-tags
-	testSet := workunit.TestSetUnit
-	if ctx.EACConfig != nil && ctx.EACConfig.Testing != nil {
-		ltags := ctx.EACConfig.Testing.GetSuiteLTags(testCfg.SuiteName)
-		testSet = workunit.ClassifyTestByTags(ltags)
-	}
-
-	// Compute source hash
-	sourceHash, _ := hash.Files(ctx.WorkspaceRoot, sourceFiles)
-
-	log.Debugf("[ATOMIC-STATE] Saving test state: module=%s testSet=%s sourceFiles=%d", module, testSet, len(sourceFiles))
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	err = stateMgr.SaveTestModuleResult(module, testSet, passed, sourceHash, buildID, "")
-	if err != nil {
-		log.Debugf("[ATOMIC-STATE] SaveTestModuleResult failed: module=%s err=%v", module, err)
-	}
-	return err
-}
-
-func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, _ []PackageResult) {
-	testedModuleResults := make(map[string]bool)
-
-	// Iterate over actual results (which use path:testType format like "go/eac/core/config:gotest")
-	for resultKey, result := range testCfg.ExecCtx.results {
-		// Extract pkgPath from resultKey (strip test type suffix if present)
-		pkgPath := resultKey
-		if colonIdx := strings.LastIndex(resultKey, ":"); colonIdx > 0 {
-			// Check if suffix is a valid test type
-			suffix := resultKey[colonIdx+1:]
-			if testing.IsValidTestType(suffix) {
-				pkgPath = resultKey[:colonIdx]
-			}
-		}
-
-		// Get module moniker from package path using module mapper
-		moduleMoniker := extractMonikerFromPath(pkgPath, testCfg.ModuleMapper)
-
-		if existing, ok := testedModuleResults[moduleMoniker]; ok && !existing {
-			continue
-		}
-
-		passed := !result.PackageFailed && result.TestsFailed == 0
-		testedModuleResults[moduleMoniker] = passed
-	}
-
-	moduleTestInfo, _ := buildModuleTestInfo(testCfg.TestsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
-
-	// Determine test set from suite L-tags
-	testSet := workunit.TestSetUnit
-	if ctx.EACConfig != nil && ctx.EACConfig.Testing != nil {
-		ltags := ctx.EACConfig.Testing.GetSuiteLTags(testCfg.SuiteName)
-		testSet = workunit.ClassifyTestByTags(ltags)
-	}
-
-	// Save test state for each module
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	for module, passed := range testedModuleResults {
-		info, ok := moduleTestInfo[module]
-		if !ok {
-			continue
-		}
-
-		sourceHash, _ := hash.Files(ctx.WorkspaceRoot, info.SourceFiles)
-		if err := stateMgr.SaveTestModuleResult(module, testSet, passed, sourceHash, info.BuildID, ""); err != nil {
-			log.Warnf("Failed to update test state for %s: %v", module, err)
-		}
-	}
-}
-
 func showTestTimings(_ *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) {
 	testedModules := make(map[string]bool)
 	for pkgPath := range testCfg.TestsByPackage {
@@ -1063,7 +1064,7 @@ func showTestTimings(_ *cmdframework.ExecutionContext, testCfg *TestFrameworkCon
 }
 
 // extractUniqueModulesFromPaths extracts unique module monikers from package paths.
-// Used to convert test package paths to module monikers for ExecutionPlan.Layers.
+// Used to convert test package paths to module monikers for ExecutionPlan.ExecutionOrder.
 func extractUniqueModulesFromPaths(paths []string, mapper *ModuleMapper) []string {
 	seen := make(map[string]bool)
 	var modules []string
@@ -1092,4 +1093,43 @@ func removeExistingModules(from, existing []string) []string {
 		}
 	}
 	return result
+}
+
+// computeTestInputHash computes the input hash for a module's tests.
+func computeTestInputHash(ctx *cmdframework.ExecutionContext, contract interface{ GetGlobPatterns() []string }) (string, error) {
+	patterns := contract.GetGlobPatterns()
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+	if err != nil {
+		return "", err
+	}
+	return hash.Files(ctx.WorkspaceRoot, files)
+}
+
+// writeUoWTestManifest writes a UoW manifest for a completed test.
+func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, unitID workunit.UnitID, inputHash string, startTime time.Time, exitCode int) {
+	// Initialize tracker if needed (thread-safe)
+	testCfg.ExecCtx.mu.Lock()
+	if testCfg.Tracker == nil {
+		testCfg.Tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, workunit.ContextTest)
+	}
+	tracker := testCfg.Tracker
+	testCfg.ExecCtx.mu.Unlock()
+
+	// Create and record the manifest
+	manifest := &coreoutput.UoWManifest{
+		Context:    workunit.ContextTest,
+		Module:     unitID.Module,
+		Component:  unitID.Component,
+		Tool:       unitID.Tool,
+		InputHash:  inputHash,
+		ExecutedAt: startTime,
+		ExitCode:   exitCode,
+		Duration:   time.Since(startTime),
+	}
+
+	if err := tracker.RecordComplete(unitID, manifest); err != nil {
+		log.Debugf("[TEST-UOW-CACHE] Failed to write UoW manifest for %s: %v", unitID.Longname(), err)
+	} else {
+		log.Debugf("[TEST-UOW-CACHE] Wrote UoW manifest for %s (exitCode=%d)", unitID.Longname(), exitCode)
+	}
 }

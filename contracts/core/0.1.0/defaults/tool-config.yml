@@ -17,7 +17,7 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
+  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint, mermaid-render]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
@@ -440,6 +440,24 @@ container-tools:
         target: /docs
     workdir: /docs
     requirements: [docker]
+
+  mermaid-render:
+    description: "Mermaid diagram batch rendering"
+    localPath: containers/mermaid-tool
+    command: ["node", "/app/batch-render.js", "--manifest", "/work/manifest.json"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{staging}"
+        target: /staging
+      - source: "{staging}/.mermaid-work"
+        target: /work
+    workdir: /docs
+    requirements: [docker]
+    resources:
+      cpus: 2
+      memory: "2g"
+      shm_size: "1g"  # Chromium needs shared memory
 
   plantuml:
     description: "PlantUML renderer"

@@ -1,6 +1,8 @@
 package docs
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,17 +12,18 @@ import (
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // MermaidResult holds the result of a mermaid update operation.
 type MermaidResult struct {
-	FilesScanned int
-	DiagramsFound int
+	FilesScanned      int
+	DiagramsFound     int
 	FilesWithDiagrams int
-	CacheHits    int
-	CacheMisses  int
-	Rendered     int
-	Failed       int
+	CacheHits         int
+	CacheMisses       int
+	Rendered          int
+	Failed            int
 }
 
 // runMermaidUpdate handles the mermaid area update.
@@ -157,55 +160,15 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 		return result, fmt.Errorf("Docker is not available but required for mermaid rendering. Ensure Docker is installed and the daemon is running")
 	}
 
-	// Ensure mermaid Docker image exists
-	fmt.Fprintln(logWriter, "Ensuring mermaid-tool Docker image...")
-	if err := books.EnsureMermaidImage(repoRoot, logWriter); err != nil {
-		return result, fmt.Errorf("ensuring mermaid image: %w", err)
-	}
+	// Render cache misses using batch tool
+	fmt.Fprintf(logWriter, "Rendering %d diagram(s) via mermaid-render tool...\n", result.CacheMisses)
 
-	// Render cache misses
-	fmt.Fprintf(logWriter, "Rendering %d diagram(s)...\n", result.CacheMisses)
+	rendered, failed, err := renderMermaidBatch(repoRoot, statuses, cache, logWriter)
+	result.Rendered = rendered
+	result.Failed = failed
 
-	for i := range statuses {
-		status := &statuses[i]
-		if status.Cached {
-			continue
-		}
-
-		block := status.Block
-		relPath, relErr := filepath.Rel(docsDir, block.SourceFile)
-		if relErr != nil {
-			relPath = block.SourceFile // Fallback to absolute
-		}
-
-		if opts.Verbose {
-			fmt.Fprintf(logWriter, "  Rendering %s [%d]...\n", relPath, block.BlockIndex)
-		}
-
-		// Render the diagram
-		err := books.RenderSingleDiagram(block, status.CachePath, repoRoot, logWriter)
-		if err != nil {
-			log.Errorf("  Failed to render %s [%d]: %v", relPath, block.BlockIndex, err)
-			result.Failed++
-			continue
-		}
-
-		// Store in persistent cache
-		cleanContent := books.StripSizeDirective(block.Content)
-		if err := cache.PutMermaid(status.CachePath, books.MermaidCacheKey{
-			SourceFile: block.SourceFile,
-			BlockIndex: block.BlockIndex,
-			Code:       cleanContent,
-		}); err != nil {
-			log.Warnf("  Failed to cache %s [%d]: %v", relPath, block.BlockIndex, err)
-			// Non-fatal - continue
-		}
-
-		result.Rendered++
-
-		if opts.Verbose || result.Rendered%10 == 0 {
-			fmt.Fprintf(logWriter, "  Progress: %d/%d diagrams rendered\n", result.Rendered, result.CacheMisses)
-		}
+	if err != nil {
+		return result, err
 	}
 
 	if result.Failed > 0 {
@@ -215,4 +178,114 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	}
 
 	return result, nil
+}
+
+// renderMermaidBatch renders diagrams using the mermaid-render tool.
+// Uses shared types from books package to avoid duplication.
+func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *books.AssetCache, logWriter io.Writer) (int, int, error) {
+	// Filter for cache misses
+	toRender := []books.CacheStatus{}
+	for i := range statuses {
+		status := &statuses[i]
+		if !status.Cached {
+			toRender = append(toRender, *status)
+		}
+	}
+
+	if len(toRender) == 0 {
+		return 0, 0, nil
+	}
+
+	// Create work directory for manifest and temp files
+	cacheDir := paths.DocsCachePath(repoRoot)
+	workDir := filepath.Join(cacheDir, ".mermaid-work")
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		return 0, 0, fmt.Errorf("creating work directory: %w", err)
+	}
+	defer os.RemoveAll(workDir)
+
+	// Create diagram specs using shared types from books package
+	diagrams := make([]books.MermaidDiagramSpec, 0, len(toRender))
+	for i, status := range toRender {
+		block := status.Block
+
+		// Write diagram content to temp .mmd file
+		mmdFile := filepath.Join(workDir, fmt.Sprintf("diagram_%d.mmd", i))
+		if err := os.WriteFile(mmdFile, []byte(block.Content), 0o644); err != nil {
+			return 0, 0, fmt.Errorf("writing temp file for %s: %w", block.Filename, err)
+		}
+
+		// Container paths: workDir maps to /work, cacheDir maps to /staging
+		containerInput := fmt.Sprintf("/work/diagram_%d.mmd", i)
+
+		// Output path relative to cacheDir
+		relOutput, err := filepath.Rel(cacheDir, status.CachePath)
+		if err != nil {
+			return 0, 0, fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
+		}
+		containerOutput := "/staging/" + strings.ReplaceAll(relOutput, "\\", "/")
+
+		diagrams = append(diagrams, books.MermaidDiagramSpec{
+			Input:  containerInput,
+			Output: containerOutput,
+			Config: "/etc/mermaid/mermaid-config.json",
+		})
+	}
+
+	// Create manifest using shared type from books package
+	manifest := books.MermaidManifest{
+		Diagrams:    diagrams,
+		Concurrency: 4,
+		Theme:       "dark",
+	}
+
+	// Write manifest file
+	manifestPath := filepath.Join(workDir, "manifest.json")
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return 0, 0, fmt.Errorf("marshaling manifest: %w", err)
+	}
+	if err := os.WriteFile(manifestPath, manifestData, 0o644); err != nil {
+		return 0, 0, fmt.Errorf("writing manifest: %w", err)
+	}
+
+	// Execute mermaid-render tool via bridge
+	bridge := tool.GlobalHandlerToolBridge()
+	tc := &tool.ToolContext{
+		WorkspaceRoot: repoRoot,
+		StagingDir:    cacheDir, // Use cache dir as staging for update command
+		LogWriter:     logWriter,
+	}
+
+	exitCode, execErr := bridge.ExecuteTool(context.Background(), "mermaid-render", tc)
+	if execErr != nil {
+		return 0, len(toRender), fmt.Errorf("mermaid-render tool failed: %w", execErr)
+	}
+	if exitCode != 0 {
+		return 0, len(toRender), fmt.Errorf("mermaid-render tool exited with code %d", exitCode)
+	}
+
+	// Verify outputs and update cache
+	rendered := 0
+	failed := 0
+	for _, status := range toRender {
+		if _, err := os.Stat(status.CachePath); err == nil {
+			rendered++
+
+			// Store in persistent cache
+			block := status.Block
+			cleanContent := books.StripSizeDirective(block.Content)
+			if err := cache.PutMermaid(status.CachePath, books.MermaidCacheKey{
+				SourceFile: block.SourceFile,
+				BlockIndex: block.BlockIndex,
+				Code:       cleanContent,
+			}); err != nil {
+				log.Warnf("Failed to cache %s: %v", block.Filename, err)
+			}
+		} else {
+			failed++
+		}
+	}
+
+	return rendered, failed, nil
 }

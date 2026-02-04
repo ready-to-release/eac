@@ -135,22 +135,21 @@ func phaseInit(ctx *ExecutionContext) error {
 	// Configure orchestrator
 	// If using registry, set TUI: false so orchestrator doesn't create its own console
 	orchConfig := orchestrator.Config{
-		WorkspaceRoot:        workspaceRoot,
-		OutputBaseDir:        ctx.Config.OutputDir,
-		LogFileName:          ctx.Config.LogFileName,
-		ActionVerb:           ctx.Config.ActionVerb,
-		MaxConcurrency:       maxConcurrency,
-		Turbo:                turboMultiplier,
-		StatusUpdateInterval: 500, // 500ms for responsive feedback
+		WorkspaceRoot:         workspaceRoot,
+		OutputBaseDir:         ctx.Config.OutputDir,
+		LogFileName:           ctx.Config.LogFileName,
+		ActionVerb:            ctx.Config.ActionVerb,
+		MaxConcurrency:        maxConcurrency,
+		Turbo:                 turboMultiplier,
+		StatusUpdateInterval:  500, // 500ms for responsive feedback
 		ComponentTypesDisplay: ctx.ComponentTypesDisplay,
-		ShowTimings:          ctx.Config.ShowTimings,
-		DryRun:               ctx.Config.DryRun,
-		TUI:                  ctx.Config.UseTUI, // Always set TUI flag for output suppression (console may be created by registry)
-		TUIHeight:            ctx.Config.TUIHeight,
-		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
-		TUI3Demo:             ctx.Config.TUI3Demo,
-		SkipTUIDelay:         ctx.Config.SkipTUIDelay,
-		Layered:              ctx.Config.Layered, // Controls LayerMode: true=Strict, false=None
+		ShowTimings:           ctx.Config.ShowTimings,
+		DryRun:                ctx.Config.DryRun,
+		TUI:                   ctx.Config.UseTUI, // Always set TUI flag for output suppression (console may be created by registry)
+		TUIHeight:             ctx.Config.TUIHeight,
+		TUIASCIIMode:          ctx.Config.TUIASCIIMode,
+		TUI3Demo:              ctx.Config.TUI3Demo,
+		SkipTUIDelay:          ctx.Config.SkipTUIDelay,
 	}
 
 	// Create orchestrator

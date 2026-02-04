@@ -21,7 +21,6 @@
 // Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
 // Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
 // Flag.skip-cache: type=bool, usage=Skip incremental cache, force full rebuild
-// Flag.layered-build: type=bool, usage=Execute layers sequentially (default: all modules in parallel)
 // Flag.skip-depm: type=bool, usage=Only build specified modules, no dependency resolution (CI isolation)
 // Flag.no-deps: type=bool, usage=Alias for --skip-depm
 // Flag.use-existing-depm: type=bool, usage=Skip building module dependencies if artifacts exist (for CI incremental builds)
@@ -271,7 +270,6 @@ func Build() int {
 
 	// Extract build-specific flags
 	useExistingDepm := buildFlags.UseExistingDepm
-	unlayeredBuild := shared.UnlayeredBuild
 	version := buildFlags.Version
 	reproducible := buildFlags.Reproducible
 	listArtifacts := buildFlags.ListArtifacts
@@ -286,11 +284,6 @@ func Build() int {
 	if buildFlags.NoTidy {
 		tidyFirst = false
 	}
-
-	// Determine layered execution mode
-	// Default: layered (respects module dependency order)
-	// --unlayered-build or --turbo disables layered mode
-	layeredBuild := !unlayeredBuild && !turbo
 
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -347,7 +340,6 @@ func Build() int {
 		SkipDeps:       skipDeps,
 		SkipDepm:       skipDepm,
 		ForceRebuild:   forceRebuild,
-		Layered:        layeredBuild,
 		Turbo:          turbo,
 		MaxConcurrency: roof,
 		DryRun:         dryRun,
@@ -367,7 +359,6 @@ func Build() int {
 		Version:         version,
 		BuildAll:        buildAll,
 		UseExistingDepm: useExistingDepm,
-		LayeredBuild:    layeredBuild,
 		Reproducible:    reproducible,
 		RequestedSet:    requestedSet,
 	}
@@ -584,7 +575,6 @@ func printBuildUsage() {
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --skip-cache              Skip incremental cache, force full rebuild")
-	log.Info("  --unlayered-build         Run all modules in parallel (default: layered execution for local)")
 	log.Info("  --skip-depm               Only build specified modules, no module dependency resolution (CI isolation)")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
 	log.Info("  --skip-deps               Skip system dependency verification (go, docker, etc.)")

@@ -16,6 +16,8 @@ component-types:
   go:
     extensions: [".go"]
     builder: go
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [go]
     defaults:
@@ -30,6 +32,8 @@ component-types:
   typescript:
     extensions: [".ts", ".tsx"]
     builder: npm
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [docker]
     files:
@@ -40,6 +44,8 @@ component-types:
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
     builder: npm
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [docker]
 
@@ -47,6 +53,7 @@ component-types:
   dockerfile:
     extensions: []  # Dockerfile has no standard extension
     builder: buildx
+    lintable: true
     scanners: [sbom, vuln, secrets, iac]
     # Dockerfiles often depend on Go binaries being built first
     build_after: [go]
@@ -103,18 +110,24 @@ component-types:
   # Markdown component - documentation files
   markdown:
     extensions: [".md", ".markdown"]
+    lintable: true
+    scanners: [secrets]
     files:
       source: ["**/*.md", "**/*.markdown"]
 
   # YAML component - configuration files
   yaml:
     extensions: [".yml", ".yaml"]
+    lintable: true
+    scanners: [secrets]
     files:
       source: ["**/*.yml", "**/*.yaml"]
 
   # GitHub Workflows component - GitHub Actions workflows and reusable actions
   workflows:
     extensions: []  # Uses .yml/.yaml but in specific paths
+    lintable: true
+    scanners: [secrets]
     default_root: .github/workflows
     requirements: []
     files:
@@ -124,27 +137,25 @@ component-types:
   # JSON component - data and configuration files
   json:
     extensions: [".json"]
+    lintable: true
+    scanners: [secrets]
     files:
       source: ["**/*.json"]
 
   # Gherkin - BDD specification files (.feature)
   gherkin:
     extensions: [".feature"]
+    testable: true
+    lintable: true
+    scanners: [secrets]
     files:
       source: ["**/*.feature"]
 
   # Structurizr - Architecture diagrams in Structurizr DSL (.dsl)
+  # No builder - DSL files are validated via lint, not built
   structurizr:
     extensions: [".dsl"]
-    # Phase-specific tool configuration
-    tools:
-      build:
-        default: structurizr-cli
-      lint:
-        default: structurizr-cli
-      scan:
-        secrets: trivy-secrets
-        default: [secrets]  # DSL files only need secrets scanning
+    lintable: true
     scanners: [secrets]
     requirements: [docker]
     files:
@@ -186,6 +197,8 @@ component-types:
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
     builder: scripts
+    testable: true
+    lintable: true
     scanners: [secrets]
     requirements: [docker]
     files:
@@ -198,6 +211,8 @@ component-types:
   bash:
     extensions: [".sh", ".bash"]
     builder: scripts
+    testable: true
+    lintable: true
     scanners: [secrets]
     requirements: [docker]
     files:
@@ -207,6 +222,8 @@ component-types:
   python:
     extensions: [".py"]
     builder: python
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [python]
     files:
@@ -218,6 +235,8 @@ component-types:
   rust:
     extensions: [".rs"]
     builder: cargo
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [cargo]
     files:
@@ -229,6 +248,8 @@ component-types:
   dotnet:
     extensions: [".cs", ".fs", ".vb"]
     builder: dotnet
+    testable: true
+    lintable: true
     scanners: [sbom, vuln, secrets, sast]
     requirements: [dotnet]
     files:

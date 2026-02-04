@@ -63,7 +63,6 @@ type CommandConfig struct {
 
 	// Execution Control
 	MaxConcurrency int  // 0 = use config default
-	Layered        bool // Use dependency layers (build) vs parallel (test/scan)
 	Sequential     bool // Force sequential execution (maxConcurrency=1)
 	Turbo          bool // Enable turbo mode (+2 parallel workers)
 	DryRun         bool // Skip actual execution

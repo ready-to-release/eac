@@ -95,7 +95,6 @@ type UnitQueuedEvent struct {
 	Component   string
 	Handler     string
 	Weight      int
-	Layer       int // 0 if not using layers
 }
 
 func (e UnitQueuedEvent) EventType() string    { return "unit_queued" }
@@ -125,12 +124,10 @@ func (e UnitCompletedEvent) Timestamp() time.Time { return e.Time }
 
 // ProgressUpdateEvent is emitted periodically during execution.
 type ProgressUpdateEvent struct {
-	Time         time.Time
-	Running      []string // IDs of currently running units
-	Completed    int
-	Total        int
-	CurrentLayer int // 0 if not using layers
-	TotalLayers  int // 0 if not using layers
+	Time      time.Time
+	Running   []string // IDs of currently running units
+	Completed int
+	Total     int
 
 	// Capacity tracking (three-value model)
 	Roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
@@ -152,8 +149,9 @@ func (e ResourceStatusEvent) Timestamp() time.Time { return e.Time }
 
 // ResourceInfo describes a resource constraint.
 type ResourceInfo struct {
-	Name     string // e.g., "cpu-scheduler", "module:books"
+	Name     string // e.g., "host-scheduler", "docker-scheduler", "module:books"
 	Type     string // "semaphore", "weighted", "filelock"
+	Pool     string // "host" or "docker" for pool identification (empty for non-pool resources)
 	Capacity int
 	Used     int
 	Waiting  int
@@ -161,11 +159,15 @@ type ResourceInfo struct {
 
 // ToolStatusEvent is emitted when tool usage changes.
 type ToolStatusEvent struct {
-	Time             time.Time
-	ActiveContainers []string
-	UsedContainers   []string
-	ActiveSystem     []string
-	UsedSystem       []string
+	Time                 time.Time
+	ActiveContainerTools []string
+	UsedContainerTools   []string
+	ActiveSystem         []string
+	UsedSystem           []string
+
+	// Container instance counts (for "Containers" lamps - actual processes, not tool types)
+	ContainerInstancesRunning int // Currently running container instances (lit lamps)
+	ContainerInstancesTotal   int // Total container instances started (total lamps)
 }
 
 func (e ToolStatusEvent) EventType() string    { return "tool_status" }
@@ -216,20 +218,22 @@ type InitSummaryEvent struct {
 	RequestedModules int
 	ResolvedModules  int
 	TotalUnits       int
-	Layers           []LayerInfo
+	Modules          []ModuleInfo // Modules with their units of work
 	Parallelism      ParallelismInfo
 	Flags            FlagsInfo
+	PlannedTools     []PlannedToolInfo // Tools that will be used during execution
+}
+
+// PlannedToolInfo describes a tool that will be used during execution.
+type PlannedToolInfo struct {
+	Name        string // Tool identifier (e.g., "go", "godog", "trivy")
+	IsContainer bool   // true = runs in container, false = runs on system
 }
 
 func (e InitSummaryEvent) EventType() string    { return "init_summary" }
 func (e InitSummaryEvent) Timestamp() time.Time { return e.Time }
 
-// LayerInfo describes an execution layer.
-type LayerInfo struct {
-	Modules []ModuleInfo
-}
-
-// ModuleInfo describes a module within a layer.
+// ModuleInfo describes a module with its units of work.
 type ModuleInfo struct {
 	Name  string
 	Units []UnitInfo

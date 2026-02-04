@@ -1,10 +1,11 @@
 package flags
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/adapters/tui"
+	"github.com/ready-to-release/eac/go/clibase/environment"
 )
 
 func TestParser_AllSetsSubscribed(t *testing.T) {
@@ -237,13 +238,13 @@ func TestParser_AllFlags(t *testing.T) {
 	flags := p.AllFlags()
 
 	// Count expected flags:
-	// Execution: turbo, roof, parallel, sequential, layered, unlayered, unlayered-build (7)
+	// Execution: turbo, roof, parallel, sequential (4)
 	// Output: with-tui, tui, no-tui, tui-height, ascii, skip-tui-delay, debug, timings, demo (9)
 	// Cache: with-cache, no-cache, skip-cache, with-deps, no-deps, skip-deps (6)
 	// Module: exclude, skip-depm (2)
 	// DryRun: dry-run (1)
-	// Total: 25
-	expectedCount := 25
+	// Total: 22
+	expectedCount := 22
 	if len(flags) != expectedCount {
 		t.Errorf("AllFlags() returned %d flags, want %d", len(flags), expectedCount)
 	}
@@ -334,14 +335,5 @@ func TestParser_MixedArgsAndFlags(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(s, substr)
 }

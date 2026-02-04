@@ -16,7 +16,7 @@ Module changelogs are independent of the repository changelog and follow the sam
 
 Module changelog locations are defined in `.eac/repository.yml` under `versioning.changelog` and follow the **release type convention**.
 
-See [Understanding Release Types](../../../repository/continuous-delivery/release-types.md) for complete details.
+See [Understanding Release Types](../release-types.md) for complete details.
 
 ### Location Rules by Release Type
 

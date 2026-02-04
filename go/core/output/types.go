@@ -79,6 +79,16 @@ type UoWManifest struct {
 
 	// Version is the manifest schema version.
 	Version string `json:"version"`
+
+	// NoOp indicates this UoW intentionally produced no output.
+	// Used for placeholder UoWs like build:templates:none modules.
+	// When true, empty InputHash/OutputHash/Artifacts are expected and valid.
+	// Cache detection treats NoOp UoWs as always up-to-date if the manifest exists.
+	NoOp bool `json:"noop,omitempty"`
+
+	// Metadata contains optional context-specific key-value pairs.
+	// Used to store testset, build_id, and other UoW-specific information.
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // ValidationResult contains the outcome of validating a work unit's output.
@@ -151,5 +161,34 @@ func StatusFromExitCode(exitCode int) Status {
 		return StatusCached
 	default:
 		return StatusFailed
+	}
+}
+
+// NewNoOpManifest creates a manifest for UoWs that intentionally produce no output.
+// Used for placeholder UoWs like modules with no buildable components, no tests,
+// no lintable code, or non-scannable components.
+//
+// NoOp manifests have:
+//   - NoOp: true (always up-to-date in cache detection if ExitCode == 0)
+//   - ExitCode: 0 (successful)
+//   - Empty InputHash/OutputHash/Artifacts (expected and valid)
+//   - Metadata["reason"] describing why it's NoOp
+func NewNoOpManifest(ctx workunit.Context, module, component, tool, reason string) *UoWManifest {
+	return &UoWManifest{
+		Context:    ctx,
+		Module:     module,
+		Component:  component,
+		Tool:       tool,
+		ExitCode:   0,
+		InputHash:  "",
+		ExecutedAt: time.Now().UTC(),
+		Duration:   0,
+		Artifacts:  []Artifact{},
+		OutputHash: "",
+		Version:    "1.0.0",
+		NoOp:       true,
+		Metadata: map[string]string{
+			"reason": reason,
+		},
 	}
 }

@@ -32,11 +32,9 @@ type DependencyGraphStats struct {
 	MaxDependents     int `json:"max_dependents" yaml:"max_dependents"`     // Maximum dependents for any module
 }
 
-// ExecutionPlan represents a layered execution plan for modules.
+// ExecutionPlan represents an execution plan for modules.
 type ExecutionPlan struct {
-	Layers         [][]string `json:"layers" yaml:"layers"`                   // Modules grouped by dependency layer
-	ExecutionOrder []string   `json:"execution_order" yaml:"execution_order"` // Flattened order of all modules
-	LayerCount     int        `json:"layer_count" yaml:"layer_count"`         // Number of layers
+	ExecutionOrder []string `json:"execution_order" yaml:"execution_order"` // Topologically sorted order of modules
 }
 
 // GetModuleDependencyGraph builds a complete dependency graph for all modules.
@@ -250,9 +248,7 @@ func CalculateExecutionOrder(monikers []string, rootPath string, includeDependen
 	}
 
 	return &ExecutionPlan{
-		Layers:         layers,
 		ExecutionOrder: executionOrder,
-		LayerCount:     len(layers),
 	}, nil
 }
 

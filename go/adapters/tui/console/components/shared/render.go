@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -135,13 +134,6 @@ func TreeBranch(isLast bool) string {
 		return "`-"
 	}
 	return "|-"
-}
-
-// LayerHeader renders a layer header for the execution tree.
-func LayerHeader(layerNum int) string {
-	return lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Render(
-		fmt.Sprintf("Layer %d", layerNum),
-	)
 }
 
 // RepeatChar repeats a character n times.

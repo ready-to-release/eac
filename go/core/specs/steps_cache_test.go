@@ -22,6 +22,7 @@ import (
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
+	"github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -375,7 +376,7 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 		return fmt.Errorf("failed to load module registry: %w", err)
 	}
 
-	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
+	// Create UoW manifests for each module (simulating a successful build)
 	for _, contract := range reg.All() {
 		files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
 		if err != nil {
@@ -385,8 +386,35 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 		if err != nil {
 			return fmt.Errorf("failed to hash files for %s: %w", contract.Moniker, err)
 		}
-		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, contract.Moniker, true, sourceHash); err != nil {
-			return fmt.Errorf("failed to update build state for %s: %w", contract.Moniker, err)
+
+		// Create UoW manifest in the expected location
+		// Format: out/build/<module>/<component>_<tool>/uow.manifest.json
+		manifest := &output.UoWManifest{
+			Context:    workunit.ContextBuild,
+			Module:     contract.Moniker,
+			Component:  "go",  // Default component for Go modules
+			Tool:       "go",  // Default tool
+			ExitCode:   0,
+			InputHash:  sourceHash,
+			ExecutedAt: time.Now().UTC().Truncate(time.Second),
+			Duration:   time.Second,
+			Artifacts:  []output.Artifact{},
+			OutputHash: "sha256:output-" + contract.Moniker,
+			Version:    "1.0.0",
+		}
+
+		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", contract.Moniker, "go_go")
+		if err := os.MkdirAll(manifestDir, 0755); err != nil {
+			return fmt.Errorf("failed to create manifest dir for %s: %w", contract.Moniker, err)
+		}
+
+		manifestPath := filepath.Join(manifestDir, "uow.manifest.json")
+		data, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal manifest for %s: %w", contract.Moniker, err)
+		}
+		if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write manifest for %s: %w", contract.Moniker, err)
 		}
 	}
 
@@ -809,9 +837,33 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 		return fmt.Errorf("failed to hash files for %s: %w", module, err)
 	}
 
-	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
-	if err := stateMgr.SaveModuleResult(workunit.ContextLint, module, true, sourceHash); err != nil {
-		return fmt.Errorf("failed to update lint state for %s: %w", module, err)
+	// Create UoW manifest for successful lint
+	manifest := &output.UoWManifest{
+		Context:    workunit.ContextLint,
+		Module:     module,
+		Component:  "go",
+		Tool:       "golangci-lint",
+		ExitCode:   0,
+		InputHash:  sourceHash,
+		ExecutedAt: time.Now().UTC().Truncate(time.Second),
+		Duration:   time.Second,
+		Artifacts:  []output.Artifact{},
+		OutputHash: "sha256:lint-output-" + module,
+		Version:    "1.0.0",
+	}
+
+	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go_golangci-lint")
+	if err := os.MkdirAll(manifestDir, 0755); err != nil {
+		return fmt.Errorf("failed to create manifest dir for %s: %w", module, err)
+	}
+
+	manifestPath := filepath.Join(manifestDir, "uow.manifest.json")
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest for %s: %w", module, err)
+	}
+	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write manifest for %s: %w", module, err)
 	}
 
 	return nil
@@ -850,9 +902,33 @@ func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 		return fmt.Errorf("failed to hash files for %s: %w", module, err)
 	}
 
-	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
-	if err := stateMgr.SaveModuleResult(workunit.ContextLint, module, false, sourceHash); err != nil {
-		return fmt.Errorf("failed to update lint state for %s: %w", module, err)
+	// Create UoW manifest for failed lint (exit_code: 1)
+	manifest := &output.UoWManifest{
+		Context:    workunit.ContextLint,
+		Module:     module,
+		Component:  "go",
+		Tool:       "golangci-lint",
+		ExitCode:   1, // Failed
+		InputHash:  sourceHash,
+		ExecutedAt: time.Now().UTC().Truncate(time.Second),
+		Duration:   time.Second,
+		Artifacts:  []output.Artifact{},
+		OutputHash: "sha256:lint-output-" + module,
+		Version:    "1.0.0",
+	}
+
+	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go_golangci-lint")
+	if err := os.MkdirAll(manifestDir, 0755); err != nil {
+		return fmt.Errorf("failed to create manifest dir for %s: %w", module, err)
+	}
+
+	manifestPath := filepath.Join(manifestDir, "uow.manifest.json")
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest for %s: %w", module, err)
+	}
+	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write manifest for %s: %w", module, err)
 	}
 
 	return nil
@@ -885,7 +961,6 @@ func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 		return fmt.Errorf("failed to load module registry: %w", err)
 	}
 
-	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
 	moduleNames := []string{mod1, mod2}
 	for _, moniker := range moduleNames {
 		contract, ok := reg.Get(moniker)
@@ -900,8 +975,34 @@ func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 		if err != nil {
 			return fmt.Errorf("failed to hash files for %s: %w", moniker, err)
 		}
-		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, moniker, true, sourceHash); err != nil {
-			return fmt.Errorf("failed to update build state for %s: %w", moniker, err)
+
+		// Create UoW manifest for successful build
+		manifest := &output.UoWManifest{
+			Context:    workunit.ContextBuild,
+			Module:     moniker,
+			Component:  "go",
+			Tool:       "go",
+			ExitCode:   0,
+			InputHash:  sourceHash,
+			ExecutedAt: time.Now().UTC().Truncate(time.Second),
+			Duration:   time.Second,
+			Artifacts:  []output.Artifact{},
+			OutputHash: "sha256:output-" + moniker,
+			Version:    "1.0.0",
+		}
+
+		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", moniker, "go_go")
+		if err := os.MkdirAll(manifestDir, 0755); err != nil {
+			return fmt.Errorf("failed to create manifest dir for %s: %w", moniker, err)
+		}
+
+		manifestPath := filepath.Join(manifestDir, "uow.manifest.json")
+		data, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal manifest for %s: %w", moniker, err)
+		}
+		if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write manifest for %s: %w", moniker, err)
 		}
 	}
 

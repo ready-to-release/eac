@@ -10,7 +10,7 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 | Guide                                                                                                | What You'll Accomplish                                                      |
 | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) | Learn the four release types and how they determine changelog locations     |
+| [Understanding Release Types](../../../../reference/eac/continuous-delivery/release-types.md) | Learn the four release types and how they determine changelog locations     |
 | [Understanding the Release Folder](./understanding-release-folder.md)                                | Learn release folder structure and how published modules link to changelogs |
 | [Release Workflow Variants](./release-workflow-variants.md)                                          | Choose CDe or RA pattern based on regulatory requirements                   |
 
@@ -50,7 +50,7 @@ This system uses **changelog-driven releases** where updating module changelogs 
 
 **Release artifacts** live in the centralized `release/<module>/` folders for **published and bundle modules**. Internal modules have changelogs in their module roots. See:
 
-- [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) - Learn the release type system
+- [Understanding Release Types](../../../../reference/eac/continuous-delivery/release-types.md) - Learn the release type system
 - [Understanding the Release Folder](./understanding-release-folder.md) - Details on folder structure and changelog locations
 
 ### How It Works

@@ -72,17 +72,10 @@ type UoWDataHook interface {
 
 // UoWData contains the resolved execution plan.
 type UoWData struct {
-	Layers []UoWLayer // Execution layers (or single layer if flat)
-	Flat   bool       // True if all units execute in parallel (no layers)
+	Modules []UoWModule // Modules with their units of work
 }
 
-// UoWLayer describes a single execution layer.
-type UoWLayer struct {
-	Index   int
-	Modules []UoWModule
-}
-
-// UoWModule describes a module within a layer.
+// UoWModule describes a module with its units of work.
 type UoWModule struct {
 	Name  string
 	Units []UoWUnit

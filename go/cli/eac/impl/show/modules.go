@@ -77,42 +77,34 @@ func ShowModules() int {
 	// Build markdown table
 	tb := render.NewTableBuilder()
 	if withArtifacts {
-		tb.WithHeaders("Layer", "Moniker", "Components", "Artifacts", "Missing", "Overrides")
+		tb.WithHeaders("Moniker", "Components", "Artifacts", "Missing", "Overrides")
 	} else {
-		tb.WithHeaders("Layer", "Moniker", "Components")
+		tb.WithHeaders("Moniker", "Components")
 	}
 
-	// Iterate by layers with separators between each layer
-	for layerIdx, layer := range execPlan.Layers {
-		// Add separator before each layer (except the first)
-		if layerIdx > 0 {
-			tb.AddSeparator()
+	// Iterate in execution order
+	for _, moniker := range execPlan.ExecutionOrder {
+		// Find the module contract
+		mod, ok := report.Registry.Get(moniker)
+		if !ok {
+			continue // Module not in registry, skip
 		}
 
-		for _, moniker := range layer {
-			// Find the module contract
-			mod, ok := report.Registry.Get(moniker)
-			if !ok {
-				continue // Module not in registry, skip
-			}
+		// Format components list
+		pkgDisplay := mod.GetComponentTypesDisplay()
 
-			// Format components list
-			pkgDisplay := mod.GetComponentTypesDisplay()
-
-			if withArtifacts {
-				// Get artifact statistics for this module
-				artifactStats := getArtifactStats(mod, cfg, workspaceRoot)
-				tb.AddRow(
-					fmt.Sprintf("%d", layerIdx),
-					mod.Moniker,
-					pkgDisplay,
-					fmt.Sprintf("%d", artifactStats.Total),
-					fmt.Sprintf("%d", artifactStats.Missing),
-					fmt.Sprintf("%d", artifactStats.Overrides),
-				)
-			} else {
-				tb.AddRow(fmt.Sprintf("%d", layerIdx), mod.Moniker, pkgDisplay)
-			}
+		if withArtifacts {
+			// Get artifact statistics for this module
+			artifactStats := getArtifactStats(mod, cfg, workspaceRoot)
+			tb.AddRow(
+				mod.Moniker,
+				pkgDisplay,
+				fmt.Sprintf("%d", artifactStats.Total),
+				fmt.Sprintf("%d", artifactStats.Missing),
+				fmt.Sprintf("%d", artifactStats.Overrides),
+			)
+		} else {
+			tb.AddRow(mod.Moniker, pkgDisplay)
 		}
 	}
 

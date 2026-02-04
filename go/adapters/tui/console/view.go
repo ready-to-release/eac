@@ -2,13 +2,16 @@ package console
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 )
+
+// stableLampsCount is the fixed number of lamps for all resource displays.
+// This ensures consistent visual width across CPU, Mem, Docker mem, and Tools.
+const stableLampsCount = 16
 
 // LayoutMetrics contains pre-calculated layout dimensions for the TUI.
 // This is the SINGLE SOURCE OF TRUTH for layout calculations.
@@ -197,13 +200,8 @@ func (m Model) renderSideBySideLayout(tabs []*UoWState, height int) string {
 		logsWidth = 40
 	}
 
-	// Render left panel (Components - tabs or tree based on viewMode)
-	var leftPanel string
-	if m.viewMode == ViewModeTree {
-		leftPanel = m.renderTreePanel(tabs, componentsWidth, height)
-	} else {
-		leftPanel = m.renderTabGridPanel(tabs, componentsWidth, height)
-	}
+	// Render left panel (Components - always use tab grid view)
+	leftPanel := m.renderTabGridPanel(tabs, componentsWidth, height)
 
 	// Render right panel (Logs)
 	rightPanel := m.renderLogsPanel(logsWidth, height)
@@ -266,10 +264,9 @@ func (m Model) renderTabGridPanel(tabs []*UoWState, width, height int) string {
 	}
 
 	title := "Units (of work)"
-	modeIndicator := "[Tabs]"
 
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
-	headerRight := Styles.Dim.Render(modeIndicator) + " ─┐"
+	headerRight := "─┐"
 	headerBorderLen := width - lipgloss.Width(headerLeft) - lipgloss.Width(headerRight)
 	if headerBorderLen < 1 {
 		headerBorderLen = 1
@@ -398,16 +395,13 @@ func (m Model) renderInitPaneCompact() string {
 		iconStyle = Styles.Dim
 	}
 
-	// Build compact summary: "✓ Initialization: 33 components, 3 layers, 15 workers"
+	// Build compact summary: "✓ Initialization: 33 units, 15 workers"
 	left := iconStyle.Render(icon) + " " + Styles.Dim.Render("Initialization")
 
 	if m.initSummary != nil {
 		var parts []string
 		if m.initSummary.UoWCount > 0 {
 			parts = append(parts, fmt.Sprintf("%d units", m.initSummary.UoWCount))
-		}
-		if m.initSummary.LayerCount > 0 {
-			parts = append(parts, fmt.Sprintf("%d layers", m.initSummary.LayerCount))
 		}
 		if m.initSummary.EffectiveWorkers > 0 {
 			parts = append(parts, fmt.Sprintf("%d workers", m.initSummary.EffectiveWorkers))
@@ -559,14 +553,19 @@ func (m Model) renderTabGridContent(tabs []*UoWState, width, height int) string 
 	}
 
 	// Helper to render a row of tabs
-	renderTabRow := func(layerTabs []*UoWState, rowStart int) []string {
+	renderTabRow := func(tabList []*UoWState, rowStart int) []string {
 		var tabParts []string
 
 		for colIdx := 0; colIdx < tabsPerRow; colIdx++ {
 			tabIdx := rowStart + colIdx
-			if tabIdx < len(layerTabs) {
-				tabParts = append(tabParts, renderCompactTab(layerTabs[tabIdx]))
+			if tabIdx < len(tabList) {
+				tabParts = append(tabParts, renderCompactTab(tabList[tabIdx]))
 			}
+		}
+
+		// Skip empty rows
+		if len(tabParts) == 0 {
+			return nil
 		}
 
 		// Single row output
@@ -574,106 +573,11 @@ func (m Model) renderTabGridContent(tabs []*UoWState, width, height int) string 
 	}
 
 	var rows []string
-	usedLayerGrouping := false
 
-	// Group tabs by layer if ExecutionTree is available
-	if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-		// Build a map from moniker to tab state for quick lookup
-		tabMap := make(map[string]*UoWState)
-		for _, t := range tabs {
-			tabMap[t.Moniker] = t
-		}
-
-		// Build a map from moniker to component layer index
-		compLayerMap := make(map[string]int)
-		if len(m.initSummary.ComponentLayers) > 0 {
-			for layerIdx, compLayer := range m.initSummary.ComponentLayers {
-				for _, compID := range compLayer {
-					compLayerMap[compID] = layerIdx
-				}
-			}
-		}
-
-		// Count how many tabs we can match to layers
-		matchedTabs := 0
-		for _, layer := range m.initSummary.ExecutionTree {
-			for _, module := range layer.Modules {
-				for _, uow := range module.UoWs {
-					if _, ok := tabMap[uow.ID]; ok {
-						matchedTabs++
-					}
-				}
-			}
-		}
-
-		// Only use layer grouping if we matched at least half the tabs
-		if matchedTabs > 0 && matchedTabs >= len(tabs)/2 {
-			usedLayerGrouping = true
-			for layerIdx, layer := range m.initSummary.ExecutionTree {
-				// Module Layer header
-				layerHeader := Styles.Dim.Render(fmt.Sprintf("── Module Layer %d ──", layerIdx+1))
-				rows = append(rows, layerHeader)
-
-				// Collect tabs for this module layer, grouped by component layer
-				var layerTabs []*UoWState
-				for _, module := range layer.Modules {
-					for _, uow := range module.UoWs {
-						if state, ok := tabMap[uow.ID]; ok {
-							layerTabs = append(layerTabs, state)
-						}
-					}
-				}
-
-				// Group tabs by component layer if we have component layer info
-				if len(compLayerMap) > 0 && len(layerTabs) > 1 {
-					// Find unique component layers in this module layer
-					compLayerTabs := make(map[int][]*UoWState)
-					for _, tab := range layerTabs {
-						compLayer, ok := compLayerMap[tab.Moniker]
-						if !ok {
-							compLayer = 0 // Default to layer 0 if not found
-						}
-						compLayerTabs[compLayer] = append(compLayerTabs[compLayer], tab)
-					}
-
-					// Get sorted component layer indices
-					var compLayerIndices []int
-					for idx := range compLayerTabs {
-						compLayerIndices = append(compLayerIndices, idx)
-					}
-					sort.Ints(compLayerIndices)
-
-					// Only show component layer headers if there's more than one
-					showCompHeaders := len(compLayerIndices) > 1
-
-					for _, compLayerIdx := range compLayerIndices {
-						compTabs := compLayerTabs[compLayerIdx]
-						if showCompHeaders {
-							compHeader := Styles.Dim.Render(fmt.Sprintf("  ┌ Comp Layer %d", compLayerIdx+1))
-							rows = append(rows, compHeader)
-						}
-						for rowStart := 0; rowStart < len(compTabs); rowStart += tabsPerRow {
-							tabRows := renderTabRow(compTabs, rowStart)
-							rows = append(rows, tabRows...)
-						}
-					}
-				} else {
-					// No component layer info, render flat
-					for rowStart := 0; rowStart < len(layerTabs); rowStart += tabsPerRow {
-						tabRows := renderTabRow(layerTabs, rowStart)
-						rows = append(rows, tabRows...)
-					}
-				}
-			}
-		}
-	}
-
-	// Fallback: flat list (no layer grouping or monikers didn't match)
-	if !usedLayerGrouping {
-		for rowStart := 0; rowStart < len(tabs); rowStart += tabsPerRow {
-			tabRows := renderTabRow(tabs, rowStart)
-			rows = append(rows, tabRows...)
-		}
+	// Flat list of all tabs
+	for rowStart := 0; rowStart < len(tabs); rowStart += tabsPerRow {
+		tabRows := renderTabRow(tabs, rowStart)
+		rows = append(rows, tabRows...)
 	}
 
 	// Limit to available height
@@ -751,18 +655,16 @@ func (m Model) renderTreeContent(tabs []*UoWState, width, height int) string {
 		return m.renderTabsAsTree(tabs, width, height)
 	}
 
-	// Check if monikers match ExecutionTree format (same logic as tab grid)
+	// Check if monikers match ExecutionTree format
 	tabMap := make(map[string]*UoWState)
 	for _, t := range tabs {
 		tabMap[t.Moniker] = t
 	}
 	matchedTabs := 0
-	for _, layer := range m.initSummary.ExecutionTree {
-		for _, module := range layer.Modules {
-			for _, uow := range module.UoWs {
-				if _, ok := tabMap[uow.ID]; ok {
-					matchedTabs++
-				}
+	for _, module := range m.initSummary.ExecutionTree {
+		for _, uow := range module.UoWs {
+			if _, ok := tabMap[uow.ID]; ok {
+				matchedTabs++
 			}
 		}
 	}
@@ -775,99 +677,88 @@ func (m Model) renderTreeContent(tabs []*UoWState, width, height int) string {
 	var lines []string
 	effectiveActiveTab := m.getEffectiveActiveTab()
 
-	for layerIdx, layer := range m.initSummary.ExecutionTree {
-		// Layer header
-		layerLine := Styles.Dim.Render(fmt.Sprintf("Module Layer %d", layerIdx+1))
-		lines = append(lines, layerLine)
+	for modIdx, module := range m.initSummary.ExecutionTree {
+		isLastMod := modIdx == len(m.initSummary.ExecutionTree)-1
 
-		for modIdx, module := range layer.Modules {
-			isLastMod := modIdx == len(layer.Modules)-1
-
-			// Module line with tree branch
-			modBranch := "├─"
-			if isLastMod {
-				modBranch = "└─"
-			}
-			modLine := Styles.Dim.Render(modBranch) + " " + Styles.Phase.Render(module.Name)
-			lines = append(lines, modLine)
-
-			// Units of work under this module
-			for uowIdx, uow := range module.UoWs {
-				isLastUoW := uowIdx == len(module.UoWs)-1
-
-				// Find matching tab for this unit of work
-				moniker := uow.ID
-				var tabState *UoWState
-				for _, t := range tabs {
-					if t.Moniker == moniker {
-						tabState = t
-						break
-					}
-				}
-
-				// UoW line
-				uowBranch := "│   ├─"
-				if isLastMod {
-					uowBranch = "    ├─"
-				}
-				if isLastUoW {
-					if isLastMod {
-						uowBranch = "    └─"
-					} else {
-						uowBranch = "│   └─"
-					}
-				}
-
-				// Status icon and styling
-				icon := "○"
-				var style lipgloss.Style = Styles.Dim
-				if tabState != nil {
-					icon = m.statusIcon(tabState.Status)
-					switch tabState.Status {
-					case UoWRunning:
-						style = Styles.TabRunning
-					case UoWComplete:
-						style = Styles.TabComplete
-					case UoWSkipped:
-						style = Styles.TabSkipped
-					case UoWFailed:
-						style = Styles.TabFailed
-					default:
-						style = Styles.TabPending
-					}
-				}
-
-				// Weight indicator
-				weightStr := ""
-				if tabState != nil && tabState.Weight > 0 {
-					if m.asciiMode {
-						weightStr = fmt.Sprintf(" w%d", tabState.Weight)
-					} else {
-						weightStr = " " + weightDigit(tabState.Weight)
-					}
-				}
-
-				displayName := uow.DisplayName
-				maxNameLen := width - len(uowBranch) - 4 - lipgloss.Width(weightStr)
-				if len(displayName) > maxNameLen && maxNameLen > 3 {
-					displayName = displayName[:maxNameLen-1] + "…"
-				}
-
-				uowContent := icon + " " + displayName + weightStr
-
-				// Highlight active unit of work
-				if moniker == effectiveActiveTab {
-					style = style.Bold(true).Reverse(true)
-				}
-
-				uowLine := Styles.Dim.Render(uowBranch) + " " + style.Render(uowContent)
-				lines = append(lines, uowLine)
-			}
+		// Module line with tree branch
+		modBranch := "├─"
+		if isLastMod {
+			modBranch = "└─"
 		}
+		modLine := Styles.Dim.Render(modBranch) + " " + Styles.Phase.Render(module.Name)
+		lines = append(lines, modLine)
 
-		// Spacing between layers
-		if layerIdx < len(m.initSummary.ExecutionTree)-1 {
-			lines = append(lines, "")
+		// Units of work under this module
+		for uowIdx, uow := range module.UoWs {
+			isLastUoW := uowIdx == len(module.UoWs)-1
+
+			// Find matching tab for this unit of work
+			moniker := uow.ID
+			var tabState *UoWState
+			for _, t := range tabs {
+				if t.Moniker == moniker {
+					tabState = t
+					break
+				}
+			}
+
+			// UoW line
+			uowBranch := "│   ├─"
+			if isLastMod {
+				uowBranch = "    ├─"
+			}
+			if isLastUoW {
+				if isLastMod {
+					uowBranch = "    └─"
+				} else {
+					uowBranch = "│   └─"
+				}
+			}
+
+			// Status icon and styling
+			icon := "○"
+			var style lipgloss.Style = Styles.Dim
+			if tabState != nil {
+				icon = m.statusIcon(tabState.Status)
+				switch tabState.Status {
+				case UoWRunning:
+					style = Styles.TabRunning
+				case UoWComplete:
+					style = Styles.TabComplete
+				case UoWSkipped:
+					style = Styles.TabSkipped
+				case UoWFailed:
+					style = Styles.TabFailed
+				default:
+					style = Styles.TabPending
+				}
+			}
+
+			// Weight indicator
+			weightStr := ""
+			if tabState != nil && tabState.Weight > 0 {
+				if m.asciiMode {
+					weightStr = fmt.Sprintf(" w%d", tabState.Weight)
+				} else {
+					weightStr = " " + weightDigit(tabState.Weight)
+				}
+			}
+
+			displayName := uow.DisplayName
+			maxNameLen := width - len(uowBranch) - 4 - lipgloss.Width(weightStr)
+			if len(displayName) > maxNameLen && maxNameLen > 3 {
+				displayName = displayName[:maxNameLen-1] + "…"
+			}
+
+			uowContent := icon + " " + displayName + weightStr
+
+			// Highlight active unit of work
+			if moniker == effectiveActiveTab {
+				style = style.Bold(true).Reverse(true)
+			}
+
+			uowLine := Styles.Dim.Render(uowBranch) + " " + style.Render(uowContent)
+			lines = append(lines, uowLine)
 		}
 	}
 
@@ -1044,10 +935,6 @@ func (m Model) renderLogsPanel(width, height int) string {
 						moduleElapsed = state.EndTime.Sub(state.StartTime).Round(time.Millisecond * 100)
 					}
 				}
-			}
-
-			if m.totalLayers > 0 && m.layer > 0 {
-				left += " " + Styles.Dim.Render(fmt.Sprintf("(layer %d/%d)", m.layer, m.totalLayers))
 			}
 
 			left = fmt.Sprintf("%s %s %d/%d",
@@ -1627,11 +1514,6 @@ func (m Model) renderPaneHeader(phase Phase) string {
 			}
 		}
 
-		// Add layer info if using layered execution
-		if m.totalLayers > 0 && m.layer > 0 {
-			left += " " + Styles.Dim.Render(fmt.Sprintf("(layer %d/%d)", m.layer, m.totalLayers))
-		}
-
 		// Show module elapsed time and progress count
 		left = fmt.Sprintf("%s %s %d/%d",
 			left,
@@ -1662,6 +1544,10 @@ func (m Model) renderPaneHeader(phase Phase) string {
 }
 
 // renderResourcesPane renders a bordered pane showing resource pressure and system metrics.
+// Layout: 3 rows x 3 columns
+// Row 1: Active lamps | Mem | DockerMem
+// Row 2: Timer | CPU | Containers
+// Row 3: Counts | Tools (spans two columns)
 // Returns empty string if no scheduler is active.
 func (m Model) renderResourcesPane() string {
 	// Get component scheduler stats (the single weighted scheduler)
@@ -1681,14 +1567,12 @@ func (m Model) renderResourcesPane() string {
 
 	var result strings.Builder
 
-	// Fixed column widths for vertical alignment across 2 lines
-	// Col1: timer+CPU / UoW (remaining + running/lamps)
-	// Col2: Mem / ✓ ⏭ ✗ counters
-	// Col3: Containers / Tools
+	// Fixed column widths for vertical alignment across 3 lines
+	// Proportional split: ~35% / ~30% / ~35%
 	const (
-		col1Width = 52 // Aligns: timer+CPU, UoW remaining+running+lamps
-		col2Width = 22 // Aligns: Mem, ✓ ⏭ ✗ counters
-		col3Width = 20 // Aligns: Containers, Tools
+		col1Width = 32 // Active lamps, Timer, Counts
+		col2Width = 26 // CPU, Mem
+		col3Width = 26 // Containers, DockerMem
 	)
 
 	// Helper to pad string to fixed width
@@ -1736,31 +1620,16 @@ func (m Model) renderResourcesPane() string {
 	// Content width (inside borders)
 	contentWidth := m.width - 4
 
-	// === Line 1: System metrics ===
-	elapsed := time.Since(m.startTime)
-	mins := int(elapsed.Minutes())
-	secs := int(elapsed.Seconds()) % 60
-	timerStr := zone.Mark("res-timer", white.Render(fmt.Sprintf("%02d:%02d", mins, secs)))
+	// === Get capacity info ===
+	capInfo := m.GetCapacityInfo()
+	if capInfo.Roof == 0 {
+		capInfo.Roof = pressureCap
+	}
+	if capInfo.PressureTarget == 0 {
+		capInfo.PressureTarget = pressureCap
+	}
+	roof := capInfo.EffectiveRoof()
 
-	cpuDots := m.renderCPUDots()
-	cpuStr := zone.Mark("res-cpu", white.Render("CPU:")+cpuDots)
-
-	// Col1: timer + CPU
-	col1Line1 := padTo(timerStr+" "+cpuStr, col1Width)
-
-	// Col2: Mem (aligns with Slots on line2, Runner on line3)
-	memDots := m.renderMemDots()
-	col2Line1 := padTo(zone.Mark("res-mem", white.Render("Mem:")+memDots), col2Width)
-
-	// Col3: Jobs (swapped with Slots)
-	containerDotsLine1 := m.renderActiveContainerDots()
-	col3Line1 := padTo(zone.Mark("res-jobs", white.Render("Containers:")+containerDotsLine1), col3Width)
-
-	line1 := col1Line1 + sep + col2Line1 + sep + col3Line1
-	line1 = padTo(line1, contentWidth)
-	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
-
-	// === Line 2: UoW status ===
 	// Use derived counts (single source of truth)
 	counts := m.DeriveCounts()
 	running := counts.Running
@@ -1768,14 +1637,78 @@ func (m Model) renderResourcesPane() string {
 	cached := counts.Cached
 	failed := counts.Failed
 
-	// Icons (assume 2 chars width each for Unicode)
-	runIcon, doneIcon, cacheIcon, failIcon := "▶", "✓", "⏭", "✗"
-	if m.asciiMode {
-		runIcon, doneIcon, cacheIcon, failIcon = "> ", "V ", "= ", "X "
-	}
+	// Label width for alignment (longest is "Tools:" = 6)
+	const labelWidth = 6
 
-	// Calculate remaining and total
-	// Use initSummary.UoWCount as the authoritative total (scheduled work items)
+	// === Line 1: Active lamps | Mem | DockerMem ===
+	// Active lamps show 3 states: active (filled orange), loft (unfilled orange), blocked (grey)
+	// Running counter is right-aligned with orange bg, one space padding from right edge
+	activeLamps, loftLamps, blockedLamps := RenderActiveLamps(running, capInfo.PressureTarget, roof, m.asciiMode)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // Dim orange for loft
+	grey := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))      // Grey for unallocatable
+	orangeBg := lipgloss.NewStyle().Background(lipgloss.Color("208")).Foreground(lipgloss.Color("0")) // Orange bg for running count
+	lampsStr := white.Render("Active:") + Styles.TabRunning.Render(activeLamps) + dimOrange.Render(loftLamps) + grey.Render(blockedLamps)
+	counterStr := orangeBg.Render(fmt.Sprintf("%3d", running)) + "/" + fmt.Sprintf("%3d", capInfo.PressureTarget)
+	// Calculate padding to right-align counter with 1 space from right edge
+	lampsWidth := lipgloss.Width(lampsStr)
+	counterWidth := lipgloss.Width(counterStr)
+	padWidth := col1Width - lampsWidth - counterWidth - 1 // -1 for right padding
+	if padWidth < 1 {
+		padWidth = 1
+	}
+	activeLampsStr := zone.Mark("res-uow", lampsStr+strings.Repeat(" ", padWidth)+counterStr)
+	col1Line1 := padTo(activeLampsStr, col1Width)
+
+	// Mem dots (system memory, pad label to align lamps)
+	memDots := m.renderMemDots()
+	memStr := zone.Mark("res-mem", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "Mem:"))+memDots)
+	col2Line1 := padTo(memStr, col2Width)
+
+	// Mem dots (docker memory, pad label to align lamps under Containers:)
+	dockerMemDots := m.renderDockerMemDots()
+	dockerMemStr := zone.Mark("res-dmem", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Mem:"))+dockerMemDots)
+	col3Line1 := padTo(dockerMemStr, col3Width)
+
+	line1 := col1Line1 + sep + col2Line1 + sep + col3Line1
+	line1 = padTo(line1, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Line 2: Right-aligned counts | CPU | Containers ===
+	// Background-colored counters (3 chars each, right-aligned in cell)
+	blueBg := lipgloss.NewStyle().Background(lipgloss.Color("39")).Foreground(lipgloss.Color("0"))   // Cached (blue)
+	greenBg := lipgloss.NewStyle().Background(lipgloss.Color("40")).Foreground(lipgloss.Color("0")) // Done (green)
+	redBg := lipgloss.NewStyle().Background(lipgloss.Color("196")).Foreground(lipgloss.Color("0"))  // Failed (red)
+	countersStr := blueBg.Render(fmt.Sprintf("%3d", cached)) + " " + greenBg.Render(fmt.Sprintf("%3d", done)) + " " + redBg.Render(fmt.Sprintf("%3d", failed))
+	// Calculate padding to right-align counters with 1 space from right edge (no bg)
+	countersWidth := lipgloss.Width(countersStr)
+	padWidth2 := col1Width - countersWidth - 1 // -1 for trailing space (no bg)
+	if padWidth2 < 1 {
+		padWidth2 = 1
+	}
+	col1Line2 := zone.Mark("res-counters", strings.Repeat(" ", padWidth2)+countersStr) + " "
+
+	// CPU dots (pad label to align lamps)
+	cpuDots := m.renderCPUDots()
+	cpuStr := zone.Mark("res-cpu", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "CPU:"))+cpuDots)
+	col2Line2 := padTo(cpuStr, col2Width)
+
+	// Running Docker containers count
+	containerCountDots := m.renderRunningContainersDots()
+	containerCountStr := zone.Mark("res-containers", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Containers:"))+containerCountDots)
+	col3Line2 := padTo(containerCountStr, col3Width)
+
+	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2
+	line2 = padTo(line2, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line2 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Line 3: Timer + Progress | Tools (orange) | Tools (blue) ===
+	// Timer on left
+	elapsed := time.Since(m.startTime)
+	mins := int(elapsed.Minutes())
+	secs := int(elapsed.Seconds()) % 60
+	timerStr := zone.Mark("res-timer", white.Render(fmt.Sprintf("Time:%02d:%02d", mins, secs)))
+
+	// Calculate total
 	total := 0
 	if m.initSummary != nil && m.initSummary.UoWCount > 0 {
 		total = m.initSummary.UoWCount
@@ -1783,73 +1716,29 @@ func (m Model) renderResourcesPane() string {
 		total = len(m.uowOrder)
 	}
 	finalized := done + cached + failed
-	remaining := total - finalized
 
-	// Get capacity info for three-value model display
-	capInfo := m.GetCapacityInfo()
-	// If roof not set from Status, fall back to pressureCap from lock
-	if capInfo.Roof == 0 {
-		capInfo.Roof = pressureCap
+	// Progress: finalized/total, right-aligned
+	progressStr := white.Render(fmt.Sprintf("%3d/%3d", finalized, total))
+	timerWidth := lipgloss.Width(timerStr)
+	progressWidth := lipgloss.Width(progressStr)
+	padWidth3 := col1Width - timerWidth - progressWidth - 1 // 1 space right padding
+	if padWidth3 < 0 {
+		padWidth3 = 0
 	}
-	if capInfo.PressureTarget == 0 {
-		capInfo.PressureTarget = pressureCap
-	}
+	col1Line3 := timerStr + strings.Repeat(" ", padWidth3) + progressStr + " "
 
-	// Fixed-width format: "UoW: ▶XX/YY ▶ZZ/WW ✓XXX ⏭XXX ✗XXX"
-	// First fraction: remaining/total (pending work)
-	// Second fraction: running/roof (active slots vs hard ceiling)
-	remainingStr := Styles.TabPending.Render(fmt.Sprintf("%3d", remaining)) +
-		Styles.Dim.Render(fmt.Sprintf("/%-3d", total))
+	// System tools (orange) in col2, pad label to align lamps
+	systemToolsStr := zone.Mark("res-tools", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "Tools:"))+m.renderToolsDots())
+	col2Line3 := padTo(systemToolsStr, col2Width)
 
-	// Build capacity string with optional pressure indicator
-	// Format: "▶●●●●●○○○○○ 5/16 [=16]" normal or "▶●●●●●○○○○○ 5/16 [▼12]" under pressure
-	roof := capInfo.EffectiveRoof()
+	// Container tools (blue) in col3, pad label to align lamps under Containers:
+	containerDots := m.renderPlannedContainerDots()
+	containerToolsStr := zone.Mark("res-jobs", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Tools:"))+containerDots)
+	col3Line3 := padTo(containerToolsStr, col3Width)
 
-	// Render capacity lamps: filled (●) = running, empty (○) = available
-	filledLamps, emptyLamps := RenderCapacityLamps(running, roof, m.asciiMode)
-	lampsStr := Styles.TabRunning.Render(filledLamps) + Styles.Dim.Render(emptyLamps)
-
-	runStr := Styles.TabRunning.Render(runIcon) + lampsStr + " " +
-		Styles.TabRunning.Render(fmt.Sprintf("%2d", running)) +
-		Styles.Dim.Render(fmt.Sprintf("/%-2d", roof))
-
-	// Always show pressure target indicator:
-	// [▼N] = under pressure (throttling to N)
-	// [=N] = normal (capacity stable at N)
-	if capInfo.IsUnderPressure() {
-		pressureIcon := "▼"
-		if m.asciiMode {
-			pressureIcon = "v"
-		}
-		runStr += Styles.Dim.Render(fmt.Sprintf(" [%s%d]", pressureIcon, capInfo.PressureTarget))
-	} else if roof > 0 {
-		steadyIcon := "="
-		runStr += Styles.Dim.Render(fmt.Sprintf(" [%s%d]", steadyIcon, roof))
-	}
-
-	div := Styles.Dim.Render("|")
-
-	// Col1: UoW remaining + running/lamps (aligns under Timer+CPU)
-	uowStr := white.Render("UoW: ") + remainingStr + " " + div + " " + runStr
-	col1Line2 := padTo(zone.Mark("res-uow", uowStr), col1Width)
-
-	// Col2: ✓ ⏭ ✗ counters (aligns under Mem)
-	countersStr := Styles.TabComplete.Render(fmt.Sprintf("%s%3d", doneIcon, done)) + " " +
-		Styles.TabSkipped.Render(fmt.Sprintf("%s%3d", cacheIcon, cached)) + " " +
-		Styles.TabFailed.Render(fmt.Sprintf("%s%3d", failIcon, failed))
-	col2Line2 := padTo(zone.Mark("res-counters", countersStr), col2Width)
-
-	// Col3: Tools (aligns under Containers)
-	toolsStr := white.Render("Tools:") + m.renderToolsDots()
-	// Add layer info if available
-	if m.totalLayers > 0 {
-		toolsStr += " " + Styles.Dim.Render(fmt.Sprintf("L%d/%d", m.layer, m.totalLayers))
-	}
-	col3Line2 := padTo(zone.Mark("res-tools", toolsStr), col3Width)
-
-	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2
-	line2 = padTo(line2, contentWidth)
-	result.WriteString(Styles.Border.Render("│") + " " + line2 + " " + Styles.Border.Render("│") + "\n")
+	line3 := col1Line3 + sep + col2Line3 + sep + col3Line3
+	line3 = padTo(line3, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line3 + " " + Styles.Border.Render("│") + "\n")
 
 	// Footer: └─────────────────────────────────────┘
 	footerBorderLen := m.width - 2
@@ -2067,13 +1956,12 @@ func (m Model) renderSelectedHelp(zoneID, helpText string, contentWidth int) str
 
 	// Map zone IDs to friendly element names
 	elementNames := map[string]string{
-		"res-timer":    "Timer",
-		"res-cpu":      "CPU",
-		"res-mem":      "Memory",
-		"res-jobs":     "Containers",
-		"res-uow":      "UoW",
-		"res-tools":    "Tools",
-		"res-layer":    "Layer",
+		"res-timer":     "Timer",
+		"res-cpu":       "CPU",
+		"res-mem":       "Memory",
+		"res-jobs":      "Tools",
+		"res-uow":       "Active",
+		"res-tools":     "Tools",
 		"freeze-button": "Freeze",
 	}
 
@@ -2258,33 +2146,80 @@ func (m Model) renderTabBarContent(tabs []*UoWState) string {
 	return result.String()
 }
 
-// renderCPUDots returns colored dots representing per-core CPU usage.
-// Green = low, Yellow = medium, Orange = very high, Red = maxed
+// renderCPUDots returns colored dots representing CPU usage normalized to stableLampsCount.
+// Normalizes 8-64 cores to 16 lamps by grouping cores and averaging their usage.
+// Color progression: green (low) → yellow → orange → red (high)
 // Uses cached metrics updated by UpdateCachedMetrics() to avoid blocking gopsutil calls.
 func (m Model) renderCPUDots() string {
 	// Use cached values (updated periodically by tick handler)
 	perCore := m.cachedCPUPercent
 	if len(perCore) == 0 {
-		return "----"
+		// No data yet - show placeholder
+		dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+		emptyChar := "○"
+		if m.asciiMode {
+			emptyChar = "o"
+		}
+		return dim.Render(strings.Repeat(emptyChar, stableLampsCount))
 	}
 
-	var dots strings.Builder
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))   // Green
-	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226")) // Yellow
-	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // Orange
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))    // Red
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))    // Dim gray
+	// Normalize cores to stableLampsCount lamps
+	// Each lamp represents a range of cores (or fraction of a core)
+	normalized := make([]float64, stableLampsCount)
+	coreCount := len(perCore)
 
-	// Choose characters based on mode
+	if coreCount <= stableLampsCount {
+		// Fewer cores than lamps: each core maps to multiple lamps
+		// E.g., 8 cores → 16 lamps = each core controls 2 lamps (pairs)
+		lampsPerCore := float64(stableLampsCount) / float64(coreCount)
+		for i, pct := range perCore {
+			startLamp := int(float64(i) * lampsPerCore)
+			endLamp := int(float64(i+1) * lampsPerCore)
+			if endLamp > stableLampsCount {
+				endLamp = stableLampsCount
+			}
+			for j := startLamp; j < endLamp; j++ {
+				normalized[j] = pct
+			}
+		}
+	} else {
+		// More cores than lamps: group cores and average
+		coresPerLamp := float64(coreCount) / float64(stableLampsCount)
+		for i := 0; i < stableLampsCount; i++ {
+			startCore := int(float64(i) * coresPerLamp)
+			endCore := int(float64(i+1) * coresPerLamp)
+			if endCore > coreCount {
+				endCore = coreCount
+			}
+			sum := 0.0
+			count := 0
+			for j := startCore; j < endCore; j++ {
+				sum += perCore[j]
+				count++
+			}
+			if count > 0 {
+				normalized[i] = sum / float64(count)
+			}
+		}
+	}
+
+	// Colors for thresholds
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))    // Active (low usage)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22")) // Idle
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))  // Medium
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))  // High
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))     // Maxed
+
 	filledChar, emptyChar := "●", "○"
 	if m.asciiMode {
 		filledChar, emptyChar = "*", "o"
 	}
 
-	for _, pct := range perCore {
+	var dots strings.Builder
+	for _, pct := range normalized {
 		switch {
 		case pct < 5:
-			dots.WriteString(dim.Render(emptyChar))
+			dots.WriteString(dimGreen.Render(emptyChar)) // Idle - unfilled green
 		case pct < 50:
 			dots.WriteString(green.Render(filledChar))
 		case pct < 80:
@@ -2299,11 +2234,12 @@ func (m Model) renderCPUDots() string {
 	return dots.String()
 }
 
-// renderMemDots returns 11 dots representing memory usage.
-// Color progression: green (low) → yellow → orange → red (high)
+// renderMemDots returns 16 dots representing memory usage.
+// Color progression: green (0-25%) → yellow (25-50%) → orange (50-75%) → red (75-100%)
+// Unfilled dots use the color of their threshold zone.
 // Uses cached metrics updated by UpdateCachedMetrics() to avoid blocking gopsutil calls.
 func (m Model) renderMemDots() string {
-	const totalDots = 11
+	const totalDots = stableLampsCount
 
 	// Use cached value (updated periodically by tick handler)
 	usedPct := m.cachedMemPercent
@@ -2311,20 +2247,14 @@ func (m Model) renderMemDots() string {
 		// No metrics yet
 		return strings.Repeat("-", totalDots)
 	}
-	// Map percentage to dots: 0% = 1 active, 100% = 11 active
-	activeDots := 1 + int(usedPct/10.0+0.5)
+	// Map percentage to dots: 0% = 0 active, 100% = 16 active
+	activeDots := int(usedPct / 100.0 * float64(totalDots))
 	if activeDots > totalDots {
 		activeDots = totalDots
 	}
-	if activeDots < 1 {
-		activeDots = 1
+	if activeDots < 0 {
+		activeDots = 0
 	}
-
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))   // 0-30%
-	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226")) // 30-60%
-	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // 60-90%
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))    // 90-100%
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 
 	// Choose characters based on mode
 	filledChar, emptyChar := "●", "○"
@@ -2332,28 +2262,291 @@ func (m Model) renderMemDots() string {
 		filledChar, emptyChar = "*", "o"
 	}
 
+	// Colors for each threshold zone (4 dots each)
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // 0-25% (filled)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // 0-25% (unfilled)
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // 25-50% (filled)
+	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // 25-50% (unfilled)
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // 50-75% (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // 50-75% (unfilled)
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // 75-100% (filled)
+	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // 75-100% (unfilled)
+
 	var dots strings.Builder
 	for i := 0; i < totalDots; i++ {
-		if i >= activeDots {
-			// Inactive dots are dim
-			dots.WriteString(dim.Render(emptyChar))
-		} else {
-			// Active dots colored by position (threshold)
-			// Dots 0-2 (0-30%): green, 3-5 (30-60%): yellow, 6-8 (60-90%): orange, 9-10 (90-100%): red
-			switch {
-			case i < 3:
-				dots.WriteString(green.Render(filledChar))
-			case i < 6:
-				dots.WriteString(yellow.Render(filledChar))
-			case i < 9:
-				dots.WriteString(orange.Render(filledChar))
-			default:
-				dots.WriteString(red.Render(filledChar))
+		isFilled := i < activeDots
+		char := emptyChar
+		if isFilled {
+			char = filledChar
+		}
+
+		// Color based on position (threshold zone, 4 dots each)
+		switch {
+		case i < 4:
+			if isFilled {
+				dots.WriteString(green.Render(char))
+			} else {
+				dots.WriteString(dimGreen.Render(char))
+			}
+		case i < 8:
+			if isFilled {
+				dots.WriteString(yellow.Render(char))
+			} else {
+				dots.WriteString(dimYellow.Render(char))
+			}
+		case i < 12:
+			if isFilled {
+				dots.WriteString(orange.Render(char))
+			} else {
+				dots.WriteString(dimOrange.Render(char))
+			}
+		default:
+			if isFilled {
+				dots.WriteString(red.Render(char))
+			} else {
+				dots.WriteString(dimRed.Render(char))
 			}
 		}
 	}
 
 	return dots.String()
+}
+
+// renderDockerMemDots renders Docker memory pool usage as colored dots.
+// Always shows 16 dots - filled based on usage percentage.
+// Color progression: green (0-25%) → yellow (25-50%) → orange (50-75%) → red (75-100%)
+// Unfilled dots use the color of their threshold zone.
+func (m Model) renderDockerMemDots() string {
+	const totalDots = stableLampsCount
+
+	// Choose characters based on mode
+	filledChar, emptyChar := "●", "○"
+	if m.asciiMode {
+		filledChar, emptyChar = "*", "o"
+	}
+
+	// Use cached Docker memory percentage (0 if not tracked)
+	usedPct := m.cachedDockerMemPercent
+
+	// Map percentage to dots: 0% = 0 active, 100% = 16 active
+	activeDots := int(usedPct / 100.0 * float64(totalDots))
+	if activeDots > totalDots {
+		activeDots = totalDots
+	}
+
+	// Colors for each threshold zone (4 dots each)
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // 0-25% (filled)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // 0-25% (unfilled)
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // 25-50% (filled)
+	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // 25-50% (unfilled)
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // 50-75% (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // 50-75% (unfilled)
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // 75-100% (filled)
+	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // 75-100% (unfilled)
+
+	var dots strings.Builder
+	for i := 0; i < totalDots; i++ {
+		isFilled := i < activeDots
+		char := emptyChar
+		if isFilled {
+			char = filledChar
+		}
+
+		// Color based on position (threshold zone, 4 dots each)
+		switch {
+		case i < 4:
+			if isFilled {
+				dots.WriteString(green.Render(char))
+			} else {
+				dots.WriteString(dimGreen.Render(char))
+			}
+		case i < 8:
+			if isFilled {
+				dots.WriteString(yellow.Render(char))
+			} else {
+				dots.WriteString(dimYellow.Render(char))
+			}
+		case i < 12:
+			if isFilled {
+				dots.WriteString(orange.Render(char))
+			} else {
+				dots.WriteString(dimOrange.Render(char))
+			}
+		default:
+			if isFilled {
+				dots.WriteString(red.Render(char))
+			} else {
+				dots.WriteString(dimRed.Render(char))
+			}
+		}
+	}
+
+	return dots.String()
+}
+
+// renderRunningContainersDots renders container instance lamps.
+// INVARIANT: Lamp index maps directly to container instance index.
+//   - Lamp 0 = container instance 0 (first spawned)
+//   - Lamp 1 = container instance 1 (second spawned)
+//   - etc.
+// FIFO semantics: containers complete in spawn order, so completed containers
+// are always at lower indices than running containers.
+// When container N completes, lamp N goes from lit to dim.
+//
+// Visual layout (16 lamps):
+//   ○○○○●●●●○○○○○○○○
+//   └──┘└──┘└────────┘
+//   done run  unused
+func (m Model) renderRunningContainersDots() string {
+	const maxDots = stableLampsCount
+
+	// 3 distinct colors:
+	cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("51"))    // Running = bright cyan filled
+	dimCyan := lipgloss.NewStyle().Foreground(lipgloss.Color("30")) // Completed = dim cyan unfilled
+	black := lipgloss.NewStyle().Foreground(lipgloss.Color("236"))  // Never-used = near-black
+
+	filledChar, emptyChar := "●", "○"
+	if m.asciiMode {
+		filledChar, emptyChar = "*", "o"
+	}
+
+	total := m.totalContainerCount
+	running := m.runningContainerCount
+	completed := total - running
+
+	// Clamp to max display
+	if total > maxDots {
+		total = maxDots
+	}
+	if running > total {
+		running = total
+	}
+	if completed < 0 {
+		completed = 0
+	}
+
+	// If no containers have run, show all black (never-used)
+	if total == 0 {
+		return black.Render(strings.Repeat(emptyChar, maxDots))
+	}
+
+	var dots strings.Builder
+
+	// Render lamps in index order (0 to maxDots-1)
+	// Lamp i represents container instance i
+	for i := 0; i < maxDots; i++ {
+		if i < completed {
+			// Container i has completed (FIFO: first spawned = first completed)
+			dots.WriteString(dimCyan.Render(emptyChar))
+		} else if i < total {
+			// Container i is still running
+			dots.WriteString(cyan.Render(filledChar))
+		} else {
+			// Slot i has never been used
+			dots.WriteString(black.Render(emptyChar))
+		}
+	}
+
+	return dots.String()
+}
+
+// renderPlannedContainerDots renders container lamps with fixed width (16 max).
+// Shows containers as they are used: filled when running, unfilled when stopped.
+// Order: left=old (idle), middle=active, right=unused
+// Unused slots are black/dim. This tracks the count of individual containers used.
+func (m Model) renderPlannedContainerDots() string {
+	const fixedLamps = stableLampsCount
+
+	sharpBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("39")) // Active container (filled)
+	lightBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("75")) // Inactive container (unfilled blue)
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))      // Empty/unused slot
+
+	filledChar := "●"
+	emptyChar := "○"
+	if m.asciiMode {
+		filledChar = "*"
+		emptyChar = "o"
+	}
+
+	// Calculate active container tools from running UoWs
+	activeTools := m.getActiveContainerTools()
+
+	// Separate seen containers into inactive (idle) and active
+	var inactiveCount, activeCount int
+	for _, container := range m.seenContainerTools {
+		if activeTools[container] {
+			activeCount++
+		} else {
+			inactiveCount++
+		}
+	}
+
+	// Clamp to max lamps
+	totalSeen := inactiveCount + activeCount
+	if totalSeen > fixedLamps {
+		// Proportionally reduce if over limit
+		if inactiveCount > fixedLamps {
+			inactiveCount = fixedLamps
+			activeCount = 0
+		} else {
+			activeCount = fixedLamps - inactiveCount
+		}
+	}
+
+	var dots strings.Builder
+	lampCount := 0
+
+	// 1. Inactive/idle containers first (left) - old
+	for i := 0; i < inactiveCount && lampCount < fixedLamps; i++ {
+		dots.WriteString(lightBlue.Render(emptyChar))
+		lampCount++
+	}
+
+	// 2. Active containers (middle) - currently running
+	for i := 0; i < activeCount && lampCount < fixedLamps; i++ {
+		dots.WriteString(sharpBlue.Render(filledChar))
+		lampCount++
+	}
+
+	// 3. Unused slots (right) - never used
+	for lampCount < fixedLamps {
+		dots.WriteString(dim.Render(emptyChar))
+		lampCount++
+	}
+
+	return dots.String()
+}
+
+// getActiveContainerTools returns a set of container tool names that have running UoWs.
+func (m Model) getActiveContainerTools() map[string]bool {
+	active := make(map[string]bool)
+	for _, moniker := range m.uowOrder {
+		state := m.uowStates[moniker]
+		if state != nil && state.Status == UoWRunning {
+			// Extract tool from moniker (format: context:module:component:tool)
+			tool := extractToolFromMoniker(moniker)
+			if tool != "" {
+				// Check if this tool is a container tool
+				for _, ct := range m.plannedContainerTools {
+					if ct == tool {
+						active[tool] = true
+						break
+					}
+				}
+			}
+		}
+	}
+	return active
+}
+
+// extractToolFromMoniker extracts the tool name from a moniker.
+// Moniker format: context:module:component:tool (e.g., "local:books:api:go")
+func extractToolFromMoniker(moniker string) string {
+	parts := strings.Split(moniker, ":")
+	if len(parts) >= 4 {
+		return parts[len(parts)-1] // Last segment is the tool
+	}
+	return ""
 }
 
 // renderActiveContainerDots returns colored dots for each running job.
@@ -2401,14 +2594,16 @@ func (m Model) renderActiveContainerDots() string {
 	return dots.String()
 }
 
-// renderToolsDots returns colored dots for all known tools.
-// All tools known from init are always shown - filled when active, empty when inactive.
-// Containers: blue (sharp=active, light=inactive), System tools: orange
+// renderToolsDots renders system tool lamps with fixed width (16 max).
+// Shows tools as they are used: filled when running, unfilled when stopped.
+// Order: left=old (idle), middle=active, right=unused
+// Unused slots are black/dim. This tracks the count of individual tools used.
 func (m Model) renderToolsDots() string {
-	sharpBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))  // Active container
-	lightBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("75"))  // Inactive container
-	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // System tool (active)
-	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // System tool (inactive)
+	const fixedLamps = stableLampsCount
+
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // Active system tool (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // Inactive system tool (unfilled)
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))       // Empty/unused slot
 
 	filledChar := "●"
 	emptyChar := "○"
@@ -2417,41 +2612,75 @@ func (m Model) renderToolsDots() string {
 		emptyChar = "o"
 	}
 
-	var dots strings.Builder
+	// Calculate active system tools from running UoWs
+	activeSystem := m.getActiveSystemTools()
 
-	// All planned containers - show all, filled if active
-	for _, tool := range m.plannedContainers {
-		isActive := false
-		for _, active := range m.activeContainers {
-			if tool == active {
-				isActive = true
-				break
-			}
-		}
-		if isActive {
-			dots.WriteString(sharpBlue.Render(filledChar))
+	// Separate seen tools into inactive (idle) and active
+	var inactiveCount, activeCount int
+	for _, tool := range m.seenSystemTools {
+		if activeSystem[tool] {
+			activeCount++
 		} else {
-			dots.WriteString(lightBlue.Render(emptyChar))
+			inactiveCount++
 		}
 	}
 
-	// All planned system tools - show all, filled if active
-	for _, tool := range m.plannedSystemTools {
-		isActive := false
-		for _, active := range m.activeSystemTools {
-			if tool == active {
-				isActive = true
-				break
-			}
-		}
-		if isActive {
-			dots.WriteString(orange.Render(filledChar))
+	// Clamp to max lamps
+	totalSeen := inactiveCount + activeCount
+	if totalSeen > fixedLamps {
+		// Proportionally reduce if over limit
+		if inactiveCount > fixedLamps {
+			inactiveCount = fixedLamps
+			activeCount = 0
 		} else {
-			dots.WriteString(dimOrange.Render(emptyChar))
+			activeCount = fixedLamps - inactiveCount
 		}
+	}
+
+	var dots strings.Builder
+	lampCount := 0
+
+	// 1. Inactive/idle tools first (left) - old
+	for i := 0; i < inactiveCount && lampCount < fixedLamps; i++ {
+		dots.WriteString(dimOrange.Render(emptyChar))
+		lampCount++
+	}
+
+	// 2. Active tools (middle) - currently running
+	for i := 0; i < activeCount && lampCount < fixedLamps; i++ {
+		dots.WriteString(orange.Render(filledChar))
+		lampCount++
+	}
+
+	// 3. Unused slots (right) - never used
+	for lampCount < fixedLamps {
+		dots.WriteString(dim.Render(emptyChar))
+		lampCount++
 	}
 
 	return dots.String()
+}
+
+// getActiveSystemTools returns a set of system tool names that have running UoWs.
+func (m Model) getActiveSystemTools() map[string]bool {
+	active := make(map[string]bool)
+	for _, moniker := range m.uowOrder {
+		state := m.uowStates[moniker]
+		if state != nil && state.Status == UoWRunning {
+			// Extract tool from moniker (format: context:module:component:tool)
+			tool := extractToolFromMoniker(moniker)
+			if tool != "" {
+				// Check if this tool is a system tool
+				for _, st := range m.plannedSystemTools {
+					if st == tool {
+						active[tool] = true
+						break
+					}
+				}
+			}
+		}
+	}
+	return active
 }
 
 // weightDigit returns a colored circled digit for weight display.

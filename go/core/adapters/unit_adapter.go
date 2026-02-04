@@ -79,6 +79,26 @@ func (a *UnitSpecAdapter) GetDependsOn() []interfaces.UnitIDPort {
 	return result
 }
 
+func (a *UnitSpecAdapter) GetPoolAllocation() interfaces.PoolAllocationPort {
+	alloc := a.spec.GetPoolAllocation()
+	return &PoolAllocationAdapter{alloc: alloc}
+}
+
+// PoolAllocationAdapter wraps resource.PoolAllocation to implement interfaces.PoolAllocationPort.
+type PoolAllocationAdapter struct {
+	alloc interface {
+		GetHostWeight() int
+		GetDockerWeight() int
+		IsContainer() bool
+		TotalWeight() int
+	}
+}
+
+func (a *PoolAllocationAdapter) GetHostWeight() int   { return a.alloc.GetHostWeight() }
+func (a *PoolAllocationAdapter) GetDockerWeight() int { return a.alloc.GetDockerWeight() }
+func (a *PoolAllocationAdapter) IsContainer() bool    { return a.alloc.IsContainer() }
+func (a *PoolAllocationAdapter) TotalWeight() int     { return a.alloc.TotalWeight() }
+
 // AdaptUnitSpec is a convenience function to wrap a unit spec.
 func AdaptUnitSpec(spec workunit.UnitSpec) interfaces.UnitSpecPort {
 	return NewUnitSpecAdapter(spec)

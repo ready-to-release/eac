@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/workspace"
@@ -453,4 +454,55 @@ func GetCommandByCanonical(canonicalName string) *CommandRegistration {
 	// Convert kebab-case to space-separated for lookup
 	actualName := strings.ReplaceAll(canonicalName, "-", " ")
 	return commandRegistry[actualName]
+}
+
+// GetSubcommands returns all registered subcommands for a parent command.
+// For parent "get", returns registrations for "get modules", "get files", etc.
+// Excludes nested subcommands (e.g., "get foo bar" when parent is "get").
+func GetSubcommands(parentName string) []*CommandRegistration {
+	prefix := parentName + " "
+	var result []*CommandRegistration
+
+	for name, reg := range commandRegistry {
+		if strings.HasPrefix(name, prefix) {
+			// Only direct children (no spaces in remainder)
+			remainder := strings.TrimPrefix(name, prefix)
+			if !strings.Contains(remainder, " ") {
+				result = append(result, reg)
+			}
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ActualCommand < result[j].ActualCommand
+	})
+
+	return result
+}
+
+// IsValidSubcommand checks if a subcommand is registered under a parent.
+// Returns true if "get modules" is registered when parent="get" and sub="modules".
+func IsValidSubcommand(parentName, subcommandName string) bool {
+	fullName := parentName + " " + subcommandName
+	_, exists := commandRegistry[fullName]
+	return exists
+}
+
+// GetSubcommandNames returns the names (not full paths) of subcommands.
+// Useful for switch statement validation or displaying available options.
+func GetSubcommandNames(parentName string) []string {
+	subs := GetSubcommands(parentName)
+	names := make([]string, len(subs))
+	for i, sub := range subs {
+		names[i] = strings.TrimPrefix(sub.ActualCommand, parentName+" ")
+	}
+	return names
+}
+
+// SetTestRegistry replaces the command registry for testing purposes.
+// The returned registry is the original, which should be restored after testing.
+func SetTestRegistry(reg map[string]*CommandRegistration) map[string]*CommandRegistration {
+	original := commandRegistry
+	commandRegistry = reg
+	return original
 }

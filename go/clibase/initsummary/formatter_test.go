@@ -9,7 +9,6 @@ import (
 func TestFormatCompact(t *testing.T) {
 	s := New("build").
 		SetRequest([]string{"a"}, []string{"a", "b", "c"}).
-		SetExecutionPlan([][]string{{"a"}, {"b", "c"}}).
 		SetExecutionContext("local").
 		SetDepmStatus(DepmStatus{Verified: true, Total: 2, Resolved: []string{"b", "c"}}).
 		SetDepsStatus(DepsStatus{Verified: true, Required: []string{"go"}, Available: []DepsResult{{Name: "go", Available: true}}}).
@@ -20,9 +19,6 @@ func TestFormatCompact(t *testing.T) {
 	// Should contain key info in compact form
 	if !strings.Contains(output, "1 requested → 3 total (+2 depm)") {
 		t.Errorf("FormatCompact missing module summary\n\nGot:\n%s", output)
-	}
-	if !strings.Contains(output, "Modules in each layer:") {
-		t.Errorf("FormatCompact missing layer sizes\n\nGot:\n%s", output)
 	}
 	if !strings.Contains(output, "Depm: ✅") {
 		t.Errorf("FormatCompact missing depm status\n\nGot:\n%s", output)
@@ -97,7 +93,6 @@ func TestFormatCompactWithTestInfo(t *testing.T) {
 func TestFormatDetailed(t *testing.T) {
 	s := New("build").
 		SetRequest([]string{"core", "eac-cli"}, []string{"core", "eac-cli", "eac-logging"}).
-		SetExecutionPlan([][]string{{"eac-logging"}, {"core", "eac-cli"}}).
 		SetFlags(Flags{TidyFirst: true, TidyExplicit: false}).
 		SetExecutionContext("local").
 		SetDepmStatus(DepmStatus{
@@ -124,14 +119,7 @@ func TestFormatDetailed(t *testing.T) {
 		"Requested: 2",
 		"Added depm: 1",
 		"── Execution Plan ──",
-		"Layers: 2",
-		"LAYER",             // Table header
-		"MODULE",            // Table header
-		"│ 0",               // Layer 0 row
-		"│ 1",               // Layer 1 row
-		"eac-logging",       // Module in layer 0
-		"core",              // Module in layer 1
-		"eac-cli",           // Module in layer 1
+		"Modules: 3",
 		"── Flags ──",
 		"tidy-first",
 		"── Module Dependencies (depm) ──",
@@ -222,69 +210,6 @@ func TestTruncateList(t *testing.T) {
 				t.Errorf("truncateList() = %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestFormatLayerSizes(t *testing.T) {
-	tests := []struct {
-		name  string
-		sizes []int
-		width int
-		want  string
-	}{
-		{
-			name:  "single layer width 1",
-			sizes: []int{3},
-			width: 1,
-			want:  "3",
-		},
-		{
-			name:  "multiple layers width 1",
-			sizes: []int{2, 1, 3},
-			width: 1,
-			want:  "2 → 1 → 3",
-		},
-		{
-			name:  "multiple layers width 2",
-			sizes: []int{8, 6, 14, 1},
-			width: 2,
-			want:  " 8 →  6 → 14 →  1",
-		},
-		{
-			name:  "empty",
-			sizes: []int{},
-			width: 1,
-			want:  "none",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := formatLayerSizes(tt.sizes, tt.width)
-			if got != tt.want {
-				t.Errorf("formatLayerSizes() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDigitWidth(t *testing.T) {
-	tests := []struct {
-		n    int
-		want int
-	}{
-		{0, 1},
-		{1, 1},
-		{9, 1},
-		{10, 2},
-		{99, 2},
-		{100, 3},
-	}
-	for _, tt := range tests {
-		got := digitWidth(tt.n)
-		if got != tt.want {
-			t.Errorf("digitWidth(%d) = %d, want %d", tt.n, got, tt.want)
-		}
 	}
 }
 

@@ -118,7 +118,6 @@ func Lint() int {
 		MaxConcurrency: shared.MaxConcurrency,
 		ForceRebuild:   shared.CacheConfig.ShouldSkipState(), // Use ForceRebuild for skip-cache flag
 		DryRun:         shared.DryRun,
-		Layered:        !shared.UnlayeredBuild && !shared.Turbo,
 		UseTUI:         shared.UseTUI,
 		TUIHeight:      shared.TUIHeight,
 		TUIASCIIMode:   shared.TUIASCIIMode,

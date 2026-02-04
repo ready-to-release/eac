@@ -64,6 +64,7 @@ func (m *observerMockConsole) NewWriter(source string, logWriter io.Writer) io.W
 func (m *observerMockConsole) SendLine(line Line)              { m.lineCalls = append(m.lineCalls, line) }
 func (m *observerMockConsole) WriteResult(text string)         { m.resultLines = append(m.resultLines, text) }
 func (m *observerMockConsole) UpdateStatus(status Status)      { m.statusCalls = append(m.statusCalls, status) }
+func (m *observerMockConsole) StatusRefreshInterval() time.Duration { return 0 }
 func (m *observerMockConsole) SetPhase(phase Phase)            { m.phaseCalls = append(m.phaseCalls, phase) }
 func (m *observerMockConsole) CompletePhase(phase Phase, success bool, summary string) {
 	m.phaseCompleteCalls = append(m.phaseCompleteCalls, phaseCompleteCall{phase, success, summary})
@@ -167,7 +168,6 @@ func TestTUIObserverUnitQueuedEvent(t *testing.T) {
 		Component:   "go",
 		Handler:     "go",
 		Weight:      4,
-		Layer:       1,
 	})
 
 	if len(mock.uowStartCalls) != 1 {
@@ -242,12 +242,10 @@ func TestTUIObserverProgressUpdateEvent(t *testing.T) {
 
 	now := time.Now()
 	observer.OnEvent(interfaces.ProgressUpdateEvent{
-		Time:         now,
-		Running:      []string{"build:core:go:go"},
-		Completed:    5,
-		Total:        10,
-		CurrentLayer: 2,
-		TotalLayers:  3,
+		Time:      now,
+		Running:   []string{"build:core:go:go"},
+		Completed: 5,
+		Total:     10,
 	})
 
 	if len(mock.statusCalls) != 1 {
@@ -262,12 +260,6 @@ func TestTUIObserverProgressUpdateEvent(t *testing.T) {
 	}
 	if status.Total != 10 {
 		t.Errorf("Expected Total 10, got %d", status.Total)
-	}
-	if status.Layer != 2 {
-		t.Errorf("Expected Layer 2, got %d", status.Layer)
-	}
-	if status.TotalLayers != 3 {
-		t.Errorf("Expected TotalLayers 3, got %d", status.TotalLayers)
 	}
 }
 
@@ -296,6 +288,89 @@ func TestTUIObserverResourceStatusEvent(t *testing.T) {
 	}
 	if lock.Capacity != 8 {
 		t.Errorf("Expected Capacity 8, got %d", lock.Capacity)
+	}
+}
+
+func TestTUIObserverResourceStatusEvent_DockerMemory(t *testing.T) {
+	mock := newMockConsole()
+	observer := NewTUIObserver(mock)
+
+	now := time.Now()
+	observer.OnEvent(interfaces.ResourceStatusEvent{
+		Time: now,
+		Resources: []interfaces.ResourceInfo{
+			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
+			{Name: "docker-scheduler", Type: "weighted", Pool: "docker", Capacity: 6, Used: 3, Waiting: 1},
+		},
+	})
+
+	if len(mock.statusCalls) != 1 {
+		t.Fatalf("Expected 1 UpdateStatus call, got %d", len(mock.statusCalls))
+	}
+	status := mock.statusCalls[0]
+
+	// Should extract docker memory from docker-scheduler resource
+	if !status.DockerAvailable {
+		t.Error("Expected DockerAvailable=true when docker-scheduler has capacity > 0")
+	}
+
+	// Docker memory percent = Used/Capacity * 100 = 3/6 * 100 = 50%
+	expectedPercent := 50.0
+	if status.DockerMemPercent != expectedPercent {
+		t.Errorf("Expected DockerMemPercent %.1f, got %.1f", expectedPercent, status.DockerMemPercent)
+	}
+}
+
+func TestTUIObserverResourceStatusEvent_DockerUnavailable(t *testing.T) {
+	mock := newMockConsole()
+	observer := NewTUIObserver(mock)
+
+	now := time.Now()
+	observer.OnEvent(interfaces.ResourceStatusEvent{
+		Time: now,
+		Resources: []interfaces.ResourceInfo{
+			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
+			// No docker-scheduler means Docker is not available
+		},
+	})
+
+	if len(mock.statusCalls) != 1 {
+		t.Fatalf("Expected 1 UpdateStatus call, got %d", len(mock.statusCalls))
+	}
+	status := mock.statusCalls[0]
+
+	if status.DockerAvailable {
+		t.Error("Expected DockerAvailable=false when no docker-scheduler resource")
+	}
+	if status.DockerMemPercent != 0 {
+		t.Errorf("Expected DockerMemPercent 0, got %.1f", status.DockerMemPercent)
+	}
+}
+
+func TestTUIObserverResourceStatusEvent_DockerZeroCapacity(t *testing.T) {
+	mock := newMockConsole()
+	observer := NewTUIObserver(mock)
+
+	now := time.Now()
+	observer.OnEvent(interfaces.ResourceStatusEvent{
+		Time: now,
+		Resources: []interfaces.ResourceInfo{
+			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
+			{Name: "docker-scheduler", Type: "weighted", Pool: "docker", Capacity: 0, Used: 0, Waiting: 0},
+		},
+	})
+
+	if len(mock.statusCalls) != 1 {
+		t.Fatalf("Expected 1 UpdateStatus call, got %d", len(mock.statusCalls))
+	}
+	status := mock.statusCalls[0]
+
+	// Zero capacity means Docker is effectively unavailable
+	if status.DockerAvailable {
+		t.Error("Expected DockerAvailable=false when docker-scheduler capacity is 0")
+	}
+	if status.DockerMemPercent != 0 {
+		t.Errorf("Expected DockerMemPercent 0, got %.1f", status.DockerMemPercent)
 	}
 }
 
@@ -370,11 +445,9 @@ func TestTUIObserverInitSummaryEvent(t *testing.T) {
 		RequestedModules: 2,
 		ResolvedModules:  5,
 		TotalUnits:       12,
-		Layers: []interfaces.LayerInfo{
-			{Modules: []interfaces.ModuleInfo{
-				{Name: "core", Units: []interfaces.UnitInfo{
-					{ID: "build:core:go:go", DisplayName: "core:go", Weight: 4},
-				}},
+		Modules: []interfaces.ModuleInfo{
+			{Name: "core", Units: []interfaces.UnitInfo{
+				{ID: "build:core:go:go", DisplayName: "core:go", Weight: 4},
 			}},
 		},
 		Parallelism: interfaces.ParallelismInfo{
@@ -386,6 +459,10 @@ func TestTUIObserverInitSummaryEvent(t *testing.T) {
 		Flags: interfaces.FlagsInfo{
 			TidyFirst: true,
 			UseTUI:    true,
+		},
+		PlannedTools: []interfaces.PlannedToolInfo{
+			{Name: "go", IsContainer: false},
+			{Name: "mkdocs-build", IsContainer: true},
 		},
 	})
 
@@ -409,7 +486,7 @@ func TestTUIObserverInitSummaryEvent(t *testing.T) {
 		t.Errorf("Expected UoWCount 12, got %d", summary.UoWCount)
 	}
 	if len(summary.ExecutionTree) != 1 {
-		t.Errorf("Expected 1 layer, got %d", len(summary.ExecutionTree))
+		t.Errorf("Expected 1 module, got %d", len(summary.ExecutionTree))
 	}
 	if summary.ParallelismMode != "devbox" {
 		t.Errorf("Expected ParallelismMode 'devbox', got %q", summary.ParallelismMode)
@@ -422,6 +499,19 @@ func TestTUIObserverInitSummaryEvent(t *testing.T) {
 	}
 	if !summary.Flags.UseTUI {
 		t.Error("Expected Flags.UseTUI=true")
+	}
+	// Verify PlannedTools conversion
+	if len(summary.PlannedTools) != 2 {
+		t.Errorf("Expected 2 PlannedTools, got %d", len(summary.PlannedTools))
+	} else {
+		if summary.PlannedTools[0].Name != "go" || summary.PlannedTools[0].IsContainer {
+			t.Errorf("Expected PlannedTools[0]={go, false}, got {%s, %v}",
+				summary.PlannedTools[0].Name, summary.PlannedTools[0].IsContainer)
+		}
+		if summary.PlannedTools[1].Name != "mkdocs-build" || !summary.PlannedTools[1].IsContainer {
+			t.Errorf("Expected PlannedTools[1]={mkdocs-build, true}, got {%s, %v}",
+				summary.PlannedTools[1].Name, summary.PlannedTools[1].IsContainer)
+		}
 	}
 }
 

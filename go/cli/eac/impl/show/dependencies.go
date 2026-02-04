@@ -107,22 +107,17 @@ func ShowDependencies() int {
 	} else {
 		fmt.Println("## Execution Order")
 		fmt.Println("")
-		fmt.Printf("Total layers: %d\n", plan.LayerCount)
+		fmt.Printf("Total modules: %d\n", len(plan.ExecutionOrder))
 		fmt.Println("")
 
-		layerTable := render.NewTableBuilder().
-			WithHeaders("Layer", "Module")
+		orderTable := render.NewTableBuilder().
+			WithHeaders("Order", "Module")
 
-		for i, layer := range plan.Layers {
-			if i > 0 {
-				layerTable.AddSeparator()
-			}
-			for _, module := range layer {
-				layerTable.AddRow(fmt.Sprintf("%d", i), module)
-			}
+		for i, module := range plan.ExecutionOrder {
+			orderTable.AddRow(fmt.Sprintf("%d", i+1), module)
 		}
 
-		fmt.Println(layerTable.Build())
+		fmt.Println(orderTable.Build())
 		fmt.Println("")
 	}
 

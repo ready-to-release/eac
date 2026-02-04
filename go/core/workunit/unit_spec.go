@@ -1,18 +1,21 @@
 package workunit
 
+import "github.com/ready-to-release/eac/go/core/resource"
+
 // UnitSpec represents the input specification for a unit of work.
 // It describes what to execute and how to schedule it.
 // Implements interfaces.UnitSpecPort for port-based access.
 type UnitSpec struct {
-	ID              UnitID            // Unique identifier for this work unit
-	ComponentType   string            // From component-types.yml (e.g., "go", "gherkin")
-	Weight          int               // Scheduling weight for resource allocation
-	Container       bool              // Whether this runs in Docker
-	HostInstalled   bool              // Whether this runs on host system (opposite of Container)
-	DependsOn       []UnitID          // Work units that must complete first (within module)
-	Cached          bool              // Skip execution if up-to-date
-	Metadata        map[string]any    // Context-specific configuration
-	Index           int               // Position in input slice for result ordering
+	ID              UnitID                  // Unique identifier for this work unit
+	ComponentType   string                  // From component-types.yml (e.g., "go", "gherkin")
+	Weight          int                     // Scheduling weight for resource allocation (host pool)
+	Container       bool                    // Whether this runs in Docker (DEPRECATED: use PoolAllocation)
+	HostInstalled   bool                    // Whether this runs on host system (opposite of Container)
+	PoolAllocation  resource.PoolAllocation // Dual pool allocation for scheduling
+	DependsOn       []UnitID                // Work units that must complete first (within module)
+	Cached          bool                    // Skip execution if up-to-date
+	Metadata        map[string]any          // Context-specific configuration
+	Index           int                     // Position in input slice for result ordering
 }
 
 // DependsOnComponents returns the component names from DependsOn.
@@ -171,4 +174,25 @@ func (s UnitSpec) IsCached() bool {
 // Implements interfaces.UnitSpecPort.
 func (s UnitSpec) GetDependsOn() []UnitID {
 	return s.DependsOn
+}
+
+// GetPoolAllocation returns the resource pool allocation for this spec.
+// If PoolAllocation is explicitly set (non-zero weights), returns it directly.
+// Otherwise, derives allocation from the legacy Container/Weight fields:
+//   - Host-only (Container=false): HostWeight=Weight, DockerWeight=0
+//   - Container (Container=true): HostWeight=Weight, DockerWeight=Weight
+func (s UnitSpec) GetPoolAllocation() resource.PoolAllocation {
+	// If explicitly set, use it
+	if s.PoolAllocation.HostWeight > 0 || s.PoolAllocation.DockerWeight > 0 {
+		return s.PoolAllocation
+	}
+
+	// Legacy derivation from Container/Weight fields
+	alloc := resource.PoolAllocation{
+		HostWeight: s.Weight,
+	}
+	if s.Container {
+		alloc.DockerWeight = s.Weight // Container uses both pools with same weight
+	}
+	return alloc
 }

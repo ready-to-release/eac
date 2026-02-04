@@ -49,6 +49,9 @@ RUN printf '#!/bin/sh\nexec /usr/bin/chromium \\\n  --no-sandbox \\\n  --disable
 COPY puppeteer-config.json /etc/mermaid/puppeteer-config.json
 COPY mermaid-config.json /etc/mermaid/mermaid-config.json
 
+# Copy batch rendering script
+COPY batch-render.js /app/batch-render.js
+
 # Set environment for puppeteer to use our wrapper
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-wrapper
 ENV PUPPETEER_SKIP_DOWNLOAD=true

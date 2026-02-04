@@ -20,7 +20,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	// Background steps
 	sc.Step(`^the repository has the EAC module system configured$`, func() error {
 		// EAC configuration should exist in isolated test environment
-		return eacgodog.FileExists(ctx, ".r2r")
+		return eacgodog.FileExists(ctx, ".eac")
 	})
 
 	// Setup steps - Module creation

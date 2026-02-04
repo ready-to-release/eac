@@ -30,6 +30,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/services"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -439,16 +440,10 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 		}
 	}
 
-	// Check build state using workunit StateManager
-	stateMgr := workunit.NewStateManager(workspaceRoot)
-	unitID := workunit.UnitID{
-		Context:   workunit.ContextBuild,
-		Module:    moduleConfig.ModuleMoniker,
-		Component: "_module",
-		Tool:      "_",
-	}
-	if !stateMgr.Exists(unitID) {
-		return true, moduleConfig.ModuleMoniker + " module not in build state"
+	// Check for UoW manifests to determine if module has been built
+	reader := coreoutput.NewReader(workspaceRoot)
+	if !reader.HasManifests(workunit.ContextBuild, moduleConfig.ModuleMoniker) {
+		return true, moduleConfig.ModuleMoniker + " module not built (no UoW manifests)"
 	}
 
 	return false, ""

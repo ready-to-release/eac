@@ -2,7 +2,10 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"sync"
+
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // CommandOption represents a selectable command in the Selector TUI.
@@ -63,6 +66,24 @@ func SubcommandsToOptions(subs []SubcommandInfo) []CommandOption {
 	for i, sub := range subs {
 		opts[i] = SubcommandToOption(sub)
 	}
+	return opts
+}
+
+// SubcommandsFromRegistry creates CommandOptions from registry for a parent command.
+// This replaces the hardcoded `var subcommands = []tui.SubcommandInfo{...}` pattern.
+func SubcommandsFromRegistry(parentName string) []CommandOption {
+	subs := registry.GetSubcommands(parentName)
+	opts := make([]CommandOption, len(subs))
+
+	for i, sub := range subs {
+		// Extract just the subcommand name (remove parent prefix)
+		name := strings.TrimPrefix(sub.ActualCommand, parentName+" ")
+		opts[i] = CommandOption{
+			Name:        name,
+			Description: sub.Short,
+		}
+	}
+
 	return opts
 }
 

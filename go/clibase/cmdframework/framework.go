@@ -180,30 +180,39 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 	// Hook: AfterExecute - runs post-build tasks like manifest generation
 	// In TUI mode: runs in background while TUI is displayed (TUI has its own exit hold)
 	// In non-TUI mode: must complete before process exits
-	var afterExecDone chan struct{}
+	type afterExecResult struct {
+		err error
+	}
+	var afterExecDone chan afterExecResult
 	if hooks.AfterExecute != nil {
-		afterExecDone = make(chan struct{})
+		afterExecDone = make(chan afterExecResult, 1)
 		go func() {
-			defer close(afterExecDone)
 			afterExecStart := time.Now()
 			log.Debugf("AfterExecute: starting")
-			if err := hooks.AfterExecute(ctx); err != nil {
+			err := hooks.AfterExecute(ctx)
+			if err != nil {
 				log.Errorf("AfterExecute hook failed: %v", err)
 			}
 			log.Debugf("AfterExecute: completed in %v", time.Since(afterExecStart))
+			afterExecDone <- afterExecResult{err: err}
+			close(afterExecDone)
 		}()
 	}
 
 	// Phase 5: Summary - handles TUI exit (user timer if active, else immediate)
 	exitCode := phaseSummary(ctx, hooks.CustomSummary)
 
-	// Wait for AfterExecute to complete in non-TUI mode
-	// In TUI mode, the exit hold mechanism allows AfterExecute to complete
+	// Wait for AfterExecute to complete and propagate errors
+	// In TUI mode, we still wait for completion to ensure errors are captured
 	// In non-TUI mode, we must wait here or the process exits before AfterExecute finishes
-	if afterExecDone != nil && !cfg.UseTUI {
+	if afterExecDone != nil {
 		log.Debugf("Waiting for AfterExecute to complete...")
-		<-afterExecDone
+		result := <-afterExecDone
 		log.Debugf("AfterExecute complete, exiting")
+		// Propagate AfterExecute errors to exit code (only if execution succeeded)
+		if result.err != nil && exitCode == 0 {
+			exitCode = 1
+		}
 	}
 
 	return exitCode
@@ -233,80 +242,51 @@ func buildUoWData(ctx *ExecutionContext) interfaces.UoWData {
 		return interfaces.UoWData{}
 	}
 
-	s := ctx.InitSummary
-	if len(s.ExecutionLayers) == 0 {
-		return interfaces.UoWData{Flat: !ctx.Config.Layered}
-	}
-
 	// Try to get UoWs from UnitProvider for proper ID generation
 	provider := GetUnitProvider(ctx.Config.Type)
 	if provider != nil {
-		unitLayers := provider(ctx)
-		if len(unitLayers) > 0 {
-			return buildUoWDataFromUnitSpecs(s.ExecutionLayers, unitLayers, !ctx.Config.Layered)
+		units := provider(ctx)
+		if len(units) > 0 {
+			return buildUoWDataFromUnitSpecs(units)
 		}
 	}
 
-	// Fallback: build from module names only (no component details)
-	return buildUoWDataFromModules(s.ExecutionLayers, !ctx.Config.Layered)
+	// Fallback: empty data
+	return interfaces.UoWData{}
 }
 
 // buildUoWDataFromUnitSpecs builds UoW data using UnitSpec data for proper IDs.
-func buildUoWDataFromUnitSpecs(moduleLayers [][]string, unitLayers [][]workunit.UnitSpec, flat bool) interfaces.UoWData {
+func buildUoWDataFromUnitSpecs(units []workunit.UnitSpec) interfaces.UoWData {
 	// Build a map of module -> UoWUnits from unit specs
 	moduleUoWs := make(map[string][]interfaces.UoWUnit)
-	for _, layer := range unitLayers {
-		for _, spec := range layer {
-			module := spec.ID.Module
-			entry := interfaces.UoWUnit{
-				ID:          spec.ID.Longname(),
-				DisplayName: spec.ID.Shortname(),
-				Weight:      spec.Weight,
-			}
-			moduleUoWs[module] = append(moduleUoWs[module], entry)
+	moduleOrder := []string{}
+	seenModules := make(map[string]bool)
+
+	for _, spec := range units {
+		module := spec.ID.Module
+		entry := interfaces.UoWUnit{
+			ID:          spec.ID.Longname(),
+			DisplayName: spec.ID.Shortname(),
+			Weight:      spec.Weight,
+		}
+		moduleUoWs[module] = append(moduleUoWs[module], entry)
+
+		if !seenModules[module] {
+			seenModules[module] = true
+			moduleOrder = append(moduleOrder, module)
 		}
 	}
 
-	// Build the layer structure following module layer order
-	layers := make([]interfaces.UoWLayer, len(moduleLayers))
-	for i, moduleNames := range moduleLayers {
-		modules := make([]interfaces.UoWModule, len(moduleNames))
-		for j, moduleName := range moduleNames {
-			modules[j] = interfaces.UoWModule{
-				Name:  moduleName,
-				Units: moduleUoWs[moduleName],
-			}
-		}
-		layers[i] = interfaces.UoWLayer{
-			Index:   i,
-			Modules: modules,
-		}
-	}
-
-	return interfaces.UoWData{
-		Layers: layers,
-		Flat:   flat,
-	}
-}
-
-// buildUoWDataFromModules builds minimal UoW data from module names only.
-func buildUoWDataFromModules(moduleLayers [][]string, flat bool) interfaces.UoWData {
-	layers := make([]interfaces.UoWLayer, len(moduleLayers))
-	for i, moduleNames := range moduleLayers {
-		modules := make([]interfaces.UoWModule, len(moduleNames))
-		for j, moduleName := range moduleNames {
-			modules[j] = interfaces.UoWModule{
-				Name: moduleName,
-			}
-		}
-		layers[i] = interfaces.UoWLayer{
-			Index:   i,
-			Modules: modules,
+	// Build flat module list
+	modules := make([]interfaces.UoWModule, len(moduleOrder))
+	for i, moduleName := range moduleOrder {
+		modules[i] = interfaces.UoWModule{
+			Name:  moduleName,
+			Units: moduleUoWs[moduleName],
 		}
 	}
 
 	return interfaces.UoWData{
-		Layers: layers,
-		Flat:   flat,
+		Modules: modules,
 	}
 }

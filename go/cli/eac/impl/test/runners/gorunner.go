@@ -246,7 +246,7 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, logWri
 	}
 
 	// Build go test command
-	goTestArgs := []string{"test", "-json", "-v", "-parallel", fmt.Sprintf("%d", cfg.Parallelism)}
+	goTestArgs := []string{"test", "-json", "-v"}
 
 	// Extract Go build tags from suite filter (e.g., "@L0,@L1" -> "L0,L1")
 	// This ensures test files with //go:build constraints are compiled

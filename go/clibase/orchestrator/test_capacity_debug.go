@@ -58,8 +58,8 @@ func calculateCapacityTest(cpuCount, ramGB, roof int, turbo float64) int {
 		return roof
 	}
 
-	// Auto-detect: min(CPU, RAM/3) × turbo
-	ramCap := ramGB / 3
+	// Auto-detect: min(CPU, RAM/2) × turbo
+	ramCap := ramGB / 2
 	if ramCap < 1 {
 		ramCap = 1
 	}
@@ -76,7 +76,7 @@ func calculateCapacityTest(cpuCount, ramGB, roof int, turbo float64) int {
 	fmt.Fprintf(os.Stderr, "  [Base capacity=%d × turbo=%.2f = %d]\n", base, turbo, capacity)
 
 	// Cap at RAM limit FIRST (safety), then CPU limit
-	ramMax := ramGB / 3
+	ramMax := ramGB / 2
 	if capacity > ramMax && ramMax > 0 {
 		fmt.Fprintf(os.Stderr, "  [Turbo exceeded RAM limit: %d → %d (ramGB=%d)]\n", capacity, ramMax, ramGB)
 		capacity = ramMax

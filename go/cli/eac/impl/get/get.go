@@ -4,7 +4,7 @@
 // Group.Configuration: config
 // Group.Repository Structure: modules, components, units, dependencies, execution-order
 // Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local
-// Group.CI/CD: ci-dispatch, ci-dispatch-layers, ci-workflows
+// Group.CI/CD: ci-dispatch, ci-workflows
 // Group.Build: build-times, build-deps, artifacts
 // Group.Testing: test-results, tests, suite, test-timings
 // Group.Utilities: token-size
@@ -42,47 +42,6 @@ func init() {
 	registry.Register(Get)
 }
 
-// subcommands defines all available get subcommands.
-var subcommands = []tui.SubcommandInfo{
-	{Name: "config", Description: "Get all EAC configuration"},
-	{Name: "modules", Description: "Get all module contracts"},
-	{Name: "components", Description: "Get all components with phase and dependency info"},
-	{Name: "units", Description: "Get units of work for a framework (build|test|lint|scan)"},
-	{Name: "dependencies", Description: "Get module dependency graph"},
-	{Name: "execution-order", Description: "Get build order for modules"},
-	{Name: "files", Description: "Get repository files with module mappings"},
-	{Name: "files-by-module", Description: "Get files grouped by module"},
-	{Name: "changed-modules", Description: "Get modules affected by changes"},
-	{Name: "changed-modules-ci", Description: "Get modules requiring CI rebuild"},
-	{Name: "changed-modules-local", Description: "Get modules requiring local rebuild"},
-	{Name: "ci-dispatch", Description: "Filter modules for CI dispatch"},
-	{Name: "ci-dispatch-layers", Description: "Get CI dispatch layers"},
-	{Name: "ci-workflows", Description: "Get CI workflow configurations"},
-	{Name: "build-times", Description: "Get build timing data"},
-	{Name: "build-deps", Description: "Get build dependencies for a module"},
-	{Name: "artifacts", Description: "Get resolved artifacts for a module"},
-	{Name: "test-results", Description: "Get test execution results"},
-	{Name: "tests", Description: "Get all tests in structured format"},
-	{Name: "suite", Description: "Get test suite information"},
-	{Name: "test-timings", Description: "Get test timing data"},
-	{Name: "token-size", Description: "Estimate token counts for files"},
-	{Name: "valid-commands", Description: "Get all valid commands"},
-	{Name: "documented-commands", Description: "Get commands documented in markdown"},
-	{Name: "release-bundle", Description: "Get release bundle configuration"},
-	{Name: "release-notes", Description: "Get release notes"},
-	{Name: "release-status", Description: "Get release status"},
-	{Name: "environments", Description: "Get all environment contracts"},
-	{Name: "specs", Description: "Get specification files"},
-	{Name: "changelog", Description: "Get changelog entries"},
-	{Name: "approval-comments", Description: "Get approval comments"},
-	{Name: "book-description", Description: "Get book descriptions"},
-	{Name: "cli-release-notes", Description: "Get CLI release notes"},
-	{Name: "current-sha", Description: "Get current git SHA"},
-	{Name: "evidence-ci-runs", Description: "Get evidence CI runs"},
-	{Name: "module-ci-workflow", Description: "Get module CI workflow"},
-	{Name: "module-trigger-reason", Description: "Get module trigger reason"},
-}
-
 // printHelp prints the help for the get command using registry metadata.
 func printHelp() {
 	reg := registry.GetCommand("get")
@@ -108,29 +67,22 @@ func Get() int {
 		return 1
 	}
 
-	// Check for valid subcommand
-	switch args[0] {
-	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci",
-		"changed-modules-local", "ci-dispatch", "ci-dispatch-layers", "ci-workflows",
-		"components", "config", "dependencies", "documented-commands", "environments",
-		"execution-order", "files", "files-by-module", "modules", "release-bundle",
-		"release-notes", "release-status", "suite", "test-results", "tests", "test-timings",
-		"token-size", "units", "valid-commands", "specs", "changelog", "approval-comments",
-		"book-description", "cli-release-notes", "current-sha", "evidence-ci-runs",
-		"module-ci-workflow", "module-trigger-reason":
+	// Check for valid subcommand using dynamic discovery from registry
+	if registry.IsValidSubcommand("get", args[0]) {
 		// Handled by separate registrations in respective files
 		return 0
-	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n", args[0])
-		printHelp()
-		return 1
 	}
+
+	fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n", args[0])
+	printHelp()
+	return 1
 }
 
 // runInteractiveTUI shows the interactive TUI for subcommand selection.
 // Uses the new SelectorConsole pattern: TUI just picks a command, caller executes.
 func runInteractiveTUI() int {
-	options := tui.SubcommandsToOptions(subcommands)
+	// Get options dynamically from registry
+	options := tui.SubcommandsFromRegistry("get")
 	selected, args, cancelled := selector.RunSelector(context.Background(), options)
 
 	if cancelled || selected == "" {

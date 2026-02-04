@@ -32,9 +32,6 @@ func TestNew(t *testing.T) {
 			if s.AddedDepm == nil {
 				t.Error("AddedDepm should be initialized")
 			}
-			if s.ExecutionLayers == nil {
-				t.Error("ExecutionLayers should be initialized")
-			}
 		})
 	}
 }
@@ -94,53 +91,6 @@ func TestSetRequest(t *testing.T) {
 	}
 }
 
-func TestSetExecutionPlan(t *testing.T) {
-	tests := []struct {
-		name      string
-		layers    [][]string
-		wantCount int
-		wantSizes []int
-	}{
-		{
-			name:      "single layer",
-			layers:    [][]string{{"a", "b"}},
-			wantCount: 1,
-			wantSizes: []int{2},
-		},
-		{
-			name:      "multiple layers",
-			layers:    [][]string{{"a"}, {"b", "c"}, {"d"}},
-			wantCount: 3,
-			wantSizes: []int{1, 2, 1},
-		},
-		{
-			name:      "empty layers",
-			layers:    [][]string{},
-			wantCount: 0,
-			wantSizes: []int{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := New("build").SetExecutionPlan(tt.layers)
-
-			if s.LayerCount != tt.wantCount {
-				t.Errorf("LayerCount = %d, want %d", s.LayerCount, tt.wantCount)
-			}
-
-			sizes := s.LayerSizes()
-			if len(sizes) != len(tt.wantSizes) {
-				t.Errorf("LayerSizes length = %d, want %d", len(sizes), len(tt.wantSizes))
-			}
-			for i, size := range sizes {
-				if size != tt.wantSizes[i] {
-					t.Errorf("LayerSizes[%d] = %d, want %d", i, size, tt.wantSizes[i])
-				}
-			}
-		})
-	}
-}
 
 func TestTotalModules(t *testing.T) {
 	s := New("build").SetRequest(
@@ -262,7 +212,6 @@ func TestBuilderChaining(t *testing.T) {
 	// Test that all builder methods return *Summary for chaining
 	s := New("build").
 		SetRequest([]string{"a"}, []string{"a", "b"}).
-		SetExecutionPlan([][]string{{"a"}, {"b"}}).
 		SetFlags(Flags{TidyFirst: true}).
 		SetExecutionContext("local").
 		SetDepmStatus(DepmStatus{Verified: true, Total: 1, Resolved: []string{"b"}}).
@@ -276,9 +225,6 @@ func TestBuilderChaining(t *testing.T) {
 	}
 	if len(s.RequestedModules) != 1 {
 		t.Error("Chain broken: RequestedModules not set")
-	}
-	if s.LayerCount != 2 {
-		t.Error("Chain broken: ExecutionPlan not set")
 	}
 	if !s.Flags.TidyFirst {
 		t.Error("Chain broken: Flags not set")
@@ -428,7 +374,6 @@ func TestFormatInitLine(t *testing.T) {
 			summary: New("build").
 				SetExecutionContext("devbox").
 				SetRequest([]string{"a", "b"}, []string{"a", "b", "c"}).
-				SetExecutionPlan([][]string{{"a", "b"}, {"c"}}).
 				SetUoWCount(45).
 				SetParallelism(&ParallelismInfo{
 					Mode:             "devbox",
@@ -436,7 +381,7 @@ func TestFormatInitLine(t *testing.T) {
 					TurboBoost:       2,
 					EffectiveWorkers: 10,
 				}),
-			contains: []string{"build", "devbox", "3 modules", "2 layers", "workers:10"},
+			contains: []string{"build", "devbox", "3 modules", "workers:10"},
 		},
 		{
 			name: "build without turbo",
@@ -452,12 +397,10 @@ func TestFormatInitLine(t *testing.T) {
 			contains: []string{"build", "ci", "workers:4"},
 		},
 		{
-			name: "build flat execution",
+			name: "build parallel execution",
 			summary: New("build").
 				SetExecutionContext("local").
-				SetRequest([]string{"a", "b"}, []string{"a", "b"}).
-				SetExecutionPlan([][]string{{"a"}, {"b"}}).
-				SetFlatExecution(true),
+				SetRequest([]string{"a", "b"}, []string{"a", "b"}),
 			contains: []string{"parallel"},
 		},
 	}

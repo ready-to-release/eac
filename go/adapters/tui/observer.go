@@ -77,8 +77,6 @@ func (o *TUIObserver) onProgressUpdate(e interfaces.ProgressUpdateEvent) {
 		Running:        e.Running,
 		Completed:      e.Completed,
 		Total:          e.Total,
-		Layer:          e.CurrentLayer,
-		TotalLayers:    e.TotalLayers,
 		Roof:           e.Roof,
 		PressureTarget: e.PressureTarget,
 	})
@@ -86,6 +84,11 @@ func (o *TUIObserver) onProgressUpdate(e interfaces.ProgressUpdateEvent) {
 
 func (o *TUIObserver) onResourceStatus(e interfaces.ResourceStatusEvent) {
 	locks := make([]LockStatus, len(e.Resources))
+
+	// Extract docker memory metrics from docker-scheduler resource
+	var dockerMemPercent float64
+	var dockerAvailable bool
+
 	for i, r := range e.Resources {
 		locks[i] = LockStatus{
 			Name:     r.Name,
@@ -94,16 +97,29 @@ func (o *TUIObserver) onResourceStatus(e interfaces.ResourceStatusEvent) {
 			Used:     r.Used,
 			Waiting:  r.Waiting,
 		}
+
+		// Check for docker-scheduler to extract docker memory metrics
+		if r.Name == "docker-scheduler" && r.Capacity > 0 {
+			dockerAvailable = true
+			dockerMemPercent = float64(r.Used) / float64(r.Capacity) * 100
+		}
 	}
-	o.console.UpdateStatus(Status{Locks: locks})
+
+	o.console.UpdateStatus(Status{
+		Locks:            locks,
+		DockerMemPercent: dockerMemPercent,
+		DockerAvailable:  dockerAvailable,
+	})
 }
 
 func (o *TUIObserver) onToolStatus(e interfaces.ToolStatusEvent) {
 	o.console.UpdateStatus(Status{
-		ActiveContainers:  e.ActiveContainers,
-		UsedContainers:    e.UsedContainers,
-		ActiveSystemTools: e.ActiveSystem,
-		UsedSystemTools:   e.UsedSystem,
+		ActiveContainerTools:  e.ActiveContainerTools,
+		UsedContainerTools:    e.UsedContainerTools,
+		ActiveSystemTools:     e.ActiveSystem,
+		UsedSystemTools:       e.UsedSystem,
+		RunningContainerCount: e.ContainerInstancesRunning,
+		TotalContainerCount:   e.ContainerInstancesTotal,
 	})
 }
 
@@ -134,24 +150,29 @@ func (o *TUIObserver) onSummaryReady(e interfaces.SummaryReadyEvent) {
 
 func (o *TUIObserver) onInitSummary(e interfaces.InitSummaryEvent) {
 	// Convert to TUI InitSummary format
-	layers := make([]ExecutionLayer, len(e.Layers))
-	for i, layer := range e.Layers {
-		modules := make([]ExecutionModule, len(layer.Modules))
-		for j, mod := range layer.Modules {
-			uows := make([]UoWEntry, len(mod.Units))
-			for k, unit := range mod.Units {
-				uows[k] = UoWEntry{
-					ID:          unit.ID,
-					DisplayName: unit.DisplayName,
-					Weight:      unit.Weight,
-				}
-			}
-			modules[j] = ExecutionModule{
-				Name: mod.Name,
-				UoWs: uows,
+	modules := make([]ExecutionModule, len(e.Modules))
+	for i, mod := range e.Modules {
+		uows := make([]UoWEntry, len(mod.Units))
+		for k, unit := range mod.Units {
+			uows[k] = UoWEntry{
+				ID:          unit.ID,
+				DisplayName: unit.DisplayName,
+				Weight:      unit.Weight,
 			}
 		}
-		layers[i] = ExecutionLayer{Modules: modules}
+		modules[i] = ExecutionModule{
+			Name: mod.Name,
+			UoWs: uows,
+		}
+	}
+
+	// Convert PlannedTools
+	plannedTools := make([]PlannedTool, len(e.PlannedTools))
+	for i, tool := range e.PlannedTools {
+		plannedTools[i] = PlannedTool{
+			Name:        tool.Name,
+			IsContainer: tool.IsContainer,
+		}
 	}
 
 	o.console.SetInitSummary(&InitSummary{
@@ -160,8 +181,7 @@ func (o *TUIObserver) onInitSummary(e interfaces.InitSummaryEvent) {
 		RequestedModules:  e.RequestedModules,
 		CalculatedModules: e.ResolvedModules,
 		UoWCount:          e.TotalUnits,
-		ExecutionTree:     layers,
-		LayerCount:        len(layers),
+		ExecutionTree:     modules,
 		ParallelismMode:   e.Parallelism.Mode,
 		EffectiveWorkers:  e.Parallelism.EffectiveWorkers,
 		TurboBoost:        e.Parallelism.TurboBoost,
@@ -174,6 +194,7 @@ func (o *TUIObserver) onInitSummary(e interfaces.InitSummaryEvent) {
 			SkipDeps:     e.Flags.SkipDeps,
 			SkipDepm:     e.Flags.SkipDepm,
 		},
+		PlannedTools: plannedTools,
 	})
 }
 

@@ -108,14 +108,6 @@ func (ctx *ExecutionContext) GetAddedDependencies() []string {
 	return added
 }
 
-// GetLayers returns the dependency layers for layered execution.
-func (ctx *ExecutionContext) GetLayers() [][]string {
-	if ctx.ExecutionPlan != nil {
-		return ctx.ExecutionPlan.Layers
-	}
-	// Single layer with all monikers for non-layered execution
-	return [][]string{ctx.Config.Monikers}
-}
 
 // applySkipFilter removes modules from the list based on skip configuration.
 func applySkipFilter(monikers []string, ctx *ExecutionContext) []string {

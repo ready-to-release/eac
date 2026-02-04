@@ -140,6 +140,18 @@ func GetUnits() int {
 
 		// Apply filters
 		filtered := reports.FilterUnits(report.Units, filters.toReportFilters())
+
+		// Return units with skipped info if any components were skipped
+		if len(report.Skipped) > 0 {
+			return struct {
+				Units   []*reports.UnitInfo         `json:"units" yaml:"units"`
+				Skipped []*reports.SkippedComponent `json:"skipped" yaml:"skipped"`
+			}{
+				Units:   filtered,
+				Skipped: report.Skipped,
+			}, nil
+		}
+
 		return filtered, nil
 	})
 }

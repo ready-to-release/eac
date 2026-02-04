@@ -11,14 +11,14 @@ func TestCalculateCapacity(t *testing.T) {
 		turbo     float64
 		want      int
 	}{
-		// Basic cases - RAM/3 because each weight unit uses ~2.5GB + overhead
+		// Basic cases - RAM/2 because each weight unit uses ~1.5-2GB
 		{
 			name:      "16 CPU, 32GB RAM, no config, no turbo",
 			cpuCount:  16,
 			ramGB:     32,
 			configMax: 0,
 			turbo:     1.0,
-			want:      10, // min(16, 32/3=10) = 10
+			want:      16, // min(16, 32/2=16) = 16
 		},
 		{
 			name:      "8 CPU, 16GB RAM, no config, no turbo",
@@ -26,7 +26,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.0,
-			want:      5, // min(8, 16/3=5) = 5
+			want:      8, // min(8, 16/2=8) = 8
 		},
 		{
 			name:      "4 CPU, 8GB RAM, no config, no turbo",
@@ -34,7 +34,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     8,
 			configMax: 0,
 			turbo:     1.0,
-			want:      2, // min(4, 8/3=2) = 2
+			want:      4, // min(4, 8/2=4) = 4
 		},
 
 		// RAM-limited cases
@@ -44,7 +44,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     8,
 			configMax: 0,
 			turbo:     1.0,
-			want:      2, // min(16, 8/3=2) = 2
+			want:      4, // min(16, 8/2=4) = 4
 		},
 		{
 			name:      "8 CPU, 4GB RAM - RAM limited",
@@ -52,7 +52,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     4,
 			configMax: 0,
 			turbo:     1.0,
-			want:      1, // min(8, 4/3=1) = 1
+			want:      2, // min(8, 4/2=2) = 2
 		},
 
 		// CPU-limited cases
@@ -62,7 +62,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     32,
 			configMax: 0,
 			turbo:     1.0,
-			want:      4, // min(4, 32/3=10) = 4
+			want:      4, // min(4, 32/2=16) = 4
 		},
 		{
 			name:      "2 CPU, 16GB RAM - CPU limited",
@@ -70,7 +70,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.0,
-			want:      2, // min(2, 16/3=5) = 2
+			want:      2, // min(2, 16/2=8) = 2
 		},
 
 		// configMax (--roof) fully controls capacity
@@ -80,7 +80,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 16,
 			turbo:     1.0,
-			want:      16, // --roof=16 overrides detected=5
+			want:      16, // --roof=16 overrides detected=8
 		},
 		{
 			name:      "configMax lower than detected - uses configMax",
@@ -88,15 +88,15 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     32,
 			configMax: 4,
 			turbo:     1.0,
-			want:      4, // detected=10, configMax=4, uses 4
+			want:      4, // detected=16, configMax=4, uses 4
 		},
 		{
 			name:      "configMax equals detected",
 			cpuCount:  8,
 			ramGB:     16,
-			configMax: 5,
+			configMax: 8,
 			turbo:     1.0,
-			want:      5,
+			want:      8,
 		},
 
 		// Turbo mode - now capped at RAM limit to prevent overcommit
@@ -106,7 +106,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.25,
-			want:      5, // base=5, 5*1.25=6.25->6, but capped at ramGB/3=5 to prevent overcommit
+			want:      8, // base=8, 8*1.25=10, but capped at ramGB/2=8 to prevent overcommit
 		},
 		{
 			name:      "turbo 2.0x on 8 CPU, 16GB",
@@ -114,15 +114,15 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     2.0,
-			want:      5, // base=5, 5*2=10, but capped at ramGB/3=5 to prevent overcommit
+			want:      8, // base=8, 8*2=16, but capped at ramGB/2=8 to prevent overcommit
 		},
 		{
 			name:      "turbo 2.0x on 8 CPU with low configMax",
 			cpuCount:  8,
 			ramGB:     16,
-			configMax: 8,
+			configMax: 6,
 			turbo:     2.0,
-			want:      8, // base=5, 5*2=10, but configMax=8 caps it
+			want:      6, // --roof=6 takes precedence
 		},
 
 		// Edge cases
@@ -140,7 +140,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     1,
 			configMax: 0,
 			turbo:     1.0,
-			want:      1, // 1GB/3 = 0, but min is 1
+			want:      1, // 1GB/2 = 0, but min is 1
 		},
 		{
 			name:      "turbo with 64 cap",
@@ -195,17 +195,17 @@ func TestCalculateCapacity_RoofFullyControls(t *testing.T) {
 		t.Errorf("Large machine with --roof=8: got capacity=%d, want 8 (roof overrides detected)", got)
 	}
 
-	// Case 3: No roof (0) - should use auto-detection (RAM/3)
-	// 16GB/3 = 5, min(8, 5) = 5
+	// Case 3: No roof (0) - should use auto-detection (RAM/2)
+	// 16GB/2 = 8, min(8, 8) = 8
 	got = calculateCapacity(smallMachineCPU, smallMachineRAM, 0, 1.0)
-	if got != 5 {
-		t.Errorf("Small machine with no --roof: got capacity=%d, want 5 (auto-detected from 16GB/3)", got)
+	if got != 8 {
+		t.Errorf("Small machine with no --roof: got capacity=%d, want 8 (auto-detected from min(8 CPU, 16GB/2=8))", got)
 	}
 }
 
 // TestCalculateCapacity_16GB_8CPU validates the exact system configuration
 // described in the bug report (16GB RAM, 8 CPU cores).
-// This test should PASS after the fix - it verifies capacity=5 with turbo=1.0.
+// This test should PASS after the fix - it verifies capacity=8 with turbo=1.0.
 func TestCalculateCapacity_16GB_8CPU(t *testing.T) {
 	// User's exact system: 16GB RAM, 8 CPU cores
 	cpuCount := 8
@@ -215,12 +215,12 @@ func TestCalculateCapacity_16GB_8CPU(t *testing.T) {
 
 	capacity := calculateCapacity(cpuCount, ramGB, configMax, turbo)
 
-	// Expected: min(CPU=8, RAM/3=5) × turbo=1.0 = 5
-	// This allows 1 PDF build at a time (weight=4, uses ~8GB)
-	if capacity != 5 {
-		t.Errorf("16GB/8CPU should give capacity=5, got %d", capacity)
-		t.Logf("Expected calculation: min(8, 16/3=5) × 1.0 = 5")
-		t.Logf("This ensures only 1 PDF (weight=4, ~8GB) runs at a time")
+	// Expected: min(CPU=8, RAM/2=8) × turbo=1.0 = 8
+	// With 16GB RAM and 8 CPUs, we can run 8 parallel lightweight tasks
+	// or 2 PDF builds (weight=4 each, ~4GB each)
+	if capacity != 8 {
+		t.Errorf("16GB/8CPU should give capacity=8, got %d", capacity)
+		t.Logf("Expected calculation: min(8, 16/2=8) × 1.0 = 8")
 	}
 }
 
@@ -242,26 +242,26 @@ func TestCalculateCapacity_TurboDoesNotOvercommit(t *testing.T) {
 		{
 			name:        "turbo=1.0 baseline",
 			turbo:       1.0,
-			maxExpected: 5,
-			reason:      "base capacity is 5 (16GB/3=5)",
+			maxExpected: 8,
+			reason:      "base capacity is 8 (min(8 CPU, 16GB/2=8))",
 		},
 		{
 			name:        "turbo=2.0 should not exceed RAM limit",
 			turbo:       2.0,
-			maxExpected: 5,
-			reason:      "turbo should not exceed RAM/3=5 to prevent memory overcommit",
+			maxExpected: 8,
+			reason:      "turbo should not exceed RAM/2=8 to prevent memory overcommit",
 		},
 		{
 			name:        "turbo=3.2 should not exceed RAM limit",
 			turbo:       3.2,
-			maxExpected: 5,
-			reason:      "observed capacity=16 causes 4 PDFs (32GB) on 16GB system - MUST FAIL",
+			maxExpected: 8,
+			reason:      "turbo is capped by RAM/2=8 limit",
 		},
 		{
 			name:        "turbo=4.0 should not exceed RAM limit",
 			turbo:       4.0,
-			maxExpected: 5,
-			reason:      "even extreme turbo should respect RAM/3=5 limit",
+			maxExpected: 8,
+			reason:      "even extreme turbo should respect RAM/2=8 limit",
 		},
 	}
 
@@ -270,14 +270,12 @@ func TestCalculateCapacity_TurboDoesNotOvercommit(t *testing.T) {
 			capacity := calculateCapacity(cpuCount, ramGB, configMax, tt.turbo)
 
 			// Critical assertion: turbo should NEVER exceed RAM-based capacity
-			// RAM capacity = 16GB / 3 = 5 (each weight unit = ~2.5GB + overhead)
-			// If capacity > 5, we can schedule 4+ PDFs (16 weight units)
-			// That would require 32GB on a 16GB system → overcommit → swapping → timeout
+			// RAM capacity = 16GB / 2 = 8 (each weight unit = ~1.5-2GB)
+			// If capacity > 8, we can schedule more than RAM supports
 			if capacity > tt.maxExpected {
-				t.Errorf("Turbo should not exceed RAM limit: capacity=%d > %d (RAM/3)", capacity, tt.maxExpected)
+				t.Errorf("Turbo should not exceed RAM limit: capacity=%d > %d (RAM/2)", capacity, tt.maxExpected)
 				t.Logf("Reason: %s", tt.reason)
 				t.Logf("With capacity=%d, we could schedule %d PDFs (weight=4 each)", capacity, capacity/4)
-				t.Logf("That requires ~%dGB RAM on a 16GB system → OVERCOMMIT", (capacity/4)*8)
 			}
 		})
 	}
@@ -297,7 +295,7 @@ func TestCalculateCapacity_RoofOverridesAll(t *testing.T) {
 	// --roof should override auto-detection completely
 	if capacity != 10 {
 		t.Errorf("--roof should override: expected 10, got %d", capacity)
-		t.Logf("Detected values: CPU=%d, RAM/3=%d, but --roof=%d should win", cpuCount, ramGB/3, roof)
+		t.Logf("Detected values: CPU=%d, RAM/2=%d, but --roof=%d should win", cpuCount, ramGB/2, roof)
 	}
 
 	// Test with turbo - roof still wins

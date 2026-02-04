@@ -52,7 +52,7 @@ func aiSummaryAfterResolve(ctx *cmdframework.ExecutionContext) error {
 }
 
 // ResolveUnitSpecs generates UnitSpecs for AI analysis components.
-func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	// Get analysis type filter from config
 	analysisType := ""
 	if ctx.Config.Extra != nil {
@@ -67,12 +67,8 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec 
 		analysisTypes = []string{analysisType}
 	}
 
-	// Build dependency graph: source depends on dsl and specs
-	// Layer 0: dsl, specs, docs (can run in parallel)
-	// Layer 1: source (depends on dsl and specs)
-
-	var layer0 []workunit.UnitSpec
-	var layer1 []workunit.UnitSpec
+	// Build specs list (source depends on dsl and specs via DependsOn)
+	var specs []workunit.UnitSpec
 
 	for _, moniker := range ctx.GetExecutionMonikers() {
 		for _, aType := range analysisTypes {
@@ -94,7 +90,7 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec 
 				Metadata:      make(map[string]any),
 			}
 
-			layer0 = append(layer0, spec)
+			specs = append(specs, spec)
 		}
 
 		// Add source analysis if not filtered out
@@ -118,23 +114,16 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec 
 				Metadata: make(map[string]any),
 			}
 
-			// Only add source if we're running both dsl and specs
-			if analysisType == "" || analysisType == "source" {
-				layer1 = append(layer1, sourceSpec)
-			}
+			specs = append(specs, sourceSpec)
 		}
 	}
 
-	// Return layers
-	var layers [][]workunit.UnitSpec
-	if len(layer0) > 0 {
-		layers = append(layers, layer0)
-	}
-	if len(layer1) > 0 {
-		layers = append(layers, layer1)
+	// Set indices
+	for i := range specs {
+		specs[i].Index = i
 	}
 
-	return layers
+	return specs
 }
 
 // getAnalysisWeight returns the scheduling weight for an analysis type.

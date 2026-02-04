@@ -26,12 +26,10 @@ type completedMsg struct {
 
 // Status represents a status update from the orchestrator.
 type Status struct {
-	Phase       string
-	Running     []string
-	Completed   int
-	Total       int
-	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
-	TotalLayers int // Total number of layers (0 = not using layers)
+	Phase     string
+	Running   []string
+	Completed int
+	Total     int
 
 	// Capacity tracking (three-value model)
 	Roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
@@ -41,11 +39,19 @@ type Status struct {
 	Locks []LockStatus // Individual lock states
 
 	// Container tools (e.g., "mkdocs-build", "go-lint")
-	ActiveContainers []string
-	UsedContainers   []string
+	ActiveContainerTools []string
+	UsedContainerTools   []string
 	// System tools (e.g., "go", "docker")
 	ActiveSystemTools []string
 	UsedSystemTools   []string
+
+	// Docker memory metrics
+	DockerMemPercent float64 // Docker memory pool usage percentage (0-100)
+	DockerAvailable  bool    // Whether Docker is available
+
+	// Container instance counts (for "Containers" lamps)
+	RunningContainerCount int // Currently running container instances (lit lamps)
+	TotalContainerCount   int // Total container instances started (total lamps shown)
 }
 
 // LockStatus represents the state of a single lock.

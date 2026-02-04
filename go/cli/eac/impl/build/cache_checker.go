@@ -3,7 +3,6 @@ package build
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ready-to-release/eac/go/core/execution"
@@ -11,40 +10,33 @@ import (
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
-// CacheCheckResult represents the result of a cache verification for a component.
-// Used by background cache detection to report results to the scheduler.
-type CacheCheckResult struct {
-	Moniker   string    // Display name: module:component:tool (matches TUI tabs)
-	IsCached  bool      // True if cache hit confirmed
-	CacheTime time.Time // When the cached artifact was originally built
-	Module    string    // Module name
-	Component string    // Component name
-	Handler   string    // Tool/handler name
-}
-
-// BuildCacheVerifier implements execution.CacheVerifier for build commands.
-// It verifies cache status by checking:
-// 1. Pre-computed cachedModules set (from incremental detection)
-// 2. Module manifest existence
-// 3. Artifact integrity via hash comparison
-type BuildCacheVerifier struct {
+// UoWBuildCacheVerifier implements execution.CacheVerifier for UoW-based caching.
+// It verifies cache status at the component:tool level instead of module level.
+type UoWBuildCacheVerifier struct {
 	workspaceRoot string
-	cachedModules map[string]bool
-	cacheTimes    map[string]time.Time
+	cachedUoWs    map[string]bool      // UoW longname -> cached
+	uowCacheTimes map[string]time.Time // UoW longname -> cache time
+	cachedModules map[string]bool      // Module-level cache (aggregated from UoWs for TUI)
 }
 
-// NewBuildCacheVerifier creates a new BuildCacheVerifier.
-func NewBuildCacheVerifier(workspaceRoot string, cachedModules map[string]bool, cacheTimes map[string]time.Time) *BuildCacheVerifier {
-	return &BuildCacheVerifier{
+// NewUoWBuildCacheVerifier creates a new UoWBuildCacheVerifier.
+func NewUoWBuildCacheVerifier(
+	workspaceRoot string,
+	cachedUoWs map[string]bool,
+	uowCacheTimes map[string]time.Time,
+	cachedModules map[string]bool,
+) *UoWBuildCacheVerifier {
+	return &UoWBuildCacheVerifier{
 		workspaceRoot: workspaceRoot,
+		cachedUoWs:    cachedUoWs,
+		uowCacheTimes: uowCacheTimes,
 		cachedModules: cachedModules,
-		cacheTimes:    cacheTimes,
 	}
 }
 
-// Verify implements execution.CacheVerifier.
-// It checks if a work unit's output is cached and valid.
-func (v *BuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) (execution.CacheResult, error) {
+// Verify implements execution.CacheVerifier for UoW-based caching.
+// It checks if a specific component:tool UoW is cached and valid.
+func (v *UoWBuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec) (execution.CacheResult, error) {
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
@@ -52,71 +44,48 @@ func (v *BuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSpec)
 	default:
 	}
 
-	result := VerifyComponentCache(v.workspaceRoot, unit, v.cachedModules, v.cacheTimes)
+	longname := unit.ID.Longname()
+
+	// Check if UoW is in cached set
+	if v.cachedUoWs == nil || !v.cachedUoWs[longname] {
+		// Fall back to module-level check for backwards compatibility
+		// (module cache is aggregated from UoWs but used for TUI display)
+		if v.cachedModules != nil && v.cachedModules[unit.ID.Module] {
+			// Module is cached, but this specific UoW wasn't tracked
+			// Trust module-level cache
+			return execution.CacheResult{
+				Cached:    true,
+				CacheTime: time.Time{},
+			}, nil
+		}
+		return execution.CacheResult{Cached: false}, nil
+	}
+
+	// Verify UoW artifact integrity
+	reader := coreoutput.NewReader(v.workspaceRoot)
+	validationResult := reader.ValidateUoW(
+		workunit.ContextBuild,
+		unit.ID.Module,
+		unit.ID.Component,
+		unit.ID.Tool,
+	)
+
+	if !validationResult.ManifestExists {
+		// No manifest - trust the hash check that already passed
+		return execution.CacheResult{
+			Cached:    true,
+			CacheTime: v.uowCacheTimes[longname],
+		}, nil
+	}
+
+	if !validationResult.Valid {
+		// Artifacts invalid - not cached
+		return execution.CacheResult{Cached: false}, nil
+	}
+
+	// Confirmed cache hit
 	return execution.CacheResult{
-		Cached:    result.IsCached,
-		CacheTime: result.CacheTime,
+		Cached:    true,
+		CacheTime: v.uowCacheTimes[longname],
 	}, nil
-}
-
-// VerifyComponentCache checks if a component's module is cached and verifies artifact integrity.
-// This is the SAME logic as buildComponentWorker cache check, extracted for reuse.
-// Operates at COMPONENT granularity to match TUI tabs.
-//
-// The verification process:
-// 1. Check if module is in the pre-computed cachedModules set
-// 2. Load the module manifest from build output (if exists)
-// 3. Verify artifact integrity via hash comparison
-//
-// Returns a CacheCheckResult with IsCached=true if the cache is valid.
-func VerifyComponentCache(
-	workspaceRoot string,
-	spec workunit.UnitSpec,
-	cachedModules map[string]bool,
-	cacheTimes map[string]time.Time,
-) CacheCheckResult {
-	module := spec.ID.Module
-
-	// Build moniker to match scheduler's formatDisplayName()
-	var moniker string
-	if spec.ID.Tool != "" {
-		moniker = fmt.Sprintf("%s:%s:%s", module, spec.ID.Component, spec.ID.Tool)
-	} else {
-		moniker = fmt.Sprintf("%s:%s", module, spec.ID.Component)
-	}
-
-	result := CacheCheckResult{
-		Moniker:   moniker,
-		Module:    module,
-		Component: spec.ID.Component,
-		Handler:   spec.ID.Tool,
-		IsCached:  false,
-	}
-
-	// 1. Check if module is in cached set (pre-computed during init)
-	if cachedModules == nil || !cachedModules[module] {
-		return result
-	}
-
-	// 2. Check UoW manifests and verify artifact integrity
-	reader := coreoutput.NewReader(workspaceRoot)
-	if !reader.HasManifests(workunit.ContextBuild, module) {
-		// No manifests - trust source hash check (which already passed during init)
-		// This is a valid cache hit
-		result.IsCached = true
-		result.CacheTime = cacheTimes[module]
-		return result
-	}
-
-	// 3. Verify artifact integrity (hash check)
-	if err := reader.VerifyModuleIntegrity(workunit.ContextBuild, module); err != nil {
-		// Artifacts changed - not actually cached
-		// Don't modify cachedModules here - that's the worker's job
-		return result
-	}
-
-	// 4. Confirmed cache hit
-	result.IsCached = true
-	result.CacheTime = cacheTimes[module]
-	return result
 }

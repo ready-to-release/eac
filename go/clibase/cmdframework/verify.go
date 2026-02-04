@@ -3,7 +3,6 @@ package cmdframework
 import (
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
@@ -44,13 +43,6 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Always set/update execution context
 	summary.ExecutionContext = detectExecutionContext()
 
-	// Execution plan info
-	if ctx.ExecutionPlan != nil {
-		summary.ExecutionLayers = ctx.ExecutionPlan.Layers
-		summary.LayerCount = len(ctx.ExecutionPlan.Layers)
-	}
-	summary.FlatExecution = !ctx.Config.Layered
-
 	// Calculate UoW count using the registered provider (if available)
 	// Only use provider if UoW count wasn't already set by a hook (e.g., test framework)
 	// This allows us to show the actual UoW count, not just module count
@@ -62,18 +54,6 @@ func phaseVerify(ctx *ExecutionContext) error {
 		log.Debugf("UoW count already set by hook: %d", summary.UoWCount)
 	} else {
 		log.Debugf("No UoW count provider registered")
-	}
-
-	// Calculate component layers using the command-type-specific provider (if available)
-	// Only use provider if component layers wasn't already set by a hook
-	if summary.ComponentLayerCount == 0 {
-		provider := GetUnitLayersProvider(ctx.Config.Type)
-		if provider != nil {
-			layers := provider(ctx)
-			log.Debugf("Component layers from provider: %d layers", len(layers))
-			summary.ComponentExecutionLayers = layers
-			summary.ComponentLayerCount = len(layers)
-		}
 	}
 
 	// Set flags (merge with any existing flags from hooks)
@@ -119,16 +99,10 @@ type ArtifactValidator func(ctx *ExecutionContext) *initsummary.ArtifactValidati
 // Commands provide their own implementation based on their work items.
 type UoWCountProvider func(ctx *ExecutionContext) int
 
-// UnitLayersProvider is a function that returns the component execution layers.
-// Used to compute component layer info for the init summary display.
-type UnitLayersProvider func(ctx *ExecutionContext) [][]string
-
 var (
-	depsVerifier              DepsVerifier
-	artifactValidator         ArtifactValidator
-	uowCountProvider          UoWCountProvider
-	unitLayersProviders       = make(map[CommandType]UnitLayersProvider)
-	unitLayersProvidersMu     sync.RWMutex
+	depsVerifier      DepsVerifier
+	artifactValidator ArtifactValidator
+	uowCountProvider  UoWCountProvider
 )
 
 // SetDepsVerifier sets the global system dependency verifier function.
@@ -144,27 +118,6 @@ func SetArtifactValidator(v ArtifactValidator) {
 // SetUoWCountProvider sets the global UoW count provider function.
 func SetUoWCountProvider(p UoWCountProvider) {
 	uowCountProvider = p
-}
-
-// SetUnitLayersProvider is deprecated. Use RegisterUnitLayersProvider instead.
-// This function is kept for backward compatibility but should be removed.
-func SetUnitLayersProvider(p UnitLayersProvider) {
-	// No-op - callers should use RegisterUnitLayersProvider
-}
-
-// RegisterUnitLayersProvider registers a component layers provider for a specific command type.
-// This ensures each command type (build, test, scan, lint) uses its own provider.
-func RegisterUnitLayersProvider(cmdType CommandType, p UnitLayersProvider) {
-	unitLayersProvidersMu.Lock()
-	defer unitLayersProvidersMu.Unlock()
-	unitLayersProviders[cmdType] = p
-}
-
-// GetUnitLayersProvider returns the component layers provider for a command type.
-func GetUnitLayersProvider(cmdType CommandType) UnitLayersProvider {
-	unitLayersProvidersMu.RLock()
-	defer unitLayersProvidersMu.RUnlock()
-	return unitLayersProviders[cmdType]
 }
 
 // displayInitSummary outputs the initialization summary to console.
@@ -200,35 +153,12 @@ func convertToTUIInitSummary(ctx *ExecutionContext) *tui.InitSummary {
 		CalculatedModules: len(s.CalculatedModules),
 		AddedDepm:         len(s.AddedDepm),
 		UoWCount:          s.UoWCount,
-		FlatExecution:     s.FlatExecution,
 		OutputDir:         s.OutputDir,
 	}
 
-	// Build execution tree: layers → modules → UoWs
+	// Build execution tree: modules → UoWs
 	// Use UnitProvider to get proper IDs with Longname()
-	ts.ExecutionTree = buildExecutionTreeFromUnits(ctx, s)
-
-	// Compute layer sizes from execution tree
-	ts.LayerCount = len(s.ExecutionLayers)
-	ts.LayerSizes = make([]int, len(s.ExecutionLayers))
-	ts.ComponentsPerModLayer = make([]int, len(s.ExecutionLayers))
-
-	for i, layer := range s.ExecutionLayers {
-		ts.LayerSizes[i] = len(layer)
-	}
-
-	// Count components per module layer from ComponentExecutionLayers
-	if len(s.ComponentExecutionLayers) > 0 {
-		for i, compLayer := range s.ComponentExecutionLayers {
-			if i < len(ts.ComponentsPerModLayer) {
-				ts.ComponentsPerModLayer[i] = len(compLayer)
-			}
-		}
-	}
-
-	// Pass component layers to TUI for visualization
-	ts.ComponentLayers = s.ComponentExecutionLayers
-	ts.ComponentLayerCount = s.ComponentLayerCount
+	ts.ExecutionTree = buildExecutionTreeFromUnits(ctx)
 
 	// Parallelism info
 	if s.Parallelism != nil {
@@ -287,7 +217,7 @@ func convertToTUIInitSummary(ctx *ExecutionContext) *tui.InitSummary {
 	return ts
 }
 
-// ExtractPlannedTools extracts unique tools from component work layers.
+// ExtractPlannedTools extracts unique tools from component work units.
 // Returns a list of tools with their IsContainer status for TUI display.
 func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
 	provider := GetUnitProvider(ctx.Config.Type)
@@ -295,19 +225,16 @@ func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
 		return nil
 	}
 
-	layers := provider(ctx)
-	if len(layers) == 0 {
+	units := provider(ctx)
+	if len(units) == 0 {
 		return nil
 	}
 
 	// Track unique tools (tool name -> isContainer)
 	toolMap := make(map[string]bool)
-	for _, layer := range layers {
-		for _, unit := range layer {
-			if unit.ID.Tool != "" {
-				// Use the full tool key to ensure uniqueness
-				toolMap[unit.ID.Tool] = unit.Container
-			}
+	for _, unit := range units {
+		if unit.ID.Tool != "" {
+			toolMap[unit.ID.Tool] = unit.Container
 		}
 	}
 
@@ -323,125 +250,66 @@ func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
 	return tools
 }
 
-// buildExecutionTreeFromUnits builds the hierarchical tree: layers → modules → UoWs.
+// buildExecutionTreeFromUnits builds a flat list of modules with their UoWs.
 // Uses UnitProvider to get proper IDs with Longname() for globally unique identification.
-// Falls back to string-based parsing if UnitProvider is not available.
-func buildExecutionTreeFromUnits(ctx *ExecutionContext, s *initsummary.Summary) []tui.ExecutionLayer {
-	if len(s.ExecutionLayers) == 0 {
-		return nil
-	}
-
+func buildExecutionTreeFromUnits(ctx *ExecutionContext) []tui.ExecutionModule {
 	// Initialize Extra map if needed
 	if ctx.Config.Extra == nil {
 		ctx.Config.Extra = make(map[string]interface{})
 	}
 
-	// First check if UnitSpecs are cached (populated by UnitLayersProvider during phaseVerify)
-	// This ensures we use the same data that was used for component layers
-	// Check both the command-specific cache key (e.g., "componentWorkLayers" for build)
-	// and the generic cache key used by this function
-	if cached, ok := ctx.Config.Extra["componentWorkLayers"].([][]workunit.UnitSpec); ok && len(cached) > 0 {
-		return buildTreeFromUnitSpecs(s.ExecutionLayers, cached)
+	// Check if UnitSpecs are cached
+	if cached, ok := ctx.Config.Extra["componentWorkUnits"].([]workunit.UnitSpec); ok && len(cached) > 0 {
+		return buildModulesFromUnitSpecs(cached)
 	}
-	if cached, ok := ctx.Config.Extra["unitSpecsCache"].([][]workunit.UnitSpec); ok && len(cached) > 0 {
-		return buildTreeFromUnitSpecs(s.ExecutionLayers, cached)
+	if cached, ok := ctx.Config.Extra["unitSpecsCache"].([]workunit.UnitSpec); ok && len(cached) > 0 {
+		return buildModulesFromUnitSpecs(cached)
 	}
 
 	// Try to get UoWs from UnitProvider for proper ID generation
 	provider := GetUnitProvider(ctx.Config.Type)
 	if provider != nil {
-		unitLayers := provider(ctx)
-		if len(unitLayers) > 0 {
-			// Cache for subsequent calls (e.g., from scheduler if called again)
-			ctx.Config.Extra["unitSpecsCache"] = unitLayers
-			return buildTreeFromUnitSpecs(s.ExecutionLayers, unitLayers)
+		units := provider(ctx)
+		if len(units) > 0 {
+			// Cache for subsequent calls
+			ctx.Config.Extra["unitSpecsCache"] = units
+			return buildModulesFromUnitSpecs(units)
 		}
 	}
 
-	// Fallback: build from ComponentExecutionLayers strings (legacy path)
-	// Note: This path uses hardcoded Weight=1 and simplified ID format
-	return buildTreeFromStrings(s)
+	return nil
 }
 
-// buildTreeFromUnitSpecs builds the execution tree using UnitSpec data.
-// Uses Longname() for globally unique IDs and DisplayName() for display.
-func buildTreeFromUnitSpecs(moduleLayers [][]string, unitLayers [][]workunit.UnitSpec) []tui.ExecutionLayer {
+// buildModulesFromUnitSpecs builds module list from unit specs.
+func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []tui.ExecutionModule {
 	// Build a map of module -> UoWEntries from unit specs
 	moduleUoWs := make(map[string][]tui.UoWEntry)
-	for _, layer := range unitLayers {
-		for _, spec := range layer {
-			module := spec.ID.Module
-			entry := tui.UoWEntry{
-				ID:          spec.ID.Longname(),
-				DisplayName: spec.ID.Shortname(),
-				Weight:      spec.Weight,
-			}
-			moduleUoWs[module] = append(moduleUoWs[module], entry)
+	moduleOrder := []string{} // Track module order
+	seenModules := make(map[string]bool)
+
+	for _, spec := range units {
+		module := spec.ID.Module
+		entry := tui.UoWEntry{
+			ID:          spec.ID.Longname(),
+			DisplayName: spec.ID.Shortname(),
+			Weight:      spec.Weight,
+		}
+		moduleUoWs[module] = append(moduleUoWs[module], entry)
+
+		if !seenModules[module] {
+			seenModules[module] = true
+			moduleOrder = append(moduleOrder, module)
 		}
 	}
 
-	// Build the tree structure following module layer order
-	tree := make([]tui.ExecutionLayer, len(moduleLayers))
-	for i, moduleNames := range moduleLayers {
-		layer := tui.ExecutionLayer{
-			Modules: make([]tui.ExecutionModule, len(moduleNames)),
-		}
-		for j, moduleName := range moduleNames {
-			layer.Modules[j] = tui.ExecutionModule{
-				Name: moduleName,
-				UoWs: moduleUoWs[moduleName],
-			}
-		}
-		tree[i] = layer
-	}
-
-	return tree
-}
-
-// buildTreeFromStrings builds the execution tree from string-based ComponentExecutionLayers.
-// This is the legacy fallback path when UnitProvider is not available.
-func buildTreeFromStrings(s *initsummary.Summary) []tui.ExecutionLayer {
-	// Build a map of module -> UoW entries from ComponentExecutionLayers
-	// Components are named "module:component" or "module:component:handler"
-	// We store the full ID and extract display name (part after first colon)
-	moduleUoWs := make(map[string][]tui.UoWEntry)
-	for _, layer := range s.ComponentExecutionLayers {
-		for _, comp := range layer {
-			// Extract module name and rest from "module:component[:handler]" format
-			if idx := strings.Index(comp, ":"); idx > 0 {
-				module := comp[:idx]
-				// Store full ID and display name (everything after first colon)
-				displayName := comp[idx+1:]
-				moduleUoWs[module] = append(moduleUoWs[module], tui.UoWEntry{
-					ID:          comp,
-					DisplayName: displayName,
-					Weight:      1,
-				})
-			} else {
-				// Component without colon - use as-is (module is the component)
-				moduleUoWs[comp] = append(moduleUoWs[comp], tui.UoWEntry{
-					ID:          comp,
-					DisplayName: comp,
-					Weight:      1,
-				})
-			}
+	// Build the flat module list maintaining order
+	modules := make([]tui.ExecutionModule, len(moduleOrder))
+	for i, moduleName := range moduleOrder {
+		modules[i] = tui.ExecutionModule{
+			Name: moduleName,
+			UoWs: moduleUoWs[moduleName],
 		}
 	}
 
-	// Build the tree structure
-	tree := make([]tui.ExecutionLayer, len(s.ExecutionLayers))
-	for i, moduleNames := range s.ExecutionLayers {
-		layer := tui.ExecutionLayer{
-			Modules: make([]tui.ExecutionModule, len(moduleNames)),
-		}
-		for j, moduleName := range moduleNames {
-			layer.Modules[j] = tui.ExecutionModule{
-				Name: moduleName,
-				UoWs: moduleUoWs[moduleName],
-			}
-		}
-		tree[i] = layer
-	}
-
-	return tree
+	return modules
 }

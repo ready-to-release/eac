@@ -136,6 +136,263 @@ func stringSliceEqual(a, b []string) bool {
 	return true
 }
 
+func TestComponentType_GetPool(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want string
+	}{
+		{
+			name: "explicit host pool",
+			ct:   &ComponentType{Pool: "host"},
+			want: "host",
+		},
+		{
+			name: "explicit docker pool",
+			ct:   &ComponentType{Pool: "docker"},
+			want: "docker",
+		},
+		{
+			name: "docker requirement implies docker pool",
+			ct:   &ComponentType{Requirements: []string{"docker"}},
+			want: "docker",
+		},
+		{
+			name: "go requirement defaults to host pool",
+			ct:   &ComponentType{Requirements: []string{"go"}},
+			want: "host",
+		},
+		{
+			name: "empty component defaults to host",
+			ct:   &ComponentType{},
+			want: "host",
+		},
+		{
+			name: "explicit pool overrides requirements inference",
+			ct:   &ComponentType{Pool: "host", Requirements: []string{"docker"}},
+			want: "host",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ct.GetPool()
+			if got != tt.want {
+				t.Errorf("GetPool() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestComponentType_RequiresDocker(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want bool
+	}{
+		{
+			name: "has docker requirement",
+			ct:   &ComponentType{Requirements: []string{"go", "docker"}},
+			want: true,
+		},
+		{
+			name: "no docker requirement",
+			ct:   &ComponentType{Requirements: []string{"go", "npm"}},
+			want: false,
+		},
+		{
+			name: "empty requirements",
+			ct:   &ComponentType{},
+			want: false,
+		},
+		{
+			name: "only docker requirement",
+			ct:   &ComponentType{Requirements: []string{"docker"}},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ct.RequiresDocker()
+			if got != tt.want {
+				t.Errorf("RequiresDocker() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestComponentType_GetDockerWeight(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want int
+	}{
+		{
+			name: "explicit docker weight",
+			ct: &ComponentType{
+				Pool:      "docker",
+				Resources: &ComponentTypeResources{CPUs: 2, DockerWeight: 4},
+			},
+			want: 4,
+		},
+		{
+			name: "defaults to CPU weight for docker pool",
+			ct: &ComponentType{
+				Pool:      "docker",
+				Resources: &ComponentTypeResources{CPUs: 2},
+			},
+			want: 2,
+		},
+		{
+			name: "host only returns zero",
+			ct: &ComponentType{
+				Pool:      "host",
+				Resources: &ComponentTypeResources{CPUs: 4, DockerWeight: 2},
+			},
+			want: 0,
+		},
+		{
+			name: "inferred docker from requirements",
+			ct: &ComponentType{
+				Requirements: []string{"docker"},
+				Resources:    &ComponentTypeResources{CPUs: 3},
+			},
+			want: 3,
+		},
+		{
+			name: "no resources defaults to 1 for docker pool",
+			ct: &ComponentType{
+				Pool: "docker",
+			},
+			want: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ct.GetDockerWeight()
+			if got != tt.want {
+				t.Errorf("GetDockerWeight() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestComponentType_GetPoolAllocation(t *testing.T) {
+	tests := []struct {
+		name            string
+		ct              *ComponentType
+		wantHostWeight  int
+		wantDockerWeight int
+		wantIsContainer bool
+	}{
+		{
+			name: "host only component",
+			ct: &ComponentType{
+				Pool:      "host",
+				Resources: &ComponentTypeResources{CPUs: 2},
+			},
+			wantHostWeight:   2,
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+		{
+			name: "container component",
+			ct: &ComponentType{
+				Pool:      "docker",
+				Resources: &ComponentTypeResources{CPUs: 4, DockerWeight: 4},
+			},
+			wantHostWeight:   4,
+			wantDockerWeight: 4,
+			wantIsContainer:  true,
+		},
+		{
+			name: "container with different weights",
+			ct: &ComponentType{
+				Pool:      "docker",
+				Resources: &ComponentTypeResources{CPUs: 2, DockerWeight: 4},
+			},
+			wantHostWeight:   2,
+			wantDockerWeight: 4,
+			wantIsContainer:  true,
+		},
+		{
+			name:             "default component",
+			ct:               &ComponentType{},
+			wantHostWeight:   1,
+			wantDockerWeight: 0,
+			wantIsContainer:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			alloc := tt.ct.GetPoolAllocation()
+			if alloc.HostWeight != tt.wantHostWeight {
+				t.Errorf("HostWeight = %v, want %v", alloc.HostWeight, tt.wantHostWeight)
+			}
+			if alloc.DockerWeight != tt.wantDockerWeight {
+				t.Errorf("DockerWeight = %v, want %v", alloc.DockerWeight, tt.wantDockerWeight)
+			}
+			if alloc.IsContainer() != tt.wantIsContainer {
+				t.Errorf("IsContainer() = %v, want %v", alloc.IsContainer(), tt.wantIsContainer)
+			}
+		})
+	}
+}
+
+func TestComponentType_GetAmp(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want float64
+	}{
+		{
+			name: "returns explicit amp value",
+			ct:   &ComponentType{Amp: 1.5},
+			want: 1.5,
+		},
+		{
+			name: "returns 1.0 when amp is zero",
+			ct:   &ComponentType{Amp: 0},
+			want: 1.0,
+		},
+		{
+			name: "returns 1.0 when amp is not set",
+			ct:   &ComponentType{},
+			want: 1.0,
+		},
+		{
+			name: "returns amp value of 2.0",
+			ct:   &ComponentType{Amp: 2.0},
+			want: 2.0,
+		},
+		{
+			name: "returns amp value less than 1",
+			ct:   &ComponentType{Amp: 0.5},
+			want: 0.5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ct.GetAmp()
+			if got != tt.want {
+				t.Errorf("GetAmp() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	// Test nil receiver
+	t.Run("nil receiver returns 1.0", func(t *testing.T) {
+		var ct *ComponentType
+		if got := ct.GetAmp(); got != 1.0 {
+			t.Errorf("nil.GetAmp() = %v, want 1.0", got)
+		}
+	})
+}
+
 // TestNewComponentTypesWithToolChains validates that the new docs-pdf and docs-site
 // component types have proper tool chains configured.
 func TestNewComponentTypesWithToolChains(t *testing.T) {

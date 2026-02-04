@@ -25,6 +25,13 @@ type Console interface {
 	// Status Updates
 	UpdateStatus(status Status)
 
+	// Configuration
+	// StatusRefreshInterval returns how often the orchestrator should send status updates.
+	// The orchestrator should set up a ticker and call UpdateStatus at this interval
+	// to keep the TUI responsive even during idle periods.
+	// Returns 0 if no periodic refresh is needed.
+	StatusRefreshInterval() time.Duration
+
 	// Phase Management
 	SetPhase(phase Phase)
 	CompletePhase(phase Phase, success bool, summary string)
@@ -79,11 +86,12 @@ type Config struct {
 // This is passed to console.NewModel to avoid global state and enable testing.
 type TUIConfig struct {
 	// Timeouts
-	MetricsInterval  time.Duration // How often to refresh CPU/memory metrics (default: 500ms)
-	MinDisplayTime   time.Duration // Minimum time to show completion state (default: 1500ms)
-	ExitCountdown    time.Duration // Exit countdown duration (default: 10s)
-	FreezeCountdown  time.Duration // Extended countdown when Freeze clicked (default: 120s)
-	AutoScrollResume time.Duration // Auto-scroll resume delay (default: 8s)
+	MetricsInterval       time.Duration // How often to refresh CPU/memory metrics (default: 500ms)
+	StatusRefreshInterval time.Duration // How often orchestrator should send status updates (default: 250ms)
+	MinDisplayTime        time.Duration // Minimum time to show completion state (default: 1500ms)
+	ExitCountdown         time.Duration // Exit countdown duration (default: 10s)
+	FreezeCountdown       time.Duration // Extended countdown when Freeze clicked (default: 120s)
+	AutoScrollResume      time.Duration // Auto-scroll resume delay (default: 8s)
 
 	// Layout
 	MaxTabs           int // Maximum visible tabs before scrolling (default: 36)
@@ -100,11 +108,12 @@ type TUIConfig struct {
 func DefaultTUIConfig() *TUIConfig {
 	return &TUIConfig{
 		// Timeouts
-		MetricsInterval:  500 * time.Millisecond,
-		MinDisplayTime:   1500 * time.Millisecond,
-		ExitCountdown:    10 * time.Second,
-		FreezeCountdown:  120 * time.Second,
-		AutoScrollResume: 8 * time.Second,
+		MetricsInterval:       500 * time.Millisecond,
+		StatusRefreshInterval: 250 * time.Millisecond,
+		MinDisplayTime:        1500 * time.Millisecond,
+		ExitCountdown:         10 * time.Second,
+		FreezeCountdown:       120 * time.Second,
+		AutoScrollResume:      8 * time.Second,
 
 		// Layout
 		MaxTabs:           36,
@@ -139,12 +148,10 @@ type Line struct {
 
 // Status represents a status update from the orchestrator.
 type Status struct {
-	Phase       string
-	Running     []string
-	Completed   int
-	Total       int
-	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
-	TotalLayers int // Total number of layers (0 = not using layers)
+	Phase     string
+	Running   []string
+	Completed int
+	Total     int
 
 	// Capacity tracking for the three-value model:
 	// - Running: sum of weights currently executing (derived from UoW states)
@@ -160,11 +167,19 @@ type Status struct {
 	Locks []LockStatus // Individual lock states
 
 	// Container tools (e.g., "mkdocs-build", "go-lint")
-	ActiveContainers []string
-	UsedContainers   []string
+	ActiveContainerTools []string
+	UsedContainerTools   []string
 	// System tools (e.g., "go", "docker")
 	ActiveSystemTools []string
 	UsedSystemTools   []string
+
+	// Docker memory metrics (from dual-pool scheduler)
+	DockerMemPercent float64 // Docker memory pool usage percentage (0-100)
+	DockerAvailable  bool    // Whether Docker is available
+
+	// Container instance counts (for "Containers" lamps)
+	RunningContainerCount int // Currently running container instances (lit lamps)
+	TotalContainerCount   int // Total container instances started (total lamps shown)
 }
 
 // LockStatus represents the state of a single lock.
@@ -250,16 +265,8 @@ type InitSummary struct {
 	// UoW count - total units of work to schedule
 	UoWCount int
 
-	// Execution tree - for visual tree rendering
-	ExecutionTree         []ExecutionLayer // Full tree: module layers -> modules -> components
-	LayerCount            int              // Number of module execution layers
-	LayerSizes            []int            // Number of modules per layer
-	ComponentsPerModLayer []int            // Number of components per module layer
-	FlatExecution         bool             // True if running all layers in parallel
-
-	// Component layers - components grouped by internal dependency order
-	ComponentLayers     [][]string // Component IDs grouped by dependency layer
-	ComponentLayerCount int        // Number of component layers
+	// Execution tree - modules and their components
+	ExecutionTree []ExecutionModule
 
 	// Parallelism
 	ParallelismMode  string // "ci" or "devbox"
@@ -303,11 +310,6 @@ type InitSummary struct {
 	PlannedTools []PlannedTool
 }
 
-// ExecutionLayer represents a single execution layer with its modules.
-type ExecutionLayer struct {
-	Modules []ExecutionModule
-}
-
 // UoWEntry represents a unit of work with its globally unique ID.
 type UoWEntry struct {
 	ID          string // UnitIDPort.Longname() - the canonical key (context:module:component:tool[:extra])
@@ -315,7 +317,7 @@ type UoWEntry struct {
 	Weight      int    // Scheduling weight for resource allocation
 }
 
-// ExecutionModule represents a module and its UoWs within a layer.
+// ExecutionModule represents a module and its UoWs.
 type ExecutionModule struct {
 	Name string     // Module name (e.g., "eac-commands")
 	UoWs []UoWEntry // Units of work with their globally unique IDs

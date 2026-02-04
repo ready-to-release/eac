@@ -46,6 +46,10 @@ type GlobalSemaphore struct {
 	registry      *locktracker.Registry
 	lockID        string
 
+	// Custom file names (defaults to stateFile/stateLockFile if empty)
+	stateFileName string
+	lockFileName  string
+
 	mu          sync.Mutex
 	allocations map[string]int // local: allocID -> weight
 	closed      bool
@@ -97,12 +101,21 @@ func NewGlobalSemaphore(workspaceRoot string, capacity int, registry *locktracke
 
 // signalHandler listens for signals and cleans up allocations.
 func (gs *GlobalSemaphore) signalHandler() {
+	// Capture the channel reference under the mutex
+	gs.mu.Lock()
+	sigClose := gs.sigClose
+	gs.mu.Unlock()
+
+	if sigClose == nil {
+		return
+	}
+
 	select {
 	case <-gs.sigChan:
 		// On signal, release all allocations then stop listening
 		gs.Close()
 		signal.Stop(gs.sigChan)
-	case <-gs.sigClose:
+	case <-sigClose:
 		// Normal close, stop listening
 		signal.Stop(gs.sigChan)
 	}
@@ -221,9 +234,25 @@ func (gs *GlobalSemaphore) Close() {
 	}
 }
 
+// getStateFileName returns the state file name to use.
+func (gs *GlobalSemaphore) getStateFileName() string {
+	if gs.stateFileName != "" {
+		return gs.stateFileName
+	}
+	return stateFile
+}
+
+// getLockFileName returns the lock file name to use.
+func (gs *GlobalSemaphore) getLockFileName() string {
+	if gs.lockFileName != "" {
+		return gs.lockFileName
+	}
+	return stateLockFile
+}
+
 // tryAcquireInternal attempts to acquire weight atomically.
 func (gs *GlobalSemaphore) tryAcquireInternal(weight, capacity int) (string, bool, int) {
-	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, stateLockFile))
+	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, gs.getLockFileName()))
 	if err := lock.Lock(); err != nil {
 		return "", false, 0
 	}
@@ -258,7 +287,7 @@ func (gs *GlobalSemaphore) tryAcquireInternal(weight, capacity int) (string, boo
 
 // releaseInternal removes an allocation from global state.
 func (gs *GlobalSemaphore) releaseInternal(allocID string) int {
-	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, stateLockFile))
+	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, gs.getLockFileName()))
 	if err := lock.Lock(); err != nil {
 		return 0
 	}
@@ -278,7 +307,7 @@ func (gs *GlobalSemaphore) releaseInternal(allocID string) int {
 
 // cleanStale removes stale allocations from dead processes.
 func (gs *GlobalSemaphore) cleanStale() {
-	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, stateLockFile))
+	lock := flock.New(filepath.Join(gs.workspaceRoot, stateDir, gs.getLockFileName()))
 	if err := lock.Lock(); err != nil {
 		return
 	}
@@ -321,7 +350,7 @@ func isProcessAlive(pid int) bool {
 }
 
 func (gs *GlobalSemaphore) readState() *State {
-	path := filepath.Join(gs.workspaceRoot, stateDir, stateFile)
+	path := filepath.Join(gs.workspaceRoot, stateDir, gs.getStateFileName())
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return &State{Allocations: make(map[string]*Allocation)}
@@ -337,7 +366,7 @@ func (gs *GlobalSemaphore) readState() *State {
 }
 
 func (gs *GlobalSemaphore) writeState(state *State) {
-	path := filepath.Join(gs.workspaceRoot, stateDir, stateFile)
+	path := filepath.Join(gs.workspaceRoot, stateDir, gs.getStateFileName())
 	data, _ := json.Marshal(state)
 	os.WriteFile(path, data, 0o644)
 }

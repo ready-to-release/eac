@@ -69,9 +69,9 @@ func (s *Section) SetSelectedUnit(unit *shared.UnitDetails) {
 	s.selected.SetUnit(unit)
 }
 
-// SetLayers updates the execution tree layers.
-func (s *Section) SetLayers(layers []shared.ExecutionLayer) {
-	s.tree.SetLayers(layers)
+// SetModules updates the execution tree modules.
+func (s *Section) SetModules(modules []shared.ExecutionModule) {
+	s.tree.SetModules(modules)
 }
 
 // SetCollapsed sets whether the section is collapsed.

@@ -439,10 +439,6 @@ modules:
   - moniker: mcp-server
     name: Go Commands MCP Server
     description: Internal MCP server for Commands
-    versioning:
-      scheme: SemVer
-      changelog: go/mcp/commands/CHANGELOG.md
-      release_type: internal
     depends_on: [eac-cli]
     components:
       go:

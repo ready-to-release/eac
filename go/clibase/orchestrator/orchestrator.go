@@ -39,13 +39,11 @@ type Orchestrator struct {
 	tuiCancel  context.CancelFunc
 
 	// TUI status tracking (protected by tuiMu)
-	tuiMu          sync.Mutex
-	tuiRunning     []string
-	tuiCompleted   int
-	tuiTotal       int
-	tuiLayer       int  // Current layer (1-indexed, 0 = not using layers)
-	tuiTotalLayers int  // Total layers (0 = not using layers)
-	tuiStarted     bool // True once StartTUI has been called
+	tuiMu        sync.Mutex
+	tuiRunning   []string
+	tuiCompleted int
+	tuiTotal     int
+	tuiStarted   bool // True once StartTUI has been called
 
 	// Component results from last execution (for detailed reporting)
 	lastUnitResults []UnitResult
@@ -123,8 +121,6 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 	o.tuiTotal = len(allMonikers)
 	o.tuiCompleted = 0
 	o.tuiRunning = nil
-	o.tuiLayer = 0
-	o.tuiTotalLayers = len(layers)
 	o.tuiMu.Unlock()
 
 	// Start TUI console if enabled (lifecycle management)
@@ -134,12 +130,10 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 
 	// Emit initial progress event to all observers
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      nil,
-		Completed:    0,
-		Total:        len(allMonikers),
-		CurrentLayer: 0,
-		TotalLayers:  len(layers),
+		Time:      time.Now(),
+		Running:   nil,
+		Completed: 0,
+		Total:     len(allMonikers),
 	})
 
 	// Print header with layer info
@@ -163,11 +157,6 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 		if len(layerMonikers) == 0 {
 			continue
 		}
-
-		// Update layer tracking
-		o.tuiMu.Lock()
-		o.tuiLayer = layerIdx + 1 // 1-indexed
-		o.tuiMu.Unlock()
 
 		fmt.Fprintf(o.orchestratorOut, "Layer %d: %s%s", layerIdx+1, formatMonikerList(layerMonikers), LineEnding)
 
@@ -234,8 +223,6 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	o.tuiTotal = len(monikers)
 	o.tuiCompleted = 0
 	o.tuiRunning = nil
-	o.tuiLayer = 0       // Not using layers
-	o.tuiTotalLayers = 0 // Not using layers
 	o.tuiMu.Unlock()
 
 	// Start TUI console if enabled (lifecycle management)
@@ -245,12 +232,10 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 
 	// Emit initial progress event to all observers
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      nil,
-		Completed:    0,
-		Total:        len(monikers),
-		CurrentLayer: 0,
-		TotalLayers:  0,
+		Time:      time.Now(),
+		Running:   nil,
+		Completed: 0,
+		Total:     len(monikers),
 	})
 
 	// Print header (use display names for cleaner output)
@@ -573,8 +558,6 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 	copy(running, o.tuiRunning)
 	completed := o.tuiCompleted
 	total := o.tuiTotal
-	layer := o.tuiLayer
-	totalLayers := o.tuiTotalLayers
 	o.tuiMu.Unlock()
 
 	// Emit events to observers
@@ -583,12 +566,10 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 		ID:   moniker,
 	})
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      running,
-		Completed:    completed,
-		Total:        total,
-		CurrentLayer: layer,
-		TotalLayers:  totalLayers,
+		Time:      time.Now(),
+		Running:   running,
+		Completed: completed,
+		Total:     total,
 	})
 }
 
@@ -607,8 +588,6 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int) {
 	copy(running, o.tuiRunning)
 	completed := o.tuiCompleted
 	total := o.tuiTotal
-	layer := o.tuiLayer
-	totalLayers := o.tuiTotalLayers
 	o.tuiMu.Unlock()
 
 	// Emit events to observers
@@ -618,12 +597,10 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int) {
 		ExitCode: exitCode,
 	})
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      running,
-		Completed:    completed,
-		Total:        total,
-		CurrentLayer: layer,
-		TotalLayers:  totalLayers,
+		Time:      time.Now(),
+		Running:   running,
+		Completed: completed,
+		Total:     total,
 	})
 }
 
@@ -744,24 +721,29 @@ func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
 	}
 
 	// Convert TUI InitSummary to observer event
-	layers := make([]interfaces.LayerInfo, len(data.ExecutionTree))
-	for i, layer := range data.ExecutionTree {
-		modules := make([]interfaces.ModuleInfo, len(layer.Modules))
-		for j, mod := range layer.Modules {
-			units := make([]interfaces.UnitInfo, len(mod.UoWs))
-			for k, uow := range mod.UoWs {
-				units[k] = interfaces.UnitInfo{
-					ID:          uow.ID,
-					DisplayName: uow.DisplayName,
-					Weight:      uow.Weight,
-				}
-			}
-			modules[j] = interfaces.ModuleInfo{
-				Name:  mod.Name,
-				Units: units,
+	modules := make([]interfaces.ModuleInfo, len(data.ExecutionTree))
+	for i, mod := range data.ExecutionTree {
+		units := make([]interfaces.UnitInfo, len(mod.UoWs))
+		for j, uow := range mod.UoWs {
+			units[j] = interfaces.UnitInfo{
+				ID:          uow.ID,
+				DisplayName: uow.DisplayName,
+				Weight:      uow.Weight,
 			}
 		}
-		layers[i] = interfaces.LayerInfo{Modules: modules}
+		modules[i] = interfaces.ModuleInfo{
+			Name:  mod.Name,
+			Units: units,
+		}
+	}
+
+	// Convert PlannedTools to interface type
+	plannedTools := make([]interfaces.PlannedToolInfo, len(data.PlannedTools))
+	for i, tool := range data.PlannedTools {
+		plannedTools[i] = interfaces.PlannedToolInfo{
+			Name:        tool.Name,
+			IsContainer: tool.IsContainer,
+		}
 	}
 
 	o.emit(interfaces.InitSummaryEvent{
@@ -771,7 +753,7 @@ func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
 		RequestedModules: data.RequestedModules,
 		ResolvedModules:  data.CalculatedModules,
 		TotalUnits:       data.UoWCount,
-		Layers:           layers,
+		Modules:          modules,
 		Parallelism: interfaces.ParallelismInfo{
 			Mode:             data.ParallelismMode,
 			EffectiveWorkers: data.EffectiveWorkers,
@@ -786,6 +768,7 @@ func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
 			SkipDeps:     data.Flags.SkipDeps,
 			SkipDepm:     data.Flags.SkipDepm,
 		},
+		PlannedTools: plannedTools,
 	})
 }
 
@@ -965,8 +948,6 @@ func (o *Orchestrator) RunUnitsLayered(layers [][]workunit.UnitSpec, worker Unit
 	o.tuiTotal = len(allWork)
 	o.tuiCompleted = 0
 	o.tuiRunning = nil
-	o.tuiLayer = 0
-	o.tuiTotalLayers = len(layers)
 	o.tuiMu.Unlock()
 
 	// Start TUI console if enabled (lifecycle management)
@@ -976,12 +957,10 @@ func (o *Orchestrator) RunUnitsLayered(layers [][]workunit.UnitSpec, worker Unit
 
 	// Emit initial progress event to all observers
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      nil,
-		Completed:    0,
-		Total:        len(allWork),
-		CurrentLayer: 0,
-		TotalLayers:  len(layers),
+		Time:      time.Now(),
+		Running:   nil,
+		Completed: 0,
+		Total:     len(allWork),
 	})
 
 	// Print header
@@ -1005,11 +984,6 @@ func (o *Orchestrator) RunUnitsLayered(layers [][]workunit.UnitSpec, worker Unit
 		if len(layerWork) == 0 {
 			continue
 		}
-
-		// Update layer tracking
-		o.tuiMu.Lock()
-		o.tuiLayer = layerIdx + 1
-		o.tuiMu.Unlock()
 
 		// Format layer info
 		layerModules := getLayerModules(layerWork)
@@ -1106,8 +1080,6 @@ func (o *Orchestrator) RunUnitsParallel(work []workunit.UnitSpec, worker UnitWor
 	o.tuiTotal = len(work)
 	o.tuiCompleted = 0
 	o.tuiRunning = nil
-	o.tuiLayer = 0
-	o.tuiTotalLayers = 0
 	o.tuiMu.Unlock()
 
 	// Start TUI console if enabled (lifecycle management)
@@ -1117,12 +1089,10 @@ func (o *Orchestrator) RunUnitsParallel(work []workunit.UnitSpec, worker UnitWor
 
 	// Emit initial progress event to all observers
 	o.emit(interfaces.ProgressUpdateEvent{
-		Time:         time.Now(),
-		Running:      nil,
-		Completed:    0,
-		Total:        len(work),
-		CurrentLayer: 0,
-		TotalLayers:  0,
+		Time:      time.Now(),
+		Running:   nil,
+		Completed: 0,
+		Total:     len(work),
 	})
 
 	// Print header

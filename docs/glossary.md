@@ -10,7 +10,7 @@ Definitions of key terms and concepts used throughout the documentation.
 
 A document capturing an important architectural decision, including context, decision, and consequences.
 
-See [Decision Records](./reference/repository/decision-records/index.md).
+See [Decision Records](./reference/eac/decision-records/index.md).
 
 ### Artifact
 
@@ -42,7 +42,7 @@ Commands: [pipeline run](./reference/eac/commands/pipeline/run.md), [pipeline st
 
 A versioning scheme based on dates (e.g., `module-name/2024.01.15`).
 
-Used for module releases. See [Versioning](./reference/repository/continuous-delivery/changelog/versioning.md).
+Used for module releases. See [Versioning](./reference/eac/continuous-delivery/changelog/versioning.md).
 
 ### Category
 
@@ -54,7 +54,7 @@ See [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md).
 
 Automated practices for integrating code changes and deploying to production.
 
-See [Continuous Delivery](./reference/repository/continuous-delivery/index.md).
+See [Continuous Delivery](./reference/eac/continuous-delivery/index.md).
 
 ### Compliance-Velocity Paradox
 
@@ -96,7 +96,7 @@ Commands: [get dependencies](./reference/eac/commands/get/dependencies.md), [sho
 ### Diataxis
 
 A documentation framework organizing content into tutorials, how-to guides, technical reference,
-and explanation. See [DR-004](./reference/repository/decision-records/dr004.md).
+and explanation. See [DR-004](./reference/eac/decision-records/dr004.md).
 
 ### DORA Metrics
 
@@ -166,7 +166,7 @@ Used throughout commands to reference modules.
 
 A repository containing multiple related modules managed together.
 
-See [DR-001](./reference/repository/decision-records/dr001.md).
+See [DR-001](./reference/eac/decision-records/dr001.md).
 
 ---
 
@@ -212,7 +212,7 @@ A complete inventory of components in a software product. Command: [scan](./refe
 
 ### SemVer (Semantic Versioning)
 
-A versioning scheme using MAJOR.MINOR.PATCH (e.g., `1.2.3`). See [Versioning](./reference/repository/continuous-delivery/changelog/versioning.md).
+A versioning scheme using MAJOR.MINOR.PATCH (e.g., `1.2.3`). See [Versioning](./reference/eac/continuous-delivery/changelog/versioning.md).
 
 ### Specification
 
@@ -240,7 +240,7 @@ A reusable document structure with placeholder variables for generating document
 
 ### Trunk-Based Development
 
-A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/repository/decision-records/dr002.md).
+A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/eac/decision-records/dr002.md).
 
 ---
 
@@ -365,5 +365,5 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 - [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md) - Command organization
 - [Naming Conventions](./reference/eac/commands/overview/naming-conventions.md) - Command naming patterns
 - [R2R and EAC](./reference/eac/architecture/index.md) - System architecture
-- [Decision Records](./reference/repository/decision-records/index.md) - Architectural decisions
+- [Decision Records](./reference/eac/decision-records/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy

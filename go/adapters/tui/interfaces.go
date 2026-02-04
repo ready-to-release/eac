@@ -44,10 +44,7 @@ type SummaryData = tuicontract.SummaryData
 // InitSummary holds structured init summary data.
 type InitSummary = tuicontract.InitSummary
 
-// ExecutionLayer represents a single execution layer with its modules.
-type ExecutionLayer = tuicontract.ExecutionLayer
-
-// ExecutionModule represents a module and its UoWs within a layer.
+// ExecutionModule represents a module and its UoWs.
 type ExecutionModule = tuicontract.ExecutionModule
 
 // UoWEntry represents a unit of work with its globally unique ID.

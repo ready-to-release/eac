@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/uow-manifest/0.1.0",
+  "title": "UoW Manifest Schema",
+  "description": "Schema for Unit of Work manifests. Stored at out/{context}/{module}/{component}_{tool}/uow.manifest.json. Supports build, test, lint, and scan contexts with unified structure.",
+  "type": "object",
+  "properties": {
+    "context": {
+      "type": "string",
+      "enum": ["build", "test", "lint", "scan"],
+      "description": "Operation context"
+    },
+    "module": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Module moniker"
+    },
+    "component": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Component name (e.g., go, docker, typescript)"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Tool/handler name (e.g., go, gotest, trivy-vuln, go-lint). May be empty for some contexts."
+    },
+    "exit_code": {
+      "type": "integer",
+      "description": "Exit code of tool execution (0 = success, >0 = failure, -1 = cached)"
+    },
+    "input_hash": {
+      "type": "string",
+      "description": "Hash of inputs. Empty for NoOp UoWs."
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 execution start timestamp"
+    },
+    "duration": {
+      "type": "integer",
+      "description": "Execution duration in nanoseconds"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" },
+      "description": "Output artifacts. Empty for NoOp UoWs and non-artifact-producing contexts (lint, some tests)."
+    },
+    "output_hash": {
+      "type": "string",
+      "description": "Hash of all artifact hashes. Empty for NoOp UoWs."
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version"
+    },
+    "noop": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if UoW intentionally produces no output. Cache detection treats NoOp UoWs as always up-to-date if exit_code is 0. Used for placeholder UoWs like modules with no buildable components, no tests, no lintable code, or non-scannable components."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Context-specific key-value pairs. For NoOp UoWs, typically contains 'reason' key."
+    }
+  },
+  "required": ["context", "module", "component", "tool", "exit_code", "executed_at", "version"],
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique artifact ID within UoW" },
+        "path": { "type": "string", "description": "Relative path from workspace root" },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "size": { "type": "integer", "minimum": 0 },
+        "type": { "type": "string", "description": "Artifact type (binary, report, coverage, evidence)" }
+      },
+      "required": ["id", "path"]
+    }
+  }
+}

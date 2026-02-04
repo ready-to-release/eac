@@ -240,21 +240,9 @@ func TestModuleDependency_Struct(t *testing.T) {
 
 func TestExecutionPlan_Struct(t *testing.T) {
 	plan := ExecutionPlan{
-		Layers: [][]string{
-			{"mod-c", "mod-d"},
-			{"mod-b"},
-			{"mod-a"},
-		},
 		ExecutionOrder: []string{"mod-c", "mod-d", "mod-b", "mod-a"},
-		LayerCount:     3,
 	}
 
-	if len(plan.Layers) != 3 {
-		t.Errorf("len(Layers) = %d, want 3", len(plan.Layers))
-	}
-	if plan.LayerCount != 3 {
-		t.Errorf("LayerCount = %d, want 3", plan.LayerCount)
-	}
 	if len(plan.ExecutionOrder) != 4 {
 		t.Errorf("len(ExecutionOrder) = %d, want 4", len(plan.ExecutionOrder))
 	}

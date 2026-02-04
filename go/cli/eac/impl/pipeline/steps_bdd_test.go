@@ -122,7 +122,7 @@ func moduleHasUncommittedChanges(ctx *eacgodog.TestContext, moniker string) erro
 
 	// Commit only this module's files first so they're tracked
 	modulePath := fmt.Sprintf("go/%s", moniker)
-	cmd := exec.Command("git", "add", modulePath, ".r2r", ".github")
+	cmd := exec.Command("git", "add", modulePath, ".eac", ".github")
 	cmd.Dir = ctx.IsolatedDir
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to stage module files: %w", err)
@@ -155,7 +155,7 @@ func moduleHasNoChanges(ctx *eacgodog.TestContext, moniker string) error {
 
 	// Commit only this module's files (not other changes that might exist)
 	modulePath := fmt.Sprintf("go/%s", moniker)
-	cmd := exec.Command("git", "add", modulePath, ".r2r", ".github")
+	cmd := exec.Command("git", "add", modulePath, ".eac", ".github")
 	cmd.Dir = ctx.IsolatedDir
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to stage module files: %w", err)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -306,11 +307,13 @@ func ValidateArtifactsTargetOnly(
 	targetOS, targetArch string,
 	workspaceRoot string,
 ) (*ValidationResults, error) {
-	// Load per-module manifest from UoW to get requested artifacts and platform info
+	// Get requested artifacts from UoW manifests via coreoutput.Reader
+	// Note: UoW manifests track actual artifacts produced, not "requested" artifacts
+	// The validation logic handles empty requestedArtifacts as "validate all"
 	var requestedArtifacts []string
-	manifest, err := GetModuleManifestFromUoWs(workspaceRoot, workunit.ContextBuild, targetModule, "")
-	if err == nil && manifest != nil {
-		requestedArtifacts = manifest.GetRequestedArtifacts()
+	reader := coreoutput.NewReader(workspaceRoot)
+	if moduleView, err := reader.GetModule(workunit.ContextBuild, targetModule); err == nil && moduleView != nil {
+		requestedArtifacts = extractRequestedArtifactsFromModuleView(moduleView)
 	}
 
 	// Validate only the target module
@@ -350,12 +353,12 @@ func ValidateArtifactsWithDependencies(
 		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	// Load per-module manifests from UoWs to get requested artifacts and platform info
-	moduleManifests := make(map[string]*ModuleManifest)
+	// Load module views from UoW manifests to get artifacts and platform info
+	reader := coreoutput.NewReader(workspaceRoot)
+	moduleViews := make(map[string]*coreoutput.ModuleView)
 	for moniker := range allModules {
-		manifest, err := GetModuleManifestFromUoWs(workspaceRoot, workunit.ContextBuild, moniker, "")
-		if err == nil && manifest != nil {
-			moduleManifests[moniker] = manifest
+		if moduleView, err := reader.GetModule(workunit.ContextBuild, moniker); err == nil && moduleView != nil {
+			moduleViews[moniker] = moduleView
 		}
 	}
 
@@ -366,18 +369,18 @@ func ValidateArtifactsWithDependencies(
 	}
 
 	for moniker := range allModules {
-		// Get requested artifacts from per-module manifest
+		// Get requested artifacts from module view
 		var requestedArtifacts []string
-		if manifest, ok := moduleManifests[moniker]; ok {
-			requestedArtifacts = manifest.GetRequestedArtifacts()
+		if moduleView, ok := moduleViews[moniker]; ok {
+			requestedArtifacts = extractRequestedArtifactsFromModuleView(moduleView)
 		}
 
 		// For dependencies, use the platform from manifest (where they were built)
 		// This supports cross-platform CI (e.g., Linux build with --all, Windows test)
 		resolveOS, resolveArch := targetOS, targetArch
 		if moniker != targetModule {
-			if manifest, ok := moduleManifests[moniker]; ok {
-				if platforms := manifest.GetPlatforms(); len(platforms) > 0 {
+			if moduleView, ok := moduleViews[moniker]; ok {
+				if platforms := extractPlatformsFromModuleView(moduleView); len(platforms) > 0 {
 					resolveOS = platforms[0].OS
 					resolveArch = platforms[0].Arch
 				}
@@ -583,4 +586,112 @@ func DetermineRequestedArtifacts(
 
 	// Delegate to core config - single source of truth for artifact resolution
 	return cfg.GetBuildArtifactIDs(module.Moniker, buildAll)
+}
+
+// extractRequestedArtifactsFromModuleView extracts artifact IDs from a ModuleView.
+// Note: UoW manifests track actual artifacts produced, not "requested" artifacts.
+// This returns the IDs of all artifacts that were actually produced.
+// Callers should treat empty result as "validate all artifacts".
+func extractRequestedArtifactsFromModuleView(view *coreoutput.ModuleView) []string {
+	if view == nil {
+		return nil
+	}
+
+	var ids []string
+	for _, comp := range view.Components {
+		for _, uow := range comp.UoWs {
+			for _, art := range uow.Artifacts {
+				if art.ID != "" {
+					ids = append(ids, art.ID)
+				}
+			}
+		}
+	}
+	return ids
+}
+
+// PlatformInfo describes a platform that was built.
+type PlatformInfo struct {
+	OS   string `json:"os"`   // Operating system (windows, linux, darwin)
+	Arch string `json:"arch"` // Architecture (amd64, arm64)
+}
+
+// ArtifactInfo describes a single built artifact.
+type ArtifactInfo struct {
+	Type     string   `json:"type"`               // Artifact type (executable, file, directory, image)
+	ID       string   `json:"id"`                 // Artifact identifier
+	Name     string   `json:"name"`               // Resolved artifact name or image reference
+	Path     string   `json:"path"`               // Relative path from build root, or image reference for type=image
+	Platform string   `json:"platform,omitempty"` // Platform (e.g., "windows-amd64", "linux/amd64") if applicable
+	Size     int64    `json:"size,omitempty"`     // File size in bytes (for file-based artifacts)
+	SHA256   string   `json:"sha256,omitempty"`   // SHA-256 hash of artifact content (for file-based artifacts)
+	Digest   string   `json:"digest,omitempty"`   // Image digest (for type=image, e.g., "sha256:abc123...")
+	Tags     []string `json:"tags,omitempty"`     // Image tags (for type=image)
+	Registry string   `json:"registry,omitempty"` // Container registry (for type=image, e.g., "ghcr.io")
+}
+
+// extractPlatformsFromModuleView extracts platform info from artifact paths in a ModuleView.
+func extractPlatformsFromModuleView(view *coreoutput.ModuleView) []PlatformInfo {
+	if view == nil {
+		return nil
+	}
+
+	seen := make(map[string]bool)
+	var platforms []PlatformInfo
+
+	for _, comp := range view.Components {
+		for _, uow := range comp.UoWs {
+			for _, art := range uow.Artifacts {
+				platform := inferPlatformFromPath(art.Path)
+				if platform == "" || seen[platform] {
+					continue
+				}
+				seen[platform] = true
+
+				os, arch := parsePlatformString(platform)
+				if os != "" && arch != "" {
+					platforms = append(platforms, PlatformInfo{OS: os, Arch: arch})
+				}
+			}
+		}
+	}
+
+	return platforms
+}
+
+// inferPlatformFromPath tries to extract platform info from artifact path.
+// Common patterns: "eac-linux-amd64", "app-darwin-arm64.exe", "linux/amd64"
+func inferPlatformFromPath(path string) string {
+	patterns := []struct {
+		pattern  string
+		platform string
+	}{
+		{"linux-amd64", "linux-amd64"},
+		{"linux-arm64", "linux-arm64"},
+		{"darwin-amd64", "darwin-amd64"},
+		{"darwin-arm64", "darwin-arm64"},
+		{"windows-amd64", "windows-amd64"},
+		{"windows-arm64", "windows-arm64"},
+		{"linux/amd64", "linux-amd64"},
+		{"linux/arm64", "linux-arm64"},
+	}
+
+	lowerPath := strings.ToLower(path)
+	for _, p := range patterns {
+		if strings.Contains(lowerPath, p.pattern) {
+			return p.platform
+		}
+	}
+
+	return ""
+}
+
+// parsePlatformString parses "os-arch" or "os/arch" format into separate OS and Arch.
+func parsePlatformString(platform string) (os, arch string) {
+	for i := len(platform) - 1; i >= 0; i-- {
+		if platform[i] == '-' || platform[i] == '/' {
+			return platform[:i], platform[i+1:]
+		}
+	}
+	return "", ""
 }

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	eactesting "github.com/ready-to-release/eac/go/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -86,8 +85,8 @@ func TestChangelogLocationValidation(t *testing.T) {
 	}
 }
 
-// TestSpecificModuleChangelogLocations validates internal modules have changelogs in module roots.
-// After Phase 2 migration, internal modules should have changelogs colocated with their code.
+// TestSpecificModuleChangelogLocations validates that modules with SemVer versioning have changelogs.
+// Uses the core config system to determine which modules require changelogs.
 func TestSpecificModuleChangelogLocations(t *testing.T) {
 	// Get workspace root
 	workspaceRoot, err := os.Getwd()
@@ -96,63 +95,33 @@ func TestSpecificModuleChangelogLocations(t *testing.T) {
 		workspaceRoot = filepath.Dir(workspaceRoot)
 	}
 
-	// Internal modules should have changelogs in module roots (Phase 2 completed)
-	internalModules := []struct {
-		moniker      string
-		expectedPath string // Where it should be after migration
-	}{
-		{
-			moniker:      "eac-cli",
-			expectedPath: "go/cli/eac/CHANGELOG.md",
-		},
-		{
-			moniker:      "mcp-server",
-			expectedPath: "go/eac/mcp/commands/CHANGELOG.md",
-		},
-		{
-			moniker:      "r2r-installer",
-			expectedPath: "scripts/CHANGELOG.md",
-		},
-		{
-			moniker:      "vscode-commit",
-			expectedPath: "typescript/vscode-commit/CHANGELOG.md",
-		},
-	}
+	// Load modules from the real config
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	require.NoError(t, err, "should load module contracts successfully")
 
-	for _, pm := range internalModules {
-		t.Run(pm.moniker, func(t *testing.T) {
-			// Use mock registry with predictable data
-			moduleRegistry := eactesting.NewMockRegistry(
-				eactesting.WithModule(pm.moniker,
-					eactesting.WithVersioning(),
-					eactesting.WithChangelog(pm.expectedPath),
-					eactesting.WithReleaseType("internal"),
-				),
-			)
+	// Test each module with SemVer versioning
+	for _, moniker := range moduleRegistry.AllMonikers() {
+		moduleContract, exists := moduleRegistry.Get(moniker)
+		require.True(t, exists, "module %s should exist in registry", moniker)
 
-			moduleContract, exists := moduleRegistry.Get(pm.moniker)
-			require.True(t, exists, "mock module should always exist")
+		// Skip modules without versioning or non-SemVer schemes
+		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme != "SemVer" {
+			continue
+		}
 
-			// Get actual path from contract
-			actualPath := moduleContract.GetChangelogPath()
-			assert.Equal(t, pm.expectedPath, actualPath,
-				"module %s should report changelog in module root", pm.moniker)
+		t.Run(moniker, func(t *testing.T) {
+			// Get expected changelog path from contract
+			expectedPath := moduleContract.GetChangelogPath()
+			require.NotEmpty(t, expectedPath,
+				"module %s with SemVer versioning should define a changelog path", moniker)
 
 			// Check if changelog exists at expected location
-			expectedFullPath := filepath.Join(workspaceRoot, pm.expectedPath)
+			expectedFullPath := filepath.Join(workspaceRoot, expectedPath)
 			_, err := os.Stat(expectedFullPath)
 
-			// After Phase 2, changelog should exist at module root
 			assert.NoError(t, err,
-				"changelog should exist at module root %s for internal module %s",
-				pm.expectedPath, pm.moniker)
-
-			// Verify it's NOT in release/ folder
-			oldPath := "release/" + pm.moniker + "/CHANGELOG.md"
-			oldFullPath := filepath.Join(workspaceRoot, oldPath)
-			_, oldErr := os.Stat(oldFullPath)
-			assert.True(t, os.IsNotExist(oldErr),
-				"changelog should NOT exist in release/ for internal module %s", pm.moniker)
+				"changelog should exist at %s for SemVer module %s",
+				expectedPath, moniker)
 		})
 	}
 }

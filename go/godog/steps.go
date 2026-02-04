@@ -103,17 +103,32 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	})
 
 	// Directory setup steps
-	sc.Step(`^no \.r2r directory exists$`, func() error {
-		return RemoveAll(ctx, ".r2r")
+	sc.Step(`^no \.eac directory exists$`, func() error {
+		return RemoveAll(ctx, ".eac")
 	})
 
 	// EAC configuration setup steps (shared across multiple packages)
 	sc.Step(`^I am in a git repository with EAC configuration$`, func() error {
-		// EAC configuration should exist in isolated test environment
+		// Ensure we're in a git repository
 		if err := IsGitRepository(ctx); err != nil {
 			return err
 		}
-		return FileExists(ctx, ".r2r")
+		// Create minimal EAC configuration if it doesn't exist
+		if err := CreateDirectory(ctx, ".eac"); err != nil {
+			return fmt.Errorf("failed to create .eac directory: %w", err)
+		}
+		// Create minimal repository.yml if it doesn't exist
+		repoYml := `.eac/repository.yml`
+		if err := FileExists(ctx, repoYml); err != nil {
+			minimalConfig := `repository:
+  name: test-repo
+modules: []
+`
+			if err := CreateFile(ctx, repoYml, minimalConfig); err != nil {
+				return fmt.Errorf("failed to create repository.yml: %w", err)
+			}
+		}
+		return nil
 	})
 	sc.Step(`^I am in a git repository with GitHub remote$`, func() error {
 		// GitHub remote should be configured

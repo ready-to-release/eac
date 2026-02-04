@@ -12,27 +12,11 @@ import (
 
 // UnitWorkProvider is a function that converts execution context to work units.
 // This is provided by the build package to avoid import cycles.
-type UnitWorkProvider func(ctx *ExecutionContext) [][]workunit.UnitSpec
+// Returns a flat list of units - scheduling order is determined by DependsOn constraints.
+type UnitWorkProvider func(ctx *ExecutionContext) []workunit.UnitSpec
 
-// ExecutionMode defines how components should be executed.
-type ExecutionMode int
-
-const (
-	// ExecutionModeConfigured uses ctx.Config.Layered to decide execution mode.
-	ExecutionModeConfigured ExecutionMode = iota
-	// ExecutionModeLayered always uses layered execution (respects inter-layer dependencies).
-	ExecutionModeLayered
-	// ExecutionModeParallel always uses parallel execution (no dependency order).
-	ExecutionModeParallel
-)
-
-// executionModeConfig holds per-command-type execution settings.
-var executionModeConfig = map[CommandType]ExecutionMode{
-	CommandTypeBuild: ExecutionModeConfigured, // Respects ctx.Config.Layered
-	CommandTypeTest:  ExecutionModeLayered,    // Always layered (parallel first, sequential second)
-	CommandTypeScan:  ExecutionModeParallel,   // No dependency order needed
-	CommandTypeLint:  ExecutionModeParallel,   // No dependency order needed
-}
+// All commands use dependency-based parallel execution.
+// Work units are scheduled based on their DependsOn constraints.
 
 // UnitRegistry holds providers and workers for each command type.
 // It provides thread-safe access to component execution functions.
@@ -135,8 +119,8 @@ func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 }
 
 // phaseExecuteComponentsUnified handles component-level execution for all command types.
-// It uses the registered provider and worker for the given command type, and respects
-// the execution mode configuration (layered vs parallel).
+// It uses the registered provider and worker for the given command type.
+// Scheduling order is determined by DependsOn constraints in the work units.
 func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) error {
 	provider := GetUnitProvider(cmdType)
 	worker := GetUnitWorker(cmdType)
@@ -146,14 +130,14 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	}
 
 	// Get component work items from provider
-	componentLayers := provider(ctx)
-	if len(componentLayers) == 0 {
+	allWork := provider(ctx)
+	if len(allWork) == 0 {
 		ctx.Results = []orchestrator.WorkResult{}
 		return nil
 	}
 
 	// Create incremental summary builder with component counts per module
-	componentCounts := computeComponentCounts(componentLayers)
+	componentCounts := computeComponentCounts(allWork)
 	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
 	ctx.SummaryBuilder.SetStartTime(ctx.StartTime)
 	ctx.Orchestrator.SetSummaryBuilder(ctx.SummaryBuilder)
@@ -178,29 +162,12 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 		return worker(ctx, module, component, logWriter)
 	}
 
-	// Determine execution mode from config
-	mode := executionModeConfig[cmdType]
-	useLayered := mode == ExecutionModeLayered ||
-		(mode == ExecutionModeConfigured && ctx.Config.Layered)
-
-	log.Debugf("phaseExecuteComponentsUnified: cmdType=%s, mode=%d, useLayered=%v",
-		cmdType, mode, useLayered)
-
-	// Execute components
-	var results []orchestrator.WorkResult
-	var err error
+	// Execute components with dependency-based parallel scheduling
+	log.Debugf("Executing %d %s components with dependency-based scheduling",
+		len(allWork), cmdType)
 
 	execStart := time.Now()
-	if useLayered {
-		log.Debugf("Executing %d %s component layers with weighted parallelism",
-			len(componentLayers), cmdType)
-		results, err = ctx.Orchestrator.RunUnitsLayered(componentLayers, orchWorker)
-	} else {
-		allWork := flattenUnitLayers(componentLayers)
-		log.Debugf("Executing %d %s components in parallel with weighted scheduling",
-			len(allWork), cmdType)
-		results, err = ctx.Orchestrator.RunUnitsParallel(allWork, orchWorker)
-	}
+	results, err := ctx.Orchestrator.RunUnitsParallel(allWork, orchWorker)
 	log.Debugf("phaseExecuteComponentsUnified: execution returned in %v", time.Since(execStart))
 
 	if err != nil {
@@ -227,24 +194,13 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	return nil
 }
 
-// computeComponentCounts computes the number of components per module from work layers.
-func computeComponentCounts(layers [][]workunit.UnitSpec) map[string]int {
+// computeComponentCounts computes the number of components per module.
+func computeComponentCounts(units []workunit.UnitSpec) map[string]int {
 	counts := make(map[string]int)
-	for _, layer := range layers {
-		for _, work := range layer {
-			counts[work.ID.Module]++
-		}
+	for _, work := range units {
+		counts[work.ID.Module]++
 	}
 	return counts
-}
-
-// flattenUnitLayers flattens work unit layers to a single slice.
-func flattenUnitLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
-	var all []workunit.UnitSpec
-	for _, layer := range layers {
-		all = append(all, layer...)
-	}
-	return all
 }
 
 // GetExitCode returns the overall exit code from results (0 if all succeeded).

@@ -1,16 +1,17 @@
 package books
 
 import (
+	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // Size presets for mermaid diagrams.
@@ -228,149 +229,123 @@ type CacheStatus struct {
 	CachePath string // absolute path to cached SVG (if exists)
 }
 
-// mermaidImageName is the Docker image used for mermaid-tool rendering.
-// Uses :local tag to match tool system expectations (LocalImageTag()).
-const mermaidImageName = "mermaid-tool:local"
+// MermaidManifest defines input for batch mermaid rendering.
+type MermaidManifest struct {
+	Diagrams    []MermaidDiagramSpec `json:"diagrams"`
+	Concurrency int                  `json:"concurrency"`
+	Theme       string               `json:"theme"`
+}
 
-// EnsureMermaidImage ensures the mermaid-tool Docker image is built.
-// Always runs docker build - Docker's layer cache handles efficiency.
-// Exported for use by update docs command.
-func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
-	fmt.Fprintf(logWriter, "    Building Docker image: %s\n", mermaidImageName)
+// MermaidDiagramSpec defines a single diagram to render.
+type MermaidDiagramSpec struct {
+	Input  string `json:"input"`  // Path to .mmd file in work dir
+	Output string `json:"output"` // Path for output .svg
+	Config string `json:"config"` // Mermaid config file
+}
 
-	// Detect Docker-in-Docker mode for path handling
-	isDinD := dockerutil.IsDinD()
-	hostRepoRoot := workspaceRoot
-	if isDinD {
-		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
-			hostRepoRoot = hostRoot
+// renderMermaidBatch renders multiple diagrams using the mermaid-render tool.
+// This replaces the previous direct Docker execution with the tool bridge.
+func (p *Preprocessor) renderMermaidBatch(toRender []CacheStatus) (int, error) {
+	if len(toRender) == 0 {
+		return 0, nil
+	}
+
+	// Create work directory for manifest and temp files
+	workDir := filepath.Join(p.stagingDir, ".mermaid-work")
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		return 0, fmt.Errorf("creating work directory: %w", err)
+	}
+	defer os.RemoveAll(workDir) // Clean up work directory
+
+	// Create diagram specs and write temp .mmd files
+	diagrams := make([]MermaidDiagramSpec, 0, len(toRender))
+	for i, status := range toRender {
+		block := status.Block
+
+		// Write diagram content to temp .mmd file
+		mmdFile := filepath.Join(workDir, fmt.Sprintf("diagram_%d.mmd", i))
+		if err := os.WriteFile(mmdFile, []byte(block.Content), 0o644); err != nil {
+			return 0, fmt.Errorf("writing temp file for %s: %w", block.Filename, err)
+		}
+
+		// Convert paths to container paths
+		// workDir maps to /work in container
+		// stagingDir maps to /staging in container
+		containerInput := fmt.Sprintf("/work/diagram_%d.mmd", i)
+
+		// Output path relative to staging, converted to container path
+		relOutput, err := filepath.Rel(p.stagingDir, status.CachePath)
+		if err != nil {
+			return 0, fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
+		}
+		containerOutput := "/staging/" + strings.ReplaceAll(relOutput, "\\", "/")
+
+		diagrams = append(diagrams, MermaidDiagramSpec{
+			Input:  containerInput,
+			Output: containerOutput,
+			Config: "/etc/mermaid/mermaid-config.json",
+		})
+	}
+
+	// Create manifest
+	manifest := MermaidManifest{
+		Diagrams:    diagrams,
+		Concurrency: 4,
+		Theme:       "dark",
+	}
+
+	// Write manifest file
+	manifestPath := filepath.Join(workDir, "manifest.json")
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return 0, fmt.Errorf("marshaling manifest: %w", err)
+	}
+	if err := os.WriteFile(manifestPath, manifestData, 0o644); err != nil {
+		return 0, fmt.Errorf("writing manifest: %w", err)
+	}
+
+	p.log("    Rendering %d diagram(s) via mermaid-render tool...", len(toRender))
+
+	// Execute mermaid-render tool via bridge
+	bridge := tool.GlobalHandlerToolBridge()
+	tc := &tool.ToolContext{
+		WorkspaceRoot: p.workspaceRoot,
+		StagingDir:    p.stagingDir,
+		LogWriter:     p.logWriter,
+	}
+
+	exitCode, execErr := bridge.ExecuteTool(context.Background(), "mermaid-render", tc)
+	if execErr != nil {
+		return 0, fmt.Errorf("mermaid-render tool failed: %w", execErr)
+	}
+	if exitCode != 0 {
+		return 0, fmt.Errorf("mermaid-render tool exited with code %d", exitCode)
+	}
+
+	// Verify outputs were created and update cache
+	rendered := 0
+	for _, status := range toRender {
+		if _, err := os.Stat(status.CachePath); err == nil {
+			rendered++
+
+			// Save to persistent cache
+			block := status.Block
+			cleanContent := StripSizeDirective(block.Content)
+			if err := p.assetCache.PutMermaid(status.CachePath, MermaidCacheKey{
+				SourceFile: block.SourceFile,
+				BlockIndex: block.BlockIndex,
+				Code:       cleanContent,
+			}); err != nil {
+				p.log("      ⚠️  Failed to cache %s: %v", block.Filename, err)
+			}
 		}
 	}
 
-	// Build paths for Dockerfile and context
-	var dockerfilePath, contextPath string
-	if isDinD {
-		// Host is Windows, construct Windows paths manually
-		dockerfilePath = hostRepoRoot + "\\containers\\mermaid-tool\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\mermaid-tool"
-	} else {
-		dockerfilePath = filepath.Join(workspaceRoot, "containers", "mermaid-tool", "Dockerfile")
-		contextPath = filepath.Join(workspaceRoot, "containers", "mermaid-tool")
-	}
-
-	fmt.Fprintf(logWriter, "    Dockerfile: %s\n", dockerfilePath)
-	fmt.Fprintf(logWriter, "    Context: %s\n", contextPath)
-
-	cmd := exec.Command("docker", "build",
-		"-t", mermaidImageName,
-		"-f", dockerfilePath,
-		contextPath)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker build failed: %w", err)
-	}
-
-	return nil
+	return rendered, nil
 }
 
-// RenderSingleDiagram renders a single mermaid diagram to SVG using mermaid-tool
-// Returns error if rendering fails
-// Exported for use by update docs command.
-func RenderSingleDiagram(block MermaidBlock, outputPath, workspaceRoot string, logWriter io.Writer) error {
-	// Detect Docker-in-Docker mode
-	isDinD := dockerutil.IsDinD()
-	hostRepoRoot := workspaceRoot
-	if isDinD {
-		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
-			hostRepoRoot = hostRoot
-		}
-	}
-
-	// Create temp file for mermaid content
-	tmpDir := filepath.Dir(outputPath)
-	tmpFile := filepath.Join(tmpDir, block.Filename+".mmd")
-
-	// Ensure directory exists before writing
-	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
-		return fmt.Errorf("creating temp directory: %w", err)
-	}
-
-	// Write diagram content to temp file
-	if err := os.WriteFile(tmpFile, []byte(block.Content), 0o644); err != nil {
-		return fmt.Errorf("writing temp file: %w", err)
-	}
-	defer os.Remove(tmpFile) // Clean up temp file
-
-	// Calculate Docker paths (relative to workspace root)
-	relTmpFile, err := filepath.Rel(workspaceRoot, tmpFile)
-	if err != nil {
-		return fmt.Errorf("calculating relative tmp path: %w", err)
-	}
-	relOutputPath, err := filepath.Rel(workspaceRoot, outputPath)
-	if err != nil {
-		return fmt.Errorf("calculating relative output path: %w", err)
-	}
-
-	// Convert to Docker paths (forward slashes)
-	dockerTmpFile := "/docs/" + strings.ReplaceAll(relTmpFile, "\\", "/")
-	dockerOutputPath := "/docs/" + strings.ReplaceAll(relOutputPath, "\\", "/")
-
-	// Format Docker volume path using host paths for DinD
-	dockerVolume := dockerutil.FormatDockerVolume(hostRepoRoot)
-
-	// Build Docker command
-	// Use dedicated cli-mkdocs-mermaid container for diagram rendering
-	// The container has mermaid-tool, chromium, and embedded configs at /etc/mermaid/
-	args := []string{
-		"run", "--rm",
-		"-v", dockerVolume + ":/docs",
-		"-w", "/docs",
-		"--shm-size=1gb",                       // Increase shared memory for Chromium (prevents crashes)
-		"--security-opt", "seccomp=unconfined", // Allow Chromium to run without sandboxing restrictions
-		mermaidImageName,
-		"mmdc",
-		"-i", dockerTmpFile,
-		"-o", dockerOutputPath,
-		"-t", "dark", // Theme (dark for PDF)
-		"-b", "transparent", // Background
-		"--configFile", "/etc/mermaid/mermaid-config.json", // Disable htmlLabels for PDF compatibility
-		"-p", "/etc/mermaid/puppeteer-config.json", // Puppeteer config for container environment
-	}
-
-	// Add user spec in DinD mode to avoid permission issues
-	if isDinD {
-		uid := os.Getuid()
-		gid := os.Getgid()
-		userSpec := fmt.Sprintf("%d:%d", uid, gid)
-		// Insert --user after "run" and "--rm"
-		args = append([]string{"run", "--rm", "--user", userSpec}, args[2:]...)
-	}
-
-	// Run docker command
-	cmd := exec.Command("docker", args...)
-	cmd.Dir = workspaceRoot
-
-	// Capture output for debugging
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("mmdc failed for %s: %w (stderr: %s)",
-			block.Filename, err, stderr.String())
-	}
-
-	// Verify SVG was created
-	if _, err := os.Stat(outputPath); err != nil {
-		return fmt.Errorf("SVG not created: %w", err)
-	}
-
-	return nil
-}
-
-// renderMermaidDiagrams renders multiple mermaid diagrams in parallel
-// Only renders cache misses (cached diagrams are skipped)
+// renderMermaidDiagrams renders multiple mermaid diagrams using the tool bridge.
+// Only renders cache misses (cached diagrams are skipped).
 // Returns number of diagrams rendered and any error.
 func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error) {
 	// Check Docker availability first - fail fast if unavailable
@@ -382,11 +357,6 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 			errorMsg += "\nEnsure Docker is installed and the daemon is running"
 		}
 		return 0, fmt.Errorf("%s", errorMsg)
-	}
-
-	// Ensure mermaid-tool image exists (build if needed)
-	if err := EnsureMermaidImage(p.workspaceRoot, p.logWriter); err != nil {
-		return 0, fmt.Errorf("failed to ensure mermaid image: %w", err)
 	}
 
 	// Filter for cache misses
@@ -403,76 +373,10 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 		return 0, nil
 	}
 
-	// Determine worker count (max 4 parallel renders to avoid overwhelming Chromium)
-	// Each worker spawns a Docker container with Chromium, so we keep this conservative
-	maxWorkers := 4
-	if maxWorkers > len(toRender) {
-		maxWorkers = len(toRender)
-	}
-
-	p.log("    Rendering %d diagram(s) in parallel (using %d workers)...", len(toRender), maxWorkers)
-
-	// Create channels for work distribution
-	jobs := make(chan CacheStatus, len(toRender))
-	type result struct {
-		status CacheStatus
-		err    error
-	}
-	results := make(chan result, len(toRender))
-
-	// Start worker goroutines
-	for w := 0; w < maxWorkers; w++ {
-		go func(workerID int) {
-			for status := range jobs {
-				block := status.Block
-				err := RenderSingleDiagram(block, status.CachePath, p.workspaceRoot, p.logWriter)
-				results <- result{status: status, err: err}
-			}
-		}(w)
-	}
-
-	// Send jobs to workers
-	for i := range toRender {
-		jobs <- toRender[i]
-	}
-	close(jobs)
-
-	// Collect results
-	rendered := 0
-	failed := 0
-	var errors []string
-
-	for i := 0; i < len(toRender); i++ {
-		res := <-results
-		if res.err != nil {
-			p.log("      ❌ Failed to render %s: %v", res.status.Block.Filename, res.err)
-			failed++
-			errors = append(errors, fmt.Sprintf("%s: %v", res.status.Block.Filename, res.err))
-		} else {
-			rendered++
-
-			// Save to persistent cache after successful rendering
-			block := res.status.Block
-			// Use stripped content for cache key to ensure consistency
-			cleanContent := StripSizeDirective(block.Content)
-			if err := p.assetCache.PutMermaid(res.status.CachePath, MermaidCacheKey{
-				SourceFile: block.SourceFile,
-				BlockIndex: block.BlockIndex,
-				Code:       cleanContent,
-			}); err != nil {
-				p.log("      ⚠️  Failed to cache %s: %v", block.Filename, err)
-				// Non-fatal - rendering succeeded even if caching failed
-			}
-
-			// Log progress every 10 diagrams
-			if rendered%10 == 0 || rendered == len(toRender) {
-				p.log("      ✓ Progress: %d/%d diagrams rendered", rendered, len(toRender))
-			}
-		}
-	}
-
-	if failed > 0 {
-		return rendered, fmt.Errorf("%d diagram(s) failed to render", failed)
+	// Use batch rendering via tool bridge
+	rendered, err := p.renderMermaidBatch(toRender)
+	if err != nil {
+		return rendered, err
 	}
 
 	p.log("    ✓ Rendered %d diagram(s) successfully", rendered)

@@ -63,8 +63,7 @@ func ScanConfig() CommandFlagConfig {
 type SharedFlags struct {
 	// Execution control
 	Turbo          bool
-	MaxConcurrency int  // 0 = auto-detect
-	UnlayeredBuild bool // Disable layered execution (run all in parallel)
+	MaxConcurrency int // 0 = auto-detect
 
 	// Output control
 	UseTUI       bool
@@ -97,7 +96,6 @@ type SharedFlags struct {
 	CacheExplicit    bool // True if --with-cache or --no-cache was used
 	DepsExplicit     bool // True if --with-deps or --skip-deps was used
 	ParallelExplicit bool // True if --parallel or --sequential was used
-	LayeredExplicit  bool // True if --layered or --unlayered was used
 	TUIExplicit      bool // True if --with-tui or --no-tui was used
 }
 
@@ -125,9 +123,7 @@ func ParseSharedFlagsWithEnv(config CommandFlagConfig, args []string, env *envir
 	if parsed.Execution != nil {
 		result.Turbo = parsed.Execution.Turbo
 		result.MaxConcurrency = parsed.Execution.Roof
-		result.UnlayeredBuild = parsed.Execution.UnlayeredBuild
 		result.ParallelExplicit = parsed.Execution.ParallelExplicit
-		result.LayeredExplicit = parsed.Execution.LayeredExplicit
 	}
 
 	// Extract output flags

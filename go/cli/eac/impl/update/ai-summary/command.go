@@ -114,7 +114,6 @@ func UpdateAISummary() int {
 		SkipDeps:       true, // AI analysis doesn't need system deps
 		SkipDepm:       true, // No module dependencies
 		ForceRebuild:   config.SkipCache,
-		Layered:        true,  // Respect build_after dependencies
 		MaxConcurrency: 2,     // AI tasks are token-limited, not CPU/RAM-limited
 		Turbo:          config.Turbo,
 		DryRun:         config.DryRun,

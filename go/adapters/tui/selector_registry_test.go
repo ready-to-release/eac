@@ -3,6 +3,8 @@ package tui
 import (
 	"context"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 func TestRegisterSelector(t *testing.T) {
@@ -82,4 +84,78 @@ func resetSelectorRegistry() {
 	selectorMu.Lock()
 	defer selectorMu.Unlock()
 	globalSelectorFactory = nil
+}
+
+// TestSubcommandsFromRegistry tests the SubcommandsFromRegistry function.
+func TestSubcommandsFromRegistry(t *testing.T) {
+	// Save and restore original registry
+	originalRegistry := registry.GetCommandRegistry()
+	defer func() {
+		// Reset registry by re-registering original commands
+		// This is a simplified approach for testing
+	}()
+
+	// Clear registry and add test data using SetTestRegistry helper
+	registry.SetTestRegistry(map[string]*registry.CommandRegistration{
+		"test": {
+			ActualCommand: "test",
+			CanonicalName: "test",
+			Short:         "Test parent command",
+			IsParent:      true,
+		},
+		"test alpha": {
+			ActualCommand: "test alpha",
+			CanonicalName: "test-alpha",
+			Short:         "Alpha subcommand",
+		},
+		"test beta": {
+			ActualCommand: "test beta",
+			CanonicalName: "test-beta",
+			Short:         "Beta subcommand",
+		},
+		"test gamma": {
+			ActualCommand: "test gamma",
+			CanonicalName: "test-gamma",
+			Short:         "Gamma subcommand",
+		},
+	})
+	defer registry.SetTestRegistry(originalRegistry)
+
+	t.Run("converts registry to CommandOptions", func(t *testing.T) {
+		opts := SubcommandsFromRegistry("test")
+		if len(opts) != 3 {
+			t.Errorf("Expected 3 options, got %d", len(opts))
+		}
+	})
+
+	t.Run("options have correct names", func(t *testing.T) {
+		opts := SubcommandsFromRegistry("test")
+		names := make(map[string]bool)
+		for _, opt := range opts {
+			names[opt.Name] = true
+		}
+
+		expected := []string{"alpha", "beta", "gamma"}
+		for _, exp := range expected {
+			if !names[exp] {
+				t.Errorf("Missing expected option: %q", exp)
+			}
+		}
+	})
+
+	t.Run("options have descriptions", func(t *testing.T) {
+		opts := SubcommandsFromRegistry("test")
+		for _, opt := range opts {
+			if opt.Description == "" {
+				t.Errorf("Option %q has empty description", opt.Name)
+			}
+		}
+	})
+
+	t.Run("returns empty for nonexistent parent", func(t *testing.T) {
+		opts := SubcommandsFromRegistry("nonexistent")
+		if len(opts) != 0 {
+			t.Errorf("Expected 0 options for nonexistent parent, got %d", len(opts))
+		}
+	})
 }

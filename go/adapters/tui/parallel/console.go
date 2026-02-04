@@ -78,6 +78,11 @@ func (c *Console) UpdateStatus(status tui.Status) {
 	c.inner.UpdateStatus(status)
 }
 
+// StatusRefreshInterval returns how often the orchestrator should send status updates.
+func (c *Console) StatusRefreshInterval() time.Duration {
+	return c.inner.StatusRefreshInterval()
+}
+
 // SetPhase switches to a new phase.
 func (c *Console) SetPhase(phase tui.Phase) {
 	c.inner.SetPhase(phase)

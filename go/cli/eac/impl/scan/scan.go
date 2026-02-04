@@ -119,7 +119,6 @@ func Scan() int {
 		OutputDir:      "out/scan",
 		LogFileName:    "scan.log",
 		Monikers:       shared.Monikers,
-		Layered:        !shared.UnlayeredBuild && !shared.Turbo,
 		Sequential:     sequential,
 		Turbo:          shared.Turbo,
 		MaxConcurrency: shared.MaxConcurrency,

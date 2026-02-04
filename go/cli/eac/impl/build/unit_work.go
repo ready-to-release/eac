@@ -7,11 +7,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
-// ResolveUnitSpecs converts module layers to component work layers.
+// ResolveUnitSpecs converts modules to component work specs.
 // Each module is expanded to its buildable components with weight and dependency info.
 // Uses ComponentResolver for consistent component-to-tool mapping.
 // Returns nil if no buildable components are found.
-func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.ComponentTypes == nil {
 		return nil
@@ -23,91 +23,65 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec 
 		cachedModules = bctx.cachedModules
 	}
 
-	layers := ctx.GetLayers()
-	if len(layers) == 0 {
-		// Not using layers - treat all modules as single layer
-		monikers := ctx.GetExecutionMonikers()
-		if len(monikers) == 0 {
-			return nil
-		}
-		layers = [][]string{monikers}
+	monikers := ctx.GetExecutionMonikers()
+	if len(monikers) == 0 {
+		return nil
 	}
 
 	// Create component resolver for unified resolution
 	compResolver := resolver.NewComponentResolver()
 
-	var componentLayers [][]workunit.UnitSpec
+	var specs []workunit.UnitSpec
 	globalIndex := 0
 
-	for _, layerMonikers := range layers {
-		var layerWork []workunit.UnitSpec
+	for _, moniker := range monikers {
+		// Check if module is cached
+		isCached := cachedModules != nil && cachedModules[moniker]
 
-		for _, moniker := range layerMonikers {
-			// Check if module is cached
-			isCached := cachedModules != nil && cachedModules[moniker]
-
-			// Get module contract
-			module, exists := ctx.ModuleRegistry.Get(moniker)
-			if !exists {
-				continue
-			}
-
-			// Use ComponentResolver to get build specs for this module
-			specs := compResolver.ResolveForBuild(module, cachedModules)
-
-			if len(specs) == 0 {
-				// Module has no buildable components - create a placeholder
-				layerWork = append(layerWork, workunit.UnitSpec{
-					ID: workunit.UnitID{
-						Context:   workunit.ContextBuild,
-						Module:    moniker,
-						Component: "none",
-						Tool:      "",
-					},
-					ComponentType: "none",
-					Weight:        1,
-					Container:     false,
-					HostInstalled: true,
-					DependsOn:     nil,
-					Cached:        isCached,
-					Metadata:      make(map[string]any),
-					Index:         globalIndex,
-				})
-				globalIndex++
-				continue
-			}
-
-			// Add specs with correct index
-			for i := range specs {
-				specs[i].Index = globalIndex
-				globalIndex++
-			}
-
-			layerWork = append(layerWork, specs...)
+		// Get module contract
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
 		}
 
-		if len(layerWork) > 0 {
-			componentLayers = append(componentLayers, layerWork)
+		// Use ComponentResolver to get build specs for this module
+		moduleSpecs := compResolver.ResolveForBuild(module, cachedModules)
+
+		if len(moduleSpecs) == 0 {
+			// Module has no buildable components - create a placeholder
+			specs = append(specs, workunit.UnitSpec{
+				ID: workunit.UnitID{
+					Context:   workunit.ContextBuild,
+					Module:    moniker,
+					Component: "none",
+					Tool:      "",
+				},
+				ComponentType: "none",
+				Weight:        1,
+				Container:     false,
+				HostInstalled: true,
+				DependsOn:     nil,
+				Cached:        isCached,
+				Metadata:      make(map[string]any),
+				Index:         globalIndex,
+			})
+			globalIndex++
+			continue
 		}
+
+		// Add specs with correct index
+		for i := range moduleSpecs {
+			moduleSpecs[i].Index = globalIndex
+			globalIndex++
+		}
+
+		specs = append(specs, moduleSpecs...)
 	}
 
-	return componentLayers
-}
-
-// FlattenUnitLayers flattens component work layers to a single slice.
-func FlattenUnitLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
-	var all []workunit.UnitSpec
-	for _, layer := range layers {
-		all = append(all, layer...)
-	}
-	return all
+	return specs
 }
 
 // CountUnits returns the total number of component work items.
-func CountUnits(layers [][]workunit.UnitSpec) int {
-	count := 0
-	for _, layer := range layers {
-		count += len(layer)
-	}
-	return count
+func CountUnits(specs []workunit.UnitSpec) int {
+	return len(specs)
 }

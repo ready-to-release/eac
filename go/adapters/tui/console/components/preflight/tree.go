@@ -15,7 +15,7 @@ import (
 // TreePanel displays the execution tree using a scrollable viewport.
 type TreePanel struct {
 	vp      viewport.Model
-	layers  []shared.ExecutionLayer
+	modules []shared.ExecutionModule
 	focused bool
 }
 
@@ -27,44 +27,34 @@ func NewTreePanel(width, height int) *TreePanel {
 	return &TreePanel{vp: vp}
 }
 
-// SetLayers updates the execution layers displayed in the tree.
-func (t *TreePanel) SetLayers(layers []shared.ExecutionLayer) {
-	t.layers = layers
+// SetModules updates the execution modules displayed in the tree.
+func (t *TreePanel) SetModules(modules []shared.ExecutionModule) {
+	t.modules = modules
 	t.vp.SetContent(t.renderContent())
 }
 
 // renderContent renders the tree content as a string.
 func (t *TreePanel) renderContent() string {
-	if len(t.layers) == 0 {
+	if len(t.modules) == 0 {
 		return shared.DimStyle.Render("No execution tree available")
 	}
 
 	var lines []string
 
-	for layerIdx, layer := range t.layers {
-		// Layer header
-		lines = append(lines, shared.LayerHeader(layerIdx+1))
+	for modIdx, module := range t.modules {
+		isLast := modIdx == len(t.modules)-1
+		branch := shared.TreeBranch(isLast)
 
-		for modIdx, module := range layer.Modules {
-			isLast := modIdx == len(layer.Modules)-1
-			branch := shared.TreeBranch(isLast)
-
-			modLine := fmt.Sprintf("  %s %s", branch, module.Name)
-			if len(module.UoWs) > 0 {
-				displayNames := make([]string, len(module.UoWs))
-				for i, uow := range module.UoWs {
-					displayNames[i] = uow.DisplayName
-				}
-				uowStr := strings.Join(displayNames, ", ")
-				modLine += shared.DimStyle.Render(" - ") + uowStr
+		modLine := fmt.Sprintf("%s %s", branch, module.Name)
+		if len(module.UoWs) > 0 {
+			displayNames := make([]string, len(module.UoWs))
+			for i, uow := range module.UoWs {
+				displayNames[i] = uow.DisplayName
 			}
-			lines = append(lines, modLine)
+			uowStr := strings.Join(displayNames, ", ")
+			modLine += shared.DimStyle.Render(" - ") + uowStr
 		}
-
-		// Add spacing between layers
-		if layerIdx < len(t.layers)-1 {
-			lines = append(lines, "")
-		}
+		lines = append(lines, modLine)
 	}
 
 	return strings.Join(lines, "\n")

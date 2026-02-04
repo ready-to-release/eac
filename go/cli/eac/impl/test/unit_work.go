@@ -15,14 +15,14 @@ import (
 
 var componentWorkLog = logging.C()
 
-// ResolveTestUnitSpecs converts TestsByPackage to component work layers.
-// Returns two layers: parallel tests first, sequential tests second.
+// ResolveTestUnitSpecs converts TestsByPackage to component work specs.
+// Returns parallel tests first, followed by sequential tests.
 // Returns nil if no tests to execute.
 // Work items are created for each unique component:tool combination,
 // allowing parallel execution of different test types (gotest, godog) within the same package.
 //
 // Test keys use the same format as build/lint/scan: "module:component:tool".
-func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
@@ -79,9 +79,6 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 			componentName := findComponentOfType(ctx, moduleMoniker, compTypeName)
 			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
 
-			// Check if module is cached
-			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
-
 			// Extract spec name for BDD tests (godog, tscucumber)
 			// For BDD tests, use spec name as the component identifier
 			// For unit tests, use a unique path-based name to avoid collisions
@@ -101,6 +98,22 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 			toolName := testType
 			if toolName == "" {
 				toolName = "none"
+			}
+
+			// Build UnitID to check UoW-level cache
+			unitID := workunit.UnitID{
+				Context:   workunit.ContextTest,
+				Module:    moduleMoniker,
+				Component: cleanName,
+				Tool:      toolName,
+			}
+
+			// Check UoW-level cache first, fall back to module-level
+			isCached := false
+			if testCfg.CachedUoWs != nil && testCfg.CachedUoWs[unitID.Longname()] {
+				isCached = true
+			} else if testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker] {
+				isCached = true
 			}
 
 			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
@@ -134,24 +147,18 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 		}
 	}
 
-	// Set indices per-layer (Index must be relative to the layer, not global)
-	for i := range parallelWork {
-		parallelWork[i].Index = i
-	}
-	for i := range sequentialWork {
-		sequentialWork[i].Index = i
+	// Combine parallel and sequential work into a single flat slice
+	// Parallel work comes first, followed by sequential work
+	var specs []workunit.UnitSpec
+	specs = append(specs, parallelWork...)
+	specs = append(specs, sequentialWork...)
+
+	// Set indices globally
+	for i := range specs {
+		specs[i].Index = i
 	}
 
-	// Build layers: parallel first, sequential second
-	var layers [][]workunit.UnitSpec
-	if len(parallelWork) > 0 {
-		layers = append(layers, parallelWork)
-	}
-	if len(sequentialWork) > 0 {
-		layers = append(layers, sequentialWork)
-	}
-
-	return layers
+	return specs
 }
 
 // groupTestsByType groups tests by their type (e.g., "gotest", "godog").

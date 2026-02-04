@@ -198,6 +198,37 @@ func (b *BuildBridge) HasHandler(name string) bool {
 	return false
 }
 
+// GetToolForComponent returns the tool definition for a component type.
+// This is used to access tool resources for scheduling weight calculation.
+// Resolution order: resolver component-tools mapping → direct registry lookup.
+// Returns nil if no tool is found for the component type.
+func (b *BuildBridge) GetToolForComponent(componentType string) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	var toolID string
+
+	// Try resolver first (for component-tools mappings)
+	if b.resolver != nil {
+		toolID = b.resolver.ResolveToolID(componentType, OperationBuild)
+	}
+
+	// If resolver didn't find it, try direct registry lookup
+	// (componentType might be the tool name itself)
+	if toolID == "" {
+		toolID = componentType
+	}
+
+	// Look up tool in registry
+	if b.registry != nil {
+		if tool, ok := b.registry.Get(toolID); ok {
+			return tool
+		}
+	}
+
+	return nil
+}
+
 // GetHandlerForComponent returns a build handler for a component type using the resolver.
 // This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build).
 // Native handlers take precedence over tool registry definitions.

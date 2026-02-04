@@ -19,9 +19,13 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/scheduling"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/shirou/gopsutil/v3/mem"
 )
+
+// Ensure execution package is used (for CacheVerifier alias)
+var _ execution.CacheVerifier
 
 // UnitExtras holds additional data passed from workers to unit results.
 // Used for test-specific fields that need to flow from the test runner to the summary.
@@ -36,7 +40,7 @@ type UnitExtras struct {
 // with weighted resource control and dependency ordering.
 type UnitScheduler struct {
 	config    Config
-	semaphore *capacity.GlobalSemaphore // Global cross-process semaphore
+	semaphore *capacity.DualPoolSemaphore // Dual-pool cross-process semaphore (host + docker)
 	registry  *locktracker.Registry     // Lock tracking registry for TUI visualization
 
 	// Dynamic capacity management
@@ -85,11 +89,18 @@ type UnitScheduler struct {
 	roof int // Hard ceiling - pool size set at scheduler start
 
 	// Tools tracking (protected by toolsMu) - separated by type
-	toolsMu          sync.Mutex
-	activeContainers map[string]int  // container tool -> count of running components
-	usedContainers   map[string]bool // all container tools ever used
-	activeSystem     map[string]int  // system tool -> count of running components
-	usedSystem       map[string]bool // all system tools ever used
+	toolsMu              sync.Mutex
+	activeContainerTools map[string]int  // container tool -> count of running components
+	usedContainerTools   map[string]bool // all container tools ever used
+	activeSystem         map[string]int  // system tool -> count of running components
+	usedSystem           map[string]bool // all system tools ever used
+
+	// Container instance tracking (protected by toolsMu)
+	// For "Containers" lamps: each container gets its own lamp position
+	// When started: new lamp lights up at next position
+	// When stopped: that lamp goes dim but stays visible
+	containerLamps    []bool         // true = running (lit), false = completed (dim)
+	containerLampMap  map[string]int // moniker -> lamp index (to turn off correct lamp)
 
 	// Output infrastructure
 	orchestratorOut io.Writer
@@ -101,8 +112,14 @@ type UnitScheduler struct {
 	// Summary builder for incremental summary computation
 	summaryBuilder SummaryBuilder
 
-	// Work queue for dispatcher-based scheduling
-	workQueue *WorkQueue
+	// Scheduler for dependency-aware LPT scheduling
+	scheduler scheduling.WorkScheduler
+
+	// Over-capacity coordination: serialize items with weight > totalCapacity
+	// These items can't acquire semaphore (would block forever), so they bypass it
+	// but must execute one at a time to prevent resource exhaustion
+	overCapacityMu   sync.Mutex
+	overCapacityItem *workunit.UnitID
 
 	// Early cache detection results for worker short-circuit
 	// Background thread populates this; workers check before executing
@@ -139,9 +156,12 @@ func NewUnitScheduler(config *Config, tuiConsole tui.Console, registry *locktrac
 		turbo = 1.0
 	}
 	initialCap := detectAvailableCapacity(config.MaxConcurrency, turbo)
+	dockerCap := detectDockerCapacity(turbo)
 
-	// Create GLOBAL semaphore - shared across all processes via filesystem
-	sem := capacity.NewGlobalSemaphore(config.WorkspaceRoot, initialCap, registry)
+	// Create DUAL-POOL semaphore - shared across all processes via filesystem
+	// Host pool: for all work units (host-native and containerized)
+	// Docker pool: additional constraint for containerized work
+	sem := capacity.NewDualPoolSemaphore(config.WorkspaceRoot, initialCap, dockerCap, registry)
 
 	us := &UnitScheduler{
 		config:           *config,
@@ -160,11 +180,13 @@ func NewUnitScheduler(config *Config, tuiConsole tui.Console, registry *locktrac
 		unitHandlerDone:  make(map[string]map[string]int),
 		unitFailed:       make(map[string]map[string]bool),
 		unitExtras:       make(map[string]map[string]UnitExtras),
-		activeContainers: make(map[string]int),
-		usedContainers:   make(map[string]bool),
-		activeSystem:     make(map[string]int),
-		usedSystem:       make(map[string]bool),
-		tuiConsole:       tuiConsole,
+		activeContainerTools: make(map[string]int),
+		usedContainerTools:   make(map[string]bool),
+		activeSystem:         make(map[string]int),
+		usedSystem:           make(map[string]bool),
+		containerLamps:       make([]bool, 0),
+		containerLampMap:     make(map[string]int),
+		tuiConsole:           tuiConsole,
 		emitFunc:         emitFunc,
 		writerFactory:    writerFactory,
 	}
@@ -191,8 +213,9 @@ func (us *UnitScheduler) startCapacityTicker() {
 		for {
 			select {
 			case <-us.capacityTicker.C:
-				newCap := detectAvailableCapacity(us.configMax, us.turbo)
-				us.semaphore.SetCapacity(newCap)
+				hostCap := detectAvailableCapacity(us.configMax, us.turbo)
+				dockerCap := detectDockerCapacity(us.turbo)
+				us.semaphore.SetCapacity(hostCap, dockerCap)
 			case <-us.capacityStop:
 				us.capacityTicker.Stop()
 				return
@@ -236,9 +259,19 @@ func (us *UnitScheduler) emitResourceStatus() {
 	snapshot := us.registry.Snapshot()
 	resources := make([]interfaces.ResourceInfo, 0, len(snapshot))
 	for _, lock := range snapshot {
+		// Derive pool from lock name (component-scheduler → host, docker-scheduler → docker)
+		pool := ""
+		switch lock.Name {
+		case "component-scheduler":
+			pool = "host"
+		case "docker-scheduler":
+			pool = "docker"
+		}
+
 		resources = append(resources, interfaces.ResourceInfo{
 			Name:     lock.Name,
 			Type:     string(lock.Type),
+			Pool:     pool,
 			Capacity: int(lock.Capacity),
 			Used:     int(lock.Used),
 			Waiting:  int(lock.Waiting),
@@ -248,6 +281,26 @@ func (us *UnitScheduler) emitResourceStatus() {
 	us.emit(interfaces.ResourceStatusEvent{
 		Time:      time.Now(),
 		Resources: resources,
+	})
+}
+
+// emitToolStatus sends the current tool/container status to observers.
+// This should be called after tool activation/deactivation to update the TUI's Tools and Containers lamps.
+func (us *UnitScheduler) emitToolStatus() {
+	if us.emitFunc == nil {
+		return
+	}
+
+	running, total := us.getContainerInstanceCounts()
+
+	us.emit(interfaces.ToolStatusEvent{
+		Time:                      time.Now(),
+		ActiveContainerTools:      us.getActiveContainerToolsList(),
+		UsedContainerTools:        us.getUsedContainerToolsList(),
+		ActiveSystem:              us.getActiveSystemToolsList(),
+		UsedSystem:                us.getUsedSystemToolsList(),
+		ContainerInstancesRunning: running,
+		ContainerInstancesTotal:   total,
 	})
 }
 
@@ -400,20 +453,16 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 		cpuCount = 4 // Fallback
 	}
 
-	// Prioritize Docker → WSL → Host memory detection
+	// Use HOST memory for capacity since builds run on host, not in Docker/WSL
+	// Docker/WSL memory limits only apply to containerized builds (handled separately by weight system)
 	var ramGB int
-	effectiveMem := GetEffectiveMemoryBytes()
-	if effectiveMem > 0 {
-		ramGB = int(effectiveMem / (1024 * 1024 * 1024))
+	memInfo, err := mem.VirtualMemory()
+	if err == nil {
+		// Use TOTAL host RAM for scheduling capacity
+		// Available can fluctuate; total is stable and represents actual machine capacity
+		ramGB = int(memInfo.Total / (1024 * 1024 * 1024))
 	} else {
-		// Fallback: use host available RAM (not total) for safety
-		memInfo, err := mem.VirtualMemory()
-		if err == nil {
-			// Use AVAILABLE, not TOTAL (critical on Windows/WSL)
-			ramGB = int(memInfo.Available / (1024 * 1024 * 1024))
-		} else {
-			ramGB = 8 // Hard fallback
-		}
+		ramGB = 8 // Hard fallback
 	}
 
 	capacity := calculateCapacity(cpuCount, ramGB, configMax, turbo)
@@ -435,10 +484,10 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 		return roof
 	}
 
-	// Auto-detect: min(CPU, RAM/3) × turbo
-	// RAM/3 because each weight unit uses ~2.5GB + overhead
-	// This ensures we don't overcommit memory on lower-spec machines
-	ramCap := ramGB / 3
+	// Auto-detect: min(CPU, RAM/2) × turbo
+	// RAM/2 because each parallel unit uses ~1.5-2GB for typical Go builds
+	// This balances parallelism with memory safety on constrained systems
+	ramCap := ramGB / 2
 	if ramCap < 1 {
 		ramCap = 1
 	}
@@ -456,7 +505,7 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 
 	// Cap at RAM limit FIRST (safety), then CPU limit
 	// This prevents turbo from overcommitting memory
-	ramMax := ramGB / 3
+	ramMax := ramGB / 2
 	if capacity > ramMax && ramMax > 0 {
 		logging.C().Debugf("[scheduler] Turbo exceeded RAM limit: %d -> %d (ramGB=%d)", capacity, ramMax, ramGB)
 		capacity = ramMax
@@ -481,6 +530,41 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 	return capacity
 }
 
+// detectDockerCapacity calculates the docker pool capacity.
+// Uses Docker daemon's memory limit via `docker info`.
+// Returns 0 if Docker is unavailable or has no memory limit.
+func detectDockerCapacity(turbo float64) int {
+	dockerMem := GetDockerMemoryBytes()
+	if dockerMem == 0 {
+		logging.C().Debugf("[scheduler] Docker unavailable or no memory limit, docker capacity = 0")
+		return 0
+	}
+
+	// Docker pool uses 1GB per weight unit (heavier builds)
+	// This is more conservative than host pool (256MB per unit)
+	const dockerBytesPerWeight = 1024 * 1024 * 1024 // 1GB
+
+	dockerCapGB := int(dockerMem / dockerBytesPerWeight)
+	if dockerCapGB < 1 {
+		dockerCapGB = 1
+	}
+
+	// Apply turbo multiplier but cap at reasonable level
+	if turbo > 1.0 {
+		dockerCapGB = int(float64(dockerCapGB) * turbo)
+	}
+
+	// Cap at 16 concurrent docker builds (practical limit)
+	if dockerCapGB > 16 {
+		dockerCapGB = 16
+	}
+
+	logging.C().Debugf("[scheduler] Docker capacity: dockerMem=%d bytes → capacity=%d",
+		dockerMem, dockerCapGB)
+
+	return dockerCapGB
+}
+
 // InitializeWork prepares the scheduler for a batch of work units.
 // Must be called before RunUnits.
 func (us *UnitScheduler) InitializeWork(work []workunit.UnitSpec) {
@@ -495,10 +579,12 @@ func (us *UnitScheduler) InitializeWork(work []workunit.UnitSpec) {
 	us.unitHandlerDone = make(map[string]map[string]int)
 	us.unitFailed = make(map[string]map[string]bool)
 	us.unitExtras = make(map[string]map[string]UnitExtras)
-	us.activeContainers = make(map[string]int)
-	us.usedContainers = make(map[string]bool)
+	us.activeContainerTools = make(map[string]int)
+	us.usedContainerTools = make(map[string]bool)
 	us.activeSystem = make(map[string]int)
 	us.usedSystem = make(map[string]bool)
+	us.containerLamps = make([]bool, 0)
+	us.containerLampMap = make(map[string]int)
 
 	// Count components per module and initialize tracking maps
 	for _, w := range work {
@@ -536,27 +622,19 @@ func (us *UnitScheduler) InitializeWork(work []workunit.UnitSpec) {
 
 // RunUnits executes work units with worker pool scheduling.
 // Uses LPT (Longest Processing Time First) - heaviest jobs scheduled first.
-// Spawns a pool of worker goroutines that pull from the queue concurrently.
+// Spawns a pool of worker goroutines that pull from the scheduler concurrently.
 // Returns results in the same order as the input work items.
 func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFunc) []UnitResult {
 	results := make([]UnitResult, len(work))
 	var resultsMu sync.Mutex
 	var wg sync.WaitGroup
 
-	// Determine layer mode from config:
-	// - Layered=true → LayerModeStrict (module + component + DependsOn enforced)
-	// - Layered=false → LayerModeNone (component + DependsOn only)
-	mode := execution.LayerModeNone
-	if us.config.Layered {
-		mode = execution.LayerModeStrict
-	}
-
-	// Create work queue with LayerPolicy for scheduling
-	queue, err := NewWorkQueueWithPolicy(work, mode)
+	// Create scheduler with dependency-based LPT scheduling
+	sched, err := scheduling.NewDependencyScheduler(work)
 	if err != nil {
 		// Circular dependencies are a configuration error.
 		// Return early with error results for all work items.
-		logging.C().Errorf("[scheduler] Failed to create work queue: %v", err)
+		logging.C().Errorf("[scheduler] Failed to create scheduler: %v", err)
 		for i, w := range work {
 			results[i] = UnitResult{
 				Module:    w.ID.Module,
@@ -568,7 +646,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 		}
 		return results
 	}
-	us.workQueue = queue // Store for stats access
+	us.scheduler = sched // Store for stats access
 
 	// Create all tabs as QUEUED upfront (positions are immutable)
 	for _, w := range work {
@@ -594,56 +672,53 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 		us.StartBackgroundCacheDetection(work, cachedModules, cacheTimes, verifier)
 	}
 
-	// Determine worker pool size: min(work items, capacity)
+	// Determine worker pool size: min(work items, host capacity)
 	// This ensures we can saturate capacity immediately
 	poolSize := len(work)
-	capacity := us.semaphore.Capacity()
-	if capacity > 0 && poolSize > capacity {
-		poolSize = capacity
+	hostCap := us.semaphore.HostCapacity()
+	dockerCap := us.semaphore.DockerCapacity()
+	if hostCap.Total > 0 && poolSize > hostCap.Total {
+		poolSize = hostCap.Total
 	}
 
 	// Store roof (hard ceiling) for three-value capacity model
 	// Roof is the actual peak allocation - workers spawned at start
 	us.roof = poolSize
 
-	// Store total capacity for over-capacity detection
-	totalCapacity := capacity
+	// Store total capacities for over-capacity detection
+	totalHostCapacity := hostCap.Total
+	totalDockerCapacity := dockerCap.Total
 
-	// Spawn worker pool - all workers start immediately and compete for queue items
-	// Workers use bin-packing: check available capacity, pop item that fits
+	// Spawn worker pool - all workers start immediately and compete for scheduler items
+	// Scheduler returns heaviest ready item (LPT); orchestrator handles capacity via semaphore
 	for i := 0; i < poolSize; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
 			for {
-				// Check available capacity for bin-packing
-				// This is approximate (race-safe) - actual acquisition may differ
-				available := us.semaphore.Available()
-				if available < 1 {
-					available = 1 // At minimum, look for weight-1 items
-				}
-
-				// Pop item that fits available capacity (bin-packing)
-				// Prioritizes heavier items that fit, enabling parallel small jobs
-				spec := queue.PopReadyWithBudget(available, totalCapacity)
+				// Get next ready item from scheduler (LPT ordering, deps satisfied)
+				// Blocks until an item is ready or scheduler is exhausted
+				spec := sched.WaitForReady()
 				if spec == nil {
-					return // queue exhausted
+					return // scheduler exhausted
 				}
 
-				weight := spec.Weight
-				if weight <= 0 {
-					weight = 1
-				}
+				// Get pool allocation for this unit
+				alloc := spec.GetPoolAllocation()
 
-				// Check if this is an over-capacity item (weight > total capacity)
-				// Over-capacity items skip semaphore and execute serially via queue lock
-				isOverCapacity := totalCapacity > 0 && weight > totalCapacity
+				// Check if this is an over-capacity item (weight exceeds pool capacity)
+				// Over-capacity items skip semaphore (would block forever) and execute serially
+				isOverCapacity := (totalHostCapacity > 0 && alloc.HostWeight > totalHostCapacity) ||
+					(totalDockerCapacity > 0 && alloc.DockerWeight > 0 && alloc.DockerWeight > totalDockerCapacity)
 
-				// Acquire capacity (blocks until slot available)
-				// CRITICAL: Skip semaphore for over-capacity items to prevent forever-blocking
-				if !isOverCapacity {
-					us.semaphore.Acquire(weight)
+				// For over-capacity items: serialize via mutex (only one at a time)
+				// For normal items: acquire weighted semaphore capacity
+				if isOverCapacity {
+					us.overCapacityMu.Lock()
+					us.overCapacityItem = &spec.ID
+				} else {
+					us.semaphore.Acquire(context.Background(), alloc)
 				}
 				us.emitResourceStatus() // Update TUI Resources pane
 
@@ -653,7 +728,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 				var result UnitResult
 
 				// Check if any dependency failed - if so, skip execution and fail immediately
-				if queue.HasFailedDependency(spec.ID) {
+				if sched.HasFailedDependency(spec.ID) {
 					result = UnitResult{
 						Module:    spec.ID.Module,
 						Component: spec.ID.Component,
@@ -661,37 +736,30 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 						ExitCode:  1,
 						Errors:    []string{"Skipped: dependency failed"},
 					}
-					// Release capacity immediately since we're not executing
-					if !isOverCapacity {
-						us.semaphore.Release(weight)
-					}
-					us.emitResourceStatus()
 				} else {
 					// Execute work
 					result = us.executeWorker(*spec, worker)
-
-					// Release capacity
-					if !isOverCapacity {
-						us.semaphore.Release(weight)
-					}
-					us.emitResourceStatus() // Update TUI Resources pane
 				}
+
+				// Release capacity/mutex
+				if isOverCapacity {
+					us.overCapacityItem = nil
+					us.overCapacityMu.Unlock()
+				} else {
+					us.semaphore.Release(alloc)
+				}
+				us.emitResourceStatus() // Update TUI Resources pane
 
 				// Store result by original index
 				resultsMu.Lock()
 				results[spec.Index] = result
 				resultsMu.Unlock()
 
-				// Notify queue: mark as completed or failed based on result
+				// Notify scheduler: mark as completed or failed based on result
 				if result.ExitCode > 0 {
-					queue.MarkFailed(spec.ID)
+					sched.MarkFailed(spec.ID)
 				} else {
-					queue.MarkComplete(spec.ID)
-				}
-
-				// Release over-capacity lock if this was an over-capacity item
-				if isOverCapacity {
-					queue.ReleaseOverCapacity(spec.ID)
+					sched.MarkComplete(spec.ID)
 				}
 
 				// Mark component complete (broadcasts to legacy channels, updates TUI)
@@ -703,14 +771,14 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	// Wait for all workers to complete
 	wg.Wait()
 
-	// Defensive check: verify queue is fully drained
+	// Defensive check: verify scheduler is fully drained
 	// If items remain, workers exited prematurely (indicates a bug)
-	if remaining := queue.Len(); remaining > 0 {
-		logging.C().Warnf("[scheduler] BUG: queue has %d items remaining after all workers exited", remaining)
+	if remaining := sched.Len(); remaining > 0 {
+		logging.C().Warnf("[scheduler] BUG: scheduler has %d items remaining after all workers exited", remaining)
 	}
 
-	// Close queue
-	queue.Close()
+	// Close scheduler
+	sched.Close()
 
 	return results
 }
@@ -816,38 +884,47 @@ func (us *UnitScheduler) getUnitExtras(module, component string) (UnitExtras, bo
 
 // addActiveTool increments the usage count for a tool/handler.
 // Also tracks docker as active when container tools are used.
-func (us *UnitScheduler) addActiveTool(handler string, isContainer bool) {
+// moniker is used to track which container instance owns which lamp position.
+func (us *UnitScheduler) addActiveTool(handler string, isContainer bool, moniker string) {
 	if handler == "" {
 		return
 	}
 
 	us.toolsMu.Lock()
 	if isContainer {
-		us.activeContainers[handler]++
-		us.usedContainers[handler] = true
+		us.activeContainerTools[handler]++
+		us.usedContainerTools[handler] = true
 		// Container tools require docker - track it as active system tool
 		us.activeSystem["docker"]++
 		us.usedSystem["docker"] = true
+		// Assign a new lamp position for this container instance
+		lampIdx := len(us.containerLamps)
+		us.containerLamps = append(us.containerLamps, true) // true = running (lit)
+		us.containerLampMap[moniker] = lampIdx
 	} else {
 		us.activeSystem[handler]++
 		us.usedSystem[handler] = true
 	}
 	us.toolsMu.Unlock()
+
+	// Emit tool status update
+	us.emitToolStatus()
 }
 
 // removeActiveTool decrements the usage count for a tool/handler.
 // Also decrements docker count when container tools finish.
-func (us *UnitScheduler) removeActiveTool(handler string, isContainer bool) {
+// moniker identifies which container lamp to turn off.
+func (us *UnitScheduler) removeActiveTool(handler string, isContainer bool, moniker string) {
 	if handler == "" {
 		return
 	}
 
 	us.toolsMu.Lock()
 	if isContainer {
-		if us.activeContainers[handler] > 0 {
-			us.activeContainers[handler]--
-			if us.activeContainers[handler] == 0 {
-				delete(us.activeContainers, handler)
+		if us.activeContainerTools[handler] > 0 {
+			us.activeContainerTools[handler]--
+			if us.activeContainerTools[handler] == 0 {
+				delete(us.activeContainerTools, handler)
 			}
 		}
 		// Decrement docker usage count
@@ -856,6 +933,10 @@ func (us *UnitScheduler) removeActiveTool(handler string, isContainer bool) {
 			if us.activeSystem["docker"] == 0 {
 				delete(us.activeSystem, "docker")
 			}
+		}
+		// Turn off this container's lamp (mark as completed/dim)
+		if idx, ok := us.containerLampMap[moniker]; ok && idx < len(us.containerLamps) {
+			us.containerLamps[idx] = false // false = completed (dim)
 		}
 	} else {
 		if us.activeSystem[handler] > 0 {
@@ -866,36 +947,39 @@ func (us *UnitScheduler) removeActiveTool(handler string, isContainer bool) {
 		}
 	}
 	us.toolsMu.Unlock()
+
+	// Emit tool status update
+	us.emitToolStatus()
 }
 
-// getActiveContainersList returns a sorted list of currently active container tools.
-func (us *UnitScheduler) getActiveContainersList() []string {
+// getActiveContainerToolsList returns a sorted list of currently active container tools.
+func (us *UnitScheduler) getActiveContainerToolsList() []string {
 	us.toolsMu.Lock()
 	defer us.toolsMu.Unlock()
 
-	if len(us.activeContainers) == 0 {
+	if len(us.activeContainerTools) == 0 {
 		return nil
 	}
 
-	tools := make([]string, 0, len(us.activeContainers))
-	for tool := range us.activeContainers {
+	tools := make([]string, 0, len(us.activeContainerTools))
+	for tool := range us.activeContainerTools {
 		tools = append(tools, tool)
 	}
 	sort.Strings(tools)
 	return tools
 }
 
-// getUsedContainersList returns a sorted list of all container tools that have been used.
-func (us *UnitScheduler) getUsedContainersList() []string {
+// getUsedContainerToolsList returns a sorted list of all container tools that have been used.
+func (us *UnitScheduler) getUsedContainerToolsList() []string {
 	us.toolsMu.Lock()
 	defer us.toolsMu.Unlock()
 
-	if len(us.usedContainers) == 0 {
+	if len(us.usedContainerTools) == 0 {
 		return nil
 	}
 
-	tools := make([]string, 0, len(us.usedContainers))
-	for tool := range us.usedContainers {
+	tools := make([]string, 0, len(us.usedContainerTools))
+	for tool := range us.usedContainerTools {
 		tools = append(tools, tool)
 	}
 	sort.Strings(tools)
@@ -934,6 +1018,21 @@ func (us *UnitScheduler) getUsedSystemToolsList() []string {
 	}
 	sort.Strings(tools)
 	return tools
+}
+
+// getContainerInstanceCounts returns running and total container instance counts.
+// Running = currently lit lamps, Total = all lamps (lit + dim).
+func (us *UnitScheduler) getContainerInstanceCounts() (running, total int) {
+	us.toolsMu.Lock()
+	defer us.toolsMu.Unlock()
+
+	total = len(us.containerLamps)
+	for _, active := range us.containerLamps {
+		if active {
+			running++
+		}
+	}
+	return running, total
 }
 
 // tuiMarkPending creates a component tab in pending state (scheduled, waiting for slot).
@@ -990,7 +1089,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	startTime := time.Now()
 
 	// Track active tool usage
-	us.addActiveTool(tool, spec.Container)
+	us.addActiveTool(tool, spec.Container, moniker)
 
 	// Create output directory for this component
 	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
@@ -1006,7 +1105,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		result.Errors = []string{fmt.Sprintf("Failed to create directory: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
-		us.removeActiveTool(tool, spec.Container)
+		us.removeActiveTool(tool, spec.Container, moniker)
 		return result
 	}
 
@@ -1018,7 +1117,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		result.Errors = []string{fmt.Sprintf("Failed to create log file: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
-		us.removeActiveTool(tool, spec.Container)
+		us.removeActiveTool(tool, spec.Container, moniker)
 		return result
 	}
 
@@ -1104,7 +1203,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	}
 
 	// Remove tool from active list
-	us.removeActiveTool(tool, spec.Container)
+	us.removeActiveTool(tool, spec.Container, moniker)
 
 	return result
 }
@@ -1135,7 +1234,7 @@ func (us *UnitScheduler) tuiMarkRunning(moniker string) {
 	})
 	pressureTarget := 0
 	if us.semaphore != nil {
-		pressureTarget = us.semaphore.Capacity()
+		pressureTarget = us.semaphore.HostCapacity().Total
 	}
 	us.emit(interfaces.ProgressUpdateEvent{
 		Time:           time.Now(),
@@ -1179,7 +1278,7 @@ func (us *UnitScheduler) tuiMarkCompleted(moniker string, exitCode int) {
 	})
 	pressureTarget := 0
 	if us.semaphore != nil {
-		pressureTarget = us.semaphore.Capacity()
+		pressureTarget = us.semaphore.HostCapacity().Total
 	}
 	us.emit(interfaces.ProgressUpdateEvent{
 		Time:           time.Now(),

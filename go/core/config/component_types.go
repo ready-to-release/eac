@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/core/resource"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,6 +38,13 @@ type ComponentType struct {
 	// Empty or omitted means the component type is not scannable.
 	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
 
+	// Testable indicates this component type supports testing (e.g., go test, npm test)
+	Testable bool `yaml:"testable,omitempty" json:"testable,omitempty"`
+
+	// Lintable indicates this component type supports linting
+	// When true, lint providers can be configured for this type
+	Lintable bool `yaml:"lintable,omitempty" json:"lintable,omitempty"`
+
 	// BuildAfter specifies component types that must complete before this one
 	// within the same module. Used for intra-module dependency ordering.
 	// Example: ["go"] means this component waits for the "go" component to finish.
@@ -59,18 +67,34 @@ type ComponentType struct {
 	// Defaults contains default values for component instances of this type.
 	// Enables convention-over-configuration patterns.
 	Defaults *ComponentTypeDefaults `yaml:"defaults,omitempty" json:"defaults,omitempty"`
+
+	// Pool specifies which resource pool this component uses.
+	// Valid values: "host" (default), "docker".
+	// "docker" means the component runs in a container and uses BOTH pools.
+	// If not specified, inferred from Requirements (docker requirement -> docker pool).
+	Pool string `yaml:"pool,omitempty" json:"pool,omitempty"`
+
+	// Amp is the weight amplifier for this component type.
+	// Multiplies the tool's base resource weight (from tool-config.yml resources.cpus).
+	// Default: 1.0 (no amplification). Values < 1.0 reduce weight, > 1.0 increase weight.
+	Amp float64 `yaml:"amp,omitempty" json:"amp,omitempty"`
 }
 
 // ComponentTypeResources defines resource requirements for a component type.
 // CPUs is used as the scheduling weight. Memory is used for container limits.
 type ComponentTypeResources struct {
-	// CPUs is the number of CPUs required. Used as scheduling weight.
+	// CPUs is the number of CPUs required. Used as scheduling weight (host pool).
 	// Default: 1
 	CPUs int `yaml:"cpus,omitempty" json:"cpus,omitempty"`
 
 	// Memory is the memory requirement (e.g., "8g", "512m").
 	// Used for container memory limits.
 	Memory string `yaml:"memory,omitempty" json:"memory,omitempty"`
+
+	// DockerWeight is the weight for docker pool allocation.
+	// If not set, defaults to CPUs value for container components.
+	// Only used when component pool is "docker".
+	DockerWeight int `yaml:"docker_weight,omitempty" json:"docker_weight,omitempty"`
 }
 
 // ComponentTypeDefaults contains default values for component instances.
@@ -150,6 +174,21 @@ func (c *ComponentType) HasToolChain() bool {
 	return len(c.ToolChain) > 1
 }
 
+// IsBuildable returns true if this component type has a builder configured.
+func (c *ComponentType) IsBuildable() bool {
+	return c.HasBuilder()
+}
+
+// IsTestable returns true if this component type supports testing.
+func (c *ComponentType) IsTestable() bool {
+	return c.Testable
+}
+
+// IsLintable returns true if this component type supports linting.
+func (c *ComponentType) IsLintable() bool {
+	return c.Lintable
+}
+
 // IsScannable returns true if this component type has scanners configured.
 // Component types without scanners (or with empty scanners) are not scannable.
 func (c *ComponentType) IsScannable() bool {
@@ -181,6 +220,15 @@ func (c *ComponentType) GetWeight() int {
 	return 1
 }
 
+// GetAmp returns the weight amplifier for this component type.
+// Returns 1.0 if not specified or if the value is 0.
+func (c *ComponentType) GetAmp() float64 {
+	if c == nil || c.Amp == 0 {
+		return 1.0
+	}
+	return c.Amp
+}
+
 // GetMemory returns the memory requirement for this component type.
 // Returns empty string if not specified.
 func (c *ComponentType) GetMemory() string {
@@ -188,6 +236,55 @@ func (c *ComponentType) GetMemory() string {
 		return c.Resources.Memory
 	}
 	return ""
+}
+
+// GetPool returns the resource pool type for this component.
+// Returns "host" if not specified and no docker requirement.
+// Returns "docker" if Pool field is "docker" OR if Requirements includes "docker".
+func (c *ComponentType) GetPool() string {
+	// Explicit pool setting takes precedence
+	if c.Pool == "host" || c.Pool == "docker" {
+		return c.Pool
+	}
+	// Infer from requirements
+	if c.RequiresDocker() {
+		return "docker"
+	}
+	return "host"
+}
+
+// RequiresDocker returns true if this component requires docker.
+func (c *ComponentType) RequiresDocker() bool {
+	for _, req := range c.Requirements {
+		if req == "docker" {
+			return true
+		}
+	}
+	return false
+}
+
+// GetDockerWeight returns the docker pool weight.
+// Returns 0 for host-only components.
+func (c *ComponentType) GetDockerWeight() int {
+	if c.GetPool() != "docker" {
+		return 0
+	}
+	if c.Resources != nil && c.Resources.DockerWeight > 0 {
+		return c.Resources.DockerWeight
+	}
+	// Default to CPU/host weight
+	return c.GetWeight()
+}
+
+// GetPoolAllocation returns the complete pool allocation for this component.
+func (c *ComponentType) GetPoolAllocation() resource.PoolAllocation {
+	hostWeight := c.GetWeight()
+	dockerWeight := c.GetDockerWeight()
+
+	return resource.PoolAllocation{
+		HostWeight:   hostWeight,
+		DockerWeight: dockerWeight,
+	}
 }
 
 // Get returns a component type definition by name.

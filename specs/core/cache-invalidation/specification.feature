@@ -51,7 +51,7 @@ Feature: Cache Invalidation System
       When I append "// cache-test-comment" to file "go/test-core/main.go"
       And I run "get changed-modules-local "
       Then the YAML output field "modules" contains "test-core"
-      And the YAML output field "change_reasons.test-core" contains "source changed"
+      And the YAML output field "change_reasons.test-core" contains "input hash mismatch"
 
     Scenario: B2 - Unchanged modules remain up-to-date
       Given I have built all modules successfully
@@ -214,7 +214,7 @@ Feature: Cache Invalidation System
       And a new module "test-new" is configured with go_root "go/test-new"
       When I run "get changed-modules-local "
       Then the YAML output field "modules" contains "test-new"
-      And the YAML output field "change_reasons.test-new" contains "no prior state"
+      And the YAML output field "change_reasons.test-new" contains "no build manifests found"
 
     Scenario: K2 - Circular dependency is detected and rejected
       Given modules are configured with circular dependency:

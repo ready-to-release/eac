@@ -22,6 +22,7 @@ func (m *mockConsole) NewWriter(source string, logWriter io.Writer) io.Writer {
 func (m *mockConsole) SendLine(line Line)                                        {}
 func (m *mockConsole) WriteResult(text string)                                   {}
 func (m *mockConsole) UpdateStatus(status Status)                                {}
+func (m *mockConsole) StatusRefreshInterval() time.Duration                      { return 0 }
 func (m *mockConsole) SetPhase(phase Phase)                                      {}
 func (m *mockConsole) CompletePhase(phase Phase, success bool, summary string)   {}
 func (m *mockConsole) WriteToPhase(phase Phase, text string)                     {}

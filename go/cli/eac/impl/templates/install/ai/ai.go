@@ -188,7 +188,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, "templates", "ai")
+	destination := filepath.Join(workspaceRoot, paths.EACDir, "templates", "ai")
 
 	cfg := &Config{
 		Destination:   destination,

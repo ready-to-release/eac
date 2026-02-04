@@ -227,3 +227,149 @@ func TestBuildBridge_SetToolSystem(t *testing.T) {
 		t.Error("Tool system not properly configured")
 	}
 }
+
+func TestBuildBridge_GetToolForComponent(t *testing.T) {
+	tests := []struct {
+		name          string
+		componentType string
+		setupRegistry func(r *DefaultRegistry)
+		setupResolver func(r Registry) *DefaultResolver
+		wantToolID    string
+		wantCPUs      int
+		wantNil       bool
+	}{
+		{
+			name:          "returns tool from registry by direct lookup",
+			componentType: "go-build", // Direct tool name
+			setupRegistry: func(r *DefaultRegistry) {
+				config := &ToolConfig{
+					SystemTools: map[string]*ToolDefinition{
+						"go-build": {
+							Type:   ToolTypeSystem,
+							Binary: "go",
+							Resources: &ToolResources{
+								CPUs: 2,
+							},
+						},
+					},
+				}
+				if err := r.RegisterFromConfig(config); err != nil {
+					t.Fatalf("RegisterFromConfig failed: %v", err)
+				}
+			},
+			setupResolver: nil,
+			wantToolID:    "go-build",
+			wantCPUs:      2,
+		},
+		{
+			name:          "returns tool with resolver component-tools mapping",
+			componentType: "typescript",
+			setupRegistry: func(r *DefaultRegistry) {
+				config := &ToolConfig{
+					ContainerTools: map[string]*ToolDefinition{
+						"npm-build": {
+							Type:      ToolTypeContainer,
+							Image:     "node",
+							Tag:       "22-alpine",
+							Container: "node",
+							Resources: &ToolResources{
+								CPUs:   4,
+								Memory: "4g",
+							},
+						},
+					},
+					ComponentTools: map[string]*ToolAssignment{
+						"typescript": {
+							Builder: "npm-build",
+						},
+					},
+				}
+				if err := r.RegisterFromConfig(config); err != nil {
+					t.Fatalf("RegisterFromConfig failed: %v", err)
+				}
+			},
+			setupResolver: func(r Registry) *DefaultResolver {
+				resolver := NewResolver(r)
+				// Load component-tools mapping
+				resolver.LoadProjectConfig(map[string]*ToolAssignment{
+					"typescript": {Builder: "npm-build"},
+				})
+				return resolver
+			},
+			wantToolID: "npm-build",
+			wantCPUs:   4,
+		},
+		{
+			name:          "returns nil for unknown component type",
+			componentType: "unknown",
+			setupRegistry: func(r *DefaultRegistry) {},
+			setupResolver: nil,
+			wantNil:       true,
+		},
+		{
+			name:          "returns tool with default resources (CPUs=0)",
+			componentType: "simple-tool",
+			setupRegistry: func(r *DefaultRegistry) {
+				config := &ToolConfig{
+					SystemTools: map[string]*ToolDefinition{
+						"simple-tool": {
+							Type:   ToolTypeSystem,
+							Binary: "simple",
+							// No Resources specified
+						},
+					},
+				}
+				if err := r.RegisterFromConfig(config); err != nil {
+					t.Fatalf("RegisterFromConfig failed: %v", err)
+				}
+			},
+			setupResolver: nil,
+			wantToolID:    "simple-tool",
+			wantCPUs:      0, // nil resources = 0
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bridge := NewBuildBridge()
+			registry := NewRegistry()
+			registry.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
+			if tt.setupRegistry != nil {
+				tt.setupRegistry(registry)
+			}
+
+			var resolver *DefaultResolver
+			if tt.setupResolver != nil {
+				resolver = tt.setupResolver(registry)
+			}
+
+			bridge.SetToolSystem(registry, resolver, &mockExecutor{})
+
+			got := bridge.GetToolForComponent(tt.componentType)
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("GetToolForComponent(%q) = %v, want nil", tt.componentType, got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatalf("GetToolForComponent(%q) = nil, want tool", tt.componentType)
+			}
+
+			if got.ID != tt.wantToolID {
+				t.Errorf("GetToolForComponent(%q).ID = %q, want %q", tt.componentType, got.ID, tt.wantToolID)
+			}
+
+			gotCPUs := 0
+			if got.Resources != nil {
+				gotCPUs = got.Resources.CPUs
+			}
+			if gotCPUs != tt.wantCPUs {
+				t.Errorf("GetToolForComponent(%q).Resources.CPUs = %d, want %d", tt.componentType, gotCPUs, tt.wantCPUs)
+			}
+		})
+	}
+}

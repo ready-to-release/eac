@@ -37,49 +37,29 @@ func init() {
 	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeBuild, ResolveUnitSpecs)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeBuild, buildUnitWorker)
 	cmdframework.SetUoWCountProvider(getBuildUoWCount)
-	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeBuild, getBuildUnitLayers)
 }
 
-// getCachedUnitWork returns cached component work layers, computing once if needed.
+// getCachedUnitWork returns cached component work specs, computing once if needed.
 // This avoids duplicate calls to ResolveUnitSpecs during startup.
-func getCachedUnitWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func getCachedUnitWork(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	// Check if already cached in Extra
 	if ctx.Config.Extra == nil {
 		ctx.Config.Extra = make(map[string]interface{})
 	}
-	if cached, ok := ctx.Config.Extra["componentWorkLayers"]; ok {
-		return cached.([][]workunit.UnitSpec)
+	if cached, ok := ctx.Config.Extra["componentWorkSpecs"]; ok {
+		return cached.([]workunit.UnitSpec)
 	}
 
 	// Compute and cache
-	layers := ResolveUnitSpecs(ctx)
-	ctx.Config.Extra["componentWorkLayers"] = layers
-	return layers
+	specs := ResolveUnitSpecs(ctx)
+	ctx.Config.Extra["componentWorkSpecs"] = specs
+	return specs
 }
 
 // getBuildUoWCount returns the total number of buildable UoWs (units of work).
 func getBuildUoWCount(ctx *cmdframework.ExecutionContext) int {
-	layers := getCachedUnitWork(ctx)
-	return CountUnits(layers)
-}
-
-// getBuildUnitLayers returns the component execution layers as string slices.
-// Each layer contains component identifiers in "module:component:handler" format.
-// This matches the display name format used by the TUI scheduler.
-func getBuildUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := getCachedUnitWork(ctx)
-	result := make([][]string, len(layers))
-	for i, layer := range layers {
-		result[i] = make([]string, len(layer))
-		for j, work := range layer {
-			if work.ID.Tool != "" {
-				result[i][j] = fmt.Sprintf("%s:%s:%s", work.ID.Module, work.ID.Component, work.ID.Tool)
-			} else {
-				result[i][j] = fmt.Sprintf("%s:%s", work.ID.Module, work.ID.Component)
-			}
-		}
-	}
-	return result
+	specs := getCachedUnitWork(ctx)
+	return CountUnits(specs)
 }
 
 // BuildConfig holds build-specific configuration.
@@ -88,7 +68,6 @@ type BuildConfig struct {
 	Version         string
 	BuildAll        bool
 	UseExistingDepm bool
-	LayeredBuild    bool
 
 	// Reproducible controls determinism behavior for MkDocs builds.
 	// Values: "auto" (default), "true", "false"
@@ -124,10 +103,14 @@ func (c *BuildConfig) ResolveReproducible() bool {
 // buildContext holds build-specific state during execution.
 type buildContext struct {
 	cfg              *BuildConfig
-	cachedModules    map[string]bool      // Modules that are up-to-date (cache hits)
+	cachedModules    map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
 	cacheTimes       map[string]time.Time // When cached modules were last built
 	componentWeights map[string]int       // Component weights: "module:component" -> weight
 	tracker          *coreoutput.InMemoryTracker // UoW manifest tracker
+
+	// UoW-level cache tracking
+	cachedUoWs    map[string]bool      // UoW longname -> cached (e.g., "build:core:go:go")
+	uowCacheTimes map[string]time.Time // UoW longname -> cache time
 }
 
 // RunBuildWithFramework executes build using the cmdframework.
@@ -199,38 +182,29 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Handle --use-existing-depm: filter out deps that already have artifacts
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && ctx.ExecutionPlan != nil {
 		var filteredOrder []string
-		var filteredLayers [][]string
 
-		for _, layer := range ctx.ExecutionPlan.Layers {
-			var filteredLayer []string
-			for _, m := range layer {
-				// Always include requested modules
-				if buildCfg.RequestedSet[m] {
-					filteredLayer = append(filteredLayer, m)
-					filteredOrder = append(filteredOrder, m)
-					continue
-				}
-				// For deps, check if artifacts exist
-				if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.BuildAll) {
-					log.Debugf("Skipping dep %s (artifacts exist)", m)
-				} else {
-					filteredLayer = append(filteredLayer, m)
-					filteredOrder = append(filteredOrder, m)
-				}
+		for _, m := range ctx.ExecutionPlan.ExecutionOrder {
+			// Always include requested modules
+			if buildCfg.RequestedSet[m] {
+				filteredOrder = append(filteredOrder, m)
+				continue
 			}
-			if len(filteredLayer) > 0 {
-				filteredLayers = append(filteredLayers, filteredLayer)
+			// For deps, check if artifacts exist
+			if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.BuildAll) {
+				log.Debugf("Skipping dep %s (artifacts exist)", m)
+			} else {
+				filteredOrder = append(filteredOrder, m)
 			}
 		}
 
 		ctx.ExecutionPlan.ExecutionOrder = filteredOrder
-		ctx.ExecutionPlan.Layers = filteredLayers
 	}
 
 	// Incremental build detection (devbox only)
 	// Also run in dry-run mode to show which modules would be built/skipped
 	if !ctx.Config.ForceRebuild && !buildCfg.UseExistingDepm {
-		detectIncrementalChanges(ctx, bctx)
+		// UoW-based incremental detection
+		detectUoWIncrementalChanges(ctx, bctx)
 
 		// Pass cache times to orchestrator for TUI display
 		if len(bctx.cacheTimes) > 0 && ctx.Orchestrator != nil {
@@ -240,7 +214,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		// Enable early cache detection for fast TUI feedback
 		// Tabs will progressively "light up" blue as cache hits are detected
 		if len(bctx.cachedModules) > 0 && ctx.Orchestrator != nil {
-			verifier := NewBuildCacheVerifier(ctx.WorkspaceRoot, bctx.cachedModules, bctx.cacheTimes)
+			verifier := NewUoWBuildCacheVerifier(ctx.WorkspaceRoot, bctx.cachedUoWs, bctx.uowCacheTimes, bctx.cachedModules)
 			ctx.Orchestrator.SetCacheDetection(verifier, bctx.cachedModules)
 		}
 	}
@@ -256,173 +230,32 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // This is called after component resolution so weights can be looked up during execution.
 // The weights are used to scale container resources (CPU, memory) appropriately.
 func populateComponentWeights(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
-	layers := getCachedUnitWork(ctx)
-	if len(layers) == 0 {
+	specs := getCachedUnitWork(ctx)
+	if len(specs) == 0 {
 		return
 	}
 
-	for _, layer := range layers {
-		for _, spec := range layer {
-			// Key format: "module:component" (without tool suffix)
-			key := spec.ID.Module + ":" + spec.ID.Component
-			if spec.ID.Tool != "" {
-				// Include tool for unique identification when multiple tools per component
-				key = spec.ID.Module + ":" + spec.ID.Component + ":" + spec.ID.Tool
-			}
-			bctx.componentWeights[key] = spec.Weight
-			log.Debugf("[WEIGHT] Stored weight for %s: %d", key, spec.Weight)
+	for _, spec := range specs {
+		// Key format: "module:component" (without tool suffix)
+		key := spec.ID.Module + ":" + spec.ID.Component
+		if spec.ID.Tool != "" {
+			// Include tool for unique identification when multiple tools per component
+			key = spec.ID.Module + ":" + spec.ID.Component + ":" + spec.ID.Tool
 		}
+		bctx.componentWeights[key] = spec.Weight
+		log.Debugf("[WEIGHT] Stored weight for %s: %d", key, spec.Weight)
 	}
 
 	log.Debugf("[WEIGHT] Populated %d component weights", len(bctx.componentWeights))
 }
 
-// detectIncrementalChanges performs incremental build detection.
-// Instead of filtering modules from the execution plan, it stores which modules
-// are cached so the component worker can skip them with -1 (blue in TUI).
-// This keeps all modules visible and clickable in the TUI.
-func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
-	startTime := time.Now()
-	defer func() {
-		ctx.SetChangeDetectionTiming(time.Since(startTime))
-	}()
 
-	// Collect modules for change detection
-	monikers := ctx.GetExecutionMonikers()
-	if len(monikers) == 0 {
-		return
-	}
-
-	// Build module files map for hash computation
-	moduleFiles := make(map[string][]string)
-	for _, moniker := range monikers {
-		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			patterns := contract.GetGlobPatterns()
-			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
-			if err != nil {
-				log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
-				continue
-			}
-			moduleFiles[moniker] = files
-		}
-	}
-
-	// Use StateManager for change detection
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	rule := workunit.DefaultRules[workunit.ContextBuild]
-
-	// Create hash provider that computes hash from expanded files
-	hashProvider := func(module string) (string, error) {
-		files, ok := moduleFiles[module]
-		if !ok {
-			return "", fmt.Errorf("no files for module %s", module)
-		}
-		return hash.Files(ctx.WorkspaceRoot, files)
-	}
-
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
-	if err != nil {
-		log.Debugf("Failed to detect changes: %v", err)
-		return
-	}
-
-	log.Debugf("[TUI-CACHE] DetectChanges result: FreshBuild=%v Changed=%d UpToDate=%d",
-		changeResult.FreshRun, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
-	for moniker, reason := range changeResult.ChangeReasons {
-		log.Debugf("[TUI-CACHE] Changed: %s -> %s", moniker, reason)
-	}
-
-	detectionTime := time.Since(startTime)
-
-	if changeResult.FreshRun {
-		log.Debugf("Fresh build detected, all modules will build")
-		if ctx.InitSummary != nil {
-			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
-				Enabled:       true,
-				DetectionTime: detectionTime,
-				FreshBuild:    true,
-			})
-		}
-		return
-	}
-
-	// Build set of changed modules (modules that need rebuilding)
-	changedSet := make(map[string]bool)
-	for _, m := range changeResult.ChangedModules {
-		changedSet[m] = true
-	}
-
-	// Build set of cached modules (modules that are up-to-date)
-	// These will be skipped at the component worker level, not filtered from the plan.
-	// This keeps all modules visible in the TUI.
-	bctx.cachedModules = make(map[string]bool)
-	bctx.cacheTimes = make(map[string]time.Time)
-	buildCfg := bctx.cfg
-	var changedList []string
-	var cachedList []string
-
-	for _, moniker := range monikers {
-		// In dry-run mode, show actual cache state (not forced rebuild)
-		// In normal mode, explicitly requested modules always rebuild (bypass cache)
-		if !ctx.Config.DryRun && buildCfg.RequestedSet[moniker] {
-			changedList = append(changedList, moniker)
-			continue
-		}
-		if changedSet[moniker] {
-			changedList = append(changedList, moniker)
-		} else {
-			bctx.cachedModules[moniker] = true
-			cachedList = append(cachedList, moniker)
-			// Load the ExecutedAt time from state for display in TUI
-			unitID := workunit.UnitID{
-				Context:   workunit.ContextBuild,
-				Module:    moniker,
-				Component: "_module",
-				Tool:      "_",
-			}
-			if state, loadErr := stateMgr.Load(unitID); loadErr == nil && state != nil {
-				bctx.cacheTimes[moniker] = state.ExecutedAt
-			}
-		}
-	}
-
-	// Report incremental detection in init summary
-	log.Debugf("[INCREMENTAL] Setting summary: InitSummary=%v, changedList=%v, cachedList=%v",
-		ctx.InitSummary != nil, changedList, cachedList)
-	if ctx.InitSummary != nil {
-		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
-			Enabled:       true,
-			DetectionTime: detectionTime,
-			Changed:       changedList,
-			UpToDate:      cachedList,
-			FreshBuild:    false,
-		})
-	}
-
-	log.Debugf("Incremental: %d modules to build, %d cached (will show blue in TUI)",
-		len(changedList), len(cachedList))
-
-	// Debug: Log the cached modules map keys
-	if len(bctx.cachedModules) > 0 {
-		var keys []string
-		for k := range bctx.cachedModules {
-			keys = append(keys, k)
-		}
-		log.Debugf("[TUI-CACHE] cachedModules set with %d entries: %v", len(keys), keys)
-	} else {
-		log.Debugf("[TUI-CACHE] cachedModules is empty or nil")
-	}
-}
-
-// buildAfterExecute handles post-build tasks: artifact derivations, manifest generation, state updates.
+// buildAfterExecute handles post-build tasks: artifact derivations and post-build steps.
+// Note: UoW manifests are written atomically during build execution via InMemoryTracker.
 func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
 	if !ok {
 		return fmt.Errorf("buildConfig not found or wrong type")
-	}
-	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
-	if !ok {
-		return fmt.Errorf("buildContext not found or wrong type")
 	}
 
 	// Check if any modules were actually built (vs all cached)
@@ -447,16 +280,41 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		log.Debugf("buildAfterExecute: processAllArtifactDerivations took %v", time.Since(start))
 	}
 
-	// NOTE: Legacy manifest generation removed - UoW manifests are now written
-	// during build execution via InMemoryTracker (see buildUnitWorker)
-
-	// Update incremental build state - only if something was actually built
-	if !ctx.Config.DryRun && anyBuilt {
-		start := time.Now()
-		updateIncrementalState(ctx, bctx)
-		log.Debugf("buildAfterExecute: updateIncrementalState took %v", time.Since(start))
+	// Assert all UoWs have valid manifests (skip in dry-run mode)
+	if !ctx.Config.DryRun {
+		if err := assertBuildManifestsExist(ctx); err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+// assertBuildManifestsExist verifies that all expected UoWs have valid manifests.
+// This catches cases where manifest generation was broken or never implemented.
+func assertBuildManifestsExist(ctx *cmdframework.ExecutionContext) error {
+	specs := getCachedUnitWork(ctx)
+	if len(specs) == 0 {
+		return nil
+	}
+
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	var missing []string
+
+	for _, spec := range specs {
+		// Check if manifest exists for this UoW
+		_, err := reader.GetUoW(workunit.ContextBuild, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
+		if err != nil {
+			missing = append(missing, spec.ID.Longname())
+			log.Debugf("[BUILD-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("build completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
+	}
+
+	log.Debugf("[BUILD-ASSERT] All %d UoW manifests verified", len(specs))
 	return nil
 }
 
@@ -519,47 +377,6 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 	return nil
 }
 
-// updateIncrementalState updates the build state for incremental detection.
-func updateIncrementalState(ctx *cmdframework.ExecutionContext, _ *buildContext) {
-	// Collect successfully built modules (exit code 0 or -1 for cached)
-	var successfulModules []string
-	for _, result := range ctx.Results {
-		if result.ExitCode == 0 || result.ExitCode == -1 {
-			successfulModules = append(successfulModules, result.Moniker)
-		}
-	}
-
-	if len(successfulModules) == 0 {
-		return
-	}
-
-	// Update state using StateManager
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	for _, moniker := range successfulModules {
-		contract, ok := ctx.ModuleRegistry.Get(moniker)
-		if !ok {
-			continue
-		}
-
-		// Get source files and compute hash
-		patterns := contract.GetGlobPatterns()
-		files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
-		if err != nil {
-			log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
-			continue
-		}
-
-		sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
-		if err != nil {
-			log.Debugf("Failed to hash files for %s: %v", moniker, err)
-			continue
-		}
-
-		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, moniker, true, sourceHash); err != nil {
-			log.Warnf("Failed to update build state for %s: %v", moniker, err)
-		}
-	}
-}
 
 // buildUnitWorker builds a single component within a module.
 // This is called by the UnitScheduler for parallel component execution.
@@ -576,10 +393,29 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		return 1
 	}
 
-	// Check incremental cache first - if module is cached, verify artifacts and skip (blue in TUI)
-	log.Debugf("[TUI-CACHE] Component worker for %s: cachedModules=%v, isCached=%v",
-		module, bctx.cachedModules != nil, bctx.cachedModules[module])
-	if bctx.cachedModules != nil && bctx.cachedModules[module] {
+	// Check incremental cache first - if module/UoW is cached, verify artifacts and skip (blue in TUI)
+	// Parse component to build unitID for UoW cache lookup
+	parts := strings.SplitN(component, ":", 2)
+	compName := parts[0]
+	toolName := ""
+	if len(parts) == 2 {
+		toolName = parts[1]
+	}
+
+	// Build UnitID for UoW-level cache lookup
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextBuild,
+		Module:    module,
+		Component: compName,
+		Tool:      toolName,
+	}
+
+	// Check UoW-level cache
+	isCached := isUoWCached(bctx, unitID)
+	log.Debugf("[UOW-CACHE] Component worker for %s: unitID=%s, isCached=%v",
+		component, unitID.Longname(), isCached)
+
+	if isCached {
 		// In dry-run mode, just report what would happen
 		if ctx.Config.DryRun {
 			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", module)
@@ -590,21 +426,21 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		// If no manifests exist, trust the source hash check (which already passed)
 		// Only fail cache if manifests exist AND integrity check fails (actual tampering)
 		reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-		if !reader.HasManifests(workunit.ContextBuild, module) {
-			// No manifests - trust source hash, allow cache hit
-			log.Debugf("Cache hit (no manifests to verify)")
-			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
-			return -1 // -1 = skipped/cached = blue in TUI
-		}
 
-		// Manifests exist - verify artifact integrity
-		if err := reader.VerifyModuleIntegrity(workunit.ContextBuild, module); err != nil {
-			output.Writeln(logWriter, "Cache miss: %v", err)
-			// Fall through to build - clear cache flag so other components don't skip
-			delete(bctx.cachedModules, module)
+		validationResult := reader.ValidateUoW(workunit.ContextBuild, module, compName, toolName)
+		if !validationResult.ManifestExists {
+			// No manifest - trust source hash, allow cache hit
+			log.Debugf("UoW cache hit (no manifest to verify)")
+			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
+			return -1
+		}
+		if !validationResult.Valid {
+			output.Writeln(logWriter, "UoW cache miss: artifacts invalid")
+			// Fall through to build - clear cache flag
+			delete(bctx.cachedUoWs, unitID.Longname())
 		} else {
 			output.Writeln(logWriter, "⏭️  Cached (verified)")
-			return -1 // -1 = skipped/cached = blue in TUI
+			return -1
 		}
 	}
 
@@ -618,22 +454,35 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// Handle placeholder "none" component (modules with no buildable components)
 	if component == "none" {
 		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
-		// Still update build state so cache detection works for modules with no buildable components
-		if !ctx.Config.DryRun {
-			if err := updateModuleBuildStateAtomic(ctx, module); err != nil {
-				log.Debugf("Failed to update build state for %s: %v", module, err)
+		// Write a NoOp manifest for the "none" placeholder to satisfy manifest assertions
+		// NoOp manifests are always considered up-to-date in cache detection
+		if bctx.tracker != nil {
+			noneID := workunit.UnitID{
+				Context:   workunit.ContextBuild,
+				Module:    module,
+				Component: "none",
+				Tool:      "",
+			}
+			manifest := coreoutput.NewNoOpManifest(
+				workunit.ContextBuild,
+				module,
+				"none",
+				"",
+				"no buildable components",
+			)
+			if err := bctx.tracker.RecordStart(noneID); err != nil {
+				log.Debugf("Failed to record UoW start for %s: %v", noneID.Longname(), err)
+			}
+			if err := bctx.tracker.RecordComplete(noneID, manifest); err != nil {
+				log.Debugf("Failed to record UoW completion for %s: %v", noneID.Longname(), err)
 			}
 		}
 		return 0
 	}
 
-	// Parse component parameter: "compName:builderName" (e.g., "go:go", "docs:mkdocs")
-	parts := strings.SplitN(component, ":", 2)
-	compName := parts[0]
-	builderName := ""
-	if len(parts) == 2 {
-		builderName = parts[1]
-	}
+	// Component was already parsed above for cache check
+	// compName and toolName are already set, use toolName as builderName
+	builderName := toolName
 
 	// Skip if dependency and artifacts exist (--use-existing-depm)
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
@@ -725,8 +574,9 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		return 1
 	}
 
-	// Create UoW ID and record start
-	unitID := workunit.UnitID{
+	// Update UoW ID with actual handler name (may differ from parsed tool name)
+	// and record start
+	unitID = workunit.UnitID{
 		Context:   workunit.ContextBuild,
 		Module:    module,
 		Component: compName,
@@ -800,39 +650,10 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		}
 	}
 
-	// Atomically update build state for this module immediately after success
-	// This ensures interrupted builds preserve cache for completed modules
-	if err := updateModuleBuildStateAtomic(ctx, module); err != nil {
-		log.Debugf("Failed to update build state for %s: %v", module, err)
-	}
+	// NOTE: UoW manifests are written atomically via tracker.RecordComplete above
+	// No separate module-level state update needed
 
 	return 0
-}
-
-// updateModuleBuildStateAtomic updates build state for a single module immediately after completion.
-// This ensures interrupted builds preserve cache for completed modules (atomic caching).
-func updateModuleBuildStateAtomic(ctx *cmdframework.ExecutionContext, module string) error {
-	contract, exists := ctx.ModuleRegistry.Get(module)
-	if !exists {
-		return nil
-	}
-
-	// Get source files for this module
-	patterns := contract.GetGlobPatterns()
-	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
-	if err != nil {
-		return err
-	}
-
-	// Compute source hash
-	sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
-	if err != nil {
-		return err
-	}
-
-	// Save module state
-	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
-	return stateMgr.SaveModuleResult(workunit.ContextBuild, module, true, sourceHash)
 }
 
 // getHandlerForComponent finds the build handler for a specific component.

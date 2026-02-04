@@ -21,10 +21,11 @@ var HelpTextMap = map[string]string{
 	"res-timer":     "Elapsed time since execution started",
 	"res-cpu":       "CPU usage per core (green=low, yellow=medium, red=high)",
 	"res-mem":       "Memory usage (green=low, yellow=medium, red=high)",
+	"res-dmem":      "Docker memory pool usage (green=low, yellow=medium, red=high)",
 	"res-jobs":      "Active containers running in parallel",
-	"res-uow":       "UoW: remaining/total | running/roof [▼pressure] | done cached failed",
+	"res-uow":       "Active: filled=running, unfilled=available loft, grey=unallocatable",
+	"res-counters":  "Progress: done/total P:pending F:failed",
 	"res-tools":     "Tool lamps: blue=container, orange=system (filled=active)",
-	"res-layer":     "Current execution layer / total layers",
 	"freeze-button": "Click to pause auto-exit countdown for 2 minutes",
 }
 
@@ -53,11 +54,9 @@ type Model struct {
 	resultsBuffer *RingBuffer // Output that appears after Run phase completes
 
 	// Run phase state (orchestrator status)
-	running     []string  // Currently running module monikers
-	completed   int       // Completed count
-	total       int       // Total modules
-	layer       int       // Current layer being executed (1-indexed, 0 = not using layers)
-	totalLayers int       // Total number of layers (0 = not using layers)
+	running   []string // Currently running module monikers
+	completed int      // Completed count
+	total     int      // Total modules
 
 	// Capacity tracking (three-value model)
 	roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
@@ -70,10 +69,12 @@ type Model struct {
 	locks []LockStatus // Individual lock states
 
 	// Tools tracking (containers vs system)
-	plannedContainers  []string // All container tools (from PlannedTools at init)
+	plannedContainerTools  []string // All container tools (from PlannedTools at init)
 	plannedSystemTools []string // All system tools (from PlannedTools at init)
-	activeContainers   []string // Currently active container tools
+	activeContainerTools   []string // Currently active container tools
 	activeSystemTools  []string // Currently active system tools
+	seenContainerTools     []string // Containers that have been used at least once (for lamp display)
+	seenSystemTools    []string // System tools that have been used at least once (for lamp display)
 
 	// Per-module tab tracking for Run phase
 	uowStates    map[string]*UoWState // Per-module state (running, completed, failed)
@@ -122,9 +123,13 @@ type Model struct {
 	quitting bool
 
 	// Cached system metrics (updated periodically, not on every render)
-	cachedCPUPercent   []float64 // Per-core CPU usage percentages
-	cachedMemPercent   float64   // Memory usage percentage
-	lastMetricsUpdate  time.Time // When metrics were last updated
+	cachedCPUPercent       []float64 // Per-core CPU usage percentages
+	cachedMemPercent       float64   // Memory usage percentage
+	cachedDockerMemPercent float64   // Docker memory pool usage percentage
+	dockerAvailable        bool      // Whether Docker is available
+	runningContainerCount  int       // Currently running container instances (lit lamps)
+	totalContainerCount    int       // Total container instances started (total lamps)
+	lastMetricsUpdate      time.Time // When metrics were last updated
 
 	// Text selection state (mouse drag to copy)
 	selection SelectionState
@@ -300,6 +305,10 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		bufferSizeUoW = 200
 	}
 
+	// Prime CPU metrics - gopsutil needs a baseline sample for cpu.Percent(0, true)
+	// to return meaningful data. Without this, the first call returns empty/zero.
+	_, _ = cpu.Percent(0, true)
+
 	return Model{
 		height:            height,
 		width:             80, // Default, will be updated on WindowSizeMsg
@@ -460,16 +469,13 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 		structuredInitHeight = 8 // header + 4 rows + 2 separators + footer
 	}
 
-	// Account for Execution Tree pane (variable height based on layers)
+	// Account for Execution Tree pane (variable height based on modules)
 	execTreeHeight := 0
 	if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-		// header (1) + per layer: header (1) + modules + spacing (1 between layers) + footer (1)
+		// header (1) + modules + footer (1)
 		execTreeHeight = 2 // header + footer
-		for i, layer := range m.initSummary.ExecutionTree {
-			execTreeHeight += 1 + len(layer.Modules) // layer header + modules
-			if i < len(m.initSummary.ExecutionTree)-1 {
-				execTreeHeight++ // spacing between layers
-			}
+		for _, module := range m.initSummary.ExecutionTree {
+			execTreeHeight += 1 + len(module.UoWs) // module header + UoWs
 		}
 	}
 
@@ -547,16 +553,8 @@ type InitSummary struct {
 	// UoW count - total units of work to schedule
 	UoWCount int
 
-	// Execution tree - for visual tree rendering
-	ExecutionTree         []ExecutionLayer // Full tree: module layers → modules → components
-	LayerCount            int              // Number of module execution layers
-	LayerSizes            []int            // Number of modules per layer
-	ComponentsPerModLayer []int            // Number of components per module layer
-	FlatExecution         bool             // True if running all layers in parallel
-
-	// Component layers - components grouped by internal dependency order
-	ComponentLayers     [][]string // Component IDs grouped by dependency layer
-	ComponentLayerCount int        // Number of component layers
+	// Execution tree - modules and their components
+	ExecutionTree []ExecutionModule
 
 	// Parallelism
 	ParallelismMode  string // "ci" or "devbox"
@@ -606,12 +604,7 @@ type PlannedTool struct {
 	IsContainer bool   // true = runs in container, false = runs on system
 }
 
-// ExecutionLayer represents a single execution layer with its modules.
-type ExecutionLayer struct {
-	Modules []ExecutionModule
-}
-
-// ExecutionModule represents a module and its units of work within a layer.
+// ExecutionModule represents a module and its units of work.
 type ExecutionModule struct {
 	Name string     // Module name (e.g., "eac-cli")
 	UoWs []UoWEntry // Units of work with ID and display name
@@ -699,6 +692,47 @@ func (m *Model) MarkUoWRunning(moniker string) {
 	// No need to track running count here - it's derived from state
 	state.Status = UoWRunning
 	state.StartTime = time.Now() // Start timing when execution actually begins
+
+	// Track tool usage for lamp display
+	// Extract tool from moniker (format: context:module:component:tool)
+	parts := strings.Split(moniker, ":")
+	if len(parts) >= 4 {
+		tool := parts[len(parts)-1]
+
+		// Check if this tool is a container tool and track it
+		for _, ct := range m.plannedContainerTools {
+			if ct == tool {
+				found := false
+				for _, seen := range m.seenContainerTools {
+					if seen == tool {
+						found = true
+						break
+					}
+				}
+				if !found {
+					m.seenContainerTools = append(m.seenContainerTools, tool)
+				}
+				break
+			}
+		}
+
+		// Check if this tool is a system tool and track it
+		for _, st := range m.plannedSystemTools {
+			if st == tool {
+				found := false
+				for _, seen := range m.seenSystemTools {
+					if seen == tool {
+						found = true
+						break
+					}
+				}
+				if !found {
+					m.seenSystemTools = append(m.seenSystemTools, tool)
+				}
+				break
+			}
+		}
+	}
 }
 
 // MarkUoWComplete marks a module as completed with the given exit code.
@@ -858,9 +892,8 @@ func (m Model) getLockParts() []string {
 // Should be called from the tick handler, not from View().
 // The update interval is configured via TUIConfig.MetricsInterval.
 func (m *Model) UpdateCachedMetrics() {
-	// Skip during exit sequence - no need to update metrics when quitting
-	// Also skip once all runners are done (summary is being generated)
-	if m.exitRequested || m.quitting || m.pendingSummaryData != nil || !m.allRunnersCompleted.IsZero() {
+	// Only skip when actually quitting - keep metrics live while TUI is visible
+	if m.quitting {
 		return
 	}
 

@@ -17,8 +17,8 @@ Technical reference material for the R2R and EAC ecosystem.
 
 ## Repository
 
-| Resource                                                         | Description                     |
-| ---------------------------------------------------------------- | ------------------------------- |
-| [Continuous Delivery](./repository/continuous-delivery/index.md) | CI/CD workflows and conventions |
-| [Decision Records](./repository/decision-records/index.md)       | Architectural decisions         |
-| [Modules](./repository/modules/index.md)                         | Complete module reference       |
+| Resource                                                    | Description                     |
+| ----------------------------------------------------------- | ------------------------------- |
+| [Continuous Delivery](./eac/continuous-delivery/index.md)   | CI/CD workflows and conventions |
+| [Decision Records](./eac/decision-records/index.md)         | Architectural decisions         |
+| [Modules](./eac/modules/index.md)                           | Complete module reference       |

@@ -14,8 +14,8 @@ func TestUnitRegistry_RegisterAndRetrieve(t *testing.T) {
 	reg := NewUnitRegistry()
 
 	// Create mock provider and worker
-	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
-		return [][]workunit.UnitSpec{{}}
+	mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
+		return []workunit.UnitSpec{}
 	}
 	mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 0
@@ -68,7 +68,7 @@ func TestUnitRegistry_PartialRegistration(t *testing.T) {
 	reg := NewUnitRegistry()
 
 	// Register only provider
-	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+	mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		return nil
 	}
 	reg.RegisterProvider(CommandTypeTest, mockProvider)
@@ -95,11 +95,11 @@ func TestUnitRegistry_ReplaceRegistration(t *testing.T) {
 	reg := NewUnitRegistry()
 
 	callCount := 0
-	provider1 := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+	provider1 := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		callCount = 1
 		return nil
 	}
-	provider2 := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+	provider2 := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		callCount = 2
 		return nil
 	}
@@ -128,7 +128,7 @@ func TestUnitRegistry_AllCommandTypes(t *testing.T) {
 	commandTypes := []CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}
 
 	for _, cmdType := range commandTypes {
-		mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+		mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 			return nil
 		}
 		mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
@@ -157,7 +157,7 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			cmdType := CommandType([]CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}[idx%4])
-			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) []workunit.UnitSpec {
 				return nil
 			})
 			reg.RegisterWorker(cmdType, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
@@ -182,32 +182,6 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 	// If we get here without a race condition panic, the test passes
 }
 
-// TestExecutionMode_Configuration tests the execution mode configuration.
-func TestExecutionMode_Configuration(t *testing.T) {
-	tests := []struct {
-		cmdType      CommandType
-		expectedMode ExecutionMode
-	}{
-		{CommandTypeBuild, ExecutionModeConfigured},
-		{CommandTypeTest, ExecutionModeLayered},
-		{CommandTypeScan, ExecutionModeParallel},
-		{CommandTypeLint, ExecutionModeParallel},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.cmdType), func(t *testing.T) {
-			mode, exists := executionModeConfig[tt.cmdType]
-			if !exists {
-				t.Errorf("Expected execution mode config for %s", tt.cmdType)
-				return
-			}
-			if mode != tt.expectedMode {
-				t.Errorf("Expected mode %v for %s, got %v", tt.expectedMode, tt.cmdType, mode)
-			}
-		})
-	}
-}
-
 // TestGlobalRegistryFunctions tests the package-level registry functions.
 func TestGlobalRegistryFunctions(t *testing.T) {
 	// Reset global registry for test isolation
@@ -216,7 +190,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 
 	// Test RegisterUnitProvider and GetUnitProvider
 	buildCalled := false
-	RegisterUnitProvider(CommandTypeBuild, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+	RegisterUnitProvider(CommandTypeBuild, func(ctx *ExecutionContext) []workunit.UnitSpec {
 		buildCalled = true
 		return nil
 	})

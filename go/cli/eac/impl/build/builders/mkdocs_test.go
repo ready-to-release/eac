@@ -162,7 +162,7 @@ func TestCalculateWeightedMemory(t *testing.T) {
 }
 
 func TestGetEffectiveWeight(t *testing.T) {
-	// Without tool system configured, should return default
+	// Book component type has cpus: 2 in component-types.yml
 	weight := getEffectiveWeight("book")
-	assert.Equal(t, 4, weight, "Default weight for book should be 4")
+	assert.Equal(t, 2, weight, "Book weight should be 2 (from component-types.yml)")
 }

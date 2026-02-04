@@ -1,5 +1,6 @@
 title: Continuous Delivery
 nav:
   - index.md
+  - release-types.md
   - workflows/
   - changelog/
