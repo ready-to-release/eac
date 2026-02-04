@@ -63,9 +63,12 @@ if [ "$SHOW_WELCOME" -eq 1 ]; then
     echo "✅ go-invoker module imported successfully!"
 fi
 
-# Create alias unless --no-alias specified
+# Create aliases unless --no-alias specified
 if [ "$NO_ALIAS" -eq 0 ]; then
     new_run_alias
+    # Create 'eac' alias for the primary CLI tool
+    # REPO_ROOT is provided by go.sh
+    alias eac="go run $REPO_ROOT/go/cli/eac"
 else
     if [ "$SHOW_WELCOME" -eq 1 ]; then
         echo ""
