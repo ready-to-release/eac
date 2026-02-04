@@ -41,7 +41,7 @@ func TestPDFHandler_ListArtifacts(t *testing.T) {
 	h := &PDFHandler{}
 	artifacts := h.ListArtifacts(nil, "/workspace")
 
-	expected := []string{"pdf/", "site/"}
+	expected := []string{"site/pdf/"}
 	if len(artifacts) != len(expected) {
 		t.Fatalf("ListArtifacts() returned %d artifacts, want %d", len(artifacts), len(expected))
 	}
