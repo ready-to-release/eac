@@ -5,6 +5,7 @@
 package specs
 
 import (
+	"github.com/ready-to-release/eac/go/core/environments"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -361,13 +362,13 @@ func ensureNoBuildState(ctx *eacgodog.TestContext) error {
 func buildAllModules(ctx *eacgodog.TestContext) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-	os.Setenv("R2R_CONTAINER_ROOT", ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
+	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
+			os.Unsetenv(environments.EnvR2RContainerRoot)
 		} else {
-			os.Setenv("R2R_CONTAINER_ROOT", origContainerRoot)
+			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -807,13 +808,13 @@ func mockCIAtDifferentSHA(ctx *eacgodog.TestContext, module string) error {
 func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-	os.Setenv("R2R_CONTAINER_ROOT", ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
+	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
+			os.Unsetenv(environments.EnvR2RContainerRoot)
 		} else {
-			os.Setenv("R2R_CONTAINER_ROOT", origContainerRoot)
+			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -872,13 +873,13 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-	os.Setenv("R2R_CONTAINER_ROOT", ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
+	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
+			os.Unsetenv(environments.EnvR2RContainerRoot)
 		} else {
-			os.Setenv("R2R_CONTAINER_ROOT", origContainerRoot)
+			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -946,13 +947,13 @@ func ensureNoModificationsInDir(ctx *eacgodog.TestContext, dir string) error {
 func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-	os.Setenv("R2R_CONTAINER_ROOT", ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
+	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
+			os.Unsetenv(environments.EnvR2RContainerRoot)
 		} else {
-			os.Setenv("R2R_CONTAINER_ROOT", origContainerRoot)
+			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
 		}
 	}()
 

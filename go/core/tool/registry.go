@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"gopkg.in/yaml.v3"
 )
 
@@ -220,7 +221,7 @@ func (r *DefaultRegistry) getCanonicalUnlocked(canonicalName string) (*ToolDefin
 	systemID := canonicalName + ":system"
 	containerID := canonicalName + ":container"
 
-	debug := os.Getenv("DEBUG_TOOL_RESOLVE") != ""
+	debug := os.Getenv(environments.EnvDebugToolResolve) != ""
 	if debug {
 		fmt.Fprintf(os.Stderr, "[DEBUG] getCanonical(%s) binding=%s\n", canonicalName, binding)
 	}

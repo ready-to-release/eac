@@ -44,6 +44,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
@@ -459,7 +460,7 @@ func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
 	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
 	// In local dev: uses workspaceRoot (repo root where templates/ exists)
 	distRoot := workspaceRoot
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		distRoot = containerRoot
 	}
 	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, reportsDir, category, templateFilename)

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // findConfigFile finds the config file by first locating the repository root
@@ -58,7 +59,7 @@ func getConfigFileCandidates(repoRoot string) []string {
 	r2rDir := filepath.Join(repoRoot, ".r2r")
 
 	// 0. R2R_CONFIG_PATH environment variable (highest priority)
-	if configPath := os.Getenv("R2R_CONFIG_PATH"); configPath != "" {
+	if configPath := os.Getenv(envconsts.EnvR2RConfigPath); configPath != "" {
 		// Support both absolute and relative paths
 		if filepath.IsAbs(configPath) {
 			candidates = append(candidates, configPath)
@@ -123,7 +124,7 @@ func FindRepositoryRoot() (string, error) {
 // InitConfig initializes the configuration by finding and loading the config file.
 func InitConfig() {
 	// CRITICAL: Block configuration access in test environment
-	if os.Getenv("R2R_TESTING") == "true" {
+	if os.Getenv(envconsts.EnvR2RTesting) == "true" {
 		logging.Fatal("CRITICAL: InitConfig() called in test environment. Tests must use isolated configurations.")
 	}
 
@@ -171,7 +172,7 @@ func InitConfig() {
 	// Tag checking is now opt-in for startup performance (~2000ms savings)
 	// - Set R2R_CHECK_TAGS=true to enable tag checking on startup
 	// - CI environments still validate pinned tags via ValidatePinnedExtensions()
-	if os.Getenv("R2R_CHECK_TAGS") == "true" {
+	if os.Getenv(envconsts.EnvR2RCheckTags) == "true" {
 		checkLatestTags(&Global)
 	}
 }

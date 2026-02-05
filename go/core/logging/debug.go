@@ -15,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // ExecutionContext identifies where the CLI is running.
@@ -124,7 +126,7 @@ func IsDebugEnabled() bool {
 // InitFromEnv initializes debug state from EAC_DEBUG environment variable.
 // Call this early in main() before any logging occurs.
 func InitFromEnv() {
-	if os.Getenv("EAC_DEBUG") != "" {
+	if os.Getenv(environments.EnvEACDebug) != "" {
 		EnableDebug()
 	}
 }

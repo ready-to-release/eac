@@ -5,6 +5,7 @@
 package specs
 
 import (
+	"github.com/ready-to-release/eac/go/core/environments"
 	"context"
 	"fmt"
 	"os"
@@ -34,8 +35,8 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	sc.Before(func(c context.Context, sc *godog.Scenario) (context.Context, error) {
 		cfgState = &configTestState{}
 		// Save original env vars and clear config cache
-		cfgState.origRepoRoot = os.Getenv("R2R_REPO_ROOT")
-		cfgState.origContainerRoot = os.Getenv("R2R_CONTAINER_ROOT")
+		cfgState.origRepoRoot = os.Getenv(environments.EnvR2RRepoRoot)
+		cfgState.origContainerRoot = os.Getenv(environments.EnvR2RContainerRoot)
 		config.ClearCache()
 		return c, nil
 	})
@@ -65,7 +66,7 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		return configTheRepositoryHasFileWith(ctx, path, content.Content)
 	})
 	sc.Step(`^the contracts directory does not exist$`, func() error {
-		os.Unsetenv("R2R_CONTAINER_ROOT")
+		os.Unsetenv(environments.EnvR2RContainerRoot)
 		return nil
 	})
 
@@ -124,14 +125,14 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 func cleanupConfigTestState() {
 	if cfgState != nil {
 		if cfgState.origRepoRoot != "" {
-			os.Setenv("R2R_REPO_ROOT", cfgState.origRepoRoot)
+			os.Setenv(environments.EnvR2RRepoRoot, cfgState.origRepoRoot)
 		} else {
-			os.Unsetenv("R2R_REPO_ROOT")
+			os.Unsetenv(environments.EnvR2RRepoRoot)
 		}
 		if cfgState.origContainerRoot != "" {
-			os.Setenv("R2R_CONTAINER_ROOT", cfgState.origContainerRoot)
+			os.Setenv(environments.EnvR2RContainerRoot, cfgState.origContainerRoot)
 		} else {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
+			os.Unsetenv(environments.EnvR2RContainerRoot)
 		}
 		config.ClearCache()
 	}
@@ -156,9 +157,9 @@ func configSetupAfterIsolation(ctx *eacgodog.TestContext) {
 
 	cfgState.repoRoot = ctx.IsolatedDir
 
-	os.Setenv("R2R_REPO_ROOT", ctx.IsolatedDir)
+	os.Setenv(environments.EnvR2RRepoRoot, ctx.IsolatedDir)
 	if toolRoot != "" {
-		os.Setenv("R2R_CONTAINER_ROOT", toolRoot)
+		os.Setenv(environments.EnvR2RContainerRoot, toolRoot)
 	}
 }
 

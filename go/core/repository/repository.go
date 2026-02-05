@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/workspace"
@@ -274,7 +275,7 @@ func IsGitRepository(path string) bool {
 // GetContainerRoot returns the container's internal root directory if running
 // inside a container (R2R_CONTAINER_ROOT is set), otherwise returns empty string.
 func GetContainerRoot() string {
-	return os.Getenv("R2R_CONTAINER_ROOT")
+	return os.Getenv(environments.EnvR2RContainerRoot)
 }
 
 // GetDistRoot returns the distribution root where tool assets live.
@@ -288,7 +289,7 @@ func GetDistRoot(fallback string) string {
 
 // GetWorkspaceRoot returns the workspace root override (R2R_REPO_ROOT) if set.
 func GetWorkspaceRoot() string {
-	return os.Getenv("R2R_REPO_ROOT")
+	return os.Getenv(environments.EnvR2RRepoRoot)
 }
 
 // GetRepoEACConfigRoot returns the path to the EAC repository configuration directory.

@@ -28,6 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -279,7 +280,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	if !filepath.IsAbs(cfg.Path) {
 		// First, check for R2R_PWD environment variable (used in isolated tests)
 		// This allows tests to run from a different directory than the command invocation
-		cwd := os.Getenv("R2R_PWD")
+		cwd := os.Getenv(environments.EnvR2RPWD)
 		if cwd == "" {
 			// Fall back to actual working directory
 			var err error

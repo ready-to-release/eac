@@ -48,6 +48,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -561,7 +562,7 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 // copySystemTemplates copies system default configuration files to user repository.
 func copySystemTemplates(workspaceRoot string, force bool) error {
 	// Get system root (Docker container or local dev)
-	systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+	systemRoot := os.Getenv(environments.EnvR2RContainerRoot)
 	if systemRoot == "" {
 		// Local dev mode - system defaults are in workspace root
 		systemRoot = workspaceRoot

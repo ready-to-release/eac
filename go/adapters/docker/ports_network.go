@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 const (
@@ -26,7 +28,7 @@ var (
 
 // getPortRangeStart returns the configured port range start or the default.
 func getPortRangeStart() int {
-	if val := os.Getenv("EAC_PORT_RANGE_START"); val != "" {
+	if val := os.Getenv(environments.EnvEACPortRangeStart); val != "" {
 		if port, err := strconv.Atoi(val); err == nil && port > 0 && port < 65536 {
 			return port
 		}
@@ -36,7 +38,7 @@ func getPortRangeStart() int {
 
 // getPortRangeEnd returns the configured port range end or the default.
 func getPortRangeEnd() int {
-	if val := os.Getenv("EAC_PORT_RANGE_END"); val != "" {
+	if val := os.Getenv(environments.EnvEACPortRangeEnd); val != "" {
 		if port, err := strconv.Atoi(val); err == nil && port > 0 && port < 65536 {
 			return port
 		}

@@ -6,15 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
-)
-
-// Environment variable names (duplicated to avoid import cycle with environments package).
-const (
-	envR2RRepoRoot      = "R2R_REPO_ROOT"
-	envR2RContainerRoot = "R2R_CONTAINER_ROOT"
-	envR2RPWD           = "R2R_PWD"
-	envR2RDockerMode    = "R2R_DOCKER_MODE"
 )
 
 // Cache for workspace detection results.
@@ -30,7 +23,7 @@ type Workspace struct {
 	Root string
 
 	// Source indicates how the workspace was detected.
-	Source string // "env:R2R_REPO_ROOT", "env:R2R_DOCKER_MODE", "git"
+	Source string // "env:R2R_REPO_ROOT", "env:environments.EnvR2RDockerMode", "git"
 
 	// IsContainer is true when running inside a container.
 	IsContainer bool
@@ -48,7 +41,7 @@ type Workspace struct {
 func Detect() (*Workspace, error) {
 	// IMPORTANT: Check for test isolation override FIRST, before using cached value.
 	// This ensures isolated tests use their temporary directory instead of the cached real repo root.
-	if envRoot := os.Getenv(envR2RRepoRoot); envRoot != "" {
+	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot != "" {
 		// Don't use cache when env override is set
 		return DetectWithOptions(DefaultOptions())
 	}
@@ -90,11 +83,11 @@ func DetectWithOptions(opts Options) (*Workspace, error) {
 	w := &Workspace{}
 
 	// Set container flag early (used throughout)
-	w.IsContainer = os.Getenv("R2R_DOCKER_MODE") == "true"
+	w.IsContainer = os.Getenv(environments.EnvR2RDockerMode) == "true"
 
 	// Step 1: Check explicit override (unless ModeGitOnly)
 	if opts.Mode != ModeGitOnly {
-		if root := os.Getenv(envR2RRepoRoot); root != "" {
+		if root := os.Getenv(environments.EnvR2RRepoRoot); root != "" {
 			w.Root = filepath.Clean(root)
 			w.Source = "env:R2R_REPO_ROOT"
 			if err := validateIfRequired(w.Root, opts); err != nil {
@@ -118,7 +111,7 @@ func DetectWithOptions(opts Options) (*Workspace, error) {
 	// Step 3: Docker mode fallback (unless ModeGitOnly)
 	if opts.Mode != ModeGitOnly && w.IsContainer {
 		w.Root = paths.ContainerRepoRoot
-		w.Source = "env:R2R_DOCKER_MODE"
+		w.Source = "env:environments.EnvR2RDockerMode"
 		if err := validateIfRequired(w.Root, opts); err != nil {
 			return nil, err
 		}
@@ -189,13 +182,13 @@ func RootOrPanic() string {
 
 // IsInContainer returns true if running inside a container.
 func IsInContainer() bool {
-	return os.Getenv("R2R_DOCKER_MODE") == "true"
+	return os.Getenv(environments.EnvR2RDockerMode) == "true"
 }
 
 // DistRoot returns the distribution root for loading tool assets.
 // In containers, this is R2R_CONTAINER_ROOT; otherwise, the workspace root.
 func DistRoot() string {
-	if root := os.Getenv(envR2RContainerRoot); root != "" {
+	if root := os.Getenv(environments.EnvR2RContainerRoot); root != "" {
 		return root
 	}
 	r, err := Root()
@@ -208,7 +201,7 @@ func DistRoot() string {
 // WorkingDir returns the effective working directory.
 // Checks R2R_PWD first, then falls back to os.Getwd().
 func WorkingDir() (string, error) {
-	if pwd := os.Getenv(envR2RPWD); pwd != "" {
+	if pwd := os.Getenv(environments.EnvR2RPWD); pwd != "" {
 		return filepath.Clean(pwd), nil
 	}
 	return os.Getwd()
@@ -226,14 +219,14 @@ func ForTesting(t interface{ Helper(); Cleanup(func()) }, root string) func() {
 		h.Helper()
 	}
 
-	old := os.Getenv(envR2RRepoRoot)
-	os.Setenv(envR2RRepoRoot, root)
+	old := os.Getenv(environments.EnvR2RRepoRoot)
+	os.Setenv(environments.EnvR2RRepoRoot, root)
 
 	cleanup := func() {
 		if old == "" {
-			os.Unsetenv(envR2RRepoRoot)
+			os.Unsetenv(environments.EnvR2RRepoRoot)
 		} else {
-			os.Setenv(envR2RRepoRoot, old)
+			os.Setenv(environments.EnvR2RRepoRoot, old)
 		}
 	}
 
@@ -250,7 +243,7 @@ func RequireIsolation(t interface{ Helper(); Fatalf(string, ...any) }) {
 	if h, ok := t.(interface{ Helper() }); ok {
 		h.Helper()
 	}
-	if os.Getenv(envR2RRepoRoot) == "" {
+	if os.Getenv(environments.EnvR2RRepoRoot) == "" {
 		t.Fatalf("test requires isolation: R2R_REPO_ROOT not set")
 	}
 }
@@ -364,7 +357,7 @@ func validateIfRequired(root string, opts Options) error {
 
 // resolveDistRoot determines the distribution root for tool assets.
 func resolveDistRoot(workspaceRoot string, _ bool) string {
-	if containerRoot := os.Getenv(envR2RContainerRoot); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		return containerRoot
 	}
 	return workspaceRoot

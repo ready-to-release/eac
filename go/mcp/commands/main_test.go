@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -163,13 +164,13 @@ func TestEnvironmentVariableMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue == "" {
-				os.Unsetenv("EAC_USE_DIRECT_BINARY")
+				os.Unsetenv(environments.EnvEACUseDirectBinary)
 			} else {
-				os.Setenv("EAC_USE_DIRECT_BINARY", tt.envValue)
-				defer os.Unsetenv("EAC_USE_DIRECT_BINARY")
+				os.Setenv(environments.EnvEACUseDirectBinary, tt.envValue)
+				defer os.Unsetenv(environments.EnvEACUseDirectBinary)
 			}
 
-			got := os.Getenv("EAC_USE_DIRECT_BINARY") == "true"
+			got := os.Getenv(environments.EnvEACUseDirectBinary) == "true"
 			assert.Equal(t, tt.want, got)
 		})
 	}

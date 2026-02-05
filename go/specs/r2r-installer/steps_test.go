@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
@@ -160,7 +161,7 @@ func checkLatestReleaseHasBinary() {
 	binaryCheckDone = true
 
 	// Skip GitHub API call in mock mode - assume binary available
-	if os.Getenv("__R2R_TEST_MOCK") == "1" {
+	if os.Getenv(environments.EnvR2RTestMock) == "1" {
 		binaryAvailable = true
 		return
 	}

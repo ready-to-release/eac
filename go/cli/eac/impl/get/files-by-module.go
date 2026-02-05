@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func init() {
@@ -66,7 +67,7 @@ func GetFilesByModule() int {
 
 	// Get JSON from flag or environment
 	if jsonInput == "" {
-		jsonInput = os.Getenv("FILES_BY_MODULE")
+		jsonInput = os.Getenv(environments.EnvFilesByModule)
 	}
 
 	if jsonInput == "" {

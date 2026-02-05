@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func init() {
@@ -343,7 +344,7 @@ func parseRemoveConfig() (*removeConfig, error) {
 	} else {
 		// Remove current workspace
 		// Get current working directory - check R2R_PWD first (for test isolation)
-		cwd := os.Getenv("R2R_PWD")
+		cwd := os.Getenv(environments.EnvR2RPWD)
 		if cwd == "" {
 			// Fall back to actual working directory
 			var err error

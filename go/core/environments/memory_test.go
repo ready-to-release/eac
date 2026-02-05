@@ -138,7 +138,7 @@ func TestGetPDFExportConcurrencyDefault(t *testing.T) {
 
 func TestGetPDFExportConcurrencyCI(t *testing.T) {
 	// CI environment should always return 2
-	t.Setenv("CI", "true")
+	t.Setenv(EnvCI, "true")
 
 	result := GetPDFExportConcurrency()
 	assert.Equal(t, 2, result, "CI should always return 2")

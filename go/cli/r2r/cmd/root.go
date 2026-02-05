@@ -8,6 +8,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/version"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +48,7 @@ var RootCmd = &cobra.Command{
 		logLevel := "info"
 
 		// Check R2R_LOG_LEVEL environment variable first
-		if envLogLevel := os.Getenv("R2R_LOG_LEVEL"); envLogLevel != "" {
+		if envLogLevel := os.Getenv(envconsts.EnvR2RLogLevel); envLogLevel != "" {
 			logLevel = envLogLevel
 		}
 
@@ -64,14 +65,14 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Check if we fixed redirect pollution
-		if os.Getenv("R2R_FIXED_REDIRECT") == "true" {
+		if os.Getenv(envconsts.EnvR2RFixedRedirect) == "true" {
 			logging.Warnf("Fixed bash redirect pollution in arguments (removed spurious '2' from '2>&1'): original=%s filtered=%s",
-				os.Getenv("R2R_ORIGINAL_ARGS"), os.Getenv("R2R_FILTERED_ARGS"))
+				os.Getenv(envconsts.EnvR2ROriginalArgs), os.Getenv(envconsts.EnvR2RFilteredArgs))
 
 			// Clean up env vars
-			os.Unsetenv("R2R_FIXED_REDIRECT")
-			os.Unsetenv("R2R_ORIGINAL_ARGS")
-			os.Unsetenv("R2R_FILTERED_ARGS")
+			os.Unsetenv(envconsts.EnvR2RFixedRedirect)
+			os.Unsetenv(envconsts.EnvR2ROriginalArgs)
+			os.Unsetenv(envconsts.EnvR2RFilteredArgs)
 		}
 
 		// Log command execution
@@ -92,7 +93,7 @@ func init() {
 	logging.InitFromEnv()
 
 	// Only log initialization in debug/verbose mode
-	if os.Getenv("R2R_VERBOSE_LOG") == "true" || os.Getenv("R2R_LOG_LEVEL") == "debug" {
+	if os.Getenv(envconsts.EnvR2RVerboseLog) == "true" || os.Getenv(envconsts.EnvR2RLogLevel) == "debug" {
 		logging.EnableDebug()
 		versionInfo := version.GetInfo()
 		logging.Debugf("R2R CLI initialized: version=%s commit=%s timestamp=%s",
