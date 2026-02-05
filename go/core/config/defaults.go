@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
@@ -206,7 +207,7 @@ func LoadTimeoutsDefaults(repoRoot string) (*TimeoutConfig, error) {
 // Note: Can't import repository package here to avoid cycles, so inline the check.
 // See repository.GetDistRoot() for the canonical implementation.
 func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		return containerRoot
 	}
 	return repoRoot

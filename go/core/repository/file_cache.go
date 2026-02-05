@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/github"
 )
@@ -76,7 +77,7 @@ func (c *FileCache) ensurePopulated() error {
 
 	// In CI with optimization enabled, try GitHub Trees API first
 	// CI detection: check CI or GITHUB_ACTIONS env vars (same as environments.IsCI())
-	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != ""
+	isCI := os.Getenv(environments.EnvCI) != "" || os.Getenv(environments.EnvGitHubActions) != ""
 	if c.useGitHubInCI && isCI {
 		files, err = c.populateFromGitHub()
 		if err != nil {
@@ -107,7 +108,7 @@ func (c *FileCache) ensurePopulated() error {
 // populateFromGitHub fetches file list using GitHub Trees API.
 // Requires GITHUB_SHA env var and github.Global() to be set.
 func (c *FileCache) populateFromGitHub() ([]string, error) {
-	sha := os.Getenv("GITHUB_SHA")
+	sha := os.Getenv(environments.EnvGitHubSHA)
 	if sha == "" {
 		return nil, &RepositoryError{Op: "github-trees", Message: "GITHUB_SHA not set"}
 	}

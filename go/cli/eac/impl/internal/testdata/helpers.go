@@ -3,6 +3,7 @@
 package testdata
 
 import (
+	"github.com/ready-to-release/eac/go/core/environments"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 func FindRepoRoot(startPath string) (string, error) {
 	// Check if running in isolated test environment
 	// Trust this environment variable when set - it's explicitly configured by the test framework
-	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
+	if repoRoot := os.Getenv(environments.EnvR2RRepoRoot); repoRoot != "" {
 		return repoRoot, nil
 	}
 

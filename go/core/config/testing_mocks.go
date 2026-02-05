@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -148,20 +149,20 @@ func loadFromEnvironment() TestingMocksConfig {
 	return TestingMocksConfig{
 		Mocks: MocksConfig{
 			AI: AIMockConfig{
-				Enabled: parseBool(os.Getenv("R2R_MOCK_AI")),
-				MockDir: os.Getenv("R2R_MOCK_AI_DIR"),
+				Enabled: parseBool(os.Getenv(environments.EnvR2RMockAI)),
+				MockDir: os.Getenv(environments.EnvR2RMockAIDir),
 			},
 			Security: SecurityMockConfig{
-				Enabled: parseBool(os.Getenv("R2R_MOCK_SECURITY")),
-				Tools:   parseTools(os.Getenv("R2R_MOCK_SECURITY_TOOLS")),
+				Enabled: parseBool(os.Getenv(environments.EnvR2RMockSecurity)),
+				Tools:   parseTools(os.Getenv(environments.EnvR2RMockSecurityTools)),
 			},
 			Docker: DockerMockConfig{
-				Enabled: parseBool(os.Getenv("R2R_MOCK_DOCKER")) || parseBool(os.Getenv("R2R_MOCK_STRUCTURIZR")),
+				Enabled: parseBool(os.Getenv(environments.EnvR2RMockDocker)) || parseBool(os.Getenv(environments.EnvR2RMockStructurizr)),
 			},
 			GitHub: GitHubMockConfig{
 				// Support both R2R_MOCK_GITHUB and R2R_MOCK_GITHUB_CLI for backward compatibility
-				Enabled:     parseBool(os.Getenv("R2R_MOCK_GITHUB")) || parseBool(os.Getenv("R2R_MOCK_GITHUB_CLI")),
-				NoWorkflows: parseBool(os.Getenv("R2R_MOCK_NO_WORKFLOWS")) || parseBool(os.Getenv("R2R_MOCK_GITHUB_NO_WORKFLOWS")),
+				Enabled:     parseBool(os.Getenv(environments.EnvR2RMockGitHub)) || parseBool(os.Getenv(environments.EnvR2RMockGitHubCLI)),
+				NoWorkflows: parseBool(os.Getenv(environments.EnvR2RMockNoWorkflows)) || parseBool(os.Getenv(environments.EnvR2RMockGitHubNoWorkflows)),
 			},
 		},
 	}

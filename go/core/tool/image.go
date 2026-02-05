@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // ImageManager handles container image lifecycle (check, build, pull).
@@ -148,7 +150,7 @@ func (m *ImageManager) pullCIImageWithOptions(ctx context.Context, tool *ToolDef
 	name := filepath.Base(tool.LocalPath)
 
 	// Try SHA-tagged image first (from current commit's CI build)
-	sha := os.Getenv("GITHUB_SHA")
+	sha := os.Getenv(environments.EnvGitHubSHA)
 	if sha != "" && len(sha) >= 7 {
 		shaTag := fmt.Sprintf("ghcr.io/%s/%s:sha-%s", m.ghcrOrg, name, sha[:7])
 

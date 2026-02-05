@@ -20,7 +20,7 @@ const (
 // Returns CI if running in a CI system, DevBox otherwise.
 func DetectRuntime() RuntimeEnv {
 	// Check for CI environment indicators
-	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" {
+	if os.Getenv(EnvCI) != "" || os.Getenv(EnvGitHubActions) != "" {
 		return CI
 	}
 	return DevBox

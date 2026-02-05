@@ -9,6 +9,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -133,7 +134,7 @@ func runCommandRefsUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writ
 // Checks multiple locations in order of preference.
 func findCommandsBinary(repoRoot string) string {
 	// Check environment variable first
-	if envPath := os.Getenv("COMMANDS_PATH"); envPath != "" {
+	if envPath := os.Getenv(environments.EnvCommandsPath); envPath != "" {
 		return envPath
 	}
 

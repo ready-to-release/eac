@@ -16,6 +16,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/help"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // InitialWorkingDir stores the working directory when the program started.
@@ -58,7 +59,7 @@ func main() {
 
 	// Check if we have an original PWD from the CLI wrapper
 	// If not, use current directory
-	InitialWorkingDir = os.Getenv("R2R_PWD")
+	InitialWorkingDir = os.Getenv(environments.EnvR2RPWD)
 	if InitialWorkingDir == "" {
 		var err error
 		InitialWorkingDir, err = os.Getwd()

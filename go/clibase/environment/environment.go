@@ -32,9 +32,9 @@ func Detect() *Env {
 // DetectWithTestVars allows customizing which env vars indicate test context.
 func DetectWithTestVars(testEnvVars ...string) *Env {
 	env := &Env{
-		IsCI: os.Getenv("CI") != "" ||
-			os.Getenv("GITHUB_ACTIONS") != "" ||
-			os.Getenv("GITLAB_CI") != "",
+		IsCI: os.Getenv(environments.EnvCI) != "" ||
+			os.Getenv(environments.EnvGitHubActions) != "" ||
+			os.Getenv(environments.EnvGitLabCI) != "",
 		IsContainer: logging.GetExecutionContext() == logging.ContextR2RCLI,
 	}
 

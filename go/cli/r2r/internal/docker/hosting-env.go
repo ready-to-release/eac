@@ -8,6 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/conf"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/terminal"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // BuildEnvironmentVars creates the environment variable list for a container.
@@ -15,17 +16,17 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 	// In Docker-in-Docker mode, propagate the ORIGINAL host path to child containers
 	// so they can correctly mount volumes for further nested containers.
 	hostRepoRoot := ch.rootDir
-	if existingHostRoot := os.Getenv("R2R_HOST_REPOROOT"); existingHostRoot != "" {
+	if existingHostRoot := os.Getenv(envconsts.EnvR2RHostRepoRoot); existingHostRoot != "" {
 		hostRepoRoot = existingHostRoot
 		logging.Debugf("Docker-in-Docker: propagating original host path to child: host_root=%s", hostRepoRoot)
 	}
 
 	envVars := []string{
-		"R2R_DOCKER_MODE=true",
-		"R2R_HOST_GOOS=" + runtime.GOOS,
-		"R2R_HOST_GOARCH=" + runtime.GOARCH,
-		"R2R_CONTAINER_REPOROOT=" + "/var/task",
-		"R2R_HOST_REPOROOT=" + hostRepoRoot,
+		envconsts.EnvR2RDockerMode + "=true",
+		envconsts.EnvR2RHostGOOS + "=" + runtime.GOOS,
+		envconsts.EnvR2RHostGOARCH + "=" + runtime.GOARCH,
+		envconsts.EnvR2RContainerRepoRoot + "=/var/task",
+		envconsts.EnvR2RHostRepoRoot + "=" + hostRepoRoot,
 	}
 
 	// Add terminal dimensions
@@ -39,7 +40,7 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 		cols = strconv.Itoa(width)
 		lines = strconv.Itoa(height)
 		logging.Debugf("Terminal size detected: detected_width=%d detected_height=%d", width, height)
-		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, "R2R_TERMINAL_DETECTION=auto")
+		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, envconsts.EnvR2RTerminalDetection+"=auto")
 	} else {
 		// Failed to detect, use environment or defaults
 		if cols == "" {
@@ -49,7 +50,7 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 			lines = "24"
 		}
 		logging.Debugf("Using default terminal size: cols=%s lines=%s", cols, lines)
-		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, "R2R_TERMINAL_DETECTION=default")
+		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, envconsts.EnvR2RTerminalDetection+"=default")
 	}
 
 	// 1. CI Environment Detection & Defaults

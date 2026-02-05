@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // Logger provides a simple logging interface for the r2r CLI.
@@ -43,7 +45,7 @@ func InitFromEnv() {
 	})
 
 	// Check for debug mode via environment variable
-	if os.Getenv("R2R_DEBUG") != "" || os.Getenv("R2R_LOG_LEVEL") == "debug" {
+	if os.Getenv(envconsts.EnvR2RDebug) != "" || os.Getenv(envconsts.EnvR2RLogLevel) == "debug" {
 		EnableDebug()
 	}
 }

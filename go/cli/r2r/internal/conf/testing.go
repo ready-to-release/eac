@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // TestConfig provides an isolated configuration for tests.
@@ -17,7 +19,7 @@ func NewTestConfig(t *testing.T) *TestConfig {
 	t.Helper()
 
 	// Ensure we're in a test environment
-	t.Setenv("R2R_TESTING", "true")
+	t.Setenv(envconsts.EnvR2RTesting, "true")
 
 	return &TestConfig{
 		Config: &Config{
@@ -39,7 +41,7 @@ func NewTestConfigWithExtensions(t *testing.T, extensions []Extension) *TestConf
 	t.Helper()
 
 	// Ensure we're in a test environment
-	t.Setenv("R2R_TESTING", "true")
+	t.Setenv(envconsts.EnvR2RTesting, "true")
 
 	return &TestConfig{
 		Config: &Config{
@@ -98,7 +100,7 @@ func LoadTestConfig(t *testing.T, _ string) (*Config, error) {
 	t.Helper()
 
 	// Ensure test environment
-	t.Setenv("R2R_TESTING", "true")
+	t.Setenv(envconsts.EnvR2RTesting, "true")
 
 	// Create a new config instance to avoid global state
 	config := &Config{}

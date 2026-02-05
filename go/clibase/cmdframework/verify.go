@@ -6,6 +6,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -19,7 +20,7 @@ func detectExecutionContext() string {
 
 	// Environment: CI or devbox
 	env := "devbox"
-	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" {
+	if os.Getenv(environments.EnvCI) != "" || os.Getenv(environments.EnvGitHubActions) != "" {
 		env = "CI"
 	}
 

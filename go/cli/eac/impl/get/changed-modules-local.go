@@ -24,6 +24,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/hash"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -111,7 +112,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		monikers = append(monikers, moniker)
 
 		// Debug: print module patterns
-		if os.Getenv("DEBUG_CACHE_CMD") != "" {
+		if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 			patterns := contract.GetGlobPatterns()
 			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
 		}
@@ -124,7 +125,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 	}
 
 	// Debug: print discovered files
-	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+	if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 		for moniker, files := range moduleFiles {
 			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s files=%v\n", moniker, files)
 		}
@@ -145,7 +146,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 			// No manifests = module needs build
 			changedModules = append(changedModules, moniker)
 			changeReasons[moniker] = "no build manifests found"
-			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+			if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: no manifests\n", moniker)
 			}
 			continue
@@ -184,19 +185,19 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		if needsRebuild {
 			changedModules = append(changedModules, moniker)
 			changeReasons[moniker] = mismatchReason
-			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+			if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: %s\n", moniker, mismatchReason)
 			}
 		} else {
 			upToDateModules = append(upToDateModules, moniker)
-			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+			if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s: up to date\n", moniker)
 			}
 		}
 	}
 
 	// Debug: print results
-	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+	if os.Getenv(environments.EnvDebugCacheCmd) != "" {
 		fmt.Fprintf(os.Stderr, "[DEBUG cmd] changed=%v upToDate=%v reasons=%v\n",
 			changedModules, upToDateModules, changeReasons)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/github"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/session"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 func detectCIEnvironment() bool {
@@ -139,7 +140,7 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	// In CI, return error if any extensions are unpinned
 	if isCI && len(unpinnedExtensions) > 0 {
 		// Skip fatal error if we're in a test environment
-		if os.Getenv("R2R_TESTING") == "true" {
+		if os.Getenv(envconsts.EnvR2RTesting) == "true" {
 			logging.Errorf("Extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
 			return unpinnedExtensions, fmt.Errorf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
 		}
@@ -161,7 +162,7 @@ func checkLatestTags(cfg *Config) {
 	// Check warning suppression for non-CI environments
 	if !isCI {
 		// Check explicit suppression
-		if os.Getenv("R2R_SKIP_PIN_WARNING") == "true" {
+		if os.Getenv(envconsts.EnvR2RSkipPinWarning) == "true" {
 			suppressWarnings = true
 		} else {
 			// Get session identifier (parent process ID works across platforms)
@@ -184,7 +185,7 @@ func checkLatestTags(cfg *Config) {
 	// Handle validation result
 	if err != nil {
 		// In CI with unpinned extensions - fatal error (unless in test)
-		if os.Getenv("R2R_TESTING") != "true" {
+		if os.Getenv(envconsts.EnvR2RTesting) != "true" {
 			logging.Fatalf(": %v", err)
 		}
 		return
@@ -207,7 +208,7 @@ func checkLatestTags(cfg *Config) {
 		}
 
 		// Also set environment variable for current process tree
-		os.Setenv("R2R_SKIP_PIN_WARNING", "true")
+		os.Setenv(envconsts.EnvR2RSkipPinWarning, "true")
 	}
 }
 

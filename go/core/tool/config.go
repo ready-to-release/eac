@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"gopkg.in/yaml.v3"
 )
 
@@ -343,7 +344,7 @@ func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationEr
 // defaultsRoot returns the root directory for loading contract defaults.
 // Container-aware: uses R2R_CONTAINER_ROOT when running in container.
 func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		return containerRoot
 	}
 	return repoRoot

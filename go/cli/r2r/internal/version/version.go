@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 var (
@@ -172,7 +173,7 @@ func Validate(forceUpdate bool) error {
 	}
 
 	// Check R2R_NO_UPDATE_CHECK environment variable
-	if os.Getenv("R2R_NO_UPDATE_CHECK") == "true" {
+	if os.Getenv(envconsts.EnvR2RNoUpdateCheck) == "true" {
 		logging.Debug("Update checks disabled by R2R_NO_UPDATE_CHECK environment variable")
 		return nil
 	}

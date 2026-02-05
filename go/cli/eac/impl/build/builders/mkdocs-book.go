@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -343,7 +344,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 	hostRepoRoot := workspaceRoot
 	isDinD := IsDockerInDocker()
 	if isDinD {
-		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+		if hostRoot := os.Getenv(environments.EnvR2RHostRepoRoot); hostRoot != "" {
 			hostRepoRoot = hostRoot
 		}
 	}

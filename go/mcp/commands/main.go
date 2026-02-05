@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -271,7 +272,7 @@ func buildCmdParts(commandName, additionalArgs string) []string {
 // Uses direct binary if EAC_USE_DIRECT_BINARY=true, otherwise uses r2r eac (Docker).
 func buildCommand(repoRoot string, cmdParts []string) *exec.Cmd {
 	var cmd *exec.Cmd
-	if os.Getenv("EAC_USE_DIRECT_BINARY") == "true" {
+	if os.Getenv(environments.EnvEACUseDirectBinary) == "true" {
 		cmd = exec.Command(paths.CommandsBinaryPath(repoRoot), cmdParts...) //nolint:gosec // MCP server executes EAC commands by design
 	} else {
 		cmd = exec.Command("r2r", append([]string{"eac"}, cmdParts...)...) //nolint:gosec // MCP server executes EAC commands by design

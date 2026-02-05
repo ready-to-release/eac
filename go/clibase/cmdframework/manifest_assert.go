@@ -9,7 +9,7 @@ import (
 )
 
 // AssertManifestsExist verifies that all executed UoWs have valid manifests.
-// Units that failed, were skipped (dependency failed), or timed out are excluded
+// Units that failed, were skipped (dependency failed), cached, or timed out are excluded
 // since they never ran (or were killed) and therefore never generated manifests.
 //
 // commandName is used for log prefixes and error messages (e.g., "build", "test").
@@ -19,12 +19,15 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 		return nil
 	}
 
-	// Build set of (module, component, handler) tuples that had failures.
+	// Build set of (module, component, handler) tuples that were not successfully executed.
+	// ExitCode != 0 means:
+	// - ExitCode > 0: failed
+	// - ExitCode < 0: skipped/cached (e.g., -1 for cached)
 	type unitKey struct{ module, component, handler string }
-	failedUnits := make(map[unitKey]bool)
+	skipManifestCheck := make(map[unitKey]bool)
 	for _, r := range ctx.UnitResults {
-		if r.ExitCode > 0 {
-			failedUnits[unitKey{r.Module, r.Component, r.Handler}] = true
+		if r.ExitCode != 0 {
+			skipManifestCheck[unitKey{r.Module, r.Component, r.Handler}] = true
 		}
 	}
 
@@ -35,8 +38,8 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 
 	for _, spec := range specs {
 		key := unitKey{spec.ID.Module, spec.ID.Component, spec.ID.Tool}
-		if failedUnits[key] {
-			log.Debugf("[%s-ASSERT] Skipping manifest check for failed/skipped UoW: %s", prefix, spec.ID.Longname())
+		if skipManifestCheck[key] {
+			log.Debugf("[%s-ASSERT] Skipping manifest check for failed/cached/skipped UoW: %s", prefix, spec.ID.Longname())
 			continue
 		}
 
@@ -52,6 +55,6 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 			commandName, len(missing), missing)
 	}
 
-	log.Debugf("[%s-ASSERT] All %d UoW manifests verified (%d skipped due to failures)", prefix, checked, len(specs)-checked)
+	log.Debugf("[%s-ASSERT] All %d UoW manifests verified (%d skipped due to non-zero exit codes)", prefix, checked, len(specs)-checked)
 	return nil
 }

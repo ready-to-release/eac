@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"github.com/ready-to-release/eac/go/core/environments"
 	"os"
 	"path/filepath"
 	"testing"
@@ -215,8 +216,8 @@ func TestLoadToolConfig_NoDefaults(t *testing.T) {
 
 func TestDefaultsRoot_ContainerMode(t *testing.T) {
 	// Test container mode
-	os.Setenv("R2R_CONTAINER_ROOT", "/container/root")
-	defer os.Unsetenv("R2R_CONTAINER_ROOT")
+	os.Setenv(environments.EnvR2RContainerRoot, "/container/root")
+	defer os.Unsetenv(environments.EnvR2RContainerRoot)
 
 	root := defaultsRoot("/local/root")
 	if root != "/container/root" {
@@ -225,7 +226,7 @@ func TestDefaultsRoot_ContainerMode(t *testing.T) {
 }
 
 func TestDefaultsRoot_LocalMode(t *testing.T) {
-	os.Unsetenv("R2R_CONTAINER_ROOT")
+	os.Unsetenv(environments.EnvR2RContainerRoot)
 
 	root := defaultsRoot("/local/root")
 	if root != "/local/root" {

@@ -8,19 +8,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ready-to-release/eac/go/core/workspace"
 )
 
+// loadTestContract is a helper that loads the environment contract using workspace detection.
+func loadTestContract(t *testing.T) *EnvironmentContract {
+	t.Helper()
+	ws, err := workspace.Detect()
+	require.NoError(t, err, "workspace detection should succeed")
+	contract, err := LoadEnvironmentContract(ws.Root)
+	require.NoError(t, err, "contract loading should succeed")
+	return contract
+}
+
 func TestLoadEnvironmentContract(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 	assert.NotNil(t, contract)
 	assert.Equal(t, "0.1.0", contract.Metadata.Version)
 	assert.NotEmpty(t, contract.Environments)
 }
 
 func TestGetEnvironment(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
 	tests := []struct {
 		moniker     string
@@ -57,76 +67,39 @@ func TestGetEnvironment(t *testing.T) {
 }
 
 func TestGetEnvironmentsByLevel(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
-	l0Envs := contract.GetEnvironmentsByLevel("L0")
-	assert.NotEmpty(t, l0Envs)
-	for _, env := range l0Envs {
-		assert.Equal(t, "L0", env.Level)
-	}
-
-	l1Envs := contract.GetEnvironmentsByLevel("L1")
-	assert.NotEmpty(t, l1Envs)
-	for _, env := range l1Envs {
-		assert.Equal(t, "L1", env.Level)
-	}
-
-	l2Envs := contract.GetEnvironmentsByLevel("L2")
-	assert.NotEmpty(t, l2Envs)
-	for _, env := range l2Envs {
-		assert.Equal(t, "L2", env.Level)
-	}
-
-	l3Envs := contract.GetEnvironmentsByLevel("L3")
-	assert.NotEmpty(t, l3Envs)
-	for _, env := range l3Envs {
-		assert.Equal(t, "L3", env.Level)
-	}
-
-	l4Envs := contract.GetEnvironmentsByLevel("L4")
-	assert.NotEmpty(t, l4Envs)
-	for _, env := range l4Envs {
-		assert.Equal(t, "L4", env.Level)
+	levels := []string{"L0", "L1", "L2", "L3", "L4"}
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
+			envs := contract.GetEnvironmentsByLevel(level)
+			assert.NotEmpty(t, envs, "should have environments for level %s", level)
+			for _, env := range envs {
+				assert.Equal(t, level, env.Level)
+			}
+		})
 	}
 }
 
 func TestGetEnvironmentsByType(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
-	unitEnvs := contract.GetEnvironmentsByType("unit")
-	assert.NotEmpty(t, unitEnvs)
-	for _, env := range unitEnvs {
-		assert.Equal(t, "unit", env.Type)
-	}
-
-	dockerEnvs := contract.GetEnvironmentsByType("docker")
-	assert.NotEmpty(t, dockerEnvs)
-	for _, env := range dockerEnvs {
-		assert.Equal(t, "docker", env.Type)
-	}
-
-	plteEnvs := contract.GetEnvironmentsByType("plte")
-	assert.NotEmpty(t, plteEnvs)
-	for _, env := range plteEnvs {
-		assert.Equal(t, "plte", env.Type)
-	}
-
-	productionEnvs := contract.GetEnvironmentsByType("production")
-	assert.NotEmpty(t, productionEnvs)
-	for _, env := range productionEnvs {
-		assert.Equal(t, "production", env.Type)
+	types := []string{"unit", "docker", "plte", "production"}
+	for _, envType := range types {
+		t.Run(envType, func(t *testing.T) {
+			envs := contract.GetEnvironmentsByType(envType)
+			assert.NotEmpty(t, envs, "should have environments for type %s", envType)
+			for _, env := range envs {
+				assert.Equal(t, envType, env.Type)
+			}
+		})
 	}
 }
 
 func TestValidateContract(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
-
-	// Valid contract should pass validation
-	err = contract.ValidateContract()
-	assert.NoError(t, err)
+	contract := loadTestContract(t)
+	err := contract.ValidateContract()
+	assert.NoError(t, err, "valid contract should pass validation")
 }
 
 func TestValidateContract_MissingVersion(t *testing.T) {
@@ -181,53 +154,54 @@ func TestValidateContract_InvalidLevel(t *testing.T) {
 }
 
 func TestGetAllMonikers(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
 	monikers := contract.GetAllMonikers()
 	assert.NotEmpty(t, monikers)
-	assert.Contains(t, monikers, "l00-01")
-	assert.Contains(t, monikers, "l00-02")
-	assert.Contains(t, monikers, "l01-01")
-	assert.Contains(t, monikers, "l01-02")
-	assert.Contains(t, monikers, "local01")
-	assert.Contains(t, monikers, "local02")
-	assert.Contains(t, monikers, "plte01")
-	assert.Contains(t, monikers, "plte02")
-	assert.Contains(t, monikers, "production")
-	assert.Contains(t, monikers, "production-inactive")
+
+	expectedMonikers := []string{
+		"l00-01", "l00-02", "l01-01", "l01-02",
+		"local01", "local02", "plte01", "plte02",
+		"production", "production-inactive",
+	}
+	for _, expected := range expectedMonikers {
+		assert.Contains(t, monikers, expected)
+	}
 }
 
 func TestEnvironmentSystemDeps(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
-	l00_01, err := contract.GetEnvironment("l00-01")
-	require.NoError(t, err)
-	assert.Empty(t, l00_01.SystemDeps)
+	tests := []struct {
+		moniker      string
+		expectedDeps []string
+		expectEmpty  bool
+	}{
+		{"l00-01", nil, true},
+		{"l01-01", []string{"@deps:go"}, false},
+		{"local01", []string{"@deps:docker"}, false},
+		{"plte01", []string{"@deps:kubectl", "@deps:helm"}, false},
+		{"production", []string{"@deps:kubectl", "@deps:helm"}, false},
+	}
 
-	l01_01, err := contract.GetEnvironment("l01-01")
-	require.NoError(t, err)
-	assert.Contains(t, l01_01.SystemDeps, "@deps:go")
+	for _, tt := range tests {
+		t.Run(tt.moniker, func(t *testing.T) {
+			env, err := contract.GetEnvironment(tt.moniker)
+			require.NoError(t, err)
 
-	local01, err := contract.GetEnvironment("local01")
-	require.NoError(t, err)
-	assert.Contains(t, local01.SystemDeps, "@deps:docker")
-
-	plte01, err := contract.GetEnvironment("plte01")
-	require.NoError(t, err)
-	assert.Contains(t, plte01.SystemDeps, "@deps:kubectl")
-	assert.Contains(t, plte01.SystemDeps, "@deps:helm")
-
-	production, err := contract.GetEnvironment("production")
-	require.NoError(t, err)
-	assert.Contains(t, production.SystemDeps, "@deps:kubectl")
-	assert.Contains(t, production.SystemDeps, "@deps:helm")
+			if tt.expectEmpty {
+				assert.Empty(t, env.SystemDeps)
+			} else {
+				for _, dep := range tt.expectedDeps {
+					assert.Contains(t, env.SystemDeps, dep)
+				}
+			}
+		})
+	}
 }
 
 func TestGetTestTag(t *testing.T) {
-	contract, err := LoadEnvironmentContract()
-	require.NoError(t, err)
+	contract := loadTestContract(t)
 
 	tests := []struct {
 		moniker     string

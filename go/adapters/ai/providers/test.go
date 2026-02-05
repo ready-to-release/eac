@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/adapters/ai"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -41,7 +42,7 @@ func (p *TestProvider) Execute(ctx context.Context, input string, opts ...ai.Opt
 	}
 
 	// 2. Fall back to environment variable
-	if response := os.Getenv("R2R_TEST_AI_RESPONSE"); response != "" {
+	if response := os.Getenv(environments.EnvR2RTestAIResponse); response != "" {
 		return response, nil
 	}
 

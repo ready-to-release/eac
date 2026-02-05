@@ -12,6 +12,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/core/testing"
@@ -69,7 +70,7 @@ func BuildTagFilter() string {
 	}
 
 	// Suite tag filter from environment
-	if suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS"); suiteTagFilter != "" {
+	if suiteTagFilter := os.Getenv(environments.EnvGodogSuiteTags); suiteTagFilter != "" {
 		parts = append(parts, suiteTagFilter)
 	}
 
@@ -96,14 +97,14 @@ func buildPlatformTagFilter() string {
 // BuildOptions constructs godog options from environment and config.
 // Generates cucumber.json report when output directory is set.
 func BuildOptions(specsPath, defaultReportName string, t *testing.T) *godog.Options {
-	outputDir := os.Getenv("GODOG_OUTPUT_DIR")
+	outputDir := os.Getenv(environments.EnvGodogOutputDir)
 
-	consoleFormat := os.Getenv("GODOG_FORMAT")
+	consoleFormat := os.Getenv(environments.EnvGodogFormat)
 	if consoleFormat == "" {
 		consoleFormat = "pretty"
 	}
 
-	pathsStr := os.Getenv("GODOG_PATHS")
+	pathsStr := os.Getenv(environments.EnvGodogPaths)
 	if pathsStr == "" {
 		pathsStr = specsPath
 	}
@@ -124,7 +125,7 @@ func BuildOptions(specsPath, defaultReportName string, t *testing.T) *godog.Opti
 
 	// Add cucumber report formatter if output directory is set
 	if outputDir != "" {
-		reportName := os.Getenv("GODOG_REPORT_NAME")
+		reportName := os.Getenv(environments.EnvGodogReportName)
 		if reportName == "" {
 			reportName = defaultReportName
 		}
@@ -150,7 +151,7 @@ var suiteInitOnce sync.Once
 // This runs once per test suite and helps debug CI environment issues.
 func logSuiteInitDiagnostics(repoRoot, specsPath string) {
 	// Only log diagnostics if GODOG_DEBUG_INIT is set or if running in CI
-	if os.Getenv("GODOG_DEBUG_INIT") == "" && os.Getenv("CI") == "" && os.Getenv("GITHUB_ACTIONS") == "" {
+	if os.Getenv(environments.EnvGodogDebugInit) == "" && os.Getenv(environments.EnvCI) == "" && os.Getenv(environments.EnvGitHubActions) == "" {
 		return
 	}
 

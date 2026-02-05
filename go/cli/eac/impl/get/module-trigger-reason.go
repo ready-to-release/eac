@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func init() {
@@ -47,7 +48,7 @@ func GetModuleTriggerReason() int {
 
 	// Get JSON from flag or environment
 	if jsonInput == "" {
-		jsonInput = os.Getenv("MODULE_STATUS")
+		jsonInput = os.Getenv(environments.EnvModuleStatus)
 	}
 
 	if jsonInput == "" {
