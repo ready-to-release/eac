@@ -34,17 +34,6 @@ Make code **hard to break** (Rule 3) through:
 
 ## How I Work
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### Workflow
 
 1. **Security Scan**: Run SAST/DAST, check dependencies
@@ -52,7 +41,6 @@ Before using MCP tools for project discovery:
 3. **Release Checks**: CI status, changelog, version
 4. **Compliance**: OSCAL assessment if required
 5. **Report**: Comprehensive readiness summary
-6. **Output structured result**: Save JSON report to `out/claude/go-security-release-<timestamp>.json`
 
 ## What You'll Get
 
@@ -78,47 +66,6 @@ Before using MCP tools for project discovery:
 
 ### Recommendation
 
-## Structured Output Format
-
-In addition to the readiness report, I generate a structured JSON report:
-
-**File**: `out/claude/go-security-release-<timestamp>.json`
-
-**Schema**: `.claude/schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "go-security-release",
-  "task": "Brief description of the security/release task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "critical|high|medium|low|info",
-      "category": "security|correctness",
-      "location": "file or dependency",
-      "message": "Security vulnerability or release blocker",
-      "recommendation": "Remediation steps"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 45.2,
-    "items_analyzed": 127,
-    "findings_by_severity": { "critical": 0, "high": 1, "medium": 3, "low": 8 }
-  },
-  "summary": "Security and release readiness summary",
-  "artifacts": [
-    {
-      "path": "out/release-readiness-<module>-<version>.md",
-      "type": "report",
-      "description": "Detailed release readiness report"
-    }
-  ]
-}
-```
-
-**Purpose**: Track security posture over time, measure release quality, and identify recurring vulnerabilities
 **APPROVED** for release v1.2.0
 
 or

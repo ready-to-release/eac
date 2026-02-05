@@ -36,9 +36,8 @@ Provide comprehensive code quality assessment from multiple angles:
 
 ### Phase 1: Context Loading (1-2 min)
 
-1. Check for cached session context (`out/claude/session-context.json`)
-2. If missing, gather project context once
-3. Share context with all agents
+1. Gather project context using MCP tools
+2. Identify scope of review (changed files or specific targets)
 
 ### Phase 2: Multi-Agent Review (5-10 min)
 
@@ -47,22 +46,22 @@ Run 5 specialized agents sequentially:
 1. **go-architect** (2-3 min)
    - Task: "Review architecture and design patterns in the changed code"
    - Focus: Module boundaries, interface design, dependency management
-   - Output: `out/go-architect-<timestamp>.json`
+   - Output: Findings and recommendations
 
 2. **go-test-engineer** (2-3 min)
    - Task: "Analyze test coverage and test quality for the changes"
    - Focus: Missing tests, edge cases, test clarity
-   - Output: `out/go-test-engineer-<timestamp>.json`
+   - Output: Test quality analysis
 
 3. **go-security-release** (2-3 min)
    - Task: "Scan for security vulnerabilities and compliance issues"
    - Focus: Security risks, dependency vulnerabilities, hardcoded secrets
-   - Output: `out/go-security-release-<timestamp>.json`
+   - Output: Security assessment
 
 4. **go-cli-ux** (1-2 min) - If CLI changes detected
    - Task: "Review CLI user experience and error handling"
    - Focus: Command ergonomics, help text, error messages
-   - Output: `out/go-cli-ux-<timestamp>.json`
+   - Output: UX evaluation
 
 5. **code-simplifier** (2-3 min)
    - Task: "Analyze code complexity and identify simplification opportunities"
@@ -71,20 +70,16 @@ Run 5 specialized agents sequentially:
 
 ### Phase 3: Aggregation (1-2 min)
 
-1. **Load all JSON reports**:
-   - Read all `out/*-<timestamp>.json` files from Phase 2
-   - Parse findings from each agent
+1. **Collect findings from all agents**:
+   - Review each agent's output from Phase 2
+   - Extract key findings and recommendations
 
-2. **Deduplicate findings**:
-   - Group by location (file:line)
-   - Merge duplicate observations
-   - Preserve agent attribution
-
-3. **Prioritize**:
-   - Sort by severity: critical → high → medium → low → info
+2. **Organize findings**:
+   - Group by severity: critical → high → medium → low → info
    - Group by category: security, correctness, testing, architecture, ux, style
+   - Note which agent provided each finding
 
-4. **Generate consolidated report**:
+3. **Generate consolidated report**:
    - Save to `out/comprehensive-review-<timestamp>.md`
    - Include summary, prioritized findings, next steps
 
@@ -162,15 +157,6 @@ Description of the issue...
 3. **Create follow-up issues** for Medium/Low improvements
 4. **Run comprehensive review again** after fixes
 
----
-
-## Agent Reports
-
-Full agent reports available at:
-- Architecture: `out/go-architect-<timestamp>.json`
-- Testing: `out/go-test-engineer-<timestamp>.json`
-- Security: `out/go-security-release-<timestamp>.json`
-- UX: `out/go-cli-ux-<timestamp>.json`
 ```
 
 ## Usage Examples
@@ -181,7 +167,7 @@ Full agent reports available at:
 User: /go:comprehensive-review
 Assistant: Starting comprehensive code review...
 
-Phase 1: Loading context... (checking out/claude/session-context.json)
+Phase 1: Loading context...
 Phase 2: Running 5 specialized agents...
   - go-architect reviewing architecture... (2m 15s)
   - go-test-engineer analyzing tests... (2m 42s)
@@ -253,16 +239,12 @@ Scope: go/cli/eac/impl/release/*.go (8 files)
 
 All outputs saved to `out/` directory:
 
-1. **Individual agent reports** (JSON):
-   - `out/go-architect-<timestamp>.json`
-   - `out/go-test-engineer-<timestamp>.json`
-   - `out/go-security-release-<timestamp>.json`
-   - `out/go-cli-ux-<timestamp>.json`
-
-2. **Consolidated report** (Markdown):
+1. **Consolidated report** (Markdown):
    - `out/comprehensive-review-<timestamp>.md`
+   - Contains all findings from all agents
+   - Organized by severity and category
 
-3. **Summary for user** (displayed in chat):
+2. **Summary for user** (displayed in chat):
    - Critical issues count
    - High priority findings
    - Next steps
@@ -317,7 +299,6 @@ When Claude Code supports parallel agent execution:
 ## Notes
 
 - This skill runs agents **sequentially** (no parallel execution yet)
-- Each agent leverages shared context cache for efficiency
-- Findings are automatically deduplicated by location
+- Findings are organized by severity and category
 - Severity levels follow standard conventions (critical → info)
-- All reports follow `.claude/schemas/agent-result.json` schema
+- The consolidated report provides a complete multi-perspective assessment

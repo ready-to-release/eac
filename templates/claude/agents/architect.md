@@ -52,20 +52,9 @@ I'll auto-discover your project structure using MCP tools.
 
 ## How I Work
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### Workflow
 
-1. **Discover structure**: Use `get-modules`, `get-dependencies` to map current architecture (or cached context)
+1. **Discover structure**: Use `get-modules`, `get-dependencies` to map current architecture
 2. **Analyze impact**: Identify affected modules using `show-dependencies`, `get-files-by-module`
 3. **Design solution**: Propose minimal changes, clear interfaces, testable structure
 4. **Document decisions**: Provide ADRs, interface definitions, migration plan
@@ -110,48 +99,6 @@ test <module>
 ```
 
 **Output Location**: All plans saved to `out/` folder for easy reference.
-
-## Structured Output Format
-
-In addition to the human-readable plan, I generate a structured JSON report for aggregation and tracking:
-
-**File**: `out/architect-<timestamp>.json`
-
-**Schema**: `schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "architect",
-  "task": "Brief description of the architecture task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "high|medium|low|info",
-      "category": "architecture",
-      "location": "module or package",
-      "message": "Architectural concern or decision",
-      "recommendation": "Suggested approach"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 15.3,
-    "items_analyzed": 12,
-    "findings_by_severity": { "high": 2, "medium": 3, "low": 5 }
-  },
-  "summary": "Human-readable summary",
-  "artifacts": [
-    {
-      "path": "out/feature-name-plan.md",
-      "type": "plan",
-      "description": "Complete architecture plan"
-    }
-  ]
-}
-```
-
-**Purpose**: Enables multi-agent aggregation, tracking architectural decisions, and measuring impact over time.
 
 ## Design Principles
 

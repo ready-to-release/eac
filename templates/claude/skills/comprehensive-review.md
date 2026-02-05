@@ -35,9 +35,8 @@ Provide comprehensive code quality assessment from multiple angles:
 
 ### Phase 1: Context Loading (1-2 min)
 
-1. Check for cached session context (`out/session-context.json`)
-2. If missing, gather project context once
-3. Share context with all agents
+1. Gather project context using MCP tools
+2. Identify scope of review (changed files or specific targets)
 
 ### Phase 2: Multi-Agent Review (5-10 min)
 
@@ -46,27 +45,27 @@ Run specialized agents sequentially:
 1. **architect** (2-3 min)
    - Task: "Review architecture and design patterns in the changed code"
    - Focus: Module boundaries, interface design, dependency management
-   - Output: `out/architect-<timestamp>.json`
+   - Output: Findings and recommendations
 
 2. **test-engineer** (2-3 min)
    - Task: "Analyze test coverage and test quality for the changes"
    - Focus: Missing tests, edge cases, test clarity
-   - Output: `out/test-engineer-<timestamp>.json`
+   - Output: Test quality analysis
 
 3. **debugger** (1-2 min)
    - Task: "Identify potential bugs and error handling gaps"
    - Focus: Error paths, edge cases, defensive coding
-   - Output: `out/debugger-<timestamp>.json`
+   - Output: Bug analysis
 
 ### Phase 3: Aggregation (1-2 min)
 
-1. **Load all JSON reports**:
-   - Read all `out/*-<timestamp>.json` files from Phase 2
-   - Parse findings from each agent
+1. **Collect findings from all agents**:
+   - Review each agent's output from Phase 2
+   - Extract key findings and recommendations
 
-2. **Deduplicate findings**:
-   - Group by location (file:line)
-   - Merge duplicate observations
+2. **Organize findings**:
+   - Group by severity and category
+   - Note which agent provided each finding
    - Preserve agent attribution
 
 3. **Prioritize**:
@@ -231,7 +230,6 @@ When Claude Code supports parallel agent execution:
 ## Notes
 
 - This skill runs agents **sequentially** (no parallel execution yet)
-- Each agent leverages shared context cache for efficiency
-- Findings are automatically deduplicated by location
+- Findings are organized by severity and category
 - Severity levels follow standard conventions (critical → info)
-- All reports follow `schemas/agent-result.json` schema
+- The consolidated report provides a complete multi-perspective assessment
