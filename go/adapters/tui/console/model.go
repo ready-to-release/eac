@@ -18,15 +18,37 @@ var log = logging.C()
 
 // HelpTextMap maps zone IDs to help descriptions for the Resources pane elements.
 var HelpTextMap = map[string]string{
-	"res-timer":     "Elapsed time since execution started",
-	"res-cpu":       "CPU usage per core (green=low, yellow=medium, red=high)",
-	"res-mem":       "Memory usage (green=low, yellow=medium, red=high)",
-	"res-dmem":      "Docker memory pool usage (green=low, yellow=medium, red=high)",
-	"res-jobs":      "Active containers running in parallel",
-	"res-uow":       "Active: filled=running, unfilled=available loft, grey=unallocatable",
-	"res-counters":  "Progress: done/total P:pending F:failed",
-	"res-tools":     "Tool lamps: blue=container, orange=system (filled=active)",
-	"freeze-button": "Click to pause auto-exit countdown for 2 minutes",
+	// Row 1 - System metrics
+	"res-timer": "Wall-clock elapsed time (includes I/O waits and scheduler delays)",
+
+	"res-cpu": "Active cores normalized to 16 lamps; color per lamp shows that core's load: green <50%, yellow 50-80%, orange 80-95%, red >95%",
+
+	"res-mem": "Host RAM usage: green <37% ok, yellow 37-68% normal, orange 68-87% pressure, red >87% constrained (risk of swapping)",
+
+	"res-dmem": "Docker memory pool: green <37%, yellow 37-68%, orange 68-87%, red >87% (containers may OOM)",
+
+	// Row 2 - Scheduler pressure (Host)
+	"res-host": "Host scheduler pressure (running/target): green <37%, yellow 37-68%, orange 68-87%, red >87% queuing jobs",
+
+	"res-host-weight": "Host slots used/capacity; W:N = waiting jobs (yellow 1-5, red >5 = backpressure)",
+
+	// Row 2 - Scheduler pressure (Docker)
+	"res-docker": "Docker scheduler pressure: green <37%, yellow 37-68%, orange 68-87%, red >87% queuing containers",
+
+	"res-docker-weight": "Docker slots used/capacity; W:N = waiting containers (red >5 = Docker is bottleneck)",
+
+	// Row 2/3 - Progress counters
+	"res-counters": "Progress: blue=cached (higher=good incremental), green=done, red=failed",
+
+	// Row 2/3 - Tool and container tracking
+	"res-jobs": "Container instances FIFO: bright blue=running, dim=completed, dark=unused",
+
+	"res-native": "System tools (go, git): bright orange=active, dim=idle, dark=unused",
+
+	"res-ctools": "Container tools: bright blue=running, light=completed, dark=unused",
+
+	// Controls
+	"freeze-button": "Click [...] to pause auto-exit (2min); shows countdown when active: green >60s, yellow 20-60s, red <20s",
 }
 
 // Model is the Bubbletea model for the console window.
@@ -58,9 +80,15 @@ type Model struct {
 	completed int      // Completed count
 	total     int      // Total modules
 
-	// Capacity tracking (three-value model)
+	// Capacity tracking (three-value model) - Host scheduler
 	roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
 	pressureTarget int // Dynamic optimal capacity (may be < roof under memory pressure)
+
+	// Docker scheduler capacity tracking
+	dockerRunning        int // Currently running container weight
+	dockerPressureTarget int // Docker scheduler pressure target
+	dockerRoof           int // Docker scheduler max capacity
+	dockerWaiting        int // Jobs waiting for docker scheduler
 
 	startTime time.Time // Execution start
 	lastError *Line     // Most recent error (sticky display)
@@ -149,7 +177,7 @@ type SelectionState struct {
 // UoWState tracks per-module execution state for tab display.
 type UoWState struct {
 	Moniker     string       // Full ID for matching (Longname: context:module:component:tool)
-	DisplayName string       // Short name for display (Shortname: module:component)
+	DisplayName string       // Context-aware name for display
 	Index       int          // 1-based index in execution order (for tab display)
 	Weight      int          // Scheduling weight/pressure (shown in tab)
 	Buffer      *RingBuffer  // Module-specific output buffer

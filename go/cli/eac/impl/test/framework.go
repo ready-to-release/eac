@@ -564,32 +564,9 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// assertTestManifestsExist verifies that all expected UoWs have valid manifests.
-// This catches cases where manifest generation was broken or never implemented.
+// assertTestManifestsExist verifies that all executed UoWs have valid manifests.
 func assertTestManifestsExist(ctx *cmdframework.ExecutionContext) error {
-	specs := ResolveTestUnitSpecs(ctx)
-	if len(specs) == 0 {
-		return nil
-	}
-
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	var missing []string
-
-	for _, spec := range specs {
-		// Check if manifest exists for this UoW
-		_, err := reader.GetUoW(workunit.ContextTest, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
-		if err != nil {
-			missing = append(missing, spec.ID.Longname())
-			log.Debugf("[TEST-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
-		}
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("test completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
-	}
-
-	log.Debugf("[TEST-ASSERT] All %d UoW manifests verified", len(specs))
-	return nil
+	return cmdframework.AssertManifestsExist(ctx, "test", ResolveTestUnitSpecs(ctx))
 }
 
 // testWorker runs tests for a module path.
@@ -619,7 +596,7 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 
 // testUnitWorker runs tests for a package path using component-level execution.
 // This is called by the UnitScheduler for parallel test component execution.
-// The component parameter is in "componentName:toolName" format (e.g., "config:gotest" or "docs-drawio-cache:godog").
+// The component parameter is in "componentType:toolName:testname" format (e.g., "go:gotest:impl-build").
 // The orchestrator (UoW) creates the log file and output directory - worker just writes to logWriter.
 func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
@@ -633,12 +610,17 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		return 1
 	}
 
-	// Parse component:tool format (e.g., "config:gotest")
-	componentName := component
+	// Parse component:tool:testname format (e.g., "go:gotest:impl-build")
+	// Parts: [0]=componentType, [1]=tool, [2]=testname
+	parts := strings.Split(component, ":")
+	componentType := parts[0]
 	testType := ""
-	if idx := strings.LastIndex(component, ":"); idx > 0 {
-		componentName = component[:idx]
-		testType = component[idx+1:]
+	testname := ""
+	if len(parts) >= 2 {
+		testType = parts[1]
+	}
+	if len(parts) >= 3 {
+		testname = parts[2]
 	}
 
 	// Build UnitID for UoW-level cache lookup
@@ -649,8 +631,9 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 	unitID := workunit.UnitID{
 		Context:   workunit.ContextTest,
 		Module:    module,
-		Component: componentName,
+		Component: componentType,
 		Tool:      toolName,
+		Extra:     map[string]string{"testname": testname},
 	}
 
 	// Check UoW-level cache first
@@ -662,10 +645,11 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		return -1 // -1 = skipped/cached = blue in TUI
 	}
 
-	// Look up pkgPath from component mapping
-	pkgPath, ok := testCfg.ComponentToPkgPath[componentName]
+	// Look up pkgPath from component mapping using testname
+	// testname is the unique identifier within module:componentType (e.g., "impl-build")
+	pkgPath, ok := testCfg.ComponentToPkgPath[testname]
 	if !ok {
-		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for component %s\n", componentName)
+		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for testname %s\n", testname)
 		return 1
 	}
 
@@ -693,8 +677,8 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 	startTime := time.Now()
 
 	// Run tests - UoW manages log file, we just write to logWriter
-	// Use the componentName as result key for aggregation
-	resultKey := componentName
+	// Use the testname as result key for aggregation (unique within module:componentType)
+	resultKey := testname
 	result := testCfg.ExecCtx.runPackageTestsDirect(pkgPath, tests, logWriter)
 
 	testCfg.ExecCtx.mu.Lock()
@@ -702,7 +686,8 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 	testCfg.ExecCtx.mu.Unlock()
 
 	// Pass test counts to orchestrator for summary display
-	ctx.Orchestrator.SetUnitExtras(module, componentName, orchestrator.UnitExtras{
+	// Use componentType as the component name for orchestrator tracking
+	ctx.Orchestrator.SetUnitExtras(module, componentType, orchestrator.UnitExtras{
 		TestsTotal:   result.TestsTotal,
 		TestsPassed:  result.TestsPassed,
 		TestsFailed:  result.TestsFailed,
@@ -715,9 +700,7 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 	if !passed {
 		exitCode = 1
 	}
-	if !environments.IsCI() {
-		writeUoWTestManifest(ctx, testCfg, unitID, inputHash, startTime, exitCode)
-	}
+	writeUoWTestManifest(ctx, testCfg, unitID, inputHash, startTime, exitCode)
 
 	if result.PackageFailed || result.TestsFailed > 0 {
 		return 1
@@ -1116,11 +1099,13 @@ func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 	testCfg.ExecCtx.mu.Unlock()
 
 	// Create and record the manifest
+	// Include Extra field for testname which ensures unique directory names
 	manifest := &coreoutput.UoWManifest{
 		Context:    workunit.ContextTest,
 		Module:     unitID.Module,
 		Component:  unitID.Component,
 		Tool:       unitID.Tool,
+		Extra:      unitID.Extra, // Include testname for unique directory path
 		InputHash:  inputHash,
 		ExecutedAt: startTime,
 		ExitCode:   exitCode,

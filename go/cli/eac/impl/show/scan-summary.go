@@ -1,15 +1,12 @@
 // Command: show scan-summary
 // Short: Generate pretty scan summary for a module
-// Flag.scans: type=string, usage=Comma-separated list of scans that were run (e.g., sbom,vuln,secrets)
-// Flag.failed-scans: type=string, usage=Space-separated list of scans that failed
 // Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
-// Flag.status: type=string, usage=Overall status (success or failure)
 // Long: The show scan-summary command generates a formatted security scan summary with status per scan.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive scan summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
 // Long:
-// Long: The command reads from the scan manifest at out/scan/<module>/scan.manifest.json.
-// Long: Status is derived from the manifest - success if all scans passed, failure otherwise.
+// Long: The command reads from UoW manifests at out/scan/<module>/*/uow.manifest.json.
+// Long: Status is derived from exit codes - success if all zero, failure otherwise.
 // Long:
 // Long: Expected Output:
 // Long: - Markdown-formatted scan summary with emojis and styling
@@ -21,14 +18,14 @@ package show
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
-	"github.com/ready-to-release/eac/go/core/manifest"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -73,32 +70,43 @@ func ShowScanSummary() int {
 		return 1
 	}
 
-	// Load scan manifest
-	moduleScanDir := filepath.Join(workspaceRoot, "out", "scan", module)
-	mf, err := manifest.LoadScanManifest(moduleScanDir)
-	if err != nil {
-		log.Errorf("No scan manifest found at %s: %v", moduleScanDir, err)
+	// Load scan UoW manifests
+	reader := coreoutput.NewReader(workspaceRoot)
+	manifests, err := reader.ListUoWs(workunit.ContextScan, module)
+	if err != nil || len(manifests) == 0 {
+		log.Errorf("No scan manifests found for module %s (run scan first)", module)
 		return 1
 	}
 
-	return generateScanSummaryFromManifest(module, mf, artifactName)
+	return generateScanSummaryFromUoWs(module, manifests, artifactName)
 }
 
-// generateScanSummaryFromManifest generates a scan summary from the scan manifest.
-func generateScanSummaryFromManifest(module string, mf *manifest.ScanManifest, artifactName string) int {
+// generateScanSummaryFromUoWs generates a scan summary from UoW manifests.
+func generateScanSummaryFromUoWs(module string, manifests []*coreoutput.UoWManifest, artifactName string) int {
 	var sb strings.Builder
 
 	// Header
 	sb.WriteString(fmt.Sprintf("## 🔒 Security Scans: %s\n\n", module))
 
-	// Determine status from manifest
-	status := "success"
-	if !mf.AllPassed() {
-		status = "failure"
+	// Determine overall status
+	allPassed := true
+	passed := 0
+	failed := 0
+	skipped := 0
+
+	for _, m := range manifests {
+		if m.ExitCode > 0 {
+			allPassed = false
+			failed++
+		} else if m.ExitCode < 0 {
+			skipped++
+		} else {
+			passed++
+		}
 	}
 
 	// Status message
-	if status == "success" {
+	if allPassed {
 		sb.WriteString("✅ **All scans passed**\n\n")
 	} else {
 		sb.WriteString("⚠️ **Some scans failed**\n\n")
@@ -108,25 +116,24 @@ func generateScanSummaryFromManifest(module string, mf *manifest.ScanManifest, a
 	tb := render.NewTableBuilder().
 		WithHeaders("Scan", "Status", "Duration")
 
-	for scanType, result := range mf.Scans {
-		duration := ""
-		if result.DurationSeconds > 0 {
-			duration = fmt.Sprintf("%.1fs", result.DurationSeconds)
+	for _, m := range manifests {
+		scanName := m.Tool
+		if m.Component != "" && m.Component != m.Tool {
+			scanName = m.Component + "/" + m.Tool
 		}
 
-		switch result.Status {
-		case manifest.ScanStatusPassed:
-			tb.AddRow(scanType, "✅ Passed", duration)
-		case manifest.ScanStatusFailed:
-			if result.Error != "" {
-				tb.AddRow(scanType, fmt.Sprintf("❌ Failed: %s", truncate(result.Error, 40)), duration)
-			} else {
-				tb.AddRow(scanType, "❌ Failed", duration)
-			}
-		case manifest.ScanStatusSkipped:
-			tb.AddRow(scanType, "⏭️ Skipped", duration)
+		duration := ""
+		if m.Duration.Seconds() > 0 {
+			duration = fmt.Sprintf("%.1fs", m.Duration.Seconds())
+		}
+
+		switch {
+		case m.ExitCode == 0:
+			tb.AddRow(scanName, "✅ Passed", duration)
+		case m.ExitCode < 0:
+			tb.AddRow(scanName, "⏭️ Cached", duration)
 		default:
-			tb.AddRow(scanType, result.Status, duration)
+			tb.AddRow(scanName, "❌ Failed", duration)
 		}
 	}
 
@@ -134,16 +141,12 @@ func generateScanSummaryFromManifest(module string, mf *manifest.ScanManifest, a
 	sb.WriteString("\n")
 
 	// Summary stats
+	total := passed + failed + skipped
 	sb.WriteString(fmt.Sprintf("**Summary**: %d passed, %d failed, %d skipped (total: %d)\n",
-		mf.Summary.Passed, mf.Summary.Failed, mf.Summary.Skipped, mf.Summary.Total))
+		passed, failed, skipped, total))
 
 	// Artifact info
 	sb.WriteString(fmt.Sprintf("**Artifact**: `%s`\n", artifactName))
-
-	// Git commit if available
-	if mf.GitCommit != "" {
-		sb.WriteString(fmt.Sprintf("**Commit**: `%s`\n", truncate(mf.GitCommit, 7)))
-	}
 
 	fmt.Print(sb.String())
 	return 0

@@ -113,9 +113,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - site-render-tool container (python base image)
+  # Docker - site-render-oci container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/site-render-tool"
+    directory: "/containers/site-render-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -125,9 +125,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - pdf-tool container (python base image)
+  # Docker - pdf-oci container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/pdf-tool"
+    directory: "/containers/pdf-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -137,9 +137,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mermaid-tool container (node base image)
+  # Docker - mermaid-oci container (node base image)
   - package-ecosystem: "docker"
-    directory: "/containers/mermaid-tool"
+    directory: "/containers/mermaid-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -149,9 +149,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # npm - mermaid-tool container
+  # npm - mermaid-oci container
   - package-ecosystem: "npm"
-    directory: "/containers/mermaid-tool"
+    directory: "/containers/mermaid-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -165,9 +165,9 @@ updates:
   # Containers - Python dependencies (pip)
   # ============================================================================
 
-  # Python - site-render-tool container
+  # Python - site-render-oci container
   - package-ecosystem: "pip"
-    directory: "/containers/site-render-tool"
+    directory: "/containers/site-render-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -177,9 +177,9 @@ updates:
       - "dependencies"
       - "python"
 
-  # Python - pdf-tool container
+  # Python - pdf-oci container
   - package-ecosystem: "pip"
-    directory: "/containers/pdf-tool"
+    directory: "/containers/pdf-oci"
     schedule:
       interval: "weekly"
       day: "monday"

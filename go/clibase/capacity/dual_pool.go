@@ -132,10 +132,13 @@ func (dps *DualPoolSemaphore) signalHandler() {
 
 // Acquire blocks until allocation can be satisfied from all required pools.
 func (dps *DualPoolSemaphore) Acquire(ctx context.Context, alloc resource.PoolAllocation) bool {
-	// Always acquire host capacity first
-	if alloc.HostWeight > 0 {
-		dps.hostSem.Acquire(alloc.HostWeight)
+	// All work must acquire from host pool - enforce minimum weight of 1
+	// This prevents accidental bypass of the semaphore when HostWeight is 0
+	hostWeight := alloc.HostWeight
+	if hostWeight < 1 {
+		hostWeight = 1
 	}
+	dps.hostSem.Acquire(hostWeight)
 
 	// If container work, also acquire docker capacity
 	if alloc.DockerWeight > 0 && dps.dockerSem != nil {
@@ -152,9 +155,12 @@ func (dps *DualPoolSemaphore) Release(alloc resource.PoolAllocation) {
 		dps.dockerSem.Release(alloc.DockerWeight)
 	}
 
-	if alloc.HostWeight > 0 {
-		dps.hostSem.Release(alloc.HostWeight)
+	// All work acquired from host pool with minimum weight 1
+	hostWeight := alloc.HostWeight
+	if hostWeight < 1 {
+		hostWeight = 1
 	}
+	dps.hostSem.Release(hostWeight)
 }
 
 // HostCapacity returns current host pool status.

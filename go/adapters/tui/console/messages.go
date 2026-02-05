@@ -95,7 +95,7 @@ type InitSummaryMsg struct {
 // This creates the tab in pending state (scheduled but waiting for slot).
 type UoWStartMsg struct {
 	Moniker     string // Full ID for matching (Longname)
-	DisplayName string // Short name for tab display (Shortname)
+	DisplayName string // Context-aware name for tab display
 	Weight      int    // Scheduling weight/pressure for this module
 }
 

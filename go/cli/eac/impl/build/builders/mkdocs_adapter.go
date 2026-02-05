@@ -58,12 +58,13 @@ func (a *mkdocsPreprocessAdapter) Build(module interfaces.ModuleContractPort, wo
 
 	// Convert BuildOptions to mkdocs.BuildOptions
 	mkdocsOpts := mkdocs.BuildOptions{
-		Component:    opts.Component,
-		Force:        opts.ForceRebuild || isForceRebuildCLI(),
-		Reproducible: opts.Reproducible,
-		PDFMode:      false, // Determined from book config
-		Tidy:         opts.TidyFirst,
-		Weight:       opts.Weight, // Pass weight for container resource scaling
+		Component:     opts.Component,
+		Force:         opts.ForceRebuild || isForceRebuildCLI(),
+		Reproducible:  opts.Reproducible,
+		PDFMode:       false, // Determined from book config
+		Tidy:          opts.TidyFirst,
+		Weight:        opts.Weight,         // Pass weight for container resource scaling
+		ArtifactsMode: opts.ArtifactsMode,  // Pass artifacts mode for PDF page limits
 	}
 
 	result := a.handler.Build(module, workspaceRoot, outputDir, logWriter, mkdocsOpts)
@@ -87,7 +88,7 @@ func isForceRebuildCLI() bool {
 }
 
 // ============================================================================
-// site-render-tool adapter
+// site-render-oci adapter
 // ============================================================================
 
 // mkdocsSiteAdapter adapts mkdocs.SiteRenderHandler to builders.Handler.
@@ -95,7 +96,7 @@ type mkdocsSiteAdapter struct {
 	handler *mkdocs.SiteRenderHandler
 }
 
-func (a *mkdocsSiteAdapter) Name() string { return "site-render-tool" }
+func (a *mkdocsSiteAdapter) Name() string { return "site-render-oci" }
 
 func (a *mkdocsSiteAdapter) Requirements() []string { return []string{"docker"} }
 
@@ -117,10 +118,11 @@ func (a *mkdocsSiteAdapter) Build(module interfaces.ModuleContractPort, workspac
 	a.ensureHandler(workspaceRoot)
 
 	mkdocsOpts := mkdocs.BuildOptions{
-		Component:    opts.Component,
-		Force:        opts.ForceRebuild || isForceRebuildCLI(),
-		Reproducible: opts.Reproducible,
-		Weight:       opts.Weight, // Pass weight for container resource scaling
+		Component:     opts.Component,
+		Force:         opts.ForceRebuild || isForceRebuildCLI(),
+		Reproducible:  opts.Reproducible,
+		Weight:        opts.Weight,         // Pass weight for container resource scaling
+		ArtifactsMode: opts.ArtifactsMode,  // Pass artifacts mode for PDF page limits
 	}
 
 	result := a.handler.Build(module, workspaceRoot, outputDir, logWriter, mkdocsOpts)
@@ -134,7 +136,7 @@ func (a *mkdocsSiteAdapter) ensureHandler(workspaceRoot string) {
 }
 
 // ============================================================================
-// pdf-tool adapter
+// pdf-oci adapter
 // ============================================================================
 
 // mkdocsPDFAdapter adapts mkdocs.PDFRenderHandler to builders.Handler.
@@ -142,7 +144,7 @@ type mkdocsPDFAdapter struct {
 	handler *mkdocs.PDFRenderHandler
 }
 
-func (a *mkdocsPDFAdapter) Name() string { return "pdf-tool" }
+func (a *mkdocsPDFAdapter) Name() string { return "pdf-oci" }
 
 func (a *mkdocsPDFAdapter) Requirements() []string { return []string{"docker"} }
 
@@ -172,10 +174,11 @@ func (a *mkdocsPDFAdapter) Build(module interfaces.ModuleContractPort, workspace
 	}
 
 	mkdocsOpts := mkdocs.BuildOptions{
-		Component:    component,
-		Force:        opts.ForceRebuild || isForceRebuildCLI(),
-		Reproducible: opts.Reproducible,
-		Weight:       opts.Weight, // Pass weight for container resource scaling
+		Component:     component,
+		Force:         opts.ForceRebuild || isForceRebuildCLI(),
+		Reproducible:  opts.Reproducible,
+		Weight:        opts.Weight,         // Pass weight for container resource scaling
+		ArtifactsMode: opts.ArtifactsMode,  // Pass artifacts mode for PDF page limits
 		Metadata: map[string]string{
 			"theme": theme,
 		},

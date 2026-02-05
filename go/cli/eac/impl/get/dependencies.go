@@ -1,4 +1,5 @@
 // Command: get dependencies
+// Short: Get full dependency graph for all modules
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

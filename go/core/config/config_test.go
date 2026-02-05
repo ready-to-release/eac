@@ -309,7 +309,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "container module - should aggregate",
 			module: Module{
 				Moniker:   "my-container",
-				Template:  "container",
+				Template:  "container-template",
 				DependsOn: []string{"my-lib"},
 			},
 			expected: true,
@@ -318,7 +318,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "container-multiarch module - should aggregate",
 			module: Module{
 				Moniker:   "ext-eac",
-				Template:  "container-multiarch",
+				Template:  "container-multiarch-template",
 				DependsOn: []string{"eac-cli"},
 			},
 			expected: true,

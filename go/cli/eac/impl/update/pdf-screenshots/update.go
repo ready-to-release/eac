@@ -42,7 +42,7 @@ var log = logging.C()
 
 const (
 	// pdfToolsImage is the Docker image for PDF operations.
-	pdfToolsImage = "pdf-cli-tool:latest"
+	pdfToolsImage = "pdf-cli-oci:latest"
 
 	// defaultDPI is the default resolution for extracted images.
 	defaultDPI = 150
@@ -191,10 +191,10 @@ func UpdatePDFScreenshots() int {
 	}
 	defer dockerClient.Close()
 
-	// Build the pdf-cli-tool image if needed
-	fmt.Println("Ensuring pdf-cli-tool Docker image...")
+	// Build the pdf-cli-oci image if needed
+	fmt.Println("Ensuring pdf-cli-oci Docker image...")
 	if err := ensurePDFToolsImage(repoRoot); err != nil {
-		log.Errorf("Error building pdf-cli-tool image: %v", err)
+		log.Errorf("Error building pdf-cli-oci image: %v", err)
 		return 1
 	}
 
@@ -370,7 +370,7 @@ func countPages(dir string) int {
 	return count
 }
 
-// ensurePDFToolsImage builds the pdf-tool Docker image if needed.
+// ensurePDFToolsImage builds the pdf-oci Docker image if needed.
 func ensurePDFToolsImage(repoRoot string) error {
 	// Check if image exists
 	cmd := exec.Command("docker", "image", "inspect", pdfToolsImage)
@@ -379,10 +379,10 @@ func ensurePDFToolsImage(repoRoot string) error {
 	}
 
 	// Build the image
-	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-cli-tool")
-	buildCtx := paths.ContainersPath(repoRoot, "pdf-cli-tool")
+	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-cli-oci")
+	buildCtx := paths.ContainersPath(repoRoot, "pdf-cli-oci")
 
-	fmt.Println("Building pdf-cli-tool image...")
+	fmt.Println("Building pdf-cli-oci image...")
 	cmd = exec.Command("docker", "build",
 		"-t", pdfToolsImage,
 		"-f", dockerfilePath,

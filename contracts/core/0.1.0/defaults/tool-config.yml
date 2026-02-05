@@ -17,7 +17,7 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint, mermaid-render]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, site-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint, mermaid-render]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
@@ -40,6 +40,22 @@ system-tools:
       command: "docker info"
       pattern: "Server Version: (\\d+\\.\\d+)"
     version: ">=20.10"
+
+  podman:
+    description: "Podman container runtime"
+    binary: podman
+    verify:
+      command: "podman info"
+      pattern: "version: (\\d+\\.\\d+)"
+    version: ">=4.0"
+
+  containerd:
+    description: "containerd container runtime"
+    binary: nerdctl
+    verify:
+      command: "nerdctl info"
+      pattern: "Server Version: (\\d+\\.\\d+)"
+    version: ">=1.0"
 
   git:
     description: "Version control"
@@ -243,10 +259,12 @@ container-tools:
     description: "NPM build in container"
     image: node
     tag: "22-alpine"
-    command: ["sh", "-c", "npm install && npm run build"]
+    command: ["sh", "-c", "npm install && npm run build && if [ -d out ]; then cp -r out/* /output/; fi"]
     mounts:
       - source: "{module}"
         target: /app
+      - source: "{output}"
+        target: /output
     workdir: /app
     requirements: [docker]
 
@@ -355,7 +373,7 @@ container-tools:
   # Documentation
   mkdocs-build:
     description: "MkDocs build"
-    localPath: containers/site-render-tool
+    localPath: containers/site-render-oci
     resources:
       cpus: 4       # Site building with plugins can be CPU-intensive
       memory: "1g"
@@ -391,9 +409,9 @@ container-tools:
       watch_enabled: true
       watch_paths: ["docs/", "mkdocs.yml"]
 
-  site-render-tool:
+  site-render-oci:
     description: "MkDocs site rendering from preprocessed content"
-    localPath: containers/site-render-tool
+    localPath: containers/site-render-oci
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -409,9 +427,9 @@ container-tools:
       cpus: 4       # Site rendering with plugins can be CPU-intensive
       memory: "1g"
 
-  pdf-tool:
+  pdf-oci:
     description: "MkDocs PDF generation with Playwright"
-    localPath: containers/pdf-tool
+    localPath: containers/pdf-oci
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -443,7 +461,7 @@ container-tools:
 
   mermaid-render:
     description: "Mermaid diagram batch rendering"
-    localPath: containers/mermaid-tool
+    localPath: containers/mermaid-oci
     command: ["node", "/app/batch-render.js", "--manifest", "/work/manifest.json"]
     mounts:
       - source: "{workspace}"
@@ -496,11 +514,24 @@ container-tools:
   # Servers
   static-site:
     description: "Static site server (nginx)"
-    localPath: containers/nginx-tool
+    localPath: containers/nginx-oci
     mounts:
       - source: "{content}"
         target: /usr/share/nginx/html
         readonly: true
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  mkdocs-dev-oci:
+    description: "MkDocs development server with polling-based file watching"
+    localPath: containers/mkdocs-dev-oci
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
     requirements: [docker]
     serve:
       container_port: 8000
@@ -693,6 +724,27 @@ component-tools:
 
   ai-docs:
     builder: ai-docs-analyzer
+
+#---------------------------------------------------------------------------
+# Test Type to Component Type Mapping
+#---------------------------------------------------------------------------
+# Maps test discovery types (gotest, godog, etc.) to component types for UoW naming.
+# This determines the "component" field in test UnitIDs: test:module:component:tool:testname
+#
+# Format: test_type: component_type
+# - test_type: The type returned by test discovery (e.g., "gotest", "godog", "mocha")
+# - component_type: The component type used in UnitID (e.g., "go", "gherkin", "typescript")
+#
+# Override in .eac/repository.yml to customize for your project.
+test-type-mapping:
+  gotest: go
+  godog: gherkin
+  mocha: typescript
+  tscucumber: gherkin
+  pester: pwsh
+  pytest: python
+  cargo: rust
+  dotnet: dotnet
 
 #---------------------------------------------------------------------------
 # Environment Overrides

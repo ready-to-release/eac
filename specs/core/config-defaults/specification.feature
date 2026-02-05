@@ -174,7 +174,7 @@ Feature: Configuration Defaults System
         component-types:
           custom-go-lib:
             extensions: [".go"]
-            builder: go
+            builders: [go]
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
@@ -187,7 +187,7 @@ Feature: Configuration Defaults System
         component-types:
           go:
             extensions: [".go", ".go2"]
-            builder: go
+            builders: [go]
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
@@ -199,7 +199,7 @@ Feature: Configuration Defaults System
         component-types:
           my-go-lib:
             extensions: [".go"]
-            builder: go
+            builders: [go]
             files:
               source: ["lib/**/*.go"]
               tests: ["lib/**/*_test.go"]

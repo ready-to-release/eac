@@ -28,9 +28,7 @@ package zap
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/scan/internal"
@@ -39,7 +37,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/manifest"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -181,10 +178,8 @@ func ZAP() int {
 		return 1
 	}
 
-	gitCommit := internal.GetGitCommit(workspaceRoot)
-
 	// Verify module exists
-	module, exists := moduleReport.Registry.Get(moniker)
+	_, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
 		log.Debugf("Module not found: moniker=%s", moniker)
 		log.Errorf("Error: module not found: %s\n", moniker)
@@ -193,9 +188,6 @@ func ZAP() int {
 
 	log.Debugf("Scanning target: moniker=%s, target=%s", moniker, targetURL)
 	log.Infof("🕷️  Scanning %s at %s...\n", moniker, targetURL)
-
-	scanStart := time.Now()
-	moduleScanDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, moniker)
 
 	// Run OWASP ZAP scan
 	findings, err := docker.RunZAPScan(targetURL, scanType, workspaceRoot, zapImage)
@@ -212,8 +204,6 @@ func ZAP() int {
 			log.Infof("  📄 Error evidence: %s\n", outputPath)
 		}
 
-		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error())
 		return 1
 	}
 
@@ -222,14 +212,8 @@ func ZAP() int {
 	if err != nil {
 		log.Debugf("Failed to write evidence: moniker=%s, error=%v", moniker, err)
 		log.Errorf("  ❌ Failed to write evidence: %v\n", err)
-
-		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error())
 		return 1
 	}
-
-	// Update scan manifest with success
-	updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "")
 
 	log.Debugf("ZAP scan completed: moniker=%s, evidence=%s", moniker, outputPath)
 	log.Infof("  ✅ Success: %s\n", outputPath)
@@ -237,30 +221,6 @@ func ZAP() int {
 	return 0
 }
 
-// updateScanManifest loads or creates the scan manifest, adds the scanner result, and saves it.
-func updateScanManifest(moduleScanDir, moniker, moduleType, gitCommit, status string, duration time.Duration, evidencePath, errorMsg string) {
-	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, moduleType, gitCommit)
-	if err != nil {
-		log.Debugf("Failed to load/create scan manifest: error=%v", err)
-		return
-	}
-
-	result := manifest.ScannerResult{
-		Status:          status,
-		RunTime:         time.Now(),
-		DurationSeconds: duration.Seconds(),
-		EvidencePath:    evidencePath,
-		Error:           errorMsg,
-	}
-	mf.AddScannerResult(string(internal.ScannerDAST), result)
-
-	if err := mf.Save(moduleScanDir); err != nil {
-		log.Debugf("Failed to save scan manifest: error=%v", err)
-		return
-	}
-
-	log.Debugf("Scan manifest updated: path=%s", manifest.GetScanManifestPath(moduleScanDir))
-}
 
 func printZAPUsage() {
 	log.Info("Dynamic Application Security Testing using OWASP ZAP")

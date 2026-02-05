@@ -66,7 +66,6 @@ func getBuildUoWCount(ctx *cmdframework.ExecutionContext) int {
 type BuildConfig struct {
 	TidyFirst       bool
 	Version         string
-	BuildAll        bool
 	UseExistingDepm bool
 
 	// Reproducible controls determinism behavior for MkDocs builds.
@@ -75,6 +74,13 @@ type BuildConfig struct {
 	// - true: Always rebuild HTML from staging (CI default)
 	// - false: Skip MkDocs if staging unchanged (local default)
 	Reproducible string
+
+	// ArtifactsMode controls the scope of artifact generation.
+	// Values: "all" (CI default), "reduced" (local default)
+	// - all: Build all artifacts for all platforms
+	// - reduced: Build reduced artifacts for faster local builds
+	// Use ArtifactsMode.AllArtifactsRequested() to check if all artifacts should be built.
+	ArtifactsMode environment.ArtifactsMode
 
 	// Set of originally requested modules (for --use-existing-depm logic)
 	RequestedSet map[string]bool
@@ -111,6 +117,11 @@ type buildContext struct {
 	// UoW-level cache tracking
 	cachedUoWs    map[string]bool      // UoW longname -> cached (e.g., "build:core:go:go")
 	uowCacheTimes map[string]time.Time // UoW longname -> cache time
+
+	// Pre-computed module input hashes (computed once before worker dispatch).
+	// All components in a module share the same hash to avoid divergence
+	// when parallel builds modify shared files (e.g., go.sum via go mod tidy).
+	moduleInputHashes map[string]string // module moniker -> input hash
 }
 
 // RunBuildWithFramework executes build using the cmdframework.
@@ -153,9 +164,10 @@ func buildAfterInit(ctx *cmdframework.ExecutionContext) error {
 		SetRequest(ctx.Config.Monikers, ctx.GetExecutionMonikers()).
 		SetExecutionContext(string(logging.GetExecutionContext())).
 		SetFlags(initsummary.Flags{
-			DebugMode: ctx.Config.DebugMode,
-			UseTUI:    ctx.Config.UseTUI,
-			TidyFirst: buildCfg.TidyFirst,
+			DebugMode:     ctx.Config.DebugMode,
+			UseTUI:        ctx.Config.UseTUI,
+			TidyFirst:     buildCfg.TidyFirst,
+			ArtifactsMode: buildCfg.ArtifactsMode.String(),
 		}).
 		SetOutputDir(paths.OutBuildRelPath)
 
@@ -190,7 +202,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 				continue
 			}
 			// For deps, check if artifacts exist
-			if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.BuildAll) {
+			if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested()) {
 				log.Debugf("Skipping dep %s (artifacts exist)", m)
 			} else {
 				filteredOrder = append(filteredOrder, m)
@@ -200,7 +212,19 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		ctx.ExecutionPlan.ExecutionOrder = filteredOrder
 	}
 
-	// Incremental build detection (devbox only)
+	// Pre-compute module input hashes ONCE before any workers run.
+	// This ensures all components in a module get the same hash, avoiding
+	// divergence when parallel builds modify shared files (e.g., go.sum via go mod tidy).
+	bctx.moduleInputHashes = make(map[string]string)
+	if ctx.ModuleRegistry != nil && ctx.ExecutionPlan != nil {
+		for _, module := range ctx.ExecutionPlan.ExecutionOrder {
+			if contract, ok := ctx.ModuleRegistry.Get(module); ok {
+				bctx.moduleInputHashes[module] = computeComponentInputHash(ctx, module, contract)
+			}
+		}
+	}
+
+	// Incremental build detection (local only)
 	// Also run in dry-run mode to show which modules would be built/skipped
 	if !ctx.Config.ForceRebuild && !buildCfg.UseExistingDepm {
 		// UoW-based incremental detection
@@ -290,32 +314,9 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// assertBuildManifestsExist verifies that all expected UoWs have valid manifests.
-// This catches cases where manifest generation was broken or never implemented.
+// assertBuildManifestsExist verifies that all executed UoWs have valid manifests.
 func assertBuildManifestsExist(ctx *cmdframework.ExecutionContext) error {
-	specs := getCachedUnitWork(ctx)
-	if len(specs) == 0 {
-		return nil
-	}
-
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	var missing []string
-
-	for _, spec := range specs {
-		// Check if manifest exists for this UoW
-		_, err := reader.GetUoW(workunit.ContextBuild, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
-		if err != nil {
-			missing = append(missing, spec.ID.Longname())
-			log.Debugf("[BUILD-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
-		}
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("build completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
-	}
-
-	log.Debugf("[BUILD-ASSERT] All %d UoW manifests verified", len(specs))
-	return nil
+	return cmdframework.AssertManifestsExist(ctx, "build", getCachedUnitWork(ctx))
 }
 
 // processAllArtifactDerivations runs artifact derivations for all successfully built modules.
@@ -337,13 +338,13 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 		}
 
 		// Get merged artifacts (module-level takes priority over type-level)
-		mergedArtifacts := cfg.GetBuildArtifacts(moniker, buildCfg.BuildAll)
+		mergedArtifacts := cfg.GetBuildArtifacts(moniker, buildCfg.ArtifactsMode.AllArtifactsRequested())
 		if len(mergedArtifacts) == 0 {
 			continue
 		}
 
 		// Determine which artifacts were requested
-		requestedArtifacts := determineRequestedArtifactsForBuild(module, buildCfg.BuildAll, ctx.WorkspaceRoot)
+		requestedArtifacts := determineRequestedArtifactsForBuild(module, buildCfg.ArtifactsMode, ctx.WorkspaceRoot)
 
 		// Build output directory
 		moduleOutputDir := paths.BuildOutputPath(ctx.WorkspaceRoot, moniker)
@@ -362,10 +363,11 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 		}
 
 		// Reconstruct component directory path matching build output structure.
-		// Build uses "component_handler" format (e.g., "typescript_npm-build") for the output path.
+		// Build uses "component-handler" format (e.g., "typescript-npm-build") for the output path.
+		// Must match UnitID.DirName() which uses dash separator.
 		componentDir := compResult.Component
 		if compResult.Handler != "" {
-			componentDir = compResult.Component + "_" + compResult.Handler
+			componentDir = compResult.Component + "-" + compResult.Handler
 		}
 		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
 		if exitCode := builders.ExecutePostBuildSteps(compResult.Module, compResult.Component, ctx.WorkspaceRoot, componentOutputDir, io.Discard); exitCode != 0 {
@@ -427,7 +429,13 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		// Only fail cache if manifests exist AND integrity check fails (actual tampering)
 		reader := coreoutput.NewReader(ctx.WorkspaceRoot)
 
-		validationResult := reader.ValidateUoW(workunit.ContextBuild, module, compName, toolName)
+		uowID := workunit.UnitID{
+			Context:   workunit.ContextBuild,
+			Module:    module,
+			Component: compName,
+			Tool:      toolName,
+		}
+		validationResult := reader.ValidateUoW(uowID)
 		if !validationResult.ManifestExists {
 			// No manifest - trust source hash, allow cache hit
 			log.Debugf("UoW cache hit (no manifest to verify)")
@@ -486,7 +494,7 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 
 	// Skip if dependency and artifacts exist (--use-existing-depm)
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
-		if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.BuildAll) {
+		if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested()) {
 			output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
 			return 0
 		}
@@ -494,10 +502,10 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 
 	// Acquire component-level lock with wait (skip in dry-run)
 	// Use component-level locking to allow parallel builds of different components within the same module
-	// Use underscore separator for Windows compatibility (same as lint)
+	// Use dash separator to match UnitID.DirName() for consistent manifest paths
 	componentDir := compName
 	if builderName != "" {
-		componentDir = compName + "_" + builderName
+		componentDir = compName + "-" + builderName
 	}
 	if !ctx.Config.DryRun {
 		lockCfg := locking.UnitBuildConfig(module, componentDir, paths.OutBuildRelPath)
@@ -511,7 +519,7 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	}
 
 	// Get the handler for this component/tool
-	// For tool chain components, builderName is the tool name (e.g., "pdf-tool")
+	// For tool chain components, builderName is the tool name (e.g., "pdf-oci")
 	// and we need to get the handler directly by name
 	var handler builders.Handler
 	if builderName != "" {
@@ -528,7 +536,7 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	}
 
 	// Determine which artifacts to build
-	requestedArtifacts := determineRequestedArtifactsForBuild(moduleContract, buildCfg.BuildAll, ctx.WorkspaceRoot)
+	requestedArtifacts := determineRequestedArtifactsForBuild(moduleContract, buildCfg.ArtifactsMode, ctx.WorkspaceRoot)
 
 	// Look up weight for this component from pre-computed weights map
 	// Key format matches what was stored in populateComponentWeights
@@ -551,8 +559,9 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		Component:          compName, // Pass original component name for component-level parallelism
 		Reproducible:       buildCfg.ResolveReproducible(),
 		ForceRebuild:       ctx.Config.ForceRebuild,
-		Weight:             weight,            // Resource multiplier for container builds
-		CacheConfig:        ctx.Config.CacheConfig, // Fine-grained cache control
+		Weight:             weight,                   // Resource multiplier for container builds
+		CacheConfig:        ctx.Config.CacheConfig,   // Fine-grained cache control
+		ArtifactsMode:      buildCfg.ArtifactsMode,   // Artifact scope mode
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -588,6 +597,15 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 		}
 	}
 
+	// Use pre-computed module input hash to ensure all components in a module
+	// share the same hash. This prevents divergence when parallel builds modify
+	// shared files (e.g., go.sum via go mod tidy).
+	inputHash := bctx.moduleInputHashes[module]
+	if inputHash == "" {
+		// Fallback: compute if not pre-computed (shouldn't happen in normal flow)
+		inputHash = computeComponentInputHash(ctx, module, moduleContract)
+	}
+
 	// Build the component
 	// Use component-level output directory: out/build/<module>/<component>/<builder>
 	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
@@ -597,12 +615,11 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// -1 = skipped (cached), 0 = success, >0 = failure
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
-		// Record failure manifest with input hash for debugging
+		// Record failure manifest with pre-computed input hash for debugging
 		if bctx.tracker != nil {
-			inputHash := computeComponentInputHash(ctx, module, moduleContract)
 			manifest := &coreoutput.UoWManifest{
 				ExitCode:   exitCode,
-				InputHash:  inputHash,
+				InputHash:  inputHash, // Use pre-computed hash from before build
 				ExecutedAt: time.Now().UTC(),
 				Artifacts:  nil,
 				OutputHash: "",
@@ -631,15 +648,12 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	if bctx.tracker != nil {
 		artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
 
-		// Compute InputHash from module source files
-		inputHash := computeComponentInputHash(ctx, module, moduleContract)
-
 		// Compute OutputHash from artifact hashes
 		outputHash := computeOutputHash(artifacts)
 
 		manifest := &coreoutput.UoWManifest{
 			ExitCode:   exitCode,
-			InputHash:  inputHash,
+			InputHash:  inputHash, // Use pre-computed hash from before build
 			ExecutedAt: time.Now().UTC(),
 			Artifacts:  artifacts,
 			OutputHash: outputHash,

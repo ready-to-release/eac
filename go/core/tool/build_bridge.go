@@ -132,11 +132,11 @@ func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []Com
 	for _, compName := range module.GetEnabledComponents() {
 		compTypeName := module.Components.GetComponentType(compName)
 		compType := cfg.ComponentTypes.Get(compTypeName)
-		if compType == nil || !compType.HasBuilder() {
+		if compType == nil || !compType.IsBuildable() {
 			continue
 		}
 
-		builderName := compType.Builder
+		builderName := compType.GetBuilders()[0]
 
 		// Try to find handler from tool registry
 		if h := b.getHandlerUnlocked(builderName); h != nil {
@@ -244,12 +244,12 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 		toolID = b.resolver.ResolveToolID(componentType, OperationBuild)
 	}
 
-	// Fall back to component-types.yml builder field
+	// Fall back to component-types.yml builders field
 	if toolID == "" {
 		cfg := config.Global()
 		if cfg != nil && cfg.ComponentTypes != nil {
-			if compType := cfg.ComponentTypes.Get(componentType); compType != nil {
-				toolID = compType.Builder
+			if compType := cfg.ComponentTypes.Get(componentType); compType != nil && compType.IsBuildable() {
+				toolID = compType.GetBuilders()[0]
 			}
 		}
 	}
@@ -259,7 +259,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 	}
 
 	// Check if the tool ID is a native handler first
-	// Native handlers take precedence (e.g., mkdocs-preprocess, site-render-tool, pdf-tool)
+	// Native handlers take precedence (e.g., mkdocs-preprocess, site-render-oci, pdf-oci)
 	if h, ok := b.nativeHandlers[toolID]; ok {
 		return h
 	}

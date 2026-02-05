@@ -21,9 +21,10 @@ type OutputPipe struct {
 	reader *io.PipeReader
 	writer *io.PipeWriter
 
-	wg     sync.WaitGroup
-	closed bool
-	mu     sync.Mutex
+	wg      sync.WaitGroup
+	closed  bool
+	closing bool // true when Close() is called but readLines() still draining
+	mu      sync.Mutex
 }
 
 // NewOutputPipe creates a new pipe that streams lines to the channel.
@@ -50,16 +51,20 @@ func (op *OutputPipe) Writer() io.Writer {
 }
 
 // Close closes the pipe and waits for the reader goroutine to finish.
+// During close, remaining lines are sent with blocking (with timeout) to ensure
+// final error output reaches the TUI before the unit is marked complete.
 func (op *OutputPipe) Close() error {
 	op.mu.Lock()
 	if op.closed {
 		op.mu.Unlock()
 		return nil
 	}
-	op.closed = true
+	// Mark as closing first - this switches trySendLine to blocking mode
+	// so remaining lines (especially error output) get through
+	op.closing = true
 	op.mu.Unlock()
 
-	// Close writer first - this causes scanner.Scan() to return EOF
+	// Close writer - this causes scanner.Scan() to return EOF
 	err := op.writer.Close()
 
 	// Wait for readLines() to exit (should be quick after writer closes)
@@ -77,6 +82,11 @@ func (op *OutputPipe) Close() error {
 		// Timeout - readLines() is stuck, but we can't block forever
 		// This is a fallback safety; ideally shouldn't happen
 	}
+
+	// Now mark fully closed
+	op.mu.Lock()
+	op.closed = true
+	op.mu.Unlock()
 
 	return err
 }
@@ -124,6 +134,8 @@ func (op *OutputPipe) readLines() {
 
 // trySendLine attempts to send a line to the channel.
 // Returns false if the channel is closed (recovered from panic).
+// When the pipe is closing, uses blocking send with timeout to ensure
+// final output (especially errors) reaches the TUI.
 func (op *OutputPipe) trySendLine(line tuicontract.Line) (ok bool) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -132,6 +144,23 @@ func (op *OutputPipe) trySendLine(line tuicontract.Line) (ok bool) {
 		}
 	}()
 
+	op.mu.Lock()
+	closing := op.closing
+	op.mu.Unlock()
+
+	if closing {
+		// During close: blocking send with timeout to flush remaining lines
+		// This ensures error output gets to TUI before completion event
+		select {
+		case op.lineChan <- line:
+			return true
+		case <-time.After(100 * time.Millisecond):
+			// Timeout - drop line but don't block forever
+			return true
+		}
+	}
+
+	// Normal operation: non-blocking to avoid stalling workers
 	select {
 	case op.lineChan <- line:
 		return true

@@ -128,9 +128,9 @@ function Install-Binary {
 
             # Use the actual built r2r-cli binary from the build output
             # This is available because r2r-installer depends on r2r-cli module
-            # When running from build output: out/build/r2r-installer/pwsh/
-            # Go up 2 levels to out/build, then access r2r-cli/go/
-            $builtBinary = Join-Path $PSScriptRoot "..\..\r2r-cli\go\r2r-windows-amd64.exe"
+            # When running from build output: out/build/r2r-installer/pwsh-scripts/
+            # Go up 2 levels to out/build, then access r2r-cli/go-go/
+            $builtBinary = Join-Path $PSScriptRoot "..\..\r2r-cli\go-go\r2r-windows-amd64.exe"
 
             if (-not (Test-Path $builtBinary)) {
                 Write-ColorOutput "Test mode: Pre-built binary not found at $builtBinary" "Red"

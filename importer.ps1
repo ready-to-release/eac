@@ -82,7 +82,7 @@ git:
 
 # Create r2r alias pointing to the OS-specific binary
 # Binary is now at out/build/r2r-cli/go/ (component-level output structure)
-$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\r2r-cli\go"
+$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\r2r-cli\go-go"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
     $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows-amd64.exe"
 } elseif ($IsMacOS) {

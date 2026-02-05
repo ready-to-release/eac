@@ -52,7 +52,7 @@ eac/
 │   ├── mermaid-cli/            # Mermaid diagram renderer
 │   ├── mkdocs-pdf/             # PDF documentation builder
 │   ├── mkdocs-site/            # Documentation site builder
-│   ├── pdf-cli-tool/           # PDF manipulation utilities (poppler-utils)
+│   ├── pdf-cli-oci/           # PDF manipulation utilities (poppler-utils)
 │   └── static-site/            # Static site hosting
 │
 ├── contracts/                  # JSON schemas and system defaults

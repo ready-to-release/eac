@@ -84,6 +84,12 @@ func TestStartServe_Success(t *testing.T) {
 
 // TestStartServe_ContainerAlreadyRunning tests that StartServe returns existing container
 func TestStartServe_ContainerAlreadyRunning(t *testing.T) {
+	// Skip if port 9000 is not available at OS level, since this test requires
+	// the specific port to match the mocked container name
+	if !IsPortAvailable(9000) {
+		t.Skip("Port 9000 is in use by another process, skipping test")
+	}
+
 	ctx := context.Background()
 	mockClient := &mocks.MockDockerClient{}
 

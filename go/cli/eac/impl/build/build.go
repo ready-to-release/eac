@@ -7,7 +7,7 @@
 // Long:
 // Long: Expected Output:
 // Long:   - Build logs written to 'out/build/<module>/build.log' (one per module)
-// Long:   - Build manifest at 'out/build/<module>/build.manifest.json' (with timing data)
+// Long:   - Build manifest at 'out/build/<module>/<component>/uow.manifest.json' (with timing data)
 // Long:   - Failed builds are clearly marked with error details
 // Long:   - Failed builds do not stop execution of remaining modules
 // Long:   - Exit code 0 indicates all builds succeeded
@@ -273,7 +273,6 @@ func Build() int {
 	version := buildFlags.Version
 	reproducible := buildFlags.Reproducible
 	listArtifacts := buildFlags.ListArtifacts
-	buildAll := buildFlags.BuildAll
 
 	// Handle tidy flag: --tidy-first sets it true, --no-tidy sets it false
 	// Default is based on environment (true for local, false for CI)
@@ -285,6 +284,17 @@ func Build() int {
 		tidyFirst = false
 	}
 
+	// Handle artifacts mode: default based on environment (all for CI, reduced for local)
+	artifactsMode := env.DefaultArtifactsMode()
+	if buildFlags.Artifacts != "" {
+		mode, err := environment.ParseArtifactsMode(buildFlags.Artifacts)
+		if err != nil {
+			log.Errorf("Error: %v", err)
+			return 1
+		}
+		artifactsMode = mode
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -292,7 +302,7 @@ func Build() int {
 		return 1
 	}
 
-	// Ensure eac binary exists (devbox only - CI uses setup-commands action)
+	// Ensure eac binary exists (local only - CI uses setup-commands action)
 	if env.IsLocalConsole {
 		if err := ensureCommandsBinary(workspaceRoot); err != nil {
 			log.Errorf("Error: failed to build eac binary: %v", err)
@@ -357,9 +367,9 @@ func Build() int {
 	buildCfg := &BuildConfig{
 		TidyFirst:       tidyFirst,
 		Version:         version,
-		BuildAll:        buildAll,
 		UseExistingDepm: useExistingDepm,
 		Reproducible:    reproducible,
+		ArtifactsMode:   artifactsMode,
 		RequestedSet:    requestedSet,
 	}
 
@@ -414,7 +424,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 // runModuleBuild runs build for a single module.
 // Executes all handlers for the module's buildable components in sequence.
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun, buildAll, reproducible bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, artifactsMode environment.ArtifactsMode, reproducible bool) int {
 	// Get all handlers for module's buildable components
 	compHandlers := builders.GetHandlersForModule(module)
 	if len(compHandlers) == 0 {
@@ -423,7 +433,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	}
 
 	// Determine which artifacts to build
-	requestedArtifacts := determineRequestedArtifactsForBuild(module, buildAll, workspaceRoot)
+	requestedArtifacts := determineRequestedArtifactsForBuild(module, artifactsMode, workspaceRoot)
 
 	opts := builders.BuildOptions{
 		TidyFirst:          tidyFirst,
@@ -494,54 +504,26 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	return 0
 }
 
-// verifyBuildDependenciesQuiet checks build dependencies silently and returns status for summary
+// verifyBuildDependenciesQuiet checks build dependencies silently and returns status for summary.
 // No output is written - the caller is responsible for displaying the results via InitSummary.
+// Docker is verified from the bootstrap namespace - it's the only true system dependency.
+// Tool-level dependencies are handled by the tool system at execution time.
 func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.ModuleContractReport) (int, initsummary.DepsStatus) {
 	status := initsummary.DepsStatus{Verified: true}
 
-	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
-		// Config not loaded, skip verification
-		return 0, status
-	}
-
-	// Collect unique build dependencies from all modules
-	depsMap := make(map[string]bool)
-	for _, moniker := range monikers {
-		module, exists := moduleReport.Registry.Get(moniker)
-		if !exists {
-			continue
-		}
-
-		// Get build requirements from package types
-		enabledPackages := module.GetEnabledComponents()
-		deps := cfg.ComponentTypes.GetBuildRequirements(enabledPackages)
-		for _, dep := range deps {
-			if dep != "" {
-				depsMap[dep] = true
-			}
-		}
-	}
-
-	// No dependencies to verify
-	if len(depsMap) == 0 {
-		return 0, status
-	}
-
-	// Convert to sorted slice for consistent output
-	deps := make([]string, 0, len(depsMap))
-	for dep := range depsMap {
-		deps = append(deps, dep)
-	}
-	sort.Strings(deps)
-
-	// Filter out platform-incompatible tools before verification
-	deps = tool.FilterPlatformSupported(deps)
-	status.Required = deps
-
-	// Verify dependencies using tool registry
+	// Get bootstrap tools from the tool registry
 	registry := tool.GlobalRegistry()
-	results := registry.VerifyAll(deps)
+	bootstrapTools := registry.GetBootstrapTools()
+
+	if len(bootstrapTools) == 0 {
+		// No bootstrap tools configured, skip verification
+		return 0, status
+	}
+
+	status.Required = bootstrapTools
+
+	// Verify bootstrap tools
+	results := registry.VerifyAll(bootstrapTools)
 
 	for _, result := range results {
 		status.Available = append(status.Available, initsummary.DepsResult{
@@ -593,6 +575,10 @@ func printBuildUsage() {
 	log.Info("                            auto: CI uses true, local uses false")
 	log.Info("                            true: Always rebuild HTML from staging")
 	log.Info("                            false: Skip MkDocs if staging unchanged")
+	log.Info("  --artifacts MODE          Artifact scope mode: all, reduced")
+	log.Info("                            all: Build all artifacts for all platforms (CI default)")
+	log.Info("                            reduced: Reduced artifacts for faster local builds (local default)")
+	log.Info("  --all                     Alias for --artifacts all")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("MkDocs modules with books (books.yml):")
@@ -707,11 +693,11 @@ func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool) bool {
 }
 
 // determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module.
-func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, buildAll bool, workspaceRoot string) []string {
-	// When --all is specified, return "*" to signal builders to include all artifacts
+func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, mode environment.ArtifactsMode, workspaceRoot string) []string {
+	// When --artifacts all is specified, return "*" to signal builders to include all artifacts
 	// This handles cases where module type has no artifacts defined (like container type)
 	// but module has books that should all be built
-	if buildAll {
+	if mode.AllArtifactsRequested() {
 		return []string{"*"}
 	}
 

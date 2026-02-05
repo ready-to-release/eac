@@ -23,7 +23,7 @@ modules:
   - moniker: repository
     name: Repository Root Module
     description: Repository root module including configuration files, build tools, and git settings
-    depends_on: [pdf-tool]
+    depends_on: [pdf-oci]
     components:
       # Text/config files without typed extensions
       repo-config:
@@ -32,17 +32,17 @@ modules:
       markdown:
         root: /
         patterns:
-          source: ["*.md", "*.markdown", ".claude/**/*.md", "scripts/**/*.md", "release/README.md", "release/r2r-cli/*.md", "release/ext-eac/*.md", "release/docs/*.md", ".github/**/*.md"]
+          source: ["*.md", "*.markdown", ".claude/**/*.md", "scripts/**/*.md", "release/README.md", "release/r2r-cli/*.md", "release/ext-eac/*.md", "release/docs/*.md", ".github/**/*.md", "junie/**/*.md"]
       yaml:
         root: /
         patterns:
-          source: [.r2r/**/*.yml, .r2r/**/*.yaml, .golangci.yml, .markdownlint.yml, .markdownlint-cli2.yaml, cspell.config.yml, .claude/**/*.yml, .claude/**/*.yaml, r2r-cli.yml, .github/**/*.yml, .github/**/*.yaml]
+          source: [.r2r/**/*.yml, .r2r/**/*.yaml, .golangci.yml, .markdownlint.yml, .markdownlint-cli2.yaml, cspell.config.yml, .claude/**/*.yml, .claude/**/*.yaml, r2r-cli.yml, .github/**/*.yml, .github/**/*.yaml, .eac/**/*.yml, .eac/**/*.yaml]
       workflows:
         root: .github/workflows
       json:
         root: /
         patterns:
-          source: [.mcp.json, .vscode/**/*.json, .claude/**/*.json, specs/.risk-controls/*.json]
+          source: [.mcp.json, .vscode/**/*.json, .claude/**/*.json, specs/.risk-controls/*.json, .eac/**/*.json]
       testdata:
         type: testdata
         root: /
@@ -73,7 +73,7 @@ modules:
   - moniker: contracts-bundle
     name: Contract Files Module
     description: Go module providing embedded contract files (schemas, EBNF, defaults) for consumption by other modules
-    template: go-library
+    template: go-library-template
     parameters:
       go_root: contracts
     components:
@@ -86,6 +86,13 @@ modules:
         root: contracts
         patterns:
           source: ["**/*.ebnf"]
+      yaml:
+        root: contracts
+        patterns:
+          source:
+            - security/**/*.yml
+            - testing/**/*.yml
+            - tools/**/*.yml
 
   - moniker: core
     name: Core Domain Libraries
@@ -112,71 +119,103 @@ modules:
         root: go/core/specs
       # gherkin, structurizr auto-inferred
 
-  - moniker: pdf-tool
+  - moniker: pdf-oci
     name: MkDocs PDF Container
     description: Pre-built Docker container for MkDocs PDF generation (Chromium, Playwright)
-    template: container
+    template: container-template
     components:
-      json: containers/pdf-tool
+      json: containers/pdf-oci
       testdata:
         type: testdata
-        root: containers/pdf-tool
+        root: containers/pdf-oci
         patterns:
           source: ["*.txt", "overrides/**/*.html"]
+      mkdocs-plugin:
+        type: containercode
+        root: containers/pdf-oci/mkdocs-exporter-fork
+        patterns:
+          source:
+            - "**/*.py"
+            - "**/*.css"
+            - pyproject.toml
+            - LICENSE
 
-  - moniker: site-render-tool
+  - moniker: site-render-oci
     name: MkDocs Site Container
     description: Pre-built Docker container for MkDocs HTML site generation
-    template: container
+    template: container-template
     components:
       testdata:
         type: testdata
-        root: containers/site-render-tool
+        root: containers/site-render-oci
         patterns:
-          source: ["*.txt", "*.py"]
+          source: ["*.txt"]
+      scripts:
+        type: containercode
+        root: containers/site-render-oci
+        patterns:
+          source: ["*.py"]
 
-  - moniker: mermaid-tool
+  - moniker: mkdocs-dev-oci
+    name: MkDocs Dev Server Container
+    description: Development server container with polling-based file watching for live reload
+    template: container-template
+    components:
+      testdata:
+        type: testdata
+        root: containers/mkdocs-dev-oci
+        patterns:
+          source: ["*.txt"]
+      scripts:
+        type: containercode
+        root: containers/mkdocs-dev-oci
+        patterns:
+          source: ["*.py", "*.sh"]
+
+  - moniker: mermaid-oci
     name: Mermaid CLI Container
     description: Container for Mermaid diagram rendering
-    template: container
+    template: container-template
     components:
-      json: containers/mermaid-tool
+      json: containers/mermaid-oci
+      scripts:
+        type: containercode
+        root: containers/mermaid-oci
+        patterns:
+          source: ["*.js"]
 
-  - moniker: pdf-cli-tool
-    name: PDF CLI Tools Container
-    description: Lightweight container for PDF manipulation (page extraction with poppler-utils)
-    template: container
+  # pdf-cli-oci: auto-discovered from containers/pdf-cli-oci/Dockerfile
 
-  - moniker: nginx-tool
+  - moniker: nginx-oci
     name: Static Site Container
     description: Container for static site serving with nginx
-    template: container
+    template: container-template
     components:
       testdata:
         type: testdata
-        root: containers/nginx-tool
+        root: containers/nginx-oci
         patterns:
           source: ["*.conf"]
 
-  - moniker: gitfilter-tool
+  - moniker: git-oci
     name: Git Filter Repo Container
     description: Container for git-filter-repo operations
-    template: container
+    template: container-template
     components:
       testdata:
         type: testdata
-        root: containers/gitfilter-tool
+        root: containers/git-oci
         patterns:
           source: ["*.sh"]
 
-  - moniker: gource-tool
+  - moniker: gource-oci
     name: Gource Container
     description: Container for Gource visualization rendering
-    template: container
+    template: container-template
     components:
       testdata:
         type: testdata
-        root: containers/gource-tool
+        root: containers/gource-oci
         patterns:
           source: ["*.sh", "*.html", "*.conf"]
 
@@ -191,9 +230,9 @@ modules:
       scheme: CalVer
       changelog: release/docs/CHANGELOG.md
       release_type: published
-    depends_on: [repository, site-render-tool, pdf-tool]
+    depends_on: [repository, site-render-oci, pdf-oci]
     components:
-      # HTML site (tool chain: preprocess -> site-render-tool)
+      # HTML site (tool chain: preprocess -> site-render-oci)
       site:
         type: docs-site
         root: docs
@@ -219,7 +258,7 @@ modules:
           source: ["LICENSE"]
       # structurizr auto-inferred
 
-      # Diataxis PDF components (tool chain: preprocess -> pdf-tool)
+      # Diataxis PDF components (tool chain: preprocess -> pdf-oci)
       tutorials:
         type: docs-pdf
         config:
@@ -261,6 +300,16 @@ modules:
             - id: windows-amd64
               type: executable
               pattern: "eac-windows-amd64.exe"
+            - id: linux-amd64-upx
+              type: executable
+              pattern: "eac-linux-amd64-upx"
+              compression: upx
+              derive_from: "eac-linux-amd64"
+            - id: windows-amd64-upx
+              type: executable
+              pattern: "eac-windows-amd64-upx.exe"
+              compression: upx
+              derive_from: "eac-windows-amd64.exe"
       markdown: go/cli/eac
       gherkin-steps:
         root: go/cli/eac/specs
@@ -291,54 +340,57 @@ modules:
         root: containers/drawio-tool
         patterns:
           source: ["**/*.py", "requirements.txt", "templates/*.xml"]
+      impl-assets:
+        type: testdata
+        root: go/cli/eac/impl
+        patterns:
+          source:
+            - "**/assets/**/*.txt"
+            - "**/assets/**/*.json"
 
   - moniker: godog
     name: Godog Test Infrastructure
     description: Shared godog BDD test infrastructure (context, cache, helpers, fixtures)
+    template: go-library-template
+    parameters:
+      go_root: go/godog
     depends_on: [core]
-    components:
-      go:
-        root: go/godog
-        patterns:
-          source: ["**/*.go"]
-          tests: ["**/*_test.go"]
-          config: [go.mod, go.sum]
 
   - moniker: ai-adapter
     name: AI Adapter
     description: LLM integration abstraction with multi-provider support (Anthropic, OpenAI, Gemini, Claude CLI)
+    template: go-library-template
+    parameters:
+      go_root: go/adapters/ai
     depends_on: [core]
-    components:
-      go:
-        root: go/adapters/ai
-      markdown: go/adapters/ai
 
   - moniker: docker-adapter
     name: Docker Adapter
     description: Docker SDK wrapper for container lifecycle, image operations, port allocation, and serve functionality
+    template: go-library-template
+    parameters:
+      go_root: go/adapters/docker
     depends_on: [core]
     components:
-      go:
-        root: go/adapters/docker
-      markdown: go/adapters/docker
+      containerruntime:
+        type: go
+        root: go/adapters/containerruntime
 
   - moniker: tui-adapter
     name: TUI Adapter
     description: Terminal UI implementations with registry-based binding for parallel and basic console modes
+    template: go-library-template
+    parameters:
+      go_root: go/adapters/tui
     depends_on: [core]
-    components:
-      go:
-        root: go/adapters/tui
-      markdown: go/adapters/tui
 
   - moniker: clibase
     name: CLI Base Framework
     description: Shared CLI framework providing command execution, orchestration, flags, rendering, and TUI integration
+    template: go-library-template
+    parameters:
+      go_root: go/clibase
     depends_on: [core, tui-adapter]
-    components:
-      go:
-        root: go/clibase
-      markdown: go/clibase
 
   - moniker: r2r-cli
     name: The CLI of CLIs
@@ -410,10 +462,6 @@ modules:
   - moniker: vscode-commit
     name: VSCode Extension - Git Commit
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
-    versioning:
-      scheme: SemVer
-      changelog: typescript/vscode-commit/CHANGELOG.md
-      release_type: internal
     depends_on: [repository]
     components:
       typescript:
@@ -439,39 +487,29 @@ modules:
   - moniker: mcp-server
     name: Go Commands MCP Server
     description: Internal MCP server for Commands
+    template: go-internal-template
+    parameters:
+      go_root: go/mcp/commands
     depends_on: [eac-cli]
     components:
+      # Override go component to add build artifacts
       go:
-        root: go/mcp/commands
         build:
           artifacts:
             - id: mcp-server
               type: executable
               pattern: "{moniker}{ext}"
-      markdown: go/mcp/commands
-      # structurizr auto-inferred
+      # Custom testdata not covered by template
       testdata:
         type: testdata
         root: templates/test-repositories
         patterns:
-          source:
-            - "**/*.go"
-            - "**/*.txt"
-            - "**/*.mod"
-            - "**/*.ts"
-            - "**/*.py"
-            - "**/*.toml"
-            - "**/*.cs"
-            - "**/*.csproj"
-            - "**/*.rs"
-            - "**/*.html"
-            - "**/*.conf"
-            - "**/Dockerfile"
+          source: ["**/*.go", "**/*.txt", "**/*.mod", "**/*.ts", "**/*.py", "**/*.toml", "**/*.cs", "**/*.csproj", "**/*.rs", "**/*.html", "**/*.conf", "**/Dockerfile"]
             
   - moniker: ext-eac
     name: EAC Extension for R2R CLI
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
-    template: container-multiarch
+    template: container-multiarch-template
     versioning:
       scheme: SemVer
       changelog: release/ext-eac/CHANGELOG.md

@@ -118,8 +118,25 @@ func NewProcessor(useModern bool) PaymentProcessor {
 
 ---
 
+---
+
+## Ghost Tracking
+
+The **ghost naming convention** makes hidden code discoverable and manageable through the platform.
+
+By prefixing hidden code with `ghost-`, you enable:
+
+- **Discovery**: `eac get ghosts` finds all hidden code
+- **Visibility**: `eac show ghosts` reports on dark launch inventory
+- **Management**: Track, review, and graduate hidden features
+
+See [Ghost Tracking](ghost-tracking.md) for naming conventions and platform commands.
+
+---
+
 ## Next Steps
 
+- [Ghost Tracking](ghost-tracking.md) - Naming conventions for discoverable hidden code
 - [Trunk-Based Development](trunk-based-development.md) - Core principles
 - [CD Model Stages](../cd-model/stages.md#stage-12-release-toggling) - Stage 12 details
 - [Release Toggling](../release-toggling/index.md) - Feature flag patterns

@@ -10,8 +10,8 @@ func TestDefaultServeContext(t *testing.T) {
 	}
 
 	// Verify default values
-	if ctx.StaticSiteImage != "cli-nginx-tool:latest" {
-		t.Errorf("StaticSiteImage = %q, want %q", ctx.StaticSiteImage, "cli-nginx-tool:latest")
+	if ctx.StaticSiteImage != "cli-nginx-oci:latest" {
+		t.Errorf("StaticSiteImage = %q, want %q", ctx.StaticSiteImage, "cli-nginx-oci:latest")
 	}
 	if ctx.MkDocsLiveImage != "squidfunk/mkdocs-material:latest" {
 		t.Errorf("MkDocsLiveImage = %q, want %q", ctx.MkDocsLiveImage, "squidfunk/mkdocs-material:latest")

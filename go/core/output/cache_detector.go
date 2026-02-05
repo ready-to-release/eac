@@ -58,7 +58,7 @@ func (r *DiskOutputReader) DetectUoWChanges(
 	// Check if any manifests exist (to detect fresh run)
 	hasAnyManifest := false
 	for _, id := range expectedUoWs {
-		if _, err := r.GetUoW(ctx, id.Module, id.Component, id.Tool); err == nil {
+		if _, err := r.GetUoW(id); err == nil {
 			hasAnyManifest = true
 			break
 		}
@@ -98,7 +98,7 @@ func (r *DiskOutputReader) checkUoWChanged(
 	getInputHash InputHashProvider,
 ) (bool, string) {
 	// Load existing manifest
-	manifest, err := r.GetUoW(ctx, id.Module, id.Component, id.Tool)
+	manifest, err := r.GetUoW(id)
 	if err != nil {
 		return true, "no prior manifest"
 	}
@@ -133,9 +133,23 @@ func (r *DiskOutputReader) checkUoWChanged(
 
 	// Validate artifacts if any exist
 	if len(manifest.Artifacts) > 0 {
-		validationResult := r.ValidateUoW(ctx, id.Module, id.Component, id.Tool)
+		validationResult := r.ValidateUoW(id)
 		if !validationResult.Valid {
 			return true, "artifacts invalid"
+		}
+	}
+
+	// For test/lint/scan contexts, check if build was invalidated
+	// If any build manifest for this module was executed AFTER this manifest,
+	// then we need to re-run because the build output changed.
+	if ctx == workunit.ContextTest || ctx == workunit.ContextLint || ctx == workunit.ContextScan {
+		buildManifests, err := r.ListUoWs(workunit.ContextBuild, id.Module)
+		if err == nil && len(buildManifests) > 0 {
+			for _, buildManifest := range buildManifests {
+				if buildManifest.ExecutedAt.After(manifest.ExecutedAt) {
+					return true, "build invalidated"
+				}
+			}
 		}
 	}
 

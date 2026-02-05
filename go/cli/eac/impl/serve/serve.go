@@ -12,16 +12,19 @@
 // Flag.debug: type=bool, default=false, usage=Enable debug logging
 // Flag.rebuild: type=bool, default=false, usage=Force rebuild before serving
 // Flag.book: type=string, shorthand=b, default=, usage=Named book to serve (defaults to first 'site' book, or first book if no site)
+// Flag.build-actual-site: type=bool, default=false, usage=Build full site before serving (disables live-reload dev mode)
 package serve
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/adapters/docker"
@@ -63,6 +66,7 @@ func Serve() int {
 	var debug bool
 	var rebuild bool
 	var namedBook string
+	var buildActualSite bool
 
 	// Parse arguments
 	for i := 0; i < len(args); i++ {
@@ -99,6 +103,8 @@ func Serve() int {
 				log.Errorf("Error: --book requires a value")
 				return 1
 			}
+		case "--build-actual-site":
+			buildActualSite = true
 		default:
 			if strings.HasPrefix(arg, "-") {
 				log.Errorf("Error: unknown flag: %s", arg)
@@ -123,6 +129,12 @@ func Serve() int {
 	defer svc.Close()
 
 	workspaceRoot := svc.WorkspaceRoot()
+
+	// Initialize global bridges to enable tool.GetToolDefinition lookups
+	if err := tool.InitializeGlobalBridges(workspaceRoot, svc.ConfigRoot()); err != nil {
+		log.Errorf("Error: failed to initialize tool system: %v", err)
+		return 1
+	}
 
 	if moduleMoniker == "" {
 		log.Error("Error: module name is required")
@@ -149,7 +161,17 @@ func Serve() int {
 
 	// Handle --stop flag
 	if stop {
+		// Stop both dev and build mode containers
+		devContainerName := fmt.Sprintf("cli-serve-dev-%s", moduleMoniker)
+		_ = handleStop(workspaceRoot, devContainerName, moduleMoniker)
 		return handleStop(workspaceRoot, containerName, moduleMoniker)
+	}
+
+	// Branch based on serve mode:
+	// - Default: Development mode with live-reload (no build required)
+	// - --build-actual-site: Full build then static serve (current behavior)
+	if !buildActualSite && moduleConfig.IsSite {
+		return serveDevMode(svc, moduleMoniker, port, noBrowser, debug, reload)
 	}
 
 	// Get Docker client
@@ -338,7 +360,7 @@ type servableItem struct {
 }
 
 // getServableItems returns all servable components from a module.
-// Checks for site-render (HTML), pdf-render (PDFs), and book (legacy) types.
+// Checks for site-render/docs-site (HTML), pdf-render/docs-pdf (PDFs), and book (legacy) types.
 func getServableItems(module *config.Module) []servableItem {
 	var items []servableItem
 
@@ -348,16 +370,28 @@ func getServableItems(module *config.Module) []servableItem {
 		items = append(items, servableItem{name: name, isSite: true})
 	}
 
+	// Check for docs-site components (HTML sites - same as site-render)
+	docsSites := module.Components.GetComponentsByType("docs-site")
+	for name := range docsSites {
+		items = append(items, servableItem{name: name, isSite: true})
+	}
+
 	// Check for pdf-render components
 	pdfRenders := module.Components.GetComponentsByType("pdf-render")
 	for name := range pdfRenders {
 		items = append(items, servableItem{name: name, isSite: false})
 	}
 
+	// Check for docs-pdf components (PDFs - same as pdf-render)
+	docsPdfs := module.Components.GetComponentsByType("docs-pdf")
+	for name := range docsPdfs {
+		items = append(items, servableItem{name: name, isSite: false})
+	}
+
 	// Check for legacy book components
 	books := module.GetBooks()
 	for _, name := range books {
-		// Avoid duplicates if book name matches a pdf-render
+		// Avoid duplicates if book name matches a pdf-render or docs-pdf
 		found := false
 		for _, item := range items {
 			if item.name == name {
@@ -485,6 +519,164 @@ func handleStop(_, containerName, moduleMoniker string) int {
 	return 0
 }
 
+// waitForServerReady polls the server URL until it responds with HTTP 200 or timeout.
+// Returns nil on success, error on timeout or failure.
+func waitForServerReady(url string, timeout time.Duration) error {
+	log.Info("Waiting for server to be ready...")
+
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+
+	deadline := time.Now().Add(timeout)
+	attempt := 0
+
+	for time.Now().Before(deadline) {
+		attempt++
+
+		resp, err := client.Get(url)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				log.Infof("Server ready (attempt %d)", attempt)
+				return nil
+			}
+			// Server responded but not with 200 - MkDocs might still be building
+			log.Debugf("Server responded with status %d, waiting...", resp.StatusCode)
+		} else {
+			log.Debugf("Connection attempt %d: %v", attempt, err)
+		}
+
+		// Progressive backoff: start fast, slow down
+		sleepDuration := 500 * time.Millisecond
+		if attempt > 5 {
+			sleepDuration = 1 * time.Second
+		}
+		if attempt > 10 {
+			sleepDuration = 2 * time.Second
+		}
+
+		time.Sleep(sleepDuration)
+	}
+
+	return fmt.Errorf("server did not become ready within %v", timeout)
+}
+
+// serveDevMode starts MkDocs in live-reload development mode.
+// This is the new default behavior - no build required.
+func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrowser, debug, reload bool) int {
+	workspaceRoot := svc.WorkspaceRoot()
+
+	// Resolve docs source path (not build output)
+	docsPath := filepath.Join(workspaceRoot, "docs")
+
+	// Verify docs directory exists
+	if _, err := os.Stat(docsPath); os.IsNotExist(err) {
+		log.Errorf("Error: docs directory not found: %s", docsPath)
+		return 1
+	}
+
+	containerName := fmt.Sprintf("cli-serve-dev-%s", moduleMoniker)
+
+	// Get Docker client
+	dockerClient, err := NewDockerClient(containerName)
+	if err != nil {
+		log.Errorf("Failed to initialize Docker: %v", err)
+		return 1
+	}
+	defer dockerClient.Close()
+
+	// Check if already running
+	running, info, err := dockerClient.IsRunning()
+	if err != nil {
+		log.Errorf("Failed to check container status: %v", err)
+		return 1
+	}
+
+	if running && info != nil {
+		// Check if image is stale - auto-reload if so
+		imageStale, staleReason, staleErr := dockerClient.IsDevImageStale(workspaceRoot)
+		if staleErr != nil {
+			imageStale = false // Assume not stale on error
+		}
+		needsRestart := reload || imageStale
+
+		if needsRestart {
+			if imageStale {
+				log.Infof("Container config changed: %s", staleReason)
+			}
+			log.Info("Reloading development server...")
+
+			if port == 0 {
+				port = info.HostPort
+			}
+
+			if err := dockerClient.StopContainer(); err != nil {
+				log.Errorf("Failed to stop container: %v", err)
+				return 1
+			}
+		} else {
+			log.Infof("Development server already running for %s", moduleMoniker)
+			log.Infof("URL: %s", info.URL)
+			if !noBrowser {
+				_, _ = dockerClient.OpenBrowserWithFallback(info.URL)
+			}
+			return 0
+		}
+	}
+
+	// Start MkDocs dev server
+	log.Infof("Starting development server for %s...", moduleMoniker)
+	log.Info("Mode: Live-reload (changes reflect immediately)")
+	log.Info("")
+
+	log.Info("Initializing container...")
+	info, err = dockerClient.StartDevServer(workspaceRoot, port)
+	if err != nil {
+		log.Errorf("Failed to start dev server: %v", err)
+		return 1
+	}
+
+	log.Infof("Container started on port %d", info.HostPort)
+
+	// Verify server is ready and landing page is accessible
+	if err := waitForServerReady(info.URL, 60*time.Second); err != nil {
+		log.Errorf("Server failed to start: %v", err)
+		log.Info("Check container logs with: docker logs " + containerName + "-" + strconv.Itoa(info.HostPort))
+		// Stop the container since it's not working
+		_ = dockerClient.StopContainer()
+		return 1
+	}
+
+	log.Info("")
+	log.Infof("Development server running")
+	log.Infof("URL: %s", info.URL)
+	log.Info("")
+	log.Info("Features:")
+	log.Info("  - Live reload: Edit docs/ and see changes instantly")
+	log.Info("  - Link warnings: Broken links shown in terminal (non-blocking)")
+	log.Info("  - Reduced features: No PDF generation, basic mermaid")
+
+	// Note about polling-based file watching
+	log.Info("")
+	log.Info("File watching uses polling (works on Windows/macOS Docker Desktop)")
+	log.Info("")
+	log.Infof("For full site build: eac serve %s --build-actual-site", moduleMoniker)
+	log.Infof("Stop with: eac serve %s --stop", moduleMoniker)
+
+	if !noBrowser {
+		_, _ = dockerClient.OpenBrowserWithFallback(info.URL)
+	}
+
+	if debug {
+		log.Info("")
+		log.Info("Debug mode: Streaming container logs (Press Ctrl+C to exit)")
+		_ = dockerClient.StreamLogs()
+	}
+
+	return 0
+}
+
 // DockerClient wraps the internal serve package for module serving.
 type DockerClient struct {
 	containerName string
@@ -559,6 +751,95 @@ func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port in
 	}
 
 	return docker.StartServe(c.ctx, serveConfig)
+}
+
+// StartDevServer starts MkDocs in live-reload development mode.
+// Uses mkdocs-dev-oci container with polling-based file watching.
+func (c *DockerClient) StartDevServer(workspaceRoot string, port int) (*docker.ServeResult, error) {
+	// Get the mkdocs-dev-oci tool definition from tool-config.yml
+	toolDef := tool.GetToolDefinition("mkdocs-dev-oci")
+	if toolDef == nil {
+		return nil, fmt.Errorf("mkdocs-dev-oci tool not found in tool-config.yml")
+	}
+
+	// Check if repository has its own mkdocs.yml
+	// Check both root and docs/ directory (common MkDocs layouts)
+	var repoConfigPath string
+	rootConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
+	docsConfig := filepath.Join(workspaceRoot, "docs", "mkdocs.yml")
+
+	if _, err := os.Stat(rootConfig); err == nil {
+		repoConfigPath = "/workspace/mkdocs.yml"
+	} else if _, err := os.Stat(docsConfig); err == nil {
+		repoConfigPath = "/workspace/docs/mkdocs.yml"
+	}
+
+	// Build environment variables for the container
+	// These are used by entrypoint.sh to configure MkDocs
+	envVars := []string{
+		"DOCS_DIR=/workspace/docs",
+	}
+	if repoConfigPath != "" {
+		// Use repository's mkdocs.yml (entrypoint will wrap with INHERIT)
+		envVars = append(envVars, "CONFIG_FILE="+repoConfigPath)
+	} else {
+		// Use container's bundled fallback config
+		envVars = append(envVars, "CONFIG_FILE=/docs/mkdocs.yml")
+	}
+
+	// Build serve config for dev mode
+	// The container's entrypoint handles polling-based file watching
+	// Mount workspace root to /workspace so docs are at /workspace/docs
+	serveConfig := &docker.ServeConfig{
+		Name:          c.containerName,
+		ContentPath:   workspaceRoot,   // Mount workspace root
+		ContainerPath: "/workspace",    // Mount target
+		PreferredPort: port,
+		ContainerPort: 8000,
+		RestartPolicy: "unless-stopped",
+		EnvVars:       envVars,
+	}
+
+	// Use LocalImageTag for local containers
+	if toolDef.IsLocalContainer() {
+		serveConfig.Image = toolDef.LocalImageTag()
+		contextPath := toolDef.LocalContextPath(workspaceRoot)
+		serveConfig.BuildInfo = &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ContextPath: contextPath,
+		}
+	} else {
+		serveConfig.Image = toolDef.FullImage()
+	}
+
+	return docker.StartServe(c.ctx, serveConfig)
+}
+
+// IsDevImageStale checks if the dev server image is stale.
+// Uses configuration from the tool system (mkdocs-dev-oci tool definition).
+func (c *DockerClient) IsDevImageStale(workspaceRoot string) (bool, string, error) {
+	// Get the mkdocs-dev-oci tool definition from tool-config.yml
+	toolDef := tool.GetToolDefinition("mkdocs-dev-oci")
+	if toolDef == nil {
+		return false, "", fmt.Errorf("mkdocs-dev-oci tool not found in tool-config.yml")
+	}
+
+	// Build serve config from tool definition
+	serveConfig := &docker.ServeConfig{}
+
+	// Use LocalImageTag for local containers, or FullImage for external
+	if toolDef.IsLocalContainer() {
+		serveConfig.Image = toolDef.LocalImageTag()
+		contextPath := toolDef.LocalContextPath(workspaceRoot)
+		serveConfig.BuildInfo = &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ContextPath: contextPath,
+		}
+	} else {
+		serveConfig.Image = toolDef.FullImage()
+	}
+
+	return docker.CheckImageStale(c.ctx, serveConfig)
 }
 
 // StopContainer stops the container.

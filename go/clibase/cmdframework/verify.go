@@ -291,7 +291,7 @@ func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []tui.ExecutionModule 
 		module := spec.ID.Module
 		entry := tui.UoWEntry{
 			ID:          spec.ID.Longname(),
-			DisplayName: spec.ID.Shortname(),
+			DisplayName: spec.ID.DisplayName(),
 			Weight:      spec.Weight,
 		}
 		moduleUoWs[module] = append(moduleUoWs[module], entry)

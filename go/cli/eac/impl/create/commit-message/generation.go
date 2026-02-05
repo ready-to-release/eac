@@ -46,7 +46,15 @@ func generateWithPrompt(promptName, userPrompt, workspaceRoot string, affectedMo
 // generateWithPromptResult generates output and returns full metadata including provider info.
 func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
-	if mock, ok := aimock.GetMockResponse("commit-message"); ok {
+	// Use subcommand-aware mock lookup for module sections to allow different mock responses
+	var mock string
+	var mockFound bool
+	if promptName == "module" {
+		mock, mockFound = aimock.GetMockResponseWithSubcommand("commit-message", "module")
+	} else {
+		mock, mockFound = aimock.GetMockResponse("commit-message")
+	}
+	if mockFound {
 		// Format mock JSON to conventional commit format
 		var formattedOutput string
 		var err error

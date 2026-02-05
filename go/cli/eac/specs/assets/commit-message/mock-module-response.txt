@@ -1,0 +1,6 @@
+{
+  "module": "test-module",
+  "type": "feat",
+  "description": "add test functionality for module",
+  "body": "This module implements new test features to improve coverage and reliability. The changes include test helpers and mock data structures."
+}

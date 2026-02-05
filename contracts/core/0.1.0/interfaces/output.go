@@ -43,7 +43,7 @@ type UoWTrackerPort interface {
 }
 
 // UoWManifestPort represents a Unit of Work manifest containing execution metadata.
-// Path format: out/{context}/{module}/{component}_{tool}/uow.manifest.json
+// Path format: out/{context}/{module}/{component}[-extra1][-extra2]/uow.manifest.json
 type UoWManifestPort interface {
 	// GetContext returns the operation type: "build", "test", "lint", "scan"
 	GetContext() string
@@ -74,6 +74,9 @@ type UoWManifestPort interface {
 
 	// GetOutputHash returns the hash of all artifact hashes.
 	GetOutputHash() string
+
+	// GetExtra returns context-specific discriminators (e.g., testset, category).
+	GetExtra() map[string]string
 }
 
 // OutputArtifactPort represents a single output artifact from a work unit.

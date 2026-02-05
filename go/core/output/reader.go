@@ -22,21 +22,19 @@ func NewReader(workspaceRoot string) *DiskOutputReader {
 	}
 }
 
-// uowManifestPath returns the expected path for a UoW manifest.
-func (r *DiskOutputReader) uowManifestPath(ctx workunit.Context, module, component, tool string) string {
-	dirName := component + "_" + tool
-	return filepath.Join(r.workspaceRoot, "out", string(ctx), module, dirName, "uow.manifest.json")
+// uowManifestPath returns the expected path for a UoW manifest using UnitID.
+func (r *DiskOutputReader) uowManifestPath(id workunit.UnitID) string {
+	return filepath.Join(r.workspaceRoot, "out", string(id.Context), id.Module, id.DirName(), "uow.manifest.json")
 }
 
-// uowDir returns the directory for a UoW.
-func (r *DiskOutputReader) uowDir(ctx workunit.Context, module, component, tool string) string {
-	dirName := component + "_" + tool
-	return filepath.Join(r.workspaceRoot, "out", string(ctx), module, dirName)
+// uowDir returns the directory for a UoW using UnitID.
+func (r *DiskOutputReader) uowDir(id workunit.UnitID) string {
+	return filepath.Join(r.workspaceRoot, "out", string(id.Context), id.Module, id.DirName())
 }
 
-// GetUoW loads a single UoW manifest from disk.
-func (r *DiskOutputReader) GetUoW(ctx workunit.Context, module, component, tool string) (*UoWManifest, error) {
-	path := r.uowManifestPath(ctx, module, component, tool)
+// GetUoW loads a single UoW manifest from disk using a UnitID.
+func (r *DiskOutputReader) GetUoW(id workunit.UnitID) (*UoWManifest, error) {
+	path := r.uowManifestPath(id)
 	return Load(path)
 }
 
@@ -50,7 +48,8 @@ func (r *DiskOutputReader) GetComponent(ctx workunit.Context, module, component 
 	}
 
 	// Find all UoW directories for this component
-	// Pattern: out/{ctx}/{module}/{component}_*/uow.manifest.json
+	// Pattern: out/{ctx}/{module}/{component}[-*]/uow.manifest.json
+	// Directory names are: component (no extras) or component-extra1-extra2 (with extras)
 	moduleDir := filepath.Join(r.workspaceRoot, "out", string(ctx), module)
 	entries, err := os.ReadDir(moduleDir)
 	if err != nil {
@@ -60,19 +59,25 @@ func (r *DiskOutputReader) GetComponent(ctx workunit.Context, module, component 
 		return nil, err
 	}
 
-	prefix := component + "_"
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
-		if !strings.HasPrefix(entry.Name(), prefix) {
+		// Match directories that are exactly component or start with component-
+		dirName := entry.Name()
+		if dirName != component && !strings.HasPrefix(dirName, component+"-") {
 			continue
 		}
 
-		manifestPath := filepath.Join(moduleDir, entry.Name(), "uow.manifest.json")
+		manifestPath := filepath.Join(moduleDir, dirName, "uow.manifest.json")
 		manifest, err := Load(manifestPath)
 		if err != nil {
 			continue // Skip invalid manifests
+		}
+
+		// Double-check the manifest's component matches
+		if manifest.Component != component {
+			continue
 		}
 
 		view.UoWs = append(view.UoWs, *manifest)
@@ -179,15 +184,15 @@ func (r *DiskOutputReader) ListUoWs(ctx workunit.Context, module string) ([]*UoW
 	return manifests, nil
 }
 
-// ValidateUoW checks if a UoW's output is valid.
-func (r *DiskOutputReader) ValidateUoW(ctx workunit.Context, module, component, tool string) ValidationResult {
+// ValidateUoW checks if a UoW's output is valid using a UnitID.
+func (r *DiskOutputReader) ValidateUoW(id workunit.UnitID) ValidationResult {
 	result := ValidationResult{
 		MissingArtifacts: []string{},
 		CorruptArtifacts: []string{},
 	}
 
 	// Check manifest exists and is valid
-	manifestPath := r.uowManifestPath(ctx, module, component, tool)
+	manifestPath := r.uowManifestPath(id)
 	manifest, err := Load(manifestPath)
 	if err != nil {
 		result.Valid = false
@@ -208,8 +213,8 @@ func (r *DiskOutputReader) ValidateUoW(ctx workunit.Context, module, component, 
 		return result
 	}
 
-	uowDir := r.uowDir(ctx, module, component, tool)
-	artifactResult := ValidateArtifacts(uowDir, manifest.Artifacts)
+	uowDirPath := r.uowDir(id)
+	artifactResult := ValidateArtifacts(uowDirPath, manifest.Artifacts)
 
 	result.Valid = artifactResult.Valid
 	result.ArtifactsValid = artifactResult.ArtifactsValid
@@ -238,14 +243,14 @@ func (r *DiskOutputReader) ValidateModule(ctx workunit.Context, module string, e
 
 	// Check each expected UoW
 	for _, id := range expectedUoWs {
-		uowResult := r.ValidateUoW(ctx, id.Module, id.Component, id.Tool)
+		uowResult := r.ValidateUoW(id)
 
 		if !uowResult.Valid {
 			result.Valid = false
 
 			if !uowResult.ManifestExists {
 				result.ManifestExists = false
-				result.MissingArtifacts = append(result.MissingArtifacts, id.Component+"_"+id.Tool+"/uow.manifest.json")
+				result.MissingArtifacts = append(result.MissingArtifacts, id.DirName()+"/uow.manifest.json")
 			}
 			if !uowResult.ManifestValid {
 				result.ManifestValid = false
@@ -285,10 +290,10 @@ func (r *DiskOutputReader) VerifyModuleIntegrity(ctx workunit.Context, module st
 	}
 
 	for _, manifest := range manifests {
-		uowDir := r.uowDir(ctx, module, manifest.Component, manifest.Tool)
+		uowDir := filepath.Join(r.workspaceRoot, "out", string(ctx), module, manifest.DirName())
 		result := ValidateArtifacts(uowDir, manifest.Artifacts)
 		if !result.Valid {
-			uowName := manifest.Component + "_" + manifest.Tool
+			uowName := manifest.DirName()
 			if len(result.MissingArtifacts) > 0 {
 				return &IntegrityError{
 					UoW:     uowName,

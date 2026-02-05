@@ -332,7 +332,7 @@ func (a *componentTypeAdapter) GetPatterns() interfaces.ComponentPatternsPort {
 	}
 	return &componentPatternsAdapter{f: a.ct.Files}
 }
-func (a *componentTypeAdapter) HasBuild() bool { return a.ct.HasBuilder() }
+func (a *componentTypeAdapter) HasBuild() bool { return a.ct.IsBuildable() }
 
 type componentPatternsAdapter struct {
 	f *config.ComponentTypeFiles

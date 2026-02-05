@@ -74,46 +74,6 @@ func TestCleanStaleFromState_DeadProcess(t *testing.T) {
 	}
 }
 
-func TestCleanStaleFromState_TimeBasedStale(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	gs := &GlobalSemaphore{
-		workspaceRoot: tmpDir,
-		allocations:   make(map[string]int),
-	}
-
-	// Create a state with a stale allocation
-	state := &State{
-		Allocations: map[string]*Allocation{
-			"stale-alloc": {
-				ID:        "stale-alloc",
-				PID:       os.Getpid(), // Alive process
-				Weight:    4,
-				Timestamp: time.Now().Add(-3 * time.Minute), // Older than staleTimeout
-			},
-			"fresh-alloc": {
-				ID:        "fresh-alloc",
-				PID:       os.Getpid(),
-				Weight:    2,
-				Timestamp: time.Now(),
-			},
-		},
-	}
-
-	// Clean stale allocations
-	gs.cleanStaleFromState(state)
-
-	// Stale allocation should be removed (even though process is alive)
-	if _, ok := state.Allocations["stale-alloc"]; ok {
-		t.Error("stale allocation should be removed")
-	}
-
-	// Fresh allocation should remain
-	if _, ok := state.Allocations["fresh-alloc"]; !ok {
-		t.Error("fresh allocation should remain")
-	}
-}
-
 func TestGlobalSemaphore_CloseIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
 

@@ -209,7 +209,7 @@ func TestDetectUoWChanges_InvalidArtifacts_MarkedAsChanged(t *testing.T) {
 	f.saveManifest(m1)
 
 	// Now corrupt the artifact
-	artifactPath := filepath.Join(f.workspaceRoot, "out", "build", "core", "go_go", "binary")
+	artifactPath := filepath.Join(f.workspaceRoot, "out", "build", "core", "go-go", "binary")
 	err := os.WriteFile(artifactPath, []byte("modified content"), 0644)
 	require.NoError(t, err)
 
@@ -448,10 +448,12 @@ func TestIsModuleChanged_DifferentContext_IndependentResults(t *testing.T) {
 // =============================================================================
 
 // saveManifest writes a modified manifest back to disk
+// Uses the new flat directory format: component[-extra1][-extra2]
 func (f *testFixture) saveManifest(manifest *UoWManifest) {
 	f.t.Helper()
 
-	dirName := manifest.Component + "_" + manifest.Tool
+	// Use the new flat directory format
+	dirName := manifest.DirName()
 	manifestDir := filepath.Join(f.workspaceRoot, "out", string(manifest.Context), manifest.Module, dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(f.t, err)
@@ -536,7 +538,13 @@ func TestUoWManifest_MetadataField_LoadFromDisk(t *testing.T) {
 
 	// Load using reader
 	reader := NewReader(f.workspaceRoot)
-	loaded, err := reader.GetUoW(workunit.ContextTest, "core", "go", "gotest")
+	id := workunit.UnitID{
+		Context:   workunit.ContextTest,
+		Module:    "core",
+		Component: "go",
+		Tool:      "gotest",
+	}
+	loaded, err := reader.GetUoW(id)
 	require.NoError(t, err)
 
 	assert.Equal(t, "integration", loaded.Metadata["testset"])
@@ -649,13 +657,12 @@ func TestDetectUoWChanges_ConsistentWithValidateUoW(t *testing.T) {
 	f.saveManifest(m1)
 
 	// ValidateUoW should return valid
-	validationResult := reader.ValidateUoW(workunit.ContextBuild, "core", "go", "go")
+	id := workunit.UnitID{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"}
+	validationResult := reader.ValidateUoW(id)
 	assert.True(t, validationResult.Valid, "ValidateUoW should return valid")
 
 	// DetectUoWChanges should return up-to-date
-	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-	}
+	expectedUoWs := []workunit.UnitID{id}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil
@@ -815,4 +822,218 @@ func TestDetectUoWChanges_NoOpInAllContexts(t *testing.T) {
 			assert.Len(t, result.UpToDate, 1)
 		})
 	}
+}
+
+// =============================================================================
+// Build Invalidation Tests
+// =============================================================================
+
+func TestDetectUoWChanges_TestInvalidatedByNewerBuild(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+	newTime := time.Now()
+
+	// Create an OLD test manifest (ran 1 hour ago)
+	testManifest := f.createUoWManifest(workunit.ContextTest, "core", "go", "gotest")
+	testManifest.InputHash = "sha256:hash"
+	testManifest.ExecutedAt = oldTime
+	f.saveManifest(testManifest)
+
+	// Create a NEW build manifest (ran just now - simulates build --skip-cache)
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	buildManifest.ExecutedAt = newTime
+	f.saveManifest(buildManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextTest, Module: "core", Component: "go", Tool: "gotest"},
+	}
+
+	// Hash matches - normally would be cached
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextTest, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	// Test should be invalidated because build is newer
+	assert.Len(t, result.Changed, 1, "test should be invalidated by newer build")
+	assert.Empty(t, result.UpToDate)
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "build invalidated")
+}
+
+func TestDetectUoWChanges_TestNotInvalidatedByOlderBuild(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+	newTime := time.Now()
+
+	// Create a NEW test manifest (ran just now)
+	testManifest := f.createUoWManifest(workunit.ContextTest, "core", "go", "gotest")
+	testManifest.InputHash = "sha256:hash"
+	testManifest.ExecutedAt = newTime
+	f.saveManifest(testManifest)
+
+	// Create an OLD build manifest (ran 1 hour ago)
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	buildManifest.ExecutedAt = oldTime
+	f.saveManifest(buildManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextTest, Module: "core", Component: "go", Tool: "gotest"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextTest, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	// Test should NOT be invalidated because build is older
+	assert.Empty(t, result.Changed, "test should NOT be invalidated by older build")
+	assert.Len(t, result.UpToDate, 1)
+}
+
+func TestDetectUoWChanges_LintInvalidatedByNewerBuild(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+	newTime := time.Now()
+
+	// Create an OLD lint manifest
+	lintManifest := f.createUoWManifest(workunit.ContextLint, "core", "go", "golangci-lint")
+	lintManifest.InputHash = "sha256:hash"
+	lintManifest.ExecutedAt = oldTime
+	f.saveManifest(lintManifest)
+
+	// Create a NEW build manifest
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	buildManifest.ExecutedAt = newTime
+	f.saveManifest(buildManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextLint, Module: "core", Component: "go", Tool: "golangci-lint"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextLint, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "lint should be invalidated by newer build")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "build invalidated")
+}
+
+func TestDetectUoWChanges_ScanInvalidatedByNewerBuild(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+	newTime := time.Now()
+
+	// Create an OLD scan manifest
+	scanManifest := f.createUoWManifest(workunit.ContextScan, "core", "go", "trivy")
+	scanManifest.InputHash = "sha256:hash"
+	scanManifest.ExecutedAt = oldTime
+	f.saveManifest(scanManifest)
+
+	// Create a NEW build manifest
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	buildManifest.ExecutedAt = newTime
+	f.saveManifest(buildManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextScan, Module: "core", Component: "go", Tool: "trivy"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextScan, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	assert.Len(t, result.Changed, 1, "scan should be invalidated by newer build")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "build invalidated")
+}
+
+func TestDetectUoWChanges_BuildNotInvalidatedByBuild(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	// Build context should NOT check for build invalidation (would be circular)
+	oldTime := time.Now().Add(-1 * time.Hour)
+
+	// Create build manifest
+	buildManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildManifest.InputHash = "sha256:hash"
+	buildManifest.ExecutedAt = oldTime
+	f.saveManifest(buildManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	// Build should be cached (no self-invalidation)
+	assert.Empty(t, result.Changed)
+	assert.Len(t, result.UpToDate, 1)
+}
+
+func TestDetectUoWChanges_TestInvalidatedByAnyBuildComponent(t *testing.T) {
+	f := newTestFixture(t)
+	reader := NewReader(f.workspaceRoot)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+	newTime := time.Now()
+
+	// Create an OLD test manifest
+	testManifest := f.createUoWManifest(workunit.ContextTest, "core", "go", "gotest")
+	testManifest.InputHash = "sha256:hash"
+	testManifest.ExecutedAt = oldTime
+	f.saveManifest(testManifest)
+
+	// Create an OLD build manifest for go component
+	buildGoManifest := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	buildGoManifest.InputHash = "sha256:hash"
+	buildGoManifest.ExecutedAt = oldTime
+	f.saveManifest(buildGoManifest)
+
+	// Create a NEW build manifest for docker component (different component, same module)
+	buildDockerManifest := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	buildDockerManifest.InputHash = "sha256:hash"
+	buildDockerManifest.ExecutedAt = newTime
+	f.saveManifest(buildDockerManifest)
+
+	expectedUoWs := []workunit.UnitID{
+		{Context: workunit.ContextTest, Module: "core", Component: "go", Tool: "gotest"},
+	}
+
+	getInputHash := func(id workunit.UnitID) (string, error) {
+		return "sha256:hash", nil
+	}
+
+	result, err := reader.DetectUoWChanges(workunit.ContextTest, expectedUoWs, getInputHash)
+	require.NoError(t, err)
+
+	// Test should be invalidated because ANY build component in the module is newer
+	assert.Len(t, result.Changed, 1, "test should be invalidated by newer build of any component")
+	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "build invalidated")
 }

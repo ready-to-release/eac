@@ -52,15 +52,15 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 	scheduledComponents := make(map[string]bool)
 	for compName, compType := range enabledComponents {
 		typeConfig := r.cfg.ComponentTypes.Get(compType)
-		if typeConfig == nil || !typeConfig.HasBuilder() {
+		if typeConfig == nil || !typeConfig.IsBuildable() {
 			continue
 		}
 
 		// For tool chain types, check if the first tool has a handler
 		if typeConfig.HasToolChain() {
-			tools := typeConfig.GetTools()
-			if len(tools) > 0 {
-				handler := r.buildBridge.GetHandler(tools[0])
+			builders := typeConfig.GetBuilders()
+			if len(builders) > 0 {
+				handler := r.buildBridge.GetHandler(builders[0])
 				if handler != nil {
 					scheduledComponents[compName] = true
 				}
@@ -129,7 +129,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 		// Check if this is a tool chain (multiple tools)
 		if typeConfig != nil && typeConfig.HasToolChain() {
 			// Expand tool chain into multiple UnitSpecs
-			toolChainSpecs := expandToolChain(module.Moniker, compName, compType, typeConfig.GetTools(), externalDeps)
+			toolChainSpecs := expandToolChain(module.Moniker, compName, compType, typeConfig.GetBuilders(), externalDeps)
 			for _, tcSpec := range toolChainSpecs {
 				// Get handler for this specific tool
 				handler := r.buildBridge.GetHandler(tcSpec.Tool)
@@ -362,11 +362,12 @@ func (r *ComponentResolver) resolveToolForPhase(compType string, phase Phase, ty
 		return ""
 	}
 
-	// For now, use legacy builder field
-	// When we parse tools field from YAML, we can use it here
 	switch phase {
 	case PhaseBuild:
-		return typeConfig.Builder
+		if builders := typeConfig.GetBuilders(); len(builders) > 0 {
+			return builders[0]
+		}
+		return ""
 	default:
 		return ""
 	}

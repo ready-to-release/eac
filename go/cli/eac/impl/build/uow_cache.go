@@ -59,10 +59,14 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 		}
 	}
 
-	// Create input hash provider that computes hash from module source files
-	// Note: Currently all components in a module share the same input hash
-	// This could be refined to per-component patterns in the future
+	// Create input hash provider using pre-computed module hashes.
+	// Falls back to computing from files if pre-computed hash is not available.
 	getInputHash := func(id workunit.UnitID) (string, error) {
+		// Use pre-computed hash if available (ensures consistency with build manifests)
+		if h, ok := bctx.moduleInputHashes[id.Module]; ok && h != "" {
+			return h, nil
+		}
+		// Fallback: compute from files
 		files, ok := moduleFiles[id.Module]
 		if !ok {
 			return "", nil // No files = treat as changed
@@ -130,7 +134,7 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 		moduleCachedCounts[id.Module]++
 
 		// Try to load cache time from manifest
-		if manifest, err := reader.GetUoW(workunit.ContextBuild, id.Module, id.Component, id.Tool); err == nil {
+		if manifest, err := reader.GetUoW(id); err == nil {
 			bctx.uowCacheTimes[longname] = manifest.ExecutedAt
 		}
 	}

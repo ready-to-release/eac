@@ -147,7 +147,7 @@ func TestInferGoArtifacts_SingleMain(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},
@@ -173,7 +173,7 @@ func TestInferGoArtifacts_CmdMain(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},
@@ -205,7 +205,7 @@ func TestInferGoArtifacts_MultiMain(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},
@@ -241,7 +241,7 @@ func TestInferGoArtifacts_SkipsExplicitArtifacts(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},
@@ -308,7 +308,7 @@ func TestInferGoArtifacts_UsesPatternFromComponentTypes(t *testing.T) {
 			compTypes := &ComponentTypesConfig{
 				ComponentTypes: map[string]*ComponentType{
 					"go": {
-						Builder: "go",
+						Builders: []string{"go"},
 						Defaults: &ComponentTypeDefaults{
 							ArtifactPattern: tt.artifactPattern,
 						},
@@ -352,7 +352,7 @@ func TestInferGoArtifacts_MissingGoComponentType(t *testing.T) {
 		ComponentTypes: map[string]*ComponentType{
 			// No "go" type defined
 			"typescript": {
-				Builder: "npm",
+				Builders: []string{"npm"},
 			},
 		},
 	}
@@ -374,7 +374,7 @@ func TestInferGoArtifacts_NoDefaults(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder:  "go",
+				Builders: []string{"go"},
 				Defaults: nil, // No defaults
 			},
 		},
@@ -396,7 +396,7 @@ func TestInferGoArtifacts_EmptyArtifactPattern(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "", // Empty pattern
 				},
@@ -423,7 +423,7 @@ func TestInferGoArtifacts_LibraryModule(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},
@@ -448,7 +448,7 @@ func TestInferGoArtifacts_RelativePaths(t *testing.T) {
 	compTypes := &ComponentTypesConfig{
 		ComponentTypes: map[string]*ComponentType{
 			"go": {
-				Builder: "go",
+				Builders: []string{"go"},
 				Defaults: &ComponentTypeDefaults{
 					ArtifactPattern: "{moniker}{ext}",
 				},

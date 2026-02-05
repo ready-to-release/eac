@@ -42,6 +42,14 @@ func (m *Mapper) buildMappings() {
 		// Store mappings
 		m.pathToMoniker[modulePath] = module.Moniker
 		m.monikerToPath[module.Moniker] = modulePath
+
+		// Also index additional go-type components (e.g., containerruntime under docker-adapter)
+		for _, entry := range module.Components.GetComponentsByType("go") {
+			if entry == nil || entry.Root == "" || entry.Root == goRoot {
+				continue
+			}
+			m.pathToMoniker[m.baseModulePath+"/"+entry.Root] = module.Moniker
+		}
 	}
 }
 
@@ -55,27 +63,20 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	// Try to find by extracting relative path
 	relPath := strings.TrimPrefix(modulePath, m.baseModulePath+"/")
 
-	// Look for module with matching go package root (exact match first)
-	for _, module := range m.registry.All() {
-		goRoot := module.GetComponentRoot("go")
-		if goRoot == relPath {
-			return module.Moniker, nil
-		}
-	}
-
-	// Check if path is under a module's go package root (for nested go.mod files)
+	// Single pass: check exact match and track best prefix match
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.GetComponentRoot("go")
-		if root == "" || root == "." {
-			continue
-		}
-		if strings.HasPrefix(relPath, root+"/") || relPath == root {
-			if len(root) > bestMatchLen {
-				bestMatch = module
-				bestMatchLen = len(root)
+		for _, root := range allGoRoots(module) {
+			if root == relPath {
+				return module.Moniker, nil
+			}
+			if root != "" && root != "." && strings.HasPrefix(relPath, root+"/") {
+				if len(root) > bestMatchLen {
+					bestMatch = module
+					bestMatchLen = len(root)
+				}
 			}
 		}
 	}
@@ -115,29 +116,20 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators
 	normalizedDir := strings.ReplaceAll(moduleDir, "\\", "/")
 
-	// First, look for exact match on go package root
-	for _, module := range m.registry.All() {
-		goRoot := module.GetComponentRoot("go")
-		if goRoot == normalizedDir {
-			return module.Moniker, nil
-		}
-	}
-
-	// Check if directory is under a module's go package root (for nested go.mod files)
-	// Find the most specific (deepest) matching module
+	// Single pass: check exact match and track best prefix match
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.GetComponentRoot("go")
-		if root == "" || root == "." {
-			continue
-		}
-		// Check if moduleDir is under this root
-		if strings.HasPrefix(normalizedDir, root+"/") || normalizedDir == root {
-			if len(root) > bestMatchLen {
-				bestMatch = module
-				bestMatchLen = len(root)
+		for _, root := range allGoRoots(module) {
+			if root == normalizedDir {
+				return module.Moniker, nil
+			}
+			if root != "" && root != "." && strings.HasPrefix(normalizedDir, root+"/") {
+				if len(root) > bestMatchLen {
+					bestMatch = module
+					bestMatchLen = len(root)
+				}
 			}
 		}
 	}
@@ -185,4 +177,18 @@ func (m *Mapper) GetAllMappings() map[string]string {
 		result[k] = v
 	}
 	return result
+}
+
+// allGoRoots returns all root paths for go-type components in a module.
+// This includes both the primary "go" component and any additional components
+// with type "go" (e.g., containerruntime under docker-adapter).
+func allGoRoots(module *modules.ModuleContract) []string {
+	goComps := module.Components.GetComponentsByType("go")
+	roots := make([]string, 0, len(goComps))
+	for _, entry := range goComps {
+		if entry != nil && entry.Root != "" {
+			roots = append(roots, entry.Root)
+		}
+	}
+	return roots
 }

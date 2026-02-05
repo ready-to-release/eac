@@ -1,24 +1,23 @@
 package workunit
 
 // DisplayNameResolver computes shortest unique names within a set.
-// When multiple units have the same component name, it includes the module
-// for disambiguation. When a component name is unique, just the component is returned.
-// For BDD tests (with Spec set), uses the spec name for uniqueness checking.
+// When multiple units have the same display key, it includes the module
+// for disambiguation. When a display key is unique, just the key is returned.
+// Uses DisplayKey() for uniqueness checking which considers context:
+// - For BDD tests: spec name
+// - For unit tests: testname (or component if no testname)
+// - For other contexts: component name
 type DisplayNameResolver struct {
-	componentCounts map[string]int // component/spec -> count of units with this name
+	keyCounts map[string]int // DisplayKey() -> count of units with this key
 }
 
 // NewDisplayNameResolver creates a resolver for the given set of units.
-// It counts how many times each component/spec name appears to determine
+// It counts how many times each display key appears to determine
 // which names need disambiguation.
 func NewDisplayNameResolver(units []UnitID) *DisplayNameResolver {
-	r := &DisplayNameResolver{componentCounts: make(map[string]int)}
+	r := &DisplayNameResolver{keyCounts: make(map[string]int)}
 	for _, u := range units {
-		key := u.Component
-		if u.Spec != "" {
-			key = u.Spec // Use spec name for BDD tests
-		}
-		r.componentCounts[key]++
+		r.keyCounts[u.DisplayKey()]++
 	}
 	return r
 }
@@ -27,12 +26,12 @@ func NewDisplayNameResolver(units []UnitID) *DisplayNameResolver {
 // For BDD tests, uses spec name (e.g., "build-module" or "eac-cli:build-module").
 // If the component name is unique in the set, returns just the component (e.g., "go").
 // If the component name is ambiguous, returns module:component (e.g., "core:go").
+//
+// Note: This method uses the legacy display format. For context-aware display,
+// use ResolveShort() instead.
 func (r *DisplayNameResolver) Resolve(u UnitID) string {
-	key := u.Component
-	if u.Spec != "" {
-		key = u.Spec
-	}
-	if r.componentCounts[key] == 1 {
+	key := u.DisplayKey()
+	if r.keyCounts[key] == 1 {
 		return key // Unique: just "go" or "build-module"
 	}
 	return u.Module + ":" + key // Ambiguous: "core:go" or "eac-cli:build-module"
@@ -51,12 +50,13 @@ func (r *DisplayNameResolver) ResolveTabLabel(u UnitID, maxWidth int) string {
 	return name[:maxWidth]
 }
 
-// NeedsDisambiguation returns true if the component/spec name appears more than once.
-func (r *DisplayNameResolver) NeedsDisambiguation(component string) bool {
-	return r.componentCounts[component] > 1
+// NeedsDisambiguation returns true if the display key appears more than once.
+// Implements DisplayResolver interface.
+func (r *DisplayNameResolver) NeedsDisambiguation(key string) bool {
+	return r.keyCounts[key] > 1
 }
 
-// Count returns how many units have the given component name.
-func (r *DisplayNameResolver) Count(component string) int {
-	return r.componentCounts[component]
+// Count returns how many units have the given display key.
+func (r *DisplayNameResolver) Count(key string) int {
+	return r.keyCounts[key]
 }

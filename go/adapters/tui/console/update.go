@@ -264,6 +264,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update lock tracking info (preserve existing if new is empty for visual stability)
 		if len(status.Locks) > 0 {
 			m.locks = status.Locks
+
+			// Extract docker-scheduler stats for visibility
+			for _, lock := range status.Locks {
+				if lock.Name == "docker-scheduler" {
+					m.dockerRunning = lock.Used
+					m.dockerRoof = lock.Capacity
+					m.dockerWaiting = lock.Waiting
+					// Docker scheduler uses capacity as pressure target (no separate pressure tracking)
+					m.dockerPressureTarget = lock.Capacity
+					break
+				}
+			}
 		}
 
 		// Update active tools only if provided (preserve across partial status updates)
@@ -676,55 +688,82 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 
 		// Resources pane layout (0-indexed Y coordinates):
-		// Y = InitLines:     Resources header (contains freeze-button)
-		// Y = InitLines + 1: Content line 1 (timer, cpu, mem, jobs)
-		// Y = InitLines + 2: Content line 2 (uow, tools)
+		// Y = InitLines - 1: Resources header (contains freeze-button)
+		// Y = InitLines:     Row 1 (CPU, Time, empty, Mem, Docker Mem)
+		// Y = InitLines + 1: Row 2 (Host, Host weight, counters, Native, Containers)
+		// Y = InitLines + 2: Row 3 (Docker, Docker weight, progress, Tools placeholder, Container tools)
 		// Y = InitLines + 3: Resources footer
 
-		resourcesStartY := metrics.InitLines // Header line
-		contentLine1Y := metrics.InitLines + 1
-		contentLine2Y := metrics.InitLines + 2
+		resourcesStartY := metrics.InitLines - 1 // Header line
+		row1Y := metrics.InitLines
+		row2Y := metrics.InitLines + 1
+		row3Y := metrics.InitLines + 2
 
-		// Column boundaries (matching renderResourcesPane)
+		// Column boundaries (matching renderResourcesPane 5-column layout)
+		// col1Width=24, col2Width=11, col3Width=12, col4Width=24, col5Width=28
+		// Plus 3 chars for each separator " │ " and 2 chars for border "│ "
 		const (
-			col1End = 38              // timer+CPU or UoW
-			col2End = 38 + 3 + 24     // + separator + Mem/Tools
-			col3End = 38 + 3 + 24 + 3 // + separator for Jobs
+			borderLeft = 2                             // "│ "
+			col1End    = borderLeft + 24               // End of column 1
+			col2End    = col1End + 3 + 11              // + separator + column 2
+			col3End    = col2End + 3 + 12              // + separator + column 3
+			col4End    = col3End + 3 + 24              // + separator + column 4
+			col5End    = col4End + 3 + 28              // + separator + column 5
 		)
 
 		// Check header line for freeze button
 		if y == resourcesStartY {
 			// Freeze button is at the right end of the header
-			// It's marked with zone, so just check if we're on header line and right side
 			if x > m.width-20 { // Approximate freeze button location
 				return "freeze-button"
 			}
 			return ""
 		}
 
-		// Check content line 1: timer, cpu, mem, jobs
-		if y == contentLine1Y {
+		// Row 1: CPU | Time | (empty) | Mem | Docker Mem
+		if y == row1Y {
 			if x < col1End {
-				// Col1 contains both timer and CPU
-				// Timer is first ~6 chars, CPU follows
-				if x < 8 {
-					return "res-timer"
-				}
 				return "res-cpu"
 			} else if x < col2End {
-				return "res-mem"
+				return "res-timer"
 			} else if x < col3End {
+				return "" // empty column
+			} else if x < col4End {
+				return "res-mem"
+			} else if x < col5End {
+				return "res-dmem"
+			}
+			return ""
+		}
+
+		// Row 2: Host | Host weight | counters | Native | Containers
+		if y == row2Y {
+			if x < col1End {
+				return "res-host"
+			} else if x < col2End {
+				return "res-host-weight"
+			} else if x < col3End {
+				return "res-counters"
+			} else if x < col4End {
+				return "res-native"
+			} else if x < col5End {
 				return "res-jobs"
 			}
 			return ""
 		}
 
-		// Check content line 2: uow, tools
-		if y == contentLine2Y {
+		// Row 3: Docker | Docker weight | progress | Tools placeholder | Container tools
+		if y == row3Y {
 			if x < col1End {
-				return "res-uow"
+				return "res-docker"
 			} else if x < col2End {
-				return "res-tools"
+				return "res-docker-weight"
+			} else if x < col3End {
+				return "" // progress (no help text)
+			} else if x < col4End {
+				return "" // placeholder (no help text)
+			} else if x < col5End {
+				return "res-ctools"
 			}
 			return ""
 		}

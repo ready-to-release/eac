@@ -159,8 +159,8 @@ func TestModuleResultSet_DeriveStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rs := ModuleResultSet{
-				Module:     "test-module",
-				Components: tt.components,
+				Module: "test-module",
+				Units:  tt.components,
 			}
 
 			got := rs.DeriveStatus()
@@ -245,8 +245,8 @@ func TestModuleResultSet_GetSortedUnits(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rs := ModuleResultSet{
-				Module:     "test-module",
-				Components: tt.components,
+				Module: "test-module",
+				Units:  tt.components,
 			}
 
 			got := rs.GetSortedUnits()
@@ -276,8 +276,8 @@ func TestModuleResultSet_GetSortedUnits_DoesNotModifyOriginal(t *testing.T) {
 	}
 
 	rs := ModuleResultSet{
-		Module:     "test-module",
-		Components: original,
+		Module: "test-module",
+		Units:  original,
 	}
 
 	// Call GetSortedUnits
@@ -324,8 +324,8 @@ func TestModuleResultSet_GetSortedUnits_PreservesAllFields(t *testing.T) {
 	}
 
 	rs := ModuleResultSet{
-		Module:     "test-module",
-		Components: components,
+		Module: "test-module",
+		Units:  components,
 	}
 
 	sorted := rs.GetSortedUnits()
@@ -368,7 +368,7 @@ func TestModuleResultSet_GetSortedUnits_PreservesAllFields(t *testing.T) {
 func TestModuleResultSet_Fields(t *testing.T) {
 	rs := ModuleResultSet{
 		Module: "my-module",
-		Components: []UnitResult{
+		Units: []UnitResult{
 			{Module: "my-module", Component: "go", ExitCode: 0},
 		},
 		Status:   ModuleStatusSuccess,
@@ -810,8 +810,8 @@ func TestModuleResultSet_DeriveStatus_Priority(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rs := ModuleResultSet{
-				Module:     "test",
-				Components: tt.components,
+				Module: "test",
+				Units:  tt.components,
 			}
 			got := rs.DeriveStatus()
 			if got != tt.want {

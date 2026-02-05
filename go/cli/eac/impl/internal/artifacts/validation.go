@@ -21,20 +21,20 @@ func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.U
 		return manifests
 	}
 
-	// Build set of expected component_tool keys
+	// Build set of expected component-tool keys (dash separator matches UnitID.DirName())
 	expectedSet := make(map[string]bool)
 	for _, id := range expected {
-		key := id.Component + "_" + id.Tool
+		key := id.Component + "-" + id.Tool
 		expectedSet[key] = true
 	}
 
 	var filtered []*coreoutput.UoWManifest
 	for _, m := range manifests {
-		key := m.Component + "_" + m.Tool
+		key := m.Component + "-" + m.Tool
 		if expectedSet[key] {
 			filtered = append(filtered, m)
 		} else {
-			log.Debugf("Filtering out orphaned manifest: %s/%s_%s", m.Module, m.Component, m.Tool)
+			log.Debugf("Filtering out orphaned manifest: %s/%s-%s", m.Module, m.Component, m.Tool)
 		}
 	}
 	return filtered
@@ -42,7 +42,7 @@ func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.U
 
 // ValidateBuildArtifacts validates that build artifacts exist and are up-to-date for the given modules.
 // It performs:
-// 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}_{tool}/)
+// 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}-{tool}/)
 // 2. Artifact existence validation (files actually exist on disk)
 // 3. Staleness check (source files unchanged since build)
 // Returns ArtifactValidationInfo with details about missing/stale artifacts.
@@ -98,16 +98,24 @@ func ValidateBuildArtifactsWithExpected(
 		var moduleErrors []string
 		for _, comp := range moduleView.Components {
 			for _, uow := range comp.UoWs {
-				result := reader.ValidateUoW(workunit.ContextBuild, module, uow.Component, uow.Tool)
+				id := workunit.UnitID{
+					Context:   workunit.ContextBuild,
+					Module:    module,
+					Component: uow.Component,
+					Tool:      uow.Tool,
+					Extra:     uow.Extra,
+				}
+				result := reader.ValidateUoW(id)
 				if !result.Valid {
+					uowName := uow.DirName()
 					if len(result.MissingArtifacts) > 0 {
 						for _, missing := range result.MissingArtifacts {
-							moduleErrors = append(moduleErrors, uow.Component+"_"+uow.Tool+": "+missing)
+							moduleErrors = append(moduleErrors, uowName+": "+missing)
 						}
 					}
 					if len(result.CorruptArtifacts) > 0 {
 						for _, corrupt := range result.CorruptArtifacts {
-							moduleErrors = append(moduleErrors, uow.Component+"_"+uow.Tool+": hash mismatch for "+corrupt)
+							moduleErrors = append(moduleErrors, uowName+": hash mismatch for "+corrupt)
 						}
 					}
 					if result.Error != nil && len(moduleErrors) == 0 {
@@ -174,7 +182,12 @@ func ValidateBuildArtifactsWithExpected(
 				continue
 			}
 
-			// Check if any manifest has a mismatched input hash
+			// Check staleness: a module is stale only if NO manifest matches the current hash.
+			// This is resilient to hash divergence where parallel component builds captured
+			// different filesystem snapshots (e.g., due to go mod tidy modifying go.sum).
+			// If at least one manifest matches, the sources haven't changed since that build.
+			hasNonEmpty := false
+			anyMatch := false
 			for _, manifest := range manifests {
 				// Skip manifests with empty InputHash (legacy artifacts from pre-UoW-cache)
 				if manifest.InputHash == "" {
@@ -182,11 +195,15 @@ func ValidateBuildArtifactsWithExpected(
 						moniker, manifest.Component, manifest.Tool)
 					continue
 				}
-				if manifest.InputHash != currentHash {
-					staleModules = append(staleModules, moniker)
-					staleReasons[moniker] = "source files changed since build"
+				hasNonEmpty = true
+				if manifest.InputHash == currentHash {
+					anyMatch = true
 					break
 				}
+			}
+			if hasNonEmpty && !anyMatch {
+				staleModules = append(staleModules, moniker)
+				staleReasons[moniker] = "source files changed since build"
 			}
 		}
 	}

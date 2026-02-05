@@ -1,4 +1,5 @@
 // Command: get config
+// Short: Get loaded repository configuration
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

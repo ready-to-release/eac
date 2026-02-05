@@ -17,6 +17,7 @@ const (
 	ClearStateFiles ClearMode = iota // Only delete state.json files (recursive)
 	ClearContents                    // Delete all contents in the directory
 	ClearDocker                      // Execute docker prune command
+	ClearSemaphore                   // Delete semaphore state files (capacity coordination)
 )
 
 // String returns a string representation of ClearMode.
@@ -28,6 +29,8 @@ func (m ClearMode) String() string {
 		return "contents"
 	case ClearDocker:
 		return "docker"
+	case ClearSemaphore:
+		return "semaphore"
 	default:
 		return "unknown"
 	}
@@ -103,6 +106,14 @@ func GetAllClearDirs() []ClearDir {
 			RelPath:     filepath.Join(paths.OutDir, "cache", "preprocess-state"),
 			Description: "preprocessing cache",
 			Mode:        ClearContents,
+			Level:       cache.LevelLocal,
+			Type:        cache.TypeState,
+		},
+		// Semaphore files (capacity coordination - can cause test hangs if stale)
+		{
+			RelPath:     paths.OutDir, // Directory containing semaphore files
+			Description: "capacity semaphore state",
+			Mode:        ClearSemaphore,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeState,
 		},
@@ -219,6 +230,8 @@ func ClearTargets(targets []CacheTarget, dryRun, verbose bool) ClearResult {
 			result.DeletedBytes += bytes
 		case ClearDocker:
 			// Docker clearing is handled separately in clear.go
+		case ClearSemaphore:
+			// Semaphore clearing is handled separately in clear.go
 		}
 	}
 

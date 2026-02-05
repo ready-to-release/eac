@@ -52,7 +52,7 @@ func toDockerPath(workspaceRoot, filePath string) string {
 // Note: Cross-book concurrency is controlled by the component scheduler's weighted semaphore.
 func getPDFConcurrency(workspaceRoot string) int {
 	// Use memory-based detection from environments package
-	// This already handles CI vs devbox and returns 1-4 based on RAM tier
+	// This already handles CI vs local and returns 1-4 based on RAM tier
 	return environments.GetPDFExportConcurrency()
 }
 
@@ -157,18 +157,18 @@ type mkdocsDockerConfig struct {
 }
 
 // getMkDocsDockerConfig resolves docker configuration from module first, then type, then defaults.
-// For PDF builds, always use pdf-tool container (module config only applies to site builds).
+// For PDF builds, always use pdf-oci container (module config only applies to site builds).
 // For site builds, module docker_build config is respected.
 func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string, isPDF bool) mkdocsDockerConfig {
 	// Defaults based on output type
 	// Use :local tag for local builds to match what buildx creates
 	var defaultImage, defaultContainer string
 	if isPDF {
-		defaultImage = "pdf-tool:local"
-		defaultContainer = "pdf-tool"
+		defaultImage = "pdf-oci:local"
+		defaultContainer = "pdf-oci"
 	} else {
-		defaultImage = "site-render-tool:local"
-		defaultContainer = "site-render-tool"
+		defaultImage = "site-render-oci:local"
+		defaultContainer = "site-render-oci"
 	}
 
 	cfg := mkdocsDockerConfig{
@@ -177,7 +177,7 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 	}
 
 	// For PDF builds, always use the PDF container - don't let module config override
-	// PDF requires specific plugins (mkdocs-exporter, playwright) only in pdf-tool container
+	// PDF requires specific plugins (mkdocs-exporter, playwright) only in pdf-oci container
 	if isPDF {
 		cfg.ContextPath = filepath.Join(workspaceRoot, "containers", cfg.ContainerDir)
 		cfg.DockerfilePath = filepath.Join(cfg.ContextPath, "Dockerfile")
@@ -185,7 +185,7 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 	}
 
 	// For site builds: check if module has a dockerfile package with docker_build config
-	// (This is rare - book modules typically use shared containers like site-render-tool)
+	// (This is rare - book modules typically use shared containers like site-render-oci)
 	dockerfilePkg := module.Components["dockerfile"]
 	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil && len(dockerfilePkg.DockerBuild) > 0 {
 		if tags, ok := dockerfilePkg.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
@@ -388,7 +388,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-tool", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
@@ -511,7 +511,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 // - Devbox: Build from Dockerfile if stale
 // - CI: Pull from GHCR
 func ensureMkDocsImage(imageName, workspaceRoot, contextPath string, logWriter io.Writer) error {
-	// Extract container name from image (e.g., "pdf-tool:local" -> "pdf-tool")
+	// Extract container name from image (e.g., "pdf-oci:local" -> "pdf-oci")
 	containerName := strings.Split(imageName, ":")[0]
 
 	// Create ImageManager for local container handling

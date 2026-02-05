@@ -1,27 +1,26 @@
 # yaml-language-server: $schema=../component-types.schema.json
 # Component Types Configuration
-# Defines component types for building and file organization.
+# Defines component types for building, testing, linting, and scanning.
 #
 # Each component type specifies:
 #   - extensions: File extensions that belong to this component type (empty for non-file-based)
-#   - builder: The build handler to use (if buildable)
-#   - requirements: System dependencies needed for building
+#   - builders: Build tool IDs (empty = not buildable)
+#   - testers: Test tool IDs (empty = not testable)
+#   - linters: Lint tool IDs (empty = not lintable)
+#   - scanners: Scanner categories (sbom, vuln, secrets, sast, iac)
+#   - pool: Resource pool ("host" or "docker")
 #   - default_root: Default root path pattern (supports {moniker} placeholder)
 #   - files: Default file patterns (source, tests, config)
-#
-# Note: Linting is configured separately in lint-providers.yml
 
 component-types:
   # Go component - compiles Go modules
   go:
     extensions: [".go"]
-    builder: go
-    testable: true
-    lintable: true
+    builders: [go]
+    testers: [go]
+    linters: [golangci-lint]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [go]
     defaults:
-      # Default artifact pattern for Go executables
       artifact_pattern: "{moniker}{ext}"
     files:
       source: ["**/*.go", "**/*.go.txt"]
@@ -31,11 +30,11 @@ component-types:
   # TypeScript/JavaScript component - npm-based builds (containerized)
   typescript:
     extensions: [".ts", ".tsx"]
-    builder: npm
-    testable: true
-    lintable: true
+    builders: [npm]
+    testers: [npm]
+    linters: [eslint]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [docker]
+    pool: docker
     files:
       source: ["src/**/*.ts", "features/**/*.ts"]
       tests: ["**/*.test.ts"]
@@ -43,65 +42,55 @@ component-types:
 
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
-    builder: npm
-    testable: true
-    lintable: true
+    builders: [npm]
+    testers: [npm]
+    linters: [eslint]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [docker]
+    pool: docker
 
   # Container component - Docker/Buildx builds
   dockerfile:
     extensions: []  # Dockerfile has no standard extension
-    builder: buildx
-    lintable: true
+    builders: [buildx]
+    linters: [hadolint]
     scanners: [sbom, vuln, secrets, iac]
-    # Dockerfiles often depend on Go binaries being built first
     build_after: [go]
-    requirements: [docker]
+    pool: docker
     files:
       source: ["Dockerfile"]
 
-  # Book component - MkDocs documentation builds (LEGACY - use base-site + site-render/pdf-render)
-  # This type is maintained for backwards compatibility. New modules should use:
-  #   - base-site: For preprocessing (no Docker required)
-  #   - site-render: For HTML generation (depends on base-site)
-  #   - pdf-render: For PDF generation (depends on base-site)
+  # Book component - MkDocs documentation builds (LEGACY)
   book:
-    extensions: []  # Not file-based, uses books.yml
-    builder: mkdocs
-    # Books depend on docs assets and diagrams being ready
+    extensions: []
+    builders: [mkdocs]
     build_after: [structurizr, markdown, docs-assets]
-    requirements: [docker]
+    pool: docker
     resources:
-      cpus: 4       # Site building with plugins can be CPU-intensive
+      cpus: 4
 
-  # Docs PDF component - unified handler for PDF documentation builds
-  # Single handler that combines preprocessing (native Go) + PDF rendering (container)
-  # Example: `tutorials-pdf: { type: docs-pdf, config: { book: tutorials } }`
+  # Docs PDF component - unified PDF documentation builds
   docs-pdf:
     extensions: []
-    builder: pdf  # Unified handler: preprocessing + container in one step
+    builders: [pdf]
     build_after: [structurizr, markdown, docs-assets]
-    requirements: [docker]
+    pool: docker
     resources:
-      cpus: 4       # Keep: observed 285% CPU usage (effectively 3 cores)
-      memory: 4g    # Fits in 6GB Docker limit with shm headroom
+      cpus: 4
+      memory: 4g
     defaults:
       theme: dark
     cache:
       key_sources: [sources.hash, config.hash, theme, container.hash]
       artifacts_cacheable: true
 
-  # Docs Site component - unified handler for HTML documentation builds
-  # Single handler that combines preprocessing (native Go) + site rendering (container)
-  # Example: `site: { type: docs-site, config: { book: site } }`
+  # Docs Site component - unified HTML documentation builds
   docs-site:
     extensions: []
-    builder: site  # Unified handler: preprocessing + container in one step
+    builders: [site]
     build_after: [structurizr, markdown, docs-assets]
-    requirements: [docker]
+    pool: docker
     resources:
-      cpus: 4       # Site building with plugins can be CPU-intensive
+      cpus: 4
       memory: 1g
     cache:
       key_sources: [sources.hash, config.hash, container.hash]
@@ -110,7 +99,7 @@ component-types:
   # Markdown component - documentation files
   markdown:
     extensions: [".md", ".markdown"]
-    lintable: true
+    linters: [markdownlint]
     scanners: [secrets]
     files:
       source: ["**/*.md", "**/*.markdown"]
@@ -118,140 +107,137 @@ component-types:
   # YAML component - configuration files
   yaml:
     extensions: [".yml", ".yaml"]
-    lintable: true
+    linters: [yamllint]
     scanners: [secrets]
     files:
       source: ["**/*.yml", "**/*.yaml"]
 
-  # GitHub Workflows component - GitHub Actions workflows and reusable actions
+  # GitHub Workflows component
   workflows:
-    extensions: []  # Uses .yml/.yaml but in specific paths
-    lintable: true
+    extensions: []
+    linters: [actionlint]
     scanners: [secrets]
     default_root: .github/workflows
-    requirements: []
     files:
       source: ["**/*.yml", "**/*.yaml"]
       config: []
 
-  # JSON component - data and configuration files
+  # JSON component
   json:
     extensions: [".json"]
-    lintable: true
+    linters: [jsonlint]
     scanners: [secrets]
     files:
       source: ["**/*.json"]
 
-  # Gherkin - BDD specification files (.feature)
+  # Gherkin - BDD specification files
   gherkin:
     extensions: [".feature"]
-    testable: true
-    lintable: true
+    testers: [godog]
+    linters: [gherkin-lint]
     scanners: [secrets]
     files:
       source: ["**/*.feature"]
 
-  # Structurizr - Architecture diagrams in Structurizr DSL (.dsl)
-  # No builder - DSL files are validated via lint, not built
+  # Structurizr - Architecture diagrams
   structurizr:
     extensions: [".dsl"]
-    lintable: true
+    linters: [structurizr-lint]
     scanners: [secrets]
-    requirements: [docker]
+    pool: docker
     files:
       source: ["workspace.dsl", "**/*.dsl"]
 
-  # Documentation assets - images, diagrams, and other binary assets
+  # Documentation assets
   docs-assets:
     extensions: [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
     files:
       source: ["**/*.png", "**/*.jpg", "**/*.svg"]
 
-  # Repository configuration - root-level config files without extensions
+  # Repository configuration
   repository:
     extensions: []
     files:
       config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
 
-  # Test data/fixtures - sample files used by tests
+  # Test data/fixtures
   testdata:
     extensions: [".txt", ".go.txt"]
     files:
       source: ["**/*.txt", "**/*.go.txt"]
 
-  # Gherkin Steps component - Co-located BDD step implementations
-  # For Go: godog_test.go and steps_*_test.go files
-  # For TypeScript: cucumber step definitions in features/ directory
-  # Bindings for test runners like godog (Go) and cucumber-js (TypeScript)
+  # Container-bundled source code
+  containercode:
+    extensions: []
+    linters: [shellcheck]
+    scanners: [secrets]
+    files:
+      source: ["**/*"]
+
+  # Gherkin Steps component
   gherkin-steps:
     extensions: [".go"]
-    requirements: [go]
     default_root: specs
     files:
       source: ["godog_test.go", "steps_*_test.go"]
       tests: ["*_test.go"]
       config: []
 
-  # PowerShell component - PowerShell 7.4+ scripts (.ps1, .psm1, .psd1)
-  # Runs in container for cross-platform consistency
+  # PowerShell component
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
-    builder: scripts
-    testable: true
-    lintable: true
+    builders: [scripts]
+    testers: [pester]
+    linters: [psscriptanalyzer]
     scanners: [secrets]
-    requirements: [docker]
+    pool: docker
     files:
       source: ["**/*.ps1", "**/*.psm1"]
       tests: ["**/*.Tests.ps1"]
       config: ["**/*.psd1"]
 
-  # Bash component - POSIX-compatible shell scripts (.sh)
-  # Runs in container for cross-platform consistency (no host bash required)
+  # Bash component
   bash:
     extensions: [".sh", ".bash"]
-    builder: scripts
-    testable: true
-    lintable: true
+    builders: [scripts]
+    testers: [bats]
+    linters: [shellcheck]
     scanners: [secrets]
-    requirements: [docker]
+    pool: docker
     files:
       source: ["**/*.sh", "**/*.bash"]
 
-  # Python component - Python modules and packages
+  # Python component
   python:
     extensions: [".py"]
-    builder: python
-    testable: true
-    lintable: true
+    builders: [python]
+    testers: [pytest]
+    linters: [ruff]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [python]
     files:
       source: ["**/*.py"]
       tests: ["tests/**/*.py", "**/*_test.py"]
       config: ["pyproject.toml", "setup.py", "requirements.txt"]
 
-  # Rust component - Cargo-based Rust projects
+  # Rust component
   rust:
     extensions: [".rs"]
-    builder: cargo
-    testable: true
-    lintable: true
+    builders: [cargo]
+    testers: [cargo]
+    linters: [clippy]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [cargo]
     files:
       source: ["src/**/*.rs", "**/*.rs"]
       tests: ["tests/**/*.rs"]
       config: ["Cargo.toml", "Cargo.lock"]
 
-  # .NET component - C#/F#/VB.NET projects
+  # .NET component
   dotnet:
     extensions: [".cs", ".fs", ".vb"]
-    builder: dotnet
-    testable: true
-    lintable: true
+    builders: [dotnet]
+    testers: [dotnet]
+    linters: [dotnet-format]
     scanners: [sbom, vuln, secrets, sast]
-    requirements: [dotnet]
     files:
       source: ["**/*.cs", "**/*.fs"]
       tests: ["**/*Tests.cs", "**/*.Tests/**/*.cs"]
@@ -259,44 +245,34 @@ component-types:
 
   #---------------------------------------------------------------------------
   # AI Analysis Component Types
-  # These components bind to AI tools for automated analysis
   #---------------------------------------------------------------------------
 
-  # AI DSL component - AI-powered Structurizr DSL analysis
   ai-dsl:
     extensions: [".dsl"]
-    builder: ai-dsl-analyzer
-    requirements: []
+    builders: [ai-dsl-analyzer]
     defaults:
       output_format: markdown
     files:
       source: ["**/*.dsl"]
 
-  # AI Specs component - AI-powered Gherkin specs analysis
   ai-specs:
     extensions: [".feature"]
-    builder: ai-specs-analyzer
-    requirements: []
+    builders: [ai-specs-analyzer]
     defaults:
       output_format: markdown
     files:
       source: ["**/*.feature"]
 
-  # AI Source component - AI-powered source code analysis
-  # Depends on ai-dsl and ai-specs for context
   ai-source:
     extensions: []
-    builder: ai-source-analyzer
+    builders: [ai-source-analyzer]
     build_after: [ai-dsl, ai-specs]
-    requirements: []
     defaults:
       output_format: markdown
 
-  # AI Docs component - AI-powered documentation analysis
   ai-docs:
     extensions: [".md"]
-    builder: ai-docs-analyzer
-    requirements: []
+    builders: [ai-docs-analyzer]
     defaults:
       output_format: markdown
     files:

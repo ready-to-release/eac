@@ -30,10 +30,10 @@ func NewTracker(workspaceRoot string, ctx workunit.Context) *InMemoryTracker {
 }
 
 // uowDir returns the output directory for a UoW.
-// Format: out/{context}/{module}/{component}_{tool}/
+// Format: out/{context}/{module}/{dirname}/
+// where dirname = component[-extra1][-extra2]... for uniqueness.
 func (t *InMemoryTracker) uowDir(id workunit.UnitID) string {
-	dirName := id.Component + "_" + id.Tool
-	return filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, dirName)
+	return filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, id.DirName())
 }
 
 // RecordStart marks a UoW as started and creates its output directory.
@@ -72,6 +72,7 @@ func (t *InMemoryTracker) RecordComplete(id workunit.UnitID, manifest *UoWManife
 	manifest.Module = id.Module
 	manifest.Component = id.Component
 	manifest.Tool = id.Tool
+	manifest.Extra = id.Extra
 
 	// Write manifest to disk
 	return manifest.Save(t.workspaceRoot)
@@ -80,9 +81,8 @@ func (t *InMemoryTracker) RecordComplete(id workunit.UnitID, manifest *UoWManife
 // RecordCacheHit validates and returns an existing UoW manifest.
 // Returns an error if the manifest is missing, invalid, or artifacts are missing/corrupt.
 func (t *InMemoryTracker) RecordCacheHit(id workunit.UnitID) (*UoWManifest, error) {
-	// Compute manifest path
-	dirName := id.Component + "_" + id.Tool
-	manifestPath := filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, dirName, "uow.manifest.json")
+	// Compute manifest path using DirName for consistency
+	manifestPath := filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, id.DirName(), "uow.manifest.json")
 
 	// Load manifest
 	manifest, err := Load(manifestPath)

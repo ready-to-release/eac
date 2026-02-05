@@ -651,7 +651,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	// Create all tabs as QUEUED upfront (positions are immutable)
 	for _, w := range work {
 		moniker := w.ID.Longname()
-		displayName := w.Shortname()
+		displayName := w.DisplayName()
 		us.tuiMarkQueued(moniker, displayName, w.Weight)
 	}
 
@@ -1069,7 +1069,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	}
 
 	moniker := spec.ID.Longname()
-	displayName := spec.Shortname()
+	displayName := spec.DisplayName()
 
 	// FAST PATH: Check if background already verified cached
 	// This enables fast termination - workers don't re-do cache checks
@@ -1092,13 +1092,14 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	us.addActiveTool(tool, spec.Container, moniker)
 
 	// Create output directory for this component
-	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
+	// Structure: out/<context>/<module>/<dirname> (e.g., out/build/books/howto, out/test/eac-cli/go-gotest-impl-build)
+	// Uses DirName() which includes tool and Extra values for unique directory names
 	sanitizedModule := sanitizePathForFS(output.PackageDisplayName(module))
-	sanitizedComponent := sanitizePathForFS(component)
-	componentOutputDir := filepath.Join(us.config.WorkspaceRoot, us.config.OutputBaseDir, sanitizedModule, sanitizedComponent)
+	sanitizedDirName := sanitizePathForFS(spec.ID.DirName())
+	componentOutputDir := filepath.Join(us.config.WorkspaceRoot, us.config.OutputBaseDir, sanitizedModule, sanitizedDirName)
 
-	// Relative log path for result reporting: out/build/<module>/<component>/build.log
-	relLogPath := filepath.Join(us.config.OutputBaseDir, sanitizedModule, sanitizedComponent, us.config.LogFileName)
+	// Relative log path for result reporting: out/<context>/<module>/<dirname>/<logfile>
+	relLogPath := filepath.Join(us.config.OutputBaseDir, sanitizedModule, sanitizedDirName, us.config.LogFileName)
 
 	if err := os.MkdirAll(componentOutputDir, 0o755); err != nil {
 		result.ExitCode = 1
@@ -1150,10 +1151,15 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	resultCh := make(chan int, 1)
 	go func() {
 		// Combine component and tool for worker (e.g., "go:golangci-lint")
-		// When tool is empty (tests), workerComponent equals component
+		// For tests with Extra["testname"], format is "component:tool:testname" (e.g., "go:gotest:impl-build")
+		// When tool is empty, workerComponent equals component
 		workerComponent := component
 		if tool != "" {
 			workerComponent = component + ":" + tool
+		}
+		// Append testname if present (for test context)
+		if testname := spec.ID.Extra["testname"]; testname != "" {
+			workerComponent = workerComponent + ":" + testname
 		}
 		resultCh <- worker(module, workerComponent, workerWriter)
 	}()

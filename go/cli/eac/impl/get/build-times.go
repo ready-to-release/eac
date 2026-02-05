@@ -1,4 +1,5 @@
 // Command: get build-times
+// Short: Display build timing metrics from last build run
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON
@@ -6,14 +7,13 @@
 //
 // Long:
 // Long: Expected Output:
-// Long: YAML with build timing metrics parsed from per-module build.manifest.json files:
+// Long: YAML with build timing metrics parsed from per-module uow.manifest.json files:
 // Long:   - Per-module timing data with duration in seconds
 // Long:   - Aggregated statistics by module type
 // Long:   - Overall summary with total builds and average duration
 package get
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +23,8 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -130,10 +132,15 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 	})
 }
 
-// ParseBuildLog reads build timing data from per-module manifest files.
-// It scans all subdirectories in the build output dir for build.manifest.json files.
+// ParseBuildLog reads build timing data from UoW manifest files.
+// It scans all module subdirectories in the build output dir for uow.manifest.json files
+// and aggregates timing per module.
 func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
-	var timings []BuildTiming
+	// Derive workspace root from buildDir (which is out/build/)
+	// buildDir = {workspace}/out/build
+	workspaceRoot := filepath.Dir(filepath.Dir(buildDir))
+
+	reader := coreoutput.NewReader(workspaceRoot)
 
 	// Scan build directory for module subdirectories
 	entries, err := os.ReadDir(buildDir)
@@ -141,46 +148,33 @@ func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
 		return nil, fmt.Errorf("failed to read build directory: %w", err)
 	}
 
+	var timings []BuildTiming
+
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
 		moduleName := entry.Name()
-		manifestPath := filepath.Join(buildDir, moduleName, "build.manifest.json")
-
-		// Check if manifest exists
-		if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+		manifests, err := reader.ListUoWs(workunit.ContextBuild, moduleName)
+		if err != nil || len(manifests) == 0 {
 			continue
 		}
 
-		// Read manifest file
-		data, err := os.ReadFile(manifestPath)
-		if err != nil {
-			continue
-		}
-
-		// Parse manifest JSON - we only need duration_seconds and moniker
-		var manifest struct {
-			Moniker         string  `json:"moniker"`
-			Type            string  `json:"type"`
-			DurationSeconds float64 `json:"duration_seconds"`
-		}
-		if err := json.Unmarshal(data, &manifest); err != nil {
-			continue
-		}
-
-		// Use directory name as moniker if not in manifest (backward compat)
-		moniker := manifest.Moniker
-		if moniker == "" {
-			moniker = moduleName
+		// Aggregate duration and status across all UoWs for this module
+		var totalDuration float64
+		status := "PASS"
+		for _, m := range manifests {
+			totalDuration += m.Duration.Seconds()
+			if m.ExitCode > 0 {
+				status = "FAIL"
+			}
 		}
 
 		timings = append(timings, BuildTiming{
-			Module:   moniker,
-			Duration: manifest.DurationSeconds,
-			Status:   "PASS", // If manifest exists, build succeeded
-			Type:     manifest.Type,
+			Module:   moduleName,
+			Duration: totalDuration,
+			Status:   status,
 		})
 	}
 

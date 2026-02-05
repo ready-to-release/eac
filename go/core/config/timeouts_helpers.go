@@ -235,3 +235,4 @@ func TUIConfig() *tui.TUIConfig {
 func CapacityRecalcInterval() time.Duration {
 	return Timeouts().Scheduling.CapacityRecalc.D()
 }
+

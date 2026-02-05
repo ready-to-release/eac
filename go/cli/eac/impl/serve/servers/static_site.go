@@ -22,7 +22,7 @@ func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port 
 	// Determine image and Dockerfile
 	image := ctx.StaticSiteImage
 	if image == "" {
-		image = "cli-nginx-tool:latest"
+		image = "cli-nginx-oci:latest"
 	}
 
 	// Build container name from module
@@ -51,7 +51,7 @@ func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port 
 		}
 	} else if workspaceRoot != "" {
 		// Default Dockerfile location
-		dockerfile := filepath.Join(workspaceRoot, "containers/nginx-tool/Dockerfile")
+		dockerfile := filepath.Join(workspaceRoot, "containers/nginx-oci/Dockerfile")
 		serveConfig.BuildInfo = &docker.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: filepath.Dir(dockerfile),

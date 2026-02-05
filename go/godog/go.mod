@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/cucumber/godog v0.15.1
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0-00010101000000-000000000000
+	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/stretchr/testify v1.11.1
 )
@@ -36,7 +36,7 @@ require (
 	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9 // indirect
 	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0-20260202144134-d0b6883b9564 // indirect
+	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
@@ -62,5 +62,6 @@ replace (
 	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces => ../../contracts/security/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces => ../../contracts/testing/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces => ../../contracts/tools/0.1.0/interfaces
+	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces => ../../contracts/tui-adapter/0.1.0/interfaces
 	github.com/ready-to-release/eac/go/core => ../core
 )

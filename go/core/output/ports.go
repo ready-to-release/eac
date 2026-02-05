@@ -7,6 +7,19 @@ import (
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
+// unitIDFromPort converts a UnitIDPort to a concrete workunit.UnitID,
+// including all Extra fields for proper uniqueness handling.
+func unitIDFromPort(p interfaces.UnitIDPort) workunit.UnitID {
+	return workunit.UnitID{
+		Context:   workunit.Context(p.GetContext()),
+		Module:    p.GetModule(),
+		Component: p.GetComponent(),
+		Tool:      p.GetTool(),
+		Spec:      p.GetSpec(),
+		Extra:     p.GetExtra(),
+	}
+}
+
 // =============================================================================
 // OutputReaderAdapter - wraps DiskOutputReader to implement OutputReaderPort
 // =============================================================================
@@ -26,7 +39,25 @@ var _ interfaces.OutputReaderPort = (*OutputReaderAdapter)(nil)
 
 // GetUoW implements OutputReaderPort.GetUoW.
 func (a *OutputReaderAdapter) GetUoW(context, module, component, tool string) (interfaces.UoWManifestPort, error) {
-	manifest, err := a.reader.GetUoW(workunit.Context(context), module, component, tool)
+	id := workunit.UnitID{
+		Context:   workunit.Context(context),
+		Module:    module,
+		Component: component,
+		Tool:      tool,
+		// Note: Extra is not available through this interface signature.
+		// Use GetUoWByID for UoWs with Extra fields.
+	}
+	manifest, err := a.reader.GetUoW(id)
+	if err != nil {
+		return nil, err
+	}
+	return manifest, nil
+}
+
+// GetUoWByID implements OutputReaderPort with full UnitID support including Extra.
+func (a *OutputReaderAdapter) GetUoWByID(unitID interfaces.UnitIDPort) (interfaces.UoWManifestPort, error) {
+	id := unitIDFromPort(unitID)
+	manifest, err := a.reader.GetUoW(id)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +88,22 @@ func (a *OutputReaderAdapter) ListUoWs(context, module string) ([]interfaces.UoW
 
 // ValidateUoW implements OutputReaderPort.ValidateUoW.
 func (a *OutputReaderAdapter) ValidateUoW(context, module, component, tool string) interfaces.ValidationResultPort {
-	result := a.reader.ValidateUoW(workunit.Context(context), module, component, tool)
+	id := workunit.UnitID{
+		Context:   workunit.Context(context),
+		Module:    module,
+		Component: component,
+		Tool:      tool,
+		// Note: Extra is not available through this interface signature.
+		// Use ValidateUoWByID for UoWs with Extra fields.
+	}
+	result := a.reader.ValidateUoW(id)
+	return &result
+}
+
+// ValidateUoWByID implements validation with full UnitID support including Extra.
+func (a *OutputReaderAdapter) ValidateUoWByID(unitID interfaces.UnitIDPort) interfaces.ValidationResultPort {
+	id := unitIDFromPort(unitID)
+	result := a.reader.ValidateUoW(id)
 	return &result
 }
 
@@ -66,12 +112,7 @@ func (a *OutputReaderAdapter) ValidateModule(context, module string, expectedUoW
 	// Convert UnitIDPort to workunit.UnitID
 	ids := make([]workunit.UnitID, len(expectedUoWs))
 	for i, id := range expectedUoWs {
-		ids[i] = workunit.UnitID{
-			Context:   workunit.Context(id.GetContext()),
-			Module:    id.GetModule(),
-			Component: id.GetComponent(),
-			Tool:      id.GetTool(),
-		}
+		ids[i] = unitIDFromPort(id)
 	}
 	result := a.reader.ValidateModule(workunit.Context(context), module, ids)
 	return &result
@@ -96,23 +137,12 @@ var _ interfaces.UoWTrackerPort = (*UoWTrackerAdapter)(nil)
 
 // RecordStart implements UoWTrackerPort.RecordStart.
 func (a *UoWTrackerAdapter) RecordStart(unitID interfaces.UnitIDPort) error {
-	id := workunit.UnitID{
-		Context:   workunit.Context(unitID.GetContext()),
-		Module:    unitID.GetModule(),
-		Component: unitID.GetComponent(),
-		Tool:      unitID.GetTool(),
-	}
-	return a.tracker.RecordStart(id)
+	return a.tracker.RecordStart(unitIDFromPort(unitID))
 }
 
 // RecordComplete implements UoWTrackerPort.RecordComplete.
 func (a *UoWTrackerAdapter) RecordComplete(unitID interfaces.UnitIDPort, manifest interfaces.UoWManifestPort) error {
-	id := workunit.UnitID{
-		Context:   workunit.Context(unitID.GetContext()),
-		Module:    unitID.GetModule(),
-		Component: unitID.GetComponent(),
-		Tool:      unitID.GetTool(),
-	}
+	id := unitIDFromPort(unitID)
 
 	// Convert manifest port to concrete type
 	uowManifest := &UoWManifest{
@@ -120,6 +150,7 @@ func (a *UoWTrackerAdapter) RecordComplete(unitID interfaces.UnitIDPort, manifes
 		Module:     manifest.GetModule(),
 		Component:  manifest.GetComponent(),
 		Tool:       manifest.GetTool(),
+		Extra:      manifest.GetExtra(),
 		ExitCode:   manifest.GetExitCode(),
 		InputHash:  manifest.GetInputHash(),
 		ExecutedAt: manifest.GetExecutedAt(),
@@ -143,13 +174,7 @@ func (a *UoWTrackerAdapter) RecordComplete(unitID interfaces.UnitIDPort, manifes
 
 // RecordCacheHit implements UoWTrackerPort.RecordCacheHit.
 func (a *UoWTrackerAdapter) RecordCacheHit(unitID interfaces.UnitIDPort) (interfaces.UoWManifestPort, error) {
-	id := workunit.UnitID{
-		Context:   workunit.Context(unitID.GetContext()),
-		Module:    unitID.GetModule(),
-		Component: unitID.GetComponent(),
-		Tool:      unitID.GetTool(),
-	}
-	manifest, err := a.tracker.RecordCacheHit(id)
+	manifest, err := a.tracker.RecordCacheHit(unitIDFromPort(unitID))
 	if err != nil {
 		return nil, err
 	}

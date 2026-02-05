@@ -266,7 +266,7 @@ func buildUoWDataFromUnitSpecs(units []workunit.UnitSpec) interfaces.UoWData {
 		module := spec.ID.Module
 		entry := interfaces.UoWUnit{
 			ID:          spec.ID.Longname(),
-			DisplayName: spec.ID.Shortname(),
+			DisplayName: spec.ID.DisplayName(),
 			Weight:      spec.Weight,
 		}
 		moduleUoWs[module] = append(moduleUoWs[module], entry)

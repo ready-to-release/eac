@@ -215,3 +215,33 @@ func TestDualPoolSemaphore_CloseMultipleTimes(t *testing.T) {
 	dps.Close()
 	dps.Close()
 }
+
+func TestDualPoolSemaphore_ZeroWeightEnforcesMinimum(t *testing.T) {
+	// Verify that zero-weight allocations still acquire minimum weight of 1
+	// This prevents accidental bypass of the semaphore
+	dir := t.TempDir()
+
+	dps := NewDualPoolSemaphore(dir, 10, 4, nil)
+	defer dps.Close()
+
+	// Zero-weight allocation should still acquire weight 1
+	alloc := resource.PoolAllocation{HostWeight: 0, DockerWeight: 0}
+	acquired := dps.Acquire(context.Background(), alloc)
+
+	if !acquired {
+		t.Error("Acquire should return true")
+	}
+
+	hostCap := dps.HostCapacity()
+	if hostCap.Used != 1 {
+		t.Errorf("host.Used = %d, want 1 (minimum enforced)", hostCap.Used)
+	}
+
+	// Release should also use minimum weight 1
+	dps.Release(alloc)
+
+	hostCap = dps.HostCapacity()
+	if hostCap.Used != 0 {
+		t.Errorf("host.Used after release = %d, want 0", hostCap.Used)
+	}
+}

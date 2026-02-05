@@ -611,14 +611,14 @@ func MkDocsConfigPath(outputDir string) string {
 	return filepath.Join(outputDir, "mkdocs.yml")
 }
 
-// MkDocsSiteTemplatePath returns the path to the site-render-tool template.
+// MkDocsSiteTemplatePath returns the path to the site-render-oci template.
 func MkDocsSiteTemplatePath(repoRoot string) string {
-	return filepath.Join(repoRoot, "containers", "site-render-tool", "mkdocs.yml")
+	return filepath.Join(repoRoot, "containers", "site-render-oci", "mkdocs.yml")
 }
 
-// MkDocsPdfTemplatePath returns the path to the pdf-tool template.
+// MkDocsPdfTemplatePath returns the path to the pdf-oci template.
 func MkDocsPdfTemplatePath(repoRoot string) string {
-	return filepath.Join(repoRoot, "containers", "pdf-tool", "mkdocs.yml")
+	return filepath.Join(repoRoot, "containers", "pdf-oci", "mkdocs.yml")
 }
 
 // SiteOutputPath returns the path to the site output directory.

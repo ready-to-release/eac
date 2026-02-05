@@ -64,28 +64,28 @@ func TestMkDocsPreprocessHandler_InAllHandlers(t *testing.T) {
 }
 
 // ============================================================================
-// site-render-tool handler tests
+// site-render-oci handler tests
 // ============================================================================
 
 func TestMkDocsSiteHandler_Registered(t *testing.T) {
-	h := GetHandler("site-render-tool")
+	h := GetHandler("site-render-oci")
 	if h == nil {
-		t.Fatal("site-render-tool handler not registered")
+		t.Fatal("site-render-oci handler not registered")
 	}
 
-	if got := h.Name(); got != "site-render-tool" {
-		t.Errorf("handler Name() = %q, want %q", got, "site-render-tool")
+	if got := h.Name(); got != "site-render-oci" {
+		t.Errorf("handler Name() = %q, want %q", got, "site-render-oci")
 	}
 }
 
 func TestMkDocsSiteHandler_HasHandler(t *testing.T) {
-	if !HasHandler("site-render-tool") {
-		t.Error("HasHandler(\"site-render-tool\") = false, want true")
+	if !HasHandler("site-render-oci") {
+		t.Error("HasHandler(\"site-render-oci\") = false, want true")
 	}
 }
 
 func TestMkDocsSiteHandler_Requirements(t *testing.T) {
-	h := GetHandler("site-render-tool")
+	h := GetHandler("site-render-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -100,7 +100,7 @@ func TestMkDocsSiteHandler_Requirements(t *testing.T) {
 }
 
 func TestMkDocsSiteHandler_IsContainer(t *testing.T) {
-	h := GetHandler("site-render-tool")
+	h := GetHandler("site-render-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -111,7 +111,7 @@ func TestMkDocsSiteHandler_IsContainer(t *testing.T) {
 }
 
 func TestMkDocsSiteHandler_IsHostInstalled(t *testing.T) {
-	h := GetHandler("site-render-tool")
+	h := GetHandler("site-render-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -123,34 +123,34 @@ func TestMkDocsSiteHandler_IsHostInstalled(t *testing.T) {
 
 func TestMkDocsSiteHandler_InAllHandlers(t *testing.T) {
 	handlers := GetAllHandlers()
-	if _, exists := handlers["site-render-tool"]; !exists {
-		t.Error("site-render-tool not found in GetAllHandlers()")
+	if _, exists := handlers["site-render-oci"]; !exists {
+		t.Error("site-render-oci not found in GetAllHandlers()")
 	}
 }
 
 // ============================================================================
-// pdf-tool handler tests
+// pdf-oci handler tests
 // ============================================================================
 
 func TestMkDocsPDFHandler_Registered(t *testing.T) {
-	h := GetHandler("pdf-tool")
+	h := GetHandler("pdf-oci")
 	if h == nil {
-		t.Fatal("pdf-tool handler not registered")
+		t.Fatal("pdf-oci handler not registered")
 	}
 
-	if got := h.Name(); got != "pdf-tool" {
-		t.Errorf("handler Name() = %q, want %q", got, "pdf-tool")
+	if got := h.Name(); got != "pdf-oci" {
+		t.Errorf("handler Name() = %q, want %q", got, "pdf-oci")
 	}
 }
 
 func TestMkDocsPDFHandler_HasHandler(t *testing.T) {
-	if !HasHandler("pdf-tool") {
-		t.Error("HasHandler(\"pdf-tool\") = false, want true")
+	if !HasHandler("pdf-oci") {
+		t.Error("HasHandler(\"pdf-oci\") = false, want true")
 	}
 }
 
 func TestMkDocsPDFHandler_Requirements(t *testing.T) {
-	h := GetHandler("pdf-tool")
+	h := GetHandler("pdf-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -165,7 +165,7 @@ func TestMkDocsPDFHandler_Requirements(t *testing.T) {
 }
 
 func TestMkDocsPDFHandler_IsContainer(t *testing.T) {
-	h := GetHandler("pdf-tool")
+	h := GetHandler("pdf-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -176,7 +176,7 @@ func TestMkDocsPDFHandler_IsContainer(t *testing.T) {
 }
 
 func TestMkDocsPDFHandler_IsHostInstalled(t *testing.T) {
-	h := GetHandler("pdf-tool")
+	h := GetHandler("pdf-oci")
 	if h == nil {
 		t.Fatal("handler not found")
 	}
@@ -188,7 +188,7 @@ func TestMkDocsPDFHandler_IsHostInstalled(t *testing.T) {
 
 func TestMkDocsPDFHandler_InAllHandlers(t *testing.T) {
 	handlers := GetAllHandlers()
-	if _, exists := handlers["pdf-tool"]; !exists {
-		t.Error("pdf-tool not found in GetAllHandlers()")
+	if _, exists := handlers["pdf-oci"]; !exists {
+		t.Error("pdf-oci not found in GetAllHandlers()")
 	}
 }

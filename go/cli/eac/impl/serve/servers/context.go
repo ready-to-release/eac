@@ -13,7 +13,7 @@ import "github.com/ready-to-release/eac/go/core/tool"
 // available at serve execution time (e.g., Docker images from tool-config.yml).
 type ServeContext struct {
 	// Docker images from tool-config.yml or repository.yml
-	StaticSiteImage  string // e.g., "cli-nginx-tool:latest"
+	StaticSiteImage  string // e.g., "cli-nginx-oci:latest"
 	MkDocsLiveImage  string // e.g., "squidfunk/mkdocs-material:latest"
 	StructurizrImage string // e.g., "structurizr/lite:latest"
 
@@ -59,7 +59,7 @@ var GlobalServeContext *ServeContext
 // Docker images are looked up from tool-config.yml with hardcoded fallbacks.
 func DefaultServeContext() *ServeContext {
 	return &ServeContext{
-		StaticSiteImage:  tool.GetToolImageWithDefault("nginx-tool", "cli-nginx-tool:latest"),
+		StaticSiteImage:  tool.GetToolImageWithDefault("nginx-oci", "cli-nginx-oci:latest"),
 		MkDocsLiveImage:  tool.GetToolImageWithDefault("mkdocs-live", "squidfunk/mkdocs-material:latest"),
 		StructurizrImage: tool.GetToolImageWithDefault("structurizr-lite", "structurizr/lite:latest"),
 		DefaultPort:      9000,

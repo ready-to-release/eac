@@ -281,14 +281,8 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	// Component types
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Component Types"), module.GetComponentTypesDisplay())
 
-	// Build dependencies from package types
-	if cfg.ComponentTypes != nil {
-		enabledPackages := module.Components.GetEnabled()
-		buildDeps := cfg.ComponentTypes.GetBuildRequirements(enabledPackages)
-		if len(buildDeps) > 0 {
-			configDetails += fmt.Sprintf("- %s: %s\n", Bold("Dependencies"), formatSlice(buildDeps))
-		}
-	}
+	// Container runtime - docker is always required for container-based builds
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Container Runtime"), Code("docker"))
 
 	// Output directory
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.BuildOutputPath(module.Moniker)))

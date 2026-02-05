@@ -3,7 +3,7 @@
 // IsParent: true
 // Group.Configuration: config
 // Group.Repository Structure: modules, components, units, dependencies, execution-order
-// Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local
+// Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local, ghosts
 // Group.CI/CD: ci-dispatch, ci-workflows
 // Group.Build: build-times, build-deps, artifacts
 // Group.Testing: test-results, tests, suite, test-timings

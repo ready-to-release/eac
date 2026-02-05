@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"sort"
 	"time"
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
@@ -21,19 +22,43 @@ type MockUnitID struct {
 	ComponentVal string
 	ToolVal      string
 	SpecVal      string
+	ExtraVal     map[string]string
 }
 
-func (m *MockUnitID) GetContext() string   { return m.ContextVal }
-func (m *MockUnitID) GetModule() string    { return m.ModuleVal }
-func (m *MockUnitID) GetComponent() string { return m.ComponentVal }
-func (m *MockUnitID) GetTool() string      { return m.ToolVal }
-func (m *MockUnitID) GetSpec() string      { return m.SpecVal }
+func (m *MockUnitID) GetContext() string          { return m.ContextVal }
+func (m *MockUnitID) GetModule() string           { return m.ModuleVal }
+func (m *MockUnitID) GetComponent() string        { return m.ComponentVal }
+func (m *MockUnitID) GetTool() string             { return m.ToolVal }
+func (m *MockUnitID) GetSpec() string             { return m.SpecVal }
+func (m *MockUnitID) GetExtra() map[string]string { return m.ExtraVal }
 
-func (m *MockUnitID) Shortname() string {
-	if m.SpecVal != "" {
-		return m.SpecVal
+func (m *MockUnitID) DisplayName() string {
+	switch m.ContextVal {
+	case "test":
+		if m.SpecVal != "" {
+			return m.SpecVal + ": " + m.ToolVal
+		}
+		testname := m.ExtraVal["testname"]
+		if testname == "" {
+			testname = m.ComponentVal
+		}
+		return testname + ": unit"
+	case "build":
+		if m.ComponentVal == m.ToolVal || m.ToolVal == "" {
+			return m.ModuleVal + ": " + m.ComponentVal
+		}
+		return m.ModuleVal + ": " + m.ComponentVal + ": " + m.ToolVal
+	case "lint":
+		return "lint:" + m.ComponentVal + ":" + m.ToolVal
+	case "scan":
+		category := m.ExtraVal["category"]
+		if category == "" {
+			category = m.ToolVal
+		}
+		return "scan:" + m.ComponentVal + ":" + category
+	default:
+		return m.ComponentVal
 	}
-	return m.ModuleVal + ":" + m.ComponentVal
 }
 
 func (m *MockUnitID) Longname() string {
@@ -46,7 +71,23 @@ func (m *MockUnitID) Longname() string {
 func (m *MockUnitID) String() string { return m.Longname() }
 
 func (m *MockUnitID) OutDir() string {
-	return "out/" + m.ContextVal + "/" + m.ModuleVal + "/" + m.ComponentVal
+	dirName := m.ComponentVal
+	if m.ToolVal != "" {
+		dirName += "-" + m.ToolVal
+	}
+	if len(m.ExtraVal) > 0 {
+		keys := make([]string, 0, len(m.ExtraVal))
+		for k := range m.ExtraVal {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if v := m.ExtraVal[k]; v != "" {
+				dirName += "-" + v
+			}
+		}
+	}
+	return "out/" + m.ContextVal + "/" + m.ModuleVal + "/" + dirName
 }
 
 // NewMockUnitID creates a MockUnitID with a fluent builder pattern.
@@ -79,6 +120,11 @@ func (m *MockUnitID) WithTool(tool string) *MockUnitID {
 
 func (m *MockUnitID) WithSpec(spec string) *MockUnitID {
 	m.SpecVal = spec
+	return m
+}
+
+func (m *MockUnitID) WithExtra(extra map[string]string) *MockUnitID {
+	m.ExtraVal = extra
 	return m
 }
 

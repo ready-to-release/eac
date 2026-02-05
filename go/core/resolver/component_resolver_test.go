@@ -412,7 +412,7 @@ func TestGetWeight_FromToolResources(t *testing.T) {
 				ComponentTypes: &config.ComponentTypesConfig{
 					ComponentTypes: map[string]*config.ComponentType{
 						"test-type": {
-							Builder: "test-builder",
+							Builders: []string{"test-builder"},
 							Amp:     tt.compTypeAmp,
 						},
 					},
@@ -541,7 +541,7 @@ func TestPoolAllocation_FromToolType(t *testing.T) {
 				ComponentTypes: &config.ComponentTypesConfig{
 					ComponentTypes: map[string]*config.ComponentType{
 						"test-type": {
-							Builder: "test-builder",
+							Builders: []string{"test-builder"},
 							Amp:     tt.compTypeAmp,
 						},
 					},

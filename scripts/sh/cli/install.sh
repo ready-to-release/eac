@@ -174,10 +174,10 @@ install_binary() {
 
         # Use the actual built r2r-cli binary from the build output
         # This is available because r2r-installer depends on r2r-cli module
-        # When running from build output: out/build/r2r-installer/sh/cli/
-        # Go up 3 levels to out/build, then access r2r-cli
+        # When running from build output: out/build/r2r-installer/bash-scripts/
+        # Go up 2 levels to out/build, then access r2r-cli/go-go/
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        built_binary="${script_dir}/../../../r2r-cli/r2r-${OS}-${ARCH}"
+        built_binary="${script_dir}/../../r2r-cli/go-go/r2r-${OS}-${ARCH}"
 
         if [[ ! -f "$built_binary" ]]; then
             echo -e "${RED}Test mode: Pre-built binary not found at ${built_binary}${NC}"

@@ -1,4 +1,5 @@
 // Command: get release-notes
+// Short: Get parsed release notes for a module
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

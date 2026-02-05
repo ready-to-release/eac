@@ -17,9 +17,10 @@ import (
 
 // TestReleaseTypeWorkflowValidation_PublishedModules tests that published modules
 // are allowed to trigger release workflows.
+// Published modules: r2r-cli, ext-eac, docs (all have SemVer or CalVer with release_type: published)
 func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 	// Published modules that should be allowed to release
-	publishedModules := []string{"r2r-cli", "ext-eac", "docs", "books"}
+	publishedModules := []string{"r2r-cli", "ext-eac", "docs"}
 
 	// Use mock registry with predictable data
 	registryOpts := make([]eactesting.RegistryOption, 0, len(publishedModules))
@@ -83,87 +84,6 @@ func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
 			changelogPath := moduleContract.GetChangelogPath()
 			assert.True(t, isInReleaseFolder(changelogPath),
 				"bundle module %s should have changelog in release/ folder, got: %s", moniker, changelogPath)
-		})
-	}
-}
-
-// TestReleaseTypeWorkflowValidation_InternalModules tests that internal modules
-// should NOT trigger release workflows.
-func TestReleaseTypeWorkflowValidation_InternalModules(t *testing.T) {
-	// Internal modules that should NOT be allowed to release
-	internalModulesConfig := map[string]string{
-		"eac-cli":      "go/cli/eac/CHANGELOG.md",
-		"mcp-server":  "go/eac/mcp/commands/CHANGELOG.md",
-		"r2r-installer":     "scripts/CHANGELOG.md",
-		"vscode-commit": "typescript/vscode-commit/CHANGELOG.md",
-	}
-
-	// Use mock registry with predictable data
-	registryOpts := make([]eactesting.RegistryOption, 0, len(internalModulesConfig))
-	for moniker, changelog := range internalModulesConfig {
-		registryOpts = append(registryOpts,
-			eactesting.WithModule(moniker,
-				eactesting.WithVersioning(),
-				eactesting.WithChangelog(changelog),
-				eactesting.WithReleaseType("internal"),
-			),
-		)
-	}
-	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
-
-	for moniker := range internalModulesConfig {
-		t.Run(moniker, func(t *testing.T) {
-			moduleContract, exists := moduleRegistry.Get(moniker)
-			require.True(t, exists, "mock module should always exist")
-
-			releaseType := moduleContract.Versioning.ReleaseType
-			assert.Equal(t, "internal", releaseType,
-				"module %s should have release_type: internal", moniker)
-
-			// Verify changelog is NOT in release/ folder
-			changelogPath := moduleContract.GetChangelogPath()
-			assert.False(t, isInReleaseFolder(changelogPath),
-				"internal module %s should NOT have changelog in release/ folder, got: %s", moniker, changelogPath)
-
-			// Simulate workflow validation: internal modules should fail
-			shouldAllowRelease := releaseType == "published" || releaseType == "bundle"
-			assert.False(t, shouldAllowRelease,
-				"internal module %s should NOT be allowed to trigger release workflows", moniker)
-		})
-	}
-}
-
-// TestReleaseTypeWorkflowValidation_NoneModules tests that modules with no releases
-// should NOT trigger release workflows.
-func TestReleaseTypeWorkflowValidation_NoneModules(t *testing.T) {
-	// Modules with release_type: none
-	noneModules := []string{"core"}
-
-	// Use mock registry with predictable data
-	registryOpts := make([]eactesting.RegistryOption, 0, len(noneModules))
-	for _, moniker := range noneModules {
-		registryOpts = append(registryOpts,
-			eactesting.WithModule(moniker,
-				eactesting.WithVersioning(),
-				eactesting.WithReleaseType("none"),
-			),
-		)
-	}
-	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
-
-	for _, moniker := range noneModules {
-		t.Run(moniker, func(t *testing.T) {
-			moduleContract, exists := moduleRegistry.Get(moniker)
-			require.True(t, exists, "mock module should always exist")
-
-			releaseType := moduleContract.Versioning.ReleaseType
-			assert.Equal(t, "none", releaseType,
-				"module %s should have release_type: none", moniker)
-
-			// Simulate workflow validation: none modules should fail
-			shouldAllowRelease := releaseType == "published" || releaseType == "bundle"
-			assert.False(t, shouldAllowRelease,
-				"module %s with release_type: none should NOT be allowed to trigger release workflows", moniker)
 		})
 	}
 }

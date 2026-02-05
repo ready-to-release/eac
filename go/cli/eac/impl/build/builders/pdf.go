@@ -183,6 +183,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 
 	pdfConcurrency := environments.GetPDFExportConcurrency()
+	pageLimit := opts.ArtifactsMode.PDFPageLimit()
 	configOpts := books.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
@@ -192,6 +193,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 		Theme:           theme,
 		OutputFormat:    fmt.Sprintf("pdf-%s", theme),
 		PDFConcurrency:  pdfConcurrency,
+		PageLimit:       pageLimit,
 	}
 	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
@@ -207,7 +209,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 		return 1
 	}
 
-	// ━━━ Step 3: Invoke pdf-tool container ━━━
+	// ━━━ Step 3: Invoke pdf-oci container ━━━
 	Logln(logWriter, "📄 Invoking PDF render container...")
 	Logln(logWriter, "   Theme: %s", theme)
 	Logln(logWriter, "   Concurrency: %d (environment: %s)", pdfConcurrency, environments.DetectRuntime())
@@ -241,7 +243,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 			Logln(logWriter, "🔄 Retrying PDF build (attempt %d/%d)...", attempt, maxRetries)
 		}
 
-		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-tool", tc)
+		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-oci", tc)
 		if execErr == nil && exitCode == 0 {
 			break
 		}
@@ -273,7 +275,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 
 	hostRepoRoot := ResolveHostRepoRoot(workspaceRoot, logWriter)
 	isDinD := IsDockerInDocker()
-	imageName := "pdf-tool:local"
+	imageName := "pdf-oci:local"
 
 	if err := MergePDFs(siteDir, pdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, book.Description, logWriter, isDinD); err != nil {
 		Logln(logWriter, "❌ PDF merge failed: %v", err)

@@ -17,41 +17,34 @@ type ComponentTypesConfig struct {
 	ComponentTypes map[string]*ComponentType `yaml:"component-types"`
 }
 
-// ComponentType defines how to process files of a certain type for building.
-// Linting configuration is separate - see LintProvider in lint_providers.go.
+// ComponentType defines how to process files of a certain type.
 type ComponentType struct {
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	// Empty for non-file-based components like "book"
 	Extensions []string `yaml:"extensions" json:"extensions"`
 
-	// ToolChain is an ordered list of tools to run in sequence within a single UOW.
-	// Each tool depends on the previous tool completing. When set, this takes
-	// precedence over the legacy Builder field.
-	// Example: ["preprocess", "mkdocs-pdf"] runs preprocess first, then mkdocs-pdf.
-	ToolChain []string `yaml:"tool_chain,omitempty" json:"tool_chain,omitempty"`
+	// Builders are the build tools for this component type (tool IDs).
+	// For multi-step builds, tools execute in order (e.g., ["mkdocs-preprocess", "pdf-oci"]).
+	// Empty or omitted = not buildable.
+	Builders []string `yaml:"builders,omitempty" json:"builders,omitempty"`
 
-	// Builder is the build handler to use (e.g., "go", "mkdocs", "buildx")
-	// Deprecated: Use Tools for new component types. Kept for backwards compatibility.
-	Builder string `yaml:"builder,omitempty" json:"builder,omitempty"`
+	// Linters are the lint tools for this component type (tool IDs).
+	// Empty or omitted = not lintable.
+	Linters []string `yaml:"linters,omitempty" json:"linters,omitempty"`
 
-	// Scanners are the default security scanners for this component type (e.g., ["sbom", "vuln", "secrets", "sast"])
-	// Empty or omitted means the component type is not scannable.
+	// Testers are the test tools for this component type (tool IDs).
+	// Empty or omitted = not testable.
+	Testers []string `yaml:"testers,omitempty" json:"testers,omitempty"`
+
+	// Scanners are the security scanner categories for this component type
+	// (e.g., ["sbom", "vuln", "secrets", "sast"]).
+	// Empty or omitted = not scannable.
 	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
-
-	// Testable indicates this component type supports testing (e.g., go test, npm test)
-	Testable bool `yaml:"testable,omitempty" json:"testable,omitempty"`
-
-	// Lintable indicates this component type supports linting
-	// When true, lint providers can be configured for this type
-	Lintable bool `yaml:"lintable,omitempty" json:"lintable,omitempty"`
 
 	// BuildAfter specifies component types that must complete before this one
 	// within the same module. Used for intra-module dependency ordering.
 	// Example: ["go"] means this component waits for the "go" component to finish.
 	BuildAfter []string `yaml:"build_after,omitempty" json:"build_after,omitempty"`
-
-	// Requirements are system dependencies needed for building (e.g., ["go"], ["docker"])
-	Requirements []string `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 
 	// DefaultRoot is the default root path pattern for this component type.
 	// Supports {moniker} variable for module-specific paths (e.g., "specs/{moniker}").
@@ -71,7 +64,7 @@ type ComponentType struct {
 	// Pool specifies which resource pool this component uses.
 	// Valid values: "host" (default), "docker".
 	// "docker" means the component runs in a container and uses BOTH pools.
-	// If not specified, inferred from Requirements (docker requirement -> docker pool).
+	// Pool is determined at tool bind time based on tool bindings.
 	Pool string `yaml:"pool,omitempty" json:"pool,omitempty"`
 
 	// Amp is the weight amplifier for this component type.
@@ -144,49 +137,49 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 	return ""
 }
 
-// HasBuilder returns true if this component type has a builder configured.
-func (c *ComponentType) HasBuilder() bool {
-	return c.Builder != "" || len(c.ToolChain) > 0
-}
-
-// GetTools returns the list of tools to run for this component type.
-// If ToolChain is set, returns it directly. Otherwise, falls back to a single-element
-// slice containing Builder for backwards compatibility. Returns nil if neither is set.
-func (c *ComponentType) GetTools() []string {
+// GetBuilders returns the builder tool IDs for this component type.
+// For multi-step builds, tools execute in order.
+func (c *ComponentType) GetBuilders() []string {
 	if c == nil {
 		return nil
 	}
-	if len(c.ToolChain) > 0 {
-		return c.ToolChain
-	}
-	if c.Builder != "" {
-		return []string{c.Builder}
-	}
-	return nil
+	return c.Builders
 }
 
-// HasToolChain returns true if this component type has multiple tools configured.
-// A tool chain means tools are run in sequence with dependencies between them.
-func (c *ComponentType) HasToolChain() bool {
-	if c == nil {
-		return false
-	}
-	return len(c.ToolChain) > 1
-}
-
-// IsBuildable returns true if this component type has a builder configured.
+// IsBuildable returns true if this component type has builders configured.
 func (c *ComponentType) IsBuildable() bool {
-	return c.HasBuilder()
+	return len(c.GetBuilders()) > 0
 }
 
-// IsTestable returns true if this component type supports testing.
-func (c *ComponentType) IsTestable() bool {
-	return c.Testable
+// HasToolChain returns true if this component type has multiple builders (multi-step build).
+func (c *ComponentType) HasToolChain() bool {
+	return len(c.GetBuilders()) > 1
+}
+
+// GetLinters returns the linter tool IDs for this component type.
+func (c *ComponentType) GetLinters() []string {
+	if c == nil {
+		return nil
+	}
+	return c.Linters
 }
 
 // IsLintable returns true if this component type supports linting.
 func (c *ComponentType) IsLintable() bool {
-	return c.Lintable
+	return len(c.GetLinters()) > 0
+}
+
+// GetTesters returns the tester tool IDs for this component type.
+func (c *ComponentType) GetTesters() []string {
+	if c == nil {
+		return nil
+	}
+	return c.Testers
+}
+
+// IsTestable returns true if this component type supports testing.
+func (c *ComponentType) IsTestable() bool {
+	return len(c.GetTesters()) > 0
 }
 
 // IsScannable returns true if this component type has scanners configured.
@@ -200,15 +193,14 @@ func (c *ComponentType) GetScanners() []string {
 	return c.Scanners
 }
 
-// GetBuildAfter returns the list of component types that must complete
-// before this one within the same module.
+// GetBuildAfter returns component types that must complete before this type.
+// Creates intra-module dependencies: all components of this type wait for
+// all components of the listed types within the same module.
 func (c *ComponentType) GetBuildAfter() []string {
+	if c == nil {
+		return nil
+	}
 	return c.BuildAfter
-}
-
-// GetRequirements returns the system dependencies needed for this component type.
-func (c *ComponentType) GetRequirements() []string {
-	return c.Requirements
 }
 
 // GetWeight returns the scheduling weight for this component type.
@@ -239,28 +231,18 @@ func (c *ComponentType) GetMemory() string {
 }
 
 // GetPool returns the resource pool type for this component.
-// Returns "host" if not specified and no docker requirement.
-// Returns "docker" if Pool field is "docker" OR if Requirements includes "docker".
+// Returns "host" if not specified.
+// Returns "docker" if Pool field is "docker".
 func (c *ComponentType) GetPool() string {
-	// Explicit pool setting takes precedence
-	if c.Pool == "host" || c.Pool == "docker" {
-		return c.Pool
-	}
-	// Infer from requirements
-	if c.RequiresDocker() {
+	if c.Pool == "docker" {
 		return "docker"
 	}
 	return "host"
 }
 
-// RequiresDocker returns true if this component requires docker.
+// RequiresDocker returns true if this component uses the docker pool.
 func (c *ComponentType) RequiresDocker() bool {
-	for _, req := range c.Requirements {
-		if req == "docker" {
-			return true
-		}
-	}
-	return false
+	return c.GetPool() == "docker"
 }
 
 // GetDockerWeight returns the docker pool weight.
@@ -426,36 +408,11 @@ func getFileExtension(path string) string {
 	return ""
 }
 
-// GetBuilder returns the builder for a component type, or empty string if none.
+// GetBuilder returns the first builder for a component type, or empty string if none.
 func (c *ComponentTypesConfig) GetBuilder(componentName string) string {
 	ct := c.Get(componentName)
-	if ct == nil {
+	if ct == nil || len(ct.Builders) == 0 {
 		return ""
 	}
-	return ct.Builder
-}
-
-// GetBuildRequirements returns all system dependencies needed for a list of components.
-// Deduplicates requirements across components.
-func (c *ComponentTypesConfig) GetBuildRequirements(components []string) []string {
-	if c == nil {
-		return nil
-	}
-
-	depsMap := make(map[string]bool)
-	for _, compName := range components {
-		ct := c.Get(compName)
-		if ct == nil {
-			continue
-		}
-		for _, req := range ct.Requirements {
-			depsMap[req] = true
-		}
-	}
-
-	deps := make([]string, 0, len(depsMap))
-	for dep := range depsMap {
-		deps = append(deps, dep)
-	}
-	return deps
+	return ct.Builders[0]
 }

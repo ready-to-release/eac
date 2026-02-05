@@ -1,4 +1,5 @@
 // Command: get changelog
+// Short: Get parsed changelog data for a module
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

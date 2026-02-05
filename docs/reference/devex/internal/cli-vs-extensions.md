@@ -1,6 +1,11 @@
 # R2R CLI vs Extensions: Understanding the Architecture
 
-This guide explains the two-tier architecture of R2R: the core CLI framework and containerized extensions.
+This guide explains the two-tier architecture of R2R:
+
+1. The core CLI framework
+2. The containerized extensions.
+
+test
 
 ## Overview
 

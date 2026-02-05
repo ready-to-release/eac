@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -27,6 +28,10 @@ type Module struct {
 	Versioning    *ModuleVersioning     `yaml:"versioning,omitempty"`
 	Components    ModuleComponents      `yaml:"components"`        // Component types for this module (required)
 	Linting       *domain.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
+
+	// Top-level parameter shorthands (promoted to Parameters during expansion)
+	GoRoot        string `yaml:"go_root,omitempty"`        // Shorthand for parameters.go_root
+	ArtifactMatrixRef string `yaml:"artifact_matrix,omitempty"` // Reference to an artifact matrix name
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -809,4 +814,90 @@ func deriveChangelogPath(m *Module) string {
 	default:
 		return ""
 	}
+}
+
+// DiscoverContainerModules scans containers/ directory for Dockerfiles and creates
+// module definitions for any containers not explicitly defined.
+// This enables convention-over-configuration: containers/{name}/Dockerfile automatically
+// becomes a module with moniker={name} using the "container" template.
+//
+// Parameters:
+//   - repoRoot: repository root directory
+//   - explicitMonikers: set of monikers already defined in repository.yml
+//
+// Returns discovered modules (empty slice if none found or on error).
+func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool) []Module {
+	containersDir := filepath.Join(repoRoot, "containers")
+
+	// Check if containers directory exists
+	if _, err := os.Stat(containersDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	// Find all Dockerfiles
+	pattern := filepath.Join(containersDir, "*", "Dockerfile")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil
+	}
+
+	var modules []Module
+	for _, dockerfile := range matches {
+		// Extract container name from path (parent directory name)
+		dir := filepath.Dir(dockerfile)
+		moniker := filepath.Base(dir)
+
+		// Skip if already explicitly declared
+		if explicitMonikers[moniker] {
+			continue
+		}
+
+		// Skip non-OCI containers (internal tools like cgo-tool, drawio-tool)
+		// Convention: only auto-discover containers with -oci suffix
+		if !strings.HasSuffix(moniker, "-oci") {
+			continue
+		}
+
+		// Create module with container template
+		modules = append(modules, Module{
+			Moniker:     moniker,
+			Name:        deriveContainerName(moniker),
+			Description: fmt.Sprintf("Auto-discovered container from containers/%s", moniker),
+			Template:    "container-template",
+			DependsOn:   []string{},
+		})
+	}
+
+	// Sort for deterministic ordering
+	sort.Slice(modules, func(i, j int) bool {
+		return modules[i].Moniker < modules[j].Moniker
+	})
+
+	return modules
+}
+
+// deriveContainerName creates a human-readable name from a container moniker.
+// Examples:
+//   - "pdf-oci" -> "PDF Container"
+//   - "nginx-oci" -> "Nginx Container"
+//   - "mkdocs-dev-oci" -> "Mkdocs Dev Container"
+func deriveContainerName(moniker string) string {
+	// Remove -oci suffix
+	name := strings.TrimSuffix(moniker, "-oci")
+
+	// Split on hyphens and title-case each word
+	parts := strings.Split(name, "-")
+	for i, part := range parts {
+		if len(part) > 0 {
+			// Special case: all caps for known acronyms
+			upper := strings.ToUpper(part)
+			if upper == "PDF" || upper == "CLI" || upper == "API" || upper == "OCI" {
+				parts[i] = upper
+			} else {
+				parts[i] = strings.ToUpper(part[:1]) + part[1:]
+			}
+		}
+	}
+
+	return strings.Join(parts, " ") + " Container"
 }

@@ -113,7 +113,7 @@ type TUILayoutConfig struct {
 
 // SchedulingTimeouts holds scheduling-related timeouts.
 type SchedulingTimeouts struct {
-	CapacityRecalc Duration `yaml:"capacity_recalc"` // Capacity recalculation interval
+	CapacityRecalc Duration `yaml:"capacity_recalc"`  // Capacity recalculation interval
 }
 
 // DefaultTimeoutConfig returns the default timeout configuration.
@@ -151,7 +151,7 @@ func DefaultTimeoutConfig() *TimeoutConfig {
 			Build:          Duration(30 * time.Minute),
 			Test:           Duration(30 * time.Minute),
 			EvidenceMaxAge: Duration(24 * time.Hour),
-			WorkerTimeout:  Duration(5 * time.Minute),
+			WorkerTimeout:  Duration(3 * time.Minute),
 		},
 		TUI: TUITimeouts{
 			AutoScrollResume: Duration(8 * time.Second),
@@ -311,6 +311,5 @@ func MergeTimeoutConfigs(defaults, override *TimeoutConfig) *TimeoutConfig {
 	if override.Scheduling.CapacityRecalc != 0 {
 		result.Scheduling.CapacityRecalc = override.Scheduling.CapacityRecalc
 	}
-
 	return &result
 }

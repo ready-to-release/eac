@@ -1,4 +1,5 @@
 // Command: get execution-order
+// Short: Get topologically sorted execution order for modules
 // Usage: get execution-order <moniker1> <moniker2> ...
 //
 //	--as-yaml: Output as YAML (default)

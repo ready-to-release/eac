@@ -146,11 +146,11 @@ func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 	for _, compName := range module.GetEnabledComponents() {
 		compTypeName := module.Components.GetComponentType(compName)
 		compType := cfg.ComponentTypes.Get(compTypeName)
-		if compType == nil || !compType.HasBuilder() {
+		if compType == nil || !compType.IsBuildable() {
 			continue
 		}
 
-		builderName := compType.Builder
+		builderName := compType.GetBuilders()[0]
 
 		// Try native handler first (for specialized handlers like go, mkdocs, docker)
 		mu.RLock()

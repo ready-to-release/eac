@@ -49,7 +49,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 
 	// Run orchestrator
 	monikers := []string{"module1", "module2", "module3"}
-	orch := New(config, worker)
+	orch := New(&config, worker)
 	results, err := orch.Run(monikers)
 	orch.Close()
 
@@ -98,7 +98,7 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 
 	// Run orchestrator
 	monikers := []string{"module1", "fail-me", "module2"}
-	orch := New(config, worker)
+	orch := New(&config, worker)
 	results, err := orch.Run(monikers)
 	orch.Close() // Must close to release file handles
 
@@ -280,7 +280,7 @@ func TestDisplayManager(t *testing.T) {
 	// Create display manager with logger writing to buffer
 	var buf bytes.Buffer
 	logger := log.New(&buf, "", 0)
-	dm := newDisplayManager(logger, "testing", 3, 100, false) // 100ms for fast test
+	dm := newDisplayManager(logger, "testing", 3, 100, false, nil) // 100ms for fast test
 
 	// Start display manager
 	dm.start()
@@ -335,7 +335,7 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 
 	// Create orchestrator
 	worker := func(moniker string, logWriter io.Writer) int { return 0 }
-	orch := New(config, worker)
+	orch := New(&config, worker)
 
 	// Create mock results
 	results := []WorkResult{

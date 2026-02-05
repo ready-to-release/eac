@@ -42,15 +42,23 @@ type RepositoryConfig struct {
 
 // RepositorySettings holds repository-level configuration.
 type RepositorySettings struct {
-	Type              string            `yaml:"type"`                  // mono, poly, adjunct
-	TrunkBranch       string            `yaml:"trunk_branch"`          // main branch name
-	MaxBranchAgeDays  int               `yaml:"max_branch_age_days"`   // max age for feature branches
-	Schemes           []string          `yaml:"schemes"`               // valid versioning schemes for releasable modules (Implicit always available)
-	PR                PRConfig          `yaml:"pr"`                    // PR workflow config
-	Versioning        VersioningConfig  `yaml:"versioning"`            // versioning constraints
-	Parallelism       ParallelismConfig `yaml:"parallelism"`           // parallelism limits
-	Remote            RemoteConfig      `yaml:"remote"`                // Remote VCS repository configuration
-	OptimizeGitLsInCI bool              `yaml:"optimize_git_ls_in_ci"` // Use GitHub API for file listing in CI (faster than git ls-files)
+	Type              string              `yaml:"type"`                  // mono, poly, adjunct
+	TrunkBranch       string              `yaml:"trunk_branch"`          // main branch name
+	MaxBranchAgeDays  int                 `yaml:"max_branch_age_days"`   // max age for feature branches
+	Schemes           []string            `yaml:"schemes"`               // valid versioning schemes for releasable modules (Implicit always available)
+	PR                PRConfig            `yaml:"pr"`                    // PR workflow config
+	Versioning        VersioningConfig    `yaml:"versioning"`            // versioning constraints
+	Parallelism       ParallelismConfig   `yaml:"parallelism"`           // parallelism limits
+	Remote            RemoteConfig        `yaml:"remote"`                // Remote VCS repository configuration
+	OptimizeGitLsInCI bool                `yaml:"optimize_git_ls_in_ci"` // Use GitHub API for file listing in CI (faster than git ls-files)
+	GhostTracking     GhostTrackingConfig `yaml:"ghost-tracking"`        // Ghost tracking configuration
+}
+
+// GhostTrackingConfig holds configuration for ghost (dark launch) code tracking.
+type GhostTrackingConfig struct {
+	// Alias is the prefix used to identify ghosts (default: "ghost")
+	// Results in patterns: alias-*, alias.*, alias
+	Alias string `yaml:"ghost-alias"`
 }
 
 // RemoteConfig holds remote VCS repository configuration.
@@ -620,6 +628,7 @@ func (c *RepositoryConfig) AllMonikers() []string {
 
 // ExpandModuleTemplates expands module templates for all modules that reference them.
 // This should be called after loading and merging configs but before ApplyComponentDefaults.
+// Also discovers container modules from containers/*/Dockerfile that aren't explicitly defined.
 func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 	// Load module templates from defaults
 	templatesConfig, err := LoadModuleTemplates(repoRoot)
@@ -633,17 +642,41 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 		templates = templatesConfig.Templates
 	}
 
+	// Load artifact matrices from the same defaults file
+	var matrices *ArtifactMatricesConfig
+	data, matrixErr := loadDefaultFile(repoRoot, "module-templates.yml")
+	if matrixErr == nil {
+		matrices, _ = LoadArtifactMatrices(data)
+	}
+
 	// Load discovery conventions
 	conventions := LoadDiscoveryConventions(repoRoot)
 
 	// Get owner from repository config
 	owner := c.Repository.Remote.Owner
 
-	// Expand each module
+	// Build set of explicitly defined monikers for container discovery
+	explicitMonikers := make(map[string]bool)
+	for _, m := range c.Modules {
+		explicitMonikers[m.Moniker] = true
+	}
+
+	// Discover container modules not explicitly defined (mono repos only)
+	if c.Repository.Type == "mono" {
+		discoveredContainers := DiscoverContainerModules(repoRoot, explicitMonikers)
+		if len(discoveredContainers) > 0 {
+			c.Modules = append(c.Modules, discoveredContainers...)
+		}
+	}
+
+	// Expand each module (including discovered ones)
 	for i := range c.Modules {
 		if err := ExpandModuleFromTemplate(&c.Modules[i], templates, conventions, repoRoot, owner); err != nil {
 			return err
 		}
+
+		// Expand artifact matrix reference into Go component artifacts
+		expandArtifactMatrixForModule(&c.Modules[i], matrices)
 	}
 
 	return nil

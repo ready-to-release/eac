@@ -102,8 +102,8 @@ func TestUoWTracker_RecordStart_CreatesOutputDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
-	// Expected directory path: out/build/test-module/go_go/
-	expectedDir := filepath.Join(tmpDir, "out", "build", "test-module", "go_go")
+	// Expected directory path: out/build/test-module/go-go/
+	expectedDir := filepath.Join(tmpDir, "out", "build", "test-module", "go-go")
 
 	// Verify directory does not exist before RecordStart
 	_, err := os.Stat(expectedDir)
@@ -138,8 +138,8 @@ func TestUoWTracker_RecordStart_AllContexts(t *testing.T) {
 			tmpDir := t.TempDir()
 			id := createTestUnitID(ctx, "module", "component", "tool")
 
-			// Expected directory path: out/{context}/module/component_tool/
-			expectedDir := filepath.Join(tmpDir, "out", string(ctx), "module", "component_tool")
+			// Expected directory path: out/{context}/module/component-tool/
+			expectedDir := filepath.Join(tmpDir, "out", string(ctx), "module", "component-tool")
 
 			// TODO: After implementation, verify directory is created for each context
 			_ = expectedDir
@@ -167,8 +167,8 @@ func TestUoWTracker_RecordComplete_WritesManifestToDisk(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
 
-	// Expected manifest path: out/build/test-module/go_go/uow.manifest.json
-	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go_go", "uow.manifest.json")
+	// Expected manifest path: out/build/test-module/go-go/uow.manifest.json
+	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
 
 	// TODO: After implementation:
 	// 1. Call tracker.RecordComplete(id, manifest)
@@ -201,7 +201,7 @@ func TestUoWTracker_RecordComplete_WithoutRecordStart_StillWorks(t *testing.T) {
 	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
 	manifest.Duration = 30 * time.Second // Pre-set duration since no start time
 
-	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go_go", "uow.manifest.json")
+	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
 
 	// RecordComplete should work even without RecordStart
 	// Duration will use the pre-set value since no start time exists
@@ -216,7 +216,7 @@ func TestUoWTracker_RecordComplete_CreatesDirectoryIfMissing(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "new-module", "go", "go")
 	manifest := createTestManifest(workunit.ContextBuild, "new-module", "go", "go")
 
-	expectedDir := filepath.Join(tmpDir, "out", "build", "new-module", "go_go")
+	expectedDir := filepath.Join(tmpDir, "out", "build", "new-module", "go-go")
 
 	// Directory should not exist before RecordComplete
 	_, err := os.Stat(expectedDir)
@@ -273,7 +273,7 @@ func TestUoWTracker_RecordComplete_WritesAllFields(t *testing.T) {
 		Version:    "2.0.0",
 	}
 
-	expectedPath := filepath.Join(tmpDir, "out", "test", "core", "go_gotest", "uow.manifest.json")
+	expectedPath := filepath.Join(tmpDir, "out", "test", "core", "go-gotest", "uow.manifest.json")
 
 	// TODO: After implementation:
 	// 1. Call tracker.RecordComplete(id, manifest)
@@ -328,7 +328,7 @@ func TestUoWTracker_RecordComplete_AllContexts(t *testing.T) {
 			id := createTestUnitID(tt.context, tt.module, tt.component, tt.tool)
 			manifest := createTestManifest(tt.context, tt.module, tt.component, tt.tool)
 
-			dirName := tt.component + "_" + tt.tool
+			dirName := tt.component + "-" + tt.tool
 			expectedPath := filepath.Join(tmpDir, "out", string(tt.context), tt.module, dirName, "uow.manifest.json")
 
 			// TODO: After implementation, verify each context works correctly
@@ -408,7 +408,7 @@ func TestUoWTracker_RecordCacheHit_ReturnsErrorWhenArtifactsCorrupt(t *testing.T
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create manifest and artifact, but with mismatched hash
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 
 	// Create artifact with actual content
@@ -437,7 +437,7 @@ func TestUoWTracker_RecordCacheHit_SucceedsWhenArtifactsValid(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create UoW directory
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -466,7 +466,7 @@ func TestUoWTracker_RecordCacheHit_ValidatesMultipleArtifacts(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create UoW directory
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -503,7 +503,7 @@ func TestUoWTracker_RecordCacheHit_FailsIfAnyArtifactMissing(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create UoW directory
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -717,7 +717,7 @@ func TestUoWTracker_RecordCacheHit_ManifestExistsButInvalid(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create manifest directory and write invalid JSON
-	dirName := "go_go"
+	dirName := "go-go"
 	manifestDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -737,7 +737,7 @@ func TestUoWTracker_RecordCacheHit_ManifestExistsButEmpty(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create manifest directory and write empty file
-	dirName := "go_go"
+	dirName := "go-go"
 	manifestDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -759,8 +759,8 @@ func TestUoWTracker_WorksWithSpecialCharactersInNames(t *testing.T) {
 	id := createTestUnitID(workunit.ContextBuild, "my-complex-module", "go-component", "my-tool")
 	manifest := createTestManifest(workunit.ContextBuild, "my-complex-module", "go-component", "my-tool")
 
-	// Expected path: out/build/my-complex-module/go-component_my-tool/uow.manifest.json
-	expectedDir := filepath.Join(tmpDir, "out", "build", "my-complex-module", "go-component_my-tool")
+	// Expected path: out/build/my-complex-module/go-component-my-tool/uow.manifest.json
+	expectedDir := filepath.Join(tmpDir, "out", "build", "my-complex-module", "go-component-my-tool")
 
 	// TODO: After implementation, verify special characters in names work correctly
 	_ = id
@@ -799,7 +799,7 @@ func TestUoWTracker_FullWorkflow_Success(t *testing.T) {
 	// 4. Verify manifest on disk
 
 	// Create UoW directory and artifacts
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -826,7 +826,7 @@ func TestUoWTracker_FullWorkflow_CacheHit(t *testing.T) {
 	// 2. Second run: RecordCacheHit should succeed
 
 	// Simulate existing build with valid artifacts
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -854,7 +854,7 @@ func TestUoWTracker_FullWorkflow_CacheMiss(t *testing.T) {
 	// 3. Caller should then RecordStart and rebuild
 
 	// Create manifest with artifact reference
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -947,7 +947,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 				Version:    "1.0.0",
 			}
 
-			dirName := tt.component + "_" + tt.tool
+			dirName := tt.component + "-" + tt.tool
 			expectedPath := filepath.Join(tmpDir, "out", string(tt.context), tt.module, dirName, "uow.manifest.json")
 
 			// TODO: After implementation:

@@ -164,7 +164,13 @@ func TestUoWTrackerAdapter_RecordComplete(t *testing.T) {
 
 	// Verify manifest was written
 	reader := NewReader(f.workspaceRoot)
-	loaded, err := reader.GetUoW(workunit.ContextBuild, "test-module", "go", "go")
+	id := workunit.UnitID{
+		Context:   workunit.ContextBuild,
+		Module:    "test-module",
+		Component: "go",
+		Tool:      "go",
+	}
+	loaded, err := reader.GetUoW(id)
 	require.NoError(t, err)
 	assert.Equal(t, "test-module", loaded.Module)
 }
@@ -332,14 +338,16 @@ type testUnitID struct {
 	module    string
 	component string
 	tool      string
+	extra     map[string]string
 }
 
-func (t *testUnitID) GetContext() string   { return t.context }
-func (t *testUnitID) GetModule() string    { return t.module }
-func (t *testUnitID) GetComponent() string { return t.component }
-func (t *testUnitID) GetTool() string      { return t.tool }
-func (t *testUnitID) GetSpec() string      { return "" }
-func (t *testUnitID) Shortname() string    { return t.module + ":" + t.component }
+func (t *testUnitID) GetContext() string          { return t.context }
+func (t *testUnitID) GetModule() string           { return t.module }
+func (t *testUnitID) GetComponent() string        { return t.component }
+func (t *testUnitID) GetTool() string             { return t.tool }
+func (t *testUnitID) GetSpec() string             { return "" }
+func (t *testUnitID) GetExtra() map[string]string { return t.extra }
+func (t *testUnitID) DisplayName() string         { return t.component }
 func (t *testUnitID) Longname() string {
 	return t.context + ":" + t.module + ":" + t.component + ":" + t.tool
 }
@@ -360,13 +368,14 @@ type testManifest struct {
 	artifacts  []interfaces.OutputArtifactPort
 }
 
-func (m *testManifest) GetContext() string                        { return m.context }
-func (m *testManifest) GetModule() string                         { return m.module }
-func (m *testManifest) GetComponent() string                      { return m.component }
-func (m *testManifest) GetTool() string                           { return m.tool }
-func (m *testManifest) GetExitCode() int                          { return m.exitCode }
-func (m *testManifest) GetInputHash() string                      { return m.inputHash }
-func (m *testManifest) GetExecutedAt() time.Time                  { return m.executedAt }
-func (m *testManifest) GetDuration() time.Duration                { return m.duration }
+func (m *testManifest) GetContext() string                            { return m.context }
+func (m *testManifest) GetModule() string                             { return m.module }
+func (m *testManifest) GetComponent() string                          { return m.component }
+func (m *testManifest) GetTool() string                               { return m.tool }
+func (m *testManifest) GetExitCode() int                              { return m.exitCode }
+func (m *testManifest) GetInputHash() string                          { return m.inputHash }
+func (m *testManifest) GetExecutedAt() time.Time                      { return m.executedAt }
+func (m *testManifest) GetDuration() time.Duration                    { return m.duration }
 func (m *testManifest) GetArtifacts() []interfaces.OutputArtifactPort { return m.artifacts }
-func (m *testManifest) GetOutputHash() string                     { return m.outputHash }
+func (m *testManifest) GetOutputHash() string                         { return m.outputHash }
+func (m *testManifest) GetExtra() map[string]string                   { return nil }

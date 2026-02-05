@@ -3,6 +3,7 @@ package builders
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -12,11 +13,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
@@ -25,6 +27,87 @@ func init() {
 
 // GoHandler builds Go modules (libraries, CLIs, tests).
 type GoHandler struct{}
+
+// goToolOptions controls which tool (system go or container go-oci) to use.
+type goToolOptions struct {
+	// UseContainer forces use of container tool (go-oci) instead of system go.
+	UseContainer bool
+
+	// RaceDetection enables race detector (requires CGO, uses container).
+	RaceDetection bool
+
+	// CGOEnabled forces CGO support (uses container for reliable cross-platform CGO).
+	CGOEnabled bool
+}
+
+// resolveToolName determines whether to use system 'go' or container 'go-oci'.
+// Container is used when CGO or race detection is needed.
+func (h *GoHandler) resolveToolName(opts goToolOptions) string {
+	// Use container for specific scenarios
+	if opts.UseContainer || opts.RaceDetection || opts.CGOEnabled {
+		return "go-oci"
+	}
+	// Default: native go through tool system
+	return "go"
+}
+
+// executeTool runs the go tool with given args and env overrides.
+// Uses the tool system instead of direct exec.Command.
+func (h *GoHandler) executeTool(ctx context.Context, toolName, moduleRoot, workspaceRoot string,
+	logWriter io.Writer, args []string, envOverrides map[string]string) int {
+
+	registry := tool.GlobalRegistry()
+	executor := tool.GlobalExecutor()
+
+	// Get tool definition
+	toolDef, ok := registry.Get(toolName)
+	if !ok {
+		Logln(logWriter, "Tool not found: %s", toolName)
+		return 1
+	}
+
+	// Build placeholders for mount path resolution
+	placeholders := map[string]string{
+		"{workspace}": workspaceRoot,
+		"{module}":    moduleRoot,
+	}
+
+	// Build execution context
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: workspaceRoot,
+		ModuleRoot:    moduleRoot,
+		LogWriter:     logWriter,
+		Operation:     tool.OperationBuild,
+		ArgsOverrides: args,
+		EnvOverrides:  envOverrides,
+		Placeholders:  placeholders,
+	}
+
+	result, err := executor.Execute(ctx, toolDef, execCtx)
+	if err != nil {
+		Logln(logWriter, "Tool execution error: %v", err)
+		return 1
+	}
+
+	return result.ExitCode
+}
+
+// executeGoTool is a package-level helper that executes go commands via the tool system.
+// It uses the default "go" system tool unless specific scenarios (CGO, race) require "go-oci".
+func executeGoTool(moduleRoot, workspaceRoot string, logWriter io.Writer, args []string, envOverrides map[string]string) int {
+	h := &GoHandler{}
+	return h.executeTool(context.Background(), "go", moduleRoot, workspaceRoot, logWriter, args, envOverrides)
+}
+
+// executeGoToolWithEnv is like executeGoTool but for cross-compilation with GOOS/GOARCH.
+func executeGoToolWithEnv(moduleRoot, workspaceRoot string, logWriter io.Writer, args []string, goos, goarch string) int {
+	envOverrides := map[string]string{
+		"GOOS":        goos,
+		"GOARCH":      goarch,
+		"CGO_ENABLED": "0",
+	}
+	return executeGoTool(moduleRoot, workspaceRoot, logWriter, args, envOverrides)
+}
 
 func (h *GoHandler) Name() string { return "go" }
 
@@ -160,7 +243,7 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
 		Logln(logWriter, "Running: go mod tidy")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+		if exitCode := executeGoTool(moduleRoot, workspaceRoot, logWriter, []string{"mod", "tidy"}, nil); exitCode != 0 {
 			Logln(logWriter, "❌ go mod tidy failed")
 			return exitCode
 		}
@@ -168,7 +251,7 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 
 	// Step 2: go generate
 	Logln(logWriter, "Running: go generate ./...")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
+	if exitCode := executeGoTool(moduleRoot, workspaceRoot, logWriter, []string{"generate", "./..."}, nil); exitCode != 0 {
 		Logln(logWriter, "❌ go generate failed")
 		return exitCode
 	}
@@ -176,7 +259,7 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 	// Step 3: Build based on per-module artifact definitions
 	if !module.HasBuildArtifacts() {
 		// No artifacts = library (compile-only verification)
-		return buildLibrary(module, moduleRoot, outputDir, logWriter)
+		return buildLibrary(module, moduleRoot, workspaceRoot, outputDir, logWriter)
 	}
 
 	// Check artifact types
@@ -185,7 +268,7 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 
 	if hasTests {
 		// Test module - run tests and capture results
-		return buildTestModule(module, moduleRoot, outputDir, logWriter, opts)
+		return buildTestModule(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
 	}
 
 	if hasExecutables {
@@ -199,13 +282,13 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 	}
 
 	// Fallback: library behavior
-	return buildLibrary(module, moduleRoot, outputDir, logWriter)
+	return buildLibrary(module, moduleRoot, workspaceRoot, outputDir, logWriter)
 }
 
 // buildLibrary builds a library module (compile-only verification).
-func buildLibrary(module *modules.ModuleContract, moduleRoot, outputDir string, logWriter io.Writer) int {
+func buildLibrary(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer) int {
 	Logln(logWriter, "Running: go build ./...")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
+	if exitCode := executeGoTool(moduleRoot, workspaceRoot, logWriter, []string{"build", "./..."}, nil); exitCode != 0 {
 		Logln(logWriter, "❌ go build failed")
 		return exitCode
 	}
@@ -215,16 +298,18 @@ func buildLibrary(module *modules.ModuleContract, moduleRoot, outputDir string, 
 }
 
 // buildTestModule runs tests and captures results.
-func buildTestModule(module *modules.ModuleContract, moduleRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildTestModule(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "Running: go test ./... -json")
 
 	// First verify it compiles
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
+	if exitCode := executeGoTool(moduleRoot, workspaceRoot, logWriter, []string{"build", "./..."}, nil); exitCode != 0 {
 		Logln(logWriter, "❌ go build failed")
 		return exitCode
 	}
 
 	// Run tests with JSON output for results capture
+	// Note: We still use exec.Command here because we need to redirect stdout to a file
+	// The tool system writes to LogWriter, but tests need JSON output captured separately
 	resultsPath := filepath.Join(outputDir, "results.json")
 	resultsFile, err := os.Create(resultsPath)
 	if err != nil {
@@ -255,7 +340,7 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, w
 	binaryPath := filepath.Join(outputDir, binaryName)
 
 	Logln(logWriter, "Running: go build -o %s", binaryPath)
-	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
+	exitCode := executeGoTool(moduleRoot, workspaceRoot, logWriter, []string{"build", "-o", binaryPath}, nil)
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 	}
@@ -297,6 +382,24 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot,
 		return 1
 	}
 
+	// Filter targets based on artifacts mode (reduced vs all)
+	if opts.ArtifactsMode.IsValid() {
+		var filteredTargets []buildTarget
+		for _, target := range targets {
+			if opts.ArtifactsMode.ShouldBuildTarget(target.goos, target.goarch, target.compression) {
+				filteredTargets = append(filteredTargets, target)
+			}
+		}
+		if len(filteredTargets) == 0 {
+			Logln(logWriter, "⚠️  No targets match artifacts mode '%s' - skipping build", opts.ArtifactsMode)
+			return 0
+		}
+		if len(filteredTargets) < len(targets) {
+			Logln(logWriter, "📦 Artifacts mode '%s': building %d/%d targets", opts.ArtifactsMode, len(filteredTargets), len(targets))
+		}
+		targets = filteredTargets
+	}
+
 	// Build ldflags for version injection
 	ldflags := buildLdflags(module, moduleRoot, workspaceRoot, opts.Version, logWriter)
 
@@ -318,18 +421,10 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot,
 			args = append(args, "-ldflags", ldflags)
 		}
 
-		cmd := exec.Command("go", args...)
-		cmd.Dir = moduleRoot
-		cmd.Env = append(os.Environ(),
-			fmt.Sprintf("GOOS=%s", target.goos),
-			fmt.Sprintf("GOARCH=%s", target.goarch),
-			"CGO_ENABLED=0",
-		)
-		cmd.Stdout = logWriter
-		cmd.Stderr = logWriter
-
-		if err := cmd.Run(); err != nil {
-			Logln(logWriter, "❌ Failed to build %s/%s: %v", target.goos, target.goarch, err)
+		// Use tool system with env overrides for cross-compilation
+		exitCode := executeGoToolWithEnv(moduleRoot, workspaceRoot, logWriter, args, target.goos, target.goarch)
+		if exitCode != 0 {
+			Logln(logWriter, "❌ Failed to build %s/%s", target.goos, target.goarch)
 			continue
 		}
 
@@ -381,185 +476,6 @@ func buildLdflags(module *modules.ModuleContract, moduleRoot, workspaceRoot, exp
 	}
 
 	return ldflags
-}
-
-// buildSingleBinary builds a single binary for the current platform.
-func buildSingleBinary(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	binaryName := module.Moniker
-
-	// Add platform-specific extension
-	if strings.Contains(strings.ToLower(os.Getenv("GOOS")), "windows") ||
-		(os.Getenv("GOOS") == "" && filepath.Separator == '\\') {
-		binaryName += ".exe"
-	}
-
-	binaryPath := filepath.Join(outputDir, binaryName)
-
-	Logln(logWriter, "Running: go build -o %s", binaryPath)
-	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
-	if exitCode == 0 {
-		Logln(logWriter, "✅ Built executable: %s", binaryName)
-	}
-	return exitCode
-}
-
-// getHostPlatform returns the host's GOOS and GOARCH when running in a container.
-// Uses R2R_HOST_GOOS and R2R_HOST_GOARCH env vars set by r2r CLI.
-func getHostPlatform() (goos, goarch string) {
-	return os.Getenv("R2R_HOST_GOOS"), os.Getenv("R2R_HOST_GOARCH")
-}
-
-// CrossCompileTarget represents a cross-compilation target platform.
-type CrossCompileTarget struct {
-	OS     string
-	Arch   string
-	Suffix string
-}
-
-// Default cross-compile targets for Go executables.
-var defaultCrossCompileTargets = []CrossCompileTarget{
-	{"linux", "amd64", ""},
-	{"linux", "arm64", ""},
-	{"darwin", "amd64", ""},
-	{"darwin", "arm64", ""},
-	{"windows", "amd64", ".exe"},
-}
-
-// buildCrossCompiled builds binaries for multiple platforms
-// With --all flag, builds all configured targets. In default mode, builds only current platform.
-func buildCrossCompiled(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	binaryName := module.Moniker
-
-	// Use default cross-compile targets
-	configTargets := defaultCrossCompileTargets
-
-	// Filter targets based on requested artifacts
-	if len(opts.RequestedArtifacts) > 0 {
-		var filteredTargets []CrossCompileTarget
-		for _, target := range configTargets {
-			// Artifact ID format for executables: {os}-{arch}
-			artifactID := fmt.Sprintf("%s-%s", target.OS, target.Arch)
-			// Check if this artifact was requested
-			for _, requestedID := range opts.RequestedArtifacts {
-				if requestedID == artifactID {
-					filteredTargets = append(filteredTargets, target)
-					break
-				}
-			}
-		}
-		if len(filteredTargets) == 0 {
-			Logln(logWriter, "No platforms match requested artifacts - skipping build")
-			return 0
-		}
-		configTargets = filteredTargets
-		var platformNames []string
-		for _, t := range configTargets {
-			platformNames = append(platformNames, fmt.Sprintf("%s/%s", t.OS, t.Arch))
-		}
-		Logln(logWriter, "Building requested platforms: %v", platformNames)
-	}
-
-	// Convert to internal structure with metadata keys
-	targets := make([]struct {
-		goos        string
-		goarch      string
-		suffix      string
-		metadataKey string
-	}, len(configTargets))
-	for i, t := range configTargets {
-		targets[i] = struct {
-			goos        string
-			goarch      string
-			suffix      string
-			metadataKey string
-		}{
-			goos:        t.OS,
-			goarch:      t.Arch,
-			suffix:      t.Suffix,
-			metadataKey: fmt.Sprintf("executable-%s-%s", t.OS, t.Arch),
-		}
-	}
-
-	// Build ldflags for version injection
-	ldflags := ""
-
-	// Detect if running in CI (for version detection)
-	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-
-	// Determine version to inject
-	version := opts.Version
-	if version == "" {
-		if isCI {
-			// CI: Auto-detect from changelog for release builds
-			version = getVersionFromChangelog(moduleRoot, workspaceRoot, module.Moniker)
-		} else {
-			// Local dev: Use high version number to always be "newer" than releases
-			// This makes it clear the binary is a local non-production build
-			version = "666.666.666-local"
-		}
-	}
-
-	// Inject version if available
-	if version != "" {
-		// Get module import path for correct ldflags
-		modulePath := getGoModulePath(moduleRoot)
-		if modulePath != "" {
-			// Use module/cmd.Version pattern (standard for CLI tools)
-			versionFlag := fmt.Sprintf("-X %s/cmd.Version=%s", modulePath, version)
-			if ldflags != "" {
-				ldflags += " " + versionFlag
-			} else {
-				ldflags = versionFlag
-			}
-			Logln(logWriter, "Injecting version: %s", version)
-		}
-	}
-
-	successCount := 0
-	for _, target := range targets {
-		// Use custom name from metadata if available, otherwise use default pattern
-		outputName := fmt.Sprintf("%s-%s-%s%s", binaryName, target.goos, target.goarch, target.suffix)
-		if customName, ok := module.Metadata[target.metadataKey]; ok && customName != "" {
-			outputName = customName
-		}
-		outputPath := filepath.Join(outputDir, outputName)
-
-		Logln(logWriter, "Building: %s/%s → %s", target.goos, target.goarch, outputName)
-
-		args := []string{"build", "-o", outputPath}
-		if ldflags != "" {
-			args = append(args, "-ldflags", ldflags)
-		}
-
-		cmd := exec.Command("go", args...)
-		cmd.Dir = moduleRoot
-		cmd.Env = append(os.Environ(),
-			fmt.Sprintf("GOOS=%s", target.goos),
-			fmt.Sprintf("GOARCH=%s", target.goarch),
-			"CGO_ENABLED=0",
-		)
-		cmd.Stdout = logWriter
-		cmd.Stderr = logWriter
-
-		if err := cmd.Run(); err != nil {
-			Logln(logWriter, "❌ Failed to build %s/%s: %v", target.goos, target.goarch, err)
-			continue
-		}
-
-		successCount++
-	}
-
-	if successCount == 0 {
-		Logln(logWriter, "❌ All builds failed")
-		return 1
-	}
-
-	Logln(logWriter, "✅ Built %d/%d targets successfully", successCount, len(targets))
-
-	// Generate checksums
-	generateChecksums(outputDir, binaryName, logWriter)
-
-	return 0
 }
 
 // getGoModulePath reads the module path from go.mod file.

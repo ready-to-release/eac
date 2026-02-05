@@ -4,12 +4,15 @@
 // Long: This forces a full rebuild/retest/relint on the next run.
 // Long:
 // Long: Cache types:
-// Long:   state    - Incremental state (build/lint/test state.json files)
+// Long:   state    - Incremental state (build/lint/test state.json, capacity semaphores)
 // Long:   asset    - Rendered assets (mermaid, drawio, structurizr caches)
 // Long:   work     - Ephemeral work directories (npm work dirs)
 // Long:   registry - Docker image cache (runs docker image prune)
 // Long:   layer    - Docker builder cache (runs docker builder prune)
 // Long:   all      - Everything
+// Long:
+// Long: The state cache includes capacity semaphore files (.global-*-capacity.*)
+// Long: which coordinate parallel test/build execution. Clear these if tests hang.
 // Long:
 // Long: Default (no --type): state + work (same as --skip-cache default)
 // Long:
@@ -176,6 +179,11 @@ func clearTargetsWithCategories(targets []CacheTarget, repoRoot string, dryRun, 
 				result.DeletedCount += count
 				result.DeletedBytes += bytes
 				result.Items = append(result.Items, items...)
+			case ClearSemaphore:
+				count, bytes, items := clearSemaphoreFiles(target.FullPath, repoRoot, dryRun, verbose)
+				result.DeletedCount += count
+				result.DeletedBytes += bytes
+				result.Items = append(result.Items, items...)
 			}
 		}
 
@@ -292,6 +300,53 @@ func clearDirectoryContentsWithDetails(fullPath, relPath string, dryRun, verbose
 		if !dryRun {
 			if err := os.RemoveAll(entryPath); err != nil {
 				log.Errorf("Failed to delete %s: %v", entryRelPath, err)
+				continue
+			}
+		}
+		deleted++
+	}
+
+	return deleted, bytes, items
+}
+
+// semaphoreFiles lists the semaphore files to clear (relative to out directory).
+var semaphoreFiles = []string{
+	".global-capacity.json",
+	".global-capacity.lock",
+	".global-docker-capacity.json",
+	".global-docker-capacity.lock",
+}
+
+// clearSemaphoreFiles deletes capacity semaphore state files.
+// These files coordinate resource allocation across concurrent processes.
+// Stale semaphore state can cause test hangs and should be cleared when debugging timeouts.
+func clearSemaphoreFiles(outDir, repoRoot string, dryRun, verbose bool) (int, int64, []string) {
+	var deleted int
+	var bytes int64
+	var items []string
+
+	for _, filename := range semaphoreFiles {
+		fullPath := filepath.Join(outDir, filename)
+		relPath := filepath.Join("out", filename)
+
+		info, err := os.Stat(fullPath)
+		if os.IsNotExist(err) {
+			continue // File doesn't exist, nothing to clear
+		}
+		if err != nil {
+			if verbose {
+				items = append(items, fmt.Sprintf("[skip] %s (error: %v)", relPath, err))
+			}
+			continue
+		}
+
+		fileSize := info.Size()
+		bytes += fileSize
+		items = append(items, fmt.Sprintf("%s (%s)", relPath, formatBytes(fileSize)))
+
+		if !dryRun {
+			if err := os.Remove(fullPath); err != nil {
+				log.Errorf("Failed to delete %s: %v", relPath, err)
 				continue
 			}
 		}
@@ -423,7 +478,7 @@ func printUsage() {
 	fmt.Println("Usage: update cache-clear [--type=<spec>] [flags]")
 	fmt.Println()
 	fmt.Println("Cache types:")
-	fmt.Println("  state        Clear incremental state (build/lint/test)")
+	fmt.Println("  state        Clear incremental state (build/lint/test + capacity semaphores)")
 	fmt.Println("  asset        Clear mermaid/drawio/structurizr caches")
 	fmt.Println("  work         Clear npm work dirs, preprocessing state")
 	fmt.Println("  registry     Clear Docker image cache (runs docker image prune)")
@@ -432,6 +487,9 @@ func printUsage() {
 	fmt.Println("  local:state  Fine-grained: local state only")
 	fmt.Println()
 	fmt.Println("Default (no --type): state + work (same as --skip-cache default)")
+	fmt.Println()
+	fmt.Println("The state cache includes capacity semaphore files (.global-*-capacity.*)")
+	fmt.Println("which coordinate parallel execution. Clear these if tests/builds hang.")
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  --type=<spec>  Cache type to clear (default: state,work)")

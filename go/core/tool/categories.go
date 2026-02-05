@@ -62,7 +62,7 @@ func ScannerToolIDForCategory(category string) string {
 }
 
 // ServerToolIDForType returns the tool ID for a server type.
-// Server types: nginx-tool, mkdocs-live, structurizr-lite
+// Server types: nginx-oci, mkdocs-live, structurizr-lite
 // Returns empty string if type is unknown.
 func ServerToolIDForType(serverType string) string {
 	globalCategoryResolver.initDefaultMappings()

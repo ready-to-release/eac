@@ -4,123 +4,46 @@ import (
 	"testing"
 )
 
-func TestComponentTypeGetTools(t *testing.T) {
-	tests := []struct {
-		name  string
-		ct    *ComponentType
-		want  []string
-	}{
-		{
-			name: "tools field takes precedence over builder",
-			ct: &ComponentType{
-				ToolChain:   []string{"preprocess", "mkdocs-pdf"},
-				Builder: "legacy-builder",
-			},
-			want: []string{"preprocess", "mkdocs-pdf"},
-		},
-		{
-			name: "falls back to builder when tools is empty",
-			ct: &ComponentType{
-				Builder: "go",
-			},
-			want: []string{"go"},
-		},
-		{
-			name: "returns nil when both tools and builder are empty",
-			ct:   &ComponentType{},
-			want: nil,
-		},
-		{
-			name: "single tool in tools field",
-			ct: &ComponentType{
-				ToolChain: []string{"mkdocs-build"},
-			},
-			want: []string{"mkdocs-build"},
-		},
-		{
-			name: "three tools in chain",
-			ct: &ComponentType{
-				ToolChain: []string{"step1", "step2", "step3"},
-			},
-			want: []string{"step1", "step2", "step3"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.ct.GetTools()
-			if !stringSliceEqual(got, tt.want) {
-				t.Errorf("GetTools() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	// Test nil receiver
-	t.Run("nil receiver returns nil", func(t *testing.T) {
-		var ct *ComponentType
-		if got := ct.GetTools(); got != nil {
-			t.Errorf("nil.GetTools() = %v, want nil", got)
-		}
-	})
-}
-
-func TestComponentTypeHasToolChain(t *testing.T) {
+func TestComponentType_HasToolChain(t *testing.T) {
 	tests := []struct {
 		name string
 		ct   *ComponentType
 		want bool
 	}{
 		{
-			name: "true when tools has multiple entries",
-			ct: &ComponentType{
-				ToolChain: []string{"preprocess", "mkdocs-pdf"},
-			},
+			name: "true when multiple builders",
+			ct:   &ComponentType{Builders: []string{"preprocess", "mkdocs-pdf"}},
 			want: true,
 		},
 		{
-			name: "false when tools has single entry",
-			ct: &ComponentType{
-				ToolChain: []string{"single-tool"},
-			},
+			name: "false when single builder",
+			ct:   &ComponentType{Builders: []string{"go"}},
 			want: false,
 		},
 		{
-			name: "false when only builder is set",
-			ct: &ComponentType{
-				Builder: "go",
-			},
-			want: false,
-		},
-		{
-			name: "false when neither tools nor builder is set",
+			name: "false when empty",
 			ct:   &ComponentType{},
 			want: false,
 		},
 		{
-			name: "true with three tools",
-			ct: &ComponentType{
-				ToolChain: []string{"a", "b", "c"},
-			},
+			name: "true with three builders",
+			ct:   &ComponentType{Builders: []string{"a", "b", "c"}},
 			want: true,
+		},
+		{
+			name: "nil receiver returns false",
+			ct:   nil,
+			want: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.ct.HasToolChain()
-			if got != tt.want {
+			if got := tt.ct.HasToolChain(); got != tt.want {
 				t.Errorf("HasToolChain() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-
-	// Test nil receiver
-	t.Run("nil receiver returns false", func(t *testing.T) {
-		var ct *ComponentType
-		if got := ct.HasToolChain(); got != false {
-			t.Errorf("nil.HasToolChain() = %v, want false", got)
-		}
-	})
 }
 
 // stringSliceEqual compares two string slices for equality.
@@ -153,23 +76,13 @@ func TestComponentType_GetPool(t *testing.T) {
 			want: "docker",
 		},
 		{
-			name: "docker requirement implies docker pool",
-			ct:   &ComponentType{Requirements: []string{"docker"}},
-			want: "docker",
-		},
-		{
-			name: "go requirement defaults to host pool",
-			ct:   &ComponentType{Requirements: []string{"go"}},
-			want: "host",
-		},
-		{
 			name: "empty component defaults to host",
 			ct:   &ComponentType{},
 			want: "host",
 		},
 		{
-			name: "explicit pool overrides requirements inference",
-			ct:   &ComponentType{Pool: "host", Requirements: []string{"docker"}},
+			name: "unset pool defaults to host",
+			ct:   &ComponentType{Builders: []string{"go"}},
 			want: "host",
 		},
 	}
@@ -191,24 +104,24 @@ func TestComponentType_RequiresDocker(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "has docker requirement",
-			ct:   &ComponentType{Requirements: []string{"go", "docker"}},
+			name: "docker pool requires docker",
+			ct:   &ComponentType{Pool: "docker"},
 			want: true,
 		},
 		{
-			name: "no docker requirement",
-			ct:   &ComponentType{Requirements: []string{"go", "npm"}},
+			name: "host pool does not require docker",
+			ct:   &ComponentType{Pool: "host"},
 			want: false,
 		},
 		{
-			name: "empty requirements",
+			name: "empty component does not require docker",
 			ct:   &ComponentType{},
 			want: false,
 		},
 		{
-			name: "only docker requirement",
-			ct:   &ComponentType{Requirements: []string{"docker"}},
-			want: true,
+			name: "component with builders but no pool does not require docker",
+			ct:   &ComponentType{Builders: []string{"go"}},
+			want: false,
 		},
 	}
 
@@ -253,19 +166,18 @@ func TestComponentType_GetDockerWeight(t *testing.T) {
 			want: 0,
 		},
 		{
-			name: "inferred docker from requirements",
-			ct: &ComponentType{
-				Requirements: []string{"docker"},
-				Resources:    &ComponentTypeResources{CPUs: 3},
-			},
-			want: 3,
-		},
-		{
 			name: "no resources defaults to 1 for docker pool",
 			ct: &ComponentType{
 				Pool: "docker",
 			},
 			want: 1,
+		},
+		{
+			name: "unset pool returns zero",
+			ct: &ComponentType{
+				Resources: &ComponentTypeResources{CPUs: 3},
+			},
+			want: 0,
 		},
 	}
 
@@ -281,11 +193,11 @@ func TestComponentType_GetDockerWeight(t *testing.T) {
 
 func TestComponentType_GetPoolAllocation(t *testing.T) {
 	tests := []struct {
-		name            string
-		ct              *ComponentType
-		wantHostWeight  int
+		name             string
+		ct               *ComponentType
+		wantHostWeight   int
 		wantDockerWeight int
-		wantIsContainer bool
+		wantIsContainer  bool
 	}{
 		{
 			name: "host only component",
@@ -393,57 +305,308 @@ func TestComponentType_GetAmp(t *testing.T) {
 	})
 }
 
-// TestNewComponentTypesWithToolChains validates that the new docs-pdf and docs-site
-// component types have proper tool chains configured.
-func TestNewComponentTypesWithToolChains(t *testing.T) {
+// TestComponentType_IsBuildable tests the IsBuildable method
+func TestComponentType_IsBuildable(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want bool
+	}{
+		{
+			name: "single builder",
+			ct:   &ComponentType{Builders: []string{"go"}},
+			want: true,
+		},
+		{
+			name: "multiple builders (tool chain)",
+			ct:   &ComponentType{Builders: []string{"preprocess", "pdf-oci"}},
+			want: true,
+		},
+		{
+			name: "empty builders",
+			ct:   &ComponentType{Builders: []string{}},
+			want: false,
+		},
+		{
+			name: "nil builders",
+			ct:   &ComponentType{},
+			want: false,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.IsBuildable(); got != tt.want {
+				t.Errorf("IsBuildable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_IsLintable tests the IsLintable method
+func TestComponentType_IsLintable(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want bool
+	}{
+		{
+			name: "single linter",
+			ct:   &ComponentType{Linters: []string{"golangci-lint"}},
+			want: true,
+		},
+		{
+			name: "multiple linters",
+			ct:   &ComponentType{Linters: []string{"eslint", "prettier"}},
+			want: true,
+		},
+		{
+			name: "empty linters",
+			ct:   &ComponentType{Linters: []string{}},
+			want: false,
+		},
+		{
+			name: "nil linters",
+			ct:   &ComponentType{},
+			want: false,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.IsLintable(); got != tt.want {
+				t.Errorf("IsLintable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_IsTestable tests the IsTestable method
+func TestComponentType_IsTestable(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want bool
+	}{
+		{
+			name: "single tester",
+			ct:   &ComponentType{Testers: []string{"go"}},
+			want: true,
+		},
+		{
+			name: "multiple testers",
+			ct:   &ComponentType{Testers: []string{"go", "integration"}},
+			want: true,
+		},
+		{
+			name: "empty testers",
+			ct:   &ComponentType{Testers: []string{}},
+			want: false,
+		},
+		{
+			name: "nil testers",
+			ct:   &ComponentType{},
+			want: false,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.IsTestable(); got != tt.want {
+				t.Errorf("IsTestable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_GetBuilders tests the GetBuilders method
+func TestComponentType_GetBuilders(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want []string
+	}{
+		{
+			name: "single builder",
+			ct:   &ComponentType{Builders: []string{"go"}},
+			want: []string{"go"},
+		},
+		{
+			name: "multi-step build chain",
+			ct:   &ComponentType{Builders: []string{"mkdocs-preprocess", "pdf-oci"}},
+			want: []string{"mkdocs-preprocess", "pdf-oci"},
+		},
+		{
+			name: "empty builders",
+			ct:   &ComponentType{Builders: []string{}},
+			want: []string{},
+		},
+		{
+			name: "nil builders",
+			ct:   &ComponentType{},
+			want: nil,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.GetBuilders(); !stringSliceEqual(got, tt.want) {
+				t.Errorf("GetBuilders() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_GetLinters tests the GetLinters method
+func TestComponentType_GetLinters(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want []string
+	}{
+		{
+			name: "single linter",
+			ct:   &ComponentType{Linters: []string{"golangci-lint"}},
+			want: []string{"golangci-lint"},
+		},
+		{
+			name: "multiple linters",
+			ct:   &ComponentType{Linters: []string{"eslint", "prettier"}},
+			want: []string{"eslint", "prettier"},
+		},
+		{
+			name: "empty linters",
+			ct:   &ComponentType{Linters: []string{}},
+			want: []string{},
+		},
+		{
+			name: "nil linters",
+			ct:   &ComponentType{},
+			want: nil,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.GetLinters(); !stringSliceEqual(got, tt.want) {
+				t.Errorf("GetLinters() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_GetTesters tests the GetTesters method
+func TestComponentType_GetTesters(t *testing.T) {
+	tests := []struct {
+		name string
+		ct   *ComponentType
+		want []string
+	}{
+		{
+			name: "single tester",
+			ct:   &ComponentType{Testers: []string{"go"}},
+			want: []string{"go"},
+		},
+		{
+			name: "multiple testers",
+			ct:   &ComponentType{Testers: []string{"go", "integration"}},
+			want: []string{"go", "integration"},
+		},
+		{
+			name: "empty testers",
+			ct:   &ComponentType{Testers: []string{}},
+			want: []string{},
+		},
+		{
+			name: "nil testers",
+			ct:   &ComponentType{},
+			want: nil,
+		},
+		{
+			name: "nil receiver",
+			ct:   nil,
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ct.GetTesters(); !stringSliceEqual(got, tt.want) {
+				t.Errorf("GetTesters() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestComponentType_ToolChainExamples validates multi-step build configurations.
+func TestComponentType_ToolChainExamples(t *testing.T) {
 	t.Run("docs-pdf has tool chain", func(t *testing.T) {
 		ct := &ComponentType{
-			ToolChain: []string{"mkdocs-preprocess", "pdf-tool"},
+			Builders: []string{"mkdocs-preprocess", "pdf-oci"},
 		}
 		if !ct.HasToolChain() {
 			t.Error("docs-pdf should have tool chain")
 		}
-		tools := ct.GetTools()
-		if len(tools) != 2 {
-			t.Errorf("docs-pdf should have 2 tools, got %d", len(tools))
+		builders := ct.GetBuilders()
+		if len(builders) != 2 {
+			t.Errorf("docs-pdf should have 2 builders, got %d", len(builders))
 		}
-		if tools[0] != "mkdocs-preprocess" {
-			t.Errorf("first tool should be mkdocs-preprocess, got %s", tools[0])
+		if builders[0] != "mkdocs-preprocess" {
+			t.Errorf("first builder should be mkdocs-preprocess, got %s", builders[0])
 		}
-		if tools[1] != "pdf-tool" {
-			t.Errorf("second tool should be pdf-tool, got %s", tools[1])
+		if builders[1] != "pdf-oci" {
+			t.Errorf("second builder should be pdf-oci, got %s", builders[1])
 		}
 	})
 
 	t.Run("docs-site has tool chain", func(t *testing.T) {
 		ct := &ComponentType{
-			ToolChain: []string{"mkdocs-preprocess", "site-render-tool"},
+			Builders: []string{"mkdocs-preprocess", "site-render-oci"},
 		}
 		if !ct.HasToolChain() {
 			t.Error("docs-site should have tool chain")
 		}
-		tools := ct.GetTools()
-		if len(tools) != 2 {
-			t.Errorf("docs-site should have 2 tools, got %d", len(tools))
-		}
-		if tools[0] != "mkdocs-preprocess" {
-			t.Errorf("first tool should be mkdocs-preprocess, got %s", tools[0])
-		}
-		if tools[1] != "site-render-tool" {
-			t.Errorf("second tool should be site-render-tool, got %s", tools[1])
+		builders := ct.GetBuilders()
+		if len(builders) != 2 {
+			t.Errorf("docs-site should have 2 builders, got %d", len(builders))
 		}
 	})
 
 	t.Run("single builder has no tool chain", func(t *testing.T) {
 		ct := &ComponentType{
-			Builder: "go",
+			Builders: []string{"go"},
 		}
 		if ct.HasToolChain() {
 			t.Error("single builder should not have tool chain")
 		}
-		tools := ct.GetTools()
-		if len(tools) != 1 || tools[0] != "go" {
-			t.Errorf("expected [go], got %v", tools)
+		builders := ct.GetBuilders()
+		if len(builders) != 1 || builders[0] != "go" {
+			t.Errorf("expected [go], got %v", builders)
 		}
 	})
 }

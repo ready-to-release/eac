@@ -242,27 +242,29 @@ func (m *ScanToolMapping) GetToolForCategory(cat ScanCategory) string {
 }
 
 // ExtendedComponentType extends ComponentType with tools mapping.
-// This represents the component-types.yml structure with the new tools field.
 type ExtendedComponentType struct {
 	// Extensions are the file extensions for this component type
 	Extensions []string `yaml:"extensions" json:"extensions"`
 
-	// Builder is the legacy build handler field
-	Builder string `yaml:"builder,omitempty" json:"builder,omitempty"`
+	// Builders are the build tool IDs
+	Builders []string `yaml:"builders,omitempty" json:"builders,omitempty"`
 
-	// Scanners is the legacy scanners field
+	// Linters are the lint tool IDs
+	Linters []string `yaml:"linters,omitempty" json:"linters,omitempty"`
+
+	// Testers are the test tool IDs
+	Testers []string `yaml:"testers,omitempty" json:"testers,omitempty"`
+
+	// Scanners are scanner categories
 	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
 
 	// BuildAfter lists component types that must complete first
 	BuildAfter []string `yaml:"build_after,omitempty" json:"build_after,omitempty"`
 
-	// Requirements are system dependencies needed
-	Requirements []string `yaml:"requirements,omitempty" json:"requirements,omitempty"`
-
 	// DefaultRoot is the default root path pattern
 	DefaultRoot string `yaml:"default_root,omitempty" json:"default_root,omitempty"`
 
-	// Tools is the new phase-specific tool configuration
+	// Tools is the phase-specific tool configuration (alternative to arrays above)
 	Tools *ToolsConfig `yaml:"tools,omitempty" json:"tools,omitempty"`
 }
 
@@ -274,45 +276,56 @@ type ToolsConfig struct {
 	Scan  *ScanPhaseConfig `yaml:"scan,omitempty" json:"scan,omitempty"`
 }
 
-// GetBuildTool returns the build tool from new or legacy fields.
-func (e *ExtendedComponentType) GetBuildTool() string {
+// GetBuilders returns the builder tool IDs.
+func (e *ExtendedComponentType) GetBuilders() []string {
 	if e == nil {
-		return ""
+		return nil
 	}
-	// New field takes precedence
+	if len(e.Builders) > 0 {
+		return e.Builders
+	}
 	if e.Tools != nil && e.Tools.Build != nil && e.Tools.Build.Default != "" {
-		return e.Tools.Build.Default
+		return []string{e.Tools.Build.Default}
 	}
-	// Fall back to legacy
-	return e.Builder
+	return nil
 }
 
-// GetLintTool returns the lint tool from new fields.
-func (e *ExtendedComponentType) GetLintTool() string {
-	if e == nil || e.Tools == nil || e.Tools.Lint == nil {
-		return ""
+// GetLinters returns the linter tool IDs.
+func (e *ExtendedComponentType) GetLinters() []string {
+	if e == nil {
+		return nil
 	}
-	return e.Tools.Lint.Default
+	if len(e.Linters) > 0 {
+		return e.Linters
+	}
+	if e.Tools != nil && e.Tools.Lint != nil && e.Tools.Lint.Default != "" {
+		return []string{e.Tools.Lint.Default}
+	}
+	return nil
 }
 
-// GetTestTool returns the test tool from new fields.
-func (e *ExtendedComponentType) GetTestTool() string {
-	if e == nil || e.Tools == nil || e.Tools.Test == nil {
-		return ""
+// GetTesters returns the tester tool IDs.
+func (e *ExtendedComponentType) GetTesters() []string {
+	if e == nil {
+		return nil
 	}
-	return e.Tools.Test.Default
+	if len(e.Testers) > 0 {
+		return e.Testers
+	}
+	if e.Tools != nil && e.Tools.Test != nil && e.Tools.Test.Default != "" {
+		return []string{e.Tools.Test.Default}
+	}
+	return nil
 }
 
-// GetScanCategories returns the default scan categories for this component type.
+// GetScanCategories returns the scan categories for this component type.
 func (e *ExtendedComponentType) GetScanCategories() []ScanCategory {
 	if e == nil {
 		return nil
 	}
-	// New field takes precedence
 	if e.Tools != nil && e.Tools.Scan != nil {
 		return e.Tools.Scan.GetDefaultCategories()
 	}
-	// Fall back to legacy scanners field
 	if len(e.Scanners) > 0 {
 		cats := make([]ScanCategory, 0, len(e.Scanners))
 		for _, s := range e.Scanners {
@@ -331,9 +344,19 @@ func (e *ExtendedComponentType) GetScannerTool(cat ScanCategory) string {
 	return e.Tools.Scan.GetToolForCategory(cat)
 }
 
-// HasBuilder returns true if this component type has a builder configured.
-func (e *ExtendedComponentType) HasBuilder() bool {
-	return e.GetBuildTool() != ""
+// IsBuildable returns true if this component type has builders configured.
+func (e *ExtendedComponentType) IsBuildable() bool {
+	return len(e.GetBuilders()) > 0
+}
+
+// IsLintable returns true if this component type has linters configured.
+func (e *ExtendedComponentType) IsLintable() bool {
+	return len(e.GetLinters()) > 0
+}
+
+// IsTestable returns true if this component type has testers configured.
+func (e *ExtendedComponentType) IsTestable() bool {
+	return len(e.GetTesters()) > 0
 }
 
 // IsScannable returns true if this component type has scanners configured.

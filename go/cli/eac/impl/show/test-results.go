@@ -1,4 +1,5 @@
 // Command: show test-results
+// Short: Show test execution results from test manifests
 // Long: Shows test execution results from test manifests with:
 // Long:   - Module overview with pass/fail counts
 // Long:   - Specification coverage for godog tests

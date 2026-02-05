@@ -11,14 +11,13 @@ require (
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/defenseunicorns/go-oscal v0.7.0
 	github.com/go-git/go-git/v5 v5.16.4
-	github.com/google/uuid v1.6.0
 	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0-00010101000000-000000000000
+	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces v0.0.0-00010101000000-000000000000
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0-20260202144134-d0b6883b9564
+	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/go/adapters/ai v0.0.0-20260202144134-d0b6883b9564
 	github.com/ready-to-release/eac/go/godog v0.0.0-00010101000000-000000000000
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
@@ -54,6 +53,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/generative-ai-go v0.20.1 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.11 // indirect
 	github.com/googleapis/gax-go/v2 v2.16.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
@@ -97,10 +97,13 @@ require (
 )
 
 replace (
+	github.com/ready-to-release/eac/contracts => ../../contracts
 	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces => ../../contracts/core/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces => ../../contracts/docker-adapter/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces => ../../contracts/security/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces => ../../contracts/testing/0.1.0/interfaces
 	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces => ../../contracts/tools/0.1.0/interfaces
+	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces => ../../contracts/tui-adapter/0.1.0/interfaces
+	github.com/ready-to-release/eac/go/adapters/ai => ../adapters/ai
 	github.com/ready-to-release/eac/go/godog => ../godog
 )

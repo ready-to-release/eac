@@ -1,4 +1,5 @@
 // Command: get test-timings
+// Short: Display test timing metrics from last test run
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

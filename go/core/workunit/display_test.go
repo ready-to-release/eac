@@ -152,29 +152,29 @@ func TestDisplayNameResolver_Resolve_WithSpec(t *testing.T) {
 		{
 			name: "unique spec returns just spec name",
 			units: []UnitID{
-				{Module: "eac-cli", Component: "complex-path:godog", Spec: "build-module"},
-				{Module: "core", Component: "go"},
+				{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Context: ContextBuild, Module: "core", Component: "go"},
 			},
-			query: UnitID{Module: "eac-cli", Component: "complex-path:godog", Spec: "build-module"},
+			query: UnitID{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
 			want:  "build-module",
 		},
 		{
 			name: "duplicate spec returns module:specname",
 			units: []UnitID{
-				{Module: "eac-cli", Component: "complex-path1:godog", Spec: "build-module"},
-				{Module: "core", Component: "complex-path2:godog", Spec: "build-module"},
+				{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "build-module"},
 			},
-			query: UnitID{Module: "eac-cli", Component: "complex-path1:godog", Spec: "build-module"},
+			query: UnitID{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
 			want:  "eac-cli:build-module",
 		},
 		{
 			name: "mixed spec and non-spec units",
 			units: []UnitID{
-				{Module: "eac-cli", Component: "complex-path:godog", Spec: "build-module"},
-				{Module: "core", Component: "go"},
-				{Module: "core", Component: "complex-path:godog", Spec: "cache-invalidation"},
+				{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Context: ContextBuild, Module: "core", Component: "go"},
+				{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
 			},
-			query: UnitID{Module: "core", Component: "complex-path:godog", Spec: "cache-invalidation"},
+			query: UnitID{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
 			want:  "cache-invalidation",
 		},
 	}
@@ -192,10 +192,10 @@ func TestDisplayNameResolver_Resolve_WithSpec(t *testing.T) {
 
 func TestDisplayNameResolver_NeedsDisambiguation_WithSpec(t *testing.T) {
 	units := []UnitID{
-		{Module: "eac-cli", Component: "path1:godog", Spec: "build-module"},
-		{Module: "core", Component: "path2:godog", Spec: "build-module"}, // Duplicate spec name
-		{Module: "core", Component: "go"},
-		{Module: "eac-specs", Component: "path3:godog", Spec: "unique-spec"},
+		{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+		{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "build-module"}, // Duplicate spec name
+		{Context: ContextBuild, Module: "core", Component: "go"},
+		{Context: ContextTest, Module: "eac-specs", Component: "gherkin", Tool: "godog", Spec: "unique-spec"},
 	}
 	resolver := NewDisplayNameResolver(units)
 
@@ -209,3 +209,4 @@ func TestDisplayNameResolver_NeedsDisambiguation_WithSpec(t *testing.T) {
 		t.Error("go should not need disambiguation (only 1 unit)")
 	}
 }
+

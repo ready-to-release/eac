@@ -20,8 +20,12 @@ type UnitIDPort interface {
 	// GetSpec returns the spec name for BDD tests (e.g., "build-module")
 	GetSpec() string
 
-	// Shortname returns display name: module:component, or just spec name for BDD tests
-	Shortname() string
+	// GetExtra returns context-specific discriminators (e.g., testset, category)
+	GetExtra() map[string]string
+
+	// DisplayName returns context-aware compact display name for TUI tabs.
+	// Format by context: "spec: X", "unit: X", "go", "site: mkdocs", "lint:go:golangci-lint"
+	DisplayName() string
 
 	// Longname returns full ID: context:module:component:tool[:extra]
 	Longname() string

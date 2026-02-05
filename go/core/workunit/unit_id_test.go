@@ -47,61 +47,93 @@ func TestContext_Constants(t *testing.T) {
 }
 
 // =============================================================================
-// Shortname Tests
+// DisplayName Tests
 // =============================================================================
 
-func TestUnitID_Shortname(t *testing.T) {
+func TestUnitID_DisplayName(t *testing.T) {
 	tests := []struct {
 		name     string
 		unitID   UnitID
 		expected string
 	}{
 		{
-			name: "build unit shortname",
+			name: "build - component equals tool",
 			unitID: UnitID{
 				Context:   ContextBuild,
 				Module:    "core",
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: "core:go",
+			expected: "core: go",
 		},
 		{
-			name: "test unit shortname",
+			name: "build - component differs from tool",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "docs",
+				Component: "site",
+				Tool:      "mkdocs",
+			},
+			expected: "docs: site: mkdocs",
+		},
+		{
+			name: "test - BDD spec",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "eac-cli",
 				Component: "gherkin",
 				Tool:      "godog",
+				Spec:      "build-module",
 			},
-			expected: "eac-cli:gherkin",
+			expected: "build-module: godog",
 		},
 		{
-			name: "lint unit shortname",
-			unitID: UnitID{
-				Context:   ContextLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
-			},
-			expected: "shared-lib:go",
-		},
-		{
-			name: "shortname ignores extra fields",
+			name: "test - unit with testname",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "core",
 				Component: "go",
 				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Extra:     map[string]string{"testname": "impl-build"},
 			},
-			expected: "core:go",
+			expected: "impl-build: unit",
+		},
+		{
+			name: "test - unit without testname uses component",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+			},
+			expected: "go: unit",
+		},
+		{
+			name: "lint",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "core",
+				Component: "go",
+				Tool:      "golangci-lint",
+			},
+			expected: "lint:go:golangci-lint",
+		},
+		{
+			name: "scan with category",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-sbom",
+				Extra:     map[string]string{"category": "sbom"},
+			},
+			expected: "scan:go:sbom",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.unitID.Shortname())
+			assert.Equal(t, tt.expected, tt.unitID.DisplayName())
 		})
 	}
 }
@@ -303,7 +335,7 @@ func TestUnitID_OutDir(t *testing.T) {
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: filepath.Join("out", "build", "core", "go"),
+			expected: filepath.Join("out", "build", "core", "go-go"),
 		},
 		{
 			name: "lint output directory",
@@ -313,7 +345,7 @@ func TestUnitID_OutDir(t *testing.T) {
 				Component: "go",
 				Tool:      "golangci-lint",
 			},
-			expected: filepath.Join("out", "lint", "core", "go"),
+			expected: filepath.Join("out", "lint", "core", "go-golangci-lint"),
 		},
 		{
 			name: "scan output directory",
@@ -323,7 +355,7 @@ func TestUnitID_OutDir(t *testing.T) {
 				Component: "go",
 				Tool:      "trivy-vuln",
 			},
-			expected: filepath.Join("out", "scan", "core", "go"),
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
 		},
 	}
 
@@ -349,7 +381,7 @@ func TestUnitID_OutDir_WithTestset(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "unit"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "unit"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit"),
 		},
 		{
 			name: "test integration output directory",
@@ -360,7 +392,7 @@ func TestUnitID_OutDir_WithTestset(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "integration"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "integration"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-integration"),
 		},
 		{
 			name: "test gherkin output directory",
@@ -371,7 +403,7 @@ func TestUnitID_OutDir_WithTestset(t *testing.T) {
 				Tool:      "godog",
 				Extra:     map[string]string{"testset": "acceptance"},
 			},
-			expected: filepath.Join("out", "test", "eac-cli", "gherkin", "acceptance"),
+			expected: filepath.Join("out", "test", "eac-cli", "gherkin-godog-acceptance"),
 		},
 		{
 			name: "test without testset falls back to base path",
@@ -382,7 +414,7 @@ func TestUnitID_OutDir_WithTestset(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     nil,
 			},
-			expected: filepath.Join("out", "test", "core", "go"),
+			expected: filepath.Join("out", "test", "core", "go-gotest"),
 		},
 	}
 
@@ -411,7 +443,7 @@ func TestUnitID_LockFile(t *testing.T) {
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: filepath.Join("out", "build", "core", "go", ".lock"),
+			expected: filepath.Join("out", "build", "core", "go-go", ".lock"),
 		},
 		{
 			name: "test lock file with testset",
@@ -422,7 +454,7 @@ func TestUnitID_LockFile(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "unit"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "unit", ".lock"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit", ".lock"),
 		},
 		{
 			name: "lint lock file",
@@ -432,7 +464,7 @@ func TestUnitID_LockFile(t *testing.T) {
 				Component: "go",
 				Tool:      "golangci-lint",
 			},
-			expected: filepath.Join("out", "lint", "shared-lib", "go", ".lock"),
+			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", ".lock"),
 		},
 		{
 			name: "scan lock file",
@@ -442,7 +474,7 @@ func TestUnitID_LockFile(t *testing.T) {
 				Component: "go",
 				Tool:      "trivy-vuln",
 			},
-			expected: filepath.Join("out", "scan", "core", "go", ".lock"),
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", ".lock"),
 		},
 	}
 
@@ -471,7 +503,7 @@ func TestUnitID_StateFile(t *testing.T) {
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: filepath.Join("out", "build", "core", "go", "state.json"),
+			expected: filepath.Join("out", "build", "core", "go-go", "state.json"),
 		},
 		{
 			name: "test state file with testset",
@@ -482,7 +514,7 @@ func TestUnitID_StateFile(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "unit"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "unit", "state.json"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit", "state.json"),
 		},
 		{
 			name: "lint state file",
@@ -492,7 +524,7 @@ func TestUnitID_StateFile(t *testing.T) {
 				Component: "go",
 				Tool:      "golangci-lint",
 			},
-			expected: filepath.Join("out", "lint", "shared-lib", "go", "state.json"),
+			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", "state.json"),
 		},
 		{
 			name: "scan state file",
@@ -502,7 +534,7 @@ func TestUnitID_StateFile(t *testing.T) {
 				Component: "go",
 				Tool:      "trivy-vuln",
 			},
-			expected: filepath.Join("out", "scan", "core", "go", "state.json"),
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", "state.json"),
 		},
 	}
 
@@ -531,7 +563,7 @@ func TestUnitID_LogFile(t *testing.T) {
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: filepath.Join("out", "build", "core", "go", "execution.log"),
+			expected: filepath.Join("out", "build", "core", "go-go", "execution.log"),
 		},
 		{
 			name: "test log file with testset",
@@ -542,7 +574,7 @@ func TestUnitID_LogFile(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "unit"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "unit", "execution.log"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit", "execution.log"),
 		},
 		{
 			name: "lint log file",
@@ -552,7 +584,7 @@ func TestUnitID_LogFile(t *testing.T) {
 				Component: "go",
 				Tool:      "golangci-lint",
 			},
-			expected: filepath.Join("out", "lint", "shared-lib", "go", "execution.log"),
+			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", "execution.log"),
 		},
 		{
 			name: "scan log file",
@@ -562,7 +594,7 @@ func TestUnitID_LogFile(t *testing.T) {
 				Component: "go",
 				Tool:      "trivy-vuln",
 			},
-			expected: filepath.Join("out", "scan", "core", "go", "execution.log"),
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", "execution.log"),
 		},
 	}
 
@@ -592,7 +624,7 @@ func TestUnitID_ResultsFile(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "unit"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "unit", "results.json"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit", "results.json"),
 		},
 		{
 			name: "test integration results file",
@@ -603,7 +635,7 @@ func TestUnitID_ResultsFile(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"testset": "integration"},
 			},
-			expected: filepath.Join("out", "test", "core", "go", "integration", "results.json"),
+			expected: filepath.Join("out", "test", "core", "go-gotest-integration", "results.json"),
 		},
 		{
 			name: "lint results file",
@@ -613,7 +645,7 @@ func TestUnitID_ResultsFile(t *testing.T) {
 				Component: "go",
 				Tool:      "golangci-lint",
 			},
-			expected: filepath.Join("out", "lint", "shared-lib", "go", "results.json"),
+			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", "results.json"),
 		},
 		{
 			name: "scan results file",
@@ -623,7 +655,7 @@ func TestUnitID_ResultsFile(t *testing.T) {
 				Component: "go",
 				Tool:      "trivy-vuln",
 			},
-			expected: filepath.Join("out", "scan", "core", "go", "results.json"),
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", "results.json"),
 		},
 		{
 			name: "build results file (if applicable)",
@@ -633,7 +665,7 @@ func TestUnitID_ResultsFile(t *testing.T) {
 				Component: "go",
 				Tool:      "go",
 			},
-			expected: filepath.Join("out", "build", "core", "go", "results.json"),
+			expected: filepath.Join("out", "build", "core", "go-go", "results.json"),
 		},
 	}
 
@@ -666,7 +698,7 @@ func TestUnitID_PlanExamples(t *testing.T) {
 			},
 			expectedLong:   "build:core:go:go",
 			expectedShort:  "core:go",
-			expectedOutDir: filepath.Join("out", "build", "core", "go"),
+			expectedOutDir: filepath.Join("out", "build", "core", "go-go"),
 		},
 		{
 			name: "test:core:go:gotest:unit",
@@ -679,7 +711,7 @@ func TestUnitID_PlanExamples(t *testing.T) {
 			},
 			expectedLong:   "test:core:go:gotest:unit",
 			expectedShort:  "core:go",
-			expectedOutDir: filepath.Join("out", "test", "core", "go", "unit"),
+			expectedOutDir: filepath.Join("out", "test", "core", "go-gotest-unit"),
 		},
 		{
 			name: "test:core:go:gotest:integration",
@@ -692,7 +724,7 @@ func TestUnitID_PlanExamples(t *testing.T) {
 			},
 			expectedLong:   "test:core:go:gotest:integration",
 			expectedShort:  "core:go",
-			expectedOutDir: filepath.Join("out", "test", "core", "go", "integration"),
+			expectedOutDir: filepath.Join("out", "test", "core", "go-gotest-integration"),
 		},
 		{
 			name: "lint:core:go:golangci-lint",
@@ -704,7 +736,7 @@ func TestUnitID_PlanExamples(t *testing.T) {
 			},
 			expectedLong:   "lint:core:go:golangci-lint",
 			expectedShort:  "core:go",
-			expectedOutDir: filepath.Join("out", "lint", "core", "go"),
+			expectedOutDir: filepath.Join("out", "lint", "core", "go-golangci-lint"),
 		},
 		{
 			name: "scan:core:go:trivy-vuln",
@@ -716,7 +748,7 @@ func TestUnitID_PlanExamples(t *testing.T) {
 			},
 			expectedLong:   "scan:core:go:trivy-vuln",
 			expectedShort:  "core:go",
-			expectedOutDir: filepath.Join("out", "scan", "core", "go"),
+			expectedOutDir: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
 		},
 	}
 
@@ -730,8 +762,8 @@ func TestUnitID_PlanExamples(t *testing.T) {
 				assert.Equal(t, ex.unitID.Longname(), ex.unitID.String())
 			})
 
-			t.Run("Shortname", func(t *testing.T) {
-				assert.Equal(t, ex.expectedShort, ex.unitID.Shortname())
+			t.Run("Path", func(t *testing.T) {
+				assert.Equal(t, ex.expectedShort, ex.unitID.Path())
 			})
 
 			t.Run("OutDir", func(t *testing.T) {
@@ -777,7 +809,7 @@ func TestUnitID_EdgeCases(t *testing.T) {
 		}
 
 		assert.Equal(t, "build:my-complex-module-name:go:go", uid.Longname())
-		assert.Equal(t, "my-complex-module-name:go", uid.Shortname())
+		assert.Equal(t, "my-complex-module-name:go", uid.Path())
 	})
 
 	t.Run("component with underscores", func(t *testing.T) {
@@ -870,8 +902,8 @@ func TestUnitID_MultipleTestSetsForSameModule(t *testing.T) {
 		assert.NotEqual(t, unitTest.Longname(), integrationTest.Longname())
 	})
 
-	t.Run("same shortname", func(t *testing.T) {
-		assert.Equal(t, unitTest.Shortname(), integrationTest.Shortname())
+	t.Run("same path", func(t *testing.T) {
+		assert.Equal(t, unitTest.Path(), integrationTest.Path())
 	})
 
 	t.Run("different output directories", func(t *testing.T) {
@@ -899,69 +931,71 @@ func TestUnitID_MultipleTestSetsForSameModule(t *testing.T) {
 // Spec Field Tests (BDD Tests: godog, tscucumber)
 // =============================================================================
 
-func TestUnitID_Spec_Shortname(t *testing.T) {
+func TestUnitID_Spec_DisplayName(t *testing.T) {
 	tests := []struct {
 		name     string
 		unitID   UnitID
 		expected string
 	}{
 		{
-			name: "spec test returns spec name",
+			name: "spec test returns name: tool format",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "eac-cli",
-				Component: "build-module:go/eac/specs/impl/eac-cli:specs/.../specification.feature:godog",
+				Component: "gherkin",
 				Tool:      "godog",
 				Spec:      "build-module",
 			},
-			expected: "build-module",
+			expected: "build-module: godog",
 		},
 		{
-			name: "non-spec test returns module:component",
+			name: "non-spec test returns component: unit format",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "core",
 				Component: "go",
 				Tool:      "gotest",
 			},
-			expected: "core:go",
+			expected: "go: unit",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.unitID.Shortname())
+			assert.Equal(t, tt.expected, tt.unitID.DisplayName())
 		})
 	}
 }
 
 func TestUnitID_Spec_Longname(t *testing.T) {
+	// Spec tests use standard Longname format: context:module:component:tool
+	// The Spec field is metadata for display only, not for identification
 	tests := []struct {
 		name     string
 		unitID   UnitID
 		expected string
 	}{
 		{
-			name: "spec test returns module:spec:specname format",
+			name: "spec test uses standard format",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "eac-cli",
-				Component: "build-module:go/eac/specs/impl/eac-cli:specs/.../specification.feature:godog",
+				Component: "build-module",
 				Tool:      "godog",
-				Spec:      "build-module",
+				Spec:      "build-module", // Metadata only, doesn't affect Longname
 			},
-			expected: "eac-cli:spec:build-module",
+			expected: "test:eac-cli:build-module:godog",
 		},
 		{
 			name: "spec test with different module",
 			unitID: UnitID{
 				Context:   ContextTest,
 				Module:    "core",
-				Component: "cache-invalidation:go/eac/specs/impl/core:specs/.../specification.feature:godog",
+				Component: "cache-invalidation",
 				Tool:      "godog",
 				Spec:      "cache-invalidation",
 			},
-			expected: "core:spec:cache-invalidation",
+			expected: "test:core:cache-invalidation:godog",
 		},
 		{
 			name: "non-spec test returns standard format",
@@ -981,24 +1015,6 @@ func TestUnitID_Spec_Longname(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.unitID.Longname())
 		})
 	}
-}
-
-func TestUnitID_Spec_DisplayName(t *testing.T) {
-	specUnit := UnitID{
-		Context:   ContextTest,
-		Module:    "eac-cli",
-		Component: "build-module:go/eac/specs/impl/eac-cli:specs/.../specification.feature:godog",
-		Tool:      "godog",
-		Spec:      "build-module",
-	}
-
-	t.Run("disambiguate false returns spec only", func(t *testing.T) {
-		assert.Equal(t, "build-module", specUnit.DisplayName(false))
-	})
-
-	t.Run("disambiguate true returns module:spec:specname", func(t *testing.T) {
-		assert.Equal(t, "eac-cli:spec:build-module", specUnit.DisplayName(true))
-	})
 }
 
 func TestUnitID_Spec_TabLabel(t *testing.T) {
@@ -1082,23 +1098,6 @@ func TestUnitID_ComponentName(t *testing.T) {
 	assert.Equal(t, "impl/build", u.ComponentName())
 }
 
-func TestUnitID_DisplayName(t *testing.T) {
-	u := UnitID{
-		Context:   ContextBuild,
-		Module:    "core",
-		Component: "go",
-		Tool:      "go",
-	}
-
-	t.Run("disambiguate false returns component only", func(t *testing.T) {
-		assert.Equal(t, "go", u.DisplayName(false))
-	})
-
-	t.Run("disambiguate true returns full path", func(t *testing.T) {
-		assert.Equal(t, "core:go", u.DisplayName(true))
-	})
-}
-
 func TestUnitID_TabLabel(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -1136,6 +1135,710 @@ func TestUnitID_TabLabel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			u := UnitID{Component: tt.component}
 			assert.Equal(t, tt.expected, u.TabLabel(tt.maxWidth))
+		})
+	}
+}
+
+// =============================================================================
+// Longname Tests - All Extra Fields (TDD: Expect these to fail initially)
+// =============================================================================
+
+func TestUnitID_Longname_AllExtraFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "multiple extra fields sorted alphabetically by key",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
+			},
+			// category comes before testset alphabetically
+			expected: "scan:core:go:trivy:sbom:unit",
+		},
+		{
+			name: "scan context with category extra field",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-sbom",
+				Extra:     map[string]string{"category": "sbom"},
+			},
+			expected: "scan:core:go:trivy-sbom:sbom",
+		},
+		{
+			name: "empty values in extra are skipped",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"category": "", "testset": "unit"},
+			},
+			// empty category should be skipped, only testset appended
+			expected: "test:core:go:gotest:unit",
+		},
+		{
+			name: "three extra fields sorted alphabetically",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
+			},
+			// category < testset < zone alphabetically
+			expected: "scan:core:go:trivy:sbom:unit:prod",
+		},
+		{
+			name: "single non-testset extra field",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"category": "vuln"},
+			},
+			expected: "scan:core:go:trivy:vuln",
+		},
+		{
+			name: "all empty extra values produce base format",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"category": "", "testset": ""},
+			},
+			expected: "scan:core:go:trivy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.Longname(),
+				"Longname should include all non-empty Extra fields in sorted key order")
+		})
+	}
+}
+
+func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "multiple extra fields sorted alphabetically in path",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
+			},
+			// Format: component-tool-extra1-extra2 (category before testset alphabetically)
+			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-unit"),
+		},
+		{
+			name: "scan context with category extra field",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-sbom",
+				Extra:     map[string]string{"category": "sbom"},
+			},
+			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-sbom"),
+		},
+		{
+			name: "empty values in extra are skipped in path",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"category": "", "testset": "unit"},
+			},
+			// empty category should be skipped
+			expected: filepath.Join("out", "test", "core", "go-gotest-unit"),
+		},
+		{
+			name: "three extra fields sorted alphabetically in path",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
+			},
+			// category < testset < zone alphabetically, joined with dashes
+			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-unit-prod"),
+		},
+		{
+			name: "single non-testset extra field in path",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+				Extra:     map[string]string{"category": "vuln"},
+			},
+			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.OutDir(),
+				"OutDir should include all non-empty Extra fields in sorted key order")
+		})
+	}
+}
+
+func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
+	// Two units differing only by category should have different Longnames
+	// This proves uniqueness for scan context where category distinguishes work units
+
+	sbomScan := UnitID{
+		Context:   ContextScan,
+		Module:    "core",
+		Component: "go",
+		Tool:      "trivy",
+		Extra:     map[string]string{"category": "sbom"},
+	}
+
+	vulnScan := UnitID{
+		Context:   ContextScan,
+		Module:    "core",
+		Component: "go",
+		Tool:      "trivy",
+		Extra:     map[string]string{"category": "vuln"},
+	}
+
+	t.Run("different categories produce different longnames", func(t *testing.T) {
+		assert.NotEqual(t, sbomScan.Longname(), vulnScan.Longname(),
+			"Units with different category values must have different Longnames for uniqueness")
+	})
+
+	t.Run("different categories produce different output directories", func(t *testing.T) {
+		assert.NotEqual(t, sbomScan.OutDir(), vulnScan.OutDir(),
+			"Units with different category values must have different OutDirs for uniqueness")
+	})
+
+	t.Run("sbom scan has expected longname", func(t *testing.T) {
+		assert.Equal(t, "scan:core:go:trivy:sbom", sbomScan.Longname())
+	})
+
+	t.Run("vuln scan has expected longname", func(t *testing.T) {
+		assert.Equal(t, "scan:core:go:trivy:vuln", vulnScan.Longname())
+	})
+
+	t.Run("sbom scan has expected outdir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join("out", "scan", "core", "go-trivy-sbom"), sbomScan.OutDir())
+	})
+
+	t.Run("vuln scan has expected outdir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join("out", "scan", "core", "go-trivy-vuln"), vulnScan.OutDir())
+	})
+}
+
+func TestUnitID_DerivedFiles_WithAllExtraFields(t *testing.T) {
+	// Verify that all derived file paths use the full OutDir with all extra fields
+	unitID := UnitID{
+		Context:   ContextScan,
+		Module:    "core",
+		Component: "go",
+		Tool:      "trivy",
+		Extra:     map[string]string{"category": "sbom", "testset": "unit"},
+	}
+
+	// Expected base: out/scan/core/go-trivy-sbom-unit (component-tool-extra1-extra2, sorted alphabetically)
+	expectedOutDir := filepath.Join("out", "scan", "core", "go-trivy-sbom-unit")
+
+	t.Run("OutDir includes all extra fields sorted", func(t *testing.T) {
+		assert.Equal(t, expectedOutDir, unitID.OutDir())
+	})
+
+	t.Run("LockFile uses full OutDir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join(expectedOutDir, ".lock"), unitID.LockFile())
+	})
+
+	t.Run("StateFile uses full OutDir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join(expectedOutDir, "state.json"), unitID.StateFile())
+	})
+
+	t.Run("LogFile uses full OutDir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join(expectedOutDir, "execution.log"), unitID.LogFile())
+	})
+
+	t.Run("ResultsFile uses full OutDir", func(t *testing.T) {
+		assert.Equal(t, filepath.Join(expectedOutDir, "results.json"), unitID.ResultsFile())
+	})
+}
+
+// =============================================================================
+// NormalDisplay Tests - Human-Readable Sentences
+// =============================================================================
+
+func TestUnitID_NormalDisplay_BuildContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "go build - component equals tool",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "core",
+				Component: "go",
+				Tool:      "go",
+			},
+			expected: "Building go in core",
+		},
+		{
+			name: "site build with mkdocs",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "docs",
+				Component: "site",
+				Tool:      "mkdocs",
+			},
+			expected: "Building site in docs with mkdocs",
+		},
+		{
+			name: "build with empty tool",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "core",
+				Component: "go",
+				Tool:      "",
+			},
+			expected: "Building go in core",
+		},
+		{
+			name: "typescript build",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "mcp",
+				Component: "typescript",
+				Tool:      "npm",
+			},
+			expected: "Building typescript in mcp with npm",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.NormalDisplay())
+		})
+	}
+}
+
+func TestUnitID_NormalDisplay_TestContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "BDD test",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-cli",
+				Component: "gherkin",
+				Tool:      "godog",
+				Spec:      "build-module",
+			},
+			expected: "Testing spec build-module in eac-cli",
+		},
+		{
+			name: "unit test with testname",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"testname": "impl-build"},
+			},
+			expected: "Testing impl-build in core",
+		},
+		{
+			name: "unit test without testname",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+			},
+			expected: "Testing go in core",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.NormalDisplay())
+		})
+	}
+}
+
+func TestUnitID_NormalDisplay_LintContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "golangci-lint",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "core",
+				Component: "go",
+				Tool:      "golangci-lint",
+			},
+			expected: "Linting go in core with golangci-lint",
+		},
+		{
+			name: "eslint",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "mcp",
+				Component: "typescript",
+				Tool:      "eslint",
+			},
+			expected: "Linting typescript in mcp with eslint",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.NormalDisplay())
+		})
+	}
+}
+
+func TestUnitID_NormalDisplay_ScanContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "scan with category",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-sbom",
+				Extra:     map[string]string{"category": "sbom"},
+			},
+			expected: "Scanning go in core for sbom",
+		},
+		{
+			name: "scan without category",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+			},
+			expected: "Scanning go in core for trivy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.NormalDisplay())
+		})
+	}
+}
+
+func TestUnitID_NormalDisplay_UnknownContext(t *testing.T) {
+	unitID := UnitID{
+		Context:   "unknown",
+		Module:    "mod",
+		Component: "comp",
+		Tool:      "tool",
+	}
+
+	assert.Equal(t, "unknown comp in mod", unitID.NormalDisplay())
+}
+
+// =============================================================================
+// DisplayKey Tests - Key for Disambiguation
+// =============================================================================
+
+func TestUnitID_DisplayKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "build context uses component",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "core",
+				Component: "go",
+				Tool:      "go",
+			},
+			expected: "go",
+		},
+		{
+			name: "test context with spec uses spec",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-cli",
+				Component: "gherkin",
+				Tool:      "godog",
+				Spec:      "build-module",
+			},
+			expected: "build-module",
+		},
+		{
+			name: "test context with testname uses testname",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"testname": "impl-build"},
+			},
+			expected: "impl-build",
+		},
+		{
+			name: "test context without spec or testname uses component",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+			},
+			expected: "go",
+		},
+		{
+			name: "lint context uses component",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "core",
+				Component: "go",
+				Tool:      "golangci-lint",
+			},
+			expected: "go",
+		},
+		{
+			name: "scan context uses component",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy",
+			},
+			expected: "go",
+		},
+		{
+			name: "spec takes priority over testname",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-cli",
+				Component: "gherkin",
+				Tool:      "godog",
+				Spec:      "build-module",
+				Extra:     map[string]string{"testname": "ignored"},
+			},
+			expected: "build-module",
+		},
+		{
+			name: "empty testname falls back to component",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"testname": ""},
+			},
+			expected: "go",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.DisplayKey())
+		})
+	}
+}
+
+// =============================================================================
+// Plan Examples - Comprehensive Display Format Examples
+// =============================================================================
+
+func TestUnitID_DisplayFormats_PlanExamples(t *testing.T) {
+	examples := []struct {
+		description string
+		unitID      UnitID
+		displayName string // Context-aware display name
+		normal      string // Human-readable sentence
+	}{
+		// Test Context - BDD
+		{
+			description: "BDD godog test",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-cli",
+				Component: "gherkin",
+				Tool:      "godog",
+				Spec:      "build-module",
+			},
+			displayName: "build-module: godog",
+			normal:      "Testing spec build-module in eac-cli",
+		},
+		{
+			description: "BDD cucumber test",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "core",
+				Component: "typescript",
+				Tool:      "tscucumber",
+				Spec:      "cache-test",
+			},
+			displayName: "cache-test: tscucumber",
+			normal:      "Testing spec cache-test in core",
+		},
+		// Test Context - Unit
+		{
+			description: "Unit gotest",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-cli",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"testname": "impl-build"},
+			},
+			displayName: "impl-build: unit",
+			normal:      "Testing impl-build in eac-cli",
+		},
+		{
+			description: "Unit mocha",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "mcp",
+				Component: "typescript",
+				Tool:      "mocha",
+				Extra:     map[string]string{"testname": "client"},
+			},
+			displayName: "client: unit",
+			normal:      "Testing client in mcp",
+		},
+		// Build Context
+		{
+			description: "Go binary",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "core",
+				Component: "go",
+				Tool:      "go",
+			},
+			displayName: "core: go",
+			normal:      "Building go in core",
+		},
+		{
+			description: "Site build",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "docs",
+				Component: "site",
+				Tool:      "mkdocs",
+			},
+			displayName: "docs: site: mkdocs",
+			normal:      "Building site in docs with mkdocs",
+		},
+		{
+			description: "PDF build",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "books",
+				Component: "pdf",
+				Tool:      "pdf",
+			},
+			displayName: "books: pdf",
+			normal:      "Building pdf in books",
+		},
+		{
+			description: "TypeScript build",
+			unitID: UnitID{
+				Context:   ContextBuild,
+				Module:    "mcp",
+				Component: "typescript",
+				Tool:      "npm",
+			},
+			displayName: "mcp: typescript: npm",
+			normal:      "Building typescript in mcp with npm",
+		},
+		// Lint Context
+		{
+			description: "golangci-lint",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "core",
+				Component: "go",
+				Tool:      "golangci-lint",
+			},
+			displayName: "lint:go:golangci-lint",
+			normal:      "Linting go in core with golangci-lint",
+		},
+		{
+			description: "eslint",
+			unitID: UnitID{
+				Context:   ContextLint,
+				Module:    "mcp",
+				Component: "typescript",
+				Tool:      "eslint",
+			},
+			displayName: "lint:typescript:eslint",
+			normal:      "Linting typescript in mcp with eslint",
+		},
+		// Scan Context
+		{
+			description: "SBOM scan",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-sbom",
+				Extra:     map[string]string{"category": "sbom"},
+			},
+			displayName: "scan:go:sbom",
+			normal:      "Scanning go in core for sbom",
+		},
+		{
+			description: "Vuln scan",
+			unitID: UnitID{
+				Context:   ContextScan,
+				Module:    "core",
+				Component: "go",
+				Tool:      "trivy-vuln",
+				Extra:     map[string]string{"category": "vuln"},
+			},
+			displayName: "scan:go:vuln",
+			normal:      "Scanning go in core for vuln",
+		},
+	}
+
+	for _, ex := range examples {
+		t.Run(ex.description, func(t *testing.T) {
+			t.Run("DisplayName", func(t *testing.T) {
+				assert.Equal(t, ex.displayName, ex.unitID.DisplayName())
+			})
+			t.Run("NormalDisplay", func(t *testing.T) {
+				assert.Equal(t, ex.normal, ex.unitID.NormalDisplay())
+			})
 		})
 	}
 }

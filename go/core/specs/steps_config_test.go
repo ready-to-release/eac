@@ -493,8 +493,13 @@ func configTheTypeHasBuilder(typeName, builder string) error {
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
-	if pt.Builder != builder {
-		return fmt.Errorf("type %q has builder %q, expected %q", typeName, pt.Builder, builder)
+	builders := pt.GetBuilders()
+	actualBuilder := ""
+	if len(builders) > 0 {
+		actualBuilder = builders[0]
+	}
+	if actualBuilder != builder {
+		return fmt.Errorf("type %q has builder %q, expected %q", typeName, actualBuilder, builder)
 	}
 	return nil
 }

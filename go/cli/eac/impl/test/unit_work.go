@@ -79,33 +79,44 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			componentName := findComponentOfType(ctx, moduleMoniker, compTypeName)
 			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
 
-			// Extract spec name for BDD tests (godog, tscucumber)
-			// For BDD tests, use spec name as the component identifier
-			// For unit tests, use a unique path-based name to avoid collisions
+			// Compute testname - unique identifier within module:component
+			// For BDD tests: use spec name (e.g., "build-module")
+			// For unit tests: use path-based name (e.g., "impl-build")
 			spec := ""
-			cleanName := ""
+			testname := ""
 			if testType == "godog" || testType == "tscucumber" {
 				spec = extractSpecName(pkgPath)
-				cleanName = spec // e.g., "docs-drawio-cache"
+				testname = spec
 			} else {
-				// For regular tests, use unique component name based on path
-				// This avoids collisions when multiple packages have the same basename
-				// e.g., "go/cli/eac/impl/internal" -> "impl/internal" -> "impl-internal"
-				cleanName = uniqueComponentName(pkgPath, moduleMoniker, testCfg.ModuleMapper)
+				// Path-based testname unique within module
+				// e.g., "go/cli/eac/impl/build" -> "impl-build"
+				testname = uniqueComponentName(pkgPath, moduleMoniker, testCfg.ModuleMapper)
 			}
 
-			// Tool is the test type (gotest, godog, etc.) - consistent with build/lint/scan
+			// Skip if testname could not be determined (configuration error)
+			if testname == "" {
+				componentWorkLog.Warnf("ResolveTestUnitSpecs: skipping tests at pkgPath=%s - could not determine unique testname", pkgPath)
+				continue
+			}
+
+			// Tool is the test type (gotest, godog, etc.)
 			toolName := testType
 			if toolName == "" {
 				toolName = "none"
 			}
 
-			// Build UnitID to check UoW-level cache
+			// Build UnitID with structure: test:module:component:tool:testname
+			// - Component = component TYPE (e.g., "go", "typescript")
+			// - Extra["testname"] = unique test identifier within module:component
+			// This gives: Longname = test:eac-cli:go:gotest:impl-build
+			//             DirName  = go-gotest-impl-build
 			unitID := workunit.UnitID{
 				Context:   workunit.ContextTest,
 				Module:    moduleMoniker,
-				Component: cleanName,
+				Component: compTypeName, // Component TYPE, not path-derived name
 				Tool:      toolName,
+				Spec:      spec,
+				Extra:     map[string]string{"testname": testname},
 			}
 
 			// Check UoW-level cache first, fall back to module-level
@@ -118,14 +129,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
 			work := workunit.UnitSpec{
-				ID: workunit.UnitID{
-					Context:   workunit.ContextTest,
-					Module:    moduleMoniker,
-					Component: cleanName, // Clean component name for directory creation
-					Tool:      toolName,  // Test tool (gotest, godog, etc.)
-					Extra:     map[string]string{"testset": testType},
-					Spec:      spec, // Spec name for BDD tests (e.g., "build-module")
-				},
+				ID: unitID, // Use the same UnitID for consistency
 				ComponentType: testType,
 				Weight:        weight,
 				Container:     isContainer,
@@ -136,8 +140,9 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				Index:         0,                                  // Will be set per-layer below
 			}
 
-			// Store mapping from component name to pkgPath for worker lookup
-			testCfg.ComponentToPkgPath[cleanName] = pkgPath
+			// Store mapping from testname to pkgPath for worker lookup
+			// Key is testname (unique within module:component)
+			testCfg.ComponentToPkgPath[testname] = pkgPath
 
 			if hasSequential {
 				sequentialWork = append(sequentialWork, work)
@@ -172,15 +177,9 @@ func groupTestsByType(tests []testing.TestReference) map[string][]testing.TestRe
 }
 
 // getTestTypeComponentType maps test type to component type for tool lookup.
+// Uses the global tool config's test-type-mapping, with fallback to defaults.
 func getTestTypeComponentType(testType string) string {
-	switch testType {
-	case "gotest", "godog":
-		return "go"
-	case "mocha", "tscucumber":
-		return "typescript"
-	default:
-		return "go" // Default
-	}
+	return tool.GetTestTypeComponentType(testType)
 }
 
 // findComponentOfType finds the first component of the given type in a module.
@@ -241,49 +240,110 @@ func getTestComponentWeight(moniker, componentName string, tests []testing.TestR
 // For godog tests, pkgPath format is: "specname:testRoot:featurePath"
 // Example: "build-module:go/eac/specs/impl/eac-cli:specs/eac-cli/build-module/specification.feature"
 // Returns the spec name (first part before colon), or empty string if not found.
+// The result is sanitized for use in file paths.
 func extractSpecName(pkgPath string) string {
 	parts := strings.SplitN(pkgPath, ":", 2)
 	if len(parts) >= 1 && parts[0] != "" {
-		return parts[0]
+		return sanitizeTestname(parts[0])
 	}
 	return ""
 }
 
+// sanitizeTestname makes a testname safe for use in filesystem paths.
+// Replaces characters that are problematic on Windows and Unix:
+// - Colons, slashes, backslashes are replaced with dashes
+// - Other unsafe characters (<>"|?*) are replaced with underscores
+// - Spaces are replaced with dashes
+// - Multiple consecutive dashes are collapsed
+// - Leading/trailing dashes are trimmed
+func sanitizeTestname(name string) string {
+	if name == "" {
+		return name
+	}
+
+	// Replace path separators and colons with dashes
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, "\\", "-")
+	name = strings.ReplaceAll(name, ":", "-")
+
+	// Replace spaces with dashes
+	name = strings.ReplaceAll(name, " ", "-")
+
+	// Replace other unsafe characters with underscores
+	unsafeChars := []string{"<", ">", "\"", "|", "?", "*"}
+	for _, c := range unsafeChars {
+		name = strings.ReplaceAll(name, c, "_")
+	}
+
+	// Collapse multiple consecutive dashes into one
+	for strings.Contains(name, "--") {
+		name = strings.ReplaceAll(name, "--", "-")
+	}
+
+	// Trim leading and trailing dashes
+	name = strings.Trim(name, "-")
+
+	return name
+}
+
 // uniqueComponentName generates a unique component name from a package path.
-// Uses the path relative to the module root to avoid collisions between packages
-// with the same basename (e.g., multiple "internal" packages).
-// Example: "go/cli/eac/impl/internal" for module "eac-cli" -> "impl-internal"
+// Uses longest prefix matching to find the most specific component root.
+// This ensures deterministic results regardless of Go map iteration order.
+//
+// Example: For pkgPath "go/cli/eac/impl/validate/risk_profile" with roots:
+//   - "go/cli/eac"
+//   - "go/cli/eac/impl"
+//
+// The "go/cli/eac/impl" root wins (longer prefix), producing "validate-risk_profile"
+// Returns empty string if the path cannot be mapped to a unique name (caller should skip).
 func uniqueComponentName(pkgPath, moduleMoniker string, mapper *ModuleMapper) string {
-	// Normalize path
 	normalizedPath := filepath.ToSlash(pkgPath)
 
-	// Get module info to find the component root
-	if mapper != nil && mapper.registry != nil {
-		if module, exists := mapper.registry.Get(moduleMoniker); exists {
-			// Try to find a matching component root
-			for _, root := range module.GetComponentRoots() {
-				if root == "" || root == "/" {
-					continue
-				}
-				root = filepath.ToSlash(root)
-				// Check if pkgPath is under this component root
-				if strings.HasPrefix(normalizedPath, root+"/") {
-					// Extract the suffix after the root
-					suffix := strings.TrimPrefix(normalizedPath, root+"/")
-					if suffix != "" {
-						// Replace slashes with dashes for a clean component name
-						return strings.ReplaceAll(suffix, "/", "-")
-					}
-				}
-				// Exact match (package is at the root itself)
-				if normalizedPath == root {
-					return filepath.Base(root)
-				}
+	if mapper == nil || mapper.registry == nil {
+		componentWorkLog.Warnf("uniqueComponentName: mapper unavailable for pkgPath=%s, moduleMoniker=%s", pkgPath, moduleMoniker)
+		return ""
+	}
+
+	module, exists := mapper.registry.Get(moduleMoniker)
+	if !exists {
+		componentWorkLog.Warnf("uniqueComponentName: module not found: moniker=%s, pkgPath=%s", moduleMoniker, pkgPath)
+		return ""
+	}
+
+	// Use longest prefix match to ensure deterministic results
+	// (Go map iteration order is undefined, so "first match" would be non-deterministic)
+	var bestRoot string
+	var bestSuffix string
+
+	for _, root := range module.GetComponentRoots() {
+		if root == "" || root == "/" {
+			continue
+		}
+		root = filepath.ToSlash(root)
+
+		// Prefix match: pkgPath starts with root/
+		if strings.HasPrefix(normalizedPath, root+"/") {
+			suffix := strings.TrimPrefix(normalizedPath, root+"/")
+			if suffix != "" && (bestRoot == "" || len(root) > len(bestRoot)) {
+				bestRoot = root
+				bestSuffix = suffix
+			}
+		}
+
+		// Exact match: pkgPath equals root
+		if normalizedPath == root {
+			if bestRoot == "" || len(root) > len(bestRoot) {
+				bestRoot = root
+				bestSuffix = filepath.Base(root)
 			}
 		}
 	}
 
-	// Fallback: use basename (may not be unique, but better than nothing)
-	// This handles edge cases where module mapping isn't available
-	return filepath.Base(pkgPath)
+	if bestSuffix == "" {
+		componentWorkLog.Warnf("uniqueComponentName: no component root matched for pkgPath=%s in module=%s (roots=%v)",
+			pkgPath, moduleMoniker, module.GetComponentRoots())
+		return ""
+	}
+
+	return sanitizeTestname(bestSuffix)
 }

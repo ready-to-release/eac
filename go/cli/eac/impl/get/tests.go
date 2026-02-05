@@ -1,4 +1,5 @@
 // Command: get tests
+// Short: Get all discovered tests with metadata
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

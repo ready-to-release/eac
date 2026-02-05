@@ -1,4 +1,5 @@
 // Command: get build-deps
+// Short: Get aggregated build dependencies for a module
 // Args: module (required) - Module moniker
 // Long:
 // Long: Expected Output:
@@ -99,7 +100,7 @@ func GetBuildDeps() int {
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ComponentTypes)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry)
 
 	// Handle shell format output
 	if format == "shell" {
@@ -119,9 +120,17 @@ func GetBuildDeps() int {
 }
 
 // aggregateBuildDeps collects build dependencies from a module and all its dependencies.
-func aggregateBuildDeps(moniker string, registry *modules.Registry, pkgTypes *config.ComponentTypesConfig) []string {
+// Docker is the only true system dependency - required for any container-based tool execution.
+// UPX is included when artifacts require upx compression.
+func aggregateBuildDeps(moniker string, registry *modules.Registry) []string {
 	seen := make(map[string]bool)
 	depsSet := make(map[string]bool)
+
+	// Docker is always a dependency for builds that use container tools.
+	// The tool system handles the binding (system vs container) at execution time.
+	// Since we can't know at this point which tools will be used (that's determined
+	// by bindings), we conservatively include docker as a build dep.
+	depsSet["docker"] = true
 
 	var collect func(m string)
 	collect = func(m string) {
@@ -133,18 +142,6 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, pkgTypes *co
 		module, exists := registry.Get(m)
 		if !exists {
 			return
-		}
-
-		// Add this module's build deps (resolved from package types)
-		enabledPackages := module.GetEnabledComponents()
-		deps := pkgTypes.GetBuildRequirements(enabledPackages)
-		for _, dep := range deps {
-			depsSet[dep] = true
-		}
-
-		// Modules with books require docker for mkdocs builds
-		if len(module.GetBooks()) > 0 {
-			depsSet["docker"] = true
 		}
 
 		// Check per-module artifacts for compression requirements
@@ -203,7 +200,7 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ComponentTypes)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry)
 	if len(buildDeps) == 0 {
 		return "", nil
 	}

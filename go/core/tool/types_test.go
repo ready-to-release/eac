@@ -443,7 +443,7 @@ func TestToolDefinition_IsLocalContainer(t *testing.T) {
 			name: "local container with localPath",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-tool",
+				LocalPath: "containers/site-render-oci",
 			},
 			want: true,
 		},
@@ -506,10 +506,10 @@ func TestToolDefinition_LocalContextPath(t *testing.T) {
 			name: "local container",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-tool",
+				LocalPath: "containers/site-render-oci",
 			},
 			workspaceRoot: "/home/user/project",
-			localPath:     "containers/site-render-tool",
+			localPath:     "containers/site-render-oci",
 			wantEmpty:     false,
 		},
 		{
@@ -551,9 +551,9 @@ func TestToolDefinition_LocalImageTag(t *testing.T) {
 			name: "local container",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-tool",
+				LocalPath: "containers/site-render-oci",
 			},
-			want: "site-render-tool:local",
+			want: "site-render-oci:local",
 		},
 		{
 			name: "local container with nested path",
@@ -606,7 +606,7 @@ func TestToolDefinition_IsServable(t *testing.T) {
 		{
 			name: "tool with nil serve",
 			tool: &ToolDefinition{
-				ID:    "nginx-tool",
+				ID:    "nginx-oci",
 				Type:  ToolTypeContainer,
 				Serve: nil,
 			},
@@ -615,7 +615,7 @@ func TestToolDefinition_IsServable(t *testing.T) {
 		{
 			name: "tool with serve but no port",
 			tool: &ToolDefinition{
-				ID:    "nginx-tool",
+				ID:    "nginx-oci",
 				Type:  ToolTypeContainer,
 				Serve: &ServeConfig{},
 			},
@@ -624,7 +624,7 @@ func TestToolDefinition_IsServable(t *testing.T) {
 		{
 			name: "tool with serve and container port",
 			tool: &ToolDefinition{
-				ID:   "nginx-tool",
+				ID:   "nginx-oci",
 				Type: ToolTypeContainer,
 				Serve: &ServeConfig{
 					ContainerPort: 8080,
@@ -833,10 +833,10 @@ func TestToolDefinition_GetServerType(t *testing.T) {
 		{
 			name: "servable tool",
 			tool: &ToolDefinition{
-				ID:    "nginx-tool",
+				ID:    "nginx-oci",
 				Serve: &ServeConfig{ContainerPort: 8080},
 			},
-			want: "nginx-tool",
+			want: "nginx-oci",
 		},
 		{
 			name: "servable tool with container suffix",
@@ -930,7 +930,7 @@ func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
 			tool: ToolDefinition{
 				ID:        "mkdocs",
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-tool",
+				LocalPath: "containers/site-render-oci",
 			},
 			wantErr: false,
 		},

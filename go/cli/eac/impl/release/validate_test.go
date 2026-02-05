@@ -96,74 +96,51 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 	assert.Contains(t, result.Errors[0], "changelog not found", "error message should mention missing file")
 }
 
-// TestValidateRelease_InternalModules tests that internal modules have changelogs in module roots.
-// This test validates the POST-migration structure (Phase 2 completed).
-func TestValidateRelease_InternalModules(t *testing.T) {
+// TestValidateRelease_PublishedModules tests that published modules have changelogs in release/ folder.
+func TestValidateRelease_PublishedModules(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	// Internal modules should have changelogs in their module roots (POST-migration)
-	internalModules := map[string]struct {
-		moduleRootPath string // Where changelog should be after Phase 2
-		oldPath        string // Where it used to be (should NOT exist)
-	}{
-		"mcp-server": {
-			moduleRootPath: "go/eac/mcp/commands/CHANGELOG.md",
-			oldPath:        "release/mcp-server/CHANGELOG.md",
-		},
-		"r2r-installer": {
-			moduleRootPath: "scripts/CHANGELOG.md",
-			oldPath:        "release/r2r-installer/CHANGELOG.md",
-		},
-		"vscode-commit": {
-			moduleRootPath: "typescript/vscode-commit/CHANGELOG.md",
-			oldPath:        "release/vscode-commit/CHANGELOG.md",
-		},
-	}
+	// Published modules with versioning: r2r-cli, ext-eac, docs
+	publishedModules := []string{"r2r-cli", "ext-eac", "docs"}
 
-	for moniker, paths := range internalModules {
+	for _, moniker := range publishedModules {
 		t.Run(moniker, func(t *testing.T) {
+			expectedPath := "release/" + moniker + "/CHANGELOG.md"
+
 			// Use mock registry with predictable data
 			moduleRegistry := eactesting.NewMockRegistry(
 				eactesting.WithModule(moniker,
 					eactesting.WithVersioning(),
-					eactesting.WithChangelog(paths.moduleRootPath),
-					eactesting.WithReleaseType("internal"),
+					eactesting.WithChangelog(expectedPath),
+					eactesting.WithReleaseType("published"),
 				),
 			)
 
 			moduleContract, exists := moduleRegistry.Get(moniker)
 			require.True(t, exists, "mock module should always exist")
 
-			// Verify release_type is internal
-			assert.Equal(t, "internal", moduleContract.Versioning.ReleaseType,
-				"module %s should have release_type: internal", moniker)
+			// Verify release_type is published
+			assert.Equal(t, "published", moduleContract.Versioning.ReleaseType,
+				"module %s should have release_type: published", moniker)
 
-			// Verify changelog path points to module root
+			// Verify changelog path points to release folder
 			changelogPath := moduleContract.GetChangelogPath()
-			assert.Equal(t, paths.moduleRootPath, changelogPath,
-				"internal module %s should have changelog in module root", moniker)
+			assert.Equal(t, expectedPath, changelogPath,
+				"published module %s should have changelog in release/ folder", moniker)
 
-			// Verify changelog file exists at module root
-			moduleRootFullPath := filepath.Join(workspaceRoot, paths.moduleRootPath)
-			_, moduleRootErr := os.Stat(moduleRootFullPath)
-			assert.NoError(t, moduleRootErr,
-				"changelog should exist at module root %s for internal module %s",
-				paths.moduleRootPath, moniker)
-
-			// Verify old changelog does NOT exist in release/ folder
-			oldFullPath := filepath.Join(workspaceRoot, paths.oldPath)
-			_, oldErr := os.Stat(oldFullPath)
-			assert.True(t, os.IsNotExist(oldErr),
-				"old changelog should NOT exist at %s for internal module %s",
-				paths.oldPath, moniker)
+			// Verify changelog file exists
+			fullPath := filepath.Join(workspaceRoot, expectedPath)
+			_, err := os.Stat(fullPath)
+			assert.NoError(t, err,
+				"changelog should exist at %s for published module %s",
+				expectedPath, moniker)
 
 			// Run validation
 			result := validateChangelog(moniker, moduleContract, workspaceRoot)
 
-			// After Phase 2, validation should pass
-			if moduleRootErr == nil {
+			if err == nil {
 				assert.True(t, result.Valid,
-					"validation should pass when changelog is in module root")
+					"validation should pass when changelog exists in release/ folder")
 			}
 		})
 	}

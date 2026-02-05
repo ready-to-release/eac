@@ -183,8 +183,8 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 
 		switch framework {
 		case FrameworkBuild:
-			if typeConfig != nil && typeConfig.HasBuilder() {
-				unit := createUnitInfo(mod, compName, compType, typeConfig.Builder, workunit.ContextBuild, workspaceRoot, stateMgr)
+			if typeConfig != nil && typeConfig.IsBuildable() {
+				unit := createUnitInfo(mod, compName, compType, typeConfig.GetBuilders()[0], workunit.ContextBuild, workspaceRoot, stateMgr)
 				units = append(units, unit)
 			} else {
 				skipped = append(skipped, &SkippedComponent{
@@ -192,7 +192,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 					Component:     compName,
 					ComponentType: compType,
 					Reason:        "no builder configured",
-					ConfigHint:    "add 'builder' to component-types.yml for type '" + compType + "'",
+					ConfigHint:    "add 'builders' to component-types.yml for type '" + compType + "'",
 				})
 			}
 

@@ -10,6 +10,7 @@ use (
 	./contracts/tools/0.1.0/interfaces
 	./contracts/tui-adapter/0.1.0/interfaces
 	./go/adapters/ai
+	./go/adapters/containerruntime
 	./go/adapters/docker
 	./go/adapters/tui
 	./go/cli/eac

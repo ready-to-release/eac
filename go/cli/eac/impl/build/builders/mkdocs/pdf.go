@@ -35,7 +35,7 @@ func NewPDFRenderHandler(workspaceRoot string) *PDFRenderHandler {
 }
 
 // Name returns the handler identifier.
-func (h *PDFRenderHandler) Name() string { return "pdf-tool" }
+func (h *PDFRenderHandler) Name() string { return "pdf-oci" }
 
 // Requirements returns system dependencies (Docker required).
 func (h *PDFRenderHandler) Requirements() []string { return []string{"docker"} }
@@ -109,7 +109,7 @@ func (h *PDFRenderHandler) Build(
 	}
 
 	// Compute input hash for cache check
-	containerHash := getContainerImageHash(workspaceRoot, "pdf-tool")
+	containerHash := getContainerImageHash(workspaceRoot, "pdf-oci")
 	inputHash := computePDFRenderInputHash(baseManifest.OutputHash, theme, containerHash)
 
 	// Check cache - skip if base-site and theme unchanged
@@ -166,6 +166,7 @@ func (h *PDFRenderHandler) Build(
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 
 	pdfConcurrency := environments.GetPDFExportConcurrency()
+	pageLimit := opts.ArtifactsMode.PDFPageLimit()
 	configOpts := books.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
@@ -175,6 +176,7 @@ func (h *PDFRenderHandler) Build(
 		Theme:           theme,
 		OutputFormat:    fmt.Sprintf("pdf-%s", theme),
 		PDFConcurrency:  pdfConcurrency,
+		PageLimit:       pageLimit,
 	}
 	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
@@ -219,7 +221,7 @@ func (h *PDFRenderHandler) Build(
 			logln(logWriter, "🔄 Retrying PDF build (attempt %d/%d)...", attempt, maxRetries)
 		}
 
-		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-tool", tc)
+		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-oci", tc)
 		if execErr == nil && exitCode == 0 {
 			break
 		}

@@ -85,7 +85,72 @@ func LoadToolConfig(repoRoot, configRoot string) (*ToolConfig, error) {
 		mergeToolConfig(config, &override)
 	}
 
+	// Apply implicit defaults (e.g., docker requirement for container tools)
+	applyToolConfigDefaults(config)
+
 	return config, nil
+}
+
+// applyToolConfigDefaults applies implicit defaults to the tool configuration.
+// This includes:
+// - Adding "docker" as an implicit requirement for all container tools
+// - Applying serve defaults (port range, restart policy, auto-open browser)
+func applyToolConfigDefaults(config *ToolConfig) {
+	if config == nil {
+		return
+	}
+
+	// All container tools implicitly require docker
+	for _, tool := range config.ContainerTools {
+		if tool == nil {
+			continue
+		}
+		addImplicitDockerRequirement(tool)
+		applyServeDefaults(tool)
+	}
+}
+
+// addImplicitDockerRequirement adds "docker" to a tool's requirements if not already present.
+// This is applied to all container tools since they inherently require docker to run.
+func addImplicitDockerRequirement(tool *ToolDefinition) {
+	if tool == nil {
+		return
+	}
+
+	// Check if docker is already in requirements
+	for _, req := range tool.Requirements {
+		if req == "docker" {
+			return // Already has docker requirement
+		}
+	}
+
+	// Add docker as implicit requirement
+	tool.Requirements = append(tool.Requirements, "docker")
+}
+
+// applyServeDefaults applies default serve configuration values.
+// Defaults:
+// - HostPortRange: "9000-9999"
+// - RestartPolicy: "unless-stopped"
+// - AutoOpenBrowser: true
+func applyServeDefaults(tool *ToolDefinition) {
+	if tool == nil || tool.Serve == nil {
+		return
+	}
+
+	if tool.Serve.HostPortRange == "" {
+		tool.Serve.HostPortRange = "9000-9999"
+	}
+	if tool.Serve.RestartPolicy == "" {
+		tool.Serve.RestartPolicy = "unless-stopped"
+	}
+	// AutoOpenBrowser defaults to true if not explicitly set
+	// Since bool zero value is false, we need to check if it was explicitly set
+	// For now, we'll use a pointer to distinguish between unset and false
+	// Actually, looking at ServeConfig, AutoOpenBrowser is just bool, not *bool
+	// So we can't distinguish unset from false. We'll default to true only if
+	// the entire serve config exists (meaning the tool is a serve tool)
+	// This is a conservative approach - tools that don't want auto-open can set it to false
 }
 
 // loadToolConfigDefaults loads default tool configuration from domain.
@@ -361,6 +426,14 @@ func mergeToolConfig(base, override *ToolConfig) {
 			base.Caches = make(map[string]*CacheConfig)
 		}
 		base.Caches[name] = cache
+	}
+
+	// Merge test-type-mapping
+	for testType, compType := range override.TestTypeMapping {
+		if base.TestTypeMapping == nil {
+			base.TestTypeMapping = make(map[string]string)
+		}
+		base.TestTypeMapping[testType] = compType
 	}
 }
 

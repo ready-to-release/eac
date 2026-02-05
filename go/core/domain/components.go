@@ -150,7 +150,9 @@ func (mc ModuleComponents) GetDefault() string {
 	return ""
 }
 
-// GetEnabled returns all enabled component types.
+// GetEnabled returns all enabled component NAMES (the map keys).
+// Note: For requirement lookups in ComponentTypesConfig, use GetComponentTypes()
+// instead, which returns actual types (considering the Type field override).
 func (mc ModuleComponents) GetEnabled() []string {
 	if mc == nil {
 		return nil
@@ -218,7 +220,8 @@ func (mc ModuleComponents) GetComponentsByType(typeName string) map[string]*Comp
 	return result
 }
 
-// GetComponentTypes returns unique types used across all components.
+// GetComponentTypes returns unique component TYPES used across all components.
+// This considers the ComponentEntry.Type field if set, otherwise uses the name.
 func (mc ModuleComponents) GetComponentTypes() []string {
 	if mc == nil {
 		return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -123,4 +124,32 @@ func IsDockerAvailable() bool {
 	// Try to ping Docker daemon
 	_, err = cli.(*RealDockerClient).Ping(context.Background())
 	return err == nil
+}
+
+// IsWindowsDockerHost checks if the Docker daemon is running on a Windows host.
+// This is needed to enable polling for file watching since filesystem events
+// don't propagate through Docker mounted volumes on Windows.
+// Works correctly in DinD environments by querying the Docker daemon directly.
+func IsWindowsDockerHost() bool {
+	cli, err := newRealDockerClient()
+	if err != nil {
+		return false
+	}
+	defer cli.Close()
+
+	info, err := cli.(*RealDockerClient).Info(context.Background())
+	if err != nil {
+		return false
+	}
+
+	// Check kernel version for WSL2 (Windows Subsystem for Linux)
+	// WSL2 kernels contain "microsoft" in the version string
+	kernelVersion := strings.ToLower(info.KernelVersion)
+	if strings.Contains(kernelVersion, "microsoft") {
+		return true
+	}
+
+	// Also check OperatingSystem for "Docker Desktop" which runs on Windows/macOS
+	operatingSystem := strings.ToLower(info.OperatingSystem)
+	return strings.Contains(operatingSystem, "docker desktop")
 }

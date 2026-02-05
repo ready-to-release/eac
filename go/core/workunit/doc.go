@@ -27,12 +27,6 @@
 // Used for: cache keys, state files, dependency matching, TUI tab matching.
 // Format: "context:module:component:tool" or "module:spec:specname" for BDD tests.
 //
-// Shortname - Brief display name (deprecated):
-//
-//	id.Shortname() // "core:go"
-//
-// Deprecated: Use Path() for stable identifiers or DisplayName() for contextual display.
-//
 // Path - Component-level identification:
 //
 //	id.Path() // "core:go"
@@ -40,13 +34,16 @@
 // Returns module:component. Not unique across contexts or tools - use Longname()
 // when uniqueness is required.
 //
-// DisplayName - Context-aware display name:
+// DisplayName - Context-aware compact display name:
 //
-//	id.DisplayName(false) // "go"       - just component
-//	id.DisplayName(true)  // "core:go"  - module:component
+//	buildID.DisplayName()    // "core: go" (build context, component=tool)
+//	siteID.DisplayName()     // "docs: site: mkdocs" (build context, component!=tool)
+//	testID.DisplayName()     // "impl-build: unit" (test context)
+//	specID.DisplayName()     // "build-module: godog" (test context, BDD)
+//	lintID.DisplayName()     // "lint:go:golangci-lint" (lint context)
+//	scanID.DisplayName()     // "scan:go:sbom" (scan context)
 //
-// Use disambiguate=true when multiple modules have same component names.
-// For BDD tests, returns spec name or "module:spec:specname".
+// Format varies by context for optimal readability in TUI tabs and logs.
 //
 // TabLabel - Truncated name for TUI tabs:
 //
@@ -60,19 +57,19 @@
 // For BDD tests (godog, tscucumber), the Spec field enables special formatting:
 //
 //	id := workunit.UnitID{
-//	    Module: "eac-cli",
-//	    Spec:   "build-module",
+//	    Context: workunit.ContextTest,
+//	    Module:  "eac-cli",
+//	    Tool:    "godog",
+//	    Spec:    "build-module",
 //	}
-//	id.Longname()       // "eac-cli:spec:build-module"
-//	id.Shortname()      // "build-module"
-//	id.DisplayName(true) // "eac-cli:spec:build-module"
+//	id.Longname()     // "eac-cli:spec:build-module"
+//	id.DisplayName()  // "build-module: godog"
 //
 // # When to Use Each Method
 //
 //   - Longname(): Cache keys, state tracking, dependency matching, unique IDs
 //   - Path(): Grouping by component, when context/tool doesn't matter
-//   - DisplayName(false): User-facing output when context is clear
-//   - DisplayName(true): User-facing output when disambiguation needed
+//   - DisplayName(): User-facing output (TUI tabs, logs)
 //   - TabLabel(n): TUI tabs with limited width
 //
 // # State Management

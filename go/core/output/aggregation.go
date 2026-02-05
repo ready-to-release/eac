@@ -79,7 +79,7 @@ func AggregateUoWChanges(
 		agg.MarkCached(id)
 
 		// Load cache time from manifest
-		if manifest, err := reader.GetUoW(ctx, id.Module, id.Component, id.Tool); err == nil {
+		if manifest, err := reader.GetUoW(id); err == nil {
 			result.UoWCacheTimes[longname] = manifest.ExecutedAt
 		}
 	}

@@ -1,0 +1,13 @@
+{
+  "type": "feat",
+  "scope": "eac-core",
+  "subject": "add test functionality",
+  "body": "This commit implements new test features to improve coverage and reliability.\nThe changes include test helpers, mock data structures, and updated documentation\nto support easier test creation.",
+  "breaking": false,
+  "modules": [
+    {
+      "name": "eac-core",
+      "changes": "implement testing infrastructure with mock support and helper functions for easier test creation"
+    }
+  ]
+}

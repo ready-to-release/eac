@@ -40,29 +40,38 @@ func (c *EACConfig) ValidateAll() error {
 	}
 
 	if c.Environments != nil {
-		data, err := c.readConfigFile(EnvironmentsFileName)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("environments: failed to read: %w", err))
-		} else if err := c.validateSchema(schema.SchemaEnvironments, data); err != nil {
-			errs = append(errs, fmt.Errorf("environments: %w", err))
+		envPath := filepath.Join(c.ConfigRoot, EnvironmentsFileName)
+		if _, err := os.Stat(envPath); err == nil {
+			data, err := c.readConfigFile(EnvironmentsFileName)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("environments: failed to read: %w", err))
+			} else if err := c.validateSchema(schema.SchemaEnvironments, data); err != nil {
+				errs = append(errs, fmt.Errorf("environments: %w", err))
+			}
 		}
 	}
 
 	if c.TestingTags != nil {
-		data, err := c.readConfigFile(TestingTagsFileName)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("testing-tags: failed to read: %w", err))
-		} else if err := c.validateSchema(schema.SchemaTestingTags, data); err != nil {
-			errs = append(errs, fmt.Errorf("testing-tags: %w", err))
+		tagsPath := filepath.Join(c.ConfigRoot, TestingTagsFileName)
+		if _, err := os.Stat(tagsPath); err == nil {
+			data, err := c.readConfigFile(TestingTagsFileName)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("testing-tags: failed to read: %w", err))
+			} else if err := c.validateSchema(schema.SchemaTestingTags, data); err != nil {
+				errs = append(errs, fmt.Errorf("testing-tags: %w", err))
+			}
 		}
 	}
 
 	if c.TestSuites != nil {
-		data, err := c.readConfigFile(TestSuitesFileName)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("test-suites: failed to read: %w", err))
-		} else if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
-			errs = append(errs, fmt.Errorf("test-suites: %w", err))
+		suitesPath := filepath.Join(c.ConfigRoot, TestSuitesFileName)
+		if _, err := os.Stat(suitesPath); err == nil {
+			data, err := c.readConfigFile(TestSuitesFileName)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("test-suites: failed to read: %w", err))
+			} else if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
+				errs = append(errs, fmt.Errorf("test-suites: %w", err))
+			}
 		}
 	}
 

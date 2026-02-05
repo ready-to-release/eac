@@ -130,9 +130,9 @@ func TestScanBridge_GetAllScannerTools(t *testing.T) {
 		OutputFormat: "json",
 	})
 	registry.Register(&ToolDefinition{
-		ID:        "nginx-tool", // Not a scanner
+		ID:        "nginx-oci", // Not a scanner
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8080,
 		},

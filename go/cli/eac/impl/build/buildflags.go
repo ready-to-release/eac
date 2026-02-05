@@ -16,7 +16,7 @@ type BuildSpecificFlags struct {
 	Reproducible    string // --reproducible: MkDocs reproducibility mode
 	AcceptWarnings  bool   // --accept-warnings: Don't fail on MkDocs warnings
 	ListArtifacts   bool   // --list-artifacts: List artifacts without building
-	BuildAll        bool   // --all: Build all artifacts variants
+	Artifacts       string // --artifacts: Artifact scope mode (all, reduced). --all is alias for --artifacts all
 
 	// Declarative tracking field
 	TidyExplicit bool // True if --with-tidy, --tidy-first, or --no-tidy was used
@@ -73,7 +73,8 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 		flags.ListArtifacts = true
 		return true, 0, nil
 	case "--all":
-		flags.BuildAll = true
+		// --all is an alias for --artifacts all
+		flags.Artifacts = "all"
 		return true, 0, nil
 	case "--version":
 		if i+1 >= len(args) {
@@ -91,6 +92,16 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 		}
 		flags.Reproducible = val
 		return true, 1, nil
+	case "--artifacts":
+		if i+1 >= len(args) {
+			return true, 0, fmt.Errorf("--artifacts requires a value (all, reduced)")
+		}
+		val := args[i+1]
+		if !isValidArtifactsMode(val) {
+			return true, 0, fmt.Errorf("--artifacts must be 'all' or 'reduced'")
+		}
+		flags.Artifacts = val
+		return true, 1, nil
 	}
 
 	// Handle --key=value syntax
@@ -106,8 +117,21 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 		flags.Reproducible = val
 		return true, 0, nil
 	}
+	if strings.HasPrefix(arg, "--artifacts=") {
+		val := strings.TrimPrefix(arg, "--artifacts=")
+		if !isValidArtifactsMode(val) {
+			return true, 0, fmt.Errorf("--artifacts must be 'all' or 'reduced'")
+		}
+		flags.Artifacts = val
+		return true, 0, nil
+	}
 
 	return false, 0, nil
+}
+
+// isValidArtifactsMode checks if an artifacts mode flag value is valid.
+func isValidArtifactsMode(value string) bool {
+	return value == "all" || value == "reduced"
 }
 
 // ParseIntArg parses a string argument as an integer.

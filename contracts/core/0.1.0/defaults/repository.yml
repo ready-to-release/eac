@@ -54,6 +54,12 @@ repository:
     ci: 8       # Max parallel workers in CI (GitHub Actions)
     devbox: 0   # Auto-detect from system resources (CPU and RAM)
 
+  # Ghost tracking configuration for dark launch code discovery
+  # Ghosts are files/directories with a naming prefix used for feature hiding,
+  # monitoring probes, and code that exists in production but is inactive.
+  ghost-tracking:
+    ghost-alias: ghost  # Default prefix for ghost detection (ghost-*, ghost.*, ghost)
+
 # Default paths configuration
 paths:
   # Specs root directory - where feature specifications live

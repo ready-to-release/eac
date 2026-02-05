@@ -8,6 +8,7 @@ serving as the primary approval checkpoint before code merges to the main branch
 Stage 3 combines **automated validation** (repeated pre-commit checks plus integration tests) with **human judgment** (peer review).
 
 This stage is unique because it's the only stage in the CD Model that **always** requires manual human approval - the peer reviewer's sign-off.
+However if the contributing team is too small, (1-2 devs), this can be deferred until release approval stage.
 
 In the RA pattern, Stage 3 is the first-level approval (code quality).
 

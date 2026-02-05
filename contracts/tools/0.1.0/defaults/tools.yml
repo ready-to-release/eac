@@ -16,8 +16,8 @@
 #---------------------------------------------------------------------------
 namespaces:
   bootstrap: [go, docker, git]
-  go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, site-render-tool, pdf-tool, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
+  go: [golangci-lint, gcc, go-build, go-test-race, go-oci]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, site-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
@@ -207,6 +207,26 @@ container-tools:
       cpus: 4
     requirements: [docker]
 
+  go-oci:
+    description: "Go toolchain in container (CI, CGO, cross-compilation)"
+    localPath: containers/go-oci
+    entrypoint: ["go"]
+    # NO fixed command - args come entirely from ArgsOverrides at runtime
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/go"
+        target: /go/pkg
+      - source: "{workspace}/.cache/go-build"
+        target: /root/.cache/go-build
+    workdir: /app
+    environment:
+      GOPROXY: "https://proxy.golang.org,direct"
+    resources:
+      cpus: 4
+      memory: "4g"
+    requirements: [docker]
+
   # Node.js / TypeScript
   npm-build:
     description: "NPM build in container"
@@ -324,7 +344,7 @@ container-tools:
   # Documentation
   mkdocs-build:
     description: "MkDocs build"
-    localPath: containers/site-render-tool
+    localPath: containers/site-render-oci
     resources:
       cpus: 4
       memory: "4g"
@@ -360,9 +380,9 @@ container-tools:
       watch_enabled: true
       watch_paths: ["docs/", "mkdocs.yml"]
 
-  site-render-tool:
+  site-render-oci:
     description: "MkDocs site rendering from preprocessed content"
-    localPath: containers/site-render-tool
+    localPath: containers/site-render-oci
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -378,9 +398,23 @@ container-tools:
       cpus: 4
       memory: "4g"
 
-  pdf-tool:
+  mkdocs-dev-oci:
+    description: "MkDocs development server with polling-based live reload"
+    localPath: containers/mkdocs-dev-oci
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /docs
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  pdf-oci:
     description: "MkDocs PDF generation with Playwright"
-    localPath: containers/pdf-tool
+    localPath: containers/pdf-oci
     command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
     mounts:
       - source: "{workspace}"
@@ -422,7 +456,7 @@ container-tools:
   structurizr-cli:
     description: "Structurizr CLI for export/validation"
     image: structurizr/cli
-    tag: "2024.12.18"
+    tag: "2024.12.07"
     mounts:
       - source: "{workspace}"
         target: /workspace
@@ -432,7 +466,7 @@ container-tools:
   structurizr-lite:
     description: "Structurizr diagram server"
     image: structurizr/lite
-    tag: "2024.12.18"
+    tag: "2024.12.07"
     mounts:
       - source: "{content}"
         target: /usr/local/structurizr
@@ -446,7 +480,7 @@ container-tools:
   # Servers
   static-site:
     description: "Static site server (nginx)"
-    localPath: containers/nginx-tool
+    localPath: containers/nginx-oci
     mounts:
       - source: "{content}"
         target: /usr/share/nginx/html
@@ -620,10 +654,10 @@ component-tools:
     server: static-site
 
   site-render:
-    builder: site-render-tool
+    builder: site-render-oci
 
   pdf-render:
-    builder: pdf-tool
+    builder: pdf-oci
 
   design:
     server: structurizr-lite

@@ -63,12 +63,14 @@ func (v *UoWBuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSp
 
 	// Verify UoW artifact integrity
 	reader := coreoutput.NewReader(v.workspaceRoot)
-	validationResult := reader.ValidateUoW(
-		workunit.ContextBuild,
-		unit.ID.Module,
-		unit.ID.Component,
-		unit.ID.Tool,
-	)
+	uowID := workunit.UnitID{
+		Context:   workunit.ContextBuild,
+		Module:    unit.ID.Module,
+		Component: unit.ID.Component,
+		Tool:      unit.ID.Tool,
+		Extra:     unit.ID.Extra,
+	}
+	validationResult := reader.ValidateUoW(uowID)
 
 	if !validationResult.ManifestExists {
 		// No manifest - trust the hash check that already passed

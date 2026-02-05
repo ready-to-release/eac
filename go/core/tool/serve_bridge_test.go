@@ -18,9 +18,9 @@ func TestServeBridge_GetServerByToolID_YAMLTool(t *testing.T) {
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:        "nginx-tool",
+		ID:        "nginx-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8080,
 		},
@@ -28,7 +28,7 @@ func TestServeBridge_GetServerByToolID_YAMLTool(t *testing.T) {
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	// Should return server for servable tool
-	server := bridge.GetServerByToolID("nginx-tool")
+	server := bridge.GetServerByToolID("nginx-oci")
 	if server == nil {
 		t.Fatal("GetServerByToolID returned nil for servable tool")
 	}
@@ -58,7 +58,7 @@ func TestServeBridge_GetServerByToolID_NotFound(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// No tool system configured
-	server := bridge.GetServerByToolID("nginx-tool")
+	server := bridge.GetServerByToolID("nginx-oci")
 	if server != nil {
 		t.Error("GetServerByToolID should return nil when no server available")
 	}
@@ -95,9 +95,9 @@ func TestServeBridge_HasServerByToolID(t *testing.T) {
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:        "nginx-tool",
+		ID:        "nginx-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8000,
 		},
@@ -121,7 +121,7 @@ func TestServeBridge_HasServerByToolID(t *testing.T) {
 		toolID string
 		exists bool
 	}{
-		{"nginx-tool", true},
+		{"nginx-oci", true},
 		{"mkdocs-live", true},
 		{"trivy-sbom", false},  // exists but not servable
 		{"nonexistent", false}, // doesn't exist
@@ -142,9 +142,9 @@ func TestServeBridge_GetAllServableTools(t *testing.T) {
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:        "nginx-tool",
+		ID:        "nginx-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8000,
 		},
@@ -174,7 +174,7 @@ func TestServeBridge_GetAllServableTools(t *testing.T) {
 
 	tools := bridge.GetAllServableTools()
 
-	// Should include only servable tools: nginx-tool, mkdocs-live, structurizr-lite
+	// Should include only servable tools: nginx-oci, mkdocs-live, structurizr-lite
 	if len(tools) != 3 {
 		t.Errorf("GetAllServableTools() returned %d tools, want 3", len(tools))
 	}
@@ -207,9 +207,9 @@ func TestServeBridge_Concurrent(t *testing.T) {
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:        "nginx-tool",
+		ID:        "nginx-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8000,
 		},
@@ -222,7 +222,7 @@ func TestServeBridge_Concurrent(t *testing.T) {
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.GetServerByToolID("nginx-tool")
+			_ = bridge.GetServerByToolID("nginx-oci")
 		}
 		done <- true
 	}()
@@ -296,7 +296,7 @@ func TestServeBridge_NilToolSystem(t *testing.T) {
 
 	// Don't set tool system - should handle nil gracefully
 	// No servers should be available
-	if bridge.HasServerByToolID("nginx-tool") {
+	if bridge.HasServerByToolID("nginx-oci") {
 		t.Error("HasServerByToolID should return false without tool system")
 	}
 
@@ -345,9 +345,9 @@ func TestServeBridge_GetServerToolByID(t *testing.T) {
 	// Set up tool system
 	registry := NewRegistry()
 	staticSite := &ToolDefinition{
-		ID:        "nginx-tool",
+		ID:        "nginx-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/nginx-tool",
+		LocalPath: "containers/nginx-oci",
 		Serve: &ServeConfig{
 			ContainerPort: 8000,
 		},
@@ -356,7 +356,7 @@ func TestServeBridge_GetServerToolByID(t *testing.T) {
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	// Should return the tool definition
-	tool := bridge.GetServerToolByID("nginx-tool")
+	tool := bridge.GetServerToolByID("nginx-oci")
 	if tool == nil {
 		t.Fatal("GetServerToolByID returned nil for existing tool")
 	}

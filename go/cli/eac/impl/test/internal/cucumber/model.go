@@ -154,3 +154,13 @@ func (s *Scenario) GetDurationMs() int64 {
 	// Convert nanoseconds to milliseconds
 	return totalNs / 1_000_000
 }
+
+// GetFailedStepError returns the error message from the first failed step, if any.
+func (s *Scenario) GetFailedStepError() string {
+	for _, step := range s.Steps {
+		if step.Result.Status == "failed" && step.Result.Error != "" {
+			return step.Result.Error
+		}
+	}
+	return ""
+}

@@ -1,14 +1,31 @@
-// Package containerruntime provides runtime-agnostic container provider and discovery.
-// It exposes a global provider that currently discovers and selects Docker only.
+// Package containerruntime provides runtime selection for container operations.
+//
+// This package abstracts container runtime selection, allowing the tool system
+// to work with different runtimes (Docker, Podman, containerd) without requiring
+// full implementations for all of them.
+//
+// Currently, Docker is the only working runtime. Podman and containerd stubs
+// return "not implemented" errors but provide the type structure for future
+// implementations.
 package containerruntime
 
 import (
-	"context"
-	"fmt"
 	"sync"
 
 	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/adapters/docker"
+)
+
+// RuntimeType identifies a container runtime.
+type RuntimeType string
+
+const (
+	// RuntimeDocker is the Docker container runtime.
+	RuntimeDocker RuntimeType = "docker"
+	// RuntimePodman is the Podman container runtime.
+	RuntimePodman RuntimeType = "podman"
+	// RuntimeContainerd is the containerd runtime with nerdctl CLI.
+	RuntimeContainerd RuntimeType = "containerd"
 )
 
 var (
@@ -16,8 +33,8 @@ var (
 	globalContainerMu sync.RWMutex
 )
 
-// Global returns the global container runtime implementation.
-// Lazily initializes on first call using discovery logic (Docker-only for now).
+// Global returns the global container runtime (Docker only for now).
+// Lazily initializes on first call. Thread-safe.
 func Global() container.ContainerPort {
 	globalContainerMu.RLock()
 	c := globalContainer
@@ -35,51 +52,27 @@ func Global() container.ContainerPort {
 		return globalContainer
 	}
 
-	// Discovery (initial): try Docker adapter
-	adapter, err := docker.NewContainerAdapter()
-	if err != nil {
-		return &unavailableAdapter{err: err}
-	}
-	globalContainer = adapter
+	// Delegate to docker package's global container
+	globalContainer = docker.GlobalContainer()
 	return globalContainer
 }
 
-// SetGlobal allows injecting a specific container implementation (tests or overrides).
+// SetGlobal injects a container implementation (for tests or alternative runtimes).
 func SetGlobal(c container.ContainerPort) {
 	globalContainerMu.Lock()
 	defer globalContainerMu.Unlock()
 	globalContainer = c
 }
 
-// ResetGlobal closes and clears the global container forcing re-initialization.
+// ResetGlobal clears the global container, forcing re-initialization on next call.
+// This resets both this package's reference and the underlying docker package's
+// global to ensure a completely clean state (useful for testing).
 func ResetGlobal() {
 	globalContainerMu.Lock()
 	defer globalContainerMu.Unlock()
-	if globalContainer != nil {
-		_ = globalContainer.Close() // best-effort
-		globalContainer = nil
-	}
+	// Clear our reference without calling Close() since we delegate to docker's
+	// GlobalContainer(), which owns the lifecycle. We reset the docker global
+	// below, which handles closing properly.
+	globalContainer = nil
+	docker.ResetGlobalContainer()
 }
-
-// unavailableAdapter is a ContainerPort that always reports unavailable.
-type unavailableAdapter struct {
-	err error
-}
-
-func (a *unavailableAdapter) Execute(_ context.Context, _ *container.ContainerConfig) (*container.ContainerResult, error) {
-	return nil, fmt.Errorf("container runtime not available: %w", a.err)
-}
-
-func (a *unavailableAdapter) Build(_ context.Context, _ *container.BuildConfig) error {
-	return fmt.Errorf("container runtime not available: %w", a.err)
-}
-
-func (a *unavailableAdapter) Pull(_ context.Context, _ string) error {
-	return fmt.Errorf("container runtime not available: %w", a.err)
-}
-
-func (a *unavailableAdapter) ImageExists(_ context.Context, _ string) bool { return false }
-
-func (a *unavailableAdapter) IsAvailable() bool { return false }
-
-func (a *unavailableAdapter) Close() error { return nil }

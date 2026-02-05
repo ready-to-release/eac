@@ -14,7 +14,7 @@ import (
 
 func TestModuleTemplate_BasicExpansion(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"container": {
+		"container-template": {
 			Components: ModuleComponents{
 				"dockerfile": &ComponentEntry{Root: "containers/{moniker}"},
 				"markdown":   &ComponentEntry{Root: "containers/{moniker}"},
@@ -25,7 +25,7 @@ func TestModuleTemplate_BasicExpansion(t *testing.T) {
 	mod := &Module{
 		Moniker:    "test-container",
 		Name:       "Test Container",
-		Template:   "container",
+		Template:   "container-template",
 		Components: make(ModuleComponents),
 	}
 
@@ -56,7 +56,7 @@ func TestModuleTemplate_UnknownTemplate(t *testing.T) {
 
 func TestModuleTemplate_ModuleOverridesTemplate(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"go-library": {
+		"go-library-template": {
 			Versioning: &ModuleVersioning{
 				Scheme:      "Implicit",
 				ReleaseType: "none",
@@ -70,7 +70,7 @@ func TestModuleTemplate_ModuleOverridesTemplate(t *testing.T) {
 
 	mod := &Module{
 		Moniker:  "my-lib",
-		Template: "go-library",
+		Template: "go-library-template",
 		Parameters: map[string]string{
 			"go_root": "go/my-lib",
 		},
@@ -97,7 +97,7 @@ func TestModuleTemplate_ModuleOverridesTemplate(t *testing.T) {
 
 func TestModuleTemplate_VersioningOverride(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"go-cli": {
+		"go-cli-template": {
 			Versioning: &ModuleVersioning{
 				Scheme:      "SemVer",
 				Changelog:   "release/{moniker}/CHANGELOG.md",
@@ -108,7 +108,7 @@ func TestModuleTemplate_VersioningOverride(t *testing.T) {
 
 	mod := &Module{
 		Moniker:  "my-cli",
-		Template: "go-cli",
+		Template: "go-cli-template",
 		// Module explicitly overrides versioning
 		Versioning: &ModuleVersioning{
 			Scheme:      "CalVer",
@@ -126,7 +126,7 @@ func TestModuleTemplate_VersioningOverride(t *testing.T) {
 
 func TestModuleTemplate_ParameterSubstitution(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"container": {
+		"container-template": {
 			Components: ModuleComponents{
 				"dockerfile": &ComponentEntry{
 					Root: "containers/{moniker}",
@@ -146,7 +146,7 @@ func TestModuleTemplate_ParameterSubstitution(t *testing.T) {
 
 	mod := &Module{
 		Moniker:    "my-app",
-		Template:   "container",
+		Template:   "container-template",
 		Components: make(ModuleComponents),
 	}
 
@@ -166,14 +166,14 @@ func TestModuleTemplate_ParameterSubstitution(t *testing.T) {
 
 func TestModuleTemplate_DependsOnMerge(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"go-library": {
+		"go-library-template": {
 			DependsOn: []string{"contracts", "core"},
 		},
 	}
 
 	mod := &Module{
 		Moniker:   "my-lib",
-		Template:  "go-library",
+		Template:  "go-library-template",
 		DependsOn: []string{"core", "utils"}, // "core" overlaps with template
 	}
 
@@ -190,7 +190,7 @@ func TestModuleTemplate_DependsOnMerge(t *testing.T) {
 
 func TestModuleTemplate_InferGoRoot(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"go-library": {
+		"go-library-template": {
 			Components: ModuleComponents{
 				"markdown": &ComponentEntry{Root: "{go_root}"},
 				"gherkin":  &ComponentEntry{Root: "specs/{moniker}"},
@@ -200,7 +200,7 @@ func TestModuleTemplate_InferGoRoot(t *testing.T) {
 
 	mod := &Module{
 		Moniker:  "my-lib",
-		Template: "go-library",
+		Template: "go-library-template",
 		Components: ModuleComponents{
 			"go": &ComponentEntry{Root: "go/my-lib"}, // This provides go_root
 		},
@@ -496,7 +496,7 @@ func TestCloneComponentEntry_Nil(t *testing.T) {
 func TestModuleTemplate_DeepMergeDockerBuild(t *testing.T) {
 	// Template provides base docker_build config
 	templates := map[string]ModuleTemplate{
-		"container": {
+		"container-template": {
 			Components: ModuleComponents{
 				"dockerfile": &ComponentEntry{
 					Root: "containers/{moniker}",
@@ -523,7 +523,7 @@ func TestModuleTemplate_DeepMergeDockerBuild(t *testing.T) {
 	// Module overrides only platforms (wants multi-arch)
 	mod := &Module{
 		Moniker:  "my-multiarch",
-		Template: "container",
+		Template: "container-template",
 		Components: ModuleComponents{
 			"dockerfile": &ComponentEntry{
 				DockerBuild: &DockerBuildConfig{
@@ -557,7 +557,7 @@ func TestModuleTemplate_DeepMergeDockerBuild(t *testing.T) {
 
 func TestModuleTemplate_DeepMergePartialComponent(t *testing.T) {
 	templates := map[string]ModuleTemplate{
-		"go-library": {
+		"go-library-template": {
 			Versioning: &ModuleVersioning{
 				Scheme:      "Implicit",
 				ReleaseType: "none",
@@ -572,7 +572,7 @@ func TestModuleTemplate_DeepMergePartialComponent(t *testing.T) {
 	// Module provides partial component override (just type for markdown)
 	mod := &Module{
 		Moniker:  "my-lib",
-		Template: "go-library",
+		Template: "go-library-template",
 		Parameters: map[string]string{
 			"go_root": "go/my-lib",
 		},
@@ -605,21 +605,21 @@ func TestLoadModuleTemplates_Integration(t *testing.T) {
 	require.NotNil(t, cfg)
 
 	// Verify expected templates exist
-	assert.Contains(t, cfg.Templates, "go-library")
-	assert.Contains(t, cfg.Templates, "go-cli")
-	assert.Contains(t, cfg.Templates, "container")
-	assert.Contains(t, cfg.Templates, "container-multiarch")
-	assert.Contains(t, cfg.Templates, "documentation-site")
+	assert.Contains(t, cfg.Templates, "go-library-template")
+	assert.Contains(t, cfg.Templates, "go-cli-template")
+	assert.Contains(t, cfg.Templates, "container-template")
+	assert.Contains(t, cfg.Templates, "container-multiarch-template")
+	assert.Contains(t, cfg.Templates, "docs-site-template")
 
 	// Verify go-library template structure
-	goLib := cfg.Templates["go-library"]
+	goLib := cfg.Templates["go-library-template"]
 	require.NotNil(t, goLib.Versioning)
 	assert.Equal(t, "Implicit", goLib.Versioning.Scheme)
 	assert.Contains(t, goLib.Components, "go")
 	assert.Contains(t, goLib.Components, "markdown")
 
 	// Verify container template structure
-	container := cfg.Templates["container"]
+	container := cfg.Templates["container-template"]
 	assert.Contains(t, container.Components, "dockerfile")
 	dockerComp := container.Components["dockerfile"]
 	require.NotNil(t, dockerComp)
@@ -638,7 +638,7 @@ func TestExpandModuleTemplates_IntegrationWithRealTemplates(t *testing.T) {
 	mod := &Module{
 		Moniker:    "test-container",
 		Name:       "Test Container",
-		Template:   "container",
+		Template:   "container-template",
 		Components: make(ModuleComponents),
 	}
 
@@ -655,4 +655,598 @@ func TestExpandModuleTemplates_IntegrationWithRealTemplates(t *testing.T) {
 	require.NotNil(t, dockerComp.DockerBuild)
 	assert.Equal(t, "test-container", dockerComp.DockerBuild.Container)
 	assert.Contains(t, dockerComp.DockerBuild.Tags, "ghcr.io/ready-to-release/test-container:latest")
+}
+
+// =============================================================================
+// Container Auxiliary Components Discovery Tests
+// =============================================================================
+
+// TestDiscoverContainerAuxiliaryComponents_TestdataDiscovery verifies that testdata
+// components are discovered when container directories contain matching files.
+func TestDiscoverContainerAuxiliaryComponents_TestdataDiscovery(t *testing.T) {
+	tests := []struct {
+		name     string
+		files    []string // Files to create in containers/{moniker}/
+		wantComp bool     // Should testdata component be discovered
+	}{
+		{
+			name:     "discovers testdata with .txt files",
+			files:    []string{"config.txt", "sample.txt"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers testdata with .conf files",
+			files:    []string{"nginx.conf", "app.conf"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers testdata with .html files",
+			files:    []string{"index.html", "template.html"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers testdata with .sh files",
+			files:    []string{"entrypoint.sh", "setup.sh"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers testdata with mixed matching files",
+			files:    []string{"config.txt", "nginx.conf", "entrypoint.sh"},
+			wantComp: true,
+		},
+		{
+			name:     "no testdata with only Dockerfile",
+			files:    []string{"Dockerfile"},
+			wantComp: false,
+		},
+		{
+			name:     "no testdata with only non-matching files",
+			files:    []string{"Dockerfile", "go.mod", "mkdocs.yml"},
+			wantComp: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			containerDir := filepath.Join(repoRoot, "containers", "test-oci")
+			require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+			// Create test files
+			for _, f := range tt.files {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(containerDir, f),
+					[]byte("test content"),
+					0644,
+				))
+			}
+
+			mod := &Module{
+				Moniker:    "test-oci",
+				Template:   "container-template",
+				Components: make(ModuleComponents),
+			}
+
+			discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+			if tt.wantComp {
+				assert.Contains(t, mod.Components, "testdata",
+					"expected testdata component to be discovered")
+				if comp, ok := mod.Components["testdata"]; ok {
+					assert.Equal(t, "containers/test-oci", comp.Root)
+					assert.NotNil(t, comp.Patterns)
+					assert.Contains(t, comp.Patterns.Source, "*.txt")
+					assert.Contains(t, comp.Patterns.Source, "*.conf")
+					assert.Contains(t, comp.Patterns.Source, "*.html")
+					assert.Contains(t, comp.Patterns.Source, "*.sh")
+				}
+			} else {
+				assert.NotContains(t, mod.Components, "testdata",
+					"expected testdata component NOT to be discovered")
+			}
+		})
+	}
+}
+
+// TestDiscoverContainerAuxiliaryComponents_ScriptsDiscovery verifies that containercode
+// components are discovered when container directories contain Python or JavaScript files.
+func TestDiscoverContainerAuxiliaryComponents_ScriptsDiscovery(t *testing.T) {
+	tests := []struct {
+		name     string
+		files    []string // Files to create in containers/{moniker}/
+		wantComp bool     // Should containercode component be discovered
+	}{
+		{
+			name:     "discovers containercode with .py files",
+			files:    []string{"mkdocs_macros.py", "helpers.py"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers containercode with .js files",
+			files:    []string{"batch-render.js", "utils.js"},
+			wantComp: true,
+		},
+		{
+			name:     "discovers containercode with mixed .py and .js files",
+			files:    []string{"main.py", "helper.js"},
+			wantComp: true,
+		},
+		{
+			name:     "no containercode with only Dockerfile",
+			files:    []string{"Dockerfile"},
+			wantComp: false,
+		},
+		{
+			name:     "no containercode with only config files",
+			files:    []string{"Dockerfile", "mkdocs.yml", "requirements.txt"},
+			wantComp: false,
+		},
+		{
+			name:     "no containercode with only testdata files",
+			files:    []string{"Dockerfile", "config.txt", "nginx.conf"},
+			wantComp: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			containerDir := filepath.Join(repoRoot, "containers", "render-oci")
+			require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+			// Create test files
+			for _, f := range tt.files {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(containerDir, f),
+					[]byte("test content"),
+					0644,
+				))
+			}
+
+			mod := &Module{
+				Moniker:    "render-oci",
+				Template:   "container-template",
+				Components: make(ModuleComponents),
+			}
+
+			discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+			if tt.wantComp {
+				assert.Contains(t, mod.Components, "containercode",
+					"expected containercode component to be discovered")
+				if comp, ok := mod.Components["containercode"]; ok {
+					assert.Equal(t, "containers/render-oci", comp.Root)
+					assert.NotNil(t, comp.Patterns)
+					assert.Contains(t, comp.Patterns.Source, "*.py")
+					assert.Contains(t, comp.Patterns.Source, "*.js")
+				}
+			} else {
+				assert.NotContains(t, mod.Components, "containercode",
+					"expected containercode component NOT to be discovered")
+			}
+		})
+	}
+}
+
+// TestDiscoverContainerAuxiliaryComponents_NoOverride verifies that existing
+// component definitions are not overwritten by auto-discovery.
+func TestDiscoverContainerAuxiliaryComponents_NoOverride(t *testing.T) {
+	t.Run("does not override existing testdata component", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "test-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		// Create files that would trigger testdata discovery
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, "config.txt"),
+			[]byte("test"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:  "test-oci",
+			Template: "container-template",
+			Components: ModuleComponents{
+				"testdata": &ComponentEntry{
+					Root: "custom/testdata/path",
+					Patterns: &ComponentPatterns{
+						Source: []string{"custom/*.data"},
+					},
+				},
+			},
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		// Existing component should NOT be overwritten
+		assert.Equal(t, "custom/testdata/path", mod.Components["testdata"].Root)
+		assert.Equal(t, []string{"custom/*.data"}, mod.Components["testdata"].Patterns.Source)
+	})
+
+	t.Run("does not override existing containercode component", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "render-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		// Create files that would trigger containercode discovery
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, "script.py"),
+			[]byte("test"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:  "render-oci",
+			Template: "container-template",
+			Components: ModuleComponents{
+				"containercode": &ComponentEntry{
+					Root: "scripts/custom",
+					Patterns: &ComponentPatterns{
+						Source: []string{"**/*.custom"},
+					},
+				},
+			},
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		// Existing component should NOT be overwritten
+		assert.Equal(t, "scripts/custom", mod.Components["containercode"].Root)
+		assert.Equal(t, []string{"**/*.custom"}, mod.Components["containercode"].Patterns.Source)
+	})
+
+	t.Run("does not override nil component marker", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "test-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		// Create files that would trigger testdata discovery
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, "config.txt"),
+			[]byte("test"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:  "test-oci",
+			Template: "container-template",
+			Components: ModuleComponents{
+				"testdata": nil, // Explicit nil marker means "use convention"
+			},
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		// nil marker should be treated as "component exists" - no override
+		assert.Nil(t, mod.Components["testdata"])
+	})
+}
+
+// TestDiscoverContainerAuxiliaryComponents_NoMatchingFiles verifies that components
+// are not added when no matching files exist in the container directory.
+func TestDiscoverContainerAuxiliaryComponents_NoMatchingFiles(t *testing.T) {
+	t.Run("no components discovered when directory is empty", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "empty-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		mod := &Module{
+			Moniker:    "empty-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.NotContains(t, mod.Components, "testdata")
+		assert.NotContains(t, mod.Components, "containercode")
+	})
+
+	t.Run("no components discovered when only Dockerfile exists", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "minimal-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, "Dockerfile"),
+			[]byte("FROM alpine"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:    "minimal-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.NotContains(t, mod.Components, "testdata")
+		assert.NotContains(t, mod.Components, "containercode")
+	})
+
+	t.Run("no components discovered when container directory does not exist", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		// Don't create container directory
+
+		mod := &Module{
+			Moniker:    "nonexistent-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.NotContains(t, mod.Components, "testdata")
+		assert.NotContains(t, mod.Components, "containercode")
+	})
+
+	t.Run("no components discovered with only yaml and json files", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "config-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		// Only create files that should NOT match testdata or containercode patterns
+		files := []string{"Dockerfile", "mkdocs.yml", "config.json"}
+		for _, f := range files {
+			require.NoError(t, os.WriteFile(
+				filepath.Join(containerDir, f),
+				[]byte("content"),
+				0644,
+			))
+		}
+
+		mod := &Module{
+			Moniker:    "config-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.NotContains(t, mod.Components, "testdata")
+		assert.NotContains(t, mod.Components, "containercode")
+	})
+
+	t.Run("requirements.txt does trigger testdata discovery", func(t *testing.T) {
+		// Note: This documents current behavior. requirements.txt matches *.txt pattern.
+		// If this is undesired, the pattern should be changed to exclude it.
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "py-oci")
+		require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, "requirements.txt"),
+			[]byte("flask==2.0"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:    "py-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		// requirements.txt matches *.txt - this is current behavior
+		// Document it explicitly so we know this is intentional
+		assert.Contains(t, mod.Components, "testdata",
+			"requirements.txt matches *.txt pattern - this is expected behavior")
+	})
+}
+
+// TestDiscoverContainerAuxiliaryComponents_NonContainerTemplate verifies that
+// auxiliary component discovery only applies to container templates.
+func TestDiscoverContainerAuxiliaryComponents_NonContainerTemplate(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		wantSkip bool // Should discovery be skipped
+	}{
+		{
+			name:     "container template triggers discovery",
+			template: "container-template",
+			wantSkip: false,
+		},
+		{
+			name:     "container-multiarch template triggers discovery",
+			template: "container-multiarch-template",
+			wantSkip: false,
+		},
+		{
+			name:     "go-library template skips discovery",
+			template: "go-library-template",
+			wantSkip: true,
+		},
+		{
+			name:     "go-cli template skips discovery",
+			template: "go-cli-template",
+			wantSkip: true,
+		},
+		{
+			name:     "documentation-site template skips discovery",
+			template: "docs-site-template",
+			wantSkip: true,
+		},
+		{
+			name:     "empty template skips discovery",
+			template: "",
+			wantSkip: true,
+		},
+		{
+			name:     "custom-container template triggers discovery",
+			template: "custom-container",
+			wantSkip: false,
+		},
+		{
+			name:     "my-container-build template triggers discovery",
+			template: "my-container-build",
+			wantSkip: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			containerDir := filepath.Join(repoRoot, "containers", "test-oci")
+			require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+			// Create files that would trigger discovery
+			require.NoError(t, os.WriteFile(
+				filepath.Join(containerDir, "config.txt"),
+				[]byte("test"),
+				0644,
+			))
+			require.NoError(t, os.WriteFile(
+				filepath.Join(containerDir, "script.py"),
+				[]byte("test"),
+				0644,
+			))
+
+			mod := &Module{
+				Moniker:    "test-oci",
+				Template:   tt.template,
+				Components: make(ModuleComponents),
+			}
+
+			discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+			if tt.wantSkip {
+				assert.NotContains(t, mod.Components, "testdata",
+					"non-container template should skip testdata discovery")
+				assert.NotContains(t, mod.Components, "containercode",
+					"non-container template should skip containercode discovery")
+			} else {
+				assert.Contains(t, mod.Components, "testdata",
+					"container template should discover testdata")
+				assert.Contains(t, mod.Components, "containercode",
+					"container template should discover containercode")
+			}
+		})
+	}
+}
+
+// TestDiscoverContainerAuxiliaryComponents_BothComponentsDiscovered verifies that
+// both testdata and containercode can be discovered from the same container.
+func TestDiscoverContainerAuxiliaryComponents_BothComponentsDiscovered(t *testing.T) {
+	repoRoot := t.TempDir()
+	containerDir := filepath.Join(repoRoot, "containers", "full-oci")
+	require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+	// Create files for both components
+	testdataFiles := []string{"entrypoint.sh", "nginx.conf", "index.html"}
+	scriptFiles := []string{"mkdocs_macros.py", "batch-render.js"}
+	otherFiles := []string{"Dockerfile", "requirements.txt", "mkdocs.yml"}
+
+	for _, f := range append(append(testdataFiles, scriptFiles...), otherFiles...) {
+		require.NoError(t, os.WriteFile(
+			filepath.Join(containerDir, f),
+			[]byte("content"),
+			0644,
+		))
+	}
+
+	mod := &Module{
+		Moniker:    "full-oci",
+		Template:   "container-template",
+		Components: make(ModuleComponents),
+	}
+
+	discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+	// Both components should be discovered
+	assert.Contains(t, mod.Components, "testdata")
+	assert.Contains(t, mod.Components, "containercode")
+
+	// Verify testdata component
+	testdataComp := mod.Components["testdata"]
+	require.NotNil(t, testdataComp)
+	assert.Equal(t, "containers/full-oci", testdataComp.Root)
+
+	// Verify containercode component
+	codeComp := mod.Components["containercode"]
+	require.NotNil(t, codeComp)
+	assert.Equal(t, "containers/full-oci", codeComp.Root)
+}
+
+// TestDiscoverContainerAuxiliaryComponents_FilesInSubdirectories verifies that
+// files in subdirectories are also considered for discovery.
+func TestDiscoverContainerAuxiliaryComponents_FilesInSubdirectories(t *testing.T) {
+	t.Run("discovers testdata from subdirectory", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "nested-oci")
+		subDir := filepath.Join(containerDir, "config")
+		require.NoError(t, os.MkdirAll(subDir, 0755))
+
+		// Create file in subdirectory
+		require.NoError(t, os.WriteFile(
+			filepath.Join(subDir, "app.conf"),
+			[]byte("test"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:    "nested-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.Contains(t, mod.Components, "testdata",
+			"should discover testdata from subdirectory files")
+	})
+
+	t.Run("discovers containercode from subdirectory", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		containerDir := filepath.Join(repoRoot, "containers", "nested-oci")
+		subDir := filepath.Join(containerDir, "scripts")
+		require.NoError(t, os.MkdirAll(subDir, 0755))
+
+		// Create file in subdirectory
+		require.NoError(t, os.WriteFile(
+			filepath.Join(subDir, "helper.py"),
+			[]byte("test"),
+			0644,
+		))
+
+		mod := &Module{
+			Moniker:    "nested-oci",
+			Template:   "container-template",
+			Components: make(ModuleComponents),
+		}
+
+		discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+		assert.Contains(t, mod.Components, "containercode",
+			"should discover containercode from subdirectory files")
+	})
+}
+
+// TestDiscoverContainerAuxiliaryComponents_NilComponentsMap verifies that
+// discovery handles nil Components map gracefully.
+func TestDiscoverContainerAuxiliaryComponents_NilComponentsMap(t *testing.T) {
+	repoRoot := t.TempDir()
+	containerDir := filepath.Join(repoRoot, "containers", "nil-map-oci")
+	require.NoError(t, os.MkdirAll(containerDir, 0755))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(containerDir, "config.txt"),
+		[]byte("test"),
+		0644,
+	))
+
+	mod := &Module{
+		Moniker:    "nil-map-oci",
+		Template:   "container-template",
+		Components: nil, // nil map
+	}
+
+	// Should not panic
+	discoverContainerAuxiliaryComponents(mod, repoRoot)
+
+	// Components map should be initialized and populated
+	require.NotNil(t, mod.Components)
+	assert.Contains(t, mod.Components, "testdata")
 }

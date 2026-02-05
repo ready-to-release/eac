@@ -55,6 +55,11 @@ package-lock.json
 .vscode/extensions/*/*.vsix
 .vscode/extensions/*/.vscode-test/
 .vscode/extensions/*/package.json
+# VSCode extension build outputs (post-build copy destination)
+.vscode/extensions/vscode-commit/
+
+# TypeScript compiled output
+typescript/*/out/
 
 # env file
 .env

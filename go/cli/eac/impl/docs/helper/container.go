@@ -15,17 +15,17 @@ import (
 
 const (
 	// defaultContainerNameBase is the fallback base name for mkdocs containers.
-	defaultContainerNameBase = "site-render-tool"
+	defaultContainerNameBase = "site-render-oci"
 	// defaultImageName is the fallback Docker image name (uses :local tag for local builds).
-	defaultImageName = "site-render-tool:local"
+	defaultImageName = "site-render-oci:local"
 	// defaultDockerfile is the fallback Dockerfile path.
-	defaultDockerfile = "containers/site-render-tool/Dockerfile"
+	defaultDockerfile = "containers/site-render-oci/Dockerfile"
 
 	// containerInternalPort is the port MkDocs listens on inside the container.
 	containerInternalPort = 8000
 )
 
-// getDockerImageConfig returns the Docker image configuration for site-render-tool type.
+// getDockerImageConfig returns the Docker image configuration for site-render-oci type.
 // Uses hardcoded defaults since module types no longer define docker image config.
 func getDockerImageConfig() (containerNameBase, imageName, dockerfile string) {
 	containerNameBase = defaultContainerNameBase
@@ -114,7 +114,7 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 
 	// Copy mkdocs macros script to serve directory as main.py
 	// mkdocs-macros will automatically find main.py in the same directory as mkdocs.yml
-	macrosSource := filepath.Join(repoRoot, "containers", "site-render-tool", "mkdocs_macros.py")
+	macrosSource := filepath.Join(repoRoot, "containers", "site-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(configDir, "main.py")
 	macrosData, err := os.ReadFile(macrosSource)
 	if err == nil {

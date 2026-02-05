@@ -2,7 +2,7 @@
 // Short: Validate books.yml configuration
 // Long: Validate the books.yml file including:
 // Long:   - Book names match existing module monikers
-// Long:   - Referenced modules are type site-render-tool or pdf-tool
+// Long:   - Referenced modules are type site-render-oci or pdf-oci
 // Long:   - Copy glob patterns are valid syntax
 // Long:   - Commands are valid EAC commands
 // Long:   - Navigation references are valid

@@ -3,6 +3,7 @@ package workunit
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 )
 
 // UnitID uniquely identifies a unit of work.
@@ -14,15 +15,6 @@ type UnitID struct {
 	Tool      string            // handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
 	Extra     map[string]string // context-specific (e.g., testset: "unit")
 	Spec      string            // Spec name for BDD tests (godog, tscucumber), e.g., "build-module"
-}
-
-// Shortname returns display name: module:component, or just spec name for BDD tests.
-// Deprecated: Use Path() for stable identifiers or DisplayName() for contextual display.
-func (u UnitID) Shortname() string {
-	if u.Spec != "" {
-		return u.Spec // "build-module"
-	}
-	return u.Module + ":" + u.Component
 }
 
 // Path returns module:component for component-level identification.
@@ -37,19 +29,110 @@ func (u UnitID) ComponentName() string {
 	return u.Component
 }
 
-// DisplayName returns context-appropriate name.
-// For BDD tests, returns spec name (or module:spec:specname if disambiguate is true).
-// If disambiguate is true, returns full module:component.
-// If disambiguate is false, returns just the component.
-func (u UnitID) DisplayName(disambiguate bool) string {
-	if u.Spec != "" {
-		if disambiguate {
-			return u.Module + ":spec:" + u.Spec // "eac-cli:spec:build-module"
+// DisplayName returns a context-aware compact display name.
+// This is the primary method for TUI tabs and progress indicators.
+//
+// Format by context:
+//   - Test (BDD):  "<spec-name>: <tool>"       e.g., "build-module: godog"
+//   - Test (unit): "<testname>: unit"          e.g., "impl-build: unit"
+//   - Build:       "<module>: <component>"     e.g., "core: go"
+//                  "<module>: <comp>: <tool>"  e.g., "docs: site: mkdocs"
+//   - Lint:        "lint:<component>:<tool>"   e.g., "lint:go:golangci-lint"
+//   - Scan:        "scan:<component>:<category>" e.g., "scan:go:vuln"
+func (u UnitID) DisplayName() string {
+	switch u.Context {
+	case ContextTest:
+		if u.Spec != "" {
+			return u.Spec + ": " + u.Tool
 		}
-		return u.Spec // "build-module"
+		testname := u.Extra["testname"]
+		if testname == "" {
+			testname = u.Component
+		}
+		return testname + ": unit"
+
+	case ContextBuild:
+		if u.Component == u.Tool || u.Tool == "" {
+			return u.Module + ": " + u.Component
+		}
+		return u.Module + ": " + u.Component + ": " + u.Tool
+
+	case ContextLint:
+		return "lint:" + u.Component + ":" + u.Tool
+
+	case ContextScan:
+		category := u.Extra["category"]
+		if category == "" {
+			category = u.Tool
+		}
+		return "scan:" + u.Component + ":" + category
+
+	default:
+		return u.Component
 	}
-	if disambiguate {
-		return u.Module + ":" + u.Component
+}
+
+// NormalDisplay returns a human-readable sentence describing the work unit.
+// For logs, summaries, and headers where full context is helpful.
+//
+// Format: Human-readable sentence with all relevant information
+//   - Build:       "Building <component> in <module>"
+//                  "Building <component> in <module> with <tool>"
+//   - Test (BDD):  "Testing spec <spec-name> in <module>"
+//   - Test (unit): "Testing <testname> in <module>"
+//   - Lint:        "Linting <component> in <module> with <tool>"
+//   - Scan:        "Scanning <component> in <module> for <category>"
+//
+// Examples:
+//   - "Building go in core"
+//   - "Building site in docs with mkdocs"
+//   - "Testing spec build-module in eac-cli"
+//   - "Testing impl-build in core"
+//   - "Linting go in core with golangci-lint"
+//   - "Scanning go in core for vulnerabilities"
+func (u UnitID) NormalDisplay() string {
+	switch u.Context {
+	case ContextBuild:
+		if u.Tool == "" || u.Tool == u.Component {
+			return "Building " + u.Component + " in " + u.Module
+		}
+		return "Building " + u.Component + " in " + u.Module + " with " + u.Tool
+
+	case ContextTest:
+		if u.Spec != "" {
+			return "Testing spec " + u.Spec + " in " + u.Module
+		}
+		testname := u.Extra["testname"]
+		if testname == "" {
+			testname = u.Component
+		}
+		return "Testing " + testname + " in " + u.Module
+
+	case ContextLint:
+		return "Linting " + u.Component + " in " + u.Module + " with " + u.Tool
+
+	case ContextScan:
+		category := u.Extra["category"]
+		if category == "" {
+			category = u.Tool
+		}
+		return "Scanning " + u.Component + " in " + u.Module + " for " + category
+
+	default:
+		return string(u.Context) + " " + u.Component + " in " + u.Module
+	}
+}
+
+// DisplayKey returns the key used for disambiguation checking.
+// For test context, uses spec or testname; otherwise uses component.
+func (u UnitID) DisplayKey() string {
+	if u.Context == ContextTest {
+		if u.Spec != "" {
+			return u.Spec
+		}
+		if testname := u.Extra["testname"]; testname != "" {
+			return testname
+		}
 	}
 	return u.Component
 }
@@ -74,16 +157,23 @@ func (u UnitID) TabLabel(maxWidth int) string {
 	return name
 }
 
-// Longname returns full ID: context:module:component:tool[:extra]
-// For BDD tests (godog, tscucumber), returns "module:spec:specname" format.
-// For test context with testset extra, appends the testset value.
+// Longname returns full ID: context:module:component:tool[:extra...]
+// All Extra field values are appended in sorted key order for uniqueness.
 func (u UnitID) Longname() string {
-	if u.Spec != "" {
-		return fmt.Sprintf("%s:spec:%s", u.Module, u.Spec) // "eac-cli:spec:build-module"
-	}
 	base := fmt.Sprintf("%s:%s:%s:%s", u.Context, u.Module, u.Component, u.Tool)
-	if testset, ok := u.Extra["testset"]; ok && testset != "" {
-		base += ":" + testset
+
+	// Append all Extra values in sorted key order for consistency
+	if len(u.Extra) > 0 {
+		keys := make([]string, 0, len(u.Extra))
+		for k := range u.Extra {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if v := u.Extra[k]; v != "" {
+				base += ":" + v
+			}
+		}
 	}
 	return base
 }
@@ -93,14 +183,37 @@ func (u UnitID) String() string {
 	return u.Longname()
 }
 
-// OutDir returns the unique output directory for this unit.
-// Format: out/<context>/<module>/<component>[/<extra>...]
-func (u UnitID) OutDir() string {
-	base := filepath.Join("out", string(u.Context), u.Module, u.Component)
-	if testset, ok := u.Extra["testset"]; ok && testset != "" {
-		base = filepath.Join(base, testset)
+// DirName returns the unique directory name for this unit.
+// Format: component-tool[-extraVal1][-extraVal2]...
+// Tool and extra values are appended with dashes in sorted key order for uniqueness.
+// This is used by OutDir() and the manifest system for consistent path generation.
+func (u UnitID) DirName() string {
+	dirName := u.Component
+	if u.Tool != "" {
+		dirName += "-" + u.Tool
 	}
-	return base
+
+	// Append all Extra values with dashes in sorted key order
+	if len(u.Extra) > 0 {
+		keys := make([]string, 0, len(u.Extra))
+		for k := range u.Extra {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if v := u.Extra[k]; v != "" {
+				dirName += "-" + v
+			}
+		}
+	}
+	return dirName
+}
+
+// OutDir returns the unique output directory for this unit.
+// Format: out/<context>/<module>/<dirname>
+// Where dirname = component[-extraVal1][-extraVal2]... (flat, same depth for all UoWs)
+func (u UnitID) OutDir() string {
+	return filepath.Join("out", string(u.Context), u.Module, u.DirName())
 }
 
 // LockFile returns the path to the execution lock.
@@ -155,4 +268,10 @@ func (u UnitID) GetTool() string {
 // Implements interfaces.UnitIDPort.
 func (u UnitID) GetSpec() string {
 	return u.Spec
+}
+
+// GetExtra returns the Extra map containing context-specific discriminators.
+// Implements interfaces.UnitIDPort.
+func (u UnitID) GetExtra() map[string]string {
+	return u.Extra
 }

@@ -34,7 +34,7 @@ func NewSiteRenderHandler(workspaceRoot string) *SiteRenderHandler {
 }
 
 // Name returns the handler identifier.
-func (h *SiteRenderHandler) Name() string { return "site-render-tool" }
+func (h *SiteRenderHandler) Name() string { return "site-render-oci" }
 
 // Requirements returns system dependencies (Docker required).
 func (h *SiteRenderHandler) Requirements() []string { return []string{"docker"} }
@@ -140,7 +140,7 @@ func (h *SiteRenderHandler) Build(
 	}
 
 	// Compute input hash for cache check
-	containerHash := getContainerImageHash(workspaceRoot, "site-render-tool")
+	containerHash := getContainerImageHash(workspaceRoot, "site-render-oci")
 	inputHash := computeSiteRenderInputHash(baseManifest.OutputHash, containerHash)
 
 	// Check cache - skip if base-site unchanged
@@ -187,7 +187,7 @@ func (h *SiteRenderHandler) Build(
 	}
 
 	// Copy mkdocs macros script
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-tool", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		_ = os.WriteFile(macrosTarget, macrosData, 0o644)
@@ -218,7 +218,7 @@ func (h *SiteRenderHandler) Build(
 		Weight:        weight,
 	}
 
-	exitCode, err := bridge.ExecuteTool(context.Background(), "site-render-tool", tc)
+	exitCode, err := bridge.ExecuteTool(context.Background(), "site-render-oci", tc)
 	if err != nil {
 		logln(logWriter, "❌ Tool execution failed: %v", err)
 		return BuildResult{ExitCode: 1}

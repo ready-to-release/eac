@@ -141,13 +141,10 @@ func ShowConfig() int {
 		fmt.Println("## Package Types")
 		fmt.Println("")
 		typeTb := render.NewTableBuilder().
-			WithHeaders("Type", "Requirements")
+			WithHeaders("Type", "Pool")
 		for name, t := range cfg.ComponentTypes.ComponentTypes {
-			reqs := "-"
-			if len(t.Requirements) > 0 {
-				reqs = fmt.Sprintf("%v", t.Requirements)
-			}
-			typeTb.AddRow(name, reqs)
+			pool := t.GetPool()
+			typeTb.AddRow(name, pool)
 		}
 		fmt.Println(typeTb.Build())
 		fmt.Println("")

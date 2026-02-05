@@ -15,11 +15,11 @@
 # Usage in .eac/repository.yml:
 #   - moniker: my-container
 #     name: My Container
-#     template: container
+#     template: container-template
 #
 #   - moniker: my-lib
 #     name: My Library
-#     template: go-library
+#     template: go-library-template
 #     parameters:
 #       go_root: go/my-lib
 
@@ -30,7 +30,7 @@ module-templates:
 
   # Base Go library module (internal/supporting)
   # Use for: shared libraries, core modules, internal utilities
-  go-library:
+  go-library-template:
     versioning:
       scheme: Implicit
       release_type: none
@@ -44,7 +44,8 @@ module-templates:
 
   # Go CLI tool (published)
   # Use for: command-line tools with releases
-  go-cli:
+  # Use artifact_matrix parameter to reference cross-platform or cross-platform-upx
+  go-cli-template:
     versioning:
       scheme: SemVer
       changelog: "release/{moniker}/CHANGELOG.md"
@@ -56,7 +57,7 @@ module-templates:
 
   # Go internal CLI (not externally released)
   # Use for: internal tools, development utilities
-  go-internal:
+  go-internal-template:
     versioning:
       scheme: SemVer
       changelog: "{go_root}/CHANGELOG.md"
@@ -65,13 +66,31 @@ module-templates:
       go: "{go_root}"
       markdown: "{go_root}"
 
+  # Go MCP server module
+  # Use for: MCP (Model Context Protocol) servers
+  go-mcp-server-template:
+    versioning:
+      scheme: SemVer
+      changelog: "{go_root}/CHANGELOG.md"
+      release_type: internal
+    components:
+      go:
+        root: "{go_root}"
+        build:
+          artifacts:
+            - id: mcp-server
+              type: executable
+              pattern: "{moniker}{ext}"
+      markdown: "{go_root}"
+
   # ==========================================================================
   # CONTAINER TEMPLATES
   # ==========================================================================
 
   # Standard container (pushed to GHCR)
   # Use for: tool containers, build containers
-  container:
+  # Auto-discovers testdata and containercode components from file patterns
+  container-template:
     components:
       dockerfile:
         root: "containers/{moniker}"
@@ -90,10 +109,13 @@ module-templates:
             type: gha
       markdown: "containers/{moniker}"
       yaml: "containers/{moniker}"
+      # Auto-discovered components (if matching files exist):
+      # - testdata: when *.txt, *.conf, *.html, *.sh files exist
+      # - containercode: when *.py, *.js files exist
 
   # Container with multi-arch support
   # Use for: containers that need to run on both amd64 and arm64
-  container-multiarch:
+  container-multiarch-template:
     components:
       dockerfile:
         root: "containers/{moniker}"
@@ -124,15 +146,17 @@ module-templates:
 
   # Documentation site module (MkDocs-based)
   # Use for: main documentation sites
-  documentation-site:
+  docs-site-template:
     versioning:
       scheme: CalVer
       changelog: "release/{moniker}/CHANGELOG.md"
       release_type: published
     components:
       site:
-        type: book
+        type: docs-site
         root: docs
+        config:
+          book: site
       markdown: docs
       yaml:
         root: docs
@@ -143,9 +167,62 @@ module-templates:
       assets:
         type: docs-assets
         root: docs/assets
+    # PDF books auto-inferred from books.yml generators
 
-# Discovery conventions for auto-discovery mode
-# These rules determine how components are discovered when auto_discover: true
+  # ==========================================================================
+  # EXTENSION TEMPLATES
+  # ==========================================================================
+
+  # VSCode extension module
+  # Use for: Visual Studio Code extensions
+  vscode-extension-template:
+    versioning:
+      scheme: Implicit
+      release_type: internal
+    components:
+      typescript:
+        root: "typescript/{moniker}"
+        patterns:
+          source: ["**/*.ts", "**/*.tsx", "**/*.js"]
+          tests: ["test/**/*.test.ts"]
+          config: ["*.json", ".mocharc.json", ".vscodeignore"]
+      markdown: "typescript/{moniker}"
+      json: "contracts/{moniker}"
+
+# =============================================================================
+# Artifact Matrices
+# =============================================================================
+# Reusable artifact configurations that can be referenced by modules.
+# Use artifact_matrix parameter to reference these in module definitions.
+
+artifact-matrices:
+  # Standard cross-platform CLI build matrix
+  # Produces binaries for Linux (amd64/arm64), macOS (amd64/arm64), Windows (amd64)
+  cross-platform:
+    - {id: linux-amd64, type: executable, pattern: "{moniker}-linux-amd64"}
+    - {id: linux-arm64, type: executable, pattern: "{moniker}-linux-arm64"}
+    - {id: darwin-amd64, type: executable, pattern: "{moniker}-darwin-amd64"}
+    - {id: darwin-arm64, type: executable, pattern: "{moniker}-darwin-arm64"}
+    - {id: windows-amd64, type: executable, pattern: "{moniker}-windows-amd64.exe"}
+
+  # Cross-platform with UPX-compressed variants
+  # Extends cross-platform with compressed binaries for reduced size
+  cross-platform-upx:
+    extends: cross-platform
+    additional:
+      - {id: linux-amd64-upx, type: executable, pattern: "{moniker}-linux-amd64-upx", compression: upx, derive_from: "{moniker}-linux-amd64"}
+      - {id: windows-amd64-upx, type: executable, pattern: "{moniker}-windows-amd64-upx.exe", compression: upx, derive_from: "{moniker}-windows-amd64.exe"}
+
+  # Single platform binary (for internal tools)
+  # Uses {ext} placeholder for platform-appropriate extension
+  single-platform:
+    - {id: "{moniker}", type: executable, pattern: "{moniker}{ext}"}
+
+# =============================================================================
+# Discovery Conventions
+# =============================================================================
+# Rules for auto-discovering components based on filesystem patterns
+
 conventions:
   component_discovery:
     # Gherkin specs: look in specs/{moniker}/
@@ -175,3 +252,7 @@ conventions:
         - go
         - typescript
         - dockerfile
+
+    # Container auxiliary components (auto-discovered for container templates)
+    # testdata: *.txt, *.conf, *.html, *.sh files
+    # containercode: *.py, *.js files

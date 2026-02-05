@@ -8,7 +8,7 @@
 // Long: Expected Output:
 // Long:   - Lint logs written to 'out/lint/<module>/lint.log' (one per module)
 // Long:   - Structured results at 'out/lint/<module>/lint.json' (linter-specific format)
-// Long:   - Lint manifest at 'out/lint/<module>/lint.manifest.json' (with timing data)
+// Long:   - UoW manifests at 'out/lint/<module>/<component>/uow.manifest.json' (with timing data)
 // Long:   - Failed lints are clearly marked with error details
 // Long:   - Exit code 0 indicates no lint issues found
 // Long:   - Non-zero exit code indicates lint issues found or errors

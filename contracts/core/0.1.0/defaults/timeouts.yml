@@ -50,4 +50,4 @@ tui:
 
 # Resource scheduling
 scheduling:
-  capacity_recalc: 2s  # Capacity recalculation interval
+  capacity_recalc: 2s       # Capacity recalculation interval

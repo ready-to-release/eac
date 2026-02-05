@@ -1,4 +1,5 @@
 // Command: get specs
+// Short: Get specification files and status for a module
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

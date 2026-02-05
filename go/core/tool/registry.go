@@ -447,6 +447,15 @@ func (r *DefaultRegistry) VerifyTool(toolID string) VerifyResult {
 	return VerifyToolDefinition(tool)
 }
 
+// GetBootstrapTools returns the list of bootstrap tools that should be verified at startup.
+// Docker is the only true system dependency - it's required for container-based builds.
+// Go and git are optimizations (can fall back to container variants).
+func (r *DefaultRegistry) GetBootstrapTools() []string {
+	// Docker is the only mandatory bootstrap tool for builds
+	// Go and git are in bootstrap namespace but optional (system tool optimizations)
+	return []string{"docker"}
+}
+
 // VerifyAll checks multiple tools and returns results for each.
 // Runs verifications in parallel for faster startup.
 func (r *DefaultRegistry) VerifyAll(toolIDs []string) []VerifyResult {

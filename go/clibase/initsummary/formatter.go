@@ -423,8 +423,8 @@ func formatFlagsCompact(f Flags) string {
 	if f.DryRun {
 		parts = append(parts, "dry-run")
 	}
-	if f.BuildAll {
-		parts = append(parts, "all")
+	if f.ArtifactsMode == "all" {
+		parts = append(parts, "artifacts:all")
 	}
 	if f.UseExistingDepm {
 		parts = append(parts, "use-existing-depm")
@@ -478,8 +478,10 @@ func formatFlagsDetailed(f Flags, command string) string {
 		lines = append(lines, "  🧪 dry-run: enabled")
 	}
 
-	if f.BuildAll {
-		lines = append(lines, "  📦 all: enabled")
+	if f.ArtifactsMode == "all" {
+		lines = append(lines, "  📦 artifacts: all")
+	} else if f.ArtifactsMode != "" {
+		lines = append(lines, "  📦 artifacts: "+f.ArtifactsMode)
 	}
 
 	if f.UseExistingDepm {

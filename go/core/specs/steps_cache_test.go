@@ -388,7 +388,7 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 		}
 
 		// Create UoW manifest in the expected location
-		// Format: out/build/<module>/<component>_<tool>/uow.manifest.json
+		// Format: out/build/<module>/<component>-<tool>/uow.manifest.json
 		manifest := &output.UoWManifest{
 			Context:    workunit.ContextBuild,
 			Module:     contract.Moniker,
@@ -403,7 +403,7 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 			Version:    "1.0.0",
 		}
 
-		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", contract.Moniker, "go_go")
+		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", contract.Moniker, "go-go")
 		if err := os.MkdirAll(manifestDir, 0755); err != nil {
 			return fmt.Errorf("failed to create manifest dir for %s: %w", contract.Moniker, err)
 		}
@@ -852,7 +852,7 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 		Version:    "1.0.0",
 	}
 
-	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go_golangci-lint")
+	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go-golangci-lint")
 	if err := os.MkdirAll(manifestDir, 0755); err != nil {
 		return fmt.Errorf("failed to create manifest dir for %s: %w", module, err)
 	}
@@ -917,7 +917,7 @@ func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 		Version:    "1.0.0",
 	}
 
-	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go_golangci-lint")
+	manifestDir := filepath.Join(ctx.IsolatedDir, "out", "lint", module, "go-golangci-lint")
 	if err := os.MkdirAll(manifestDir, 0755); err != nil {
 		return fmt.Errorf("failed to create manifest dir for %s: %w", module, err)
 	}
@@ -991,7 +991,7 @@ func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 			Version:    "1.0.0",
 		}
 
-		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", moniker, "go_go")
+		manifestDir := filepath.Join(ctx.IsolatedDir, "out", "build", moniker, "go-go")
 		if err := os.MkdirAll(manifestDir, 0755); err != nil {
 			return fmt.Errorf("failed to create manifest dir for %s: %w", moniker, err)
 		}

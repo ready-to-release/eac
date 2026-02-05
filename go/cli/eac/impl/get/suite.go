@@ -1,4 +1,5 @@
 // Command: get suite
+// Short: Get test suite definition and configuration
 // Usage: get suite <suite-moniker>
 //
 //	--as-yaml: Output as YAML (default)

@@ -123,9 +123,9 @@ func TestBuildContainerConfig(t *testing.T) {
 	bridge := NewHandlerToolBridge()
 
 	tool := &ToolDefinition{
-		ID:        "site-render-tool",
+		ID:        "site-render-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/site-render-tool",
+		LocalPath: "containers/site-render-oci",
 		Command:   []string{"mkdocs", "build", "-f", "{config}", "--site-dir", "{output}/site"},
 		WorkDir:   "/docs",
 		Mounts: []MountConfig{
@@ -149,8 +149,8 @@ func TestBuildContainerConfig(t *testing.T) {
 	config := bridge.buildContainerConfig(tool, tc)
 
 	// Verify image
-	if config.Image != "site-render-tool:local" {
-		t.Errorf("Image = %q, want %q", config.Image, "site-render-tool:local")
+	if config.Image != "site-render-oci:local" {
+		t.Errorf("Image = %q, want %q", config.Image, "site-render-oci:local")
 	}
 
 	// Verify command substitution
@@ -243,9 +243,9 @@ func TestBuildContainerConfig_WithWeight(t *testing.T) {
 	bridge := NewHandlerToolBridge()
 
 	tool := &ToolDefinition{
-		ID:        "pdf-tool",
+		ID:        "pdf-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/pdf-tool",
+		LocalPath: "containers/pdf-oci",
 		Resources: &ToolResources{
 			CPUs:    1,      // Base CPU
 			Memory:  "2g",   // Base memory
@@ -320,13 +320,13 @@ func TestBuildContainerConfig_NoWeight(t *testing.T) {
 func TestBuildContainerConfig_ExplicitCPULimit(t *testing.T) {
 	bridge := NewHandlerToolBridge()
 
-	// Test case: tool with explicit CPU limit (like pdf-tool)
+	// Test case: tool with explicit CPU limit (like pdf-oci)
 	// Tool has cpus: 4, component has weight: 4
 	// Should NOT multiply: 4 CPUs used directly (not 4 * 4 = 16)
 	tool := &ToolDefinition{
-		ID:        "pdf-tool",
+		ID:        "pdf-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/pdf-tool",
+		LocalPath: "containers/pdf-oci",
 		Resources: &ToolResources{
 			CPUs:   4,    // Explicit limit
 			Memory: "8g", // Will be scaled by weight

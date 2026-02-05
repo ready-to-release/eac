@@ -329,7 +329,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 	}
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-tool", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {

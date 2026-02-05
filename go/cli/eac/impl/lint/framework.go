@@ -4,7 +4,6 @@ package lint
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/update/lint/linters"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
-	"github.com/ready-to-release/eac/go/clibase/git"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/locking"
 	"github.com/ready-to-release/eac/go/clibase/output"
@@ -251,18 +249,6 @@ func detectUoWIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *l
 // lintAfterExecute handles post-lint tasks.
 // Note: UoW manifests are written atomically during execution via InMemoryTracker.
 func lintAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
-	if !ok {
-		return fmt.Errorf("lintContext not found or wrong type")
-	}
-
-	// Generate lint manifest for each module (module-level summary)
-	for moniker, result := range lctx.results {
-		if err := generateLintManifest(ctx, moniker, result); err != nil {
-			log.Warnf("Failed to generate lint manifest for %s: %v", moniker, err)
-		}
-	}
-
 	// Assert all UoWs have valid manifests (skip in dry-run mode)
 	if !ctx.Config.DryRun {
 		if err := assertLintManifestsExist(ctx); err != nil {
@@ -273,32 +259,9 @@ func lintAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// assertLintManifestsExist verifies that all expected UoWs have valid manifests.
-// This catches cases where manifest generation was broken or never implemented.
+// assertLintManifestsExist verifies that all executed UoWs have valid manifests.
 func assertLintManifestsExist(ctx *cmdframework.ExecutionContext) error {
-	units := ResolveLintUnitSpecs(ctx)
-	if len(units) == 0 {
-		return nil
-	}
-
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	var missing []string
-
-	for _, spec := range units {
-		// Check if manifest exists for this UoW
-		_, err := reader.GetUoW(workunit.ContextLint, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
-		if err != nil {
-			missing = append(missing, spec.ID.Longname())
-			log.Debugf("[LINT-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
-		}
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("lint completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
-	}
-
-	log.Debugf("[LINT-ASSERT] All %d UoW manifests verified", len(units))
-	return nil
+	return cmdframework.AssertManifestsExist(ctx, "lint", ResolveLintUnitSpecs(ctx))
 }
 
 
@@ -344,7 +307,13 @@ func lintUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		} else {
 			// Verify UoW manifest artifacts are intact before declaring cache hit
 			reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-			validationResult := reader.ValidateUoW(workunit.ContextLint, module, compName, providerName)
+			uowID := workunit.UnitID{
+				Context:   workunit.ContextLint,
+				Module:    module,
+				Component: compName,
+				Tool:      providerName,
+			}
+			validationResult := reader.ValidateUoW(uowID)
 			if !validationResult.ManifestExists {
 				// No manifest - trust source hash, allow cache hit
 				log.Debugf("Lint UoW cache hit (no manifest to verify)")
@@ -395,8 +364,8 @@ func lintUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		return 1
 	}
 
-	// Acquire component-level lock with wait (use underscore separator for Windows compatibility)
-	componentDir := compName + "_" + providerName
+	// Acquire component-level lock with wait (use dash separator to match UnitID.DirName())
+	componentDir := compName + "-" + providerName
 	if !ctx.Config.DryRun {
 		lockCfg := locking.UnitLintConfig(module, componentDir, paths.OutLintRelPath)
 		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
@@ -657,45 +626,3 @@ func countLintIssues(jsonPath string) (int, error) {
 	return len(jsonOutput.Issues), nil
 }
 
-// generateLintManifest generates the lint manifest for a module.
-func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, result *LintModuleResult) error {
-	outputDir := paths.LintOutputPath(ctx.WorkspaceRoot, moniker)
-
-	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
-	}
-
-	manifestPath := filepath.Join(outputDir, "lint.manifest.json")
-
-	manifest := LintManifest{
-		Moniker:        moniker,
-		ComponentTypes: ctx.ComponentTypesDisplay[moniker],
-		GitCommit:       git.GetCommitSHA(ctx.WorkspaceRoot),
-		RunTime:         time.Now(),
-		DurationSeconds: result.Duration.Seconds(),
-		Success:         result.Success,
-		IssueCount:      result.IssueCount,
-		Providers:       result.Providers,
-	}
-
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(manifestPath, data, 0o644)
-}
-
-// LintManifest represents the lint manifest structure.
-type LintManifest struct {
-	Moniker        string `json:"moniker"`
-	ComponentTypes string `json:"component_types"`
-	GitCommit       string    `json:"git_commit"`
-	RunTime         time.Time `json:"run_time"`
-	DurationSeconds float64   `json:"duration_seconds"`
-	Success         bool      `json:"success"`
-	IssueCount      int       `json:"issue_count"`
-	FixedCount      int       `json:"fixed_count,omitempty"`
-	Providers       []string  `json:"providers,omitempty"`
-}

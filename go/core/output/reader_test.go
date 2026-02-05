@@ -58,6 +58,7 @@ func newTestFixture(t *testing.T) *testFixture {
 }
 
 // createUoWManifest creates a UoW manifest file on disk.
+// Uses the new flat directory format: component[-extra1][-extra2]
 func (f *testFixture) createUoWManifest(ctx workunit.Context, module, component, tool string) *UoWManifest {
 	f.t.Helper()
 	manifest := &UoWManifest{
@@ -74,7 +75,8 @@ func (f *testFixture) createUoWManifest(ctx workunit.Context, module, component,
 		Version:    "1.0.0",
 	}
 
-	dirName := component + "_" + tool
+	// Use the new flat directory format: just component name (no tool)
+	dirName := manifest.DirName()
 	manifestDir := filepath.Join(f.workspaceRoot, "out", string(ctx), module, dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(f.t, err)
@@ -89,10 +91,26 @@ func (f *testFixture) createUoWManifest(ctx workunit.Context, module, component,
 }
 
 // createUoWManifestWithArtifacts creates a UoW manifest with artifacts on disk.
+// Uses the new flat directory format: component[-extra1][-extra2]
 func (f *testFixture) createUoWManifestWithArtifacts(ctx workunit.Context, module, component, tool string, artifactContents map[string][]byte) *UoWManifest {
 	f.t.Helper()
 
-	dirName := component + "_" + tool
+	// Create manifest first to get the correct DirName
+	manifest := &UoWManifest{
+		Context:    ctx,
+		Module:     module,
+		Component:  component,
+		Tool:       tool,
+		ExitCode:   0,
+		InputHash:  "sha256:input-" + module + "-" + component + "-" + tool,
+		ExecutedAt: time.Now().UTC().Truncate(time.Second),
+		Duration:   30 * time.Second,
+		OutputHash: "sha256:output-" + module + "-" + component + "-" + tool,
+		Version:    "1.0.0",
+	}
+
+	// Use the new flat directory format
+	dirName := manifest.DirName()
 	uowDir := filepath.Join(f.workspaceRoot, "out", string(ctx), module, dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(f.t, err)
@@ -116,19 +134,7 @@ func (f *testFixture) createUoWManifestWithArtifacts(ctx workunit.Context, modul
 		})
 	}
 
-	manifest := &UoWManifest{
-		Context:    ctx,
-		Module:     module,
-		Component:  component,
-		Tool:       tool,
-		ExitCode:   0,
-		InputHash:  "sha256:input-" + module + "-" + component + "-" + tool,
-		ExecutedAt: time.Now().UTC().Truncate(time.Second),
-		Duration:   30 * time.Second,
-		Artifacts:  artifacts,
-		OutputHash: "sha256:output-" + module + "-" + component + "-" + tool,
-		Version:    "1.0.0",
-	}
+	manifest.Artifacts = artifacts
 
 	manifestPath := filepath.Join(uowDir, "uow.manifest.json")
 	data, err := json.MarshalIndent(manifest, "", "  ")
@@ -140,6 +146,7 @@ func (f *testFixture) createUoWManifestWithArtifacts(ctx workunit.Context, modul
 }
 
 // createUoWManifestWithExitCode creates a UoW manifest with specific exit code.
+// Uses the new flat directory format: component[-extra1][-extra2]
 func (f *testFixture) createUoWManifestWithExitCode(ctx workunit.Context, module, component, tool string, exitCode int) *UoWManifest {
 	f.t.Helper()
 	manifest := &UoWManifest{
@@ -156,7 +163,8 @@ func (f *testFixture) createUoWManifestWithExitCode(ctx workunit.Context, module
 		Version:    "1.0.0",
 	}
 
-	dirName := component + "_" + tool
+	// Use the new flat directory format
+	dirName := manifest.DirName()
 	manifestDir := filepath.Join(f.workspaceRoot, "out", string(ctx), module, dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(f.t, err)
@@ -180,7 +188,7 @@ func TestOutputReader_GetUoW_LoadsManifestFromCorrectPath(t *testing.T) {
 	// Create manifest at expected path
 	expected := f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
 
-	// Expected path: {workspace}/out/build/test-module/go_go/uow.manifest.json
+	// Expected path: {workspace}/out/build/test-module/go-go/uow.manifest.json
 
 	// TODO: After implementation:
 	// reader := NewReader(f.workspaceRoot)
@@ -593,7 +601,7 @@ func TestOutputReader_ListUoWs_SkipsInvalidManifests(t *testing.T) {
 	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
 
 	// Create invalid manifest (bad JSON)
-	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", "docker_docker")
+	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", "docker-docker")
 	err := os.MkdirAll(invalidDir, 0755)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(invalidDir, "uow.manifest.json"), []byte("invalid json {{{"), 0644)
@@ -637,7 +645,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWithMissingArtifacts(t *testing.
 	}
 
 	// Overwrite manifest with artifact references
-	dirName := "go_go"
+	dirName := "go-go"
 	manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName, "uow.manifest.json")
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	require.NoError(t, err)
@@ -671,7 +679,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWhenArtifactsCorrupt(t *testing.
 	f := newTestFixture(t)
 
 	// Create UoW directory
-	dirName := "go_go"
+	dirName := "go-go"
 	uowDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -781,7 +789,7 @@ func TestOutputReader_ValidateUoW_TableDriven(t *testing.T) {
 					if tt.wrongHash {
 						// Corrupt the hash
 						manifest.Artifacts[0].SHA256 = "sha256:wrong"
-						dirName := "go_go"
+						dirName := "go-go"
 						manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "test", dirName, "uow.manifest.json")
 						data, err := json.MarshalIndent(manifest, "", "  ")
 						require.NoError(t, err)
@@ -863,7 +871,7 @@ func TestOutputReader_ValidateModule_ReturnsInvalidWhenAnyUoWInvalid(t *testing.
 	manifest.Artifacts = []Artifact{
 		{ID: "image", Path: "missing-image.tar", SHA256: "sha256:missing", Size: 1000, Type: "docker-image"},
 	}
-	dirName := "docker_docker"
+	dirName := "docker-docker"
 	manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "eac-cli", dirName, "uow.manifest.json")
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	require.NoError(t, err)
@@ -1032,7 +1040,7 @@ func TestOutputReader_GetUoW_HandlesInvalidManifestJSON(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create directory with invalid manifest
-	dirName := "go_go"
+	dirName := "go-go"
 	manifestDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -1050,7 +1058,7 @@ func TestOutputReader_GetUoW_HandlesEmptyManifest(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create directory with empty manifest
-	dirName := "go_go"
+	dirName := "go-go"
 	manifestDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -1085,7 +1093,7 @@ func TestOutputReader_GetModule_HandlesMixedValidAndInvalidManifests(t *testing.
 	f.createUoWManifest(workunit.ContextBuild, "mixed-module", "go", "go")
 
 	// Create invalid manifest
-	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "mixed-module", "docker_docker")
+	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "mixed-module", "docker-docker")
 	err := os.MkdirAll(invalidDir, 0755)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(invalidDir, "uow.manifest.json"), []byte("invalid"), 0644)
@@ -1352,7 +1360,7 @@ func TestOutputReader_ValidateModule_Comprehensive(t *testing.T) {
 
 				if uow.wrongHash && len(manifest.Artifacts) > 0 {
 					manifest.Artifacts[0].SHA256 = "sha256:wrong"
-					dirName := uow.component + "_" + uow.tool
+					dirName := uow.component + "-" + uow.tool
 					manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "module", dirName, "uow.manifest.json")
 					data, err := json.MarshalIndent(manifest, "", "  ")
 					require.NoError(t, err)

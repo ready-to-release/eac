@@ -13,6 +13,59 @@ import (
 // This ensures consistent visual width across CPU, Mem, Docker mem, and Tools.
 const stableLampsCount = 16
 
+// pressureLampZones calculates non-uniform color zone boundaries for pressure lamps.
+// Distribution favors green (safe) with fewer red (critical) lamps:
+// - Green: 3/8 of total (37.5%) - large safe zone
+// - Yellow: fills remainder after other zones - warning zone
+// - Orange: 3/16 of total (18.75%) - elevated pressure
+// - Red: 1/8 of total (12.5%) - critical zone
+// For 16 lamps: 6 green, 5 yellow, 3 orange, 2 red
+func pressureLampZones(totalLamps int) (greenEnd, yellowEnd, orangeEnd int) {
+	greenCount := totalLamps * 3 / 8   // 6 for 16 lamps
+	redCount := totalLamps / 8         // 2 for 16 lamps
+	orangeCount := totalLamps * 3 / 16 // 3 for 16 lamps
+	yellowCount := totalLamps - greenCount - redCount - orangeCount // remainder (5 for 16)
+
+	greenEnd = greenCount
+	yellowEnd = greenEnd + yellowCount
+	orangeEnd = yellowEnd + orangeCount
+	// red fills the rest (totalLamps - orangeEnd)
+	return
+}
+
+// getPressureColor returns a lipgloss style for the given pressure level.
+// The color matches the scheduler lamp color zones (green/yellow/orange/red).
+func getPressureColor(running, capacity int) lipgloss.Style {
+	if capacity <= 0 {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("255")) // white if no capacity
+	}
+
+	// Calculate which lamp position this pressure corresponds to
+	activeDots := (running * stableLampsCount) / capacity
+	if activeDots > stableLampsCount {
+		activeDots = stableLampsCount
+	}
+
+	greenEnd, yellowEnd, orangeEnd := pressureLampZones(stableLampsCount)
+
+	// Color based on position (use last active lamp, or 0 if none)
+	pos := activeDots
+	if pos > 0 {
+		pos-- // 0-indexed position of last active lamp
+	}
+
+	switch {
+	case pos < greenEnd:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("40")) // green
+	case pos < yellowEnd:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("214")) // yellow
+	case pos < orangeEnd:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // orange
+	default:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("196")) // red
+	}
+}
+
 // LayoutMetrics contains pre-calculated layout dimensions for the TUI.
 // This is the SINGLE SOURCE OF TRUTH for layout calculations.
 // Both rendering (viewPanes) and mouse handling (detectTabAt) MUST use this
@@ -1544,10 +1597,10 @@ func (m Model) renderPaneHeader(phase Phase) string {
 }
 
 // renderResourcesPane renders a bordered pane showing resource pressure and system metrics.
-// Layout: 3 rows x 3 columns
-// Row 1: Active lamps | Mem | DockerMem
-// Row 2: Timer | CPU | Containers
-// Row 3: Counts | Tools (spans two columns)
+// Layout: 3 rows x 5 columns
+// Row 1: CPU lamps          | Time         | (empty)        | Mem lamps       | Docker Mem lamps
+// Row 2: Host scheduler     | Host weight  | cached/done/X  | Native tools    | Containers lamps
+// Row 3: Docker scheduler   | Docker weight| progress count | Tools placeholder| Container tools
 // Returns empty string if no scheduler is active.
 func (m Model) renderResourcesPane() string {
 	// Get component scheduler stats (the single weighted scheduler)
@@ -1567,12 +1620,21 @@ func (m Model) renderResourcesPane() string {
 
 	var result strings.Builder
 
-	// Fixed column widths for vertical alignment across 3 lines
-	// Proportional split: ~35% / ~30% / ~35%
+	// Fixed column widths for 5-column layout
 	const (
-		col1Width = 32 // Active lamps, Timer, Counts
-		col2Width = 26 // CPU, Mem
-		col3Width = 26 // Containers, DockerMem
+		col1Width = 24 // Scheduler lamps (CPU, Host, Docker)
+		col2Width = 11 // Slots (Time, Host weight, Docker weight) - left aligned
+		col3Width = 12 // Progress (empty, cached/done/failed, progress count)
+		col4Width = 24 // Host resources (Mem, Native, placeholder)
+		col5Width = 28 // Docker resources (Mem, Containers, Tools)
+	)
+
+	// Label widths for lamp alignment within columns
+	// All labels in a column are padded to the longest label length
+	const (
+		col1LabelWidth = 7  // "Docker:" is longest (7 chars)
+		col4LabelWidth = 7  // "Native:" is longest (7 chars)
+		col5LabelWidth = 11 // "Containers:" is longest (11 chars)
 	)
 
 	// Helper to pad string to fixed width
@@ -1584,11 +1646,16 @@ func (m Model) renderResourcesPane() string {
 		return s + strings.Repeat(" ", width-visWidth)
 	}
 
-	// Header: ┌─ Resources ────────────────────── [Freeze MM:SS] ┐
-	title := "Resources"
-	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
+	// Helper to right-align string in fixed width
+	rightAlign := func(s string, width int) string {
+		visWidth := lipgloss.Width(s)
+		if visWidth >= width {
+			return s
+		}
+		return strings.Repeat(" ", width-visWidth) + s
+	}
 
-	// Freeze button
+	// Freeze button (rendered first so we can calculate remaining width)
 	var freezeBtn string
 	if m.exitCountdownSecs > 0 && m.userHasInteracted {
 		mins := m.exitCountdownSecs / 60
@@ -1601,11 +1668,22 @@ func (m Model) renderResourcesPane() string {
 		} else {
 			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 		}
-		freezeBtn = btnStyle.Render(fmt.Sprintf("[Freeze %d:%02d]", mins, secs))
+		freezeBtn = btnStyle.Render(fmt.Sprintf("[%d:%02d]", mins, secs))
 	} else {
-		freezeBtn = Styles.Dim.Render("[Freeze]")
+		freezeBtn = Styles.Dim.Render("[...]")
 	}
 	freezeBtn = zone.Mark("freeze-button", freezeBtn)
+
+	// Header with column titles: ┌ Scheduler │ Slots │ Progress │ Host │ Docker ─── [...] ┐
+	headerSepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("236")) // Very dark
+	headerSep := headerSepStyle.Render(" │ ")
+	col1Header := padTo(Styles.Dim.Render("Scheduler"), col1Width)
+	col2Header := padTo(Styles.Dim.Render("Slots"), col2Width)
+	col3Header := padTo(Styles.Dim.Render("Progress"), col3Width)
+	col4Header := padTo(Styles.Dim.Render("Host"), col4Width)
+	col5Header := Styles.Dim.Render("Docker")
+	headerTitles := col1Header + headerSep + col2Header + headerSep + col3Header + headerSep + col4Header + headerSep + col5Header
+	headerLeft := "┌ " + headerTitles + " "
 
 	headerBorderLen := m.width - lipgloss.Width(headerLeft) - lipgloss.Width(freezeBtn) - 3
 	if headerBorderLen < 3 {
@@ -1615,7 +1693,10 @@ func (m Model) renderResourcesPane() string {
 
 	// Styles
 	white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-	sep := Styles.Dim.Render(" │ ")
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))  // Yellow for waiting warning
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))     // Red for high waiting
+	veryDark := lipgloss.NewStyle().Foreground(lipgloss.Color("236")) // Very dark for separators
+	sep := veryDark.Render(" │ ")
 
 	// Content width (inside borders)
 	contentWidth := m.width - 4
@@ -1628,7 +1709,6 @@ func (m Model) renderResourcesPane() string {
 	if capInfo.PressureTarget == 0 {
 		capInfo.PressureTarget = pressureCap
 	}
-	roof := capInfo.EffectiveRoof()
 
 	// Use derived counts (single source of truth)
 	counts := m.DeriveCounts()
@@ -1637,78 +1717,114 @@ func (m Model) renderResourcesPane() string {
 	cached := counts.Cached
 	failed := counts.Failed
 
-	// Label width for alignment (longest is "Tools:" = 6)
-	const labelWidth = 6
-
-	// === Line 1: Active lamps | Mem | DockerMem ===
-	// Active lamps show 3 states: active (filled orange), loft (unfilled orange), blocked (grey)
-	// Running counter is right-aligned with orange bg, one space padding from right edge
-	activeLamps, loftLamps, blockedLamps := RenderActiveLamps(running, capInfo.PressureTarget, roof, m.asciiMode)
-	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // Dim orange for loft
-	grey := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))      // Grey for unallocatable
-	orangeBg := lipgloss.NewStyle().Background(lipgloss.Color("208")).Foreground(lipgloss.Color("0")) // Orange bg for running count
-	lampsStr := white.Render("Active:") + Styles.TabRunning.Render(activeLamps) + dimOrange.Render(loftLamps) + grey.Render(blockedLamps)
-	counterStr := orangeBg.Render(fmt.Sprintf("%3d", running)) + "/" + fmt.Sprintf("%3d", capInfo.PressureTarget)
-	// Calculate padding to right-align counter with 1 space from right edge
-	lampsWidth := lipgloss.Width(lampsStr)
-	counterWidth := lipgloss.Width(counterStr)
-	padWidth := col1Width - lampsWidth - counterWidth - 1 // -1 for right padding
-	if padWidth < 1 {
-		padWidth = 1
-	}
-	activeLampsStr := zone.Mark("res-uow", lampsStr+strings.Repeat(" ", padWidth)+counterStr)
-	col1Line1 := padTo(activeLampsStr, col1Width)
-
-	// Mem dots (system memory, pad label to align lamps)
-	memDots := m.renderMemDots()
-	memStr := zone.Mark("res-mem", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "Mem:"))+memDots)
-	col2Line1 := padTo(memStr, col2Width)
-
-	// Mem dots (docker memory, pad label to align lamps under Containers:)
-	dockerMemDots := m.renderDockerMemDots()
-	dockerMemStr := zone.Mark("res-dmem", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Mem:"))+dockerMemDots)
-	col3Line1 := padTo(dockerMemStr, col3Width)
-
-	line1 := col1Line1 + sep + col2Line1 + sep + col3Line1
-	line1 = padTo(line1, contentWidth)
-	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
-
-	// === Line 2: Right-aligned counts | CPU | Containers ===
-	// Background-colored counters (3 chars each, right-aligned in cell)
-	blueBg := lipgloss.NewStyle().Background(lipgloss.Color("39")).Foreground(lipgloss.Color("0"))   // Cached (blue)
-	greenBg := lipgloss.NewStyle().Background(lipgloss.Color("40")).Foreground(lipgloss.Color("0")) // Done (green)
-	redBg := lipgloss.NewStyle().Background(lipgloss.Color("196")).Foreground(lipgloss.Color("0"))  // Failed (red)
-	countersStr := blueBg.Render(fmt.Sprintf("%3d", cached)) + " " + greenBg.Render(fmt.Sprintf("%3d", done)) + " " + redBg.Render(fmt.Sprintf("%3d", failed))
-	// Calculate padding to right-align counters with 1 space from right edge (no bg)
-	countersWidth := lipgloss.Width(countersStr)
-	padWidth2 := col1Width - countersWidth - 1 // -1 for trailing space (no bg)
-	if padWidth2 < 1 {
-		padWidth2 = 1
-	}
-	col1Line2 := zone.Mark("res-counters", strings.Repeat(" ", padWidth2)+countersStr) + " "
-
-	// CPU dots (pad label to align lamps)
+	// === Line 1: CPU | Time | (empty) | Mem | Docker Mem ===
+	// CPU lamps (padded label to align with "Docker:")
 	cpuDots := m.renderCPUDots()
-	cpuStr := zone.Mark("res-cpu", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "CPU:"))+cpuDots)
-	col2Line2 := padTo(cpuStr, col2Width)
+	cpuStr := zone.Mark("res-cpu", white.Render(fmt.Sprintf("%-*s", col1LabelWidth, "CPU:"))+cpuDots)
+	col1Line1 := padTo(cpuStr, col1Width)
 
-	// Running Docker containers count
-	containerCountDots := m.renderRunningContainersDots()
-	containerCountStr := zone.Mark("res-containers", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Containers:"))+containerCountDots)
-	col3Line2 := padTo(containerCountStr, col3Width)
-
-	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2
-	line2 = padTo(line2, contentWidth)
-	result.WriteString(Styles.Border.Render("│") + " " + line2 + " " + Styles.Border.Render("│") + "\n")
-
-	// === Line 3: Timer + Progress | Tools (orange) | Tools (blue) ===
-	// Timer on left
+	// Timer
 	elapsed := time.Since(m.startTime)
 	mins := int(elapsed.Minutes())
 	secs := int(elapsed.Seconds()) % 60
 	timerStr := zone.Mark("res-timer", white.Render(fmt.Sprintf("Time:%02d:%02d", mins, secs)))
+	col2Line1 := padTo(timerStr, col2Width)
 
-	// Calculate total
+	// Empty column
+	col3Line1 := padTo("", col3Width)
+
+	// Host memory lamps (padded label to align with "Native:")
+	memDots := m.renderMemDots()
+	memStr := zone.Mark("res-mem", white.Render(fmt.Sprintf("%-*s", col4LabelWidth, "Mem:"))+memDots)
+	col4Line1 := padTo(memStr, col4Width)
+
+	// Docker memory lamps (padded label to align with "Containers:")
+	dockerMemDots := m.renderDockerMemDots()
+	dockerMemStr := zone.Mark("res-dmem", white.Render(fmt.Sprintf("%-*s", col5LabelWidth, "Mem:"))+dockerMemDots)
+	col5Line1 := padTo(dockerMemStr, col5Width)
+
+	line1 := col1Line1 + sep + col2Line1 + sep + col3Line1 + sep + col4Line1 + sep + col5Line1
+	line1 = padTo(line1, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Line 2: Host scheduler | Host weight | counters | Native tools | Containers ===
+	// Host scheduler lamps with green/yellow/orange/red gradient (padded label to align with "Docker:")
+	hostLamps := m.renderSchedulerPressureLamps(running, capInfo.PressureTarget)
+	hostLampsStr := white.Render(fmt.Sprintf("%-*s", col1LabelWidth, "Host:")) + hostLamps
+	hostStr := zone.Mark("res-host", hostLampsStr)
+	col1Line2 := padTo(hostStr, col1Width)
+
+	// Host weight counter - color matches pressure lamps
+	hostPressureColor := getPressureColor(running, capInfo.PressureTarget)
+	hostWeightStr := hostPressureColor.Render(fmt.Sprintf("%d/%d", running, capInfo.PressureTarget))
+	// Check if there are jobs waiting for host scheduler
+	var hostWaiting int
+	for _, lock := range m.locks {
+		if lock.Name == "component-scheduler" {
+			hostWaiting = lock.Waiting
+			break
+		}
+	}
+	if hostWaiting > 0 {
+		wStyle := yellow
+		if hostWaiting > 5 {
+			wStyle = red
+		}
+		hostWeightStr += wStyle.Render(fmt.Sprintf(" W:%d", hostWaiting))
+	}
+	col2Line2 := padTo(zone.Mark("res-host-weight", hostWeightStr), col2Width)
+
+	// Progress counters (cached/done/failed)
+	blueBg := lipgloss.NewStyle().Background(lipgloss.Color("39")).Foreground(lipgloss.Color("0"))   // Cached (blue)
+	greenBg := lipgloss.NewStyle().Background(lipgloss.Color("40")).Foreground(lipgloss.Color("0")) // Done (green)
+	redBg := lipgloss.NewStyle().Background(lipgloss.Color("196")).Foreground(lipgloss.Color("0"))  // Failed (red)
+	countersStr := blueBg.Render(fmt.Sprintf("%3d", cached)) + " " + greenBg.Render(fmt.Sprintf("%3d", done)) + " " + redBg.Render(fmt.Sprintf("%3d", failed))
+	col3Line2 := zone.Mark("res-counters", rightAlign(countersStr, col3Width))
+
+	// Native/system tools (padded label to align with "Native:" - already max width)
+	nativeToolsStr := zone.Mark("res-native", white.Render(fmt.Sprintf("%-*s", col4LabelWidth, "Native:"))+m.renderToolsDots())
+	col4Line2 := padTo(nativeToolsStr, col4Width)
+
+	// Running Docker containers count (padded label to align with "Containers:" - already max width)
+	containerCountDots := m.renderRunningContainersDots()
+	containerCountStr := zone.Mark("res-jobs", white.Render(fmt.Sprintf("%-*s", col5LabelWidth, "Containers:"))+containerCountDots)
+	col5Line2 := padTo(containerCountStr, col5Width)
+
+	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2 + sep + col4Line2 + sep + col5Line2
+	line2 = padTo(line2, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line2 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Line 3: Docker scheduler | Docker weight | progress | placeholder | Container tools ===
+	// Docker scheduler lamps
+	dockerRoof := m.dockerRoof
+	dockerRunning := m.dockerRunning
+	dockerPressureTarget := m.dockerPressureTarget
+	if dockerRoof == 0 {
+		// No docker scheduler, show empty/grey lamps
+		dockerRoof = 1 // avoid div by zero
+	}
+	if dockerPressureTarget == 0 {
+		dockerPressureTarget = dockerRoof
+	}
+	// Docker scheduler lamps with green/yellow/orange/red gradient (padded label - "Docker:" is already max width for col1)
+	dockerLamps := m.renderSchedulerPressureLamps(dockerRunning, dockerPressureTarget)
+	dockerLampsStr := white.Render(fmt.Sprintf("%-*s", col1LabelWidth, "Docker:")) + dockerLamps
+	dockerStr := zone.Mark("res-docker", dockerLampsStr)
+	col1Line3 := padTo(dockerStr, col1Width)
+
+	// Docker weight counter - color matches pressure lamps
+	dockerPressureColor := getPressureColor(dockerRunning, dockerPressureTarget)
+	dockerWeightStr := dockerPressureColor.Render(fmt.Sprintf("%d/%d", dockerRunning, dockerRoof))
+	if m.dockerWaiting > 0 {
+		wStyle := yellow
+		if m.dockerWaiting > 5 {
+			wStyle = red
+		}
+		dockerWeightStr += wStyle.Render(fmt.Sprintf(" W:%d", m.dockerWaiting))
+	}
+	col2Line3 := padTo(zone.Mark("res-docker-weight", dockerWeightStr), col2Width)
+
+	// Progress: finalized/total
 	total := 0
 	if m.initSummary != nil && m.initSummary.UoWCount > 0 {
 		total = m.initSummary.UoWCount
@@ -1716,27 +1832,19 @@ func (m Model) renderResourcesPane() string {
 		total = len(m.uowOrder)
 	}
 	finalized := done + cached + failed
+	progressStr := white.Render(fmt.Sprintf("%d/%d", finalized, total))
+	col3Line3 := rightAlign(progressStr, col3Width)
 
-	// Progress: finalized/total, right-aligned
-	progressStr := white.Render(fmt.Sprintf("%3d/%3d", finalized, total))
-	timerWidth := lipgloss.Width(timerStr)
-	progressWidth := lipgloss.Width(progressStr)
-	padWidth3 := col1Width - timerWidth - progressWidth - 1 // 1 space right padding
-	if padWidth3 < 0 {
-		padWidth3 = 0
-	}
-	col1Line3 := timerStr + strings.Repeat(" ", padWidth3) + progressStr + " "
+	// Placeholder for col4 (padded label to align with "Native:")
+	veryDark = lipgloss.NewStyle().Foreground(lipgloss.Color("236")) // Very dark for unused slots
+	col4Line3 := padTo(white.Render(fmt.Sprintf("%-*s", col4LabelWidth, "Tools:"))+veryDark.Render(strings.Repeat("○", stableLampsCount)), col4Width)
 
-	// System tools (orange) in col2, pad label to align lamps
-	systemToolsStr := zone.Mark("res-tools", white.Render(fmt.Sprintf("%-*s", labelWidth+2, "Tools:"))+m.renderToolsDots())
-	col2Line3 := padTo(systemToolsStr, col2Width)
-
-	// Container tools (blue) in col3, pad label to align lamps under Containers:
+	// Container tools (padded label to align with "Containers:")
 	containerDots := m.renderPlannedContainerDots()
-	containerToolsStr := zone.Mark("res-jobs", white.Render(fmt.Sprintf("%-*s", labelWidth+8, "Tools:"))+containerDots)
-	col3Line3 := padTo(containerToolsStr, col3Width)
+	containerToolsStr := zone.Mark("res-ctools", white.Render(fmt.Sprintf("%-*s", col5LabelWidth, "Tools:"))+containerDots)
+	col5Line3 := padTo(containerToolsStr, col5Width)
 
-	line3 := col1Line3 + sep + col2Line3 + sep + col3Line3
+	line3 := col1Line3 + sep + col2Line3 + sep + col3Line3 + sep + col4Line3 + sep + col5Line3
 	line3 = padTo(line3, contentWidth)
 	result.WriteString(Styles.Border.Render("│") + " " + line3 + " " + Styles.Border.Render("│") + "\n")
 
@@ -1956,13 +2064,19 @@ func (m Model) renderSelectedHelp(zoneID, helpText string, contentWidth int) str
 
 	// Map zone IDs to friendly element names
 	elementNames := map[string]string{
-		"res-timer":     "Timer",
-		"res-cpu":       "CPU",
-		"res-mem":       "Memory",
-		"res-jobs":      "Tools",
-		"res-uow":       "Active",
-		"res-tools":     "Tools",
-		"freeze-button": "Freeze",
+		"res-timer":        "Timer",
+		"res-cpu":          "CPU",
+		"res-mem":          "Memory",
+		"res-dmem":         "Docker Mem",
+		"res-host":         "Host",
+		"res-docker":       "Docker",
+		"res-host-weight":  "Host Weight",
+		"res-docker-weight": "Docker Weight",
+		"res-counters":     "Counters",
+		"res-jobs":         "Containers",
+		"res-native":       "Native",
+		"res-ctools":       "Tools",
+		"freeze-button":    "Freeze",
 	}
 
 	elementName := elementNames[zoneID]
@@ -2235,7 +2349,7 @@ func (m Model) renderCPUDots() string {
 }
 
 // renderMemDots returns 16 dots representing memory usage.
-// Color progression: green (0-25%) → yellow (25-50%) → orange (50-75%) → red (75-100%)
+// Color progression uses non-uniform zones: more green (safe), fewer red (critical).
 // Unfilled dots use the color of their threshold zone.
 // Uses cached metrics updated by UpdateCachedMetrics() to avoid blocking gopsutil calls.
 func (m Model) renderMemDots() string {
@@ -2262,15 +2376,18 @@ func (m Model) renderMemDots() string {
 		filledChar, emptyChar = "*", "o"
 	}
 
-	// Colors for each threshold zone (4 dots each)
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // 0-25% (filled)
-	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // 0-25% (unfilled)
-	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // 25-50% (filled)
-	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // 25-50% (unfilled)
-	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // 50-75% (filled)
-	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // 50-75% (unfilled)
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // 75-100% (filled)
-	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // 75-100% (unfilled)
+	// Colors for each threshold zone (non-uniform distribution)
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // safe (filled)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // safe (unfilled)
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // warning (filled)
+	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // warning (unfilled)
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // elevated (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // elevated (unfilled)
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // critical (filled)
+	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // critical (unfilled)
+
+	// Get zone boundaries (6 green, 5 yellow, 3 orange, 2 red for 16 lamps)
+	greenEnd, yellowEnd, orangeEnd := pressureLampZones(totalDots)
 
 	var dots strings.Builder
 	for i := 0; i < totalDots; i++ {
@@ -2280,21 +2397,107 @@ func (m Model) renderMemDots() string {
 			char = filledChar
 		}
 
-		// Color based on position (threshold zone, 4 dots each)
+		// Color based on position (non-uniform zones)
 		switch {
-		case i < 4:
+		case i < greenEnd:
 			if isFilled {
 				dots.WriteString(green.Render(char))
 			} else {
 				dots.WriteString(dimGreen.Render(char))
 			}
-		case i < 8:
+		case i < yellowEnd:
 			if isFilled {
 				dots.WriteString(yellow.Render(char))
 			} else {
 				dots.WriteString(dimYellow.Render(char))
 			}
-		case i < 12:
+		case i < orangeEnd:
+			if isFilled {
+				dots.WriteString(orange.Render(char))
+			} else {
+				dots.WriteString(dimOrange.Render(char))
+			}
+		default:
+			if isFilled {
+				dots.WriteString(red.Render(char))
+			} else {
+				dots.WriteString(dimRed.Render(char))
+			}
+		}
+	}
+
+	return dots.String()
+}
+
+// renderSchedulerPressureLamps renders scheduler pressure lamps with green/yellow/orange/red gradient.
+// Shows current pressure utilization: running / pressureTarget as a percentage.
+// Uses non-uniform color zones: more green (safe), fewer red (critical).
+// Filled lamps = current usage, unfilled lamps = available headroom.
+func (m Model) renderSchedulerPressureLamps(running, pressureTarget int) string {
+	const totalDots = stableLampsCount
+
+	// Handle edge cases
+	if pressureTarget <= 0 {
+		dim := lipgloss.NewStyle().Foreground(lipgloss.Color("236"))
+		emptyChar := "○"
+		if m.asciiMode {
+			emptyChar = "o"
+		}
+		return dim.Render(strings.Repeat(emptyChar, totalDots))
+	}
+
+	// Calculate usage percentage and map to dots
+	usagePct := float64(running) / float64(pressureTarget) * 100.0
+	activeDots := int(usagePct / 100.0 * float64(totalDots))
+	if activeDots > totalDots {
+		activeDots = totalDots
+	}
+	if activeDots < 0 {
+		activeDots = 0
+	}
+
+	// Choose characters based on mode
+	filledChar, emptyChar := "●", "○"
+	if m.asciiMode {
+		filledChar, emptyChar = "*", "o"
+	}
+
+	// Colors for each threshold zone (non-uniform distribution)
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // safe (filled)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // safe (unfilled)
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // warning (filled)
+	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // warning (unfilled)
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // elevated (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // elevated (unfilled)
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // critical (filled)
+	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // critical (unfilled)
+
+	// Get zone boundaries (6 green, 5 yellow, 3 orange, 2 red for 16 lamps)
+	greenEnd, yellowEnd, orangeEnd := pressureLampZones(totalDots)
+
+	var dots strings.Builder
+	for i := 0; i < totalDots; i++ {
+		isFilled := i < activeDots
+		char := emptyChar
+		if isFilled {
+			char = filledChar
+		}
+
+		// Color based on position (non-uniform zones)
+		switch {
+		case i < greenEnd:
+			if isFilled {
+				dots.WriteString(green.Render(char))
+			} else {
+				dots.WriteString(dimGreen.Render(char))
+			}
+		case i < yellowEnd:
+			if isFilled {
+				dots.WriteString(yellow.Render(char))
+			} else {
+				dots.WriteString(dimYellow.Render(char))
+			}
+		case i < orangeEnd:
 			if isFilled {
 				dots.WriteString(orange.Render(char))
 			} else {
@@ -2314,7 +2517,7 @@ func (m Model) renderMemDots() string {
 
 // renderDockerMemDots renders Docker memory pool usage as colored dots.
 // Always shows 16 dots - filled based on usage percentage.
-// Color progression: green (0-25%) → yellow (25-50%) → orange (50-75%) → red (75-100%)
+// Uses non-uniform color zones: more green (safe), fewer red (critical).
 // Unfilled dots use the color of their threshold zone.
 func (m Model) renderDockerMemDots() string {
 	const totalDots = stableLampsCount
@@ -2334,15 +2537,18 @@ func (m Model) renderDockerMemDots() string {
 		activeDots = totalDots
 	}
 
-	// Colors for each threshold zone (4 dots each)
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // 0-25% (filled)
-	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // 0-25% (unfilled)
-	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // 25-50% (filled)
-	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // 25-50% (unfilled)
-	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // 50-75% (filled)
-	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // 50-75% (unfilled)
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // 75-100% (filled)
-	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // 75-100% (unfilled)
+	// Colors for each threshold zone (non-uniform distribution)
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))      // safe (filled)
+	dimGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("22"))   // safe (unfilled)
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))    // warning (filled)
+	dimYellow := lipgloss.NewStyle().Foreground(lipgloss.Color("58"))  // warning (unfilled)
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // elevated (filled)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // elevated (unfilled)
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))       // critical (filled)
+	dimRed := lipgloss.NewStyle().Foreground(lipgloss.Color("52"))     // critical (unfilled)
+
+	// Get zone boundaries (6 green, 5 yellow, 3 orange, 2 red for 16 lamps)
+	greenEnd, yellowEnd, orangeEnd := pressureLampZones(totalDots)
 
 	var dots strings.Builder
 	for i := 0; i < totalDots; i++ {
@@ -2352,21 +2558,21 @@ func (m Model) renderDockerMemDots() string {
 			char = filledChar
 		}
 
-		// Color based on position (threshold zone, 4 dots each)
+		// Color based on position (non-uniform zones)
 		switch {
-		case i < 4:
+		case i < greenEnd:
 			if isFilled {
 				dots.WriteString(green.Render(char))
 			} else {
 				dots.WriteString(dimGreen.Render(char))
 			}
-		case i < 8:
+		case i < yellowEnd:
 			if isFilled {
 				dots.WriteString(yellow.Render(char))
 			} else {
 				dots.WriteString(dimYellow.Render(char))
 			}
-		case i < 12:
+		case i < orangeEnd:
 			if isFilled {
 				dots.WriteString(orange.Render(char))
 			} else {
@@ -2459,7 +2665,7 @@ func (m Model) renderPlannedContainerDots() string {
 
 	sharpBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("39")) // Active container (filled)
 	lightBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("75")) // Inactive container (unfilled blue)
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))      // Empty/unused slot
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("236"))      // Empty/unused slot (very dark)
 
 	filledChar := "●"
 	emptyChar := "○"
@@ -2603,7 +2809,7 @@ func (m Model) renderToolsDots() string {
 
 	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // Active system tool (filled)
 	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // Inactive system tool (unfilled)
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))       // Empty/unused slot
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("236"))       // Empty/unused slot (very dark)
 
 	filledChar := "●"
 	emptyChar := "○"

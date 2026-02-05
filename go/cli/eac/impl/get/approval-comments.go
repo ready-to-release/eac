@@ -1,4 +1,5 @@
 // Command: get approval-comments
+// Short: Get PR approval comments for a module
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

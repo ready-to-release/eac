@@ -12,7 +12,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/manifest"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"go.uber.org/zap"
 )
@@ -209,8 +208,6 @@ func handleScanFailure(ctx *ModuleScanContext, scanErr error) {
 		log.Infof("  📄 Error evidence: %s", outputPath)
 	}
 
-	// Update scan manifest with failure
-	UpdateScanManifest(ctx, manifest.ScanStatusFailed, outputPath, scanErr.Error())
 }
 
 // handleScanSuccess handles a successful scan by writing evidence and updating manifest.
@@ -223,13 +220,8 @@ func handleScanSuccess(ctx *ModuleScanContext, findings interface{}) error {
 			zap.Error(err))
 		log.Errorf("  ❌ Failed to write evidence: %v", err)
 
-		// Update scan manifest with failure
-		UpdateScanManifest(ctx, manifest.ScanStatusFailed, "", err.Error())
 		return err
 	}
-
-	// Update scan manifest with success
-	UpdateScanManifest(ctx, manifest.ScanStatusPassed, outputPath, "")
 
 	ctx.Logger.Info(ctx.Config.ScannerName+" scan completed",
 		zap.String("moniker", ctx.Moniker),
@@ -254,32 +246,6 @@ func GetGitCommit(workspaceRoot string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// UpdateScanManifest loads or creates the scan manifest, adds the scanner result, and saves it.
-func UpdateScanManifest(ctx *ModuleScanContext, status, evidencePath, errorMsg string) {
-	duration := time.Since(ctx.ScanStart)
-
-	mf, err := manifest.LoadOrCreateScanManifest(ctx.ModuleScanDir, ctx.Moniker, ctx.Module.GetComponentTypesDisplay(), ctx.GitCommit)
-	if err != nil {
-		ctx.Logger.Warn("Failed to load/create scan manifest", zap.Error(err))
-		return
-	}
-
-	result := manifest.ScannerResult{
-		Status:          status,
-		RunTime:         time.Now(),
-		DurationSeconds: duration.Seconds(),
-		EvidencePath:    evidencePath,
-		Error:           errorMsg,
-	}
-	mf.AddScannerResult(string(ctx.Config.ScannerType), result)
-
-	if err := mf.Save(ctx.ModuleScanDir); err != nil {
-		ctx.Logger.Warn("Failed to save scan manifest", zap.Error(err))
-		return
-	}
-
-	ctx.Logger.Debug("Scan manifest updated", zap.String("path", manifest.GetScanManifestPath(ctx.ModuleScanDir)))
-}
 
 // TrivyImage returns the configured Trivy Docker image.
 // Returns empty string if security config or scanner not found.

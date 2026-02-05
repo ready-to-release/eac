@@ -29,8 +29,8 @@ type HandlerRegistry func(name string, h Handler)
 func Handlers(workspaceRoot string) map[string]Handler {
 	return map[string]Handler{
 		"mkdocs-preprocess": NewPreprocessHandler(workspaceRoot),
-		"site-render-tool":  NewSiteRenderHandler(workspaceRoot),
-		"pdf-tool":          NewPDFRenderHandler(workspaceRoot),
+		"site-render-oci":   NewSiteRenderHandler(workspaceRoot),
+		"pdf-oci":           NewPDFRenderHandler(workspaceRoot),
 	}
 }
 
@@ -38,7 +38,7 @@ func Handlers(workspaceRoot string) map[string]Handler {
 func HandlerNames() []string {
 	return []string{
 		"mkdocs-preprocess",
-		"site-render-tool",
-		"pdf-tool",
+		"site-render-oci",
+		"pdf-oci",
 	}
 }

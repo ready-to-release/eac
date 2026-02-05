@@ -3,8 +3,10 @@ package orchestrator
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,8 +30,25 @@ type testState struct {
 const maxTailLines = 10
 
 // parseLogForIssues extracts error output from failed tests.
-// Uses JSON Action field as source of truth. Non-JSON logs return empty.
+// Checks structured output files first (cucumber.json, unit.json),
+// then falls back to parsing the log file for JSON events.
 func parseLogForIssues(logPath string) (warnings, errors []string) {
+	dir := filepath.Dir(logPath)
+
+	// Try structured output files first - these are authoritative
+	// 1. cucumber.json (godog BDD tests)
+	cucumberPath := filepath.Join(dir, "cucumber.json")
+	if warnings, errors = parseCucumberJSON(cucumberPath); len(errors) > 0 || len(warnings) > 0 {
+		return warnings, errors
+	}
+
+	// 2. unit.json (CTRF format from gotest/mocha)
+	unitPath := filepath.Join(dir, "unit.json")
+	if warnings, errors = parseCTRFJSON(unitPath); len(errors) > 0 || len(warnings) > 0 {
+		return warnings, errors
+	}
+
+	// Fallback: parse log file for JSON events (legacy support)
 	file, err := os.Open(logPath)
 	if err != nil {
 		return nil, nil
@@ -114,6 +133,117 @@ func parseJSONLog(r io.Reader) (warnings, errors []string) {
 	// If package failed but no specific test failures, use package output
 	if packageFailed && len(errors) == 0 {
 		errors = packageOutput
+	}
+
+	// Limit output size
+	if len(errors) > maxTailLines {
+		errors = errors[len(errors)-maxTailLines:]
+	}
+
+	return warnings, errors
+}
+
+// cucumberReport represents the structure of cucumber.json output.
+type cucumberReport []cucumberFeature
+
+// cucumberFeature represents a feature in cucumber.json.
+type cucumberFeature struct {
+	Elements []cucumberScenario `json:"elements"`
+}
+
+// cucumberScenario represents a scenario in cucumber.json.
+type cucumberScenario struct {
+	Name  string           `json:"name"`
+	Steps []cucumberStep   `json:"steps"`
+}
+
+// cucumberStep represents a step in cucumber.json.
+type cucumberStep struct {
+	Result cucumberStepResult `json:"result"`
+}
+
+// cucumberStepResult represents a step result in cucumber.json.
+type cucumberStepResult struct {
+	Status string `json:"status"`
+	Error  string `json:"error_message,omitempty"`
+}
+
+// ctrfReport represents the structure of unit.json (CTRF format).
+type ctrfReport struct {
+	Results ctrfResults `json:"results"`
+}
+
+type ctrfResults struct {
+	Tests []ctrfTest `json:"tests"`
+}
+
+type ctrfTest struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Trace   string `json:"trace,omitempty"`
+}
+
+// parseCTRFJSON extracts errors from a unit.json file (CTRF format).
+// Returns test names with their error messages/traces for failed tests.
+func parseCTRFJSON(ctrfPath string) (warnings, errors []string) {
+	data, err := os.ReadFile(ctrfPath)
+	if err != nil {
+		return nil, nil // File doesn't exist or can't be read
+	}
+
+	var report ctrfReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		return nil, nil // Invalid JSON
+	}
+
+	for _, test := range report.Results.Tests {
+		if test.Status == "failed" {
+			// Prefer Trace (full error output), fall back to Message
+			errDetail := test.Trace
+			if errDetail == "" {
+				errDetail = test.Message
+			}
+			if errDetail != "" {
+				errors = append(errors, fmt.Sprintf("%s: %s", test.Name, errDetail))
+			} else {
+				errors = append(errors, fmt.Sprintf("%s: failed", test.Name))
+			}
+		}
+	}
+
+	// Limit output size
+	if len(errors) > maxTailLines {
+		errors = errors[len(errors)-maxTailLines:]
+	}
+
+	return warnings, errors
+}
+
+// parseCucumberJSON extracts errors from a cucumber.json file.
+// Returns scenario names with their error messages for all failed steps.
+func parseCucumberJSON(cucumberPath string) (warnings, errors []string) {
+	data, err := os.ReadFile(cucumberPath)
+	if err != nil {
+		return nil, nil // File doesn't exist or can't be read
+	}
+
+	var report cucumberReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		return nil, nil // Invalid JSON
+	}
+
+	for i := range report {
+		feature := &report[i]
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
+			// Collect all failed steps
+			for _, step := range scenario.Steps {
+				if step.Result.Status == "failed" && step.Result.Error != "" {
+					errors = append(errors, fmt.Sprintf("%s: %s", scenario.Name, step.Result.Error))
+				}
+			}
+		}
 	}
 
 	// Limit output size

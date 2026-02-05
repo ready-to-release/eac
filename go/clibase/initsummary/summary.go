@@ -71,10 +71,10 @@ type Flags struct {
 	SkipDeps bool // --skip-deps: skip go, docker, etc. checks
 
 	// Build behavior
-	ForceRebuild bool   // --skip-cache: skip incremental cache, force full execution
-	DryRun       bool   // --dry-run: simulate without executing
-	BuildAll     bool   // --all: include non-default artifacts
-	Version      string // --version: version string to inject
+	ForceRebuild  bool   // --skip-cache: skip incremental cache, force full execution
+	DryRun        bool   // --dry-run: simulate without executing
+	ArtifactsMode string // --artifacts: artifact scope mode (all, reduced)
+	Version       string // --version: version string to inject
 
 	// Test behavior
 	ListOnly bool // --list-only: list tests without running

@@ -27,7 +27,7 @@ func TestUoWManifest_ManifestPath_BuildContext(t *testing.T) {
 	workspaceRoot := "/workspace"
 	path := manifest.ManifestPath(workspaceRoot)
 
-	expected := filepath.Join(workspaceRoot, "out", "build", "core", "go_go", "uow.manifest.json")
+	expected := filepath.Join(workspaceRoot, "out", "build", "core", "go-go", "uow.manifest.json")
 	assert.Equal(t, expected, path)
 }
 
@@ -42,7 +42,7 @@ func TestUoWManifest_ManifestPath_TestContext(t *testing.T) {
 	workspaceRoot := "/workspace"
 	path := manifest.ManifestPath(workspaceRoot)
 
-	expected := filepath.Join(workspaceRoot, "out", "test", "core", "go_gotest", "uow.manifest.json")
+	expected := filepath.Join(workspaceRoot, "out", "test", "core", "go-gotest", "uow.manifest.json")
 	assert.Equal(t, expected, path)
 }
 
@@ -57,7 +57,7 @@ func TestUoWManifest_ManifestPath_LintContext(t *testing.T) {
 	workspaceRoot := "/workspace"
 	path := manifest.ManifestPath(workspaceRoot)
 
-	expected := filepath.Join(workspaceRoot, "out", "lint", "web-app", "typescript_eslint", "uow.manifest.json")
+	expected := filepath.Join(workspaceRoot, "out", "lint", "web-app", "typescript-eslint", "uow.manifest.json")
 	assert.Equal(t, expected, path)
 }
 
@@ -72,7 +72,7 @@ func TestUoWManifest_ManifestPath_ScanContext(t *testing.T) {
 	workspaceRoot := "/workspace"
 	path := manifest.ManifestPath(workspaceRoot)
 
-	expected := filepath.Join(workspaceRoot, "out", "scan", "eac-cli", "docker_trivy-vuln", "uow.manifest.json")
+	expected := filepath.Join(workspaceRoot, "out", "scan", "eac-cli", "docker-trivy-vuln", "uow.manifest.json")
 	assert.Equal(t, expected, path)
 }
 
@@ -93,7 +93,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "go",
 			tool:          "go",
 			workspaceRoot: "/project",
-			expectedPath:  filepath.Join("/project", "out", "build", "core", "go_go", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/project", "out", "build", "core", "go-go", "uow.manifest.json"),
 		},
 		{
 			name:          "test gherkin with godog",
@@ -102,7 +102,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "gherkin",
 			tool:          "godog",
 			workspaceRoot: "/project",
-			expectedPath:  filepath.Join("/project", "out", "test", "eac-cli", "gherkin_godog", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/project", "out", "test", "eac-cli", "gherkin-godog", "uow.manifest.json"),
 		},
 		{
 			name:          "lint yaml files",
@@ -111,7 +111,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "yaml",
 			tool:          "yamllint",
 			workspaceRoot: "/workspace/repo",
-			expectedPath:  filepath.Join("/workspace/repo", "out", "lint", "configs", "yaml_yamllint", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/workspace/repo", "out", "lint", "configs", "yaml-yamllint", "uow.manifest.json"),
 		},
 		{
 			name:          "scan for secrets",
@@ -120,7 +120,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "source",
 			tool:          "trivy-secret",
 			workspaceRoot: "/home/user/project",
-			expectedPath:  filepath.Join("/home/user/project", "out", "scan", "eac-web", "source_trivy-secret", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/home/user/project", "out", "scan", "eac-web", "source-trivy-secret", "uow.manifest.json"),
 		},
 		{
 			name:          "module with hyphens",
@@ -129,7 +129,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "go",
 			tool:          "go",
 			workspaceRoot: "/proj",
-			expectedPath:  filepath.Join("/proj", "out", "build", "my-complex-module", "go_go", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/proj", "out", "build", "my-complex-module", "go-go", "uow.manifest.json"),
 		},
 		{
 			name:          "tool with hyphens",
@@ -138,7 +138,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "go",
 			tool:          "golangci-lint",
 			workspaceRoot: "/proj",
-			expectedPath:  filepath.Join("/proj", "out", "lint", "core", "go_golangci-lint", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/proj", "out", "lint", "core", "go-golangci-lint", "uow.manifest.json"),
 		},
 		{
 			name:          "empty workspace root",
@@ -147,7 +147,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "comp",
 			tool:          "tool",
 			workspaceRoot: "",
-			expectedPath:  filepath.Join("out", "build", "mod", "comp_tool", "uow.manifest.json"),
+			expectedPath:  filepath.Join("out", "build", "mod", "comp-tool", "uow.manifest.json"),
 		},
 		{
 			name:          "relative workspace root",
@@ -156,7 +156,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			component:     "comp",
 			tool:          "tool",
 			workspaceRoot: ".",
-			expectedPath:  filepath.Join(".", "out", "build", "mod", "comp_tool", "uow.manifest.json"),
+			expectedPath:  filepath.Join(".", "out", "build", "mod", "comp-tool", "uow.manifest.json"),
 		},
 	}
 
@@ -479,7 +479,7 @@ func TestLoad_ReadsValidManifest(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create manifest directory
-	manifestDir := filepath.Join(tmpDir, "out", "build", "core", "go_go")
+	manifestDir := filepath.Join(tmpDir, "out", "build", "core", "go-go")
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
 
@@ -521,7 +521,7 @@ func TestLoad_ReadsValidManifest(t *testing.T) {
 
 func TestLoad_ReturnsErrorIfNotExists(t *testing.T) {
 	tmpDir := t.TempDir()
-	nonExistentPath := filepath.Join(tmpDir, "out", "build", "nonexistent", "go_go", "uow.manifest.json")
+	nonExistentPath := filepath.Join(tmpDir, "out", "build", "nonexistent", "go-go", "uow.manifest.json")
 
 	_, err := Load(nonExistentPath)
 	assert.Error(t, err, "Load should return error when file doesn't exist")
@@ -531,7 +531,7 @@ func TestLoad_ReturnsErrorForInvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create manifest directory
-	manifestDir := filepath.Join(tmpDir, "out", "build", "invalid", "go_go")
+	manifestDir := filepath.Join(tmpDir, "out", "build", "invalid", "go-go")
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
 
@@ -548,7 +548,7 @@ func TestLoad_ReturnsErrorForEmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create manifest directory
-	manifestDir := filepath.Join(tmpDir, "out", "build", "empty", "go_go")
+	manifestDir := filepath.Join(tmpDir, "out", "build", "empty", "go-go")
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
 
@@ -565,7 +565,7 @@ func TestLoad_HandlesPartialJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create manifest directory
-	manifestDir := filepath.Join(tmpDir, "out", "build", "partial", "go_go")
+	manifestDir := filepath.Join(tmpDir, "out", "build", "partial", "go-go")
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
 

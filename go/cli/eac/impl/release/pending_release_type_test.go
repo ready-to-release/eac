@@ -11,38 +11,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds both published and internal modules.
+// TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds modules with versioning configs.
+// Only 4 modules have explicit versioning: r2r-cli, ext-eac, docs (published) and r2r-eac-bundle (bundle).
 func TestFindModulesWithChangelogsAll(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
 	// Load module registry to get modules with changelogs
 	modules := findModulesWithChangelogsAll(workspaceRoot)
 
-	// Should find both published and internal modules
+	// Should find modules with versioning configs
 	assert.NotEmpty(t, modules, "should find modules with changelogs")
 
-	// Check that we find published modules
+	// Check that we find published modules (r2r-cli, ext-eac, docs)
 	hasPublished := false
 	for _, mod := range modules {
-		if mod == "r2r-cli" || mod == "docs" || mod == "books" {
+		if mod == "r2r-cli" || mod == "docs" || mod == "ext-eac" {
 			hasPublished = true
 			break
 		}
 	}
 	assert.True(t, hasPublished, "should find at least one published module")
 
-	// Check that we find internal modules
-	hasInternal := false
+	// Check that we find bundle module
+	hasBundle := false
 	for _, mod := range modules {
-		if mod == "eac-cli" || mod == "mcp-server" {
-			hasInternal = true
+		if mod == "r2r-eac-bundle" {
+			hasBundle = true
 			break
 		}
 	}
-	assert.True(t, hasInternal, "should find at least one internal module")
+	assert.True(t, hasBundle, "should find the bundle module")
 }
 
 // TestFilterModulesByReleaseType tests filtering modules by release type.
+// Only 4 modules have versioning: r2r-cli, ext-eac, docs (published) and r2r-eac-bundle (bundle).
 func TestFilterModulesByReleaseType(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
@@ -55,25 +57,19 @@ func TestFilterModulesByReleaseType(t *testing.T) {
 		{
 			name:          "filter published only",
 			filterType:    "published",
-			shouldInclude: []string{"r2r-cli", "docs", "books", "ext-eac"},
-			shouldExclude: []string{"eac-cli", "mcp-server"},
-		},
-		{
-			name:          "filter internal only",
-			filterType:    "internal",
-			shouldInclude: []string{"eac-cli", "mcp-server", "r2r-installer", "vscode-commit"},
-			shouldExclude: []string{"r2r-cli", "docs", "books"},
+			shouldInclude: []string{"r2r-cli", "docs", "ext-eac"},
+			shouldExclude: []string{"r2r-eac-bundle"},
 		},
 		{
 			name:          "filter bundle only",
 			filterType:    "bundle",
 			shouldInclude: []string{"r2r-eac-bundle"},
-			shouldExclude: []string{"r2r-cli", "eac-cli"},
+			shouldExclude: []string{"r2r-cli", "docs", "ext-eac"},
 		},
 		{
 			name:          "no filter (all)",
 			filterType:    "",
-			shouldInclude: []string{"r2r-cli", "eac-cli", "docs", "r2r-eac-bundle"},
+			shouldInclude: []string{"r2r-cli", "ext-eac", "docs", "r2r-eac-bundle"},
 			shouldExclude: []string{},
 		},
 	}
@@ -119,10 +115,12 @@ func TestFilterModulesByReleaseType(t *testing.T) {
 	}
 }
 
-// TestGetModuleReleaseType tests getting release type for a module.
+// TestGetModuleReleaseType tests getting release type for modules with versioning.
+// Only modules with explicit versioning configs have release_type set.
 func TestGetModuleReleaseType(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
+	// Only test modules that have explicit versioning configs
 	testCases := []struct {
 		module       string
 		expectedType string
@@ -130,14 +128,7 @@ func TestGetModuleReleaseType(t *testing.T) {
 		{"r2r-cli", "published"},
 		{"ext-eac", "published"},
 		{"docs", "published"},
-		{"books", "published"},
 		{"r2r-eac-bundle", "bundle"},
-		{"eac-cli", "internal"},
-		{"mcp-server", "internal"},
-		{"r2r-installer", "internal"},
-		{"vscode-commit", "internal"},
-		// core no longer has explicit versioning config, so it gets default "internal"
-		{"core", "internal"},
 	}
 
 	for _, tc := range testCases {

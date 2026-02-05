@@ -170,6 +170,10 @@ func ExpandModuleFromTemplate(
 		discoverComponents(mod, conventions, repoRoot)
 	}
 
+	// 6. Auto-discover auxiliary components for container modules
+	// This discovers testdata and containercode components based on file patterns
+	discoverContainerAuxiliaryComponents(mod, repoRoot)
+
 	return nil
 }
 
@@ -380,7 +384,12 @@ func buildModuleParams(mod *Module, owner string) map[string]string {
 		"owner":   owner,
 	}
 
-	// Add explicit parameters from module
+	// Promote top-level parameter shorthands to parameters map
+	if mod.GoRoot != "" {
+		params["go_root"] = mod.GoRoot
+	}
+
+	// Add explicit parameters from module (take precedence over shorthands)
 	for k, v := range mod.Parameters {
 		params[k] = v
 	}
@@ -717,4 +726,85 @@ func pathHasRequiredFile(repoRoot, path, requiredFile string) bool {
 	fullPath := filepath.Join(repoRoot, path, requiredFile)
 	_, err := os.Stat(fullPath)
 	return err == nil
+}
+
+// discoverContainerAuxiliaryComponents auto-discovers auxiliary components for container modules.
+// This discovers:
+//   - testdata: when containers/{moniker}/ contains files matching *.txt, *.conf, *.html, *.sh
+//   - containercode: when containers/{moniker}/ contains files matching *.py, *.js
+//
+// Only applies to modules using a container template (template name contains "container").
+// Does not override existing components if already defined.
+func discoverContainerAuxiliaryComponents(mod *Module, repoRoot string) {
+	// Only apply to container templates
+	if !strings.Contains(mod.Template, "container") {
+		return
+	}
+
+	// Ensure Components map exists
+	if mod.Components == nil {
+		mod.Components = make(ModuleComponents)
+	}
+
+	containerDir := filepath.Join(repoRoot, "containers", mod.Moniker)
+
+	// Check if container directory exists
+	if _, err := os.Stat(containerDir); os.IsNotExist(err) {
+		return
+	}
+
+	// Define file patterns for each component type
+	testdataPatterns := []string{"*.txt", "*.conf", "*.html", "*.sh"}
+	containercodePatterns := []string{"*.py", "*.js"}
+
+	// Discover testdata component
+	if !mod.Components.HasComponent("testdata") {
+		if hasMatchingFiles(containerDir, testdataPatterns) {
+			mod.Components["testdata"] = &ComponentEntry{
+				Root: filepath.ToSlash(filepath.Join("containers", mod.Moniker)),
+				Patterns: &ComponentPatterns{
+					Source: testdataPatterns,
+				},
+			}
+		}
+	}
+
+	// Discover containercode component
+	if !mod.Components.HasComponent("containercode") {
+		if hasMatchingFiles(containerDir, containercodePatterns) {
+			mod.Components["containercode"] = &ComponentEntry{
+				Root: filepath.ToSlash(filepath.Join("containers", mod.Moniker)),
+				Patterns: &ComponentPatterns{
+					Source: containercodePatterns,
+				},
+			}
+		}
+	}
+}
+
+// hasMatchingFiles checks if a directory (or its subdirectories) contains files
+// matching any of the given glob patterns.
+func hasMatchingFiles(dir string, patterns []string) bool {
+	var found bool
+
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || found {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		name := d.Name()
+		for _, pattern := range patterns {
+			matched, err := filepath.Match(pattern, name)
+			if err == nil && matched {
+				found = true
+				return filepath.SkipAll
+			}
+		}
+		return nil
+	})
+
+	return found
 }

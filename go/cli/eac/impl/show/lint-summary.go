@@ -5,8 +5,8 @@
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive lint summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
 // Long:
-// Long: The command reads from the lint manifest at out/lint/<module>/lint.manifest.json.
-// Long: Status is derived from the manifest - success if no issues, failure otherwise.
+// Long: The command reads from UoW manifests at out/lint/<module>/*/uow.manifest.json.
+// Long: Status is derived from exit codes - success if all zero, failure otherwise.
 // Long:
 // Long: Expected Output:
 // Long: - Markdown-formatted lint summary with emojis and styling
@@ -17,35 +17,20 @@
 package show
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
 	registry.Register(ShowLintSummary)
-}
-
-// LintManifest represents the lint manifest structure.
-// This is duplicated from the lint package to avoid import cycles.
-type LintManifest struct {
-	Moniker        string `json:"moniker"`
-	ComponentTypes string `json:"component_types"`
-	GitCommit       string    `json:"git_commit"`
-	RunTime         time.Time `json:"run_time"`
-	DurationSeconds float64   `json:"duration_seconds"`
-	Success         bool      `json:"success"`
-	IssueCount      int       `json:"issue_count"`
-	FixedCount      int       `json:"fixed_count,omitempty"`
-	Providers       []string  `json:"providers,omitempty"`
 }
 
 // ShowLintSummary generates a pretty lint summary.
@@ -86,63 +71,56 @@ func ShowLintSummary() int {
 		return 1
 	}
 
-	// Load lint manifest
-	manifestPath := filepath.Join(workspaceRoot, "out", "lint", module, "lint.manifest.json")
-	mf, err := loadLintManifest(manifestPath)
-	if err != nil {
-		log.Errorf("No lint manifest found at %s: %v", manifestPath, err)
+	// Load lint UoW manifests
+	reader := coreoutput.NewReader(workspaceRoot)
+	manifests, err := reader.ListUoWs(workunit.ContextLint, module)
+	if err != nil || len(manifests) == 0 {
+		log.Errorf("No lint manifests found for module %s (run lint first)", module)
 		return 1
 	}
 
-	return generateLintSummaryFromManifest(module, mf, artifactName)
-}
+	// Aggregate data from UoW manifests
+	success := true
+	var totalDuration float64
+	failedCount := 0
+	providers := []string{}
+	seen := map[string]bool{}
 
-// loadLintManifest loads a lint manifest from the given path.
-func loadLintManifest(path string) (*LintManifest, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	for _, m := range manifests {
+		totalDuration += m.Duration.Seconds()
+		if m.ExitCode > 0 {
+			success = false
+			failedCount++
+		}
+		if m.Tool != "" && !seen[m.Tool] {
+			providers = append(providers, m.Tool)
+			seen[m.Tool] = true
+		}
 	}
 
-	var mf LintManifest
-	if err := json.Unmarshal(data, &mf); err != nil {
-		return nil, err
-	}
-
-	return &mf, nil
+	return generateLintSummary(module, success, totalDuration, failedCount, providers, artifactName)
 }
 
-// generateLintSummaryFromManifest generates a lint summary from the lint manifest.
-func generateLintSummaryFromManifest(module string, mf *LintManifest, artifactName string) int {
+// generateLintSummary generates a lint summary from aggregated UoW data.
+func generateLintSummary(module string, success bool, durationSec float64, failedCount int, providers []string, artifactName string) int {
 	var sb strings.Builder
 
 	// Header with emoji based on status
-	if mf.Success {
+	if success {
 		sb.WriteString(fmt.Sprintf("## ✅ Lint: %s\n\n", module))
-		if mf.IssueCount == 0 {
-			sb.WriteString("**No lint issues found**\n\n")
-		} else if mf.FixedCount > 0 {
-			sb.WriteString(fmt.Sprintf("**%d issues auto-fixed**\n\n", mf.FixedCount))
-		}
+		sb.WriteString("**No lint issues found**\n\n")
 	} else {
 		sb.WriteString(fmt.Sprintf("## ❌ Lint: %s\n\n", module))
-		sb.WriteString(fmt.Sprintf("**%d lint issues found**\n\n", mf.IssueCount))
+		sb.WriteString(fmt.Sprintf("**%d lint provider(s) reported issues**\n\n", failedCount))
 	}
 
 	// Build metrics table
 	tb := render.NewTableBuilder().
 		WithHeaders("Metric", "Value")
 
-	tb.AddRow("Duration", fmt.Sprintf("%.2fs", mf.DurationSeconds))
-	tb.AddRow("Issues Found", fmt.Sprintf("%d", mf.IssueCount))
-	if mf.FixedCount > 0 {
-		tb.AddRow("Issues Fixed", fmt.Sprintf("%d", mf.FixedCount))
-	}
-	if len(mf.Providers) > 0 {
-		tb.AddRow("Providers", strings.Join(mf.Providers, ", "))
-	}
-	if mf.ComponentTypes != "" {
-		tb.AddRow("Component Types", mf.ComponentTypes)
+	tb.AddRow("Duration", fmt.Sprintf("%.2fs", durationSec))
+	if len(providers) > 0 {
+		tb.AddRow("Providers", strings.Join(providers, ", "))
 	}
 
 	sb.WriteString(tb.Build())
@@ -151,19 +129,6 @@ func generateLintSummaryFromManifest(module string, mf *LintManifest, artifactNa
 	// Artifact info
 	sb.WriteString(fmt.Sprintf("**Artifact**: `%s`\n", artifactName))
 
-	// Git commit if available
-	if mf.GitCommit != "" {
-		sb.WriteString(fmt.Sprintf("**Commit**: `%s`\n", truncateLint(mf.GitCommit, 7)))
-	}
-
 	fmt.Print(sb.String())
 	return 0
-}
-
-// truncateLint shortens a string to maxLen characters with "..." if needed.
-func truncateLint(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }

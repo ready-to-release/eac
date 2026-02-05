@@ -271,10 +271,12 @@ func resolvePhases(compType string, cfg *config.EACConfig) *ComponentPhases {
 	// Build phase
 	if cfg.ComponentTypes != nil {
 		typeConfig := cfg.ComponentTypes.Get(compType)
-		if typeConfig != nil && typeConfig.HasBuilder() {
+		if typeConfig != nil && typeConfig.IsBuildable() {
+			builders := typeConfig.GetBuilders()
 			phases.Build = &PhaseInfo{
 				Enabled: true,
-				Tool:    typeConfig.Builder,
+				Tool:    builders[0],
+				Tools:   builders,
 			}
 		}
 

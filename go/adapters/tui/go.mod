@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0
-	github.com/ready-to-release/eac/go/clibase v0.0.0-20260204113536-68e374bd5fdc
+	github.com/ready-to-release/eac/go/clibase v0.0.0-20260204134000-6dee1c14abac
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/shahar3/bubble-grid v1.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5

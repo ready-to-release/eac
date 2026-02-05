@@ -21,7 +21,7 @@ func TestR2RInstallerFeatures(t *testing.T) {
 	os.Setenv("__R2R_TEST_MOCK", "1")
 
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../specs/r2r-installer",
+		SpecsPath:         "../../../specs/r2r-installer",
 		DefaultReportName: "cucumber-r2r-installer",
 		RegisterSteps:     RegisterSteps,
 	}

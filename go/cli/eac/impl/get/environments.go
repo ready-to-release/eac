@@ -1,4 +1,5 @@
 // Command: get environments
+// Short: Get environment definitions and configuration
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

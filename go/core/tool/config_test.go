@@ -517,3 +517,185 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestAddImplicitDockerRequirement(t *testing.T) {
+	tests := []struct {
+		name         string
+		requirements []string
+		wantDocker   bool
+	}{
+		{
+			name:         "adds docker when no requirements",
+			requirements: nil,
+			wantDocker:   true,
+		},
+		{
+			name:         "adds docker when other requirements present",
+			requirements: []string{"gcc"},
+			wantDocker:   true,
+		},
+		{
+			name:         "does not duplicate docker",
+			requirements: []string{"docker"},
+			wantDocker:   true,
+		},
+		{
+			name:         "does not duplicate docker with other requirements",
+			requirements: []string{"docker", "gcc"},
+			wantDocker:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tool := &ToolDefinition{
+				Requirements: tt.requirements,
+			}
+			originalLen := len(tool.Requirements)
+
+			addImplicitDockerRequirement(tool)
+
+			// Check docker is in requirements
+			hasDocker := false
+			for _, req := range tool.Requirements {
+				if req == "docker" {
+					hasDocker = true
+					break
+				}
+			}
+
+			if hasDocker != tt.wantDocker {
+				t.Errorf("hasDocker = %v, want %v", hasDocker, tt.wantDocker)
+			}
+
+			// Check no duplicates
+			dockerCount := 0
+			for _, req := range tool.Requirements {
+				if req == "docker" {
+					dockerCount++
+				}
+			}
+			if dockerCount > 1 {
+				t.Errorf("docker appears %d times, should appear only once", dockerCount)
+			}
+
+			// If docker was already present, length should not change
+			if originalLen > 0 {
+				hasOriginalDocker := false
+				for _, req := range tt.requirements {
+					if req == "docker" {
+						hasOriginalDocker = true
+						break
+					}
+				}
+				if hasOriginalDocker && len(tool.Requirements) != originalLen {
+					t.Errorf("length changed from %d to %d when docker was already present",
+						originalLen, len(tool.Requirements))
+				}
+			}
+		})
+	}
+}
+
+func TestApplyServeDefaults(t *testing.T) {
+	t.Run("applies defaults when empty", func(t *testing.T) {
+		tool := &ToolDefinition{
+			Serve: &ServeConfig{},
+		}
+
+		applyServeDefaults(tool)
+
+		if tool.Serve.HostPortRange != "9000-9999" {
+			t.Errorf("HostPortRange = %q, want %q", tool.Serve.HostPortRange, "9000-9999")
+		}
+		if tool.Serve.RestartPolicy != "unless-stopped" {
+			t.Errorf("RestartPolicy = %q, want %q", tool.Serve.RestartPolicy, "unless-stopped")
+		}
+	})
+
+	t.Run("preserves explicit values", func(t *testing.T) {
+		tool := &ToolDefinition{
+			Serve: &ServeConfig{
+				HostPortRange: "8000-8999",
+				RestartPolicy: "always",
+			},
+		}
+
+		applyServeDefaults(tool)
+
+		if tool.Serve.HostPortRange != "8000-8999" {
+			t.Errorf("HostPortRange = %q, want %q", tool.Serve.HostPortRange, "8000-8999")
+		}
+		if tool.Serve.RestartPolicy != "always" {
+			t.Errorf("RestartPolicy = %q, want %q", tool.Serve.RestartPolicy, "always")
+		}
+	})
+
+	t.Run("handles nil serve config", func(t *testing.T) {
+		tool := &ToolDefinition{
+			Serve: nil,
+		}
+
+		// Should not panic
+		applyServeDefaults(tool)
+
+		if tool.Serve != nil {
+			t.Error("Serve should remain nil")
+		}
+	})
+}
+
+func TestApplyToolConfigDefaults(t *testing.T) {
+	config := &ToolConfig{
+		ContainerTools: map[string]*ToolDefinition{
+			"tool-without-docker": {
+				ID:           "tool-without-docker",
+				Requirements: []string{"gcc"},
+			},
+			"tool-with-docker": {
+				ID:           "tool-with-docker",
+				Requirements: []string{"docker"},
+			},
+			"tool-with-serve": {
+				ID: "tool-with-serve",
+				Serve: &ServeConfig{
+					ContainerPort: 8080,
+				},
+			},
+		},
+	}
+
+	applyToolConfigDefaults(config)
+
+	// Check tool-without-docker now has docker
+	tool1 := config.ContainerTools["tool-without-docker"]
+	hasDocker := false
+	for _, req := range tool1.Requirements {
+		if req == "docker" {
+			hasDocker = true
+			break
+		}
+	}
+	if !hasDocker {
+		t.Error("tool-without-docker should have docker requirement after applying defaults")
+	}
+
+	// Check tool-with-docker still has docker (no duplicates)
+	tool2 := config.ContainerTools["tool-with-docker"]
+	dockerCount := 0
+	for _, req := range tool2.Requirements {
+		if req == "docker" {
+			dockerCount++
+		}
+	}
+	if dockerCount != 1 {
+		t.Errorf("tool-with-docker has %d docker requirements, want 1", dockerCount)
+	}
+
+	// Check tool-with-serve has serve defaults
+	tool3 := config.ContainerTools["tool-with-serve"]
+	if tool3.Serve.HostPortRange != "9000-9999" {
+		t.Errorf("tool-with-serve.Serve.HostPortRange = %q, want %q",
+			tool3.Serve.HostPortRange, "9000-9999")
+	}
+}

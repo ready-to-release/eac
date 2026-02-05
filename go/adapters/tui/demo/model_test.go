@@ -327,7 +327,7 @@ func TestModel_DeriveUoWCounters_Weighted(t *testing.T) {
 
 		// Add units with different weights
 		m.AddUnit("build:mod-a:go:go", "mod-a:go", cells.UnitRunning, 1)  // weight 1
-		m.AddUnit("build:mod-b:pdf:pdf-tool", "mod-b:pdf", cells.UnitRunning, 4) // weight 4 (PDF)
+		m.AddUnit("build:mod-b:pdf:pdf-oci", "mod-b:pdf", cells.UnitRunning, 4) // weight 4 (PDF)
 		m.AddUnit("build:mod-c:site:mkdocs", "mod-c:site", cells.UnitPending, 1) // weight 1 (not running)
 
 		m.updateCells()

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -146,6 +147,10 @@ type BuildOptions struct {
 	// Higher weight = more CPU and memory allocated.
 	// Default: 1
 	Weight int
+
+	// ArtifactsMode controls artifact generation scope (all/reduced).
+	// Used to set page limits for PDF generation.
+	ArtifactsMode environment.ArtifactsMode
 }
 
 // Build executes preprocessing for a base-site component.

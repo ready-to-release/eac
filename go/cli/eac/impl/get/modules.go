@@ -1,4 +1,5 @@
 // Command: get modules
+// Short: Get module contracts with optional filtering
 // Flag.calver: type=bool, default=false, usage=Filter to only CalVer versioned modules
 // Flag.semver: type=bool, default=false, usage=Filter to only SemVer versioned modules
 // Flag.with-ci: type=bool, default=false, usage=Filter to modules that have a CI workflow

@@ -1,6 +1,7 @@
 package output
 
 import (
+	"sort"
 	"time"
 
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -45,7 +46,8 @@ type Artifact struct {
 }
 
 // UoWManifest represents a Unit of Work manifest containing execution metadata.
-// This is written to out/{context}/{module}/{component}_{tool}/uow.manifest.json
+// This is written to out/{context}/{module}/{dirname}/uow.manifest.json
+// where dirname = component[-extra1][-extra2]... for uniqueness.
 type UoWManifest struct {
 	// Context is the operation type: build, test, lint, or scan.
 	Context workunit.Context `json:"context"`
@@ -58,6 +60,10 @@ type UoWManifest struct {
 
 	// Tool is the handler/provider/scanner name (e.g., "go", "gotest", "trivy-vuln").
 	Tool string `json:"tool"`
+
+	// Extra contains context-specific discriminating fields (e.g., testset, category).
+	// These are included in the directory name for uniqueness.
+	Extra map[string]string `json:"extra,omitempty"`
 
 	// ExitCode is the exit code of the tool execution (0 = success).
 	ExitCode int `json:"exit_code"`
@@ -89,6 +95,37 @@ type UoWManifest struct {
 	// Metadata contains optional context-specific key-value pairs.
 	// Used to store testset, build_id, and other UoW-specific information.
 	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// DirName returns the unique directory name for this manifest.
+// Format: component-tool[-extraVal1][-extraVal2]...
+// Tool and extra values are appended with dashes in sorted key order for uniqueness.
+func (m *UoWManifest) DirName() string {
+	dirName := m.Component
+	if m.Tool != "" {
+		dirName += "-" + m.Tool
+	}
+
+	// Append all Extra values with dashes in sorted key order
+	if len(m.Extra) > 0 {
+		keys := make([]string, 0, len(m.Extra))
+		for k := range m.Extra {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if v := m.Extra[k]; v != "" {
+				dirName += "-" + v
+			}
+		}
+	}
+	return dirName
+}
+
+// GetExtra returns context-specific discriminators (e.g., testset, category).
+// Implements interfaces.UoWManifestPort.
+func (m *UoWManifest) GetExtra() map[string]string {
+	return m.Extra
 }
 
 // ValidationResult contains the outcome of validating a work unit's output.

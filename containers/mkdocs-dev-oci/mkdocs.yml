@@ -1,0 +1,54 @@
+# Fallback MkDocs config for repositories without mkdocs.yml
+# The entrypoint prefers using the repository's config when available
+# This is only used as a fallback for minimal documentation previews
+
+site_name: Documentation (Dev Server)
+docs_dir: /workspace/docs
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - footnotes
+  - attr_list
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences
+
+dev_addr: '0.0.0.0:8000'
+
+# Lenient validation for dev mode
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+  links:
+    not_found: warn

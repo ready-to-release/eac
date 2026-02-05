@@ -62,7 +62,8 @@ type ConfigOptions struct {
 	DocsDir         string // Path to docs directory (relative to container mount)
 	Theme           string // Theme name: "dark" or "light" (for PDF)
 	OutputFormat    string // Output format: "site", "pdf-dark", "pdf-light"
-	PDFConcurrency  int    // Playwright concurrency for PDF export (CI: 4, devbox: 8)
+	PDFConcurrency  int    // Playwright concurrency for PDF export (CI: 4, local: 8)
+	PageLimit       int    // Maximum pages to render (0 = unlimited, used in reduced mode)
 }
 
 // GenerateMkDocsConfig generates a final mkdocs.yml by loading a template
@@ -100,6 +101,11 @@ func GenerateMkDocsConfig(workspaceRoot string, opts ConfigOptions) ([]byte, err
 	// For PDF builds, update concurrency if specified
 	if opts.PDFConcurrency > 0 {
 		content = replacePDFConcurrency(content, opts.PDFConcurrency)
+	}
+
+	// For PDF builds, update page limit if specified (reduced mode)
+	if opts.PageLimit > 0 {
+		content = replacePDFPageLimit(content, opts.PageLimit)
 	}
 
 	// For PDF builds, inject book_title and book_description into aggregator config
@@ -157,6 +163,14 @@ func replacePDFConcurrency(content string, concurrency int) string {
 	// Match "concurrency: <number>" with proper indentation (10 spaces in pdf formats section)
 	pattern := regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
 	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
+}
+
+// replacePDFPageLimit updates the PDF exporter page_limit setting
+// Matches "page_limit: N" within the exporter plugin's pdf formats section.
+func replacePDFPageLimit(content string, pageLimit int) string {
+	// Match "page_limit: <number>" with proper indentation
+	pattern := regexp.MustCompile(`(?m)^(\s+page_limit:\s*)\d+\s*$`)
+	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", pageLimit))
 }
 
 // injectAggregatorBookInfo adds book_title and book_description to the aggregator config section.

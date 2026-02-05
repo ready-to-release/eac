@@ -10,12 +10,24 @@ import (
 // TestHelpTextMap validates that all expected zone IDs have help text.
 func TestHelpTextMap(t *testing.T) {
 	expectedZones := []string{
+		// Row 1
 		"res-timer",
 		"res-cpu",
 		"res-mem",
+		"res-dmem",
+		// Row 2 - Scheduler lamps
+		"res-host",
+		"res-docker",
+		// Row 2 - Weight counters
+		"res-host-weight",
+		"res-docker-weight",
+		// Row 2/3 - Progress
+		"res-counters",
+		// Row 2/3 - Resources
 		"res-jobs",
-		"res-uow",
-		"res-tools",
+		"res-native",
+		"res-ctools",
+		// Controls
 		"freeze-button",
 	}
 
@@ -45,9 +57,15 @@ func TestRenderSelectedHelp(t *testing.T) {
 		{"res-timer", "Elapsed time since execution started", "Timer:"},
 		{"res-cpu", "CPU usage per core", "CPU:"},
 		{"res-mem", "Memory usage", "Memory:"},
-		{"res-jobs", "Active container jobs", "Tools:"},
-		{"res-uow", "Unit of Work counts", "Active:"},
-		{"res-tools", "Tool lamps", "Tools:"},
+		{"res-dmem", "Docker memory pool", "Docker Mem:"},
+		{"res-host", "Host scheduler lamps", "Host:"},
+		{"res-docker", "Docker scheduler lamps", "Docker:"},
+		{"res-host-weight", "Host weight counter", "Host Weight:"},
+		{"res-docker-weight", "Docker weight counter", "Docker Weight:"},
+		{"res-counters", "Progress counters", "Counters:"},
+		{"res-jobs", "Running containers", "Containers:"},
+		{"res-native", "System tools", "Native:"},
+		{"res-ctools", "Container tools", "Tools:"},
 		{"freeze-button", "Click to pause auto-exit", "Freeze:"},
 	}
 
@@ -161,6 +179,7 @@ func TestLayoutMetricsConsistency(t *testing.T) {
 					panes:  [3]*Pane{{}, {Status: PhaseActive}, {}},
 					locks: []LockStatus{
 						{Name: "component-scheduler", Capacity: 4, Used: 2},
+						{Name: "docker-scheduler", Capacity: 6, Used: 3, Waiting: 1},
 					},
 				}
 				return m

@@ -29,15 +29,16 @@ func (a *UnitIDAdapter) Unwrap() workunit.UnitID {
 	return a.id
 }
 
-func (a *UnitIDAdapter) GetContext() string   { return string(a.id.Context) }
-func (a *UnitIDAdapter) GetModule() string    { return a.id.Module }
-func (a *UnitIDAdapter) GetComponent() string { return a.id.Component }
-func (a *UnitIDAdapter) GetTool() string      { return a.id.Tool }
-func (a *UnitIDAdapter) GetSpec() string      { return a.id.Spec }
-func (a *UnitIDAdapter) Shortname() string    { return a.id.Shortname() }
-func (a *UnitIDAdapter) Longname() string     { return a.id.Longname() }
-func (a *UnitIDAdapter) String() string       { return a.id.String() }
-func (a *UnitIDAdapter) OutDir() string       { return a.id.OutDir() }
+func (a *UnitIDAdapter) GetContext() string            { return string(a.id.Context) }
+func (a *UnitIDAdapter) GetModule() string             { return a.id.Module }
+func (a *UnitIDAdapter) GetComponent() string          { return a.id.Component }
+func (a *UnitIDAdapter) GetTool() string               { return a.id.Tool }
+func (a *UnitIDAdapter) GetSpec() string               { return a.id.Spec }
+func (a *UnitIDAdapter) GetExtra() map[string]string   { return a.id.Extra }
+func (a *UnitIDAdapter) DisplayName() string { return a.id.DisplayName() }
+func (a *UnitIDAdapter) Longname() string              { return a.id.Longname() }
+func (a *UnitIDAdapter) String() string                { return a.id.String() }
+func (a *UnitIDAdapter) OutDir() string                { return a.id.OutDir() }
 
 // AdaptUnitID is a convenience function to wrap a unit ID.
 func AdaptUnitID(id workunit.UnitID) interfaces.UnitIDPort {

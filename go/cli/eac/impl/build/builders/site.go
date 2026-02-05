@@ -174,7 +174,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 	Logln(logWriter, "   Config: %s", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-tool", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
@@ -191,7 +191,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 		return 1
 	}
 
-	// ━━━ Step 3: Invoke site-render-tool container ━━━
+	// ━━━ Step 3: Invoke site-render-oci container ━━━
 	Logln(logWriter, "📦 Invoking site render container...")
 
 	bridge := tool.GlobalHandlerToolBridge()
@@ -211,7 +211,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 		Weight:        weight,
 	}
 
-	exitCode, execErr := bridge.ExecuteTool(context.Background(), "site-render-tool", tc)
+	exitCode, execErr := bridge.ExecuteTool(context.Background(), "site-render-oci", tc)
 	if execErr != nil {
 		Logln(logWriter, "❌ Tool execution failed: %v", execErr)
 		return 1

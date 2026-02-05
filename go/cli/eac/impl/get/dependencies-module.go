@@ -1,4 +1,5 @@
 // Command: get dependencies
+// Short: Get direct dependencies of a module
 // Usage: get dependencies <module>
 //
 //	--as-yaml: Output as YAML (default)

@@ -873,6 +873,11 @@ type ToolConfig struct {
 
 	// Cache configurations
 	Caches map[string]*CacheConfig `yaml:"caches,omitempty" json:"caches,omitempty"`
+
+	// Test type to component type mapping
+	// Maps test discovery types (gotest, godog, etc.) to component types for UoW naming
+	// Example: "gotest" -> "go", "godog" -> "gherkin"
+	TestTypeMapping map[string]string `yaml:"test-type-mapping,omitempty" json:"test-type-mapping,omitempty"`
 }
 
 // Validate checks if the tool configuration is valid.

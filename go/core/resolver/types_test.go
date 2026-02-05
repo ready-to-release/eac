@@ -165,47 +165,53 @@ func TestScanToolMapping_GetToolForCategory(t *testing.T) {
 	assert.Empty(t, nilMapping.GetToolForCategory(ScanCategorySBOM))
 }
 
-func TestExtendedComponentType_GetBuildTool(t *testing.T) {
+func TestExtendedComponentType_GetBuilders(t *testing.T) {
 	tests := []struct {
 		name     string
 		ect      *ExtendedComponentType
-		expected string
+		expected []string
 	}{
 		{
 			name:     "nil config",
 			ect:      nil,
-			expected: "",
+			expected: nil,
 		},
 		{
-			name: "new tools.build field",
+			name: "explicit builders field",
 			ect: &ExtendedComponentType{
-				Builder: "old-go",
+				Builders: []string{"go"},
+			},
+			expected: []string{"go"},
+		},
+		{
+			name: "tools.build fallback",
+			ect: &ExtendedComponentType{
 				Tools: &ToolsConfig{
 					Build: &PhaseConfig{Default: "go"},
 				},
 			},
-			expected: "go",
+			expected: []string{"go"},
 		},
 		{
-			name: "legacy builder field",
+			name: "builders takes precedence over tools",
 			ect: &ExtendedComponentType{
-				Builder: "go",
+				Builders: []string{"new-go"},
+				Tools: &ToolsConfig{
+					Build: &PhaseConfig{Default: "old-go"},
+				},
 			},
-			expected: "go",
+			expected: []string{"new-go"},
 		},
 		{
-			name: "tools set but no build config",
-			ect: &ExtendedComponentType{
-				Builder: "go",
-				Tools:   &ToolsConfig{},
-			},
-			expected: "go",
+			name:     "empty returns nil",
+			ect:      &ExtendedComponentType{},
+			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.ect.GetBuildTool()
+			result := tt.ect.GetBuilders()
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -256,13 +262,13 @@ func TestExtendedComponentType_GetScanCategories(t *testing.T) {
 	}
 }
 
-func TestExtendedComponentType_HasBuilder(t *testing.T) {
-	assert.True(t, (&ExtendedComponentType{Builder: "go"}).HasBuilder())
+func TestExtendedComponentType_IsBuildable(t *testing.T) {
+	assert.True(t, (&ExtendedComponentType{Builders: []string{"go"}}).IsBuildable())
 	assert.True(t, (&ExtendedComponentType{
 		Tools: &ToolsConfig{Build: &PhaseConfig{Default: "go"}},
-	}).HasBuilder())
-	assert.False(t, (&ExtendedComponentType{}).HasBuilder())
-	assert.False(t, (*ExtendedComponentType)(nil).HasBuilder())
+	}).IsBuildable())
+	assert.False(t, (&ExtendedComponentType{}).IsBuildable())
+	assert.False(t, (*ExtendedComponentType)(nil).IsBuildable())
 }
 
 func TestExtendedComponentType_IsScannable(t *testing.T) {

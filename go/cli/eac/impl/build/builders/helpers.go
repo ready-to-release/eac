@@ -227,6 +227,12 @@ func findBuildOutputDir(frameworkOutputDir, workspaceRoot, componentRoot string)
 	return ""
 }
 
+// isBuildMetadataFile returns true for files that are build system metadata,
+// not actual build output. These are excluded from post-build copy operations.
+func isBuildMetadataFile(name string) bool {
+	return strings.HasSuffix(name, ".log") || name == "uow.manifest.json"
+}
+
 // hasNonLogFiles checks if a directory exists and contains files other than logs.
 func hasNonLogFiles(dir string) bool {
 	info, err := os.Stat(dir)
@@ -241,8 +247,7 @@ func hasNonLogFiles(dir string) bool {
 
 	for _, entry := range entries {
 		name := entry.Name()
-		// Skip log files and build manifests
-		if strings.HasSuffix(name, ".log") || name == "build.manifest.json" {
+		if isBuildMetadataFile(name) {
 			continue
 		}
 		return true
@@ -294,8 +299,7 @@ func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter
 			return err
 		}
 
-		// Skip log files and manifest
-		if strings.HasSuffix(relPath, ".log") || relPath == "build.manifest.json" {
+		if isBuildMetadataFile(relPath) {
 			return nil
 		}
 

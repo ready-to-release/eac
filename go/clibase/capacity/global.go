@@ -21,7 +21,6 @@ const (
 	stateDir      = "out"
 	stateFile     = ".global-capacity.json"
 	stateLockFile = ".global-capacity.lock"
-	staleTimeout  = 2 * time.Minute // Remove allocations older than this
 )
 
 // State is the persisted global capacity state.
@@ -319,14 +318,7 @@ func (gs *GlobalSemaphore) cleanStale() {
 }
 
 func (gs *GlobalSemaphore) cleanStaleFromState(state *State) {
-	now := time.Now()
 	for id, a := range state.Allocations {
-		// Remove if allocation is stale (older than timeout)
-		if now.Sub(a.Timestamp) > staleTimeout {
-			delete(state.Allocations, id)
-			continue
-		}
-
 		// Remove if the owning process is no longer running
 		if !isProcessAlive(a.PID) {
 			delete(state.Allocations, id)

@@ -85,6 +85,82 @@ func TestParseBuildSpecificFlags_TidyFlags(t *testing.T) {
 	}
 }
 
+func TestParseBuildSpecificFlags_ArtifactsFlag(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          []string
+		wantArtifacts string
+		wantRemaining []string
+		wantErr       bool
+	}{
+		{
+			name:          "artifacts flag with all",
+			args:          []string{"--artifacts", "all", "module1"},
+			wantArtifacts: "all",
+			wantRemaining: []string{"module1"},
+		},
+		{
+			name:          "artifacts flag with reduced",
+			args:          []string{"--artifacts", "reduced"},
+			wantArtifacts: "reduced",
+			wantRemaining: nil,
+		},
+		{
+			name:          "artifacts flag with equals syntax",
+			args:          []string{"--artifacts=reduced"},
+			wantArtifacts: "reduced",
+			wantRemaining: nil,
+		},
+		{
+			name:          "--all is alias for --artifacts all",
+			args:          []string{"--all"},
+			wantArtifacts: "all",
+			wantRemaining: nil,
+		},
+		{
+			name:          "no artifacts flag keeps default empty",
+			args:          []string{"module1"},
+			wantArtifacts: "",
+			wantRemaining: []string{"module1"},
+		},
+		{
+			name:    "artifacts flag missing value",
+			args:    []string{"--artifacts"},
+			wantErr: true,
+		},
+		{
+			name:    "artifacts flag invalid value",
+			args:    []string{"--artifacts", "invalid"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flags, remaining, err := ParseBuildSpecificFlags(tt.args)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("ParseBuildSpecificFlags() expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("ParseBuildSpecificFlags() error: %v", err)
+			}
+
+			if flags.Artifacts != tt.wantArtifacts {
+				t.Errorf("Artifacts = %q, want %q", flags.Artifacts, tt.wantArtifacts)
+			}
+
+			if len(remaining) != len(tt.wantRemaining) {
+				t.Errorf("remaining = %v, want %v", remaining, tt.wantRemaining)
+			}
+		})
+	}
+}
+
 func TestParseBuildSpecificFlags_OtherFlags(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -93,7 +169,6 @@ func TestParseBuildSpecificFlags_OtherFlags(t *testing.T) {
 		wantRepro      string
 		wantAcceptWarn bool
 		wantListArt    bool
-		wantBuildAll   bool
 		wantRemaining  []string
 		wantErr        bool
 	}{
@@ -128,13 +203,6 @@ func TestParseBuildSpecificFlags_OtherFlags(t *testing.T) {
 			name:          "list-artifacts flag",
 			args:          []string{"--list-artifacts"},
 			wantListArt:   true,
-			wantRepro:     "auto",
-			wantRemaining: nil,
-		},
-		{
-			name:          "all flag",
-			args:          []string{"--all"},
-			wantBuildAll:  true,
 			wantRepro:     "auto",
 			wantRemaining: nil,
 		},
@@ -176,9 +244,6 @@ func TestParseBuildSpecificFlags_OtherFlags(t *testing.T) {
 			}
 			if flags.ListArtifacts != tt.wantListArt {
 				t.Errorf("ListArtifacts = %v, want %v", flags.ListArtifacts, tt.wantListArt)
-			}
-			if flags.BuildAll != tt.wantBuildAll {
-				t.Errorf("BuildAll = %v, want %v", flags.BuildAll, tt.wantBuildAll)
 			}
 
 			if len(remaining) != len(tt.wantRemaining) {

@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +19,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/manifest"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -120,20 +117,9 @@ func scanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// scanAfterExecute handles scan manifest aggregation after component-level execution.
-// When scans run at component level, this aggregates component manifests into module-level manifests.
+// scanAfterExecute handles post-scan tasks.
+// Note: UoW manifests are written immediately in writeUoWScanManifest via RecordComplete.
 func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	// Aggregate component manifests into module-level manifests
-	// This is needed because component-level execution creates manifests at
-	// out/scan/<module>/<component>/scan.manifest.json, but show scan-summary
-	// expects them at out/scan/<module>/scan.manifest.json
-	if err := aggregateComponentScanManifests(ctx); err != nil {
-		log.Warnf("Failed to aggregate scan manifests: %v", err)
-	}
-
-	// UoW manifests are written immediately in writeUoWScanManifest via RecordComplete
-	// No explicit flush needed
-
 	// Assert all UoWs have valid manifests (skip in dry-run mode)
 	if !ctx.Config.DryRun {
 		if err := assertScanManifestsExist(ctx); err != nil {
@@ -144,32 +130,9 @@ func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// assertScanManifestsExist verifies that all expected UoWs have valid manifests.
-// This catches cases where manifest generation was broken or never implemented.
+// assertScanManifestsExist verifies that all executed UoWs have valid manifests.
 func assertScanManifestsExist(ctx *cmdframework.ExecutionContext) error {
-	units := ResolveScanUnitSpecs(ctx)
-	if len(units) == 0 {
-		return nil
-	}
-
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	var missing []string
-
-	for _, spec := range units {
-		// Check if manifest exists for this UoW
-		_, err := reader.GetUoW(workunit.ContextScan, spec.ID.Module, spec.ID.Component, spec.ID.Tool)
-		if err != nil {
-			missing = append(missing, spec.ID.Longname())
-			log.Debugf("[SCAN-ASSERT] Missing manifest for UoW: %s (error: %v)", spec.ID.Longname(), err)
-		}
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("scan completed but %d UoW manifest(s) are missing: %v\nThis indicates a bug in manifest generation - each UoW must persist its manifest", len(missing), missing)
-	}
-
-	log.Debugf("[SCAN-ASSERT] All %d UoW manifests verified", len(units))
-	return nil
+	return cmdframework.AssertManifestsExist(ctx, "scan", ResolveScanUnitSpecs(ctx))
 }
 
 // recordScanResult records the result of a scan for state tracking.
@@ -262,10 +225,10 @@ func scanUnitWorker(ctx *cmdframework.ExecutionContext, moniker, component strin
 		return 0
 	}
 
-	// Use underscore separator for Windows compatibility in lock/output paths
+	// Use dash separator to match UnitID.DirName() for consistent manifest paths
 	componentDir := compName
 	if scannerTypeStr != "" {
-		componentDir = compName + "_" + scannerTypeStr
+		componentDir = compName + "-" + scannerTypeStr
 	}
 
 	// Acquire lock for this component+scanner with wait
@@ -375,7 +338,7 @@ func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 	recordScanResult(sctx, moniker, true)
 
 	// Write UoW manifest for incremental cache
-	if sctx != nil && !environments.IsCI() {
+	if sctx != nil {
 		writeUoWScanManifest(ctx, sctx, moniker, component, string(scannerType), inputHash, scanStart)
 	}
 
@@ -514,8 +477,6 @@ func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewor
 		output.Writeln(logWriter, "  📄 Error evidence: %s", outputPath)
 	}
 
-	updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
-		manifest.ScanStatusFailed, outputPath, scanErr.Error())
 }
 
 // handleScanSuccess handles a successful scan (module or component level).
@@ -535,154 +496,13 @@ func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewor
 
 	if err != nil {
 		output.Writeln(logWriter, "  ❌ Failed to write evidence: %v", err)
-		updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
-			manifest.ScanStatusFailed, "", err.Error())
 		return "", err
 	}
 
-	updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
-		manifest.ScanStatusPassed, outputPath, "")
 	output.Writeln(logWriter, "  ✅ Success: %s", outputPath)
 	return outputPath, nil
 }
 
-// updateScanManifest updates the scan manifest for a module or component.
-func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig,
-	module *modules.ModuleContract, moniker, component string,
-	scanStart time.Time, status, evidencePath, errorMsg string) {
-
-	duration := time.Since(scanStart)
-
-	var scanDir, identifier, moduleType string
-	if component != "" {
-		scanDir = paths.ComponentScanOutputPath(ctx.WorkspaceRoot, moniker, component)
-		identifier = moniker + "/" + component
-		moduleType = module.Components.GetComponentType(component)
-	} else {
-		scanDir = ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
-		identifier = moniker
-		moduleType = module.GetComponentTypesDisplay()
-	}
-
-	mf, err := manifest.LoadOrCreateScanManifest(scanDir, identifier, moduleType, scanCfg.GitCommit)
-	if err != nil {
-		log.Warnf("Failed to load/create scan manifest: %v", err)
-		return
-	}
-
-	result := manifest.ScannerResult{
-		Status:          status,
-		RunTime:         time.Now(),
-		DurationSeconds: duration.Seconds(),
-		EvidencePath:    evidencePath,
-		Error:           errorMsg,
-	}
-	mf.AddScannerResult(string(scanCfg.ScannerType), result)
-
-	if err := mf.Save(scanDir); err != nil {
-		log.Warnf("Failed to save scan manifest: %v", err)
-	}
-}
-
-// aggregateComponentScanManifests aggregates component-level scan manifests into module-level manifests.
-// This is called after component-level scan execution to create the module-level manifest that
-// show scan-summary expects at out/scan/<module>/scan.manifest.json.
-func aggregateComponentScanManifests(ctx *cmdframework.ExecutionContext) error {
-	// Get unique modules from results
-	moduleSet := make(map[string]bool)
-	for _, result := range ctx.Results {
-		// Component results have format "module/component", extract module
-		moniker := result.Moniker
-		if idx := strings.Index(moniker, "/"); idx > 0 {
-			moniker = moniker[:idx]
-		}
-		moduleSet[moniker] = true
-	}
-
-	// For each module, aggregate component manifests
-	for moniker := range moduleSet {
-		if err := aggregateModuleScanManifest(ctx, moniker); err != nil {
-			log.Warnf("Failed to aggregate scan manifest for %s: %v", moniker, err)
-			// Continue with other modules
-		}
-	}
-
-	return nil
-}
-
-// aggregateModuleScanManifest aggregates all component scan manifests for a module into a single module-level manifest.
-func aggregateModuleScanManifest(ctx *cmdframework.ExecutionContext, moniker string) error {
-	moduleScanDir := ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
-
-	// Read directory to find component subdirectories
-	entries, err := os.ReadDir(moduleScanDir)
-	if err != nil {
-		// No scan directory yet - nothing to aggregate
-		return nil
-	}
-
-	// Get module for type info
-	module, exists := ctx.ModuleRegistry.Get(moniker)
-	moduleType := ""
-	if exists {
-		moduleType = module.GetComponentTypesDisplay()
-	}
-
-	// Get git commit
-	gitCommit := internal.GetGitCommit(ctx.WorkspaceRoot)
-
-	// Create or load the module-level manifest
-	moduleMf := manifest.NewScanManifest(moniker, moduleType, gitCommit)
-
-	// Track total duration
-	var totalDuration float64
-
-	// Scan component subdirectories for manifests
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		componentDir := filepath.Join(moduleScanDir, entry.Name())
-		componentMf, loadErr := manifest.LoadScanManifest(componentDir)
-		if loadErr != nil {
-			// No manifest in this directory - skip
-			continue
-		}
-
-		// Merge scanner results from component manifest
-		for scannerType, result := range componentMf.Scans {
-			// Prefix scanner with component name for uniqueness
-			key := fmt.Sprintf("%s/%s", entry.Name(), scannerType)
-			moduleMf.AddScannerResult(key, result)
-			totalDuration += result.DurationSeconds
-		}
-
-		// Merge artifacts with component prefix
-		for _, artifact := range componentMf.Artifacts {
-			artifact.Path = filepath.Join(entry.Name(), artifact.Path)
-			artifact.ID = fmt.Sprintf("%s-%s", entry.Name(), artifact.ID)
-			moduleMf.AddArtifact(artifact)
-		}
-	}
-
-	// Only save if we found any scan results
-	if len(moduleMf.Scans) == 0 {
-		return nil
-	}
-
-	moduleMf.DurationSeconds = totalDuration
-
-	// Save module-level manifest
-	if err := moduleMf.Save(moduleScanDir); err != nil {
-		return fmt.Errorf("failed to save aggregated manifest: %w", err)
-	}
-
-	log.Debugf("Aggregated scan manifest for %s: %d scanners, %d artifacts",
-		moniker, len(moduleMf.Scans), len(moduleMf.Artifacts))
-
-	return nil
-}
 
 // buildScanInitSummary creates the init summary for scan commands.
 func buildScanInitSummary(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig) {

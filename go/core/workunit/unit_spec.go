@@ -31,9 +31,9 @@ func (s UnitSpec) DependsOnComponents() []string {
 	return components
 }
 
-// Shortname returns the display name: module:component
-func (s UnitSpec) Shortname() string {
-	return s.ID.Shortname()
+// DisplayName returns context-aware compact display name.
+func (s UnitSpec) DisplayName() string {
+	return s.ID.DisplayName()
 }
 
 // Longname returns the full ID: context:module:component:tool[:extra]

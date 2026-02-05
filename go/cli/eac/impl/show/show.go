@@ -4,7 +4,7 @@
 // Group.Configuration: config
 // Group.Documentation: books
 // Group.Repository Structure: modules, components, units, dependencies
-// Group.Files and Changes: files, files-changed, files-staged
+// Group.Files and Changes: files, files-changed, files-staged, ghosts
 // Group.Workspaces: workspaces
 // Group.Build: build-summary, build-times
 // Group.Testing: test-results, test-summary, tests, suite, test-timings
@@ -52,6 +52,7 @@ var subcommands = []tui.SubcommandInfo{
 	{Name: "files", Description: "Show repository files with module ownership"},
 	{Name: "files-changed", Description: "Show modified files with module ownership"},
 	{Name: "files-staged", Description: "Show staged files with module ownership"},
+	{Name: "ghosts", Description: "Show ghost (dark launch) entities"},
 	{Name: "workspaces", Description: "Show all git worktrees and their status"},
 	{Name: "build-summary", Description: "Generate pretty build summary for GitHub Actions"},
 	{Name: "build-times", Description: "Show build timing analysis"},
@@ -109,7 +110,7 @@ func Show() int {
 	case "approval-comments", "approve-summary", "artifacts", "books", "build-summary",
 		"build-times", "changelog", "ci-summary", "component-types", "components", "config",
 		"dependencies", "dependency-ci-summary", "deps-setup-summary", "environments",
-		"files", "files-changed", "files-staged", "help", "lint-summary", "modules",
+		"files", "files-changed", "files-staged", "ghosts", "help", "lint-summary", "modules",
 		"release-notes", "release-summary", "scan-summary", "specs", "suite",
 		"test-results", "test-summary", "test-timings", "tests", "trigger-summary",
 		"units", "valid-commands", "workspaces":
