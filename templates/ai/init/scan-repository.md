@@ -15,14 +15,27 @@ You will receive:
 
 Analyze the scan results and generate an intelligent `repository.yml` configuration with:
 
-### 1. Module Definitions
+### 1. Repository Configuration
+
+Configure the repository-level settings:
+- **type**: `mono` (monorepo with multiple modules) or `poly` (multi-repo)
+- **remote**: GitHub repository information
+  - **owner**: GitHub organization or user
+  - **repo**: Repository name
+
+### 2. Module Definitions
 
 For each detected module:
 - **moniker**: Short identifier (lowercase, hyphenated)
+- **name**: Full descriptive name (title case)
 - **description**: Clear purpose/role of the module (1-2 sentences)
+- **versioning**: Version scheme and release configuration
+  - **scheme**: `CalVer` (calendar versioning) or `SemVer` (semantic versioning)
+  - **changelog**: Path to changelog file (e.g., `CHANGELOG.md`, `release/module-name/CHANGELOG.md`)
+  - **release_type**: `published` (public releases) or `internal` (internal only)
 - **components**: Language-specific configuration
 
-### 2. Module Dependencies
+### 3. Module Dependencies
 
 Analyze and infer dependencies between modules:
 - API services that frontends depend on
@@ -37,7 +50,7 @@ modules:
       - api
 ```
 
-### 3. Component Configuration
+### 4. Component Configuration
 
 For each component type, generate appropriate settings:
 
@@ -89,7 +102,7 @@ components:
     type: service  # or library
 ```
 
-### 4. Infer Module Purposes
+### 5. Infer Module Purposes
 
 Use these heuristics:
 
@@ -111,7 +124,7 @@ Use these heuristics:
 - Contains `tests/` or `test/` → Include testing info
 - Contains API-related files → API service
 
-### 5. Output Format
+### 6. Output Format
 
 Generate ONLY valid YAML for the `repository.yml` file. Do NOT include markdown fences or explanations.
 
@@ -121,24 +134,51 @@ Generate ONLY valid YAML for the `repository.yml` file. Do NOT include markdown 
 # Auto-generated from repository scan
 
 repository:
-  name: project-name
-  description: Brief project description
+  type: mono  # or poly for multi-repo
+  remote:
+    owner: github-owner
+    repo: repository-name
 
 modules:
   - moniker: module-name
+    name: Descriptive Module Name
     description: Module purpose
+    versioning:
+      scheme: CalVer  # or SemVer
+      changelog: path/to/CHANGELOG.md
+      release_type: published  # or internal
     components:
       <language>:
         root: relative/path
         type: component-type
 ```
 
-### 6. Quality Guidelines
+### 7. Quality Guidelines
+
+**Repository Type:**
+- Use `mono` for monorepos (single repository with multiple modules)
+- Use `poly` for multi-repo setups (one repository per module)
+- Most projects are `mono`
+
+**Remote Configuration:**
+- Extract from git remote URL if available
+- Default to generic values if not detected
 
 **Module Monikers:**
 - Lowercase with hyphens
 - Descriptive but concise
 - Examples: `api-service`, `web-frontend`, `cli-tools`
+
+**Module Names:**
+- Title case, descriptive
+- Full name of the module
+- Examples: "API Service", "Web Frontend", "CLI Tools"
+
+**Versioning:**
+- Use `CalVer` for date-based releases (YYYY.0M.0D format)
+- Use `SemVer` for semantic versioning (MAJOR.MINOR.PATCH)
+- Default changelog path: `CHANGELOG.md` or `release/{moniker}/CHANGELOG.md`
+- Use `published` for public modules, `internal` for internal-only modules
 
 **Descriptions:**
 - Start with action verb or noun
@@ -153,20 +193,36 @@ modules:
 - Match actual project structure
 - Use standard types: `service`, `library`, `cli-tool`, `app`, `binary`, `webapi`, `console`
 
-### 7. Multi-Module Repository Patterns
+### 8. Multi-Module Repository Patterns
 
 **Monorepo with multiple services:**
 ```yaml
+repository:
+  type: mono
+  remote:
+    owner: myorg
+    repo: microservices
+
 modules:
   - moniker: api-gateway
+    name: API Gateway
     description: API gateway routing requests to microservices
+    versioning:
+      scheme: SemVer
+      changelog: services/gateway/CHANGELOG.md
+      release_type: published
     components:
       go:
         root: services/gateway
         type: service
 
   - moniker: auth-service
+    name: Auth Service
     description: Authentication and authorization service
+    versioning:
+      scheme: SemVer
+      changelog: services/auth/CHANGELOG.md
+      release_type: internal
     components:
       go:
         root: services/auth
@@ -177,16 +233,32 @@ modules:
 
 **Full-stack application:**
 ```yaml
+repository:
+  type: mono
+  remote:
+    owner: mycompany
+    repo: webapp
+
 modules:
   - moniker: backend
+    name: Backend API
     description: Backend API providing REST endpoints
+    versioning:
+      scheme: CalVer
+      changelog: backend/CHANGELOG.md
+      release_type: published
     components:
       python:
         root: backend
         type: service
 
   - moniker: frontend
+    name: Frontend Web App
     description: Frontend web application
+    versioning:
+      scheme: CalVer
+      changelog: frontend/CHANGELOG.md
+      release_type: published
     components:
       typescript:
         root: frontend
@@ -195,12 +267,15 @@ modules:
       - backend
 ```
 
-### 8. Handle Edge Cases
+### 9. Handle Edge Cases
 
 - **No modules detected**: Generate minimal config with repository name only
 - **Single module**: Use repository name as module moniker
 - **Ambiguous types**: Default to `service` for services, `library` for libraries
 - **Missing README**: Infer from directory names and file structure
+- **Unknown remote**: Use generic placeholder values for owner/repo
+- **Versioning defaults**: Use `CalVer` for services/apps, `SemVer` for libraries
+- **Release type defaults**: Use `published` unless clearly internal-only
 
 ## Scan Results
 

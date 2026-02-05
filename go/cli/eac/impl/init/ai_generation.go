@@ -1,4 +1,4 @@
-// File: go/cli/eac/impl/init/ai_migration.go
+// File: go/cli/eac/impl/init/ai_generation.go
 package init
 
 import (
