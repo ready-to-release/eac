@@ -51,11 +51,22 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 
 	// Pre-existing configuration steps
 	sc.Step(`^a \.eac/ai-provider\.yml file exists with ([^"]*)$`, func(provider string) error {
-		content := fmt.Sprintf("provider: %s\n", provider)
+		content := fmt.Sprintf("ai:\n  provider: %s\n  model: test-model\n", provider)
 		return eacgodog.CreateFile(ctx, ".eac/ai-provider.yml", content)
 	})
 	sc.Step(`^a \.eac/repository\.yml file exists$`, func() error {
 		return eacgodog.CreateFile(ctx, ".eac/repository.yml", "# existing repository config\n")
+	})
+	sc.Step(`^a \.eac/repository\.yml file exists with custom module names$`, func() error {
+		content := `modules:
+  - moniker: custom-module
+    name: My Custom Module Name
+    description: Custom description
+`
+		return eacgodog.CreateFile(ctx, ".eac/repository.yml", content)
+	})
+	sc.Step(`^the custom module names are preserved in \.eac/repository\.yml$`, func() error {
+		return initFileContains(ctx, ".eac/repository.yml", "My Custom Module Name")
 	})
 	sc.Step(`^a \.eac/books\.yml file exists$`, func() error {
 		return eacgodog.CreateFile(ctx, ".eac/books.yml", "# existing books config\n")

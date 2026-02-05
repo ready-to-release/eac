@@ -30,23 +30,24 @@ Feature: eac-cli_init
       And stderr contains "unsupported provider"
       And stderr contains "Supported: claude-api, openai, gemini"
 
-  Rule: Init fails if config files already exist without --force
-    The init command must fail if configuration files already exist,
-    unless the --force flag is provided.
+  Rule: Init supports smart re-initialization
+    The init command automatically detects existing configuration
+    and intelligently updates it, preserving user customizations.
 
-    Scenario: Init fails when config files exist
+    Scenario: Init detects existing config and re-initializes
       Given a .eac/repository.yml file exists
       When I run "init"
-      Then the command exits with code 1
-      And stdout contains "Configuration files already exist"
-      And stdout contains "Use --force to overwrite existing files"
-
-    Scenario: Init with --force overwrites existing config files
-      Given a .eac/repository.yml file exists
-      When I run "init --force"
       Then the command exits with code 0
-      And stdout contains "Overwriting existing configuration files"
-      And stdout contains "EAC project initialized"
+      And stdout contains "Re-initializing EAC project"
+      And stdout contains "Existing configuration detected"
+      And stdout contains "EAC project re-initialized"
+
+    Scenario: Init preserves user customizations during re-init
+      Given a .eac/repository.yml file exists with custom module names
+      When I run "init"
+      Then the command exits with code 0
+      And stdout contains "Re-initializing EAC project"
+      And the custom module names are preserved in .eac/repository.yml
 
   Rule: Init creates valid ai-provider.yml when AI provider specified
     When --ai-provider is specified, init also creates ai-provider.yml
@@ -87,24 +88,24 @@ Feature: eac-cli_init
       And stdout contains link to get API key
       And the command exits with code 0
 
-  Rule: Init handles AI provider reconfiguration with --force
-    When ai-provider.yml already exists, the --force flag allows
-    overwriting the AI configuration.
+  Rule: Init supports smart AI provider switching
+    When ai-provider.yml already exists, re-running init with
+    a different provider smoothly switches the configuration.
 
-    Scenario: Reinitializing AI provider requires --force flag
+    Scenario: Reinitializing reuses existing AI provider
       Given a .eac/ai-provider.yml file exists with claude-api
       And a .eac/repository.yml file exists
-      When I run "init --ai-provider openai"
-      Then the command exits with code 1
-      And stdout contains "Configuration files already exist"
-      And stdout contains "Use --force to overwrite existing files"
+      When I run "init"
+      Then the command exits with code 0
+      And stdout contains "Reusing existing AI provider: claude-api"
+      And the .eac/ai-provider.yml file contains "provider: claude-api"
 
-    Scenario: Reinitializing AI provider with --force overwrites config
+    Scenario: Reinitializing with different provider switches smoothly
       Given a .eac/ai-provider.yml file exists with claude-api
       And a .eac/repository.yml file exists
       And a .eac/books.yml file exists
       And a .eac/environments.yml file exists
-      When I run "init --ai-provider openai --force"
-      Then stdout contains "Overwriting existing configuration files"
+      When I run "init --ai-provider openai"
+      Then stdout contains "Switching AI provider: claude-api → openai"
       And the .eac/ai-provider.yml file contains "provider: openai"
       And the command exits with code 0
