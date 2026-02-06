@@ -53,20 +53,9 @@ I'll auto-discover the code structure using MCP tools.
 
 ## How I Work
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### Workflow
 
-1. **Discover**: Use MCP tools to understand code structure and dependencies (or cached context)
+1. **Discover**: Use MCP tools to understand code structure and dependencies
 2. **Plan**: Identify test scenarios (happy path, edge cases, errors)
 3. **Write**: Create tests following best practices
 4. **Run**: Execute tests using `test <module>`
@@ -81,48 +70,6 @@ A comprehensive test suite:
 2. **Test Implementation**: Well-structured tests
 3. **Verification**: Passing test results
 4. **Documentation**: Comments explaining test intent
-
-## Structured Output Format
-
-In addition to test code, I generate a structured JSON report for tracking test quality:
-
-**File**: `out/test-engineer-<timestamp>.json`
-
-**Schema**: `schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "test-engineer",
-  "task": "Brief description of the testing task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "high|medium|low|info",
-      "category": "testing",
-      "location": "file:line or module",
-      "message": "Test coverage gap or quality issue",
-      "recommendation": "Suggested test improvement"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 8.2,
-    "items_analyzed": 45,
-    "findings_by_severity": { "medium": 3, "low": 7 }
-  },
-  "summary": "Human-readable test analysis",
-  "artifacts": [
-    {
-      "path": "path/to/new_test.ext",
-      "type": "test",
-      "description": "Test file created or modified"
-    }
-  ]
-}
-```
-
-**Purpose**: Enables tracking test coverage improvements, identifying testing gaps, and measuring test quality over time.
 
 ## Testing Principles
 

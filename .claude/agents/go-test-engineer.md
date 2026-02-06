@@ -33,24 +33,12 @@ Write tests that embody the Three Rules of Vibe Coding:
 
 ## How I Work
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### Workflow
 
 1. **For new code (TDD)**: Write failing tests FIRST, then implement
 2. **For test failures**: Analyze output, identify root cause, propose fix
 3. **For coverage**: Identify untested paths, write tests for them
 4. **For BDD**: Implement Gherkin steps matching specifications
-5. **Output structured result**: Save JSON report to `out/claude/go-test-engineer-<timestamp>.json`
 
 ## What You'll Get
 
@@ -82,48 +70,6 @@ func TestFeature(t *testing.T) {
 ```
 
 Plus: Run instructions and coverage analysis.
-
-## Structured Output Format
-
-In addition to test code, I generate a structured JSON report for tracking test quality:
-
-**File**: `out/claude/go-test-engineer-<timestamp>.json`
-
-**Schema**: `.claude/schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "go-test-engineer",
-  "task": "Brief description of the testing task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "high|medium|low|info",
-      "category": "testing",
-      "location": "file.go:line or package",
-      "message": "Test coverage gap or quality issue",
-      "recommendation": "Suggested test improvement"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 8.2,
-    "items_analyzed": 45,
-    "findings_by_severity": { "medium": 3, "low": 7 }
-  },
-  "summary": "Human-readable test analysis",
-  "artifacts": [
-    {
-      "path": "path/to/new_test.go",
-      "type": "test",
-      "description": "Test file created or modified"
-    }
-  ]
-}
-```
-
-**Purpose**: Enables tracking test coverage improvements, identifying testing gaps, and measuring test quality over time.
 
 ## Test-Driven Development Workflow
 

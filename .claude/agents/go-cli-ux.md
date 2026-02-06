@@ -34,24 +34,12 @@ Design CLI commands that are:
 
 ## How I Work
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### Workflow
 
 1. **Understand requirements**: What does the user want to accomplish?
 2. **Design structure**: Command name, flags, help text, examples
 3. **Implement with validation**: Early validation, clear errors, proper exit codes
 4. **Write tests**: Table-driven tests for CLI parsing and output
-5. **Output structured result**: Save JSON report to `out/claude/go-cli-ux-<timestamp>.json`
 
 ## What You'll Get
 
@@ -87,55 +75,12 @@ command-name --flag1 --flag2 value arg1 arg2
 
 ```go
 // Table-driven tests
-
-## Structured Output Format
-
-In addition to the CLI design, I generate a structured JSON report:
-
-**File**: `out/claude/go-cli-ux-<timestamp>.json`
-
-**Schema**: `.claude/schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "go-cli-ux",
-  "task": "Brief description of the CLI task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "high|medium|low|info",
-      "category": "ux",
-      "location": "command or flag",
-      "message": "UX concern or improvement",
-      "recommendation": "Suggested UX enhancement"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 6.8,
-    "items_analyzed": 15
-  },
-  "summary": "CLI UX design summary",
-  "artifacts": [
-    {
-      "path": "path/to/command.go",
-      "type": "implementation",
-      "description": "CLI command implementation"
-    }
-  ]
-}
-```
-
-**Purpose**: Track CLI design decisions, measure UX consistency, and identify improvement opportunities
 ```
 
 ### Help Text
 
 ```text
 (What users see with --help)
-```
-
 ```
 
 ## CLI Design Rules

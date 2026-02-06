@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ import (
 // TestMain sets up the test environment
 func TestMain(m *testing.M) {
 	// Set R2R_TESTING to prevent fatal errors in CI during tests
-	os.Setenv("R2R_TESTING", "true")
+	os.Setenv(environments.EnvR2RTesting, "true")
 
 	// Run tests
 	code := m.Run()

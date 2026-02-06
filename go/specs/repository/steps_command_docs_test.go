@@ -18,6 +18,7 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
+	"github.com/ready-to-release/eac/go/core/environments"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
 
@@ -137,7 +138,7 @@ func ifMissingShowCommandNames() error {
 // Checks multiple locations in order of preference.
 func findCommandsBinary(repoRoot string) string {
 	// Check environment variable first (set by CI)
-	if envPath := os.Getenv("COMMANDS_PATH"); envPath != "" {
+	if envPath := os.Getenv(environments.EnvCommandsPath); envPath != "" {
 		return envPath
 	}
 
@@ -145,7 +146,7 @@ func findCommandsBinary(repoRoot string) string {
 
 	// When running inside a container, prefer the container's built-in binary
 	// R2R_CONTAINER_ROOT is always set by the container image (ENV in Dockerfile)
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		candidates = append(candidates, filepath.Join(containerRoot, "out", "tools", "eac"))
 	}
 

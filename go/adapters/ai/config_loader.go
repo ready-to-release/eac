@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/core/domain/schema"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
@@ -103,7 +104,7 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 // Container-aware: uses R2R_CONTAINER_ROOT when running in container.
 func loadAIProviderDefaults(repoRoot string) (*Config, error) {
 	root := repoRoot
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		root = containerRoot
 	}
 	if root == "" {

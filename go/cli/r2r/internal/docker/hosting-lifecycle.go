@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/cache"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/terminal"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // CreateContainerConfig creates a container configuration based on mode and extension.
@@ -68,7 +69,7 @@ func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests [
 	// In Docker-in-Docker mode, we need to use the HOST path for mounts, not the container path.
 	// R2R_HOST_REPOROOT is set by the parent r2r CLI and contains the original host path.
 	mountSource := ch.rootDir
-	if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+	if hostRoot := os.Getenv(envconsts.EnvR2RHostRepoRoot); hostRoot != "" {
 		logging.Debugf("Docker-in-Docker detected, using host path for mount: host_root=%s container_root=%s", hostRoot, ch.rootDir)
 		mountSource = hostRoot
 	}

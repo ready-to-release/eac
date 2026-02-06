@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -36,10 +37,10 @@ func createEacWorkspace(t *testing.T, dir string) {
 func saveAndClearEnv(t *testing.T) func() {
 	t.Helper()
 	saved := map[string]string{
-		envR2RRepoRoot:      os.Getenv(envR2RRepoRoot),
-		envR2RContainerRoot: os.Getenv(envR2RContainerRoot),
-		envR2RPWD:           os.Getenv(envR2RPWD),
-		"R2R_DOCKER_MODE":                os.Getenv("R2R_DOCKER_MODE"),
+		environments.EnvR2RRepoRoot:      os.Getenv(environments.EnvR2RRepoRoot),
+		environments.EnvR2RContainerRoot: os.Getenv(environments.EnvR2RContainerRoot),
+		environments.EnvR2RPWD:           os.Getenv(environments.EnvR2RPWD),
+		environments.EnvR2RDockerMode:    os.Getenv(environments.EnvR2RDockerMode),
 	}
 
 	// Clear all
@@ -90,8 +91,8 @@ func TestDetect_EnvOverride_TakesPrecedenceOverGit(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	// Set env to override
-	os.Setenv(envR2RRepoRoot, tempDir)
-	defer os.Unsetenv(envR2RRepoRoot)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	defer os.Unsetenv(environments.EnvR2RRepoRoot)
 
 	ws, err := Detect()
 	if err != nil {
@@ -158,7 +159,7 @@ func TestDetect_ModeExplicit_SucceedsWithEnv(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	ws, err := DetectWithOptions(Options{
 		Mode: ModeExplicit,
@@ -178,7 +179,7 @@ func TestDetect_ModeGitOnly_IgnoresEnvOverride(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	ws, err := DetectWithOptions(Options{
 		Mode: ModeGitOnly,
@@ -204,7 +205,7 @@ func TestDetect_ValidationFailsForNonexistent(t *testing.T) {
 	defer restore()
 
 	nonexistent := filepath.Join(t.TempDir(), "does-not-exist")
-	os.Setenv(envR2RRepoRoot, nonexistent)
+	os.Setenv(environments.EnvR2RRepoRoot, nonexistent)
 
 	_, err := Detect()
 
@@ -235,7 +236,7 @@ func TestDetect_ValidationFailsForFile(t *testing.T) {
 		t.Fatalf("failed to create file: %v", err)
 	}
 
-	os.Setenv(envR2RRepoRoot, filePath)
+	os.Setenv(environments.EnvR2RRepoRoot, filePath)
 
 	_, err := Detect()
 
@@ -254,7 +255,7 @@ func TestDetect_ValidationFailsForMissingMarkers(t *testing.T) {
 
 	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	_, err := Detect()
 
@@ -273,7 +274,7 @@ func TestDetect_ValidationDisabled(t *testing.T) {
 
 	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	// With validation disabled, should succeed
 	ws, err := DetectWithOptions(Options{
@@ -297,7 +298,7 @@ func TestDetect_EacWorkspaceValid(t *testing.T) {
 	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	ws, err := Detect()
 	if err != nil {
@@ -316,7 +317,7 @@ func TestDetect_RequireGit(t *testing.T) {
 	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	_, err := DetectWithOptions(Options{
 		Mode:       ModeAuto,
@@ -337,7 +338,7 @@ func TestDetect_DockerMode(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	os.Setenv("R2R_DOCKER_MODE", "true")
+	os.Setenv(environments.EnvR2RDockerMode, "true")
 
 	ws, err := DetectWithOptions(Options{
 		Mode:     ModeAuto,
@@ -348,8 +349,8 @@ func TestDetect_DockerMode(t *testing.T) {
 		t.Fatalf("DetectWithOptions() unexpected error: %v", err)
 	}
 
-	if ws.Source != "env:R2R_DOCKER_MODE" {
-		t.Errorf("Source = %q, want %q", ws.Source, "env:R2R_DOCKER_MODE")
+	if ws.Source != "env:environments.EnvR2RDockerMode" {
+		t.Errorf("Source = %q, want %q", ws.Source, "env:environments.EnvR2RDockerMode")
 	}
 
 	if ws.Root != paths.ContainerRepoRoot {
@@ -368,15 +369,15 @@ func TestDetect_EnvOverrideBeforeDockerMode(t *testing.T) {
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
 
-	os.Setenv(envR2RRepoRoot, tempDir)
-	os.Setenv("R2R_DOCKER_MODE", "true")
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RDockerMode, "true")
 
 	ws, err := Detect()
 	if err != nil {
 		t.Fatalf("Detect() unexpected error: %v", err)
 	}
 
-	// R2R_REPO_ROOT should take precedence over R2R_DOCKER_MODE
+	// R2R_REPO_ROOT should take precedence over environments.EnvR2RDockerMode
 	if ws.Source != "env:R2R_REPO_ROOT" {
 		t.Errorf("Source = %q, want %q", ws.Source, "env:R2R_REPO_ROOT")
 	}
@@ -394,8 +395,8 @@ func TestDetect_DistRoot(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	containerRoot := filepath.Join(tempDir, "container")
-	os.Setenv(envR2RRepoRoot, tempDir)
-	os.Setenv(envR2RContainerRoot, containerRoot)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RContainerRoot, containerRoot)
 
 	ws, err := Detect()
 	if err != nil {
@@ -441,21 +442,21 @@ func TestForTesting(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	// Before ForTesting, env var should be empty
-	if got := os.Getenv(envR2RRepoRoot); got != "" {
+	if got := os.Getenv(environments.EnvR2RRepoRoot); got != "" {
 		t.Errorf("EnvR2RRepoRoot before ForTesting = %q, want empty", got)
 	}
 
 	cleanup := ForTesting(t, tempDir)
 
 	// During ForTesting, env var should be set
-	if got := os.Getenv(envR2RRepoRoot); got != tempDir {
+	if got := os.Getenv(environments.EnvR2RRepoRoot); got != tempDir {
 		t.Errorf("EnvR2RRepoRoot during ForTesting = %q, want %q", got, tempDir)
 	}
 
 	cleanup()
 
 	// After cleanup, env var should be empty again
-	if got := os.Getenv(envR2RRepoRoot); got != "" {
+	if got := os.Getenv(environments.EnvR2RRepoRoot); got != "" {
 		t.Errorf("EnvR2RRepoRoot after cleanup = %q, want empty", got)
 	}
 }
@@ -465,20 +466,20 @@ func TestForTesting_PreservesExistingValue(t *testing.T) {
 	defer restore()
 
 	original := "/original/path"
-	os.Setenv(envR2RRepoRoot, original)
+	os.Setenv(environments.EnvR2RRepoRoot, original)
 
 	tempDir := t.TempDir()
 	cleanup := ForTesting(t, tempDir)
 
 	// During ForTesting, should be the new value
-	if got := os.Getenv(envR2RRepoRoot); got != tempDir {
+	if got := os.Getenv(environments.EnvR2RRepoRoot); got != tempDir {
 		t.Errorf("EnvR2RRepoRoot during ForTesting = %q, want %q", got, tempDir)
 	}
 
 	cleanup()
 
 	// After cleanup, should restore original
-	if got := os.Getenv(envR2RRepoRoot); got != original {
+	if got := os.Getenv(environments.EnvR2RRepoRoot); got != original {
 		t.Errorf("EnvR2RRepoRoot after cleanup = %q, want %q", got, original)
 	}
 }
@@ -506,7 +507,7 @@ func TestRequireIsolation_Succeeds(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	os.Setenv(envR2RRepoRoot, "/some/path")
+	os.Setenv(environments.EnvR2RRepoRoot, "/some/path")
 
 	var fatalCalled bool
 	fakeT := &fakeTestingT{
@@ -528,7 +529,7 @@ func TestRoot(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	root, err := Root()
 	if err != nil {
@@ -545,7 +546,7 @@ func TestWorkingDir_EnvOverride(t *testing.T) {
 	defer restore()
 
 	expected := "/custom/working/dir"
-	os.Setenv(envR2RPWD, expected)
+	os.Setenv(environments.EnvR2RPWD, expected)
 
 	got, err := WorkingDir()
 	if err != nil {
@@ -578,17 +579,17 @@ func TestIsInContainer(t *testing.T) {
 	defer restore()
 
 	if IsInContainer() {
-		t.Error("IsInContainer() should be false when R2R_DOCKER_MODE not set")
+		t.Error("IsInContainer() should be false when environments.EnvR2RDockerMode not set")
 	}
 
-	os.Setenv("R2R_DOCKER_MODE", "true")
+	os.Setenv(environments.EnvR2RDockerMode, "true")
 	if !IsInContainer() {
-		t.Error("IsInContainer() should be true when R2R_DOCKER_MODE=true")
+		t.Error("IsInContainer() should be true when environments.EnvR2RDockerMode=true")
 	}
 
-	os.Setenv("R2R_DOCKER_MODE", "false")
+	os.Setenv(environments.EnvR2RDockerMode, "false")
 	if IsInContainer() {
-		t.Error("IsInContainer() should be false when R2R_DOCKER_MODE=false")
+		t.Error("IsInContainer() should be false when environments.EnvR2RDockerMode=false")
 	}
 }
 
@@ -598,7 +599,7 @@ func TestDistRoot(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(envR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
 
 	// Without container root, should return workspace root
 	got := DistRoot()
@@ -608,7 +609,7 @@ func TestDistRoot(t *testing.T) {
 
 	// With container root, should return container root
 	containerRoot := "/container/root"
-	os.Setenv(envR2RContainerRoot, containerRoot)
+	os.Setenv(environments.EnvR2RContainerRoot, containerRoot)
 	got = DistRoot()
 	if got != containerRoot {
 		t.Errorf("DistRoot() = %q, want %q", got, containerRoot)
@@ -673,7 +674,7 @@ func TestMustDetect_Panics(t *testing.T) {
 	defer restore()
 
 	// Set to nonexistent path
-	os.Setenv(envR2RRepoRoot, "/nonexistent/path")
+	os.Setenv(environments.EnvR2RRepoRoot, "/nonexistent/path")
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -689,7 +690,7 @@ func TestRootOrPanic_Panics(t *testing.T) {
 	defer restore()
 
 	// Set to nonexistent path
-	os.Setenv(envR2RRepoRoot, "/nonexistent/path")
+	os.Setenv(environments.EnvR2RRepoRoot, "/nonexistent/path")
 
 	defer func() {
 		if r := recover(); r == nil {

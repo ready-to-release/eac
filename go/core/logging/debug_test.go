@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func TestEnableDisableDebug(t *testing.T) {
@@ -29,12 +31,12 @@ func TestEnableDisableDebug(t *testing.T) {
 
 func TestInitFromEnv(t *testing.T) {
 	// Save and restore original state
-	originalValue := os.Getenv("EAC_DEBUG")
+	originalValue := os.Getenv(environments.EnvEACDebug)
 	defer func() {
 		if originalValue == "" {
-			os.Unsetenv("EAC_DEBUG")
+			os.Unsetenv(environments.EnvEACDebug)
 		} else {
-			os.Setenv("EAC_DEBUG", originalValue)
+			os.Setenv(environments.EnvEACDebug, originalValue)
 		}
 	}()
 
@@ -54,9 +56,9 @@ func TestInitFromEnv(t *testing.T) {
 			DisableDebug() // Reset state
 
 			if tt.envValue == "" {
-				os.Unsetenv("EAC_DEBUG")
+				os.Unsetenv(environments.EnvEACDebug)
 			} else {
-				os.Setenv("EAC_DEBUG", tt.envValue)
+				os.Setenv(environments.EnvEACDebug, tt.envValue)
 			}
 
 			InitFromEnv()

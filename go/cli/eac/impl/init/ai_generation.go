@@ -1,4 +1,4 @@
-// File: go/cli/eac/impl/init/ai_migration.go
+// File: go/cli/eac/impl/init/ai_generation.go
 package init
 
 import (
@@ -12,6 +12,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // aiExecutor holds the AI executor instance for executing prompts.
@@ -103,7 +104,7 @@ func loadPromptTemplate(repoRoot string) (string, error) {
 	// Check if local template exists
 	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
 		// Try system templates (for container/installed environments)
-		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		systemRoot := os.Getenv(environments.EnvR2RContainerRoot)
 		if systemRoot != "" {
 			templatePath = filepath.Join(systemRoot, "templates", "ai", "init", "scan-repository.md")
 		}

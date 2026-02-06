@@ -19,20 +19,24 @@
 // Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
 // Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
 // Long:
+// Long: Re-running init will intelligently update existing configuration:
+// Long:   - Preserves user customizations (module names, versioning, dependencies)
+// Long:   - Updates AI-generated content (descriptions, component types)
+// Long:   - Detects new/removed modules automatically
+// Long:
 // Long: Examples:
 // Long:   init                                                      # Initialize project with config files
+// Long:   init                                                      # Re-run to update existing config
 // Long:   init --scan                                               # Scan repository and auto-generate config
 // Long:   init --scan --ai-provider claude-api                      # Scan with AI-enhanced config generation
 // Long:   init --ai-provider claude-api                             # Initialize and configure AI provider
 // Long:   init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token
 // Long:   init --copy-templates                                     # Also copy system template files
-// Long:   init --force                                              # Overwrite existing config files
 // Flag.scan: type=bool, shorthand=s, default=false, usage=Scan repository to auto-detect modules and generate configuration, required=false
 // Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), required=false, completion=claude-api,openai,gemini
 // Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided), required=false
 // Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional), required=false
 // Flag.copy-templates: type=bool, default=false, usage=Copy system default configuration files to repository for customization, required=false
-// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing config files if they exist, required=false
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis, required=false
 package init
 
@@ -48,6 +52,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -111,7 +116,6 @@ func Init() int {
 	aiToken := ""
 	gitToken := ""
 	copyTemplates := false
-	force := false
 	debug := false
 
 	for i := 2; i < len(os.Args); i++ {
@@ -136,8 +140,6 @@ func Init() int {
 			}
 		case "--copy-templates":
 			copyTemplates = true
-		case "--force", "-f":
-			force = true
 		case "--debug", "-d":
 			debug = true
 		}
@@ -156,48 +158,51 @@ func Init() int {
 	}
 	defer logging.CloseLogging()
 
-	// Define config files to create
+	// Check for existing configuration (smart re-initialization)
 	eacDir := paths.EACConfigPath(workspaceRoot)
-	configFiles := []string{
-		filepath.Join(eacDir, "repository.yml"),
-		filepath.Join(eacDir, "books.yml"),
-		filepath.Join(eacDir, "environments.yml"),
-	}
+	existingConfig := detectExistingConfig(workspaceRoot)
 
-	// Check for existing config files BEFORE creating anything
-	existingFiles := []string{}
-	for _, f := range configFiles {
-		if fileExists(f) {
-			existingFiles = append(existingFiles, f)
+	if existingConfig != nil {
+		// Re-initialization mode: update existing config
+		log.Info("📁 Re-initializing EAC project...")
+		log.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
+		log.Info("")
+		log.Info("ℹ️  Existing configuration detected:")
+		if existingConfig.AIProvider != "" {
+			log.Info(fmt.Sprintf("   - AI provider: %s", existingConfig.AIProvider))
 		}
-	}
-
-	if len(existingFiles) > 0 && !force {
-		log.Error("Error: Configuration files already exist")
-		for _, f := range existingFiles {
-			log.Error(fmt.Sprintf("   Found: %s", f))
+		if existingConfig.ModuleCount > 0 {
+			log.Info(fmt.Sprintf("   - Modules: %d", existingConfig.ModuleCount))
 		}
 		log.Info("")
-		log.Info("Use --force to overwrite existing files")
-		return 1
+
+		// Determine which AI provider to use
+		// Only configure AI if explicitly requested via --ai-provider flag
+		if aiProvider != "" && aiProvider != existingConfig.AIProvider {
+			// Override AI provider
+			log.Info(fmt.Sprintf("🔄 Switching AI provider: %s → %s", existingConfig.AIProvider, aiProvider))
+		} else if aiProvider != "" && existingConfig.AIProvider != "" {
+			// Same provider explicitly requested, just log
+			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", aiProvider))
+		} else if aiProvider == "" && existingConfig.AIProvider != "" {
+			// No --ai-provider flag, but existing config has one - keep it
+			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", existingConfig.AIProvider))
+		}
+
+		// Re-scan and merge with existing config
+		// Only pass aiProvider if user explicitly specified it (not from existing config)
+		return reinitialize(workspaceRoot, eacDir, scan, aiProvider)
 	}
 
-	// Create .eac directory structure (always)
+	// First-time initialization mode
 	log.Info("📁 Initializing EAC project...")
 	log.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
 	log.Info("")
+
+	// Create .eac directory structure
 	if err := createDirectoryStructure(workspaceRoot); err != nil {
 		log.Error(fmt.Sprintf("Error creating directory structure: %v", err))
 		return 1
-	}
-
-	// Warn if overwriting with --force
-	if len(existingFiles) > 0 && force {
-		log.Warn("⚠️  Overwriting existing configuration files:")
-		for _, f := range existingFiles {
-			log.Warn(fmt.Sprintf("   - %s", f))
-		}
-		log.Info("")
 	}
 
 	// Generate config files
@@ -229,7 +234,7 @@ func Init() int {
 	if copyTemplates {
 		log.Info("")
 		log.Info("📄 Copying system template files...")
-		if err := copySystemTemplates(workspaceRoot, force); err != nil {
+		if err := copySystemTemplates(workspaceRoot); err != nil {
 			log.Error(fmt.Sprintf("Error copying templates: %v", err))
 			return 1
 		}
@@ -252,7 +257,7 @@ func Init() int {
 		log.Info("   3. Commit to version control: git add .eac/")
 		log.Info("")
 		log.Info("ℹ️  To configure AI provider (optional):")
-		log.Info("     r2r eac init --ai-provider claude-api --force")
+		log.Info("     r2r eac init --ai-provider claude-api")
 		log.Info("")
 		return 0
 	}
@@ -261,16 +266,6 @@ func Init() int {
 	log.Info("")
 	log.Info("🤖 Configuring AI Provider")
 	log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-	// Define paths
-	teamConfigPath := paths.EACConfigFilePath(workspaceRoot)
-	personalConfigPath := paths.EACConfigPersonalFilePath(workspaceRoot)
-
-	// Check if config already exists (only when configuring AI)
-	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force); err != nil {
-		log.Error(fmt.Sprintf("%v", err))
-		return 1
-	}
 
 	// Configure agent using --ai-provider flag
 	config, err := configureAgent(aiProvider)
@@ -338,44 +333,6 @@ type agentConfig struct {
 type tokenConfig struct {
 	aiToken  string // Actual AI API token
 	gitToken string // Actual Git API token
-}
-
-// checkExistingConfig checks if config files exist and validates force flag.
-func checkExistingConfig(teamPath, personalPath string, force bool) error {
-	teamExists := fileExists(teamPath)
-	personalExists := fileExists(personalPath)
-
-	if !teamExists && !personalExists {
-		// No config exists, proceed
-		return nil
-	}
-
-	// Config exists
-	if !force {
-		log.Warn("Configuration already exists")
-		log.Info("")
-		if teamExists {
-			log.Info(fmt.Sprintf("  Team config: %s", teamPath))
-		}
-		if personalExists {
-			log.Info(fmt.Sprintf("  Personal config: %s", personalPath))
-		}
-		log.Info("")
-		log.Info("Use --force to overwrite existing config")
-		return fmt.Errorf("config already exists (use --force to overwrite)")
-	}
-
-	// Force flag provided, log that we're overwriting
-	log.Info("⚠️  Overwriting existing configuration (--force)")
-	if teamExists {
-		log.Info(fmt.Sprintf("  Will replace: %s", teamPath))
-	}
-	if personalExists {
-		log.Info(fmt.Sprintf("  Will replace: %s", personalPath))
-	}
-	log.Info("")
-
-	return nil
 }
 
 // fileExists checks if a file exists.
@@ -559,9 +516,9 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 }
 
 // copySystemTemplates copies system default configuration files to user repository.
-func copySystemTemplates(workspaceRoot string, force bool) error {
+func copySystemTemplates(workspaceRoot string) error {
 	// Get system root (Docker container or local dev)
-	systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+	systemRoot := os.Getenv(environments.EnvR2RContainerRoot)
 	if systemRoot == "" {
 		// Local dev mode - system defaults are in workspace root
 		systemRoot = workspaceRoot
@@ -584,9 +541,9 @@ func copySystemTemplates(workspaceRoot string, force bool) error {
 		srcPath := fmt.Sprintf("%s/%s", systemEacDir, filename)
 		dstPath := fmt.Sprintf("%s/%s", eacDir, filename)
 
-		// Check if destination exists
-		if fileExists(dstPath) && !force {
-			log.Info(fmt.Sprintf("   ⏭️  Skipping %s (already exists, use --force to overwrite)", filename))
+		// Check if destination exists (skip if already there - smart re-init)
+		if fileExists(dstPath) {
+			log.Info(fmt.Sprintf("   ⏭️  Skipping %s (already exists)", filename))
 			skippedCount++
 			continue
 		}
@@ -758,22 +715,35 @@ func generateWithScan(workspaceRoot, eacDir, aiProvider string) error {
 		log.Info(fmt.Sprintf("      - %s (%s) at %s", mod.Name, mod.Language, mod.Root))
 	}
 
-	// Generate repository.yml
+	// Generate repository.yml using strategy pattern
 	log.Info("")
 	var repoYAML string
+
 	if aiProvider != "" {
 		log.Info(fmt.Sprintf("🤖 Generating configuration with AI (%s)...", aiProvider))
-		repoYAML, err = GenerateConfig(workspaceRoot, scanResult, aiProvider)
+		// Use AI generator with rule-based fallback
+		aiGen := NewAIGenerator(aiProvider)
+		ruleGen := NewRuleBasedGenerator()
+
+		// Try AI generation first
+		repoYAML, err = aiGen.Generate(workspaceRoot, scanResult)
 		if err != nil {
 			log.Warn(fmt.Sprintf("   ⚠️  AI generation failed: %v", err))
 			log.Info("   Falling back to rule-based generation")
-			repoYAML = generateRepositoryYAMLFromScan(scanResult)
+			repoYAML, err = ruleGen.Generate(workspaceRoot, scanResult)
+			if err != nil {
+				return fmt.Errorf("failed to generate configuration: %w", err)
+			}
 		} else {
 			log.Info("   ✓ AI-enhanced configuration generated")
 		}
 	} else {
 		log.Info("🔧 Generating configuration (rule-based)...")
-		repoYAML = generateRepositoryYAMLFromScan(scanResult)
+		generator := NewRuleBasedGenerator()
+		repoYAML, err = generator.Generate(workspaceRoot, scanResult)
+		if err != nil {
+			return fmt.Errorf("failed to generate configuration: %w", err)
+		}
 		log.Info("   ✓ Configuration generated")
 		log.Info("")
 		log.Info("   💡 Tip: Use --ai-provider claude-api for enhanced descriptions")
@@ -797,42 +767,10 @@ func generateWithScan(workspaceRoot, eacDir, aiProvider string) error {
 	return nil
 }
 
-// generateRepositoryYAMLFromScan creates a basic repository.yml from scan results (rule-based).
+// generateRepositoryYAMLFromScan is deprecated - use NewRuleBasedGenerator().Generate() instead.
+// Kept for backward compatibility.
 func generateRepositoryYAMLFromScan(scanResult *ScanResult) string {
-	var buf strings.Builder
-
-	buf.WriteString("# EAC Repository Configuration\n")
-	buf.WriteString("# Auto-generated from repository scan\n")
-	buf.WriteString("# Generated by: r2r eac init --scan\n")
-	buf.WriteString("\nrepository:\n")
-	buf.WriteString("  name: project\n")
-	buf.WriteString("  description: Auto-detected multi-module repository\n")
-	buf.WriteString("\nmodules:\n")
-
-	for _, mod := range scanResult.Modules {
-		buf.WriteString(fmt.Sprintf("  - moniker: %s\n", strings.ToLower(strings.ReplaceAll(mod.Name, "_", "-"))))
-		buf.WriteString(fmt.Sprintf("    description: %s module\n", mod.Language))
-		buf.WriteString("    components:\n")
-		buf.WriteString(fmt.Sprintf("      %s:\n", mod.Language))
-		buf.WriteString(fmt.Sprintf("        root: %s\n", mod.Root))
-
-		// Add type based on language defaults
-		switch mod.Language {
-		case "go":
-			buf.WriteString("        type: service\n")
-		case "python":
-			buf.WriteString("        type: service\n")
-		case "rust":
-			buf.WriteString("        type: binary\n")
-		case "typescript", "javascript":
-			buf.WriteString("        type: app\n")
-		case "dotnet":
-			buf.WriteString("        type: webapi\n")
-		case "java":
-			buf.WriteString("        type: service\n")
-		}
-		buf.WriteString("\n")
-	}
-
-	return buf.String()
+	generator := NewRuleBasedGenerator()
+	result, _ := generator.Generate("", scanResult)
+	return result
 }

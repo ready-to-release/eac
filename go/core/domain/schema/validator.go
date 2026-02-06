@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
@@ -83,7 +84,7 @@ func NewValidator(workspaceRoot string) (*Validator, error) {
 	// Note: Can't import repository package here to avoid cycles, so inline the check
 	// See repository.GetDistRoot() for the canonical implementation
 	schemaRoot := workspaceRoot
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
 		schemaRoot = containerRoot
 	}
 	schemaDir := paths.ContractsVersionPath(schemaRoot, "core", ContractVersion)

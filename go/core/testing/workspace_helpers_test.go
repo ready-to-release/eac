@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func TestSetupWorkspaceIsolation(t *testing.T) {
@@ -19,7 +21,7 @@ func TestSetupWorkspaceIsolation(t *testing.T) {
 	root := SetupWorkspaceIsolation(t)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv("R2R_REPO_ROOT"); envRoot == "" {
+	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
 		t.Error("R2R_REPO_ROOT not set after SetupWorkspaceIsolation")
 	}
 
@@ -40,7 +42,7 @@ func TestSetupTempWorkspaceIsolation(t *testing.T) {
 	tempRoot := SetupTempWorkspaceIsolation(t)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv("R2R_REPO_ROOT"); envRoot == "" {
+	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
 		t.Error("R2R_REPO_ROOT not set after SetupTempWorkspaceIsolation")
 	}
 
@@ -97,7 +99,7 @@ func TestCopyToTempWorkspace(t *testing.T) {
 	tempRoot := CopyToTempWorkspace(t, filesToCopy)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv("R2R_REPO_ROOT"); envRoot == "" {
+	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
 		t.Error("R2R_REPO_ROOT not set after CopyToTempWorkspace")
 	}
 

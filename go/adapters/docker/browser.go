@@ -7,13 +7,14 @@ import (
 	"runtime"
 
 	"github.com/ready-to-release/eac/go/adapters/docker/util"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // shouldOpenBrowser checks if browser should be opened based on environment.
 // Returns true only in local interactive console (not in tests, CI, containers, or DinD).
 func shouldOpenBrowser() bool {
 	// Don't open browsers in CI
-	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != "" {
+	if os.Getenv(environments.EnvCI) != "" || os.Getenv(environments.EnvGitHubActions) != "" || os.Getenv(environments.EnvGitLabCI) != "" {
 		return false
 	}
 
@@ -32,12 +33,12 @@ func shouldOpenBrowser() bool {
 	}
 
 	// Check if running in container mode
-	if os.Getenv("R2R_CONTEXT") == "r2r-cli" {
+	if os.Getenv(environments.EnvR2RContext) == "r2r-cli" {
 		return false
 	}
 
 	// Check explicit no-browser flag
-	if os.Getenv("R2R_NO_BROWSER") == "true" {
+	if os.Getenv(environments.EnvR2RNoBrowser) == "true" {
 		return false
 	}
 

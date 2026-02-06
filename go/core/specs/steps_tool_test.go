@@ -16,6 +16,7 @@ import (
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -46,8 +47,8 @@ func registerToolHooks(sc *godog.ScenarioContext) {
 
 func beforeToolScenario(c context.Context, _ *godog.Scenario) (context.Context, error) {
 	toolState = &toolTestState{
-		origRepoRoot:      os.Getenv("R2R_REPO_ROOT"),
-		origContainerRoot: os.Getenv("R2R_CONTAINER_ROOT"),
+		origRepoRoot:      os.Getenv(environments.EnvR2RRepoRoot),
+		origContainerRoot: os.Getenv(environments.EnvR2RContainerRoot),
 	}
 	config.ClearCache()
 	return c, nil
@@ -142,9 +143,9 @@ func toolSetupAfterIsolation(ctx *eacgodog.TestContext) {
 	}
 
 	toolState.repoRoot = ctx.IsolatedDir
-	os.Setenv("R2R_REPO_ROOT", ctx.IsolatedDir)
+	os.Setenv(environments.EnvR2RRepoRoot, ctx.IsolatedDir)
 	if toolRoot != "" {
-		os.Setenv("R2R_CONTAINER_ROOT", toolRoot)
+		os.Setenv(environments.EnvR2RContainerRoot, toolRoot)
 	}
 }
 

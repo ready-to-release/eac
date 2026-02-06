@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,14 +40,10 @@ type EnvironmentContract struct {
 }
 
 // LoadEnvironmentContract reads and parses the environment contract from the repository.
+// The repoRoot parameter should be the repository root path (from workspace.Detect().Root).
 // It reads directly from .eac/environments.yml.
-func LoadEnvironmentContract() (*EnvironmentContract, error) {
-	eacRoot, err := repository.GetRepoEACConfigRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get EAC config root: %w", err)
-	}
-
-	envPath := filepath.Join(eacRoot, "environments.yml")
+func LoadEnvironmentContract(repoRoot string) (*EnvironmentContract, error) {
+	envPath := filepath.Join(paths.EACConfigPath(repoRoot), "environments.yml")
 	data, err := os.ReadFile(envPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read environment contract from %s: %w", envPath, err)

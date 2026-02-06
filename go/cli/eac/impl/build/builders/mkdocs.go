@@ -30,7 +30,7 @@ func ResolveHostRepoRoot(containerRoot string, logWriter io.Writer) string {
 	if !IsDockerInDocker() {
 		return containerRoot
 	}
-	if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+	if hostRoot := os.Getenv(environments.EnvR2RHostRepoRoot); hostRoot != "" {
 		Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
 		return hostRoot
 	}

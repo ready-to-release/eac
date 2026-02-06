@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // TestScanRepository_SingleModule tests scanning single-module repositories
@@ -616,7 +617,7 @@ func TestScanRepository_EdgeCases(t *testing.T) {
 // TestScanRepository_RealTestRepositories tests against actual test repositories
 func TestScanRepository_RealTestRepositories(t *testing.T) {
 	// Get repo root
-	repoRoot := os.Getenv("R2R_REPO_ROOT")
+	repoRoot := os.Getenv(environments.EnvR2RRepoRoot)
 	if repoRoot == "" {
 		// Try to find it relative to this file
 		cwd, err := os.Getwd()

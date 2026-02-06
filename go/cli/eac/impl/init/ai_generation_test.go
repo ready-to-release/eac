@@ -1,7 +1,7 @@
 //go:build L0 && ov
 // +build L0,ov
 
-// File: go/cli/eac/impl/init/ai_migration_test.go
+// File: go/cli/eac/impl/init/ai_generation_test.go
 package init
 
 import (
@@ -353,4 +353,97 @@ func (p *mockProviderWithCapture) Execute(ctx context.Context, input string, opt
 		p.onExecute(ctx, input)
 	}
 	return p.response, nil
+}
+
+// TestLoadRepositoryContext_WithREADME tests loading context with a README file
+func TestLoadRepositoryContext_WithREADME(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	readmeContent := "# Test Project\n\nThis is a test project description.\nIt has multiple lines."
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README.md"),
+		[]byte(readmeContent),
+		0644,
+	))
+
+	context := loadRepositoryContext(tmpDir)
+
+	assert.Contains(t, context, "## README")
+	assert.Contains(t, context, "Test Project")
+	assert.Contains(t, context, "test project description")
+}
+
+// TestLoadRepositoryContext_NoREADME tests loading context without README
+func TestLoadRepositoryContext_NoREADME(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	context := loadRepositoryContext(tmpDir)
+
+	assert.Contains(t, context, "(No README found)")
+}
+
+// TestLoadRepositoryContext_READMETruncation tests that large READMEs are truncated
+func TestLoadRepositoryContext_READMETruncation(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a README larger than 2000 characters
+	largeContent := strings.Repeat("This is a long README. ", 100) // ~2300 chars
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README.md"),
+		[]byte(largeContent),
+		0644,
+	))
+
+	context := loadRepositoryContext(tmpDir)
+
+	assert.Contains(t, context, "## README")
+	assert.Contains(t, context, "...\n(truncated)")
+	// Should be around 2000 chars + header + truncation message
+	assert.Less(t, len(context), 2100)
+}
+
+// TestLoadRepositoryContext_PriorityOrder tests README file priority
+func TestLoadRepositoryContext_PriorityOrder(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create multiple README files
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README.md"),
+		[]byte("# Markdown README"),
+		0644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README.txt"),
+		[]byte("Text README"),
+		0644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README"),
+		[]byte("Plain README"),
+		0644,
+	))
+
+	context := loadRepositoryContext(tmpDir)
+
+	// Should prefer README.md first
+	assert.Contains(t, context, "Markdown README")
+	assert.NotContains(t, context, "Text README")
+	assert.NotContains(t, context, "Plain README")
+}
+
+// TestLoadRepositoryContext_READMETxtFallback tests fallback to README.txt
+func TestLoadRepositoryContext_READMETxtFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Only create README.txt (no README.md)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tmpDir, "README.txt"),
+		[]byte("Text README content"),
+		0644,
+	))
+
+	context := loadRepositoryContext(tmpDir)
+
+	assert.Contains(t, context, "## README")
+	assert.Contains(t, context, "Text README content")
 }

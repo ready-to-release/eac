@@ -68,6 +68,14 @@ typescript/*/out/
 .idea/
 # Keep .vscode/ for extension development but ignore build artifacts above
 
+# Visual Studio
+.vs/
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
 # Claude Code local settings (personal preferences not shared with team)
 .claude/settings.local.json
 

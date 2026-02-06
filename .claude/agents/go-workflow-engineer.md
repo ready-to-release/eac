@@ -38,17 +38,6 @@ Ensure GitHub workflows:
 
 **Prerequisites**: You must run `/boot` first to initialize the session and test MCP connectivity.
 
-### Context Loading (Performance Optimization)
-
-Before using MCP tools for project discovery:
-
-1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
-2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
-3. **If missing/stale**: Run MCP discovery and consider caching results
-4. **Never cache during boot**: The boot command handles initial caching
-
-**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
-
 ### 1. Verify GitHub MCP Status (from Boot)
 
 I check the boot initialization report for GitHub MCP status:
@@ -183,48 +172,6 @@ I analyze:
 ### Code Snippets
 [Specific YAML snippets for fixes]
 ```
-
-## Structured Output Format
-
-In addition to the workflow analysis, I generate a structured JSON report:
-
-**File**: `out/claude/go-workflow-engineer-<timestamp>.json`
-
-**Schema**: `.claude/schemas/agent-result.json`
-
-**Contents**:
-```json
-{
-  "agent": "go-workflow-engineer",
-  "task": "Brief description of the workflow analysis task",
-  "status": "success|warning|error",
-  "timestamp": "ISO-8601 timestamp",
-  "findings": [
-    {
-      "severity": "critical|high|medium|low|info",
-      "category": "performance|security|correctness",
-      "location": "workflow-name.yaml:line or job-name",
-      "message": "Workflow issue or optimization opportunity",
-      "recommendation": "Suggested fix or improvement"
-    }
-  ],
-  "metrics": {
-    "duration_seconds": 22.4,
-    "items_analyzed": 15,
-    "findings_by_severity": { "high": 2, "medium": 5, "low": 8 }
-  },
-  "summary": "Workflow analysis summary",
-  "artifacts": [
-    {
-      "path": "out/workflow-analysis-<workflow>.md",
-      "type": "report",
-      "description": "Detailed workflow analysis report"
-    }
-  ]
-}
-```
-
-**Purpose**: Track workflow health over time, measure CI/CD performance, and identify recurring issues.
 
 ### Batch Analysis Mode
 

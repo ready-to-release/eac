@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/conf"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 // ContainerMode defines how the container should be configured.
@@ -53,7 +54,7 @@ func NewContainerHost() (*ContainerHost, error) {
 	clientOpts = append(clientOpts, client.WithAPIVersionNegotiation())
 
 	// Override Docker host if R2R_DOCKER_HOST is set
-	if dockerHost := os.Getenv("R2R_DOCKER_HOST"); dockerHost != "" {
+	if dockerHost := os.Getenv(envconsts.EnvR2RDockerHost); dockerHost != "" {
 		clientOpts = append(clientOpts, client.WithHost(dockerHost))
 		logging.Debugf("Using custom Docker host from R2R_DOCKER_HOST: docker_host=%s", dockerHost)
 	}

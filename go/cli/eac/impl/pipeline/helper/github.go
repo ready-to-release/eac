@@ -197,7 +197,7 @@ func (m *MockGitHubCLI) WatchRun(runID string) error {
 func (m *MockGitHubCLI) WatchRunWithTimeout(runID string, timeoutSeconds int) error {
 	// Check if we should simulate a timeout
 	// For testing, we can use an environment variable
-	if os.Getenv("R2R_MOCK_TIMEOUT") == "true" {
+	if os.Getenv(environments.EnvR2RMockTimeout) == "true" {
 		return fmt.Errorf("timeout exceeded (%d seconds) waiting for run %s", timeoutSeconds, runID)
 	}
 
@@ -208,7 +208,7 @@ func (m *MockGitHubCLI) WatchRunWithTimeout(runID string, timeoutSeconds int) er
 // GetCommitSHA simulates getting a commit SHA for a ref.
 func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 	// Check if we should simulate invalid ref
-	if os.Getenv("R2R_MOCK_INVALID_REF") == "true" {
+	if os.Getenv(environments.EnvR2RMockInvalidRef) == "true" {
 		return "", fmt.Errorf("not found: invalid ref %s", ref)
 	}
 
@@ -235,7 +235,7 @@ func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error
 	}
 
 	// Check if we should simulate failing workflows
-	failingWorkflow := os.Getenv("R2R_MOCK_FAILING_WORKFLOW")
+	failingWorkflow := os.Getenv(environments.EnvR2RMockFailingWorkflow)
 
 	// Read workflows directory to find actual workflows
 	workflowsDir := filepath.Join(m.repoPath, ".github", "workflows")

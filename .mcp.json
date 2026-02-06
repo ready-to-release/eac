@@ -5,7 +5,7 @@
       "command": "go",
       "args": [
         "run",
-        "./go/eac/mcp/commands/main.go"
+        "./go/mcp/commands/main.go"
       ],
       "env": {
         "EAC_USE_DIRECT_BINARY": "true"

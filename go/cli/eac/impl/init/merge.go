@@ -1,0 +1,191 @@
+package init
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/core/config"
+)
+
+// MergeResult tracks changes from re-initialization
+type MergeResult struct {
+	ModulesAdded   []string
+	ModulesUpdated []string
+	ModulesRemoved []string
+	ComponentsAdded int
+}
+
+// mergeConfigs merges new config into existing, preserving user edits
+func mergeConfigs(workspaceRoot string, existing, new *config.RepositoryConfig) (*config.RepositoryConfig, *MergeResult) {
+	result := &MergeResult{
+		ModulesAdded:   []string{},
+		ModulesUpdated: []string{},
+		ModulesRemoved: []string{},
+	}
+
+	merged := &config.RepositoryConfig{
+		Repository: existing.Repository, // Preserve repository settings
+		Paths:      existing.Paths,
+		Conventions: existing.Conventions,
+		Modules:    []config.Module{},
+	}
+
+	// Index existing modules by moniker
+	existingModules := make(map[string]*config.Module)
+	for i := range existing.Modules {
+		mod := &existing.Modules[i]
+		existingModules[mod.Moniker] = mod
+	}
+
+	// Merge modules
+	for i := range new.Modules {
+		newMod := &new.Modules[i]
+
+		if existingMod, found := existingModules[newMod.Moniker]; found {
+			// Module exists - merge preserving user edits
+			mergedMod := mergeModule(existingMod, newMod)
+			merged.Modules = append(merged.Modules, mergedMod)
+			result.ModulesUpdated = append(result.ModulesUpdated, newMod.Moniker)
+
+			delete(existingModules, newMod.Moniker) // Mark as processed
+		} else {
+			// New module - add
+			merged.Modules = append(merged.Modules, *newMod)
+			result.ModulesAdded = append(result.ModulesAdded, newMod.Moniker)
+		}
+	}
+
+	// Remaining modules in existingModules were not found in new config
+	// Check if they still exist in filesystem before removing
+	for moniker, existingMod := range existingModules {
+		if moduleStillExists(workspaceRoot, existingMod) {
+			// Keep module even though scanner didn't detect it
+			merged.Modules = append(merged.Modules, *existingMod)
+			log.Warn(fmt.Sprintf("   Keeping module %s (not detected by scanner but still in config)", moniker))
+		} else {
+			// Module no longer exists - remove
+			result.ModulesRemoved = append(result.ModulesRemoved, moniker)
+		}
+	}
+
+	return merged, result
+}
+
+// mergeModule merges individual module, preserving user customizations
+func mergeModule(existing, new *config.Module) config.Module {
+	merged := *new // Start with new AI-generated content
+
+	// Preserve user customizations
+	merged.Name = existing.Name               // User may have customized name
+	merged.Versioning = existing.Versioning   // User versioning settings
+
+	// Merge dependencies (keep user-added deps)
+	merged.DependsOn = mergeDependencies(existing.DependsOn, new.DependsOn)
+
+	// Preserve component customizations
+	merged.Components = mergeComponents(existing.Components, new.Components)
+
+	return merged
+}
+
+// mergeDependencies combines existing and new dependencies
+func mergeDependencies(existing, new []string) []string {
+	seen := make(map[string]bool)
+	merged := []string{}
+
+	// Add all new dependencies
+	for _, dep := range new {
+		if !seen[dep] {
+			merged = append(merged, dep)
+			seen[dep] = true
+		}
+	}
+
+	// Add existing dependencies not in new (user-added)
+	for _, dep := range existing {
+		if !seen[dep] {
+			merged = append(merged, dep)
+			seen[dep] = true
+		}
+	}
+
+	return merged
+}
+
+// mergeComponents preserves user customizations in components
+func mergeComponents(existing, new config.ModuleComponents) config.ModuleComponents {
+	merged := make(config.ModuleComponents)
+
+	// Start with all new components
+	for name, comp := range new {
+		merged[name] = comp
+	}
+
+	// Preserve any user customizations from existing components
+	for name, existingComp := range existing {
+		if _, found := merged[name]; !found {
+			// Component only in existing - keep it (user may have added manually)
+			merged[name] = existingComp
+		}
+		// If component exists in both, we keep the new one (AI-generated)
+		// This allows AI to update component types and patterns
+	}
+
+	return merged
+}
+
+// moduleStillExists checks if module files are still present
+func moduleStillExists(workspaceRoot string, module *config.Module) bool {
+	// Check if any component root still exists
+	for _, component := range module.Components {
+		if component == nil {
+			continue
+		}
+		componentRoot := filepath.Join(workspaceRoot, component.Root)
+		if _, err := os.Stat(componentRoot); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// showMergeResult displays summary of changes
+func showMergeResult(result *MergeResult) {
+	log.Info("")
+	log.Info("📊 Changes Summary:")
+
+	if len(result.ModulesAdded) > 0 {
+		log.Info(fmt.Sprintf("   ✓ %d module(s) added:", len(result.ModulesAdded)))
+		for _, moniker := range result.ModulesAdded {
+			log.Info(fmt.Sprintf("      - %s", moniker))
+		}
+	}
+
+	if len(result.ModulesUpdated) > 0 {
+		log.Info(fmt.Sprintf("   ✓ %d module(s) updated:", len(result.ModulesUpdated)))
+		for i, moniker := range result.ModulesUpdated {
+			if i < 3 {
+				log.Info(fmt.Sprintf("      - %s", moniker))
+			} else if i == 3 {
+				log.Info(fmt.Sprintf("      ... and %d more", len(result.ModulesUpdated)-3))
+				break
+			}
+		}
+	}
+
+	if len(result.ModulesRemoved) > 0 {
+		log.Info(fmt.Sprintf("   ✗ %d module(s) removed:", len(result.ModulesRemoved)))
+		for _, moniker := range result.ModulesRemoved {
+			log.Info(fmt.Sprintf("      - %s", moniker))
+		}
+	}
+
+	if len(result.ModulesAdded) == 0 && len(result.ModulesRemoved) == 0 {
+		log.Info("   No module structure changes")
+	}
+
+	log.Info("")
+	log.Info("📋 Review changes:")
+	log.Info("   git diff .eac/repository.yml")
+}

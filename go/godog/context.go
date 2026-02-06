@@ -455,7 +455,7 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 	fmt.Fprintf(os.Stderr, "  Expected binary:    %s\n", binaryPath)
 	fmt.Fprintf(os.Stderr, "  OriginalRepoRoot:   %s\n", c.OriginalRepoRoot)
 	fmt.Fprintf(os.Stderr, "  IsolatedDir:        %s\n", c.IsolatedDir)
-	fmt.Fprintf(os.Stderr, "  R2R_CONTAINER_ROOT: %s\n", os.Getenv("R2R_CONTAINER_ROOT"))
+	fmt.Fprintf(os.Stderr, "  R2R_CONTAINER_ROOT: %s\n", os.Getenv(environments.EnvR2RContainerRoot))
 	fmt.Fprintf(os.Stderr, "\n")
 
 	// Check tools directory

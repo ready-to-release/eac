@@ -28,6 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -516,8 +517,8 @@ func performAutoCommit(workspaceRoot, message string) int {
 // Returns empty strings if not configured.
 func getGitAuthorInfo(workspaceRoot string) (name, email string) {
 	// Try to get from environment first (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
-	name = os.Getenv("GIT_AUTHOR_NAME")
-	email = os.Getenv("GIT_AUTHOR_EMAIL")
+	name = os.Getenv(environments.EnvGitAuthorName)
+	email = os.Getenv(environments.EnvGitAuthorEmail)
 	if name != "" && email != "" {
 		return name, email
 	}

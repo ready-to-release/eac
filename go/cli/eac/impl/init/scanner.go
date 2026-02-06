@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-enry/go-enry/v2"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -25,7 +24,6 @@ type ModuleInfo struct {
 	Language  string   `json:"language"`   // Primary language (go, python, rust, typescript, dotnet, java)
 	BuildTool string   `json:"build_tool"` // Build tool (go, cargo, npm, pip, dotnet, maven, gradle)
 	Files     []string `json:"files"`      // Key files found (go.mod, Cargo.toml, etc.)
-	Framework string   `json:"framework"`  // Framework hint (if detectable)
 }
 
 // packageManagerFiles maps file patterns to language and build tool information
@@ -240,7 +238,6 @@ func detectGoModule(repoRoot, goModPath string) (*ModuleInfo, error) {
 		Language:  "go",
 		BuildTool: "go",
 		Files:     []string{"go.mod"},
-		Framework: "",
 	}, nil
 }
 
@@ -265,8 +262,7 @@ func detectPythonModule(repoRoot, tomlPath string) (*ModuleInfo, error) {
 			Language:  "python",
 			BuildTool: "pip",
 			Files:     []string{"pyproject.toml"},
-			Framework: "",
-		}, nil
+			}, nil
 	}
 
 	moduleName := config.Project.Name
@@ -279,7 +275,6 @@ func detectPythonModule(repoRoot, tomlPath string) (*ModuleInfo, error) {
 		Language:  "python",
 		BuildTool: "pip",
 		Files:     []string{"pyproject.toml"},
-		Framework: "",
 	}, nil
 }
 
@@ -294,7 +289,6 @@ func detectPythonSetupModule(repoRoot, setupPath string) (*ModuleInfo, error) {
 		Language:  "python",
 		BuildTool: "pip",
 		Files:     []string{"setup.py"},
-		Framework: "",
 	}, nil
 }
 
@@ -319,8 +313,7 @@ func detectRustModule(repoRoot, cargoPath string) (*ModuleInfo, error) {
 			Language:  "rust",
 			BuildTool: "cargo",
 			Files:     []string{"Cargo.toml"},
-			Framework: "",
-		}, nil
+			}, nil
 	}
 
 	moduleName := config.Package.Name
@@ -333,7 +326,6 @@ func detectRustModule(repoRoot, cargoPath string) (*ModuleInfo, error) {
 		Language:  "rust",
 		BuildTool: "cargo",
 		Files:     []string{"Cargo.toml"},
-		Framework: "",
 	}, nil
 }
 
@@ -356,8 +348,7 @@ func detectNodeModule(repoRoot, packagePath string) (*ModuleInfo, error) {
 			Language:  "javascript",
 			BuildTool: "npm",
 			Files:     []string{"package.json"},
-			Framework: "",
-		}, nil
+			}, nil
 	}
 
 	moduleName := pkg.Name
@@ -381,7 +372,6 @@ func detectNodeModule(repoRoot, packagePath string) (*ModuleInfo, error) {
 		Language:  language,
 		BuildTool: "npm",
 		Files:     files,
-		Framework: "",
 	}, nil
 }
 
@@ -396,7 +386,6 @@ func detectDotNetModule(repoRoot, projPath string) (*ModuleInfo, error) {
 		Language:  "dotnet",
 		BuildTool: "dotnet",
 		Files:     []string{fileName},
-		Framework: "",
 	}, nil
 }
 
@@ -411,7 +400,6 @@ func detectMavenModule(repoRoot, pomPath string) (*ModuleInfo, error) {
 		Language:  "java",
 		BuildTool: "maven",
 		Files:     []string{"pom.xml"},
-		Framework: "",
 	}, nil
 }
 
@@ -425,47 +413,5 @@ func detectGradleModule(repoRoot, gradlePath string) (*ModuleInfo, error) {
 		Language:  "java",
 		BuildTool: "gradle",
 		Files:     []string{"build.gradle"},
-		Framework: "",
 	}, nil
-}
-
-// detectLanguage uses go-enry to detect the primary language in a directory
-// This is a helper function for future enhancements
-func detectLanguage(dirPath string) (string, error) {
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		return "", err
-	}
-
-	// Collect language statistics
-	languageCounts := make(map[string]int)
-
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		filePath := filepath.Join(dirPath, file.Name())
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			continue
-		}
-
-		language := enry.GetLanguage(file.Name(), content)
-		if language != "" && !enry.IsVendor(file.Name()) {
-			languageCounts[language]++
-		}
-	}
-
-	// Find the most common language
-	maxCount := 0
-	primaryLanguage := ""
-	for lang, count := range languageCounts {
-		if count > maxCount {
-			maxCount = count
-			primaryLanguage = lang
-		}
-	}
-
-	return strings.ToLower(primaryLanguage), nil
 }

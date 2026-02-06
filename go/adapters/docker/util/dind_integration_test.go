@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // TestDinDIntegration_PortAllocation tests port allocation in Docker-in-Docker environment
@@ -300,7 +301,7 @@ func TestDinDIntegration_ParallelImageOperations(t *testing.T) {
 // Helper to create a real Docker client directly (not wrapped in interface)
 func createRealDockerClientDirect() (*client.Client, error) {
 	// Check if running in CI or test environment
-	if os.Getenv("SKIP_DOCKER_TESTS") != "" {
+	if os.Getenv(environments.EnvSkipDockerTests) != "" {
 		return nil, fmt.Errorf("Docker tests disabled via SKIP_DOCKER_TESTS")
 	}
 

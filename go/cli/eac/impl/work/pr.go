@@ -40,6 +40,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 func init() {
@@ -268,7 +269,7 @@ func parsePRConfig() (*prConfig, error) {
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments
 	// Check R2R_PWD first (for test isolation)
-	cwd := os.Getenv("R2R_PWD")
+	cwd := os.Getenv(environments.EnvR2RPWD)
 	if cwd == "" {
 		// Fall back to actual working directory
 		var err error
@@ -305,7 +306,7 @@ func validatePREnvironment(config *prConfig) error {
 	// Check for uncommitted changes
 	// Check R2R_PWD first (for test isolation)
 	config.base.Logger.Debug("Checking for uncommitted changes")
-	cwd := os.Getenv("R2R_PWD")
+	cwd := os.Getenv(environments.EnvR2RPWD)
 	if cwd == "" {
 		var wdErr error
 		cwd, wdErr = os.Getwd()

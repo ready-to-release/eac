@@ -19,6 +19,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
 )
 
@@ -62,7 +63,7 @@ func main() {
 
 	// Check if we have an original PWD from the CLI wrapper
 	// If not, use current directory
-	InitialWorkingDir = os.Getenv("R2R_PWD")
+	InitialWorkingDir = os.Getenv(environments.EnvR2RPWD)
 	if InitialWorkingDir == "" {
 		var err error
 		InitialWorkingDir, err = os.Getwd()

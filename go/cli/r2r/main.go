@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/cli/r2r/cmd"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 )
 
 func main() {
@@ -15,9 +16,9 @@ func main() {
 	// Log if we fixed a bad call
 	if len(originalArgs) != len(filteredArgs) {
 		// We'll log this after logger is initialized in cmd.Execute()
-		os.Setenv("R2R_FIXED_REDIRECT", "true")
-		os.Setenv("R2R_ORIGINAL_ARGS", argsToString(originalArgs))
-		os.Setenv("R2R_FILTERED_ARGS", argsToString(filteredArgs))
+		os.Setenv(envconsts.EnvR2RFixedRedirect, "true")
+		os.Setenv(envconsts.EnvR2ROriginalArgs, argsToString(originalArgs))
+		os.Setenv(envconsts.EnvR2RFilteredArgs, argsToString(filteredArgs))
 	}
 
 	os.Args = filteredArgs

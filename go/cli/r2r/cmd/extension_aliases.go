@@ -6,6 +6,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/conf"
 	"github.com/ready-to-release/eac/go/cli/r2r/internal/logging"
+	"github.com/ready-to-release/eac/go/cli/r2r/internal/envconsts"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +65,7 @@ Examples:
 func InitializeExtensionAliases() {
 	// Try to load config early for alias creation
 	// This is best-effort - if it fails, we just won't have aliases
-	configFile := os.Getenv("R2R_CONFIG")
+	configFile := os.Getenv(envconsts.EnvR2RConfig)
 	if configFile == "" {
 		// Config location: .r2r/r2r-cli.yml
 		possibleConfigs := []string{

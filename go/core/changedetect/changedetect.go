@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // GitStateProvider abstracts git operations for testing and flexibility.
@@ -154,7 +156,7 @@ func (d *Detector) DetectChanges(ctx context.Context, opts DetectOptions) (*Chan
 	}
 
 	// Debug output
-	debugDetect := os.Getenv("DEBUG_CHANGEDETECT") != ""
+	debugDetect := os.Getenv(environments.EnvDebugChangeDetect) != ""
 	if debugDetect {
 		fmt.Fprintf(os.Stderr, "[DEBUG changedetect] Modules: %v\n", opts.Modules)
 		fmt.Fprintf(os.Stderr, "[DEBUG changedetect] PreviousState nil: %v\n", opts.PreviousState == nil)
