@@ -4,9 +4,10 @@ package internal
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 )
 
 // Worktree represents a git worktree.
@@ -151,8 +152,8 @@ func GetCurrentBranch(path string) (string, error) {
 
 // EnsureInGitRepo checks if we're in a git repository.
 func EnsureInGitRepo() error {
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
-	if err := cmd.Run(); err != nil {
+	_, err := gitexec.Run(".", "rev-parse", "--git-dir")
+	if err != nil {
 		return fmt.Errorf("not in a git repository")
 	}
 	return nil

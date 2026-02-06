@@ -356,6 +356,20 @@ func mergeToolConfig(base, override *ToolConfig) {
 		return
 	}
 
+	// Merge executor-mode (override wins if set)
+	if override.ExecutorMode != "" {
+		base.ExecutorMode = override.ExecutorMode
+	}
+
+	// Merge credentials (additive: override adds to base)
+	if override.Credentials != nil {
+		if base.Credentials == nil {
+			base.Credentials = &CredentialsConfig{}
+		}
+		base.Credentials.HostEnv = mergeUniqueStrings(base.Credentials.HostEnv, override.Credentials.HostEnv)
+		base.Credentials.CIEnv = mergeUniqueStrings(base.Credentials.CIEnv, override.Credentials.CIEnv)
+	}
+
 	// Merge system-tools
 	for id, tool := range override.SystemTools {
 		if tool.ID == "" {
@@ -468,19 +482,35 @@ func mergeToolAssignment(base, override *ToolAssignment) {
 
 // InitializeFromConfig creates and initializes a Registry and Resolver from configuration.
 // This is the main entry point for using the tool system.
-func InitializeFromConfig(repoRoot, configRoot string) (*DefaultRegistry, *DefaultResolver, error) {
+// Also returns the loaded ToolConfig for access to credentials and other global settings.
+func InitializeFromConfig(repoRoot, configRoot string) (*DefaultRegistry, *DefaultResolver, *ToolConfig, error) {
 	config, err := LoadToolConfig(repoRoot, configRoot)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading tool config: %w", err)
+		return nil, nil, nil, fmt.Errorf("loading tool config: %w", err)
 	}
 
 	registry := NewRegistry()
 	if err := registry.RegisterFromConfig(config); err != nil {
-		return nil, nil, fmt.Errorf("registering tools: %w", err)
+		return nil, nil, nil, fmt.Errorf("registering tools: %w", err)
 	}
 
 	resolver := NewResolver(registry)
 	resolver.LoadFromConfig(config, true) // Load as defaults
 
-	return registry, resolver, nil
+	return registry, resolver, config, nil
+}
+
+// mergeUniqueStrings appends items from add to base, skipping duplicates.
+func mergeUniqueStrings(base, add []string) []string {
+	seen := make(map[string]bool, len(base))
+	for _, s := range base {
+		seen[s] = true
+	}
+	for _, s := range add {
+		if !seen[s] {
+			base = append(base, s)
+			seen[s] = true
+		}
+	}
+	return base
 }

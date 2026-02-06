@@ -22,6 +22,8 @@
 <p align="center">
   <a href="https://github.com/ready-to-release/eac/releases?q=r2r-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=r2r-cli/*&style=for-the-badge&logo=gnubash&logoColor=white&label=r2r-cli&color=3b82f6" alt="r2r-cli"></a>
   &nbsp;
+  <a href="https://github.com/ready-to-release/eac/releases?q=eac-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-cli/*&style=for-the-badge&logo=gnubash&logoColor=white&label=eac-cli&color=22c55e" alt="eac-cli"></a>
+  &nbsp;
   <a href="https://github.com/ready-to-release/eac/pkgs/container/ext-eac"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&style=for-the-badge&logo=docker&logoColor=white&label=ext-eac&color=8b5cf6" alt="ext-eac"></a>
   &nbsp;
   <a href="https://ready-to-release.github.io/eac/"><img src="https://img.shields.io/badge/docs-live-22c55e?style=for-the-badge&logo=materialformkdocs&logoColor=white" alt="docs"></a>
@@ -104,6 +106,8 @@ Up and running in under 5 minutes.
 <summary><b>View install commands</b></summary>
 <br>
 
+**R2R CLI** (extension manager + EAC via Docker)
+
 > **Linux / macOS**
 
 ```bash
@@ -114,6 +118,22 @@ curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/s
 
 ```powershell
 irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
+```
+
+---
+
+**EAC CLI** (standalone, no Docker required)
+
+> **Linux / macOS**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
+```
+
+> **Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac/install.ps1 | iex
 ```
 
 </details>

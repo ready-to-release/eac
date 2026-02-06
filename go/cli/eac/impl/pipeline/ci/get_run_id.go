@@ -16,12 +16,11 @@
 package ci
 
 import (
-	"errors"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -84,22 +83,14 @@ func PipelineCIGetRunID() int {
 
 func findRunIDByWorkflowAndSHA(workflow, sha, workspaceRoot string) (string, error) {
 	// Get the successful run for this workflow at this commit SHA
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--commit", sha,
 		"--status", "success",
 		"--json", "databaseId",
 		"-q", ".[0].databaseId",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
-		// Try to get more info about the error
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			return "", newError("failed to query GitHub: %s", string(exitErr.Stderr))
-		}
 		return "", newError("failed to query GitHub: %v", err)
 	}
 

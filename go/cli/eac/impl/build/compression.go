@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // ProcessArtifactDerivations handles deriving and compressing artifacts after build.
@@ -189,19 +191,26 @@ func compressArtifact(art config.Artifact, targetPath string, logWriter io.Write
 
 // stripArtifact strips debug symbols from a binary.
 func stripArtifact(targetPath string, logWriter io.Writer) error {
-	stripPath, err := exec.LookPath("strip")
-	if err != nil {
+	if _, err := exec.LookPath("strip"); err != nil {
 		return fmt.Errorf("strip command not found")
 	}
 
 	fmt.Fprintf(logWriter, "  Stripping debug symbols: %s\n", filepath.Base(targetPath))
 
-	cmd := exec.Command(stripPath, targetPath)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("strip")
+	execCtx := &tool.ExecutionContext{
+		LogWriter:     logWriter,
+		StdoutWriter:  logWriter,
+		StderrWriter:  logWriter,
+		ArgsOverrides: []string{targetPath},
+	}
 
-	if err := cmd.Run(); err != nil {
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
 		return fmt.Errorf("strip command failed: %w", err)
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("strip command failed with exit code %d", result.ExitCode)
 	}
 
 	return nil
@@ -209,19 +218,26 @@ func stripArtifact(targetPath string, logWriter io.Writer) error {
 
 // upxCompressArtifact compresses a binary with UPX.
 func upxCompressArtifact(targetPath string, logWriter io.Writer) error {
-	upxPath, err := exec.LookPath("upx")
-	if err != nil {
+	if _, err := exec.LookPath("upx"); err != nil {
 		return fmt.Errorf("upx command not found")
 	}
 
 	fmt.Fprintf(logWriter, "  Compressing with UPX: %s\n", filepath.Base(targetPath))
 
-	cmd := exec.Command(upxPath, "--best", "--lzma", targetPath)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("upx")
+	execCtx := &tool.ExecutionContext{
+		LogWriter:     logWriter,
+		StdoutWriter:  logWriter,
+		StderrWriter:  logWriter,
+		ArgsOverrides: []string{"--best", "--lzma", targetPath},
+	}
 
-	if err := cmd.Run(); err != nil {
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
 		return fmt.Errorf("upx command failed: %w", err)
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("upx command failed with exit code %d", result.ExitCode)
 	}
 
 	return nil

@@ -35,13 +35,13 @@ package get
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
@@ -222,9 +222,7 @@ func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptio
 
 // getChangedFiles returns list of modified/unstaged files from git.
 func getChangedFiles(workspaceRoot string) ([]string, error) {
-	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", "HEAD")
 	if err != nil {
 		return nil, err
 	}

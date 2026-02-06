@@ -56,7 +56,7 @@ Output: manual-test-scenarios.json
                                           Output: manual-results.json
 
                                                               Input: manual-results.json
-                                                              Output: test.manifest.json
+                                                              Output: uow.manifest.json
 ```
 
 **Data Flow**:
@@ -147,7 +147,7 @@ Use `--force` to overwrite existing results.
 ### Phase 4: Merge (test merge-results)
 
 **Input**: Imported results at `test-results/<module>/<version>/manual-results.json`
-**Output**: Updated `out/test/<module>/test.manifest.json`
+**Output**: Updated `out/test/<module>/manual-merge/uow.manifest.json`
 **Purpose**: Integrate manual results with automated test results
 
 **Merge Behavior**:
@@ -442,7 +442,7 @@ eac test merge-results --module <module> --version <version>
 | -------------------- | -------------------------- | ----------------------------------------------------- |
 | `test export-manual` | Generate scenario list     | `manual-test-scenarios.{json\|csv\|md}`               |
 | `test import-manual` | Validate and store results | `test-results/<module>/<version>/manual-results.json` |
-| `test merge-results` | Update test manifest       | `out/test/<module>/test.manifest.json`                |
+| `test merge-results` | Update test manifest       | `out/test/<module>/manual-merge/uow.manifest.json`   |
 
 ### Export Command
 
@@ -490,7 +490,7 @@ eac test merge-results --module <module> --version <version>
 
 ### Manifest Structure
 
-**File**: `out/test/<module>/test.manifest.json`
+**File**: `out/test/<module>/*/uow.manifest.json`
 
 **Purpose**: Unified test results combining automated tests (unit, integration, acceptance) with manual test results.
 

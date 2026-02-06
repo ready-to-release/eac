@@ -205,7 +205,7 @@ func TestRunComponents_CounterMatchesTotal(t *testing.T) {
 
 	// Track how many workers actually executed vs short-circuited
 	var executedCount int32
-	worker := func(module, component string, logWriter io.Writer) int {
+	worker := func(ctx context.Context, module, component string, logWriter io.Writer) int {
 		atomic.AddInt32(&executedCount, 1)
 		time.Sleep(10 * time.Millisecond) // Simulate work
 		return 0

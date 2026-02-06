@@ -91,6 +91,9 @@ func (m *observerMockConsole) SendSummary(data *SummaryData) {
 func (m *observerMockConsole) SetInitSummary(summary *InitSummary) {
 	m.initSummaryCalls = append(m.initSummaryCalls, summary)
 }
+func (m *observerMockConsole) SendConfigReady(commandName, executionContext, parallelismMode string,
+	effectiveWorkers, weightedCapacity int, outputDir string) {
+}
 
 func TestTUIObserverImplementsExecutionObserver(t *testing.T) {
 	mock := newMockConsole()
@@ -164,9 +167,6 @@ func TestTUIObserverUnitQueuedEvent(t *testing.T) {
 		Time:        now,
 		ID:          "build:core:go:go",
 		DisplayName: "core:go",
-		Module:      "core",
-		Component:   "go",
-		Handler:     "go",
 		Weight:      4,
 	})
 

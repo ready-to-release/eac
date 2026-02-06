@@ -59,9 +59,10 @@ Results are written to `out/lint/<module>/`:
 
 ```text
 out/lint/eac-commands/
-├── lint.log              # Full linter output
-├── lint.json             # Structured results
-└── lint.manifest.json    # Execution metadata
+├── go-golangci-lint/     # UoW directory
+│   ├── uow.manifest.json  # Execution metadata
+│   ├── lint.log            # Full linter output
+│   └── lint.json           # Structured results
 ```
 
 ### lint.json Structure

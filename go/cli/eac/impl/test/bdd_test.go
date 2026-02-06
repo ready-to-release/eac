@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/get" // register get commands
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
 
@@ -32,4 +34,13 @@ func TestFeatures(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+// registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.
+func registryLookup(cmdName string) (func() int, bool) {
+	reg := registry.GetCommand(cmdName)
+	if reg == nil {
+		return nil, false
+	}
+	return reg.Func, true
 }

@@ -2,17 +2,17 @@
 package testers
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/core/platform"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // Writeln writes a formatted string with platform-specific line ending to the writer.
@@ -36,25 +36,25 @@ func RunTestCommandWithCapture(dir string, logWriter io.Writer, name string, arg
 	// Create multi-writer to capture output while also writing to log
 	captureWriter := io.MultiWriter(logWriter, &outputBuffer)
 
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-
 	// Create multi-writer for stderr to capture errors in log
 	stderrWriter := io.MultiWriter(os.Stderr, captureWriter)
 
-	cmd.Stdout = captureWriter
-	cmd.Stderr = stderrWriter
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(name)
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    dir,
+		StdoutWriter:  captureWriter,
+		StderrWriter:  stderrWriter,
+		ArgsOverrides: args,
+	}
 
 	exitCode := 0
-	if err := cmd.Run(); err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			exitCode = exitErr.ExitCode()
-			Writeln(logWriter, "\n❌ Tests exited with code %d (error: %v)", exitCode, err)
-		} else {
-			Writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
-			exitCode = 1
-		}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
+		Writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
+		exitCode = 1
+	} else if result.ExitCode != 0 {
+		exitCode = result.ExitCode
+		Writeln(logWriter, "\n❌ Tests exited with code %d", exitCode)
 	} else {
 		Writeln(logWriter, "\n✅ Tests passed")
 	}
@@ -66,31 +66,35 @@ func RunTestCommandWithCapture(dir string, logWriter io.Writer, name string, arg
 // Output is written to both console and log file via the provided writer.
 // Returns exit code (0 = success, non-zero = failure).
 func RunTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]string, name string, args ...string) int {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(name)
 
-	// Set custom environment variables
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+	// Build full environment
+	fullEnv := os.Environ()
+	fullEnv = append(fullEnv, "R2R_TEST_LOGGING_ACTIVE=true")
 	if env != nil {
 		for key, value := range env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+			fullEnv = append(fullEnv, fmt.Sprintf("%s=%s", key, value))
 		}
 	}
 
 	// Create multi-writer for stderr to capture errors in log
 	stderrWriter := io.MultiWriter(os.Stderr, logWriter)
 
-	cmd.Stdout = logWriter
-	cmd.Stderr = stderrWriter
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    dir,
+		StdoutWriter:  logWriter,
+		StderrWriter:  stderrWriter,
+		FullEnv:       fullEnv,
+		ArgsOverrides: args,
+	}
 
-	if err := cmd.Run(); err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			return exitErr.ExitCode()
-		}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
 		Writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
 		return 1
+	}
+	if result.ExitCode != 0 {
+		return result.ExitCode
 	}
 
 	Writeln(logWriter, "\n✅ Tests passed")

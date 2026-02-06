@@ -347,18 +347,9 @@ paths:
 	})
 
 	sc.Step(`^module "([^"]*)" has fresh test results with @control tags$`, func(module string) error {
-		// Create both cucumber results AND test manifest with fresh timestamp
-		testDir := filepath.Join("out", "test", module)
-
-		// Create test manifest
-		manifest := createMockTestManifest(module, time.Now(), []string{"ac-2"})
-		if err := eacgodog.CreateFile(ctx, filepath.Join(testDir, "test.manifest.json"), manifest); err != nil {
-			return err
-		}
-
-		// Create cucumber results (for compatibility)
+		// Create UoW manifest + cucumber artifact with fresh timestamp
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		return eacgodog.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
+		return createMockTestUoW(ctx, module, time.Now(), cucumberJSON)
 	})
 
 	sc.Step(`^module "([^"]*)" has no test results$`, func(module string) error {
@@ -367,26 +358,10 @@ paths:
 	})
 
 	sc.Step(`^module "([^"]*)" has test results older than 24 hours$`, func(module string) error {
-		// Create test results with old timestamp (26 hours ago to ensure it's > 24 hours)
+		// Create UoW manifest + cucumber artifact with old timestamp (26 hours ago)
 		oldTime := time.Now().Add(-26 * time.Hour)
-		testDir := filepath.Join("out", "test", module)
-
-		// Create test manifest with old timestamp
-		manifest := createMockTestManifest(module, oldTime, []string{"ac-2"})
-		manifestPath := filepath.Join(testDir, "test.manifest.json")
-		if err := eacgodog.CreateFile(ctx, manifestPath, manifest); err != nil {
-			return err
-		}
-
-		// Create cucumber results (for compatibility)
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		cucumberPath := filepath.Join(testDir, "results.cucumber.json")
-		if err := eacgodog.CreateFile(ctx, cucumberPath, cucumberJSON); err != nil {
-			return err
-		}
-
-		// Note: No need to set file modification time with Chtimes - the manifest already has TestTime field
-		return nil
+		return createMockTestUoW(ctx, module, oldTime, cucumberJSON)
 	})
 
 	sc.Step(`^module "([^"]*)" has fresh security scan results$`, func(module string) error {
@@ -436,17 +411,9 @@ paths:
 
 		// Create fresh evidence for each module
 		for _, module := range modules {
-			testDir := filepath.Join("out", "test", module)
-
-			// Create test manifest
-			manifest := createMockTestManifest(module, time.Now(), []string{"ac-2"})
-			if err := eacgodog.CreateFile(ctx, filepath.Join(testDir, "test.manifest.json"), manifest); err != nil {
-				return err
-			}
-
-			// Create cucumber results (for compatibility)
+			// Create UoW manifest + cucumber artifact
 			cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-			if err := eacgodog.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON); err != nil {
+			if err := createMockTestUoW(ctx, module, time.Now(), cucumberJSON); err != nil {
 				return err
 			}
 
@@ -635,71 +602,43 @@ func createMockCucumberResults(controlTags []string) string {
 	return strings.ReplaceAll(cucumberResultsTemplate, "{{TAGS}}", tags)
 }
 
-// createMockTestManifest creates a mock test manifest with given timestamp and control tags.
-func createMockTestManifest(module string, testTime time.Time, controlTags []string) string {
-	// Build tags array
-	tagsArray := make([]string, 0, len(controlTags))
-	for _, tag := range controlTags {
-		tagsArray = append(tagsArray, fmt.Sprintf("@control(%s)", tag))
+// createMockTestUoW creates a UoW manifest + cucumber artifact for a module.
+// This produces the directory structure that testview.LoadModuleTestView() expects:
+// out/test/<module>/gherkin-godog/uow.manifest.json + results.cucumber.json
+func createMockTestUoW(ctx *eacgodog.TestContext, module string, testTime time.Time, cucumberJSON string) error {
+	uowDir := filepath.Join("out", "test", module, "gherkin-godog")
+
+	// Write cucumber artifact
+	if err := eacgodog.CreateFile(ctx, filepath.Join(uowDir, "results.cucumber.json"), cucumberJSON); err != nil {
+		return err
 	}
 
+	// Write UoW manifest
 	manifest := fmt.Sprintf(`{
-  "test_id": "test-%s",
-  "test_agent": "devbox",
-  "moniker": "%s",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 1.5,
-  "git_commit": "abc123",
-  "summary": {
-    "total": 5,
-    "passed": 5,
-    "failed": 0,
-    "skipped": 0
-  },
-  "suites": {
-    "integration": {
-      "run_time": "%s",
-      "duration_seconds": 1.5,
-      "tests": {
-        "total": 5,
-        "passed": 5,
-        "failed": 0,
-        "skipped": 0
-      }
-    }
-  },
-  "tests": [
+  "context": "test",
+  "module": "%s",
+  "component": "gherkin",
+  "tool": "godog",
+  "exit_code": 0,
+  "input_hash": "sha256:mock",
+  "executed_at": "%s",
+  "duration": %d,
+  "artifacts": [
     {
-      "name": "Test with control tags",
-      "package": "test/pkg",
-      "type": "godog",
-      "suite": "integration",
-      "status": "passed",
-      "tags": %s,
-      "file_path": "test/spec.feature"
+      "id": "cucumber",
+      "path": "results.cucumber.json",
+      "sha256": "sha256:mock",
+      "size": %d,
+      "type": "cucumber-report"
     }
   ],
-  "artifacts": [],
-  "version": "1.0"
+  "output_hash": "sha256:mock",
+  "version": "1.0.0"
 }`,
 		module,
-		module,
 		testTime.Format(time.RFC3339),
-		testTime.Format(time.RFC3339),
-		marshalJSONArray(tagsArray))
+		int64(1500*time.Millisecond),
+		len(cucumberJSON))
 
-	return manifest
-}
-
-// marshalJSONArray marshals a string array to JSON format.
-func marshalJSONArray(arr []string) string {
-	if len(arr) == 0 {
-		return "[]"
-	}
-	quoted := make([]string, len(arr))
-	for i, s := range arr {
-		quoted[i] = fmt.Sprintf(`"%s"`, s)
-	}
-	return "[" + strings.Join(quoted, ",") + "]"
+	return eacgodog.CreateFile(ctx, filepath.Join(uowDir, "uow.manifest.json"), manifest)
 }

@@ -53,8 +53,15 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 		return result, fmt.Errorf("creating drawio cache directory: %w", err)
 	}
 
+	// Local cache status type (was books.DrawioCacheStatus, removed during builder migration)
+	type drawioCacheStatus struct {
+		Image     books.DrawioImage
+		Cached    bool
+		CachePath string
+	}
+
 	// Check cache status for each image
-	drawioStatuses := []books.DrawioCacheStatus{}
+	drawioStatuses := []drawioCacheStatus{}
 
 	for _, img := range drawioImages {
 		cachePath, hit := cache.GetDrawio(books.DrawioCacheKey{
@@ -74,7 +81,7 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 			result.CacheMisses++
 		}
 
-		drawioStatuses = append(drawioStatuses, books.DrawioCacheStatus{
+		drawioStatuses = append(drawioStatuses, drawioCacheStatus{
 			Image:     img,
 			Cached:    hit,
 			CachePath: cachePath,
@@ -114,8 +121,8 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 			fmt.Fprintf(logWriter, "  Optimizing %s...\n", img.RelPath)
 		}
 
-		// Optimize the image
-		err := books.OptimizeSingleImage(img.SourceFile, status.CachePath, books.MaxImageWidthPDF)
+		// Copy the image to cache (builder handles actual rendering/optimization)
+		err := copyFileForCache(img.SourceFile, status.CachePath)
 		if err != nil {
 			log.Errorf("  Failed to optimize %s: %v", img.RelPath, err)
 			result.Failed++
@@ -146,4 +153,16 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 	}
 
 	return result, nil
+}
+
+// copyFileForCache copies a file from src to dst, creating directories as needed.
+func copyFileForCache(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0o644)
 }

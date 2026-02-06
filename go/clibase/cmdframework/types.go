@@ -4,6 +4,7 @@
 package cmdframework
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"time"
@@ -137,9 +138,10 @@ type ExecutionContext struct {
 	OutputBuffer interfaces.OutputBufferPort
 
 	// Internal
-	tuiWriter   io.Writer
-	cleanup     []func()
-	initTimings InitTimings
+	tuiWriter       io.Writer
+	cleanup         []func()
+	initTimings     InitTimings
+	asyncDepsResult *asyncDepsCheck // Background deps verification (started in phaseInitDeferred)
 }
 
 // initOutputBuffer sets up the output buffer based on TUI mode.
@@ -174,14 +176,14 @@ type InitTimings struct {
 }
 
 // WorkerFunc processes a single module and returns an exit code.
-// It receives the execution context, moniker, and a log writer for output.
+// It receives a cancellation context, the execution context, moniker, and a log writer.
 // Return 0 for success, non-zero for failure.
-type WorkerFunc func(ctx *ExecutionContext, moniker string, logWriter io.Writer) int
+type WorkerFunc func(goCtx context.Context, ctx *ExecutionContext, moniker string, logWriter io.Writer) int
 
 // UnitWorkerFunc processes a single work unit and returns an exit code.
-// It receives the execution context, module moniker, component name, and a log writer.
+// It receives a cancellation context, the execution context, module moniker, component name, and a log writer.
 // Return 0 for success, non-zero for failure.
-type UnitWorkerFunc func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int
 
 // PhaseHook is called at specific points during command execution.
 // Return an error to abort execution.

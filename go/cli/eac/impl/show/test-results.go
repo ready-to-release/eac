@@ -21,12 +21,11 @@ import (
 	"text/template"
 	"time"
 
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	sharedTemplate "github.com/ready-to-release/eac/go/clibase/template"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	sharedTemplate "github.com/ready-to-release/eac/go/clibase/template"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
@@ -44,16 +43,16 @@ type TestResultsData struct {
 	TotalPassed   int
 	TotalFailed   int
 
-	ModuleStats    []manifests.ModuleStats
-	SpecCoverage   []manifests.SpecCoverage
-	ControlSummary []manifests.ControlSummary
-	Tests          []manifests.TestResult
-	SummaryByType  []manifests.TypeSummary
-	SummaryBySuite []manifests.SuiteSummary
+	ModuleStats    []testview.ModuleStats
+	SpecCoverage   []testview.SpecCoverage
+	ControlSummary []testview.ControlSummary
+	Tests          []testview.TestResult
+	SummaryByType  []testview.TypeSummary
+	SummaryBySuite []testview.SuiteSummaryEntry
 }
 
 // buildTemplateData converts CompleteTestData to template-ready data with formatted times.
-func buildTemplateData(data *manifests.CompleteTestData) *TestResultsData {
+func buildTemplateData(data *testview.CompleteTestData) *TestResultsData {
 	return &TestResultsData{
 		GeneratedAt:    time.Now().Format(time.RFC3339),
 		LastRun:        data.LastRun.Format(time.RFC3339),
@@ -73,7 +72,7 @@ func buildTemplateData(data *manifests.CompleteTestData) *TestResultsData {
 func ShowTestResults() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
 
@@ -128,47 +127,45 @@ func ShowTestResults() int {
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Errorf("failed to get current directory: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to get current directory: %v\n", err)
 		return 1
 	}
 
 	repoRoot, err := testdata.FindRepoRoot(cwd)
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to find repository root: %v\n", err)
 		return 1
 	}
 
-	// Load test manifests for specified modules (or all if no modules specified)
-	var manifestList []*implinternal.TestManifest
+	// Load test views from UoW manifests
+	var views []*testview.TestModuleView
 	if len(monikers) == 0 {
-		// No modules specified - scan all modules with test manifests
-		manifestList, err = manifests.LoadAllTestManifests(repoRoot)
+		views, err = testview.LoadAllTestViews(repoRoot)
 		if err != nil {
-			log.Errorf("failed to load manifests: %v", err)
+			fmt.Fprintf(os.Stderr, "failed to load test data: %v\n", err)
 			return 1
 		}
 	} else {
-		// Specific modules requested
-		manifestList, err = manifests.LoadTestManifestsForModules(repoRoot, monikers)
+		views, err = testview.LoadTestViewsForModules(repoRoot, monikers)
 		if err != nil {
-			log.Errorf("failed to load manifests: %v", err)
+			fmt.Fprintf(os.Stderr, "failed to load test data: %v\n", err)
 			return 1
 		}
 	}
 
-	if len(manifestList) == 0 {
+	if len(views) == 0 {
 		if len(monikers) == 0 {
-			log.Errorf("no test manifests found")
-			log.Errorf("Run tests first: test <module>")
+			fmt.Fprintf(os.Stderr, "no test manifests found\n")
+			fmt.Fprintf(os.Stderr, "Run tests first: test <module>\n")
 		} else {
-			log.Errorf("no test manifests found for modules: %s", strings.Join(monikers, ", "))
-			log.Errorf("Run tests first: test %s", strings.Join(monikers, " "))
+			fmt.Fprintf(os.Stderr, "no test manifests found for modules: %s\n", strings.Join(monikers, ", "))
+			fmt.Fprintf(os.Stderr, "Run tests first: test %s\n", strings.Join(monikers, " "))
 		}
 		return 1
 	}
 
-	// Use shared function to build complete test data
-	completeData := manifests.BuildCompleteTestData(manifestList)
+	// Build complete test data from UoW-based views
+	completeData := testview.BuildCompleteTestData(views)
 
 	// Convert to template-ready format with formatted times
 	data := buildTemplateData(completeData)
@@ -176,7 +173,7 @@ func ShowTestResults() int {
 	// Load template with fallback (team override -> system default)
 	templatePath, err := loadTestResultsTemplate(repoRoot)
 	if err != nil {
-		log.Errorf("failed to load template: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to load template: %v\n", err)
 		return 1
 	}
 
@@ -186,7 +183,7 @@ func ShowTestResults() int {
 
 	output, err := renderer.RenderToString(data)
 	if err != nil {
-		log.Errorf("failed to render: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to render: %v\n", err)
 		return 1
 	}
 
@@ -258,11 +255,11 @@ func testResultsTemplateFuncs() template.FuncMap {
 		},
 		"statusIcon": func(status string) string {
 			switch status {
-			case manifests.StatusPassed:
+			case testview.StatusPassed:
 				return "✓"
-			case manifests.StatusFailed:
+			case testview.StatusFailed:
 				return "✗"
-			case "skipped":
+			case testview.StatusSkipped:
 				return "⊘"
 			default:
 				return "-"

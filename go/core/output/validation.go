@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 // HashFile computes the SHA256 hash of a file and returns its size.
@@ -94,4 +95,23 @@ func ValidateArtifacts(baseDir string, artifacts []Artifact) ValidationResult {
 	}
 
 	return result
+}
+
+// ComputeOutputHash creates a deterministic hash from artifact hashes.
+// Used to detect when outputs have changed.
+// Returns empty string if no artifacts.
+func ComputeOutputHash(artifacts []Artifact) string {
+	if len(artifacts) == 0 {
+		return ""
+	}
+	sorted := make([]Artifact, len(artifacts))
+	copy(sorted, artifacts)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].ID < sorted[j].ID
+	})
+	hasher := sha256.New()
+	for _, a := range sorted {
+		hasher.Write([]byte(a.SHA256))
+	}
+	return "sha256:" + hex.EncodeToString(hasher.Sum(nil))
 }

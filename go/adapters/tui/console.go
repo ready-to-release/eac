@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -45,6 +46,10 @@ type ParallelConsole struct {
 	ready    chan struct{} // Signals when TUI is ready
 	done     chan struct{} // Signals when Start() has fully completed (including printSummary)
 
+	// Atomic flags for hot-path reads (avoids mutex in convertLines per-line loop)
+	atomicStopped  int32 // 1 = stopped
+	atomicDemoMode int32 // 1 = demo mode
+
 	// Signals to Model that it should stop listening.
 	// Close this to unblock listenForLines/listenForStatus.
 	modelDone chan struct{}
@@ -58,9 +63,10 @@ type ParallelConsole struct {
 	// Async message queues - TUI is pure observer, never blocks workers.
 	// Two channels: critical (state changes) and regular (output lines).
 	// Critical channel has larger buffer and is drained with priority.
-	msgChan      chan tea.Msg // Regular messages (output lines) - may drop
-	criticalChan chan tea.Msg // Critical messages (state changes) - large buffer
-	msgWg        sync.WaitGroup // Track pending messages for clean shutdown
+	msgChan      chan tea.Msg     // Regular messages (output lines) - may drop
+	criticalChan chan tea.Msg     // Critical messages (state changes) - large buffer
+	msgWg        sync.WaitGroup  // Track pending messages for clean shutdown
+	msgCloseOnce sync.Once       // Ensures criticalChan/msgChan closed exactly once
 
 	// Real terminal output - captured at creation time before any output buffering.
 	// This ensures TUI writes directly to terminal even when stdout is redirected.
@@ -81,8 +87,8 @@ func NewParallelConsole(config Config) *ParallelConsole {
 
 	return &ParallelConsole{
 		config:           config,
-		contractLineChan: make(chan tuicontract.Line, 100),
-		lineChan:         make(chan console.Line, 100),
+		contractLineChan: make(chan tuicontract.Line, 500),
+		lineChan:         make(chan console.Line, 500),
 		statusChan:       make(chan console.Status, 10),
 		ready:            make(chan struct{}),
 		done:             make(chan struct{}),
@@ -121,6 +127,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		// Use experimental tui3 layout
 		c.mu.Lock()
 		c.demoMode = true
+		atomic.StoreInt32(&c.atomicDemoMode, 1)
 		c.mu.Unlock()
 
 		width, height, _ := term.GetSize(int(os.Stdout.Fd()))
@@ -231,6 +238,7 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		c.mu.Lock()
 		if !c.stopped {
 			c.stopped = true
+			atomic.StoreInt32(&c.atomicStopped, 1)
 
 			// Close all multi-writers first
 			for _, w := range c.writers {
@@ -247,10 +255,19 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		}
 		c.mu.Unlock()
 
+		// Close async message channels and wait for pump goroutine.
+		// This prevents Send() calls to a completed bubbletea program,
+		// which would block indefinitely and leak the pump goroutine.
+		c.closeMsgChannelsOnce()
+		c.msgWg.Wait()
+
 		// Reset terminal state - always run this to ensure clean terminal
 		// \033[0m = reset attributes, \033[?25h = show cursor
 		fmt.Fprint(c.realStdout, "\033[0m\033[?25h")
 	}()
+
+	sigDone := make(chan struct{})
+	defer close(sigDone)
 
 	go func() {
 		select {
@@ -264,6 +281,9 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 			if c.program != nil {
 				c.program.Quit()
 			}
+		case <-sigDone:
+			// Start() returned normally, clean exit
+			return
 		}
 	}()
 
@@ -294,16 +314,12 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 // convertLines reads from contractLineChan and converts to console.Line or tui3 messages
 func (c *ParallelConsole) convertLines() {
 	for line := range c.contractLineChan {
-		c.mu.Lock()
-		stopped := c.stopped
-		demoMode := c.demoMode
-		c.mu.Unlock()
-
-		if stopped {
+		// Hot path: use atomic reads to avoid mutex contention per line
+		if atomic.LoadInt32(&c.atomicStopped) != 0 {
 			return
 		}
 
-		if demoMode {
+		if atomic.LoadInt32(&c.atomicDemoMode) != 0 {
 			// Convert to tui3 output line message
 			level := cells.LineLevelInfo
 			if line.Level == tuicontract.LevelWarn {
@@ -364,6 +380,7 @@ func (c *ParallelConsole) Wait() {
 
 	c.mu.Lock()
 	c.stopped = true
+	atomic.StoreInt32(&c.atomicStopped, 1)
 	c.mu.Unlock()
 }
 
@@ -375,6 +392,7 @@ func (c *ParallelConsole) Stop() {
 		return
 	}
 	c.stopped = true
+	atomic.StoreInt32(&c.atomicStopped, 1)
 	started := c.started
 	c.mu.Unlock()
 
@@ -396,13 +414,7 @@ func (c *ParallelConsole) Stop() {
 
 	// Close async message channels and wait for pending messages.
 	// This ensures all queued TUI updates are delivered before exit.
-	// Close critical first to trigger proper drain in pump goroutine.
-	if c.criticalChan != nil {
-		close(c.criticalChan)
-	}
-	if c.msgChan != nil {
-		close(c.msgChan)
-	}
+	c.closeMsgChannelsOnce()
 	c.msgWg.Wait()
 
 	// Quit the program and wait for it to fully exit
@@ -435,6 +447,19 @@ func (c *ParallelConsole) closeModelDoneOnce() {
 	default:
 		close(c.modelDone)
 	}
+}
+
+// closeMsgChannelsOnce safely closes the async message channels exactly once.
+// Safe to call from both Start() defer and Stop() without double-close panic.
+func (c *ParallelConsole) closeMsgChannelsOnce() {
+	c.msgCloseOnce.Do(func() {
+		if c.criticalChan != nil {
+			close(c.criticalChan)
+		}
+		if c.msgChan != nil {
+			close(c.msgChan)
+		}
+	})
 }
 
 // NewWriter creates an io.Writer for a module's output.
@@ -508,6 +533,8 @@ func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 		DockerAvailable:           status.DockerAvailable,
 		RunningContainerCount:     status.RunningContainerCount,
 		TotalContainerCount:       status.TotalContainerCount,
+		RunningSystemCount:        status.RunningSystemCount,
+		TotalSystemCount:          status.TotalSystemCount,
 	}
 
 	select {
@@ -748,21 +775,24 @@ func (c *ParallelConsole) MarkUoWComplete(moniker string, exitCode int) {
 
 // MarkUoWCompleteWithCacheInfo marks a module as complete with optional cache info.
 // For cached modules, cacheTime is when the artifact was built, logPath is the build log location.
-// Uses sendCritical because state changes must not be dropped.
+// Uses sendAsync (regular channel) instead of sendCritical so that completion events
+// queue behind pending output lines. This prevents the tab from turning green/red
+// before the final output lines are displayed. The regular channel has sufficient
+// capacity (500) and finalizeAllTabs() handles any missed completions at exit.
 func (c *ParallelConsole) MarkUoWCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string) {
 	c.mu.Lock()
 	demoMode := c.demoMode
 	c.mu.Unlock()
 
 	if demoMode {
-		c.sendCritical(demo.UnitCompleteMsg{
+		c.sendAsync(demo.UnitCompleteMsg{
 			Moniker:  moniker,
 			ExitCode: exitCode,
 		})
 		return
 	}
 
-	c.sendCritical(console.UoWCompleteMsg{
+	c.sendAsync(console.UoWCompleteMsg{
 		Moniker:   moniker,
 		ExitCode:  exitCode,
 		CacheTime: cacheTime,
@@ -785,10 +815,6 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 		return
 	}
 
-	// Signal listeners to stop - they will return linesDoneMsg/statusDoneMsg
-	// This must happen BEFORE sending summary so TUI can exit cleanly
-	c.closeModelDoneOnce()
-
 	if demoMode {
 		// Send summary - counts will be derived from model.units[] in updateCells()
 		// The SummaryData here just signals that we're done and provides duration
@@ -797,6 +823,10 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 				Duration: data.TotalTime,
 			},
 		})
+
+		// Signal listeners to stop AFTER sending summary so remaining lines
+		// in lineChan can be drained by listenForLines before it exits.
+		c.closeModelDoneOnce()
 
 		// Send quit after a short delay to allow final UI update
 		go func() {
@@ -808,6 +838,25 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 
 	program.Send(console.SummaryDataMsg{
 		Data: (*console.SummaryData)(data),
+	})
+
+	// Signal listeners to stop AFTER sending summary so remaining lines
+	// in lineChan can be drained by listenForLines before it exits.
+	// TUI exit is driven by SummaryDataMsg → tea.Quit, not by doneChan.
+	c.closeModelDoneOnce()
+}
+
+// SendConfigReady delivers early configuration metadata for progressive display.
+// Called after config loading but before module resolution.
+func (c *ParallelConsole) SendConfigReady(commandName, executionContext, parallelismMode string,
+	effectiveWorkers, weightedCapacity int, outputDir string) {
+	c.sendAsync(console.ConfigReadyMsg{
+		CommandName:      commandName,
+		ExecutionContext: executionContext,
+		ParallelismMode:  parallelismMode,
+		EffectiveWorkers: effectiveWorkers,
+		WeightedCapacity: weightedCapacity,
+		OutputDir:        outputDir,
 	})
 }
 
@@ -845,9 +894,14 @@ func (c *ParallelConsole) SetInitSummary(summary *InitSummary) {
 		uows := make([]console.UoWEntry, len(mod.UoWs))
 		for k, uow := range mod.UoWs {
 			uows[k] = console.UoWEntry{
-				ID:          uow.ID,
-				DisplayName: uow.DisplayName,
-				Weight:      uow.Weight,
+				ID:            uow.ID,
+				DisplayName:   uow.DisplayName,
+				Weight:        uow.Weight,
+				Module:        uow.Module,
+				Component:     uow.Component,
+				Tool:          uow.Tool,
+				ComponentType: uow.ComponentType,
+				Container:     uow.Container,
 			}
 		}
 		modules[i] = console.ExecutionModule{

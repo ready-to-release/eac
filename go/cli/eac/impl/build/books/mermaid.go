@@ -1,7 +1,6 @@
 package books
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -10,8 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
-	"github.com/ready-to-release/eac/go/core/tool"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // Size presets for mermaid diagrams.
@@ -229,197 +227,84 @@ type CacheStatus struct {
 	CachePath string // absolute path to cached SVG (if exists)
 }
 
-// MermaidManifest defines input for batch mermaid rendering.
-type MermaidManifest struct {
-	Diagrams    []MermaidDiagramSpec `json:"diagrams"`
-	Concurrency int                  `json:"concurrency"`
-	Theme       string               `json:"theme"`
+// mermaidIndexEntry maps a single mermaid block to its rendered SVG in the builder output.
+type mermaidIndexEntry struct {
+	SourceFile  string `json:"source_file"`
+	BlockIndex  int    `json:"block_index"`
+	ContentHash string `json:"content_hash"`
+	SVGFilename string `json:"svg_filename"`
 }
 
-// MermaidDiagramSpec defines a single diagram to render.
-type MermaidDiagramSpec struct {
-	Input  string `json:"input"`  // Path to .mmd file in work dir
-	Output string `json:"output"` // Path for output .svg
-	Config string `json:"config"` // Mermaid config file
+// mermaidIndex is the manifest written by the mermaid builder.
+type mermaidIndex struct {
+	Entries []mermaidIndexEntry `json:"entries"`
 }
 
-// renderMermaidBatch renders multiple diagrams using the mermaid-render tool.
-// This replaces the previous direct Docker execution with the tool bridge.
-func (p *Preprocessor) renderMermaidBatch(toRender []CacheStatus) (int, error) {
-	if len(toRender) == 0 {
-		return 0, nil
-	}
-
-	// Create work directory for manifest and temp files
-	workDir := filepath.Join(p.stagingDir, ".mermaid-work")
-	if err := os.MkdirAll(workDir, 0o755); err != nil {
-		return 0, fmt.Errorf("creating work directory: %w", err)
-	}
-	defer os.RemoveAll(workDir) // Clean up work directory
-
-	// Create diagram specs and write temp .mmd files
-	diagrams := make([]MermaidDiagramSpec, 0, len(toRender))
-	for i, status := range toRender {
-		block := status.Block
-
-		// Write diagram content to temp .mmd file
-		mmdFile := filepath.Join(workDir, fmt.Sprintf("diagram_%d.mmd", i))
-		if err := os.WriteFile(mmdFile, []byte(block.Content), 0o644); err != nil {
-			return 0, fmt.Errorf("writing temp file for %s: %w", block.Filename, err)
-		}
-
-		// Convert paths to container paths
-		// workDir maps to /work in container
-		// stagingDir maps to /staging in container
-		containerInput := fmt.Sprintf("/work/diagram_%d.mmd", i)
-
-		// Output path relative to staging, converted to container path
-		relOutput, err := filepath.Rel(p.stagingDir, status.CachePath)
-		if err != nil {
-			return 0, fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
-		}
-		containerOutput := "/staging/" + strings.ReplaceAll(relOutput, "\\", "/")
-
-		diagrams = append(diagrams, MermaidDiagramSpec{
-			Input:  containerInput,
-			Output: containerOutput,
-			Config: "/etc/mermaid/mermaid-config.json",
-		})
-	}
-
-	// Create manifest
-	manifest := MermaidManifest{
-		Diagrams:    diagrams,
-		Concurrency: 4,
-		Theme:       "dark",
-	}
-
-	// Write manifest file
-	manifestPath := filepath.Join(workDir, "manifest.json")
-	manifestData, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return 0, fmt.Errorf("marshaling manifest: %w", err)
-	}
-	if err := os.WriteFile(manifestPath, manifestData, 0o644); err != nil {
-		return 0, fmt.Errorf("writing manifest: %w", err)
-	}
-
-	p.log("    Rendering %d diagram(s) via mermaid-render tool...", len(toRender))
-
-	// Execute mermaid-render tool via bridge
-	bridge := tool.GlobalHandlerToolBridge()
-	tc := &tool.ToolContext{
-		WorkspaceRoot: p.workspaceRoot,
-		StagingDir:    p.stagingDir,
-		LogWriter:     p.logWriter,
-	}
-
-	exitCode, execErr := bridge.ExecuteTool(context.Background(), "mermaid-render", tc)
-	if execErr != nil {
-		return 0, fmt.Errorf("mermaid-render tool failed: %w", execErr)
-	}
-	if exitCode != 0 {
-		return 0, fmt.Errorf("mermaid-render tool exited with code %d", exitCode)
-	}
-
-	// Verify outputs were created and update cache
-	rendered := 0
-	for _, status := range toRender {
-		if _, err := os.Stat(status.CachePath); err == nil {
-			rendered++
-
-			// Save to persistent cache
-			block := status.Block
-			cleanContent := StripSizeDirective(block.Content)
-			if err := p.assetCache.PutMermaid(status.CachePath, MermaidCacheKey{
-				SourceFile: block.SourceFile,
-				BlockIndex: block.BlockIndex,
-				Code:       cleanContent,
-			}); err != nil {
-				p.log("      ⚠️  Failed to cache %s: %v", block.Filename, err)
-			}
-		}
-	}
-
-	return rendered, nil
-}
-
-// renderMermaidDiagrams renders multiple mermaid diagrams using the tool bridge.
-// Only renders cache misses (cached diagrams are skipped).
-// Returns number of diagrams rendered and any error.
-func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error) {
-	// Check Docker availability first - fail fast if unavailable
-	if !dockerutil.IsDockerAvailable() {
-		errorMsg := "Docker is not available but required for mermaid diagram rendering"
-		if dockerutil.IsDinD() {
-			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
-		} else {
-			errorMsg += "\nEnsure Docker is installed and the daemon is running"
-		}
-		return 0, fmt.Errorf("%s", errorMsg)
-	}
-
-	// Filter for cache misses
-	toRender := []CacheStatus{}
-	for i := range statuses {
-		status := &statuses[i]
-		if !status.Cached {
-			toRender = append(toRender, *status)
-		}
-	}
-
-	if len(toRender) == 0 {
-		p.log("    All diagrams cached, nothing to render")
-		return 0, nil
-	}
-
-	// Use batch rendering via tool bridge
-	rendered, err := p.renderMermaidBatch(toRender)
-	if err != nil {
-		return rendered, err
-	}
-
-	p.log("    ✓ Rendered %d diagram(s) successfully", rendered)
-	return rendered, nil
-}
-
-// checkMermaidCache checks which diagrams are already cached
-// Cache is at staging/assets/cache/mermaid/ (copied from docs/assets/cache/mermaid/)
-// Returns all blocks with their cache status.
+// checkMermaidCache checks which diagrams have pre-rendered SVGs from the builder output.
+// Reads mermaid-index.json from out/build/docs/mermaid/mermaid/ and matches by content hash.
+// Returns all blocks with their cache status (CachePath points to builder output SVG).
 func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, error) {
-	// Cache directory: staging/assets/cache/mermaid/ (copied from docs/assets/cache/)
-	cacheDir := filepath.Join(p.stagingDir, "assets", "cache", "mermaid")
-	log.Debugf("cache: checkMermaidCache blocks=%d cacheDir=%s", len(blocks), cacheDir)
+	builderOutputDir := paths.MermaidBuildOutputPath(p.workspaceRoot)
+	indexPath := filepath.Join(builderOutputDir, "mermaid-index.json")
+
+	// Load the builder's index manifest
+	indexData, err := os.ReadFile(indexPath)
+	if err != nil {
+		log.Debugf("mermaid: no builder index at %s: %v", indexPath, err)
+		// No builder output - all blocks are cache misses
+		statuses := make([]CacheStatus, 0, len(blocks))
+		for _, block := range blocks {
+			statuses = append(statuses, CacheStatus{
+				Block:  block,
+				Cached: false,
+			})
+		}
+		return statuses, nil
+	}
+
+	var idx mermaidIndex
+	if err := json.Unmarshal(indexData, &idx); err != nil {
+		return nil, fmt.Errorf("parsing mermaid-index.json: %w", err)
+	}
+
+	// Build lookup: content_hash -> SVG filename
+	hashToSVG := make(map[string]string, len(idx.Entries))
+	for _, entry := range idx.Entries {
+		hashToSVG[entry.ContentHash] = entry.SVGFilename
+	}
+
+	log.Debugf("mermaid: loaded builder index with %d entries", len(idx.Entries))
 
 	statuses := make([]CacheStatus, 0, len(blocks))
-
 	for _, block := range blocks {
-		// Use stripped content for cache key to ensure consistency
 		cleanContent := StripSizeDirective(block.Content)
-		cacheKey := MermaidCacheKey{
-			SourceFile: block.SourceFile,
-			BlockIndex: block.BlockIndex,
-			Code:       cleanContent,
+		hash := HashContent(cleanContent)
+
+		svgFilename, found := hashToSVG[hash]
+		if !found {
+			log.Debugf("mermaid: builder index MISS block=%d hash=%s", block.BlockIndex, hash)
+			statuses = append(statuses, CacheStatus{
+				Block:  block,
+				Cached: false,
+			})
+			continue
 		}
 
-		// Get the hash for this diagram (assetCache computes the hash)
-		persistentPath, _ := p.assetCache.GetMermaid(cacheKey)
-		hashFilename := filepath.Base(persistentPath)
-		stagingCachePath := filepath.Join(cacheDir, hashFilename)
-
-		// Check if file exists in staging (copied from docs/assets/cache/)
-		cached := false
-		if _, err := os.Stat(stagingCachePath); err == nil {
-			cached = true
-			log.Debugf("cache: mermaid staging HIT block=%d file=%s", block.BlockIndex, stagingCachePath)
-		} else {
-			log.Debugf("cache: mermaid staging MISS block=%d file=%s", block.BlockIndex, stagingCachePath)
+		svgPath := filepath.Join(builderOutputDir, svgFilename)
+		if _, err := os.Stat(svgPath); err != nil {
+			log.Debugf("mermaid: builder SVG missing block=%d file=%s", block.BlockIndex, svgPath)
+			statuses = append(statuses, CacheStatus{
+				Block:  block,
+				Cached: false,
+			})
+			continue
 		}
 
+		log.Debugf("mermaid: builder HIT block=%d hash=%s file=%s", block.BlockIndex, hash, svgFilename)
 		statuses = append(statuses, CacheStatus{
 			Block:     block,
-			Cached:    cached,
-			CachePath: stagingCachePath,
+			Cached:    true,
+			CachePath: svgPath,
 		})
 	}
 
@@ -521,9 +406,9 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 	return nil
 }
 
-// scanForMermaidDiagrams scans all markdown files in staging directory
-// Returns all mermaid blocks found (grouped by file) and their cache statuses
-// Now includes cache checking and statistics.
+// scanForMermaidDiagrams scans all markdown files in staging directory.
+// Returns all mermaid blocks found (grouped by file) and their cache statuses.
+// Reads pre-rendered SVGs from the mermaid builder output and copies them to staging.
 func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []CacheStatus, error) {
 	blocksByFile := make(map[string][]MermaidBlock)
 	allBlocks := []MermaidBlock{}
@@ -547,102 +432,42 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []Ca
 		return blocksByFile, nil, nil
 	}
 
-	// Step 2: Check cache for all blocks
+	// Step 2: Check builder output for pre-rendered SVGs
 	statuses, err := p.checkMermaidCache(allBlocks)
 	if err != nil {
-		return nil, nil, fmt.Errorf("checking cache: %w", err)
+		return nil, nil, fmt.Errorf("checking builder output: %w", err)
 	}
 
-	// Step 3: Analyze cache statistics
-	cacheHits := 0
-	cacheMisses := 0
+	// Step 3: Copy builder SVGs to staging cache directory so replaceMermaidBlocksWithImages can reference them
+	cacheDir := filepath.Join(p.stagingDir, "assets", "cache", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, nil, fmt.Errorf("creating staging cache directory: %w", err)
+	}
+
+	hits := 0
+	misses := 0
 	for i := range statuses {
 		status := &statuses[i]
 		if status.Cached {
-			cacheHits++
+			// Copy SVG from builder output to staging
+			stagingPath := filepath.Join(cacheDir, status.Block.Filename)
+			if err := copyFile(status.CachePath, stagingPath); err != nil {
+				return nil, nil, fmt.Errorf("copying SVG to staging: %w", err)
+			}
+			// Update CachePath to the staging location
+			status.CachePath = stagingPath
+			hits++
 		} else {
-			cacheMisses++
+			misses++
 		}
 	}
 
-	// Step 4: Render cache misses
-	rendered := 0
-	var renderErr error
-	if cacheMisses > 0 {
-		rendered, renderErr = p.renderMermaidDiagrams(statuses)
-		// Note: renderErr may be non-nil if some renders failed,
-		// but we continue to show statistics
-	}
+	// Step 4: Log summary and fail if any diagrams are missing
+	p.log("    Found %d diagrams in %d files", len(allBlocks), len(blocksByFile))
+	p.log("    Builder output: %d available, %d missing", hits, misses)
 
-	// Step 5: Log summary
-	totalDiagrams := len(allBlocks)
-	cacheHitRate := 0.0
-	if totalDiagrams > 0 {
-		cacheHitRate = float64(cacheHits) / float64(totalDiagrams) * 100
-	}
-
-	p.log("    Found %d diagrams in %d files", totalDiagrams, len(blocksByFile))
-	p.log("    Cache: %d hits, %d misses (%.1f%% hit rate)",
-		cacheHits, cacheMisses, cacheHitRate)
-	if rendered > 0 {
-		p.log("    Rendered: %d diagrams", rendered)
-	}
-
-	// Step 6: Log detailed breakdown by file
-	for _, blocks := range blocksByFile {
-		relPath := blocks[0].RelPath
-		fileHits := 0
-		fileMisses := 0
-
-		for _, block := range blocks {
-			// Find this block's cache status
-			for j := range statuses {
-				status := &statuses[j]
-				if status.Block.Filename == block.Filename {
-					if status.Cached {
-						fileHits++
-					} else {
-						fileMisses++
-					}
-					break
-				}
-			}
-		}
-
-		p.log("      %s: %d diagram(s) (%d cached, %d to render)",
-			relPath, len(blocks), fileHits, fileMisses)
-
-		// Show details for each diagram
-		for _, block := range blocks {
-			// Find cache status
-			cached := false
-			for _, status := range statuses {
-				if status.Block.Filename == block.Filename {
-					cached = status.Cached
-					break
-				}
-			}
-
-			cacheMarker := "❌"
-			if cached {
-				cacheMarker = "✓"
-			}
-
-			// Show first line of content
-			firstLine := strings.Split(block.Content, "\n")[0]
-			if len(firstLine) > 45 {
-				firstLine = firstLine[:45] + "..."
-			}
-
-			p.log("        [%d] %s %s %s",
-				block.BlockIndex, cacheMarker, firstLine, block.Filename)
-		}
-	}
-
-	// Return rendering error if any diagrams failed
-	// (but still return the blocksByFile and statuses so caller can see what was found)
-	if renderErr != nil {
-		return blocksByFile, statuses, fmt.Errorf("rendering: %w", renderErr)
+	if misses > 0 {
+		return nil, nil, fmt.Errorf("%d mermaid diagram(s) not found in builder output (run mermaid build first)", misses)
 	}
 
 	return blocksByFile, statuses, nil

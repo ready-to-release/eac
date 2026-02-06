@@ -2,7 +2,7 @@
 // Short: Merge manual test results into test manifest
 // Args:
 // Long: Merge manual test results from test-results/<module>/<version>/manual-results.json
-// Long: into the test manifest at out/test/<module>/test.manifest.json.
+// Long: into the test output at out/test/<module>/.
 // Long:
 // Long: This command transforms manual test results into test entries and updates
 // Long: the test manifest with aggregated statistics. If no manifest exists, a new
@@ -15,7 +15,7 @@
 // Long:   - Package set to "manual", suite set to "manual"
 // Long:
 // Long: Expected Output:
-// Long:   - Updated test.manifest.json with manual test entries
+// Long:   - Updated UoW manifest with manual test entries
 // Long:   - Manual suite added/updated in suites object
 // Long:   - Summary counts updated
 // Long:   - Exit code 0 on success, non-zero on error
@@ -35,10 +35,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/fileutil"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -98,7 +99,7 @@ func MergeResults() int {
 	}
 
 	// Validate module exists
-	moduleConfig, exists := repoCfg.Repository.GetModule(moduleFlag)
+	_, exists := repoCfg.Repository.GetModule(moduleFlag)
 	if !exists {
 		log.Errorf("unknown module: %s", moduleFlag)
 		return 1
@@ -124,53 +125,63 @@ func MergeResults() int {
 		return 1
 	}
 
-	// Load or create test manifest
-	manifestPath := filepath.Join(workspaceRoot, "out", "test", moduleFlag, "test.manifest.json")
-	var manifest *internal.TestManifest
+	// Transform manual results to manual-tests.json format (for testview parser)
+	manualTestEntries := transformToManualTestsJSON(manualResults.Results)
 
-	if fileExists(manifestPath) {
-		// Load existing manifest
-		manifestData, err := os.ReadFile(manifestPath)
-		if err != nil {
-			log.Errorf("reading test manifest: %v", err)
-			return 1
-		}
-
-		manifest = &internal.TestManifest{}
-		if err := json.Unmarshal(manifestData, manifest); err != nil {
-			log.Errorf("parsing test manifest JSON: %v", err)
-			return 1
-		}
-
-		log.Infof("Loaded existing test manifest for %s", moduleFlag)
-	} else {
-		// Create new manifest
-		manifest = createNewManifest(moduleFlag, moduleConfig.GetComponentTypesDisplay(), &manualResults.ImportMetadata)
-		log.Infof("Creating new test manifest for %s", moduleFlag)
-	}
-
-	// Remove existing manual tests from manifest
-	manifest.Tests = filterNonManualTests(manifest.Tests)
-
-	// Transform manual results to test entries
-	manualTests := transformManualResults(manualResults.Results)
-	manifest.Tests = append(manifest.Tests, manualTests...)
-
-	// Update manual suite
-	updateManualSuite(manifest, &manualResults.ImportMetadata, manualTests)
-
-	// Recalculate summary
-	updateSummary(manifest)
-
-	// Write updated manifest atomically with locking (prevents concurrent merge corruption)
-	manifestDir := filepath.Dir(manifestPath)
-	if err := os.MkdirAll(manifestDir, 0755); err != nil {
-		log.Errorf("creating manifest directory: %v", err)
+	// Write manual-tests.json into UoW output dir
+	uowDir := filepath.Join(workspaceRoot, "out", "test", moduleFlag, "manual-manual-manual")
+	if err := os.MkdirAll(uowDir, 0755); err != nil {
+		log.Errorf("creating UoW directory: %v", err)
 		return 1
 	}
 
-	if err := fileutil.AtomicWriteJSONWithLock(manifestPath, manifest, 0644); err != nil {
-		log.Errorf("writing manifest file: %v", err)
+	manualTestsPath := filepath.Join(uowDir, "manual-tests.json")
+	if err := fileutil.AtomicWriteJSONWithLock(manualTestsPath, manualTestEntries, 0644); err != nil {
+		log.Errorf("writing manual tests file: %v", err)
+		return 1
+	}
+
+	// Compute artifact hash
+	size, hash, err := coreoutput.HashFile(manualTestsPath)
+	if err != nil {
+		log.Errorf("hashing manual tests file: %v", err)
+		return 1
+	}
+
+	// Parse test time
+	testTime, parseErr := time.Parse(time.RFC3339, manualResults.ImportMetadata.TestTime)
+	if parseErr != nil {
+		testTime = time.Now()
+	}
+
+	// Create and save UoW manifest
+	artifacts := []coreoutput.Artifact{
+		{
+			ID:     "manual-report",
+			Path:   "manual-tests.json",
+			SHA256: hash,
+			Size:   size,
+			Type:   "manual-report",
+		},
+	}
+
+	uowManifest := &coreoutput.UoWManifest{
+		Context:    workunit.ContextTest,
+		Module:     moduleFlag,
+		Component:  "manual",
+		Tool:       "manual",
+		Extra:      map[string]string{"testname": "manual"},
+		ExitCode:   0,
+		InputHash:  hash,
+		ExecutedAt: testTime,
+		Duration:   time.Duration(manualResults.ImportMetadata.DurationSeconds * float64(time.Second)),
+		Artifacts:  artifacts,
+		OutputHash: coreoutput.ComputeOutputHash(artifacts),
+		Version:    "1.0.0",
+	}
+
+	if err := uowManifest.Save(workspaceRoot); err != nil {
+		log.Errorf("writing UoW manifest: %v", err)
 		return 1
 	}
 
@@ -190,9 +201,8 @@ func MergeResults() int {
 	}
 
 	log.Infof("Merged manual test results for %s %s", moduleFlag, versionFlag)
-	log.Infof("  Location: %s", manifestPath)
+	log.Infof("  Location: %s", uowManifest.ManifestPath(workspaceRoot))
 	log.Infof("  Manual tests: %d passed, %d failed, %d skipped", manualPassed, manualFailed, manualSkipped)
-	log.Infof("  Total tests in manifest: %d", manifest.Summary.Total)
 
 	return 0
 }
@@ -214,47 +224,32 @@ func validateVersionFormat(version string) error {
 	return fmt.Errorf("version must be in semver (v1.2.3) or calver (v2024.01.19) format")
 }
 
-// createNewManifest creates a new test manifest
-func createNewManifest(module, moduleType string, importMetadata *ImportMetadata) *internal.TestManifest {
-	gitCommit := getGitCommitSHA()
-	manifest := internal.NewTestManifest(module, moduleType, gitCommit)
-	manifest.DurationSeconds = importMetadata.DurationSeconds
-	return manifest
+// manualTestsJSONFile is the format for manual-tests.json (read by testview.parseManualTestFile).
+type manualTestsJSONFile struct {
+	Tests []manualTestsJSONEntry `json:"tests"`
 }
 
-// filterNonManualTests removes manual tests from the test list
-func filterNonManualTests(tests []internal.TestEntry) []internal.TestEntry {
-	filtered := make([]internal.TestEntry, 0, len(tests))
-	for _, test := range tests {
-		if test.Suite != "manual" {
-			filtered = append(filtered, test)
-		}
+type manualTestsJSONEntry struct {
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	DurationMs int64  `json:"duration_ms,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+// transformToManualTestsJSON converts manual results to the format expected by testview's manual parser.
+func transformToManualTestsJSON(results []ManualTestResult) *manualTestsJSONFile {
+	file := &manualTestsJSONFile{
+		Tests: make([]manualTestsJSONEntry, 0, len(results)),
 	}
-	return filtered
-}
-
-// transformManualResults transforms manual test results into test entries
-func transformManualResults(results []ManualTestResult) []internal.TestEntry {
-	entries := make([]internal.TestEntry, 0, len(results))
 	for _, result := range results {
-		entry := internal.TestEntry{
+		file.Tests = append(file.Tests, manualTestsJSONEntry{
 			Name:       extractScenarioName(result.ScenarioID),
-			Package:    "manual",
-			Type:       "manual",
-			Suite:      "manual",
 			Status:     result.Status,
 			DurationMs: int64(result.DurationSeconds * 1000),
-			Tags:       []string{},
-			FilePath:   "",
-		}
-
-		if result.Error != "" {
-			entry.Error = result.Error
-		}
-
-		entries = append(entries, entry)
+			Error:      result.Error,
+		})
 	}
-	return entries
+	return file
 }
 
 // extractScenarioName extracts the scenario name from a scenario ID
@@ -267,67 +262,3 @@ func extractScenarioName(scenarioID string) string {
 	return scenarioID
 }
 
-// updateManualSuite updates or creates the manual suite in the manifest
-func updateManualSuite(manifest *internal.TestManifest, importMetadata *ImportMetadata, manualTests []internal.TestEntry) {
-	// Count manual test results by status
-	summary := internal.TestSummary{
-		Total:   len(manualTests),
-		Passed:  0,
-		Failed:  0,
-		Skipped: 0,
-	}
-
-	for _, test := range manualTests {
-		switch test.Status {
-		case "passed":
-			summary.Passed++
-		case "failed":
-			summary.Failed++
-		case "skipped":
-			summary.Skipped++
-		}
-	}
-
-	// Parse test time (ISO 8601 format)
-	testTime, err := time.Parse(time.RFC3339, importMetadata.TestTime)
-	if err != nil {
-		// Fallback to current time if parsing fails
-		testTime = time.Now()
-	}
-
-	// Update or create manual suite
-	manifest.Suites["manual"] = internal.SuiteResult{
-		RunTime:         testTime,
-		DurationSeconds: importMetadata.DurationSeconds,
-		Tests:           summary,
-	}
-}
-
-// updateSummary recalculates the manifest summary from all tests
-func updateSummary(manifest *internal.TestManifest) {
-	summary := internal.TestSummary{
-		Total:     len(manifest.Tests),
-		Passed:    0,
-		Failed:    0,
-		Skipped:   0,
-		Pending:   0,
-		Undefined: 0,
-	}
-
-	for _, test := range manifest.Tests {
-		switch test.Status {
-		case "passed":
-			summary.Passed++
-		case "failed":
-			summary.Failed++
-		case "skipped":
-			summary.Skipped++
-		case "pending":
-			summary.Pending++
-		case "undefined":
-			summary.Undefined++
-		}
-	}
-
-	manifest.Summary = summary
-}

@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -33,6 +32,8 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -347,9 +348,7 @@ func findLastChangedCommit(mod *modules.ModuleContract, workspaceRoot string) (s
 	args := []string{"log", "-1", "--format=%H%n%s", "--"}
 	args = append(args, paths...)
 
-	cmd := exec.Command("git", args...)
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, args...)
 	if err != nil {
 		return "", "", fmt.Errorf("git log failed: %w", err)
 	}
@@ -422,15 +421,12 @@ func waitForDepCI(dep, workflow, commitSHA string, timeout, interval int, target
 // 2. Descendant match - CI ran on a newer commit that includes this commit's changes.
 func checkDepCIStatus(workflow, commitSHA, workspaceRoot string) (DepCIStatus, error) {
 	// First try exact commit match
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"--commit", commitSHA,
 		"--workflow", workflow,
 		"--json", "status,conclusion,databaseId,url",
 		"--limit", "5",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return DepCIStatus{}, fmt.Errorf("gh run list failed: %w", err)
 	}
@@ -513,16 +509,13 @@ func getRecentSuccessfulRuns(workflow, workspaceRoot string) ([]struct {
 	HeadSHA    string `json:"headSha"`
 }, error,
 ) {
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--branch", "main",
 		"--status", "success",
 		"--json", "status,conclusion,databaseId,url,headSha",
 		"--limit", "10",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}

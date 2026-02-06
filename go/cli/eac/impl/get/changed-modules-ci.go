@@ -33,12 +33,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -167,7 +168,7 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 	modulesWithCI, filteredOut := filterModulesWithWorkflows(allModules, workspaceRoot)
 
 	// Create GitHub API client (may not be used if mocking)
-	api := github.NewGHClient(workspaceRoot)
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	// Track results
 	result := &CIChangedModulesResult{
@@ -549,7 +550,7 @@ func determineBaseSHA(prBase, workflow, branch, workspaceRoot string) (string, b
 // getLastSuccessfulCISHA queries gh CLI for the last successful workflow run SHA.
 func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, error) {
 	// gh run list -b <branch> -s success -w "<workflow>" -L 1 --json headSha -q '.[0].headSha'
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"-b", branch,
 		"-s", "success",
 		"-w", workflow,
@@ -557,9 +558,6 @@ func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, err
 		"--json", "headSha",
 		"-q", ".[0].headSha",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("gh command failed: %w", err)
 	}
@@ -570,10 +568,7 @@ func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, err
 
 // getCurrentSHA gets the current HEAD SHA.
 func getCurrentSHA(workspaceRoot string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "rev-parse", "HEAD")
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse failed: %w", err)
 	}
@@ -583,10 +578,7 @@ func getCurrentSHA(workspaceRoot string) (string, error) {
 
 // getChangedFilesBetweenSHAs gets the list of files changed between two SHAs.
 func getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
-	cmd := exec.Command("git", "diff", "--name-only", baseSHA+".."+headSHA)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", baseSHA+".."+headSHA)
 	if err != nil {
 		return nil, fmt.Errorf("git diff failed: %w", err)
 	}

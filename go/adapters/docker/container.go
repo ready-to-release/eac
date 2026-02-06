@@ -144,6 +144,9 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		WorkingDir:   config.WorkingDir,
 		AttachStdout: true,
 		AttachStderr: true,
+		AttachStdin:  config.StdinReader != nil,
+		OpenStdin:    config.StdinReader != nil,
+		StdinOnce:    config.StdinReader != nil,
 	}
 
 	if len(config.Entrypoint) > 0 {
@@ -221,6 +224,7 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
+		Stdin:  config.StdinReader != nil,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to attach to container: %w", err)
@@ -235,13 +239,19 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Read output
-	var stdout, stderr bytes.Buffer
-	var stdoutWriter, stderrWriter io.Writer = &stdout, &stderr
-	if config.LogWriter != nil {
-		stdoutWriter = io.MultiWriter(&stdout, config.LogWriter)
-		stderrWriter = io.MultiWriter(&stderr, config.LogWriter)
+	// Pipe stdin if provided
+	if config.StdinReader != nil {
+		go func() {
+			defer attachResp.CloseWrite() //nolint:errcheck
+			_, _ = io.Copy(attachResp.Conn, config.StdinReader)
+		}()
 	}
+
+	// Determine output destinations (StdoutWriter > LogWriter > buffer capture)
+	var stdout, stderr bytes.Buffer
+	stdoutWriter := chooseWriter(config.StdoutWriter, config.LogWriter, &stdout)
+	stderrWriter := chooseWriter(config.StderrWriter, config.LogWriter, &stderr)
+
 	_, _ = stdcopy.StdCopy(stdoutWriter, stderrWriter, attachResp.Reader) //nolint:errcheck
 
 	// Wait for container exit
@@ -466,6 +476,21 @@ func parseMemoryLimit(s string) int64 {
 	var num int64
 	fmt.Sscanf(numStr, "%d", &num)
 	return num * multiplier
+}
+
+// chooseWriter selects the appropriate output writer based on priority:
+// streaming writer > log writer > capture buffer.
+func chooseWriter(streaming, log io.Writer, capture *bytes.Buffer) io.Writer {
+	if streaming != nil {
+		if log != nil {
+			return io.MultiWriter(streaming, log)
+		}
+		return streaming
+	}
+	if log != nil {
+		return io.MultiWriter(capture, log)
+	}
+	return capture
 }
 
 // unavailableAdapter is a ContainerPort that always reports unavailable.

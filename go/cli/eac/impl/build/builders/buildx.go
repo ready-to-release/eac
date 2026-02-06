@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +13,15 @@ import (
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
-	RegisterHandler(&BuildxHandler{})
+	h := &BuildxHandler{}
+	RegisterHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(h)
 }
 
 // BuildxHandler builds Docker images using docker_build config from module or type.
@@ -72,7 +76,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 	}
 
 	// Get docker_build config from module first, then fall back to module type
-	dockerBuild := getDockerBuildConfig(concrete, logWriter)
+	dockerBuild := getDockerBuildConfig(concrete, opts.Component, logWriter)
 	if dockerBuild == nil {
 		Logln(logWriter, "❌ No docker_build configuration found for module %s", moniker)
 		return 1
@@ -115,10 +119,10 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 
 	// Expand template variables in docker_build config
 	container := expandTemplate(dockerBuild.Container, moniker)
-	context := filepath.Join(workspaceRoot, expandTemplate(dockerBuild.Context, moniker))
+	buildContext := filepath.Join(workspaceRoot, expandTemplate(dockerBuild.Context, moniker))
 	dockerfilePath := expandTemplate(dockerBuild.Dockerfile, moniker)
 	if dockerfilePath == "" {
-		dockerfilePath = filepath.Join(context, "Dockerfile")
+		dockerfilePath = filepath.Join(buildContext, "Dockerfile")
 	} else {
 		dockerfilePath = filepath.Join(workspaceRoot, dockerfilePath)
 	}
@@ -132,7 +136,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 
 	Logln(logWriter, "📦 Building Docker image")
 	Logln(logWriter, "   Container: %s", container)
-	Logln(logWriter, "   Context: %s", context)
+	Logln(logWriter, "   Context: %s", buildContext)
 	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
 	Logln(logWriter, "   Tags: %v", tags)
 
@@ -144,17 +148,13 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 	}
 
 	// Build the image
-	args := buildDockerBuildArgs(dockerBuild, context, dockerfilePath, tags, moniker, opts, logWriter)
+	args := buildDockerBuildArgs(dockerBuild, buildContext, dockerfilePath, tags, moniker, opts, logWriter)
 
 	Logln(logWriter, "\nExecuting: docker %s", strings.Join(args, " "))
 
-	cmd := exec.Command("docker", args...)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
-
-	if err := cmd.Run(); err != nil {
-		Logln(logWriter, "\n❌ Docker build failed: %v", err)
-		return 1
+	if exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", args...); exitCode != 0 {
+		Logln(logWriter, "\n❌ Docker build failed")
+		return exitCode
 	}
 
 	Logln(logWriter, "\n✅ Docker image built successfully")
@@ -170,7 +170,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 }
 
 // buildDockerBuildArgs constructs the docker buildx build command arguments.
-func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, dockerfilePath string, tags []string, moniker string, opts BuildOptions, logWriter io.Writer) []string {
+func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, buildContext, dockerfilePath string, tags []string, moniker string, opts BuildOptions, logWriter io.Writer) []string {
 	args := []string{"buildx", "build"}
 
 	// Use specified builder or default to "default" (docker driver).
@@ -238,7 +238,7 @@ func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, docker
 	}
 
 	// Build context (must be last)
-	args = append(args, context)
+	args = append(args, buildContext)
 
 	return args
 }
@@ -296,6 +296,7 @@ func authenticateRegistry(registry string, logWriter io.Writer) int {
 
 	Logln(logWriter, "🔐 Authenticating to %s...", registry)
 
+	// TODO: migrate to tool executor once stdin support is added to ExecutionContext
 	cmd := exec.Command("docker", "login", registry, "-u", actor, "--password-stdin")
 	cmd.Stdin = strings.NewReader(token)
 	cmd.Stdout = logWriter
@@ -312,12 +313,14 @@ func authenticateRegistry(registry string, logWriter io.Writer) int {
 // detectLocalPlatform detects the current platform for local Docker builds
 // Returns platform in Docker format: "linux/amd64", "linux/arm64", etc.
 func detectLocalPlatform() string {
-	// Run 'docker version' to get the platform Docker is configured for
-	cmd := exec.Command("docker", "version", "--format", "{{.Server.Os}}/{{.Server.Arch}}")
-	cmd.Stderr = nil // Discard stderr - TUI may be active
-	output, err := cmd.Output()
-	if err == nil {
-		platform := strings.TrimSpace(string(output))
+	// Run 'docker version' via tool executor to get the platform Docker is configured for
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("docker")
+	execCtx := &tool.ExecutionContext{
+		ArgsOverrides: []string{"version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"},
+	}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err == nil && result.ExitCode == 0 {
+		platform := strings.TrimSpace(string(result.Stdout))
 		if platform != "" && platform != "/" {
 			return platform
 		}
@@ -342,9 +345,23 @@ func expandTemplate(template, moniker string) string {
 	return result
 }
 
-// getDockerBuildConfig gets docker_build config from the dockerfile package.
-func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *config.DockerBuildConfig {
-	// Get docker_build config from the dockerfile package
+// getDockerBuildConfig gets docker_build config from a named component, falling back to "dockerfile".
+func getDockerBuildConfig(module *modules.ModuleContract, componentName string, logWriter io.Writer) *config.DockerBuildConfig {
+	// Try the specific component name first (for multi-dockerfile modules like oci-tools)
+	if componentName != "" {
+		if pkg := module.Components[componentName]; pkg != nil {
+			if pkg.DockerBuild != nil && len(pkg.DockerBuild) > 0 {
+				dockerCfg, err := convertDockerBuildConfig(pkg.DockerBuild)
+				if err != nil {
+					Logln(logWriter, "⚠️  Failed to parse docker_build config from component %s: %v", componentName, err)
+				} else {
+					return dockerCfg
+				}
+			}
+		}
+	}
+
+	// Fall back to legacy "dockerfile" key (backward compatibility for single-container modules)
 	dockerfilePackage := module.Components["dockerfile"]
 	if dockerfilePackage == nil {
 		return nil
@@ -353,7 +370,6 @@ func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *
 		return nil
 	}
 
-	// Convert map[string]interface{} to DockerBuildConfig via YAML round-trip
 	dockerCfg, err := convertDockerBuildConfig(dockerfilePackage.DockerBuild)
 	if err != nil {
 		Logln(logWriter, "⚠️  Failed to parse dockerfile package docker_build config: %v", err)

@@ -97,6 +97,7 @@ type DefaultExecutor struct {
 	containerErr      error                    // Lazily initialized; captures container init error
 	containerProvider ContainerProvider        // Provider for container port
 	imageManager      *ImageManager
+	credentials       *CredentialsConfig       // Host env vars to forward to container tools
 }
 
 // NewExecutor creates a new tool executor.
@@ -123,6 +124,11 @@ func NewExecutorWithContainer(c container.ContainerPort) *DefaultExecutor {
 // SetContainerProvider sets a custom container provider for this executor.
 func (e *DefaultExecutor) SetContainerProvider(provider ContainerProvider) {
 	e.containerProvider = provider
+}
+
+// SetCredentials sets the global credentials config for host env forwarding to containers.
+func (e *DefaultExecutor) SetCredentials(creds *CredentialsConfig) {
+	e.credentials = creds
 }
 
 // SetImageManager sets the image manager for handling local containers and GHCR caching.
@@ -164,51 +170,34 @@ func (e *DefaultExecutor) Execute(ctx context.Context, tool *ToolDefinition, exe
 
 // executeSystem runs a system binary tool.
 func (e *DefaultExecutor) executeSystem(ctx context.Context, tool *ToolDefinition, execCtx *ExecutionContext) (*ExecutionResult, error) {
-	// Build argument list
-	args := make([]string, 0, len(tool.Args)+len(execCtx.ArgsOverrides))
-	args = append(args, tool.Args...)
-	args = append(args, execCtx.ArgsOverrides...)
-
-	// Resolve placeholders in arguments
-	for i, arg := range args {
-		args[i] = resolvePlaceholders(arg, execCtx.Placeholders)
+	cmd := BuildCommand(ctx, tool, execCtx)
+	if cmd == nil {
+		return nil, fmt.Errorf("failed to build command for tool %q", tool.ID)
 	}
 
-	// Create command
-	cmd := exec.CommandContext(ctx, tool.Binary, args...)
-
-	// Set working directory
-	workDir := execCtx.ModuleRoot
-	if tool.WorkDir != "" {
-		workDir = resolvePlaceholders(tool.WorkDir, execCtx.Placeholders)
-	}
-	if workDir != "" {
-		if filepath.IsAbs(workDir) {
-			cmd.Dir = workDir
-		} else {
-			cmd.Dir = filepath.Join(execCtx.WorkspaceRoot, workDir)
-		}
-	} else {
-		cmd.Dir = execCtx.WorkspaceRoot
-	}
-
-	// Set environment
-	cmd.Env = os.Environ()
-	for k, v := range tool.Env {
-		cmd.Env = append(cmd.Env, k+"="+resolvePlaceholders(v, execCtx.Placeholders))
-	}
-	for k, v := range execCtx.EnvOverrides {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
-
-	// Capture output
-	var stdout, stderr bytes.Buffer
-	if execCtx.LogWriter != nil {
+	// Set up stdout: streaming writer or capture buffer
+	var stdout bytes.Buffer
+	if execCtx.StdoutWriter != nil {
+		cmd.Stdout = execCtx.StdoutWriter
+	} else if execCtx.LogWriter != nil {
 		cmd.Stdout = io.MultiWriter(&stdout, execCtx.LogWriter)
-		cmd.Stderr = io.MultiWriter(&stderr, execCtx.LogWriter)
 	} else {
 		cmd.Stdout = &stdout
+	}
+
+	// Set up stderr: streaming writer or capture buffer
+	var stderr bytes.Buffer
+	if execCtx.StderrWriter != nil {
+		cmd.Stderr = execCtx.StderrWriter
+	} else if execCtx.LogWriter != nil {
+		cmd.Stderr = io.MultiWriter(&stderr, execCtx.LogWriter)
+	} else {
 		cmd.Stderr = &stderr
+	}
+
+	// Set up stdin if provided
+	if execCtx.StdinReader != nil {
+		cmd.Stdin = execCtx.StdinReader
 	}
 
 	// Execute
@@ -216,10 +205,18 @@ func (e *DefaultExecutor) executeSystem(ctx context.Context, tool *ToolDefinitio
 	err := cmd.Run()
 	duration := time.Since(start)
 
+	// Kill process group on context cancellation
+	if ctx.Err() != nil {
+		KillProcessGroup(cmd)
+	}
+
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
+		} else if ctx.Err() != nil {
+			// Context cancelled/timed out — not an unexpected error
+			exitCode = 1
 		} else {
 			return nil, fmt.Errorf("execution failed: %w", err)
 		}
@@ -284,13 +281,67 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		}
 	}
 
-	// Build environment variables map
+	// Build environment variables map with precedence:
+	// 1. Global credentials (host-env, ci-env) - lowest priority
+	// 2. Per-tool host-env
+	// 3. Static tool.Env from YAML
+	// 4. Per-call execCtx.EnvOverrides - highest priority
 	env := make(map[string]string)
+
+	// 1. Forward global credential env vars from host
+	if e.credentials != nil {
+		for _, name := range e.credentials.HostEnv {
+			if val := os.Getenv(name); val != "" {
+				env[name] = val
+			}
+		}
+		for _, name := range e.credentials.CIEnv {
+			if val := os.Getenv(name); val != "" {
+				env[name] = val
+			}
+		}
+	}
+
+	// 2. Forward per-tool host env vars (additive to global)
+	for _, name := range tool.HostEnv {
+		if val := os.Getenv(name); val != "" {
+			env[name] = val
+		}
+	}
+
+	// 3. Static YAML env (overrides forwarded values)
 	for k, v := range tool.Env {
 		env[k] = resolvePlaceholders(v, execCtx.Placeholders)
 	}
+
+	// 4. Per-call overrides (highest priority)
 	for k, v := range execCtx.EnvOverrides {
 		env[k] = v
+	}
+
+	// Debug: log forwarded host env var names (never values)
+	if execCtx.LogWriter != nil && (e.credentials != nil || len(tool.HostEnv) > 0) {
+		var forwarded []string
+		if e.credentials != nil {
+			for _, name := range e.credentials.HostEnv {
+				if _, ok := env[name]; ok {
+					forwarded = append(forwarded, name)
+				}
+			}
+			for _, name := range e.credentials.CIEnv {
+				if _, ok := env[name]; ok {
+					forwarded = append(forwarded, name)
+				}
+			}
+		}
+		for _, name := range tool.HostEnv {
+			if _, ok := env[name]; ok {
+				forwarded = append(forwarded, name)
+			}
+		}
+		if len(forwarded) > 0 {
+			fmt.Fprintf(execCtx.LogWriter, "[debug] forwarded host env: %v\n", forwarded)
+		}
 	}
 
 	// Build command with overrides
@@ -301,16 +352,19 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 
 	// Build container config
 	config := &container.ContainerConfig{
-		Image:      imageRef,
-		Command:    cmd,
-		Entrypoint: tool.Entrypoint,
-		WorkingDir: workDir,
-		Env:        env,
-		Mounts:     mounts,
-		User:       tool.User,
-		Privileged: tool.Privileged,
-		Network:    tool.Network,
-		LogWriter:  execCtx.LogWriter,
+		Image:         imageRef,
+		Command:       cmd,
+		Entrypoint:    tool.Entrypoint,
+		WorkingDir:    workDir,
+		Env:           env,
+		Mounts:        mounts,
+		User:          tool.User,
+		Privileged:    tool.Privileged,
+		Network:       tool.Network,
+		LogWriter:     execCtx.LogWriter,
+		StdoutWriter:  execCtx.StdoutWriter,
+		StderrWriter:  execCtx.StderrWriter,
+		StdinReader:   execCtx.StdinReader,
 		ContainerName: fmt.Sprintf("eac-%s-%d", tool.ContainerSafeName(), time.Now().UnixNano()),
 	}
 

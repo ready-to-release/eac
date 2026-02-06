@@ -1,13 +1,13 @@
 package cmdframework
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -48,17 +48,40 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 		ComponentTypesDisplay: make(map[string]string),
 	}
 
-	// Phase 1: Initialize
-	if err := phaseInit(ctx); err != nil {
-		log.Errorf("Initialization failed: %v", err)
+	// Phase 1a: Early init - TUI starts immediately (shows loading animation)
+	if err := phaseInitEarly(ctx); err != nil {
+		log.Errorf("Early initialization failed: %v", err)
 		return 1
 	}
 	defer ctx.Cleanup()
+
+	// Phase 1b: Deferred init - config, tools, etc. (TUI shows loading dots)
+	if err := phaseInitDeferred(ctx); err != nil {
+		log.Errorf("Initialization failed: %v", err)
+		if cfg.UseTUI && ctx.Orchestrator != nil {
+			// TUI is already running - show error and exit cleanly
+			ctx.Orchestrator.SendInitLine("ERROR: " + err.Error())
+			ctx.Orchestrator.SendSummary(&tui.SummaryData{
+				Success:   false,
+				TotalTime: time.Since(ctx.StartTime),
+				Details:   []string{"Initialization failed: " + err.Error()},
+			})
+			ctx.Orchestrator.WaitTUI()
+			ctx.Orchestrator.StopTUI()
+		}
+		return 1
+	}
 
 	// Output boot status for init phase
 	ctx.WriteStatus(true, "Loading configuration... %s", formatTiming(ctx.initTimings.ConfigLoad))
 	if ctx.initTimings.ToolInit > 0 {
 		ctx.WriteStatus(true, "Initializing tool system... %s", formatTiming(ctx.initTimings.ToolInit))
+	}
+
+	// Send early config metadata to TUI for progressive display.
+	// This fills in command name, parallelism mode, worker count before module resolution.
+	if cfg.UseTUI && ctx.Orchestrator != nil {
+		sendConfigReady(ctx)
 	}
 
 	// Hook: AfterInit
@@ -119,30 +142,16 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 	// Display init summary to console
 	displayInitSummary(ctx)
 
-	// Start TUI display now that init is complete
-	if cfg.UseTUI {
-		// TUI Hook 3: Pre-start configuration
+	// Send init summary to TUI (replaces loading dots with compact init + tabs)
+	if cfg.UseTUI && ctx.InitSummary != nil {
+		tuiSummary := convertToTUIInitSummary(ctx)
+		tuiSummary.PlannedTools = ExtractPlannedTools(ctx)
+		ctx.Orchestrator.SetInitSummary(tuiSummary)
+
+		// TUI Hook: Send UoW data for visualization (after full command is known)
 		if ctx.TUIHooks != nil {
-			if err := ctx.TUIHooks.BeforeStart(context.Background()); err != nil {
-				log.Errorf("TUI BeforeStart hook failed: %v", err)
-				return 1
-			}
-		}
-
-		ctx.WriteStatus(true, "Booting TUI...")
-		ctx.Orchestrator.StartTUI()
-
-		// Send init summary to TUI
-		if ctx.InitSummary != nil {
-			tuiSummary := convertToTUIInitSummary(ctx)
-			tuiSummary.PlannedTools = ExtractPlannedTools(ctx)
-			ctx.Orchestrator.SetInitSummary(tuiSummary)
-
-			// TUI Hook 2: Send UoW data for visualization (after full command is known)
-			if ctx.TUIHooks != nil {
-				uowData := buildUoWData(ctx)
-				ctx.TUIHooks.ReceiveUoWs(uowData)
-			}
+			uowData := buildUoWData(ctx)
+			ctx.TUIHooks.ReceiveUoWs(uowData)
 		}
 	}
 
@@ -253,6 +262,27 @@ func buildUoWData(ctx *ExecutionContext) interfaces.UoWData {
 
 	// Fallback: empty data
 	return interfaces.UoWData{}
+}
+
+// sendConfigReady sends early configuration metadata to the TUI.
+// This enables progressive display of command context before module resolution.
+func sendConfigReady(ctx *ExecutionContext) {
+	repoConcurrency := ctx.RepoConfig.EffectiveParallelism(environments.IsCI())
+	maxConcurrency := CalculateMaxConcurrency(ctx.Config.MaxConcurrency, repoConcurrency, ctx.Config.Turbo, ctx.Config.Sequential)
+
+	parallelismMode := "devbox"
+	if environments.IsCI() {
+		parallelismMode = "ci"
+	}
+
+	ctx.Orchestrator.SendConfigReady(
+		string(ctx.Config.Type),
+		string(logging.GetExecutionContext()),
+		parallelismMode,
+		maxConcurrency,
+		maxConcurrency, // Approximate until scheduler calculates real value
+		ctx.Config.OutputDir,
+	)
 }
 
 // buildUoWDataFromUnitSpecs builds UoW data using UnitSpec data for proper IDs.

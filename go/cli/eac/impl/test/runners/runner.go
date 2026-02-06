@@ -7,6 +7,7 @@
 package runners
 
 import (
+	"context"
 	"io"
 	"time"
 
@@ -49,6 +50,12 @@ type RunResult struct {
 
 // RunConfig holds configuration for test execution.
 type RunConfig struct {
+	// Ctx is the worker context for cancellation/timeout propagation.
+	// When the orchestrator's worker timeout fires, this context is cancelled,
+	// allowing runners to kill subprocesses cleanly.
+	// If nil, runners fall back to context.Background().
+	Ctx context.Context
+
 	WorkspaceRoot  string
 	TestRunDir     string
 	Coverage       bool

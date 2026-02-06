@@ -86,12 +86,19 @@ func (m *Module) GetBooks() []string {
 	return names
 }
 
-// GetChangelog returns the changelog path, defaulting to release/<moniker>/CHANGELOG.md.
+// GetChangelog returns the changelog path. Only SemVer modules default to release/<moniker>/CHANGELOG.md.
+// CalVer modules have no changelog (auto-managed releases).
 func (m *Module) GetChangelog() string {
-	if m.Versioning != nil && m.Versioning.Changelog != "" {
+	if m.Versioning == nil {
+		return ""
+	}
+	if m.Versioning.Changelog != "" {
 		return m.Versioning.Changelog
 	}
-	return "release/" + m.Moniker + "/CHANGELOG.md"
+	if m.Versioning.Scheme == "SemVer" {
+		return "release/" + m.Moniker + "/CHANGELOG.md"
+	}
+	return ""
 }
 
 // ShouldAggregateFromDependencies returns true if this module should aggregate
@@ -139,7 +146,7 @@ type ReleaseBundleCategory struct {
 type ModuleVersioning struct {
 	Scheme      string `yaml:"scheme"`                 // Implicit (supporting), SemVer, or CalVer (releasable)
 	Current     string `yaml:"current,omitempty"`      // Current version (releasable modules only)
-	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
+	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (SemVer only; defaults to release/<moniker>/CHANGELOG.md)
 	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
 }
 
@@ -562,6 +569,17 @@ func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
 	return dockerfileEntry.DockerBuild
 }
 
+// GetDockerBuildConfigForComponent returns docker_build from a named component.
+// Falls back to the "dockerfile" key for backward compatibility.
+func (m *Module) GetDockerBuildConfigForComponent(componentName string) *DockerBuildConfig {
+	if componentName != "" {
+		if entry, ok := m.Components[componentName]; ok && entry != nil && entry.DockerBuild != nil {
+			return entry.DockerBuild
+		}
+	}
+	return m.GetDockerBuildConfig()
+}
+
 // applyModuleDefaults applies default values to all modules (generic defaults only).
 // Call ApplyComponentDefaults after loading ComponentTypes for component-specific defaults.
 func (c *RepositoryConfig) applyModuleDefaults() {
@@ -787,8 +805,9 @@ func (m *Module) resolveDerivedPaths() {
 
 // deriveChangelogPath auto-derives changelog path from release_type and moniker.
 // Convention:
-//   - published/bundle: release/{moniker}/CHANGELOG.md
-//   - internal: {go_root}/CHANGELOG.md (if go component exists with root)
+//   - CalVer: no changelog (auto-managed releases)
+//   - SemVer published/bundle: release/{moniker}/CHANGELOG.md
+//   - SemVer internal: {go_root}/CHANGELOG.md (if go component exists with root)
 //   - none/empty/other: empty string (no changelog)
 func deriveChangelogPath(m *Module) string {
 	if m == nil || m.Versioning == nil {
@@ -798,6 +817,11 @@ func deriveChangelogPath(m *Module) string {
 	// Explicit changelog takes precedence
 	if m.Versioning.Changelog != "" {
 		return m.Versioning.Changelog
+	}
+
+	// CalVer modules have no changelogs (auto-managed releases)
+	if m.Versioning.Scheme == "CalVer" {
+		return ""
 	}
 
 	// Auto-derive based on release type

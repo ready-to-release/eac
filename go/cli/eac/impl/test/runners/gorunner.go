@@ -2,10 +2,10 @@
 package runners
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/testing"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 var goRunnerLog = logging.C()
@@ -238,9 +239,15 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, logWri
 	// Log file is wrapped with ANSI stripping at orchestrator level
 	streamingRunner := runner.NewStreamingRunner(logWriter, logWriter)
 
+	// Use worker context for subprocess cancellation (fall back to Background if nil)
+	runCtx := cfg.Ctx
+	if runCtx == nil {
+		runCtx = context.Background()
+	}
+
 	// Run go generate to ensure embedded files exist (e.g., from contracts)
 	// This is needed because test jobs may run on fresh checkouts without build artifacts
-	if err := runGoGenerate(actualPkgDir, logWriter); err != nil {
+	if err := runGoGenerate(runCtx, actualPkgDir, logWriter); err != nil {
 		fmt.Fprintf(logWriter, "Warning: go generate failed: %v\n", err)
 		// Don't fail - go generate might not be needed for all packages
 	}
@@ -263,39 +270,41 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, logWri
 	// Add package path
 	goTestArgs = append(goTestArgs, ".")
 
-	cmd := exec.Command("go", goTestArgs...)
-	cmd.Dir = actualPkgDir
-	cmd.Env = os.Environ()
-
-	// Set test run ID for nested commands
-	testRunID := filepath.Base(cfg.TestRunDir)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
-
-	// Disable file logging in test subprocesses to prevent polluting out/commands.log
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
-
-	// Set godog environment variables if this is a godog test
+	// Build godog-specific environment variables first (before command creation)
 	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
+	testRunID := filepath.Base(cfg.TestRunDir)
+
+	// Build environment overrides for the tool executor
+	envOverrides := map[string]string{
+		"R2R_TEST_RUN_ID":         testRunID,
+		"R2R_TEST_LOGGING_ACTIVE": "true",
+	}
+
 	if isGodogTest {
-		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
+		envOverrides["GODOG_FORMAT"] = "progress"
 		if cfg.SuiteTagFilter != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_SUITE_TAGS=%s", cfg.SuiteTagFilter))
+			envOverrides["GODOG_SUITE_TAGS"] = cfg.SuiteTagFilter
 		}
-
-		// Always set report output for godog tests (cucumber.json format)
-		// OutputDir is set by the orchestrator for UoW output
 		if cfg.OutputDir != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", cfg.OutputDir))
+			envOverrides["GODOG_OUTPUT_DIR"] = cfg.OutputDir
 		}
-
 		if relFeatureFile != "" {
 			relFeaturePath, relErr := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
 			if relErr == nil {
-				relFeaturePath = filepath.ToSlash(relFeaturePath)
-				cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
+				envOverrides["GODOG_PATHS"] = filepath.ToSlash(relFeaturePath)
 			}
 		}
 	}
+
+	// Use tool.BuildCommand for streaming JSON test event parsing via streamingRunner.Run(cmd).
+	// BuildCommand handles: binary resolution, process group, env merge, and workdir.
+	goTool := tool.GlobalRegistry().GetOrAdhoc("go")
+	cmd := tool.BuildCommand(runCtx, goTool, &tool.ExecutionContext{
+		WorkspaceRoot: cfg.WorkspaceRoot,
+		ModuleRoot:    actualPkgDir,
+		ArgsOverrides: goTestArgs,
+		EnvOverrides:  envOverrides,
+	})
 
 	// Run tests with streaming output
 	testResult, runErr := streamingRunner.Run(cmd)
@@ -331,23 +340,32 @@ func fileExists(path string) bool {
 
 // runGoGenerate runs go generate for a package directory.
 // This ensures embedded files from contracts are available for testing.
-func runGoGenerate(pkgDir string, logWriter io.Writer) error {
+// The context is used for cancellation when the worker timeout fires.
+func runGoGenerate(ctx context.Context, pkgDir string, logWriter io.Writer) error {
 	// Find the module root by walking up to find go.mod
 	moduleRoot := findModuleRoot(pkgDir)
 	if moduleRoot == "" {
 		return nil // No go.mod found, skip
 	}
 
-	cmd := exec.Command("go", "generate", "./...")
-	cmd.Dir = moduleRoot
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
-
-	output, err := cmd.CombinedOutput()
-	if len(output) > 0 {
-		fmt.Fprintf(logWriter, "go generate output:\n%s\n", string(output))
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("go")
+	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    moduleRoot,
+		FullEnv:       fullEnv,
+		ArgsOverrides: []string{"generate", "./..."},
 	}
-	return err
+	result, err := tool.GlobalExecutor().Execute(ctx, toolDef, execCtx)
+	if result != nil && (len(result.Stdout) > 0 || len(result.Stderr) > 0) {
+		fmt.Fprintf(logWriter, "go generate output:\n%s%s\n", result.Stdout, result.Stderr)
+	}
+	if err != nil {
+		return err
+	}
+	if result != nil && result.ExitCode != 0 {
+		return fmt.Errorf("go generate exited with code %d", result.ExitCode)
+	}
+	return nil
 }
 
 // findModuleRoot walks up from dir to find the directory containing go.mod.

@@ -149,7 +149,6 @@ module-templates:
   docs-site-template:
     versioning:
       scheme: CalVer
-      changelog: "release/{moniker}/CHANGELOG.md"
       release_type: published
     components:
       site:

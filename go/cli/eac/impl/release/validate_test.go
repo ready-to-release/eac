@@ -100,8 +100,8 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 func TestValidateRelease_PublishedModules(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	// Published modules with versioning: r2r-cli, ext-eac, docs
-	publishedModules := []string{"r2r-cli", "ext-eac", "docs"}
+	// Published SemVer modules with versioning: r2r-cli, ext-eac (docs is CalVer, no changelog)
+	publishedModules := []string{"r2r-cli", "ext-eac"}
 
 	for _, moniker := range publishedModules {
 		t.Run(moniker, func(t *testing.T) {
@@ -161,13 +161,8 @@ func TestValidateRelease_AllModulesConsistency(t *testing.T) {
 		moduleContract, exists := moduleRegistry.Get(moniker)
 		require.True(t, exists)
 
-		// Skip modules without versioning
-		if moduleContract.Versioning == nil {
-			continue
-		}
-
-		// Skip Implicit-versioned modules - they derive versions from parents and don't have changelogs
-		if moduleContract.Versioning.Scheme == "Implicit" {
+		// Only SemVer modules have changelogs (Implicit = no releases, CalVer = auto-managed)
+		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme != "SemVer" {
 			continue
 		}
 

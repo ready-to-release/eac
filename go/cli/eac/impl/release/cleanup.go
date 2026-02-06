@@ -20,12 +20,13 @@
 package release
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -95,19 +96,18 @@ func ReleaseCleanup() int {
 
 // releaseExists checks if a GitHub release exists for the given tag.
 func releaseExists(tagName string) bool {
-	cmd := exec.Command("gh", "release", "view", tagName)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	err := cmd.Run()
-	return err == nil
+	_, exitCode, err := ghexec.RunCombined(context.Background(), ".", "release", "view", tagName)
+	return err == nil && exitCode == 0
 }
 
 // deleteRelease deletes a GitHub release.
 func deleteRelease(tagName string) error {
-	cmd := exec.Command("gh", "release", "delete", tagName, "--yes")
-	output, err := cmd.CombinedOutput()
+	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "release", "delete", tagName, "--yes")
 	if err != nil {
-		return fmt.Errorf("%s: %w", strings.TrimSpace(string(output)), err)
+		return err
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("%s (exit %d)", strings.TrimSpace(string(output)), exitCode)
 	}
 	return nil
 }
@@ -115,8 +115,7 @@ func deleteRelease(tagName string) error {
 // deleteTag deletes a tag from the remote repository using gh api.
 func deleteTag(tagName string) error {
 	// Get repository from gh
-	repoCmd := exec.Command("gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
-	repoOutput, err := repoCmd.Output()
+	repoOutput, err := ghexec.Run(".", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
 	if err != nil {
 		return fmt.Errorf("failed to get repository: %w", err)
 	}
@@ -124,10 +123,12 @@ func deleteTag(tagName string) error {
 
 	// Delete tag via API
 	apiPath := fmt.Sprintf("repos/%s/git/refs/tags/%s", repo, tagName)
-	cmd := exec.Command("gh", "api", "--method", "DELETE", apiPath)
-	output, err := cmd.CombinedOutput()
+	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "api", "--method", "DELETE", apiPath)
 	if err != nil {
-		return fmt.Errorf("%s: %w", strings.TrimSpace(string(output)), err)
+		return err
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("%s (exit %d)", strings.TrimSpace(string(output)), exitCode)
 	}
 	return nil
 }

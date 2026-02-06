@@ -132,15 +132,14 @@ func (p *Preprocessor) copySingleSource(src config.Source) (CopyStats, error) {
 }
 
 // isAssetNeeded checks if an asset file should be copied based on references.
-// Always copies: css/, js/, logo/, templates/, cache/ (required for build)
+// Always copies: css/, js/, logo/, templates/ (required for build)
 // Conditionally copies: other assets only if referenced by markdown
 func (p *Preprocessor) isAssetNeeded(assetPath string) bool {
 	// Normalize path for comparison
 	normalized := filepath.ToSlash(assetPath)
 
 	// Always copy essential directories (required for MkDocs build)
-	// cache/ contains mermaid/structurizr/drawio preprocessed diagrams
-	essentialDirs := []string{"/css/", "/js/", "/logo/", "/templates/", "/cache/"}
+	essentialDirs := []string{"/css/", "/js/", "/logo/", "/templates/"}
 	for _, dir := range essentialDirs {
 		if strings.Contains(normalized, dir) {
 			return true

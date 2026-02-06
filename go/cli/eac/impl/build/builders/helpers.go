@@ -2,11 +2,10 @@
 package builders
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/platform"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // Logln writes a formatted string with platform-specific line ending to the writer.
@@ -21,53 +21,58 @@ func Logln(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format+platform.LineEnding, args...)
 }
 
-// RunCommandWithLog executes a command in the specified directory
-// Output is written to the provided writer
+// RunCommandWithLog executes a command in the specified directory via the tool executor.
+// Output is streamed to the provided writer.
 // Returns exit code (0 = success, non-zero = failure).
-func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...string) int {
-	// Use platform-aware command wrapper (handles .cmd files on Windows)
-	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
-	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = dir
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
+func RunCommandWithLog(ctx context.Context, dir string, logWriter io.Writer, name string, args ...string) int {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(name)
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: dir,
+		ModuleRoot:    dir,
+		LogWriter:     logWriter,
+		StdoutWriter:  logWriter,
+		StderrWriter:  logWriter,
+		ArgsOverrides: args,
+	}
 
-	err := cmd.Run()
+	result, err := tool.GlobalExecutor().Execute(ctx, toolDef, execCtx)
 	if err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			exitCode := exitErr.ExitCode()
-			Logln(logWriter, "[debug] command exited with code %d", exitCode)
-			return exitCode
-		}
 		Logln(logWriter, "\nError: failed to execute command: %v", err)
 		return 1
 	}
 
-	Logln(logWriter, "[debug] command completed successfully (exit code 0)")
-	return 0
+	if result.ExitCode != 0 {
+		Logln(logWriter, "[debug] command exited with code %d", result.ExitCode)
+	} else {
+		Logln(logWriter, "[debug] command completed successfully (exit code 0)")
+	}
+	return result.ExitCode
 }
 
-// RunCommandWithEnv executes a command with custom environment variables.
-func RunCommandWithEnv(dir string, logWriter io.Writer, env []string, name string, args ...string) int {
-	// Use platform-aware command wrapper (handles .cmd files on Windows)
-	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
-	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = dir
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
-	cmd.Env = append(os.Environ(), env...)
+// RunCommandWithEnv executes a command with custom environment variables via the tool executor.
+func RunCommandWithEnv(ctx context.Context, dir string, logWriter io.Writer, env []string, name string, args ...string) int {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(name)
 
-	if err := cmd.Run(); err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			return exitErr.ExitCode()
-		}
+	// Build full env by appending custom vars to current environment
+	fullEnv := append(os.Environ(), env...)
+
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: dir,
+		ModuleRoot:    dir,
+		LogWriter:     logWriter,
+		StdoutWriter:  logWriter,
+		StderrWriter:  logWriter,
+		FullEnv:       fullEnv,
+		ArgsOverrides: args,
+	}
+
+	result, err := tool.GlobalExecutor().Execute(ctx, toolDef, execCtx)
+	if err != nil {
 		Logln(logWriter, "\nError: failed to execute command: %v", err)
 		return 1
 	}
 
-	return 0
+	return result.ExitCode
 }
 
 // CopyFile copies a file from src to dst, preserving permissions.

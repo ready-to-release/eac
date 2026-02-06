@@ -25,9 +25,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -115,14 +115,11 @@ func GetReleaseStatus() int {
 func checkModuleRelease(module, workspaceRoot string) ModuleReleaseStatus {
 	// Query GitHub releases for this module's tag pattern
 	// Tags are formatted as: module/version (e.g., r2r-cli/1.0.0)
-	cmd := exec.Command("gh", "release", "list",
+	output, err := ghexec.Run(workspaceRoot, "release", "list",
 		"--limit", "10",
 		"--json", "tagName",
 		"-q", fmt.Sprintf(".[] | select(.tagName | startswith(\"%s/\")) | .tagName", module),
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return ModuleReleaseStatus{Released: false}
 	}

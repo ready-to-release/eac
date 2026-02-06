@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // Console is the primary interface for all TUI implementations.
@@ -43,6 +45,10 @@ type Console interface {
 	MarkUoWRunning(moniker string)
 	MarkUoWComplete(moniker string, exitCode int)
 	MarkUoWCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string)
+
+	// Early Configuration (progressive display)
+	SendConfigReady(commandName, executionContext, parallelismMode string,
+		effectiveWorkers, weightedCapacity int, outputDir string)
 
 	// Summary
 	SendSummary(data *SummaryData)
@@ -180,6 +186,10 @@ type Status struct {
 	// Container instance counts (for "Containers" lamps)
 	RunningContainerCount int // Currently running container instances (lit lamps)
 	TotalContainerCount   int // Total container instances started (total lamps shown)
+
+	// System tool instance counts (for "Native" lamps)
+	RunningSystemCount int // Currently running system tool invocations (lit lamps)
+	TotalSystemCount   int // Total system tool invocations started (total lamps)
 }
 
 // LockStatus represents the state of a single lock.
@@ -312,9 +322,17 @@ type InitSummary struct {
 
 // UoWEntry represents a unit of work with its globally unique ID.
 type UoWEntry struct {
-	ID          string // UnitIDPort.Longname() - the canonical key (context:module:component:tool[:extra])
-	DisplayName string // UnitIDPort.Shortname() - for tabs (module:component or spec name)
-	Weight      int    // Scheduling weight for resource allocation
+	ID          string                 // UnitIDPort.Longname() - the canonical key (context:module:component:tool[:extra])
+	DisplayName string                 // UnitIDPort.Shortname() - for tabs (module:component or spec name)
+	Weight      int                    // Scheduling weight for resource allocation
+	Tags        workunit.TagSummary    // Classified tag data (test UoWs only)
+
+	// Structured identity (decomposed from UnitSpec/UnitID)
+	Module        string // Module moniker (e.g., "core", "eac-cli")
+	Component     string // Component name (e.g., "go", "gherkin")
+	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
+	ComponentType string // From component-types.yml (e.g., "go", "gherkin", "dockerfile")
+	Container     bool   // true = runs in container, false = runs on host
 }
 
 // ExecutionModule represents a module and its UoWs.

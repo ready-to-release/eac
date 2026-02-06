@@ -26,10 +26,10 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -39,6 +39,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/specs/export/formats"
 	"github.com/ready-to-release/eac/go/core/specs/gherkin"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -211,13 +212,16 @@ func ExportManual() int {
 
 // getGitCommitSHA returns the current git commit SHA (40 chars).
 func getGitCommitSHA() string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	output, err := cmd.Output()
-	if err != nil {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("git")
+	execCtx := &tool.ExecutionContext{
+		ArgsOverrides: []string{"rev-parse", "HEAD"},
+	}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil || result.ExitCode != 0 {
 		log.Warnf("getting git commit SHA: %v (using placeholder)", err)
 		return "0000000000000000000000000000000000000000"
 	}
-	return strings.TrimSpace(string(output))
+	return strings.TrimSpace(string(result.Stdout))
 }
 
 // findFeatureFiles finds all .feature files in a directory.

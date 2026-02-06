@@ -78,9 +78,26 @@ type ContainerConfig struct {
 	// Zero means no timeout.
 	Timeout time.Duration
 
-	// LogWriter receives container output in real-time.
+	// LogWriter receives container output in real-time (combined stdout+stderr).
 	// If nil, output is captured in ContainerResult.
 	LogWriter io.Writer
+
+	// StdoutWriter receives stdout separately for structured output parsing.
+	// When set, stdout is piped here instead of LogWriter.
+	// Takes precedence over LogWriter for stdout stream.
+	// nil = use LogWriter or capture to ContainerResult.Stdout
+	StdoutWriter io.Writer
+
+	// StderrWriter receives stderr separately.
+	// When set, stderr is piped here instead of LogWriter.
+	// Takes precedence over LogWriter for stderr stream.
+	// nil = use LogWriter or capture to ContainerResult.Stderr
+	StderrWriter io.Writer
+
+	// StdinReader provides stdin to the container.
+	// When set, stdin is piped from this reader.
+	// nil = no stdin
+	StdinReader io.Reader
 
 	// ContainerName is an optional name for the container.
 	// If empty, a unique name is generated.

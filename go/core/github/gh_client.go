@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -19,31 +18,29 @@ var (
 // ErrRunNotFound is returned when a workflow run is not found for the given SHA.
 var ErrRunNotFound = errors.New("workflow run not found")
 
-// GHClient implements API using the gh CLI tool.
+// GHClient implements API using an injected CLIExecutor.
+// The executor is provided by the outer layer (CLI bootstrap) and routes
+// through the tool registry for binary resolution.
 type GHClient struct {
-	workDir string
+	executor CLIExecutor
+	workDir  string
 }
 
 // NewGHClient creates a new GitHub client.
-// workDir is the working directory for git operations (empty = current).
-func NewGHClient(workDir string) *GHClient {
-	return &GHClient{workDir: workDir}
+// executor: a CLIExecutor that handles actual gh binary invocation.
+// workDir: working directory for git context (empty = current).
+func NewGHClient(executor CLIExecutor, workDir string) *GHClient {
+	return &GHClient{executor: executor, workDir: workDir}
 }
 
 // GetTreeFiles returns all file paths in the repository at the given SHA.
 // Uses the GitHub Trees API for fast file listing.
 func (c *GHClient) GetTreeFiles(sha string) ([]string, error) {
-	// gh api repos/{owner}/{repo}/git/trees/{sha}?recursive=1
-	cmd := exec.Command("gh", "api", //nolint:gosec // G204: sha is a git commit hash from controlled source
+	output, err := c.executor.Exec("api",
 		fmt.Sprintf("repos/{owner}/{repo}/git/trees/%s", sha),
 		"-q", ".tree[] | select(.type==\"blob\") | .path",
 		"--paginate",
 	)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh api failed: %w", err)
 	}
@@ -73,12 +70,7 @@ func (c *GHClient) ListRuns(workflow string, opts ListRunsOpts) ([]WorkflowRun, 
 		args = append(args, "-L", fmt.Sprintf("%d", opts.Limit))
 	}
 
-	cmd := exec.Command("gh", args...)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
+	output, err := c.executor.Exec(args...)
 	if err != nil {
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
@@ -139,15 +131,10 @@ func (c *GHClient) ListReleases(limit int) ([]Release, error) {
 		limit = 100
 	}
 
-	cmd := exec.Command("gh", "release", "list", //nolint:gosec // G204: limit is an int, safe from injection
+	output, err := c.executor.Exec("release", "list",
 		"--limit", fmt.Sprintf("%d", limit),
 		"--json", "tagName,name,isDraft",
 	)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh release list failed: %w", err)
 	}
@@ -162,12 +149,7 @@ func (c *GHClient) ListReleases(limit int) ([]Release, error) {
 
 // ReleaseExists checks if a release with the given tag exists.
 func (c *GHClient) ReleaseExists(tag string) (bool, error) {
-	cmd := exec.Command("gh", "release", "view", tag, "--json", "tagName")
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	err := cmd.Run()
+	_, err := c.executor.Exec("release", "view", tag, "--json", "tagName")
 	if err != nil {
 		// gh returns error if release doesn't exist
 		return false, nil
@@ -175,23 +157,12 @@ func (c *GHClient) ReleaseExists(tag string) (bool, error) {
 	return true, nil
 }
 
-// Exec executes a raw GitHub CLI command.
-// This is a low-level method - prefer using the typed methods above when possible.
+// Exec delegates to the injected executor.
 func (c *GHClient) Exec(args ...string) ([]byte, error) {
-	return c.ExecContext(context.Background(), args...)
+	return c.executor.Exec(args...)
 }
 
-// ExecContext executes a raw GitHub CLI command with context support.
-// This is a low-level method - prefer using the typed methods above when possible.
+// ExecContext delegates to the injected executor.
 func (c *GHClient) ExecContext(ctx context.Context, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("gh command failed: %w", err)
-	}
-	return output, nil
+	return c.executor.ExecContext(ctx, args...)
 }

@@ -16,19 +16,19 @@
 package runners
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/platform"
 	"github.com/ready-to-release/eac/go/core/testing"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
@@ -146,13 +146,17 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 	}
 
 	fmt.Fprintf(logWriter, "Installing npm dependencies (npm %s)...\n", npmCmd)
-	installName, installArgs := platform.WrapCommand("npm", npmCmd)
-	installCmd := exec.Command(installName, installArgs...)
-	installCmd.Dir = env.WorkDir // Run in isolated directory
-	installCmd.Env = env.Env     // Use environment with NPM_CONFIG_CACHE
-	installOutput, installErr := installCmd.CombinedOutput()
-	fmt.Fprintf(logWriter, "%s\n", installOutput)
-	if installErr != nil {
+	installToolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
+	installExecCtx := &tool.ExecutionContext{
+		ModuleRoot:    env.WorkDir,
+		FullEnv:       env.Env,
+		ArgsOverrides: []string{npmCmd},
+	}
+	installResult, installErr := tool.GlobalExecutor().Execute(context.Background(), installToolDef, installExecCtx)
+	if installResult != nil {
+		fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
+	}
+	if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
 		fmt.Fprintf(logWriter, "npm %s failed: %v\n", npmCmd, installErr)
 		result.PackageFailed = true
 		return result
@@ -166,11 +170,14 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
 	fmt.Fprintf(logWriter, "Command: npm %s\n\n", strings.Join(args, " "))
 
-	// Execute npm test in isolated directory
-	wrappedName, wrappedArgs := platform.WrapCommand("npm", args...)
-	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = env.WorkDir // Run in isolated directory
-	cmd.Env = append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+	// Use tool.BuildCommand for pipe-based stdout/stderr streaming.
+	// BuildCommand handles: binary resolution, process group, env merge, and workdir.
+	npmTool := tool.GlobalRegistry().GetOrAdhoc("npm")
+	cmd := tool.BuildCommand(context.Background(), npmTool, &tool.ExecutionContext{
+		ModuleRoot:    env.WorkDir,
+		FullEnv:       append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true"),
+		ArgsOverrides: args,
+	})
 
 	// Capture stdout (JSON) and stderr separately
 	stdout, pipeErr := cmd.StdoutPipe()

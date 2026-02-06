@@ -17,9 +17,47 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, site-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, static-site, plantuml, markdownlint, mermaid-render]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, site-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, plantuml, markdownlint, mermaid-render]
   node: [npm, tsc, npm-build, npm-test, eslint]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
+
+#---------------------------------------------------------------------------
+# Executor Mode - Global tool type resolution default
+#---------------------------------------------------------------------------
+# Controls how tools are resolved when no explicit per-tool binding exists.
+# Per-tool bindings (in the 'bindings' section) always override this setting.
+#
+# Values:
+#   auto      - Try system tool first, fall back to container (default)
+#   container - Always use container tools (reproducible, no host deps)
+#   system    - Always use system tools (faster, requires local installs)
+#
+# Override per-project in .eac/tool-config.yml:
+#   executor-mode: container
+executor-mode: auto
+
+#---------------------------------------------------------------------------
+# Credentials - Host env vars forwarded to all container tools
+#---------------------------------------------------------------------------
+# Only explicitly listed variable names are forwarded (allowlist, not passthrough).
+# Per-tool host-env in container-tools is additive to these globals.
+# Override per-project in .eac/tool-config.yml (additive merge).
+credentials:
+  host-env:
+    - GITHUB_TOKEN
+    - GITHUB_USERNAME
+    - GOPRIVATE
+    - GONOSUMCHECK
+    - GOPROXY
+    - NPM_TOKEN
+    - SEMGREP_APP_TOKEN
+  ci-env:
+    - CI
+    - GITHUB_ACTIONS
+    - GITHUB_SHA
+    - GITHUB_REF
+    - GITHUB_REPOSITORY
+    - GITHUB_RUN_ID
 
 #---------------------------------------------------------------------------
 # System Tools (host-installed)
@@ -450,13 +488,18 @@ container-tools:
 
   # Diagram tools
   drawio:
-    description: "DrawIO CLI"
+    description: "DrawIO CLI - renders .drawio.png to optimized PNG"
     localPath: containers/drawio-tool
-    command: ["python", "/app/drawio_cli.py"]
+    command: ["python", "/app/drawio_cli.py", "render", "-i", "{input_path}", "-o", "{output_path}", "--max-width", "{max_width}"]
     mounts:
       - source: "{workspace}"
         target: /docs
+      - source: "{output}"
+        target: /output
     workdir: /docs
+    resources:
+      cpus: 4
+      memory: "4g"
     requirements: [docker]
 
   mermaid-render:
@@ -473,14 +516,15 @@ container-tools:
     workdir: /docs
     requirements: [docker]
     resources:
-      cpus: 2
-      memory: "2g"
-      shm_size: "1g"  # Chromium needs shared memory
+      cpus: 4
+      memory: "4g"
+      shm_size: "2g"  # Chromium needs shared memory
 
   plantuml:
     description: "PlantUML renderer"
     image: plantuml/plantuml
     tag: "1.2024.8"
+    command: ["-tsvg", "/data"]
     mounts:
       - source: "{output}"
         target: /data
@@ -490,17 +534,31 @@ container-tools:
   structurizr-cli:
     description: "Structurizr CLI for export/validation"
     image: structurizr/cli
-    tag: "2024.12.18"
+    tag: "2025.11.09"
     mounts:
       - source: "{workspace}"
         target: /workspace
     workdir: /workspace
     requirements: [docker]
 
+  structurizr-export:
+    description: "Structurizr CLI export to PlantUML format"
+    image: structurizr/cli
+    tag: "2025.11.09"
+    command: ["export", "-workspace", "{workspace_path}", "-format", "plantuml/c4plantuml", "-output", "/output"]
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+        readOnly: true
+      - source: "{output}"
+        target: /output
+    workdir: /workspace
+    requirements: [docker]
+
   structurizr-lite:
     description: "Structurizr diagram server"
     image: structurizr/lite
-    tag: "2024.12.18"
+    tag: "2025.11.09"
     mounts:
       - source: "{content}"
         target: /usr/local/structurizr
@@ -641,7 +699,7 @@ container-tools:
 # Tool Bindings (override auto resolution)
 # Default is "auto" - tries system first, falls back to container
 #---------------------------------------------------------------------------
-bindings:
+tool-bindings:
   # Explicitly use system for bootstrap tools
   go: system
   docker: system
@@ -706,7 +764,6 @@ component-tools:
     linter: markdownlint
 
   structurizr:
-    builder: structurizr-cli
     linter: structurizr-cli
 
   pwsh:

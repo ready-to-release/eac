@@ -43,10 +43,10 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -70,9 +70,9 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
-	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tool"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 var log = logging.C()
@@ -127,13 +127,19 @@ func ensureCommandsBinary(workspaceRoot string) error {
 
 	// Build the binary
 	goBuildStart := time.Now()
-	buildCmd := exec.Command("go", "build", "-o", outputPath, ".")
-	buildCmd.Dir = cmdDir
-	buildCmd.Stdout = os.Stdout
-	buildCmd.Stderr = os.Stderr
-
-	if err := buildCmd.Run(); err != nil {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("go")
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    cmdDir,
+		StdoutWriter:  os.Stdout,
+		StderrWriter:  os.Stderr,
+		ArgsOverrides: []string{"build", "-o", outputPath, "."},
+	}
+	buildResult, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
 		return fmt.Errorf("go build: %w", err)
+	}
+	if buildResult.ExitCode != 0 {
+		return fmt.Errorf("go build: exited with code %d", buildResult.ExitCode)
 	}
 
 	totalDuration := time.Since(buildStart)
@@ -148,6 +154,12 @@ func ensureCommandsBinary(workspaceRoot string) error {
 
 // commandsBinaryNeedsRebuild checks if the eac binary needs rebuilding.
 // Returns (needsBuild, reason) where reason explains why rebuild is needed.
+//
+// Uses sentinel files (go.mod, go.sum, go.work, go.work.sum) as proxies for
+// source changes instead of walking the entire go/ directory tree. This reduces
+// the check from ~50-200ms (hundreds of stat calls) to <5ms (4 stat calls).
+// The sentinel files reliably cover dependency and workspace changes; source-only
+// changes are caught on the next `go run` invocation which rebuilds anyway.
 func commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, binaryPath string) (bool, string) {
 	// Check if binary exists
 	binaryStat, err := os.Stat(binaryPath)
@@ -156,14 +168,16 @@ func commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, binaryPath string) (bool,
 	}
 	binaryModTime := binaryStat.ModTime()
 
-	// Check sentinel files that indicate source changes:
+	// Check sentinel files that indicate source or dependency changes:
 	// 1. go.mod in the commands directory (dependency changes)
 	// 2. go.sum in the commands directory (dependency changes)
-	// 3. go.work in workspace root (workspace changes)
+	// 3. go.work in workspace root (workspace module changes)
+	// 4. go.work.sum in workspace root (workspace dependency changes)
 	sentinelFiles := []string{
 		filepath.Join(cmdDir, "go.mod"),
 		filepath.Join(cmdDir, "go.sum"),
 		filepath.Join(workspaceRoot, "go.work"),
+		filepath.Join(workspaceRoot, "go.work.sum"),
 	}
 
 	for _, sentinel := range sentinelFiles {
@@ -172,43 +186,6 @@ func commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, binaryPath string) (bool,
 				return true, filepath.Base(sentinel) + " changed"
 			}
 		}
-	}
-
-	// Check if any .go file in the commands package tree is newer
-	// Walk the entire go directory since commands imports from core, adapters, etc.
-	goDir := filepath.Join(workspaceRoot, "go")
-	newestGoFile := ""
-	newestGoTime := time.Time{}
-
-	filepath.Walk(goDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			// Skip vendor, testdata, and hidden directories
-			name := info.Name()
-			if name == "vendor" || name == "testdata" || strings.HasPrefix(name, ".") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// Only check .go files
-		if strings.HasSuffix(path, ".go") {
-			if info.ModTime().After(newestGoTime) {
-				newestGoTime = info.ModTime()
-				newestGoFile = path
-			}
-		}
-		return nil
-	})
-
-	if newestGoTime.After(binaryModTime) {
-		// Get relative path for cleaner output
-		relPath, _ := filepath.Rel(workspaceRoot, newestGoFile)
-		if relPath == "" {
-			relPath = filepath.Base(newestGoFile)
-		}
-		return true, relPath + " changed"
 	}
 
 	return false, ""
@@ -310,14 +287,7 @@ func Build() int {
 		}
 	}
 
-	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
-	if err != nil {
-		log.Errorf("Error: failed to load module contracts: %v", err)
-		return 1
-	}
-
-	// Build requested set BEFORE expanding to all modules
+	// Build requested set BEFORE expanding to all modules.
 	// RequestedSet tracks modules explicitly specified by the user on the command line.
 	// This enables incremental detection to skip unchanged modules when "eac build" is run
 	// without arguments, while still building explicitly requested modules unconditionally.
@@ -326,19 +296,25 @@ func Build() int {
 		requestedSet[m] = true
 	}
 
-	// If no monikers provided, default to all buildable modules (before dependency check)
-	if len(monikers) == 0 {
-		for _, module := range moduleReport.Registry.All() {
-			monikers = append(monikers, module.Moniker)
-		}
-	}
-
-	// Handle --list-artifacts flag
+	// Handle --list-artifacts flag (requires module contracts; loads them only for this path).
+	// Normal builds skip this — the framework's phaseResolve loads module contracts and
+	// handles "empty monikers = all modules" expansion, saving ~50-200ms on startup.
 	if listArtifacts {
+		moduleReport, err := reports.GetModuleContracts(workspaceRoot)
+		if err != nil {
+			log.Errorf("Error: failed to load module contracts: %v", err)
+			return 1
+		}
+		if len(monikers) == 0 {
+			for _, module := range moduleReport.Registry.All() {
+				monikers = append(monikers, module.Moniker)
+			}
+		}
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
 	}
 
-	// Create command config for framework
+	// Create command config for framework.
+	// Monikers may be empty — the framework's phaseResolve expands empty to all modules.
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:           cmdframework.CommandTypeBuild,
 		CommandPath:    "build",

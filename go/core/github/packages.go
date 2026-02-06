@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os/exec"
 	"time"
 )
 
@@ -38,27 +37,24 @@ type PackagesAPI interface {
 	DeletePackageVersion(ctx context.Context, org, packageName string, versionID int) error
 }
 
-// GHPackagesClient implements PackagesAPI using the gh CLI.
+// GHPackagesClient implements PackagesAPI using an injected CLIExecutor.
 type GHPackagesClient struct {
-	workDir string
+	executor CLIExecutor
+	workDir  string
 }
 
 // NewGHPackagesClient creates a new packages client.
-func NewGHPackagesClient(workDir string) *GHPackagesClient {
-	return &GHPackagesClient{workDir: workDir}
+// executor: a CLIExecutor that handles actual gh binary invocation.
+// workDir: working directory for git context (empty = current).
+func NewGHPackagesClient(executor CLIExecutor, workDir string) *GHPackagesClient {
+	return &GHPackagesClient{executor: executor, workDir: workDir}
 }
 
 // ListOrgPackages lists all container packages for an organization.
 func (c *GHPackagesClient) ListOrgPackages(ctx context.Context, org string) ([]Package, error) {
-	// gh api /orgs/{org}/packages?package_type=container
-	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org is safely escaped with url.PathEscape
+	output, err := c.executor.ExecContext(ctx, "api",
 		fmt.Sprintf("/orgs/%s/packages?package_type=container&per_page=100", url.PathEscape(org)),
 	)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("listing packages: %w", err)
 	}
@@ -73,16 +69,10 @@ func (c *GHPackagesClient) ListOrgPackages(ctx context.Context, org string) ([]P
 
 // ListPackageVersions lists all versions of a package.
 func (c *GHPackagesClient) ListPackageVersions(ctx context.Context, org, packageName string) ([]PackageVersion, error) {
-	// gh api /orgs/{org}/packages/container/{package}/versions
-	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org and packageName are safely escaped with url.PathEscape
+	output, err := c.executor.ExecContext(ctx, "api",
 		fmt.Sprintf("/orgs/%s/packages/container/%s/versions?per_page=100",
 			url.PathEscape(org), url.PathEscape(packageName)),
 	)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("listing versions: %w", err)
 	}
@@ -121,17 +111,12 @@ func (c *GHPackagesClient) ListPackageVersions(ctx context.Context, org, package
 
 // DeletePackageVersion deletes a specific package version.
 func (c *GHPackagesClient) DeletePackageVersion(ctx context.Context, org, packageName string, versionID int) error {
-	// gh api --method DELETE /orgs/{org}/packages/container/{package}/versions/{version_id}
-	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org and packageName are safely escaped with url.PathEscape
+	_, err := c.executor.ExecContext(ctx, "api",
 		"--method", "DELETE",
 		fmt.Sprintf("/orgs/%s/packages/container/%s/versions/%d",
 			url.PathEscape(org), url.PathEscape(packageName), versionID),
 	)
-	if c.workDir != "" {
-		cmd.Dir = c.workDir
-	}
-
-	if _, err := cmd.Output(); err != nil {
+	if err != nil {
 		return fmt.Errorf("deleting version %d: %w", versionID, err)
 	}
 

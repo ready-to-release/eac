@@ -54,13 +54,14 @@ type LintModuleResult struct {
 
 // lintContext holds lint-specific state during execution.
 type lintContext struct {
-	cfg           *LintConfig
-	results       map[string]*LintModuleResult
-	cachedModules map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
-	cacheTimes    map[string]time.Time // When cached modules were last linted
-	moduleFiles   map[string][]string  // For input hash computation
-	tracker       *coreoutput.InMemoryTracker // UoW manifest tracker
-	mu            sync.Mutex           // Protects results map for concurrent access
+	cfg               *LintConfig
+	results           map[string]*LintModuleResult
+	cachedModules     map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
+	cacheTimes        map[string]time.Time // When cached modules were last linted
+	moduleFiles       map[string][]string  // For input hash computation
+	moduleInputHashes map[string]string    // Pre-computed hashes for cache consistency
+	tracker           *coreoutput.InMemoryTracker // UoW manifest tracker
+	mu                sync.Mutex           // Protects results map for concurrent access
 
 	// UoW-level cache tracking
 	cachedUoWs    map[string]bool      // UoW longname -> cached
@@ -178,9 +179,28 @@ func detectUoWIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *l
 	// Store for later input hash computation
 	lctx.moduleFiles = moduleFiles
 
-	// Use shared helpers for change detection and aggregation
+	// Pre-compute module input hashes ONCE for consistency.
+	// Workers will reuse these instead of recomputing after lint --fix modifies files.
+	moduleInputHashes := make(map[string]string)
+	for module, files := range moduleFiles {
+		h, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to compute input hash for %s: %v", module, err)
+			continue
+		}
+		moduleInputHashes[module] = h
+	}
+	lctx.moduleInputHashes = moduleInputHashes
+
+	// Use pre-computed hashes for detection (same hashes workers will use)
 	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	getInputHash := coreoutput.InputHashProvider(hash.NewModuleInputHashProvider(ctx.WorkspaceRoot, moduleFiles))
+	getInputHash := coreoutput.InputHashProvider(func(id workunit.UnitID) (string, error) {
+		h, ok := moduleInputHashes[id.Module]
+		if !ok {
+			return "", nil
+		}
+		return h, nil
+	})
 
 	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextLint, expectedUoWs, getInputHash)
 	if err != nil {
@@ -268,7 +288,7 @@ func assertLintManifestsExist(ctx *cmdframework.ExecutionContext) error {
 // lintUnitWorker lints a single component with a specific provider.
 // This is called by the UnitScheduler for parallel component execution.
 // The component parameter is in "compName:providerName" format (e.g., "go:go-lint").
-func lintUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
@@ -468,15 +488,23 @@ func lintUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 }
 
 // computeLintInputHash computes a hash of the input sources for a lint operation.
+// Uses pre-computed hashes when available for cache consistency.
 func computeLintInputHash(ctx *cmdframework.ExecutionContext, module string) string {
 	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
 	if !ok {
 		return ""
 	}
 
+	// Use pre-computed hash if available
+	if lctx.moduleInputHashes != nil {
+		if h, ok := lctx.moduleInputHashes[module]; ok {
+			return h
+		}
+	}
+
+	// Fallback: compute from cached files or fresh expansion
 	files, ok := lctx.moduleFiles[module]
 	if !ok {
-		// Try to expand patterns if not already cached
 		contract, exists := ctx.ModuleRegistry.Get(module)
 		if !exists {
 			return ""

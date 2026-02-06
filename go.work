@@ -19,6 +19,7 @@ use (
 	./go/core
 	./go/godog
 	./go/mcp/commands
+	./go/specs/eac-installer
 	./go/specs/implicit-cli
 	./go/specs/r2r-installer
 	./go/specs/repository

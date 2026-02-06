@@ -87,9 +87,6 @@ func TestUnitQueuedEvent(t *testing.T) {
 		Time:        now,
 		ID:          "build:eac-core:go:go",
 		DisplayName: "eac-core:go",
-		Module:      "eac-core",
-		Component:   "go",
-		Handler:     "go",
 		Weight:      4,
 	}
 

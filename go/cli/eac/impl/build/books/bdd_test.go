@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/show"     // register show books
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/validate" // register validate books
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
 

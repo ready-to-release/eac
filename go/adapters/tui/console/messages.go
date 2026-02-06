@@ -5,6 +5,10 @@ import "time"
 // lineMsg is sent when a new output line is received.
 type lineMsg Line
 
+// batchLineMsg is sent when multiple output lines are received in a batch.
+// This reduces Bubbletea Update+View cycles by processing up to 50 lines per message.
+type batchLineMsg []Line
+
 // statusMsg is sent when the orchestrator status changes.
 type statusMsg Status
 
@@ -52,6 +56,10 @@ type Status struct {
 	// Container instance counts (for "Containers" lamps)
 	RunningContainerCount int // Currently running container instances (lit lamps)
 	TotalContainerCount   int // Total container instances started (total lamps shown)
+
+	// System tool instance counts (for "Native" lamps)
+	RunningSystemCount int // Currently running system tool invocations (lit lamps)
+	TotalSystemCount   int // Total system tool invocations started (total lamps)
 }
 
 // LockStatus represents the state of a single lock.
@@ -120,6 +128,18 @@ type TabSelectMsg struct {
 
 // TabDecayMsg is sent periodically to clean up decayed tabs.
 type TabDecayMsg struct{}
+
+// ConfigReadyMsg delivers configuration metadata before full init summary.
+// This enables the TUI to show command context, parallelism mode, etc.
+// before module resolution completes.
+type ConfigReadyMsg struct {
+	CommandName      string
+	ExecutionContext string
+	ParallelismMode  string
+	EffectiveWorkers int
+	WeightedCapacity int
+	OutputDir        string
+}
 
 // MarqueeTickMsg is sent periodically to animate hovered tab name scrolling.
 type MarqueeTickMsg struct{}

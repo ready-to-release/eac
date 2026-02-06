@@ -55,6 +55,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 func init() {
@@ -170,8 +172,9 @@ func ReleasePrunePackages() int {
 	}
 
 	// Initialize packages client
-	pkgClient := github.NewGHPackagesClient(workspaceRoot)
-	ghClient := github.NewGHClient(workspaceRoot)
+	ghExec := ghexec.New(workspaceRoot)
+	pkgClient := github.NewGHPackagesClient(ghExec, workspaceRoot)
+	ghClient := github.NewGHClient(ghExec, workspaceRoot)
 	ctx := context.Background()
 
 	// Get org (from registry config or derived from remote config)

@@ -17,14 +17,15 @@
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -183,7 +184,7 @@ func getEvidenceCIRunsInternal(moniker, workspaceRoot string) ([]get.EvidenceCIR
 	deps := getTransitiveDeps(moniker, moduleRegistry)
 
 	// Create GitHub API client
-	api := github.NewGHClient(workspaceRoot)
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	var ciRuns []get.EvidenceCIRun
 	var skipped []string
@@ -259,15 +260,15 @@ func getTransitiveDeps(moniker string, reg *modules.Registry) []string {
 // Returns the list of downloaded artifact names.
 func downloadArtifacts(runID int, pattern, destDir, workspaceRoot string) ([]string, error) {
 	// Use gh run download with pattern matching
-	cmd := exec.Command("gh", "run", "download",
+	output, exitCode, err := ghexec.RunCombined(context.Background(), workspaceRoot, "run", "download",
 		fmt.Sprintf("%d", runID),
 		"--pattern", pattern,
 		"--dir", destDir,
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
+		return nil, fmt.Errorf("gh execution failed: %w", err)
+	}
+	if exitCode != 0 {
 		// Check if it's just "no artifacts found" (exit code 1 with specific message)
 		outputStr := string(output)
 		if strings.Contains(outputStr, "no artifact") || strings.Contains(outputStr, "no matching") {

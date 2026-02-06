@@ -30,15 +30,16 @@
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -215,10 +216,12 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 	if versionType == "semver" {
 		args = append(args, "-f", fmt.Sprintf("version=%s", version))
 	}
-	cmd := exec.Command("gh", args...)
-	cmd.Dir = workspaceRoot
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("dispatch failed: %s: %w", strings.TrimSpace(string(output)), err)
+	output, exitCode, err := ghexec.RunCombined(context.Background(), workspaceRoot, args...)
+	if err != nil {
+		return "", fmt.Errorf("dispatch failed: %w", err)
+	}
+	if exitCode != 0 {
+		return "", fmt.Errorf("dispatch failed: %s (exit %d)", strings.TrimSpace(string(output)), exitCode)
 	}
 
 	// Wait a moment for GitHub to register the run
@@ -226,23 +229,17 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 
 	// Find the run ID - look for the most recent queued/in_progress run
 	for i := 0; i < 10; i++ {
-		cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
+		output, err := ghexec.Run(workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
 			"--json", "databaseId,status",
 			"-q", `.[0] | select(.status == "queued" or .status == "in_progress" or .status == "pending") | .databaseId`)
-		cmd.Dir = workspaceRoot
-
-		output, err := cmd.Output()
 		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
 			return strings.TrimSpace(string(output)), nil
 		}
 
 		// Also check for recently completed (might have started fast)
-		cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
+		output, err = ghexec.Run(workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
 			"--json", "databaseId,status,createdAt",
 			"-q", `.[0].databaseId`)
-		cmd.Dir = workspaceRoot
-
-		output, err = cmd.Output()
 		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
 			return strings.TrimSpace(string(output)), nil
 		}
@@ -264,8 +261,7 @@ func awaitWorkflowRun(runID string, timeout int) (success bool, err error) {
 		}
 
 		// Get status
-		cmd := exec.Command("gh", "run", "view", runID, "--json", "status,conclusion")
-		output, err := cmd.Output()
+		output, err := ghexec.Run(".", "run", "view", runID, "--json", "status,conclusion")
 		if err != nil {
 			return false, err
 		}

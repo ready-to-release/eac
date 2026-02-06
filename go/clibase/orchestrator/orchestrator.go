@@ -375,8 +375,8 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		workerWriter = logFile
 	}
 
-	// Execute worker function
-	exitCode := o.worker(item.Moniker, workerWriter)
+	// Execute worker function (module-level workers get background context)
+	exitCode := o.worker(context.Background(), item.Moniker, workerWriter)
 
 	// Close TUI writer first (flushes pipe), then log file
 	if closer, ok := workerWriter.(io.Closer); ok {
@@ -713,6 +713,21 @@ func (o *Orchestrator) SendSummary(data *tui.SummaryData) {
 	})
 }
 
+// SendConfigReady sends early configuration metadata to all registered observers.
+// This enables progressive TUI display before full init summary.
+func (o *Orchestrator) SendConfigReady(commandName, executionContext, parallelismMode string,
+	effectiveWorkers, weightedCapacity int, outputDir string) {
+	o.emit(interfaces.ConfigReadyEvent{
+		Time:             time.Now(),
+		CommandName:      commandName,
+		ExecutionContext: executionContext,
+		ParallelismMode:  parallelismMode,
+		EffectiveWorkers: effectiveWorkers,
+		WeightedCapacity: weightedCapacity,
+		OutputDir:        outputDir,
+	})
+}
+
 // SetInitSummary sends structured init summary data to all registered observers.
 // This emits an InitSummaryEvent that observers can handle appropriately.
 func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
@@ -726,9 +741,15 @@ func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
 		units := make([]interfaces.UnitInfo, len(mod.UoWs))
 		for j, uow := range mod.UoWs {
 			units[j] = interfaces.UnitInfo{
-				ID:          uow.ID,
-				DisplayName: uow.DisplayName,
-				Weight:      uow.Weight,
+				ID:            uow.ID,
+				DisplayName:   uow.DisplayName,
+				Weight:        uow.Weight,
+				Tags:          uow.Tags,
+				Module:        uow.Module,
+				Component:     uow.Component,
+				Tool:          uow.Tool,
+				ComponentType: uow.ComponentType,
+				Container:     uow.Container,
 			}
 		}
 		modules[i] = interfaces.ModuleInfo{
@@ -826,6 +847,37 @@ func (o *Orchestrator) GetOrchestratorOut() io.Writer {
 // Must be called before Run or RunLayered.
 func (o *Orchestrator) SetWorker(worker WorkerFunc) {
 	o.worker = worker
+}
+
+// UpdateConfig updates the orchestrator's configuration with loaded values.
+// This is used when the orchestrator is created early (before config is loaded)
+// and needs to be updated with actual values once available.
+// Only non-zero/non-nil fields are applied.
+func (o *Orchestrator) UpdateConfig(update ConfigUpdate) {
+	if update.WorkspaceRoot != "" {
+		o.config.WorkspaceRoot = update.WorkspaceRoot
+	}
+	if update.OutputBaseDir != "" {
+		o.config.OutputBaseDir = update.OutputBaseDir
+	}
+	if update.LogFileName != "" {
+		o.config.LogFileName = update.LogFileName
+	}
+	if update.MaxConcurrency > 0 {
+		o.config.MaxConcurrency = update.MaxConcurrency
+	}
+	if update.Turbo > 0 {
+		o.config.Turbo = update.Turbo
+	}
+	if update.ComponentTypesDisplay != nil {
+		o.config.ComponentTypesDisplay = update.ComponentTypesDisplay
+	}
+	if update.ShowTimings {
+		o.config.ShowTimings = true
+	}
+	if update.DryRun {
+		o.config.DryRun = true
+	}
 }
 
 // SetComponentTypesDisplay updates the component types display map in the config.

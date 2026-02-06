@@ -43,6 +43,11 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 		testCfg.ComponentToPkgPath = make(map[string]string)
 	}
 
+	// Initialize UoW tag map for manifest writing
+	if testCfg.UoWTags == nil {
+		testCfg.UoWTags = make(map[string]workunit.TagSummary)
+	}
+
 	var parallelWork []workunit.UnitSpec
 	var sequentialWork []workunit.UnitSpec
 
@@ -99,6 +104,9 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				continue
 			}
 
+			// Compute tag summary for this UoW group
+			tagSummary := testing.AggregateTagsForTests(typeTests)
+
 			// Tool is the test type (gotest, godog, etc.)
 			toolName := testType
 			if toolName == "" {
@@ -138,11 +146,15 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				Cached:        isCached,
 				Metadata:      map[string]any{"pkgPath": pkgPath}, // Full path for test lookup
 				Index:         0,                                  // Will be set per-layer below
+				Tags:          tagSummary,
 			}
 
 			// Store mapping from testname to pkgPath for worker lookup
 			// Key is testname (unique within module:component)
 			testCfg.ComponentToPkgPath[testname] = pkgPath
+
+			// Store tag summary keyed by UoW longname for manifest writing
+			testCfg.UoWTags[unitID.Longname()] = tagSummary
 
 			if hasSequential {
 				sequentialWork = append(sequentialWork, work)

@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- Release Highlights (since 0.0.9)
+
+  Tool System & Containers:
+  - Executor mode: global override (auto/container/system) controls how containerized tools run
+  - Container credential forwarding: GITHUB_TOKEN, GOPRIVATE, NPM_TOKEN, SEMGREP_APP_TOKEN via allowlist
+  - Subprocess routing: container-based tools use process groups for clean termination
+  - tool-config.yml modernization: credentials section, executor-mode, tool-bindings keys
+
+  Container Infrastructure:
+  - Container component auto-discovery for -oci suffix containers
+  - Standardized container naming conventions
+
+-->
+
 ## [0.0.9] - 2025-12-29
 
 ### Changed

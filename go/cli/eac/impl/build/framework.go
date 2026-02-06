@@ -383,7 +383,7 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 // buildUnitWorker builds a single component within a module.
 // This is called by the UnitScheduler for parallel component execution.
 // The component parameter is in "compName:builderName" format (e.g., "go:go", "docs:mkdocs").
-func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")

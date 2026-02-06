@@ -15,12 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestReleaseTypeWorkflowValidation_PublishedModules tests that published modules
-// are allowed to trigger release workflows.
-// Published modules: r2r-cli, ext-eac, docs (all have SemVer or CalVer with release_type: published)
+// TestReleaseTypeWorkflowValidation_PublishedModules tests that published SemVer modules
+// are allowed to trigger release workflows and have changelogs.
+// Published SemVer modules: r2r-cli, ext-eac (docs is CalVer, no changelog)
 func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
-	// Published modules that should be allowed to release
-	publishedModules := []string{"r2r-cli", "ext-eac", "docs"}
+	// Published SemVer modules that should be allowed to release
+	publishedModules := []string{"r2r-cli", "ext-eac"}
 
 	// Use mock registry with predictable data
 	registryOpts := make([]eactesting.RegistryOption, 0, len(publishedModules))
@@ -52,19 +52,18 @@ func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 	}
 }
 
-// TestReleaseTypeWorkflowValidation_BundleModules tests that bundle modules
-// are allowed to trigger release workflows.
+// TestReleaseTypeWorkflowValidation_BundleModules tests that CalVer bundle modules
+// have no changelog (auto-managed releases).
 func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
-	// Bundle modules that should be allowed to release
+	// Bundle modules - r2r-eac-bundle is CalVer, so no changelog
 	bundleModules := []string{"r2r-eac-bundle"}
 
-	// Use mock registry with predictable data
+	// Use mock registry with CalVer bundle (no changelog)
 	registryOpts := make([]eactesting.RegistryOption, 0, len(bundleModules))
 	for _, moniker := range bundleModules {
 		registryOpts = append(registryOpts,
 			eactesting.WithModule(moniker,
-				eactesting.WithVersioning(),
-				eactesting.WithChangelog("release/"+moniker+"/CHANGELOG.md"),
+				eactesting.WithVersioning(), // WithVersioning defaults to CalVer
 				eactesting.WithReleaseType("bundle"),
 			),
 		)
@@ -80,10 +79,10 @@ func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
 			assert.Equal(t, "bundle", releaseType,
 				"module %s should have release_type: bundle", moniker)
 
-			// Verify changelog is in release/ folder
+			// CalVer bundle has no changelog
 			changelogPath := moduleContract.GetChangelogPath()
-			assert.True(t, isInReleaseFolder(changelogPath),
-				"bundle module %s should have changelog in release/ folder, got: %s", moniker, changelogPath)
+			assert.Empty(t, changelogPath,
+				"CalVer bundle module %s should have no changelog, got: %s", moniker, changelogPath)
 		})
 	}
 }
@@ -122,6 +121,13 @@ func TestReleaseTypeWorkflowValidation_AllModules(t *testing.T) {
 		// Verify consistency with changelog location
 		changelogPath := moduleContract.GetChangelogPath()
 		inReleaseFolder := isInReleaseFolder(changelogPath)
+
+		// CalVer modules have no changelogs regardless of release type
+		if moduleContract.Versioning.Scheme == "CalVer" {
+			assert.Empty(t, changelogPath,
+				"CalVer module %s should have no changelog, got: %s", moniker, changelogPath)
+			continue
+		}
 
 		switch releaseType {
 		case "published", "bundle":

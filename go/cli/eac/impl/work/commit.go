@@ -20,10 +20,9 @@
 package work
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
 	"go.uber.org/zap"
@@ -31,6 +30,7 @@ import (
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -191,10 +191,9 @@ func parseCommitConfig() (*commitConfig, error) {
 
 // stageAllChanges stages all changes in the working directory.
 func stageAllChanges() error {
-	cmd := exec.Command("git", "add", ".")
-	output, err := cmd.CombinedOutput()
+	_, err := gitexec.Run(".", "add", ".")
 	if err != nil {
-		return fmt.Errorf("failed to stage changes: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to stage changes: %w", err)
 	}
 	log.Debugf("Staged all changes")
 	return nil
@@ -202,28 +201,18 @@ func stageAllChanges() error {
 
 // checkStagedChanges checks if there are any staged changes.
 func checkStagedChanges() (bool, error) {
-	cmd := exec.Command("git", "diff", "--cached", "--quiet")
-	err := cmd.Run()
+	_, exitCode, err := gitexec.RunCombined(context.Background(), ".", "diff", "--cached", "--quiet")
 	if err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			// Exit code 1 means there are differences (staged changes exist)
-			if exitErr.ExitCode() == 1 {
-				return true, nil
-			}
-		}
 		return false, fmt.Errorf("failed to check staged changes: %w", err)
 	}
+	// Exit code 1 means there are differences (staged changes exist)
 	// Exit code 0 means no differences (no staged changes)
-	return false, nil
+	return exitCode == 1, nil
 }
 
 // commitWithMessage creates a commit with a custom message.
 func commitWithMessage(message string) int {
-	cmd := exec.Command("git", "commit", "-m", message)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err := gitexec.RunSilent(context.Background(), ".", "commit", "-m", message)
 	if err != nil {
 		log.Errorf("Failed to create commit: error=%v", err)
 		return 1

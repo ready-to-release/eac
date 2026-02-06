@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -88,7 +89,7 @@ func TestListenForStatus_StopsOnDoneChan(t *testing.T) {
 }
 
 // TestListenForLines_ReturnsLineWhenAvailable verifies that listenForLines
-// still returns lines normally when the done channel is open.
+// returns a batchLineMsg containing the line when the done channel is open.
 func TestListenForLines_ReturnsLineWhenAvailable(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
@@ -112,12 +113,56 @@ func TestListenForLines_ReturnsLineWhenAvailable(t *testing.T) {
 	cmd := model.listenForLines()
 	msg := cmd()
 
-	lineMsg, ok := msg.(lineMsg)
+	batch, ok := msg.(batchLineMsg)
 	if !ok {
-		t.Fatalf("expected lineMsg, got %T", msg)
+		t.Fatalf("expected batchLineMsg, got %T", msg)
 	}
-	if Line(lineMsg).Text != expectedLine.Text {
-		t.Errorf("expected line text %q, got %q", expectedLine.Text, Line(lineMsg).Text)
+	if len(batch) == 0 {
+		t.Fatal("expected non-empty batch")
+	}
+	if batch[0].Text != expectedLine.Text {
+		t.Errorf("expected line text %q, got %q", expectedLine.Text, batch[0].Text)
+	}
+}
+
+// TestListenForLines_BatchesMutipleLines verifies that listenForLines
+// drains multiple available lines into a single batch.
+func TestListenForLines_BatchesMutipleLines(t *testing.T) {
+	lineChan := make(chan Line, 10)
+	doneChan := make(chan struct{})
+
+	model := NewModel(
+		20,
+		"Test",
+		lineChan,
+		nil,
+		doneChan,
+		false,
+		true,
+		nil,
+	)
+
+	// Send multiple lines before calling listener
+	for i := 0; i < 5; i++ {
+		lineChan <- Line{Text: fmt.Sprintf("line %d", i), Level: LevelInfo}
+	}
+
+	// Start listener - should batch all 5 lines
+	cmd := model.listenForLines()
+	msg := cmd()
+
+	batch, ok := msg.(batchLineMsg)
+	if !ok {
+		t.Fatalf("expected batchLineMsg, got %T", msg)
+	}
+	if len(batch) != 5 {
+		t.Errorf("expected 5 lines in batch, got %d", len(batch))
+	}
+	for i, line := range batch {
+		expected := fmt.Sprintf("line %d", i)
+		if line.Text != expected {
+			t.Errorf("batch[%d].Text = %q, want %q", i, line.Text, expected)
+		}
 	}
 }
 
@@ -295,6 +340,140 @@ func TestGetCapacityInfo(t *testing.T) {
 				t.Errorf("PressureTarget: got %d, want %d", info.PressureTarget, tt.wantPressure)
 			}
 		})
+	}
+}
+
+// TestListenForLines_DrainsLineChanOnDoneChan verifies that when doneChan closes
+// while lineChan still has buffered lines, listenForLines drains those lines
+// into a batchLineMsg instead of discarding them.
+func TestListenForLines_DrainsLineChanOnDoneChan(t *testing.T) {
+	lineChan := make(chan Line, 10)
+	doneChan := make(chan struct{})
+
+	model := NewModel(
+		20,
+		"Test",
+		lineChan,
+		nil,
+		doneChan,
+		false,
+		true,
+		nil,
+	)
+
+	// Buffer lines BEFORE closing doneChan
+	for i := 0; i < 5; i++ {
+		lineChan <- Line{Text: fmt.Sprintf("buffered line %d", i), Level: LevelInfo}
+	}
+
+	// Close doneChan while lines are still buffered
+	close(doneChan)
+
+	// listenForLines should drain the buffered lines instead of returning linesDoneMsg
+	cmd := model.listenForLines()
+	msg := cmd()
+
+	batch, ok := msg.(batchLineMsg)
+	if !ok {
+		t.Fatalf("expected batchLineMsg (drain), got %T", msg)
+	}
+	if len(batch) != 5 {
+		t.Errorf("expected 5 drained lines, got %d", len(batch))
+	}
+	for i, line := range batch {
+		expected := fmt.Sprintf("buffered line %d", i)
+		if line.Text != expected {
+			t.Errorf("batch[%d].Text = %q, want %q", i, line.Text, expected)
+		}
+	}
+
+	// Next call should return linesDoneMsg since lineChan is now empty
+	cmd2 := model.listenForLines()
+	msg2 := cmd2()
+	if _, ok := msg2.(linesDoneMsg); !ok {
+		t.Errorf("expected linesDoneMsg on second call, got %T", msg2)
+	}
+}
+
+// TestUoWCompleteMsg_NoAutoAdvanceOnFailure verifies that when a UoW fails
+// (ExitCode > 0), the active tab does NOT auto-advance to the next running tab.
+func TestUoWCompleteMsg_NoAutoAdvanceOnFailure(t *testing.T) {
+	lineChan := make(chan Line, 10)
+	doneChan := make(chan struct{})
+
+	model := NewModel(
+		20,
+		"Test",
+		lineChan,
+		nil,
+		doneChan,
+		false,
+		true,
+		nil,
+	)
+
+	// Register two UoWs
+	model.GetOrCreateUoWStateByID("build:mod1:comp1:go", "mod1-go", 1)
+	model.GetOrCreateUoWStateByID("build:mod2:comp2:go", "mod2-go", 1)
+	model.MarkUoWRunning("build:mod1:comp1:go")
+	model.MarkUoWRunning("build:mod2:comp2:go")
+
+	// Set first tab as active (effective default)
+	model.activeTab = "build:mod1:comp1:go"
+
+	// Complete first UoW with FAILURE (exit code 1)
+	completeMsg := UoWCompleteMsg{
+		Moniker:  "build:mod1:comp1:go",
+		ExitCode: 1,
+	}
+	updatedModel, _ := model.Update(completeMsg)
+	m := updatedModel.(Model)
+
+	// Active tab should NOT have changed - failed tab stays focused
+	if m.activeTab != "build:mod1:comp1:go" {
+		t.Errorf("expected active tab to stay on failed UoW %q, got %q",
+			"build:mod1:comp1:go", m.activeTab)
+	}
+}
+
+// TestUoWCompleteMsg_AutoAdvanceOnSuccess verifies that when a UoW succeeds
+// (ExitCode == 0), the active tab auto-advances to the next running tab.
+func TestUoWCompleteMsg_AutoAdvanceOnSuccess(t *testing.T) {
+	lineChan := make(chan Line, 10)
+	doneChan := make(chan struct{})
+
+	model := NewModel(
+		20,
+		"Test",
+		lineChan,
+		nil,
+		doneChan,
+		false,
+		true,
+		nil,
+	)
+
+	// Register two UoWs
+	model.GetOrCreateUoWStateByID("build:mod1:comp1:go", "mod1-go", 1)
+	model.GetOrCreateUoWStateByID("build:mod2:comp2:go", "mod2-go", 1)
+	model.MarkUoWRunning("build:mod1:comp1:go")
+	model.MarkUoWRunning("build:mod2:comp2:go")
+
+	// Set first tab as active
+	model.activeTab = "build:mod1:comp1:go"
+
+	// Complete first UoW with SUCCESS (exit code 0)
+	completeMsg := UoWCompleteMsg{
+		Moniker:  "build:mod1:comp1:go",
+		ExitCode: 0,
+	}
+	updatedModel, _ := model.Update(completeMsg)
+	m := updatedModel.(Model)
+
+	// Active tab should have advanced to the next running UoW
+	if m.activeTab != "build:mod2:comp2:go" {
+		t.Errorf("expected active tab to advance to %q, got %q",
+			"build:mod2:comp2:go", m.activeTab)
 	}
 }
 

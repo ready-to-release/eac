@@ -21,11 +21,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -79,9 +79,7 @@ func GetChangedModules() int {
 		}
 	} else {
 		// Get list of changed files from git
-		cmd := exec.Command("git", "diff", "--name-only", baseRef)
-		cmd.Dir = workspaceRoot
-		output, err := cmd.Output()
+		output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", baseRef)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: getting changed files: %v\n", err)
 			return 1

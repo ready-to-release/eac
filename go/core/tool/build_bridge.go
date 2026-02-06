@@ -311,7 +311,7 @@ func GlobalBuildBridge() *BuildBridge {
 // Call this during application startup after loading configuration.
 func InitializeGlobalBridges(repoRoot, configRoot string) error {
 	// Initialize tool system from config
-	registry, resolver, err := InitializeFromConfig(repoRoot, configRoot)
+	registry, resolver, toolConfig, err := InitializeFromConfig(repoRoot, configRoot)
 	if err != nil {
 		// Tool config is optional, but log for visibility in case of unexpected issues
 		// Common reasons: no tool-config.yml (expected), invalid YAML (should be investigated)
@@ -329,6 +329,11 @@ func InitializeGlobalBridges(repoRoot, configRoot string) error {
 
 	// Create executor with registry for requirement validation
 	executor := NewExecutorWithRegistry(registry)
+
+	// Wire global credentials for host env forwarding to container tools
+	if toolConfig.Credentials != nil {
+		executor.SetCredentials(toolConfig.Credentials)
+	}
 
 	// Configure build bridge
 	GlobalBuildBridge().SetToolSystem(registry, resolver, executor)

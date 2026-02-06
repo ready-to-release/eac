@@ -63,7 +63,7 @@ component-types:
   book:
     extensions: []
     builders: [mkdocs]
-    build_after: [structurizr, markdown, docs-assets]
+    build_after: [structurizr, markdown, docs-assets, docs-drawio, docs-mermaid]
     pool: docker
     resources:
       cpus: 4
@@ -72,7 +72,7 @@ component-types:
   docs-pdf:
     extensions: []
     builders: [pdf]
-    build_after: [structurizr, markdown, docs-assets]
+    build_after: [structurizr, markdown, docs-assets, docs-drawio, docs-mermaid]
     pool: docker
     resources:
       cpus: 4
@@ -87,7 +87,7 @@ component-types:
   docs-site:
     extensions: []
     builders: [site]
-    build_after: [structurizr, markdown, docs-assets]
+    build_after: [structurizr, markdown, docs-assets, docs-drawio, docs-mermaid]
     pool: docker
     resources:
       cpus: 4
@@ -142,11 +142,37 @@ component-types:
   # Structurizr - Architecture diagrams
   structurizr:
     extensions: [".dsl"]
+    builders: [structurizr-render]
     linters: [structurizr-lint]
     scanners: [secrets]
     pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 2
     files:
       source: ["workspace.dsl", "**/*.dsl"]
+
+  # Drawio component - renders .drawio.png files via drawio-tool container
+  docs-drawio:
+    extensions: []
+    builders: [drawio-render]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 1
+    files:
+      source: ["**/*.drawio.png"]
+
+  # Mermaid component - renders mermaid diagrams from markdown sources
+  docs-mermaid:
+    extensions: []
+    builders: [mermaid-render]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 2
+    files:
+      source: []
 
   # Documentation assets
   docs-assets:

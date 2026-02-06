@@ -1,6 +1,7 @@
 package cmdframework
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,13 +55,11 @@ func CalculateTurboMultiplier(turbo bool) float64 {
 	return 1.0
 }
 
-// phaseInit handles the initialization phase:
-// - Find workspace root
-// - Load EAC configuration
-// - Configure logging
-// - Set up orchestrator
-// - Initialize TUI if enabled.
-func phaseInit(ctx *ExecutionContext) error {
+// phaseInitEarly performs minimal setup needed before the TUI can start.
+// This runs synchronously and must complete quickly (<10ms) so the TUI
+// appears immediately. Heavy work (config loading, tool init) is deferred
+// to phaseInitDeferred.
+func phaseInitEarly(ctx *ExecutionContext) error {
 	ctx.StartTime = time.Now()
 
 	// IMPORTANT: Create TUI console BEFORE starting output buffer.
@@ -88,6 +87,70 @@ func phaseInit(ctx *ExecutionContext) error {
 	ctx.initOutputBuffer()
 	ctx.AddCleanup(func() { ctx.stopOutputBuffer() })
 
+	// Create orchestrator with minimal config.
+	// WorkspaceRoot, OutputBaseDir, LogFileName, MaxConcurrency, Turbo etc.
+	// are populated later by phaseInitDeferred via UpdateConfig.
+	orchConfig := orchestrator.Config{
+		ActionVerb:           ctx.Config.ActionVerb,
+		StatusUpdateInterval: 500, // 500ms for responsive feedback
+		TUI:                  ctx.Config.UseTUI,
+		TUIHeight:            ctx.Config.TUIHeight,
+		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
+		TUI3Demo:             ctx.Config.TUI3Demo,
+		SkipTUIDelay:         ctx.Config.SkipTUIDelay,
+	}
+
+	orch := orchestrator.New(&orchConfig, nil) // Worker set later
+	ctx.Orchestrator = orch
+	ctx.AddCleanup(func() { orch.Close() })
+
+	// Wire up TUI console -> orchestrator -> observers
+	if tuiConsole != nil {
+		if pc, ok := tuiConsole.(*parallel.Console); ok {
+			orch.SetConsole(pc.Inner())
+
+			// Create TUI observer to receive execution events
+			tuiObserver := tui.NewTUIObserver(pc.Inner())
+			orch.AddObserver(tuiObserver)
+			orch.SetWriterFactory(tuiObserver)
+
+			// Create TUI hooks for controlled interaction
+			ctx.TUIHooks = tui.NewTUIHooks(pc.Inner())
+		}
+	} else if !ctx.Config.UseTUI {
+		// No TUI - use console observer for plain text output
+		consoleObserver := output.NewConsoleObserver()
+		orch.AddObserver(consoleObserver)
+	}
+
+	// Initialize orchestrator output infrastructure
+	if err := orch.Init(); err != nil {
+		return fmt.Errorf("failed to initialize orchestrator: %w", err)
+	}
+
+	// START TUI IMMEDIATELY - shows loading state ("Initializing..." with animated dots)
+	// The TUI already handles the "no data yet" case gracefully via renderInitPaneLoading().
+	if ctx.Config.UseTUI {
+		// TUI Hook: Pre-start configuration
+		if ctx.TUIHooks != nil {
+			if err := ctx.TUIHooks.BeforeStart(context.Background()); err != nil {
+				return fmt.Errorf("TUI BeforeStart hook failed: %w", err)
+			}
+		}
+		orch.StartTUI()
+	}
+
+	log.Debugf("TUI boot time: %v", time.Since(ctx.StartTime))
+
+	return nil
+}
+
+// phaseInitDeferred performs the heavy initialization after the TUI is already running.
+// Progress is reported to the TUI via WriteStatus, which sends phase line messages
+// that feed into the init pane. The loading animation continues until InitSummary arrives.
+func phaseInitDeferred(ctx *ExecutionContext) error {
+	deferredStart := time.Now()
+
 	// Find workspace root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -106,7 +169,6 @@ func phaseInit(ctx *ExecutionContext) error {
 	ctx.initTimings.ConfigLoad = time.Since(configStart)
 
 	// Initialize tool system bridges
-	// This loads tool-config.yml and integrates YAML-defined tools with native handlers
 	toolStart := time.Now()
 	configRoot := filepath.Join(workspaceRoot, ".eac")
 	if err := tool.InitializeGlobalBridges(workspaceRoot, configRoot); err != nil {
@@ -122,81 +184,41 @@ func phaseInit(ctx *ExecutionContext) error {
 	}
 
 	// Determine max concurrency using shared calculation
-	// 0 = dynamic (orchestrator calculates from CPU×RAM×turbo)
 	repoConcurrency := ctx.RepoConfig.EffectiveParallelism(environments.IsCI())
 	maxConcurrency := CalculateMaxConcurrency(ctx.Config.MaxConcurrency, repoConcurrency, ctx.Config.Turbo, ctx.Config.Sequential)
 	turboMultiplier := CalculateTurboMultiplier(ctx.Config.Turbo)
 
-	// Log turbo mode if enabled
 	if ctx.Config.Turbo && !ctx.Config.Sequential {
 		log.Debugf("Turbo mode enabled: %.2fx pressure multiplier", turboMultiplier)
 	}
 
-	// Configure orchestrator
-	// If using registry, set TUI: false so orchestrator doesn't create its own console
-	orchConfig := orchestrator.Config{
+	// Update orchestrator with loaded config values
+	ctx.Orchestrator.UpdateConfig(orchestrator.ConfigUpdate{
 		WorkspaceRoot:         workspaceRoot,
 		OutputBaseDir:         ctx.Config.OutputDir,
 		LogFileName:           ctx.Config.LogFileName,
-		ActionVerb:            ctx.Config.ActionVerb,
 		MaxConcurrency:        maxConcurrency,
 		Turbo:                 turboMultiplier,
-		StatusUpdateInterval:  500, // 500ms for responsive feedback
 		ComponentTypesDisplay: ctx.ComponentTypesDisplay,
 		ShowTimings:           ctx.Config.ShowTimings,
 		DryRun:                ctx.Config.DryRun,
-		TUI:                   ctx.Config.UseTUI, // Always set TUI flag for output suppression (console may be created by registry)
-		TUIHeight:             ctx.Config.TUIHeight,
-		TUIASCIIMode:          ctx.Config.TUIASCIIMode,
-		TUI3Demo:              ctx.Config.TUI3Demo,
-		SkipTUIDelay:          ctx.Config.SkipTUIDelay,
-	}
-
-	// Create orchestrator
-	orch := orchestrator.New(&orchConfig, nil) // Worker set later
-	ctx.Orchestrator = orch
-	ctx.AddCleanup(func() { orch.Close() })
-
-	// If TUI console was created earlier, set it on orchestrator
-	if tuiConsole != nil {
-		// If it's a parallel.Console, extract the inner tui.Console for the orchestrator
-		if pc, ok := tuiConsole.(*parallel.Console); ok {
-			orch.SetConsole(pc.Inner())
-
-			// Create TUI observer to receive execution events
-			tuiObserver := tui.NewTUIObserver(pc.Inner())
-			orch.AddObserver(tuiObserver)
-			orch.SetWriterFactory(tuiObserver)
-
-			// Create TUI hooks for controlled interaction
-			ctx.TUIHooks = tui.NewTUIHooks(pc.Inner())
-		}
-		// Note: If it's a different TUI type (e.g., default TUI), the orchestrator
-		// won't have a console set and will run in non-TUI mode. This is expected
-		// for interactive selection TUIs that don't need parallel task display.
-	} else if !ctx.Config.UseTUI {
-		// No TUI - use console observer for plain text output
-		consoleObserver := output.NewConsoleObserver()
-		orch.AddObserver(consoleObserver)
-	}
-
-	// Initialize TUI (but don't show yet - that happens after init phases complete)
-	if ctx.Config.UseTUI {
-		if err := orch.Init(); err != nil {
-			return fmt.Errorf("failed to initialize orchestrator: %w", err)
-		}
-	}
+	})
 
 	// Configure logging
-	// Debug always goes to file, also to console if --debug flag set
 	logName := string(ctx.Config.Type)
 	if err := logging.ConfigureLoggingSimple(workspaceRoot, logName, nil, ctx.Config.DebugMode); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	ctx.AddCleanup(func() { logging.CloseLogging() })
 
+	// Start async dependency verification (e.g., `docker info`) in background.
+	// This overlaps with module resolution and change detection (~1-3s),
+	// hiding the Docker check latency (~100-500ms) from the critical path.
+	ctx.asyncDepsResult = startAsyncDepsCheck(ctx)
+
 	log.Debugf("%s logging configured: debugMode=%v, useTUI=%v",
 		ctx.Config.ActionVerb, ctx.Config.DebugMode, ctx.Config.UseTUI)
+	log.Debugf("Deferred init time: %v", time.Since(deferredStart))
 
 	return nil
 }

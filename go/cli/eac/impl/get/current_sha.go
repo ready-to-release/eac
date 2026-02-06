@@ -20,11 +20,12 @@
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -69,15 +70,11 @@ func DetectCurrentSHA(workspaceRoot, explicitSHA string) (*SHAResult, error) {
 	// 3. Local devbox - fetch and use origin/main
 	log.Infof("Detected devbox environment (no GITHUB_SHA)")
 
-	// Fetch latest from origin
-	fetchCmd := exec.Command("git", "fetch", "origin", "main", "--quiet")
-	fetchCmd.Dir = workspaceRoot
-	_ = fetchCmd.Run() //nolint:errcheck // best-effort fetch, ref might already exist
+	// Fetch latest from origin (best-effort, ref might already exist)
+	_ = gitexec.RunSilent(context.Background(), workspaceRoot, "fetch", "origin", "main", "--quiet") //nolint:errcheck
 
 	// Get origin/main SHA
-	cmd := exec.Command("git", "rev-parse", "origin/main")
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "rev-parse", "origin/main")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get origin/main: %w", err)
 	}

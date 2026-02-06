@@ -102,6 +102,10 @@ type UnitScheduler struct {
 	containerLamps    []bool         // true = running (lit), false = completed (dim)
 	containerLampMap  map[string]int // moniker -> lamp index (to turn off correct lamp)
 
+	// System tool instance tracking (protected by toolsMu)
+	// For "Native" lamps: each native invocation gets its own lamp position
+	systemLamps []bool // true = running (lit), false = completed (dim)
+
 	// Output infrastructure
 	orchestratorOut io.Writer
 
@@ -186,6 +190,7 @@ func NewUnitScheduler(config *Config, tuiConsole tui.Console, registry *locktrac
 		usedSystem:           make(map[string]bool),
 		containerLamps:       make([]bool, 0),
 		containerLampMap:     make(map[string]int),
+		systemLamps:          make([]bool, 0),
 		tuiConsole:           tuiConsole,
 		emitFunc:         emitFunc,
 		writerFactory:    writerFactory,
@@ -292,6 +297,7 @@ func (us *UnitScheduler) emitToolStatus() {
 	}
 
 	running, total := us.getContainerInstanceCounts()
+	sysRunning, sysTotal := us.getSystemInstanceCounts()
 
 	us.emit(interfaces.ToolStatusEvent{
 		Time:                      time.Now(),
@@ -301,6 +307,8 @@ func (us *UnitScheduler) emitToolStatus() {
 		UsedSystem:                us.getUsedSystemToolsList(),
 		ContainerInstancesRunning: running,
 		ContainerInstancesTotal:   total,
+		SystemInvocationsRunning:  sysRunning,
+		SystemInvocationsTotal:    sysTotal,
 	})
 }
 
@@ -585,6 +593,7 @@ func (us *UnitScheduler) InitializeWork(work []workunit.UnitSpec) {
 	us.usedSystem = make(map[string]bool)
 	us.containerLamps = make([]bool, 0)
 	us.containerLampMap = make(map[string]int)
+	us.systemLamps = make([]bool, 0)
 
 	// Count components per module and initialize tracking maps
 	for _, w := range work {
@@ -652,7 +661,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	for _, w := range work {
 		moniker := w.ID.Longname()
 		displayName := w.DisplayName()
-		us.tuiMarkQueued(moniker, displayName, w.Weight)
+		us.tuiMarkPending(moniker, displayName, w.Weight, w.Tags)
 	}
 
 	// Emit initial resource status to show the Resources pane in TUI
@@ -757,7 +766,25 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 
 				// Notify scheduler: mark as completed or failed based on result
 				if result.ExitCode > 0 {
-					sched.MarkFailed(spec.ID)
+					// Cascade failure to all transitive dependents still in queue.
+					// Returns specs removed from the queue — they are NOT executed.
+					cascaded := sched.MarkFailedCascade(spec.ID)
+
+					// Process cascade-failed items: store results, update TUI, track completion
+					for ci := range cascaded {
+						cascadeResult := UnitResult{
+							Module:    cascaded[ci].ID.Module,
+							Component: cascaded[ci].ID.Component,
+							Handler:   cascaded[ci].ID.Tool,
+							ExitCode:  1,
+							Errors:    []string{"Skipped: dependency failed"},
+						}
+						resultsMu.Lock()
+						results[cascaded[ci].Index] = cascadeResult
+						resultsMu.Unlock()
+
+						us.markUnitComplete(cascaded[ci], &cascadeResult)
+					}
 				} else {
 					sched.MarkComplete(spec.ID)
 				}
@@ -904,6 +931,8 @@ func (us *UnitScheduler) addActiveTool(handler string, isContainer bool, moniker
 	} else {
 		us.activeSystem[handler]++
 		us.usedSystem[handler] = true
+		// Track system invocation lamp
+		us.systemLamps = append(us.systemLamps, true) // true = running (lit)
 	}
 	us.toolsMu.Unlock()
 
@@ -943,6 +972,13 @@ func (us *UnitScheduler) removeActiveTool(handler string, isContainer bool, moni
 			us.activeSystem[handler]--
 			if us.activeSystem[handler] == 0 {
 				delete(us.activeSystem, handler)
+			}
+		}
+		// Turn off one running system lamp (last running → dim)
+		for i := len(us.systemLamps) - 1; i >= 0; i-- {
+			if us.systemLamps[i] {
+				us.systemLamps[i] = false
+				break
 			}
 		}
 	}
@@ -1035,23 +1071,33 @@ func (us *UnitScheduler) getContainerInstanceCounts() (running, total int) {
 	return running, total
 }
 
+// getSystemInstanceCounts returns running and total system tool invocation counts.
+// Running = currently lit lamps, Total = all lamps (lit + dim).
+func (us *UnitScheduler) getSystemInstanceCounts() (running, total int) {
+	us.toolsMu.Lock()
+	defer us.toolsMu.Unlock()
+
+	total = len(us.systemLamps)
+	for _, active := range us.systemLamps {
+		if active {
+			running++
+		}
+	}
+	return running, total
+}
+
 // tuiMarkPending creates a component tab in pending state (scheduled, waiting for slot).
 // moniker is the globally unique ID (Longname) for matching; displayName is for tab labels.
 // Emits UnitQueuedEvent to observers.
-func (us *UnitScheduler) tuiMarkPending(moniker, displayName string, weight int) {
+func (us *UnitScheduler) tuiMarkPending(moniker, displayName string, weight int, tags workunit.TagSummary) {
 	// Emit event to observers
 	us.emit(interfaces.UnitQueuedEvent{
 		Time:        time.Now(),
 		ID:          moniker,
 		DisplayName: displayName,
 		Weight:      weight,
+		Tags:        tags,
 	})
-}
-
-// tuiMarkQueued creates a component tab in queued state (waiting in work queue).
-// This is the same visual as pending - tabs are created upfront.
-func (us *UnitScheduler) tuiMarkQueued(moniker, displayName string, weight int) {
-	us.tuiMarkPending(moniker, displayName, weight)
 }
 
 // executeWorker runs the actual work for a component.
@@ -1146,6 +1192,10 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		timeout = 5 * time.Minute
 	}
 
+	// Create cancellable context with timeout — propagated to worker and its subprocesses
+	workerCtx, workerCancel := context.WithTimeout(context.Background(), timeout)
+	defer workerCancel()
+
 	// Run worker with timeout enforcement
 	var exitCode int
 	resultCh := make(chan int, 1)
@@ -1161,14 +1211,14 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		if testname := spec.ID.Extra["testname"]; testname != "" {
 			workerComponent = workerComponent + ":" + testname
 		}
-		resultCh <- worker(module, workerComponent, workerWriter)
+		resultCh <- worker(workerCtx, module, workerComponent, workerWriter)
 	}()
 
 	select {
 	case exitCode = <-resultCh:
 		// Worker completed normally
-	case <-time.After(timeout):
-		// Worker timed out - kill it
+	case <-workerCtx.Done():
+		// Worker timed out — context cancellation kills subprocesses via exec.CommandContext
 		exitCode = workunit.ExitCodeTimeout
 		fmt.Fprintf(os.Stderr, "TIMEOUT: %s killed after %v (limit: %v)\n", displayName, time.Since(startTime), timeout)
 		fmt.Fprintf(logFile, "\n[TIMEOUT] Worker killed after %v (limit: %v)\n", time.Since(startTime), timeout)

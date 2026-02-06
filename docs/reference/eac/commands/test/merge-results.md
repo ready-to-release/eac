@@ -2,7 +2,7 @@
 
 <!-- book:cmd test merge-results -->
 
-Merge manual test results from `test-results/<module>/<version>/manual-results.json` into the test manifest at `out/test/<module>/test.manifest.json`.
+Merge manual test results from `test-results/<module>/<version>/manual-results.json` into the test output at `out/test/<module>/`.
 
 ## Synopsis
 
@@ -12,9 +12,9 @@ test merge-results --module <module> --version <version>
 
 ## Description
 
-Transforms manual test results into test entries and updates the test manifest with aggregated statistics. If no manifest exists, a new one is created. If a manual suite already exists, it is replaced with the new results.
+Transforms manual test results into test entries and writes them as a UoW manifest with a `manual-tests.json` artifact. If a manual UoW already exists, it is replaced with the new results.
 
-This command integrates manual test results into the same test manifest used for automated tests, providing a unified view of all test results across automated and manual testing efforts.
+This command integrates manual test results into the same UoW-based output structure used for automated tests, providing a unified view of all test results across automated and manual testing efforts.
 
 ## Flags
 
@@ -29,15 +29,14 @@ This file must have been created by `test import-manual` command.
 
 ## Output
 
-Creates or updates: `out/test/<module>/test.manifest.json`
+Creates or updates: `out/test/<module>/manual-merge/uow.manifest.json` and `manual-tests.json`
 
 Output message:
 
 ```text
 Merged manual test results for eac-commands v1.2.0
-  Location: out/test/eac-commands/test.manifest.json
+  Location: out/test/eac-commands/manual-merge/
   Manual tests: 5 passed, 1 failed, 0 skipped
-  Total tests in manifest: 785
 ```
 
 ## Transformation Logic
@@ -56,7 +55,7 @@ Each `ManualTestResult` becomes a `TestEntry` in the manifest:
 }
 ```
 
-**Output** (in test.manifest.json):
+**Output** (in manual-tests.json, referenced by uow.manifest.json):
 
 ```json
 {
@@ -88,61 +87,9 @@ Each `ManualTestResult` becomes a `TestEntry` in the manifest:
 | -                     | tags           | Empty array                              |
 | -                     | file_path      | Empty string                             |
 
-## Manifest Updates
+## UoW Manifest Output
 
-### New Manifest Creation
-
-If manifest doesn't exist:
-
-1. Creates new manifest with metadata from import_metadata
-2. Adds manual suite to suites object
-3. Populates tests array with manual test entries
-4. Calculates summary statistics
-
-### Existing Manifest Update
-
-If manifest exists:
-
-1. Removes all existing manual test entries
-2. Appends new manual test entries
-3. Replaces manual suite statistics
-4. Recalculates summary statistics
-
-### Manual Suite Statistics
-
-The `manual` suite in the manifest includes:
-
-```json
-{
-  "suites": {
-    "manual": {
-      "run_time": "2026-01-19T12:00:00Z",
-      "duration_seconds": 120.5,
-      "tests": {
-        "total": 6,
-        "passed": 5,
-        "failed": 1,
-        "skipped": 0
-      }
-    }
-  }
-}
-```
-
-### Summary Updates
-
-The manifest summary aggregates all tests (automated + manual):
-
-```json
-{
-  "summary": {
-    "total": 785,
-    "passed": 779,
-    "failed": 1,
-    "skipped": 5
-  }
-}
-```
+The command writes a UoW manifest at `out/test/<module>/manual-merge/uow.manifest.json` with a `manual-tests.json` artifact containing the manual test entries. The `testview` aggregation system reads this alongside automated test UoW manifests to provide unified test summaries.
 
 ## Examples
 
@@ -156,9 +103,8 @@ Output:
 
 ```text
 Merged manual test results for eac-commands v1.2.0
-  Location: out/test/eac-commands/test.manifest.json
+  Location: out/test/eac-commands/manual-merge/
   Manual tests: 5 passed, 1 failed, 0 skipped
-  Total tests in manifest: 785
 ```
 
 ### Verify Merged Results

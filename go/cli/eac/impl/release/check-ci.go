@@ -26,15 +26,17 @@
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -357,14 +359,12 @@ func getWorkflowRuns(workflow, commitSHA string, strict bool) ([]CIRunStatus, er
 
 // queryRunsByCommit queries runs filtered by exact commit SHA.
 func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(".", "run", "list",
 		"--commit", commitSHA,
 		"--workflow", workflow,
 		"--json", "status,conclusion,databaseId,headSha",
 		"--limit", "5",
 	)
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
@@ -380,14 +380,12 @@ func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
 // queryRecentRunsForCommit checks if targetCommit is an ancestor of any recent CI run.
 func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, error) {
 	// Get recent runs without commit filter
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(".", "run", "list",
 		"--workflow", workflow,
 		"--branch", "main",
 		"--json", "status,conclusion,headSha,databaseId",
 		"--limit", "10",
 	)
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
@@ -416,9 +414,8 @@ func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, err
 
 // isAncestor checks if potentialAncestor is an ancestor of commit.
 func isAncestor(potentialAncestor, commit string) bool {
-	cmd := exec.Command("git", "merge-base", "--is-ancestor", potentialAncestor, commit)
-	err := cmd.Run()
-	return err == nil
+	_, exitCode, err := gitexec.RunCombined(context.Background(), ".", "merge-base", "--is-ancestor", potentialAncestor, commit)
+	return err == nil && exitCode == 0
 }
 
 // ciRunCoversCommit returns true if a CI run with the given headSHA covers targetCommit
@@ -444,13 +441,11 @@ type CIRunWithWorkflow struct {
 
 // queryAllRecentRuns queries recent runs across all workflows on a branch.
 func queryAllRecentRuns(branch string, limit int) ([]CIRunWithWorkflow, error) {
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(".", "run", "list",
 		"--branch", branch,
 		"--json", "status,conclusion,headSha,workflowName",
 		"--limit", fmt.Sprintf("%d", limit),
 	)
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
@@ -555,16 +550,13 @@ type CIRunInfo struct {
 
 // getLastSuccessfulModuleCIInfo queries gh CLI for the last successful workflow run info.
 func getLastSuccessfulModuleCIInfo(workflow, branch, workspaceRoot string) (CIRunInfo, error) {
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"-b", branch,
 		"-s", "success",
 		"-w", workflow,
 		"-L", "1",
 		"--json", "headSha,databaseId",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return CIRunInfo{}, fmt.Errorf("gh command failed: %w", err)
 	}
@@ -589,10 +581,7 @@ func getLastSuccessfulModuleCIInfo(workflow, branch, workspaceRoot string) (CIRu
 
 // getChangedFilesBetweenCommits gets the list of files changed between two commits.
 func getChangedFilesBetweenCommits(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
-	cmd := exec.Command("git", "diff", "--name-only", baseSHA+".."+headSHA)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", baseSHA+".."+headSHA)
 	if err != nil {
 		return nil, fmt.Errorf("git diff failed: %w", err)
 	}

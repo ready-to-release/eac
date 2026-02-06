@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -22,7 +21,9 @@ import (
 )
 
 func init() {
-	RegisterHandler(&GoHandler{})
+	h := &GoHandler{}
+	RegisterHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(h)
 }
 
 // GoHandler builds Go modules (libraries, CLIs, tests).
@@ -308,8 +309,8 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot, workspaceRoot, 
 	}
 
 	// Run tests with JSON output for results capture
-	// Note: We still use exec.Command here because we need to redirect stdout to a file
-	// The tool system writes to LogWriter, but tests need JSON output captured separately
+	// StdoutWriter redirects test JSON output to results file,
+	// StderrWriter sends diagnostic output to logWriter
 	resultsPath := filepath.Join(outputDir, "results.json")
 	resultsFile, err := os.Create(resultsPath)
 	if err != nil {
@@ -318,13 +319,29 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot, workspaceRoot, 
 	}
 	defer resultsFile.Close()
 
-	cmd := exec.Command("go", "test", "./...", "-json")
-	cmd.Dir = moduleRoot
-	cmd.Stdout = resultsFile
-	cmd.Stderr = logWriter
+	registry := tool.GlobalRegistry()
+	executor := tool.GlobalExecutor()
+	toolDef := registry.GetOrAdhoc("go")
 
-	if err := cmd.Run(); err != nil {
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: workspaceRoot,
+		ModuleRoot:    moduleRoot,
+		LogWriter:     logWriter,
+		StdoutWriter:  resultsFile,
+		StderrWriter:  logWriter,
+		Operation:     tool.OperationBuild,
+		ArgsOverrides: []string{"test", "./...", "-json"},
+		Placeholders: map[string]string{
+			"{workspace}": workspaceRoot,
+			"{module}":    moduleRoot,
+		},
+	}
+
+	result, err := executor.Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
 		// Test failures are expected - capture the results anyway
+		Logln(logWriter, "⚠️  Tests completed with failures")
+	} else if result.ExitCode != 0 {
 		Logln(logWriter, "⚠️  Tests completed with failures")
 	}
 

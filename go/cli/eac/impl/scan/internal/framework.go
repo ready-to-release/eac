@@ -2,8 +2,8 @@
 package internal
 
 import (
+	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,6 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"go.uber.org/zap"
 )
 
@@ -237,13 +238,17 @@ func GetGitCommit(workspaceRoot string) string {
 	if sha := os.Getenv("GITHUB_SHA"); sha != "" {
 		return sha
 	}
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
-	if err != nil {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("git")
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: workspaceRoot,
+		ModuleRoot:    workspaceRoot,
+		ArgsOverrides: []string{"rev-parse", "HEAD"},
+	}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil || result.ExitCode != 0 {
 		return ""
 	}
-	return strings.TrimSpace(string(output))
+	return strings.TrimSpace(string(result.Stdout))
 }
 
 

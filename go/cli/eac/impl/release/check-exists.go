@@ -18,11 +18,12 @@
 package release
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -106,15 +107,11 @@ func ReleaseCheckExists() int {
 }
 
 func checkReleaseExistsRemote(tag, workspaceRoot string) (bool, error) {
-	cmd := exec.Command("gh", "release", "view", tag)
-	cmd.Dir = workspaceRoot
-
-	err := cmd.Run()
+	_, exitCode, err := ghexec.RunCombined(context.Background(), workspaceRoot, "release", "view", tag)
 	if err != nil {
-		// Command failed = release doesn't exist
-		return false, nil
+		return false, err
 	}
 
-	// Command succeeded = release exists
-	return true, nil
+	// Exit code 0 = release exists, non-zero = doesn't exist
+	return exitCode == 0, nil
 }

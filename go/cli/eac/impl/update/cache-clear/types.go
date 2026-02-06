@@ -134,8 +134,8 @@ func GetAllClearDirs() []ClearDir {
 			Type:        cache.TypeAsset,
 		},
 		{
-			RelPath:     filepath.Join("docs", "assets", "cache", "structurizr"),
-			Description: "structurizr cache",
+			RelPath:     filepath.Join(".cache", "eac", "structurizr"),
+			Description: "structurizr acceleration cache",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeAsset,

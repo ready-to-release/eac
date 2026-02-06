@@ -675,6 +675,48 @@ func StructurizrDocsCachePath(repoRoot, module, viewKey, dslHash string) string 
 	return filepath.Join(StructurizrCachePath(repoRoot), filename)
 }
 
+// StructurizrModuleBuildOutputPath returns the path to a module's structurizr build output directory.
+// Each module with a structurizr component gets its own build output.
+// Path: out/build/{module}/structurizr-structurizr-render/structurizr/
+func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moduleName, "structurizr-structurizr-render", "structurizr")
+}
+
+// StructurizrAccelCachePath returns the path to the structurizr acceleration cache.
+// Used for incremental builds to avoid re-rendering unchanged diagrams.
+// Path: .cache/eac/structurizr/
+func StructurizrAccelCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "structurizr")
+}
+
+// DrawioBuildOutputPath returns the path to the drawio build output directory.
+// This is where rendered drawio PNGs are written by the drawio builder.
+// Path: out/build/docs/drawio-drawio-render/drawio/
+func DrawioBuildOutputPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "drawio-drawio-render", "drawio")
+}
+
+// MermaidBuildOutputPath returns the path to the mermaid build output directory.
+// This is where rendered mermaid SVGs and the index manifest are written.
+// Path: out/build/docs/mermaid-mermaid-render/mermaid/
+func MermaidBuildOutputPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "mermaid-mermaid-render", "mermaid")
+}
+
+// DrawioAccelCachePath returns the path to the drawio acceleration cache.
+// Used for incremental builds to avoid re-rendering unchanged diagrams.
+// Path: .cache/eac/drawio/
+func DrawioAccelCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "drawio")
+}
+
+// MermaidAccelCachePath returns the path to the mermaid acceleration cache.
+// Used for incremental builds to avoid re-rendering unchanged diagrams.
+// Path: .cache/eac/mermaid/
+func MermaidAccelCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "mermaid")
+}
+
 // PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory.
 // Located in .cache/eac/pdf-screenshots/ (not git-tracked).
 func PDFScreenshotsCachePath(repoRoot string) string {

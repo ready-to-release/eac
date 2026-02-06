@@ -25,12 +25,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -106,9 +107,7 @@ func PipelineCIDispatchAndWait() int {
 func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot string) int {
 	// Get current ref if not specified
 	if ref == "" {
-		cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-		cmd.Dir = workspaceRoot
-		output, err := cmd.Output()
+		output, err := gitexec.Run(workspaceRoot, "rev-parse", "--abbrev-ref", "HEAD")
 		if err != nil {
 			log.Errorf("Error getting current branch: %v", err)
 			return 1
@@ -132,13 +131,9 @@ func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot st
 		}
 	}
 
-	cmd := exec.Command("gh", args...)
-	cmd.Dir = workspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		log.Errorf("Error dispatching workflow: %v", err)
+	_, dispatchErr := ghexec.Run(workspaceRoot, args...)
+	if dispatchErr != nil {
+		log.Errorf("Error dispatching workflow: %v", dispatchErr)
 		return 1
 	}
 
@@ -159,16 +154,13 @@ func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot st
 
 func findLatestRunID(workflow, ref, workspaceRoot string) (string, error) {
 	// Get the most recent run for this workflow on this ref
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--branch", ref,
 		"--limit", "1",
 		"--json", "databaseId",
 		"-q", ".[0].databaseId",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to find run: %w", err)
 	}
@@ -215,13 +207,10 @@ func waitForRun(runID string, timeout int, workspaceRoot string) int {
 }
 
 func getRunStatus(runID, workspaceRoot string) (status, conclusion string, err error) {
-	cmd := exec.Command("gh", "run", "view", runID,
+	output, err := ghexec.Run(workspaceRoot, "run", "view", runID,
 		"--json", "status,conclusion",
 		"-q", ".status + \"|\" + .conclusion",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get run status: %w", err)
 	}

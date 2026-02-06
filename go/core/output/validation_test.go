@@ -767,6 +767,72 @@ func TestValidateArtifacts_SimulatedPartialBuild(t *testing.T) {
 	assert.Len(t, result.MissingArtifacts, 2)
 }
 
+// =============================================================================
+// ComputeOutputHash() Tests
+// =============================================================================
+
+func TestComputeOutputHash_Empty(t *testing.T) {
+	result := ComputeOutputHash(nil)
+	assert.Equal(t, "", result)
+
+	result = ComputeOutputHash([]Artifact{})
+	assert.Equal(t, "", result)
+}
+
+func TestComputeOutputHash_SingleArtifact(t *testing.T) {
+	artifacts := []Artifact{
+		{ID: "a", SHA256: "sha256:abc123"},
+	}
+	result := ComputeOutputHash(artifacts)
+	assert.NotEmpty(t, result)
+	assert.True(t, len(result) > 7, "should have sha256: prefix + hex")
+	assert.Equal(t, "sha256:", result[:7])
+}
+
+func TestComputeOutputHash_Deterministic(t *testing.T) {
+	artifacts := []Artifact{
+		{ID: "a", SHA256: "sha256:aaa"},
+		{ID: "b", SHA256: "sha256:bbb"},
+	}
+	h1 := ComputeOutputHash(artifacts)
+	h2 := ComputeOutputHash(artifacts)
+	assert.Equal(t, h1, h2)
+}
+
+func TestComputeOutputHash_OrderIndependent(t *testing.T) {
+	// IDs sorted by ID field, so order of input doesn't matter
+	a1 := []Artifact{
+		{ID: "a", SHA256: "sha256:aaa"},
+		{ID: "b", SHA256: "sha256:bbb"},
+	}
+	a2 := []Artifact{
+		{ID: "b", SHA256: "sha256:bbb"},
+		{ID: "a", SHA256: "sha256:aaa"},
+	}
+	assert.Equal(t, ComputeOutputHash(a1), ComputeOutputHash(a2))
+}
+
+func TestComputeOutputHash_DifferentHashesDifferentResult(t *testing.T) {
+	a1 := []Artifact{
+		{ID: "a", SHA256: "sha256:aaa"},
+	}
+	a2 := []Artifact{
+		{ID: "a", SHA256: "sha256:bbb"},
+	}
+	assert.NotEqual(t, ComputeOutputHash(a1), ComputeOutputHash(a2))
+}
+
+func TestComputeOutputHash_DoesNotMutateInput(t *testing.T) {
+	artifacts := []Artifact{
+		{ID: "b", SHA256: "sha256:bbb"},
+		{ID: "a", SHA256: "sha256:aaa"},
+	}
+	// Copy original order
+	origFirst := artifacts[0].ID
+	ComputeOutputHash(artifacts)
+	assert.Equal(t, origFirst, artifacts[0].ID, "input slice should not be mutated")
+}
+
 func TestValidateArtifacts_SimulatedCorruptedBuild(t *testing.T) {
 	tmpDir := t.TempDir()
 

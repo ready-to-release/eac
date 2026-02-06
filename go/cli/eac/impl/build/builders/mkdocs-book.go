@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -41,14 +42,6 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		for _, book := range moduleBooks {
 			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
 		}
-	}
-
-	// Pre-build: ensure drawio cache is up to date
-	optimized, err := books.UpdateDrawioCache(workspaceRoot, logWriter)
-	if err != nil {
-		Logln(logWriter, "⚠️  Warning: drawio cache update failed: %v", err)
-	} else if optimized > 0 {
-		Logln(logWriter, "📊 Updated drawio cache: %d image(s) optimized", optimized)
 	}
 
 	// Build books sequentially - orchestrator manages parallelism
@@ -210,8 +203,7 @@ func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
 
 	// Run preprocessing
-	// TODO: Thread CacheConfig through for --skip-cache=asset support
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode, nil)
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", false
@@ -403,7 +395,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 	Logln(logWriter, "   Image: %s", imageName)
 	Logln(logWriter, "   Output: %s", siteDir)
 
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+	exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", buildArgs...)
 	if exitCode != 0 {
 		Logln(logWriter, "❌ MkDocs build failed")
 		return exitCode
@@ -456,8 +448,7 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	// Run preprocessing (overwrites existing files incrementally)
-	// TODO: Thread CacheConfig through for --skip-cache=asset support
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode, nil)
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", true

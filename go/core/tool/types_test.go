@@ -5,6 +5,29 @@ import (
 	"testing"
 )
 
+func TestExecutorMode_ToToolBinding(t *testing.T) {
+	tests := []struct {
+		name string
+		mode ExecutorMode
+		want ToolBinding
+	}{
+		{"auto", ExecutorModeAuto, ToolBindingAuto},
+		{"container", ExecutorModeContainer, ToolBindingContainer},
+		{"system", ExecutorModeSystem, ToolBindingSystem},
+		{"empty defaults to auto", "", ToolBindingAuto},
+		{"unknown defaults to auto", ExecutorMode("bogus"), ToolBindingAuto},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.mode.ToToolBinding()
+			if got != tt.want {
+				t.Errorf("ExecutorMode(%q).ToToolBinding() = %q, want %q", tt.mode, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestToolDefinition_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -183,6 +206,7 @@ func TestToolDefinition_Clone(t *testing.T) {
 		Command:     []string{"run"},
 		Entrypoint:  []string{"/bin/sh"},
 		Env:         map[string]string{"FOO": "bar"},
+		HostEnv:     []string{"GITHUB_TOKEN", "NPM_TOKEN"},
 		Mounts: []MountConfig{
 			{Source: "/src", Target: "/app"},
 		},
@@ -196,6 +220,7 @@ func TestToolDefinition_Clone(t *testing.T) {
 	original.Args[0] = "modified"
 	original.Command[0] = "modified"
 	original.Env["FOO"] = "modified"
+	original.HostEnv[0] = "modified"
 	original.Mounts[0].Source = "modified"
 	original.Requirements[0] = "modified"
 
@@ -211,6 +236,12 @@ func TestToolDefinition_Clone(t *testing.T) {
 	}
 	if clone.Env["FOO"] != "bar" {
 		t.Error("Clone Env was modified")
+	}
+	if clone.HostEnv[0] != "GITHUB_TOKEN" {
+		t.Error("Clone HostEnv was modified")
+	}
+	if clone.HostEnv[1] != "NPM_TOKEN" {
+		t.Error("Clone HostEnv second element was modified")
 	}
 	if clone.Mounts[0].Source != "/src" {
 		t.Error("Clone Mounts was modified")

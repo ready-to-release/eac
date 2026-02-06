@@ -1,11 +1,16 @@
 package cmdframework
 
 import (
+	"context"
 	"io"
 	"sync"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/domain"
+	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestUnitRegistry_RegisterAndRetrieve tests basic registration and retrieval.
@@ -17,7 +22,7 @@ func TestUnitRegistry_RegisterAndRetrieve(t *testing.T) {
 	mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		return []workunit.UnitSpec{}
 	}
-	mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 0
 	}
 
@@ -79,7 +84,7 @@ func TestUnitRegistry_PartialRegistration(t *testing.T) {
 	}
 
 	// Now register worker
-	mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 0
 	}
 	reg.RegisterWorker(CommandTypeTest, mockWorker)
@@ -131,7 +136,7 @@ func TestUnitRegistry_AllCommandTypes(t *testing.T) {
 		mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 			return nil
 		}
-		mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+		mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 			return 0
 		}
 
@@ -160,7 +165,7 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) []workunit.UnitSpec {
 				return nil
 			})
-			reg.RegisterWorker(cmdType, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+			reg.RegisterWorker(cmdType, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 				return idx
 			})
 		}(i)
@@ -180,6 +185,132 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 
 	wg.Wait()
 	// If we get here without a race condition panic, the test passes
+}
+
+// --- injectModuleDependencies tests ---
+
+func TestInjectModuleDependencies_Basic(t *testing.T) {
+	// Module A depends on Module B. UoWs in A should get DependsOn for B's UoWs.
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleA",
+		DependsOn: []string{"moduleB"},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleB",
+		DependsOn: []string{},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "gherkin", Tool: "godog"}, Index: 1},
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 2},
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "docs", Tool: "mkdocs"}, Index: 3},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// Module A's UoWs (index 0, 1) should depend on Module B's UoWs (index 2, 3)
+	assert.Len(t, result[0].DependsOn, 2, "moduleA:go should depend on 2 B UoWs")
+	assert.Len(t, result[1].DependsOn, 2, "moduleA:gherkin should depend on 2 B UoWs")
+
+	// Module B's UoWs should have no deps (it doesn't depend on anything)
+	assert.Empty(t, result[2].DependsOn)
+	assert.Empty(t, result[3].DependsOn)
+
+	// Verify the dependency IDs match B's UoWs
+	depModules := make(map[string]bool)
+	for _, dep := range result[0].DependsOn {
+		depModules[dep.Module] = true
+	}
+	assert.True(t, depModules["moduleB"])
+}
+
+func TestInjectModuleDependencies_DepNotInBatch(t *testing.T) {
+	// Module A depends on Module B, but B is not in the execution batch
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleA",
+		DependsOn: []string{"moduleB"},
+	}, "/test")))
+	// Note: moduleB is registered but has no UoWs in the work slice
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// No deps injected — moduleB has no UoWs in the batch
+	assert.Empty(t, result[0].DependsOn)
+}
+
+func TestInjectModuleDependencies_NoDeps(t *testing.T) {
+	// Both modules have no dependencies
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleA",
+		DependsOn: []string{},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleB",
+		DependsOn: []string{},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go"}, Index: 0},
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go"}, Index: 1},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	assert.Empty(t, result[0].DependsOn)
+	assert.Empty(t, result[1].DependsOn)
+}
+
+func TestInjectModuleDependencies_NilRegistry(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "moduleA", Component: "go"}, Index: 0},
+	}
+
+	result := injectModuleDependencies(work, nil)
+	assert.Equal(t, work, result, "nil registry should return work unchanged")
+}
+
+func TestInjectModuleDependencies_EmptyWork(t *testing.T) {
+	reg := modules.NewRegistry("0.1.0", "/test")
+	result := injectModuleDependencies(nil, reg)
+	assert.Nil(t, result)
+}
+
+func TestInjectModuleDependencies_PreservesExistingDeps(t *testing.T) {
+	// Module A depends on Module B, and A's UoW already has an intra-module dep
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleA",
+		DependsOn: []string{"moduleB"},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleB",
+		DependsOn: []string{},
+	}, "/test")))
+
+	existingDep := workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "static", Tool: "copy"}
+	work := []workunit.UnitSpec{
+		{
+			ID:        workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"},
+			Index:     0,
+			DependsOn: []workunit.UnitID{existingDep},
+		},
+		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 1},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// Should have existing dep + moduleB's UoW
+	assert.Len(t, result[0].DependsOn, 2)
+	assert.Equal(t, existingDep, result[0].DependsOn[0], "existing dep should be preserved")
+	assert.Equal(t, "moduleB", result[0].DependsOn[1].Module)
 }
 
 // TestGlobalRegistryFunctions tests the package-level registry functions.
@@ -205,7 +336,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	}
 
 	// Test RegisterUnitWorker and GetUnitWorker
-	RegisterUnitWorker(CommandTypeBuild, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	RegisterUnitWorker(CommandTypeBuild, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 42
 	})
 
@@ -213,7 +344,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	if worker == nil {
 		t.Fatal("RegisterUnitWorker should register for CommandTypeBuild")
 	}
-	if result := worker(nil, "", "", nil); result != 42 {
+	if result := worker(context.Background(), nil, "", "", nil); result != 42 {
 		t.Errorf("Expected worker to return 42, got %d", result)
 	}
 

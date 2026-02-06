@@ -29,11 +29,11 @@ package pipeline
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -114,8 +114,7 @@ func PipelineRun() int {
 
 // getCurrentBranch gets the current git branch name.
 func getCurrentBranch() string {
-	cmd := exec.Command("git", "branch", "--show-current")
-	output, err := cmd.Output()
+	output, err := gitexec.Run(".", "branch", "--show-current")
 	if err != nil {
 		return "main"
 	}

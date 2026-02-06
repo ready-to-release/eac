@@ -23,7 +23,7 @@ modules:
   - moniker: repository
     name: Repository Root Module
     description: Repository root module including configuration files, build tools, and git settings
-    depends_on: [pdf-oci]
+    depends_on: [oci-tools]
     components:
       # Text/config files without typed extensions
       repo-config:
@@ -32,17 +32,52 @@ modules:
       markdown:
         root: /
         patterns:
-          source: ["*.md", "*.markdown", ".claude/**/*.md", "scripts/**/*.md", "release/README.md", "release/r2r-cli/*.md", "release/ext-eac/*.md", "release/docs/*.md", ".github/**/*.md", "junie/**/*.md"]
+          source:
+            [
+              "*.md",
+              "*.markdown",
+              ".claude/**/*.md",
+              "scripts/**/*.md",
+              "release/README.md",
+              "release/r2r-cli/*.md",
+              "release/ext-eac/*.md",
+              "release/eac-cli/*.md",
+              "release/docs/*.md",
+              ".github/**/*.md",
+              "junie/**/*.md",
+            ]
       yaml:
         root: /
         patterns:
-          source: [.r2r/**/*.yml, .r2r/**/*.yaml, .golangci.yml, .markdownlint.yml, .markdownlint-cli2.yaml, cspell.config.yml, .claude/**/*.yml, .claude/**/*.yaml, r2r-cli.yml, .github/**/*.yml, .github/**/*.yaml, .eac/**/*.yml, .eac/**/*.yaml]
+          source:
+            [
+              .r2r/**/*.yml,
+              .r2r/**/*.yaml,
+              .golangci.yml,
+              .markdownlint.yml,
+              .markdownlint-cli2.yaml,
+              cspell.config.yml,
+              .claude/**/*.yml,
+              .claude/**/*.yaml,
+              r2r-cli.yml,
+              .github/**/*.yml,
+              .github/**/*.yaml,
+              .eac/**/*.yml,
+              .eac/**/*.yaml,
+            ]
       workflows:
         root: .github/workflows
       json:
         root: /
         patterns:
-          source: [.mcp.json, .vscode/**/*.json, .claude/**/*.json, specs/.risk-controls/*.json, .eac/**/*.json]
+          source:
+            [
+              .mcp.json,
+              .vscode/**/*.json,
+              .claude/**/*.json,
+              specs/.risk-controls/*.json,
+              .eac/**/*.json,
+            ]
       testdata:
         type: testdata
         root: /
@@ -51,11 +86,22 @@ modules:
       bash:
         root: /
         patterns:
-          source: [test-repository-validations.sh, scripts/sh/claude/**/*.sh, scripts/sh/vscode/**/*.sh, importer.sh]
+          source:
+            [
+              test-repository-validations.sh,
+              scripts/sh/claude/**/*.sh,
+              scripts/sh/vscode/**/*.sh,
+              importer.sh,
+            ]
       pwsh:
         root: /
         patterns:
-          source: [scripts/pwsh/claude/**/*.ps1, scripts/pwsh/local-dev/**/*.ps1, importer.ps1]
+          source:
+            [
+              scripts/pwsh/claude/**/*.ps1,
+              scripts/pwsh/local-dev/**/*.ps1,
+              importer.ps1,
+            ]
       go:
         root: go/specs/repository
         patterns:
@@ -114,110 +160,161 @@ modules:
         type: testdata
         root: go/core
         patterns:
-          source: ["testing/testdata/**/*", "specs/gherkin/testdata/**/*.feature", "github/cli_fixtures/**/*"]
+          source:
+            [
+              "testing/testdata/**/*",
+              "specs/gherkin/testdata/**/*.feature",
+              "github/cli_fixtures/**/*",
+            ]
       gherkin-steps:
         root: go/core/specs
       # gherkin, structurizr auto-inferred
 
-  - moniker: pdf-oci
-    name: MkDocs PDF Container
-    description: Pre-built Docker container for MkDocs PDF generation (Chromium, Playwright)
-    template: container-template
+  - moniker: oci-tools
+    name: OCI Tool Containers
+    description: Docker containers for documentation rendering, serving, and utility tools
     components:
-      json: containers/pdf-oci
-      testdata:
-        type: testdata
+      pdf-oci:
+        type: dockerfile
         root: containers/pdf-oci
         patterns:
-          source: ["*.txt", "overrides/**/*.html"]
-      mkdocs-plugin:
-        type: containercode
-        root: containers/pdf-oci/mkdocs-exporter-fork
-        patterns:
-          source:
-            - "**/*.py"
-            - "**/*.css"
-            - pyproject.toml
-            - LICENSE
-
-  - moniker: site-render-oci
-    name: MkDocs Site Container
-    description: Pre-built Docker container for MkDocs HTML site generation
-    template: container-template
-    components:
-      testdata:
-        type: testdata
+          source: ["**/*"]
+        docker_build:
+          container: pdf-oci
+          context: containers/pdf-oci
+          dockerfile: containers/pdf-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/pdf-oci:latest"
+            - "ghcr.io/ready-to-release/pdf-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      site-render-oci:
+        type: dockerfile
         root: containers/site-render-oci
         patterns:
-          source: ["*.txt"]
-      scripts:
-        type: containercode
-        root: containers/site-render-oci
-        patterns:
-          source: ["*.py"]
-
-  - moniker: mkdocs-dev-oci
-    name: MkDocs Dev Server Container
-    description: Development server container with polling-based file watching for live reload
-    template: container-template
-    components:
-      testdata:
-        type: testdata
+          source: ["**/*"]
+        docker_build:
+          container: site-render-oci
+          context: containers/site-render-oci
+          dockerfile: containers/site-render-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/site-render-oci:latest"
+            - "ghcr.io/ready-to-release/site-render-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      mkdocs-dev-oci:
+        type: dockerfile
         root: containers/mkdocs-dev-oci
         patterns:
-          source: ["*.txt"]
-      scripts:
-        type: containercode
-        root: containers/mkdocs-dev-oci
-        patterns:
-          source: ["*.py", "*.sh"]
-
-  - moniker: mermaid-oci
-    name: Mermaid CLI Container
-    description: Container for Mermaid diagram rendering
-    template: container-template
-    components:
-      json: containers/mermaid-oci
-      scripts:
-        type: containercode
+          source: ["**/*"]
+        docker_build:
+          container: mkdocs-dev-oci
+          context: containers/mkdocs-dev-oci
+          dockerfile: containers/mkdocs-dev-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/mkdocs-dev-oci:latest"
+            - "ghcr.io/ready-to-release/mkdocs-dev-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      mermaid-oci:
+        type: dockerfile
         root: containers/mermaid-oci
         patterns:
-          source: ["*.js"]
-
-  # pdf-cli-oci: auto-discovered from containers/pdf-cli-oci/Dockerfile
-
-  - moniker: nginx-oci
-    name: Static Site Container
-    description: Container for static site serving with nginx
-    template: container-template
-    components:
-      testdata:
-        type: testdata
+          source: ["**/*"]
+        docker_build:
+          container: mermaid-oci
+          context: containers/mermaid-oci
+          dockerfile: containers/mermaid-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/mermaid-oci:latest"
+            - "ghcr.io/ready-to-release/mermaid-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      pdf-cli-oci:
+        type: dockerfile
+        root: containers/pdf-cli-oci
+        patterns:
+          source: ["**/*"]
+        docker_build:
+          container: pdf-cli-oci
+          context: containers/pdf-cli-oci
+          dockerfile: containers/pdf-cli-oci/Dockerfile
+          platforms: [linux/amd64]
+          push: false
+      nginx-oci:
+        type: dockerfile
         root: containers/nginx-oci
         patterns:
-          source: ["*.conf"]
-
-  - moniker: git-oci
-    name: Git Filter Repo Container
-    description: Container for git-filter-repo operations
-    template: container-template
-    components:
-      testdata:
-        type: testdata
+          source: ["**/*"]
+        docker_build:
+          container: nginx-oci
+          context: containers/nginx-oci
+          dockerfile: containers/nginx-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/nginx-oci:latest"
+            - "ghcr.io/ready-to-release/nginx-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      git-oci:
+        type: dockerfile
         root: containers/git-oci
         patterns:
-          source: ["*.sh"]
-
-  - moniker: gource-oci
-    name: Gource Container
-    description: Container for Gource visualization rendering
-    template: container-template
-    components:
-      testdata:
-        type: testdata
+          source: ["**/*"]
+        docker_build:
+          container: git-oci
+          context: containers/git-oci
+          dockerfile: containers/git-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/git-oci:latest"
+            - "ghcr.io/ready-to-release/git-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      gource-oci:
+        type: dockerfile
         root: containers/gource-oci
         patterns:
-          source: ["*.sh", "*.html", "*.conf"]
+          source: ["**/*"]
+        docker_build:
+          container: gource-oci
+          context: containers/gource-oci
+          dockerfile: containers/gource-oci/Dockerfile
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/ready-to-release/gource-oci:latest"
+            - "ghcr.io/ready-to-release/gource-oci:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      go-oci:
+        type: dockerfile
+        root: containers/go-oci
+        patterns:
+          source: ["**/*"]
+        docker_build:
+          container: go-oci
+          context: containers/go-oci
+          dockerfile: containers/go-oci/Dockerfile
+          platforms: [linux/amd64]
+          push: false
 
   # ============================================================================
   # LAYER 1 - Depends on Layer 0
@@ -228,9 +325,8 @@ modules:
     description: MkDocs HTML documentation site for GitHub Pages
     versioning:
       scheme: CalVer
-      changelog: release/docs/CHANGELOG.md
       release_type: published
-    depends_on: [repository, site-render-oci, pdf-oci]
+    depends_on: [repository, oci-tools]
     components:
       # HTML site (tool chain: preprocess -> site-render-oci)
       site:
@@ -249,7 +345,19 @@ modules:
         type: docs-assets
         root: docs/assets
         patterns:
-          source: ["**/*.png", "**/*.jpg", "**/*.svg", "**/*.css", "**/*.scss", "**/*.js", "**/*.pdf", "**/*.drawio", "*.json", "*.yml"]
+          source:
+            [
+              "**/*.png",
+              "**/*.jpg",
+              "**/*.svg",
+              "**/*.css",
+              "**/*.scss",
+              "**/*.js",
+              "**/*.pdf",
+              "**/*.drawio",
+              "*.json",
+              "*.yml",
+            ]
       json: contracts/docs
       testdata:
         type: testdata
@@ -257,6 +365,18 @@ modules:
         patterns:
           source: ["LICENSE"]
       # structurizr auto-inferred
+
+      # Diagram rendering components (build before site/PDFs via build_after)
+      drawio:
+        type: docs-drawio
+        root: docs/assets
+        patterns:
+          source: ["**/*.drawio.png"]
+      mermaid:
+        type: docs-mermaid
+        root: docs
+        patterns:
+          source: ["**/*.md"]
 
       # Diataxis PDF components (tool chain: preprocess -> pdf-oci)
       tutorials:
@@ -279,7 +399,7 @@ modules:
   - moniker: eac-cli
     name: Go Commands Library
     description: Go library containing CLI command implementations
-    depends_on: [core, clibase]
+    depends_on: [core, clibase, oci-tools]
     components:
       go:
         root: go/cli/eac
@@ -354,7 +474,7 @@ modules:
     template: go-library-template
     parameters:
       go_root: go/godog
-    depends_on: [core]
+    depends_on: [core, oci-tools]
 
   - moniker: ai-adapter
     name: AI Adapter
@@ -362,7 +482,7 @@ modules:
     template: go-library-template
     parameters:
       go_root: go/adapters/ai
-    depends_on: [core]
+    depends_on: [core, oci-tools]
 
   - moniker: docker-adapter
     name: Docker Adapter
@@ -370,7 +490,7 @@ modules:
     template: go-library-template
     parameters:
       go_root: go/adapters/docker
-    depends_on: [core]
+    depends_on: [core, oci-tools]
     components:
       containerruntime:
         type: go
@@ -382,7 +502,7 @@ modules:
     template: go-library-template
     parameters:
       go_root: go/adapters/tui
-    depends_on: [core]
+    depends_on: [core, oci-tools]
 
   - moniker: clibase
     name: CLI Base Framework
@@ -390,7 +510,7 @@ modules:
     template: go-library-template
     parameters:
       go_root: go/clibase
-    depends_on: [core, tui-adapter]
+    depends_on: [core, tui-adapter, oci-tools]
 
   - moniker: r2r-cli
     name: The CLI of CLIs
@@ -400,7 +520,7 @@ modules:
       changelog: release/r2r-cli/CHANGELOG.md
       release_type: published
     evidence_books: [release-evidence-r2r-cli]
-    depends_on: [contracts-bundle]
+    depends_on: [contracts-bundle, oci-tools]
     components:
       go:
         root: go/cli/r2r
@@ -446,7 +566,7 @@ modules:
   - moniker: templates
     name: Project Templates
     description: Template files for documentation, specifications, and design records
-    depends_on: [repository]
+    depends_on: [repository, oci-tools]
     components:
       markdown: templates
       yaml: templates
@@ -462,7 +582,7 @@ modules:
   - moniker: vscode-commit
     name: VSCode Extension - Git Commit
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
-    depends_on: [repository]
+    depends_on: [repository, oci-tools]
     components:
       typescript:
         root: typescript/vscode-commit
@@ -490,7 +610,7 @@ modules:
     template: go-internal-template
     parameters:
       go_root: go/mcp/commands
-    depends_on: [eac-cli]
+    depends_on: [eac-cli, oci-tools]
     components:
       # Override go component to add build artifacts
       go:
@@ -504,8 +624,22 @@ modules:
         type: testdata
         root: templates/test-repositories
         patterns:
-          source: ["**/*.go", "**/*.txt", "**/*.mod", "**/*.ts", "**/*.py", "**/*.toml", "**/*.cs", "**/*.csproj", "**/*.rs", "**/*.html", "**/*.conf", "**/Dockerfile"]
-            
+          source:
+            [
+              "**/*.go",
+              "**/*.txt",
+              "**/*.mod",
+              "**/*.ts",
+              "**/*.py",
+              "**/*.toml",
+              "**/*.cs",
+              "**/*.csproj",
+              "**/*.rs",
+              "**/*.html",
+              "**/*.conf",
+              "**/Dockerfile",
+            ]
+
   - moniker: ext-eac
     name: EAC Extension for R2R CLI
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
@@ -515,7 +649,7 @@ modules:
       changelog: release/ext-eac/CHANGELOG.md
       release_type: published
     evidence_books: [release-evidence-ext-eac]
-    depends_on: [eac-cli]
+    depends_on: [eac-cli, oci-tools]
     depends_on_ci: [r2r-cli]
     components:
       dockerfile:
@@ -529,6 +663,7 @@ modules:
   - moniker: r2r-installer
     name: R2R CLI Installer Scripts
     description: Cross-platform installer scripts for R2R CLI
+    depends_on: [oci-tools]
     depends_on_ci: [r2r-cli]
     components:
       pwsh:
@@ -543,10 +678,28 @@ modules:
         root: go/specs/r2r-installer
       # gherkin, structurizr auto-inferred from specs/r2r-installer/
 
+  - moniker: eac-installer
+    name: EAC CLI Installer Scripts
+    description: Cross-platform installer scripts for EAC CLI
+    depends_on: [oci-tools]
+    depends_on_ci: [eac-cli]
+    components:
+      pwsh:
+        root: scripts/pwsh/eac
+      bash:
+        root: scripts/sh/eac
+      go:
+        root: go/specs/eac-installer
+        patterns:
+          config: [go.mod, go.sum]
+      gherkin-steps:
+        root: go/specs/eac-installer
+      # gherkin, structurizr auto-inferred from specs/eac-installer/
+
   - moniker: implicit-cli
     name: Go Command Invoker Scripts
     description: Cross-shell wrappers with tab completion for Go commands
-    depends_on: [eac-cli]
+    depends_on: [eac-cli, oci-tools]
     depends_on_ci: [r2r-cli]
     components:
       pwsh:
@@ -573,20 +726,22 @@ modules:
     name: Release Bundle
     description: Aggregated release bundle with links to all module releases
     versioning:
-      scheme: CalVer
+      scheme: SemVer
       changelog: release/r2r-eac-bundle/CHANGELOG.md
       release_type: bundle
-    depends_on: [r2r-cli, ext-eac, docs, repository]
+    depends_on: [eac-cli, r2r-cli, ext-eac, docs, repository, oci-tools]
     evidence_books: [release-evidence-r2r-eac-bundle]
     release_bundle:
-      title_format: "r2r-({r2r_version}) ∞ eac-({eac_version})"
+      title_format: "r2r-({r2r_version}) ∞ eac-({eac_version}) ∞ eac-({ext-eac_version})"
       headline:
         r2r: r2r-cli
-        eac: ext-eac
+        eac: eac
+        ext-eac: ext-eac
       categories:
         - name: Core Tools
           description: CLI tools and extensions
           modules:
+            - eac-cli
             - r2r-cli
             - ext-eac
         - name: Documentation

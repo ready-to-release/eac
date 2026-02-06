@@ -108,6 +108,12 @@ type ToolDefinition struct {
 	Env     map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	WorkDir string            `yaml:"workdir,omitempty" json:"workdir,omitempty"`
 
+	// HostEnv lists host environment variable names to forward into containers.
+	// Only applies to container tools (Type == "container").
+	// Values are read from os.Getenv() at execution time.
+	// These are additive to global credentials defined in ToolConfig.Credentials.
+	HostEnv []string `yaml:"host-env,omitempty" json:"host-env,omitempty"`
+
 	// Container-specific settings
 	Mounts     []MountConfig `yaml:"mounts,omitempty" json:"mounts,omitempty"`
 	Network    string        `yaml:"network,omitempty" json:"network,omitempty"`
@@ -498,6 +504,10 @@ func (t *ToolDefinition) Clone() *ToolDefinition {
 		clone.Platforms = make([]string, len(t.Platforms))
 		copy(clone.Platforms, t.Platforms)
 	}
+	if t.HostEnv != nil {
+		clone.HostEnv = make([]string, len(t.HostEnv))
+		copy(clone.HostEnv, t.HostEnv)
+	}
 
 	// Copy maps
 	if t.Env != nil {
@@ -704,6 +714,21 @@ type ExecutionContext struct {
 	// IO
 	LogWriter io.Writer // Log output destination
 
+	// Streaming: when set, executor pipes stdout/stderr here instead of capturing.
+	// Works for BOTH system and container tools.
+	// nil = capture to ExecutionResult.Stdout/Stderr (default behavior).
+	StdoutWriter io.Writer // nil = capture to ExecutionResult.Stdout
+	StderrWriter io.Writer // nil = capture to ExecutionResult.Stderr
+
+	// StdinReader provides stdin input to the tool.
+	// Works for BOTH system and container tools.
+	// nil = no stdin
+	StdinReader io.Reader
+
+	// Full environment replacement (bypasses os.Environ + EnvOverrides merge).
+	// nil = use default env merge behavior.
+	FullEnv []string
+
 	// Input context
 	Files     []string      // Specific files (for lint)
 	Operation OperationType // What operation is being performed
@@ -843,6 +868,40 @@ type EnvironmentConfig struct {
 	ComponentTools map[string]*ToolAssignment `yaml:"component-tools,omitempty" json:"component-tools,omitempty"`
 }
 
+// ExecutorMode controls the global default for tool type resolution.
+// When a tool has no explicit per-tool binding in ToolBindings,
+// the ExecutorMode determines which type of tool to prefer.
+//
+// Override per-tool using the ToolBindings map in ToolConfig.
+type ExecutorMode string
+
+const (
+	// ExecutorModeAuto tries system first, falls back to container.
+	// This is the default behavior when executor-mode is not set.
+	ExecutorModeAuto ExecutorMode = "auto"
+
+	// ExecutorModeContainer forces container tools for all unbound tools.
+	// Tools with explicit ToolBindings entries are not affected.
+	ExecutorModeContainer ExecutorMode = "container"
+
+	// ExecutorModeSystem forces system tools for all unbound tools.
+	// Tools with explicit ToolBindings entries are not affected.
+	ExecutorModeSystem ExecutorMode = "system"
+)
+
+// ToToolBinding converts an ExecutorMode to the equivalent ToolBinding.
+// Returns ToolBindingAuto for unrecognized or empty values.
+func (m ExecutorMode) ToToolBinding() ToolBinding {
+	switch m {
+	case ExecutorModeContainer:
+		return ToolBindingContainer
+	case ExecutorModeSystem:
+		return ToolBindingSystem
+	default:
+		return ToolBindingAuto
+	}
+}
+
 // ToolBinding specifies how to resolve a canonical tool name.
 type ToolBinding string
 
@@ -855,8 +914,33 @@ const (
 	ToolBindingContainer ToolBinding = "container"
 )
 
+// CredentialsConfig defines host environment variables forwarded to all container tools.
+// This provides a centralized allowlist for credential injection — only explicitly
+// named variables are forwarded, preventing accidental secret leakage.
+type CredentialsConfig struct {
+	// HostEnv lists environment variable names always forwarded to container tools.
+	// Values are read from os.Getenv() at execution time.
+	// Example: ["GITHUB_TOKEN", "GOPRIVATE", "NPM_TOKEN"]
+	HostEnv []string `yaml:"host-env,omitempty" json:"host-env,omitempty"`
+
+	// CIEnv lists CI-related environment variable names forwarded to container tools.
+	// These are typically set by CI systems and useful for reproducibility.
+	// Example: ["CI", "GITHUB_ACTIONS", "GITHUB_SHA"]
+	CIEnv []string `yaml:"ci-env,omitempty" json:"ci-env,omitempty"`
+}
+
 // ToolConfig represents the complete tool configuration file.
 type ToolConfig struct {
+	// ExecutorMode controls the global default for tool type resolution.
+	// Individual tools can override this via ToolBindings.
+	// Default: "auto" (try system first, fall back to container).
+	// Valid values: "auto", "container", "system".
+	ExecutorMode ExecutorMode `yaml:"executor-mode,omitempty" json:"executor-mode,omitempty"`
+
+	// Credentials defines host env vars forwarded to all container tools.
+	// Per-tool host-env in ToolDefinition is additive to these.
+	Credentials *CredentialsConfig `yaml:"credentials,omitempty" json:"credentials,omitempty"`
+
 	// Separate tool tables by type
 	SystemTools    map[string]*ToolDefinition `yaml:"system-tools,omitempty" json:"system-tools,omitempty"`
 	ContainerTools map[string]*ToolDefinition `yaml:"container-tools,omitempty" json:"container-tools,omitempty"`

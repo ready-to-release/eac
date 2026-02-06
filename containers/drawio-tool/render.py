@@ -16,7 +16,7 @@ from pathlib import Path
 
 def extract_diagram_xml(mxfile_path: str) -> str:
     """Extract and decode the diagram XML from an mxfile."""
-    from codec import decode_mxfile
+    from codec import decode_mxfile, decode_diagram_content
     from embed import read_png_chunks, extract_mxfile_chunk
 
     if mxfile_path.endswith('.png'):
@@ -30,6 +30,42 @@ def extract_diagram_xml(mxfile_path: str) -> str:
     return decode_mxfile(mxfile_xml)
 
 
+def find_graph_model(decoded_xml: str):
+    """Find the mxGraphModel element, handling both decoded and encoded diagram content."""
+    import xml.etree.ElementTree as ET
+    from codec import decode_diagram_content
+
+    root = ET.fromstring(decoded_xml)
+    diagram = root.find('.//diagram')
+    if diagram is None:
+        raise ValueError("No diagram found in mxfile")
+
+    # Case 1: mxGraphModel is already a child element (decoded by decode_mxfile)
+    graph_model = diagram.find('mxGraphModel')
+    if graph_model is not None:
+        return graph_model
+
+    # Case 2: diagram content is still encoded text (decode_mxfile couldn't parse it)
+    if diagram.text and diagram.text.strip():
+        decoded = decode_diagram_content(diagram.text.strip())
+        try:
+            inner = ET.fromstring(decoded)
+            if inner.tag == 'mxGraphModel':
+                return inner
+            gm = inner.find('.//mxGraphModel')
+            if gm is not None:
+                return gm
+        except ET.ParseError:
+            pass
+
+    # Case 3: search entire tree as fallback
+    graph_model = root.find('.//mxGraphModel')
+    if graph_model is not None:
+        return graph_model
+
+    raise ValueError("No mxGraphModel found in diagram")
+
+
 def mxgraph_to_svg(decoded_xml: str) -> str:
     """
     Convert mxGraphModel XML to SVG.
@@ -40,14 +76,7 @@ def mxgraph_to_svg(decoded_xml: str) -> str:
     import xml.etree.ElementTree as ET
     import html
 
-    root = ET.fromstring(decoded_xml)
-    diagram = root.find('.//diagram')
-    if diagram is None:
-        raise ValueError("No diagram found")
-
-    graph_model = diagram.find('mxGraphModel')
-    if graph_model is None:
-        raise ValueError("No mxGraphModel found")
+    graph_model = find_graph_model(decoded_xml)
 
     # Get page dimensions
     page_width = int(graph_model.get('pageWidth', '1654'))
@@ -241,22 +270,35 @@ def mxgraph_to_svg(decoded_xml: str) -> str:
 
 def svg_to_png(svg_content: str, output_path: str) -> None:
     """Convert SVG to PNG using cairosvg."""
-    try:
-        import cairosvg
-        cairosvg.svg2png(bytestring=svg_content.encode('utf-8'), write_to=output_path)
-    except ImportError:
-        # Fallback: save as SVG and let user know
-        svg_path = output_path.replace('.png', '.svg')
-        Path(svg_path).write_text(svg_content, encoding='utf-8')
-        print(f"cairosvg not available, saved as SVG: {svg_path}", file=sys.stderr)
-        raise
+    import cairosvg
+    cairosvg.svg2png(bytestring=svg_content.encode('utf-8'), write_to=output_path)
 
 
-def render_diagram(input_path: str, output_path: str) -> None:
-    """Render a DrawIO diagram to PNG."""
+def optimize_png(output_path: str, max_width: int) -> None:
+    """Resize PNG to fit within max_width, preserving aspect ratio."""
+    from PIL import Image
+
+    with Image.open(output_path) as img:
+        w, h = img.size
+        if w <= max_width:
+            return
+
+        ratio = max_width / w
+        new_h = int(h * ratio)
+        resized = img.resize((max_width, new_h), Image.LANCZOS)
+        resized.save(output_path, "PNG", optimize=True)
+        print(f"Optimized {w}x{h} -> {max_width}x{new_h}")
+
+
+def render_diagram(input_path: str, output_path: str, max_width: int = 0) -> None:
+    """Render a DrawIO diagram to PNG, optionally resizing to max_width."""
     decoded_xml = extract_diagram_xml(input_path)
     svg = mxgraph_to_svg(decoded_xml)
     svg_to_png(svg, output_path)
+
+    if max_width > 0:
+        optimize_png(output_path, max_width)
+
     print(f"Rendered to {output_path}")
 
 

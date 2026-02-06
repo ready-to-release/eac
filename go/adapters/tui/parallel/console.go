@@ -139,6 +139,13 @@ func (c *Console) SendSummary(data *tui.SummaryData) {
 	})
 }
 
+// SendConfigReady delivers early configuration metadata for progressive display.
+func (c *Console) SendConfigReady(commandName, executionContext, parallelismMode string,
+	effectiveWorkers, weightedCapacity int, outputDir string) {
+	c.inner.SendConfigReady(commandName, executionContext, parallelismMode,
+		effectiveWorkers, weightedCapacity, outputDir)
+}
+
 // SetInitSummary sends init summary data for structured display.
 func (c *Console) SetInitSummary(summary *tui.InitSummary) {
 	if summary == nil {

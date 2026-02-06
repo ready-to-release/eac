@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -88,41 +88,20 @@ func generateAllModulesSummary(runID string) int {
 		return 1
 	}
 
-	// Find all modules with test manifests
-	testDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Test)
-	entries, err := os.ReadDir(testDir)
+	// Load test views from UoW manifests
+	views, err := testview.LoadAllTestViews(workspaceRoot)
 	if err != nil {
-		log.Errorf("no test results found in %s", testDir)
+		log.Errorf("no test results found: %v", err)
 		return 1
 	}
 
-	// Collect manifests
-	var manifests []*implinternal.TestManifest
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		moduleName := entry.Name()
-		moduleTestDir := filepath.Join(testDir, moduleName)
-		manifest, err := implinternal.LoadTestManifest(moduleTestDir)
-		if err != nil {
-			continue // Skip modules without manifests
-		}
-		manifests = append(manifests, manifest)
-	}
-
-	if len(manifests) == 0 {
+	if len(views) == 0 {
 		log.Errorf("no test manifests found")
 		return 1
 	}
 
-	// Sort by moniker for consistent output
-	sort.Slice(manifests, func(i, j int) bool {
-		return manifests[i].Moniker < manifests[j].Moniker
-	})
-
 	// Generate combined summary
-	summary := generateCombinedSummary(manifests, cfg)
+	summary := generateCombinedSummary(views, cfg)
 
 	// Add footer with duration
 	duration := time.Since(startTime)
@@ -141,14 +120,14 @@ type testStats struct {
 	Duration int64 // milliseconds
 }
 
-func (s *testStats) add(entry implinternal.TestEntry) {
+func (s *testStats) add(entry testview.TestEntry) {
 	s.Total++
 	switch entry.Status {
-	case implinternal.TestStatusPassed:
+	case testview.StatusPassed:
 		s.Passed++
-	case implinternal.TestStatusFailed:
+	case testview.StatusFailed:
 		s.Failed++
-	case implinternal.TestStatusSkipped:
+	case testview.StatusSkipped:
 		s.Skipped++
 	}
 	s.Duration += entry.DurationMs
@@ -173,7 +152,7 @@ func (s *testStats) durationStr() string {
 }
 
 // generateCombinedSummary creates a summary with one table per module showing individual tests.
-func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config.EACConfig) string {
+func generateCombinedSummary(views []*testview.TestModuleView, cfg *config.EACConfig) string {
 	var summary string
 
 	// Overall status
@@ -183,12 +162,12 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 	totalTests := 0
 	allPassed := true
 
-	for _, m := range manifests {
-		totalPassed += m.Summary.Passed
-		totalFailed += m.Summary.Failed
-		totalSkipped += m.Summary.Skipped
-		totalTests += m.Summary.Total
-		if m.Summary.Failed > 0 {
+	for _, v := range views {
+		totalPassed += v.Summary.Passed
+		totalFailed += v.Summary.Failed
+		totalSkipped += v.Summary.Skipped
+		totalTests += v.Summary.Total
+		if v.Summary.Failed > 0 {
 			allPassed = false
 		}
 	}
@@ -197,36 +176,36 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 	if allPassed {
 		summary += fmt.Sprintf("# %s Test Summary\n\n", Emoji("success"))
 		summary += fmt.Sprintf("**Modules:** %d | **Tests:** %d | **Passed:** %d | **Failed:** %d | **Skipped:** %d\n\n",
-			len(manifests), totalTests, totalPassed, totalFailed, totalSkipped)
+			len(views), totalTests, totalPassed, totalFailed, totalSkipped)
 	} else {
 		summary += fmt.Sprintf("# %s Test Summary\n\n", Emoji("failure"))
 		summary += fmt.Sprintf("**Modules:** %d | **Tests:** %d | **Passed:** %d | **Failed:** %d | **Skipped:** %d\n\n",
-			len(manifests), totalTests, totalPassed, totalFailed, totalSkipped)
+			len(views), totalTests, totalPassed, totalFailed, totalSkipped)
 	}
 	summary += "---\n\n"
 
 	// One table per module
-	for _, m := range manifests {
+	for _, v := range views {
 		moduleStatus := Emoji("success")
-		if m.Summary.Failed > 0 {
+		if v.Summary.Failed > 0 {
 			moduleStatus = Emoji("failure")
 		}
 
 		// Module section header
-		summary += fmt.Sprintf("## %s %s\n\n", moduleStatus, m.Moniker)
+		summary += fmt.Sprintf("## %s %s\n\n", moduleStatus, v.Module)
 		summary += fmt.Sprintf("**Tests:** %d | **Passed:** %d | **Failed:** %d | **Skipped:** %d\n\n",
-			m.Summary.Total, m.Summary.Passed, m.Summary.Failed, m.Summary.Skipped)
+			v.Summary.Total, v.Summary.Passed, v.Summary.Failed, v.Summary.Skipped)
 
-		if len(m.Tests) == 0 {
+		if len(v.Tests) == 0 {
 			summary += "_No tests recorded_\n\n---\n\n"
 			continue
 		}
 
 		// Separate tests into unit tests and feature tests
-		var unitTests []implinternal.TestEntry
-		featureTests := make(map[string][]implinternal.TestEntry) // feature name -> tests
+		var unitTests []testview.TestEntry
+		featureTests := make(map[string][]testview.TestEntry) // feature name -> tests
 
-		for _, t := range m.Tests {
+		for _, t := range v.Tests {
 			if t.Type == "gotest" {
 				unitTests = append(unitTests, t)
 			} else {
@@ -245,7 +224,7 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 				return unitTests[i].Name < unitTests[j].Name
 			})
 
-			summary += buildTestTable(unitTests, m.Moniker, false)
+			summary += buildTestTable(unitTests, v.Module, false)
 		}
 
 		// Features section
@@ -266,9 +245,9 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 				passed, failed := 0, 0
 				for _, t := range tests {
 					switch t.Status {
-					case implinternal.TestStatusPassed:
+					case testview.StatusPassed:
 						passed++
-					case implinternal.TestStatusFailed:
+					case testview.StatusFailed:
 						failed++
 					}
 				}
@@ -286,7 +265,7 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 					return tests[i].Name < tests[j].Name
 				})
 
-				summary += buildTestTable(tests, m.Moniker, true)
+				summary += buildTestTable(tests, v.Module, true)
 				summary += "\n\n"
 			}
 		}
@@ -332,7 +311,7 @@ func extractFeatureName(pkg, filePath string) string {
 
 // buildTestTable creates a test table from a list of test entries
 // isScenario controls whether the first column is "Test" or "Scenario".
-func buildTestTable(tests []implinternal.TestEntry, moduleName string, isScenario bool) string {
+func buildTestTable(tests []testview.TestEntry, moduleName string, isScenario bool) string {
 	firstCol := "Test"
 	if isScenario {
 		firstCol = "Scenario"
@@ -393,11 +372,11 @@ func buildTestTable(tests []implinternal.TestEntry, moduleName string, isScenari
 		// Status with emoji
 		status := ""
 		switch t.Status {
-		case implinternal.TestStatusPassed:
+		case testview.StatusPassed:
 			status = Emoji("success")
-		case implinternal.TestStatusFailed:
+		case testview.StatusFailed:
 			status = Emoji("failure")
-		case implinternal.TestStatusSkipped:
+		case testview.StatusSkipped:
 			status = "⏭️"
 		default:
 			status = t.Status
@@ -660,16 +639,15 @@ func deriveTestStatus(cfg *config.EACConfig, moduleName string) string {
 		return "failure"
 	}
 
-	// Load test manifest
-	moduleTestDir := filepath.Join(workspaceRoot, cfg.Repository.TestModuleDir(moduleName))
-	manifest, err := implinternal.LoadTestManifest(moduleTestDir)
-	if err != nil {
-		// No manifest = failure
+	// Load test view from UoW manifests
+	view, err := testview.LoadModuleTestView(workspaceRoot, moduleName)
+	if err != nil || view == nil {
+		// No test data = failure
 		return "failure"
 	}
 
 	// Check if all tests passed
-	if manifest.AllPassed() {
+	if view.AllPassed() {
 		return "success"
 	}
 

@@ -5,6 +5,7 @@ package orchestrator
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -37,7 +38,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 	processed := make(map[string]bool)
 
 	// Create worker function
-	worker := func(moniker string, logWriter io.Writer) int {
+	worker := func(ctx context.Context, moniker string, logWriter io.Writer) int {
 		mu.Lock()
 		processed[moniker] = true
 		mu.Unlock()
@@ -87,7 +88,7 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 	}
 
 	// Create worker function that fails for specific modules
-	worker := func(moniker string, logWriter io.Writer) int {
+	worker := func(ctx context.Context, moniker string, logWriter io.Writer) int {
 		if moniker == "fail-me" {
 			fmt.Fprintf(logWriter, "Error: intentional failure\n")
 			return 1
@@ -334,7 +335,7 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 	}
 
 	// Create orchestrator
-	worker := func(moniker string, logWriter io.Writer) int { return 0 }
+	worker := func(ctx context.Context, moniker string, logWriter io.Writer) int { return 0 }
 	orch := New(&config, worker)
 
 	// Create mock results

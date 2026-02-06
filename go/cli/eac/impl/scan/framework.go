@@ -63,10 +63,11 @@ type ScanModuleResult struct {
 
 // scanContext holds scan-specific state during execution.
 type scanContext struct {
-	cachedModules map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
-	cacheTimes    map[string]time.Time // Module-level cache times for TUI
-	scanResults   map[string]bool      // module -> passed (true = all scanners passed)
-	mu            sync.Mutex           // Protects scanResults map for concurrent access
+	cachedModules     map[string]bool      // Modules that are up-to-date (aggregated from UoWs for TUI)
+	cacheTimes        map[string]time.Time // Module-level cache times for TUI
+	moduleInputHashes map[string]string    // Pre-computed hashes for cache consistency
+	scanResults       map[string]bool      // module -> passed (true = all scanners passed)
+	mu                sync.Mutex           // Protects scanResults map for concurrent access
 
 	// UoW-level cache tracking
 	cachedUoWs    map[string]bool      // UoW longname -> cached
@@ -159,7 +160,7 @@ func recordScanResult(sctx *scanContext, moniker string, passed bool) {
 // scanUnitWorker runs scans for a single component using component-level execution.
 // This is called by the UnitScheduler for parallel scan component execution.
 // The component parameter is in "compName:scannerType" format (e.g., "go:trivy-vuln", "go:semgrep").
-func scanUnitWorker(ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
+func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
 	// Get multi-scan config if available (contains scanner settings)
 	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
 	if multiCfg == nil {
@@ -305,8 +306,15 @@ func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 	output.Writeln(logWriter, "%s Running %s scanner on %s/%s...", emoji, scannerType, moniker, component)
 	scanStart := time.Now()
 
-	// Compute input hash for UoW manifest (before scanning)
-	inputHash, _ := computeScanInputHash(ctx, module)
+	// Use pre-computed input hash for cache consistency.
+	// This ensures the hash written to the manifest matches the hash used for detection.
+	var inputHash string
+	if sctx != nil && sctx.moduleInputHashes != nil {
+		inputHash = sctx.moduleInputHashes[moniker]
+	}
+	if inputHash == "" {
+		inputHash, _ = computeScanInputHash(ctx, module)
+	}
 
 	// Create scan config for this scanner
 	scanCfg := &ScanFrameworkConfig{
@@ -733,9 +741,28 @@ func detectUoWIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *s
 		}
 	}
 
-	// Use shared helpers for change detection and aggregation
+	// Pre-compute module input hashes ONCE for consistency.
+	// Workers will reuse these instead of recomputing independently.
+	moduleInputHashes := make(map[string]string)
+	for module, files := range moduleFiles {
+		h, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to compute input hash for %s: %v", module, err)
+			continue
+		}
+		moduleInputHashes[module] = h
+	}
+	sctx.moduleInputHashes = moduleInputHashes
+
+	// Use pre-computed hashes for detection (same hashes workers will use)
 	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	getInputHash := coreoutput.InputHashProvider(hash.NewModuleInputHashProvider(ctx.WorkspaceRoot, moduleFiles))
+	getInputHash := coreoutput.InputHashProvider(func(id workunit.UnitID) (string, error) {
+		h, ok := moduleInputHashes[id.Module]
+		if !ok {
+			return "", nil
+		}
+		return h, nil
+	})
 
 	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextScan, expectedUoWs, getInputHash)
 	if err != nil {
@@ -802,7 +829,7 @@ func detectUoWIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *s
 }
 
 // multiScanWorker runs all configured scanners for a single module.
-func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
+func multiScanWorker(_ context.Context, ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
 	multiCfg, ok := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: multiScanConfig not found or wrong type")

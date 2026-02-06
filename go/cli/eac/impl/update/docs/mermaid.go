@@ -204,8 +204,20 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 	}
 	defer os.RemoveAll(workDir)
 
-	// Create diagram specs using shared types from books package
-	diagrams := make([]books.MermaidDiagramSpec, 0, len(toRender))
+	// Local types for mermaid rendering manifest (were in books package, removed during builder migration)
+	type mermaidDiagramSpec struct {
+		Input  string `json:"input"`
+		Output string `json:"output"`
+		Config string `json:"config"`
+	}
+	type mermaidManifest struct {
+		Diagrams    []mermaidDiagramSpec `json:"diagrams"`
+		Concurrency int                  `json:"concurrency"`
+		Theme       string               `json:"theme"`
+	}
+
+	// Create diagram specs
+	diagrams := make([]mermaidDiagramSpec, 0, len(toRender))
 	for i, status := range toRender {
 		block := status.Block
 
@@ -225,15 +237,15 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 		}
 		containerOutput := "/staging/" + strings.ReplaceAll(relOutput, "\\", "/")
 
-		diagrams = append(diagrams, books.MermaidDiagramSpec{
+		diagrams = append(diagrams, mermaidDiagramSpec{
 			Input:  containerInput,
 			Output: containerOutput,
 			Config: "/etc/mermaid/mermaid-config.json",
 		})
 	}
 
-	// Create manifest using shared type from books package
-	manifest := books.MermaidManifest{
+	// Create manifest
+	manifest := mermaidManifest{
 		Diagrams:    diagrams,
 		Concurrency: 4,
 		Theme:       "dark",

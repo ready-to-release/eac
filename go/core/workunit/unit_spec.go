@@ -16,6 +16,7 @@ type UnitSpec struct {
 	Cached          bool                    // Skip execution if up-to-date
 	Metadata        map[string]any          // Context-specific configuration
 	Index           int                     // Position in input slice for result ordering
+	Tags            TagSummary              // Classified tag data (test UoWs only)
 }
 
 // DependsOnComponents returns the component names from DependsOn.

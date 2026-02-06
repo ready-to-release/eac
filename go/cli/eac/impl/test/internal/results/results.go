@@ -36,7 +36,7 @@ func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 		}
 
 		// Skip manifest file
-		if strings.HasSuffix(path, "test.manifest.json") {
+		if strings.HasSuffix(path, "uow.manifest.json") {
 			return nil
 		}
 
@@ -130,7 +130,7 @@ func AggregateCucumberReports(testRunDir string) string {
 			}
 
 			// Skip manifest file
-			if strings.HasSuffix(path, "test.manifest.json") {
+			if strings.HasSuffix(path, "uow.manifest.json") {
 				return nil
 			}
 
@@ -207,7 +207,7 @@ func AggregateCTRFReports(testRunDir string) string {
 			}
 
 			// Skip manifest file
-			if strings.HasSuffix(path, "test.manifest.json") {
+			if strings.HasSuffix(path, "uow.manifest.json") {
 				return nil
 			}
 

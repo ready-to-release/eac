@@ -11,49 +11,42 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 
 	tui "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/adapters/tui/console/render"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 var log = logging.C()
 
-// HelpTextMap maps zone IDs to help descriptions for the Resources pane elements.
-var HelpTextMap = map[string]string{
-	// Row 1 - System metrics
-	"res-timer": "Wall-clock elapsed time (includes I/O waits and scheduler delays)",
+// BootState tracks progressive layout readiness during initialization.
+// The state only advances forward, never regresses.
+type BootState int
 
-	"res-cpu": "Active cores normalized to 16 lamps; color per lamp shows that core's load: green <50%, yellow 50-80%, orange 80-95%, red >95%",
+const (
+	BootChrome  BootState = iota // Frame only, no data
+	BootMetrics                  // System metrics available (CPU, memory)
+	BootConfig                   // Command config available (name, workers, mode)
+	BootTabs                     // Tabs registered, ready for execution
+	BootRunning                  // Execution underway
+)
 
-	"res-mem": "Host RAM usage: green <37% ok, yellow 37-68% normal, orange 68-87% pressure, red >87% constrained (risk of swapping)",
-
-	"res-dmem": "Docker memory pool: green <37%, yellow 37-68%, orange 68-87%, red >87% (containers may OOM)",
-
-	// Row 2 - Scheduler pressure (Host)
-	"res-host": "Host scheduler pressure (running/target): green <37%, yellow 37-68%, orange 68-87%, red >87% queuing jobs",
-
-	"res-host-weight": "Host slots used/capacity; W:N = waiting jobs (yellow 1-5, red >5 = backpressure)",
-
-	// Row 2 - Scheduler pressure (Docker)
-	"res-docker": "Docker scheduler pressure: green <37%, yellow 37-68%, orange 68-87%, red >87% queuing containers",
-
-	"res-docker-weight": "Docker slots used/capacity; W:N = waiting containers (red >5 = Docker is bottleneck)",
-
-	// Row 2/3 - Progress counters
-	"res-counters": "Progress: blue=cached (higher=good incremental), green=done, red=failed",
-
-	// Row 2/3 - Tool and container tracking
-	"res-jobs": "Container instances FIFO: bright blue=running, dim=completed, dark=unused",
-
-	"res-native": "System tools (go, git): bright orange=active, dim=idle, dark=unused",
-
-	"res-ctools": "Container tools: bright blue=running, light=completed, dark=unused",
-
-	// Controls
-	"freeze-button": "Click [...] to pause auto-exit (2min); shows countdown when active: green >60s, yellow 20-60s, red <20s",
+// ConfigMeta holds early configuration data for progressive display.
+// Populated by ConfigReadyMsg before full InitSummary arrives.
+type ConfigMeta struct {
+	CommandName      string // "build", "test", "lint", "scan"
+	ExecutionContext string // "local", "CI"
+	ParallelismMode  string // "devbox", "ci"
+	EffectiveWorkers int    // Worker count
+	WeightedCapacity int    // Scheduler capacity
+	OutputDir        string // "out/build", "out/test"
 }
 
 // Model is the Bubbletea model for the console window.
 // Displays build/test output in a 3-pane view (Init/Run/Summary).
 type Model struct {
+	// Progressive boot state
+	bootState  BootState   // Progressive layout readiness
+	configMeta *ConfigMeta // Early config data (nil until ConfigReadyMsg)
+
 	// Configuration
 	height       int    // Total height (default: tui.DefaultHeight)
 	width        int    // Terminal width
@@ -96,14 +89,6 @@ type Model struct {
 	// Lock tracking info (from locktracker.Registry)
 	locks []LockStatus // Individual lock states
 
-	// Tools tracking (containers vs system)
-	plannedContainerTools  []string // All container tools (from PlannedTools at init)
-	plannedSystemTools []string // All system tools (from PlannedTools at init)
-	activeContainerTools   []string // Currently active container tools
-	activeSystemTools  []string // Currently active system tools
-	seenContainerTools     []string // Containers that have been used at least once (for lamp display)
-	seenSystemTools    []string // System tools that have been used at least once (for lamp display)
-
 	// Per-module tab tracking for Run phase
 	uowStates    map[string]*UoWState // Per-module state (running, completed, failed)
 	uowOrder     []string                // Order in which modules started (for tab ordering)
@@ -126,9 +111,11 @@ type Model struct {
 	paused    bool     // Pause scrolling (for review)
 	errorMode bool     // Show only errors
 	mouseMode bool     // Mouse mode: true=scrolling enabled, false=text selection enabled
-	viewMode         ViewMode // Components view mode: TabGrid or Tree
-	tabsScrollOffset int      // Scroll offset for tabs/tree panel
-	tabColumns       int      // Number of columns for tab grid (2-6, default 4)
+	viewMode         ViewMode    // Components view mode: TabGrid or Tree
+	tabViewMode      TabViewMode // Which label text to show in UoW tabs (Name/Module/Type/Tool/Mode/State)
+	tabsScrollOffset int         // Scroll offset for tabs/tree panel
+	tabWidth         int         // User-controlled individual tab width (Up/Down, min/max limits)
+	paneWidthCols    int         // Logical pane width in column units (Left/Right adjusts)
 
 	// Done state
 	linesDone  bool
@@ -155,9 +142,13 @@ type Model struct {
 	cachedMemPercent       float64   // Memory usage percentage
 	cachedDockerMemPercent float64   // Docker memory pool usage percentage
 	dockerAvailable        bool      // Whether Docker is available
-	runningContainerCount  int       // Currently running container instances (lit lamps)
-	totalContainerCount    int       // Total container instances started (total lamps)
 	lastMetricsUpdate      time.Time // When metrics were last updated
+
+	// Cached layout metrics (recomputed on tick/resize, not every View/mouse event)
+	cachedLayoutMetrics *render.LayoutMetrics
+
+	// Widget catalog (initialized in NewModel)
+	catalog *WidgetCatalog
 
 	// Text selection state (mouse drag to copy)
 	selection SelectionState
@@ -188,6 +179,13 @@ type UoWState struct {
 	DecayTime   time.Time    // When tab should disappear (zero = don't decay)
 	CacheTime   time.Time    // For cached modules: when the artifact was last built
 	LogPath     string       // Path to build log file (if available)
+
+	// Structured identity (from UoWEntry, populated once on creation)
+	Module        string
+	Component     string
+	Tool          string
+	ComponentType string
+	Container     bool
 }
 
 // UoWStatus represents the execution state of a module.
@@ -207,6 +205,49 @@ type ViewMode int
 const (
 	ViewModeTabGrid ViewMode = iota // Tab grid view (default)
 	ViewModeTree                    // Execution tree view
+)
+
+// TabViewMode controls what text appears in the label portion of UoW tabs.
+type TabViewMode int
+
+const (
+	TabViewName   TabViewMode = iota // Component display name (default)
+	TabViewModule                    // Module moniker (core, eac-cli)
+	TabViewType                      // Component type (go-lib, dockerfile, godog)
+	TabViewTool                      // Tool/runner/builder name (go, buildx, mocha)
+	TabViewExec                      // Execution mode: "container" or "host"
+	TabViewState                     // Execution state (pending, run 4s, done 12s, cached, fail:1)
+)
+
+const tabViewModeCount = 6
+
+// String returns the display name for a tab view mode.
+func (v TabViewMode) String() string {
+	switch v {
+	case TabViewName:
+		return "Name"
+	case TabViewModule:
+		return "Module"
+	case TabViewType:
+		return "Type"
+	case TabViewTool:
+		return "Tool"
+	case TabViewExec:
+		return "Mode"
+	case TabViewState:
+		return "State"
+	default:
+		return "Name"
+	}
+}
+
+// Tab sizing constants for dynamic widget sizing.
+const (
+	tabWidthMin     = 10 // Minimum: 7 chars label + 3 badge
+	tabWidthMax     = 30 // Maximum: comfortable reading width
+	tabWidthDefault = 15 // Default: matches current behavior
+	tabGap          = 1  // Gap between tabs (space character)
+	tabBorder       = 2  // Left + right panel borders
 )
 
 // Icon returns the icon for a module status (ASCII-safe).
@@ -308,9 +349,9 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 	if maxTabs <= 0 {
 		maxTabs = 36
 	}
-	tabColumns := tuiConfig.DefaultColumns
-	if tabColumns <= 0 {
-		tabColumns = 4
+	paneWidthCols := tuiConfig.DefaultColumns
+	if paneWidthCols <= 0 {
+		paneWidthCols = 4
 	}
 	freezeTimeoutSecs := int(tuiConfig.ExitCountdown.Seconds())
 	if freezeTimeoutSecs <= 0 {
@@ -337,7 +378,13 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 	// to return meaningful data. Without this, the first call returns empty/zero.
 	_, _ = cpu.Percent(0, true)
 
+	// Initialize widget catalog
+	catalog := NewWidgetCatalog()
+	RegisterAllWidgets(catalog)
+
 	return Model{
+		catalog:           catalog,
+		bootState:         BootChrome, // Start with structural chrome only
 		height:            height,
 		width:             80, // Default, will be updated on WindowSizeMsg
 		runPhaseName:      runPhaseName,
@@ -356,7 +403,8 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		uowOrder:          make([]string, 0),          // Tab ordering
 		activeTab:         "",                         // Start with aggregate view
 		maxTabs:           maxTabs,
-		tabColumns:        tabColumns,
+		tabWidth:          tabWidthDefault,
+		paneWidthCols:     paneWidthCols,
 
 		// Config-driven values
 		metricsUpdateInterval: metricsInterval,
@@ -376,19 +424,55 @@ func (m Model) Init() tea.Cmd {
 }
 
 // listenForLines creates a command that waits for new output lines.
+// Returns batchLineMsg with up to 50 lines to reduce Update+View cycles.
 // Returns linesDoneMsg when lineChan is closed or doneChan is closed.
 func (m Model) listenForLines() tea.Cmd {
 	return func() tea.Msg {
 		if m.lineChan == nil {
 			return linesDoneMsg{}
 		}
+		// Block until at least one line is available
 		select {
 		case line, ok := <-m.lineChan:
 			if !ok {
 				return linesDoneMsg{}
 			}
-			return lineMsg(line)
+			batch := make([]Line, 1, 50)
+			batch[0] = line
+			// Drain up to 49 more lines non-blocking
+			for i := 0; i < 49; i++ {
+				select {
+				case line, ok := <-m.lineChan:
+					if !ok {
+						return batchLineMsg(batch)
+					}
+					batch = append(batch, line)
+				default:
+					return batchLineMsg(batch)
+				}
+			}
+			return batchLineMsg(batch)
 		case <-m.doneChan:
+			// Drain any remaining buffered lines before signaling done.
+			// Go's select randomly picks between ready cases, so doneChan
+			// may fire while lineChan still has buffered lines. Without
+			// draining, those lines are permanently lost.
+			var remaining []Line
+		drain:
+			for {
+				select {
+				case line, ok := <-m.lineChan:
+					if !ok {
+						break drain
+					}
+					remaining = append(remaining, line)
+				default:
+					break drain
+				}
+			}
+			if len(remaining) > 0 {
+				return batchLineMsg(remaining)
+			}
 			return linesDoneMsg{}
 		}
 	}
@@ -643,6 +727,13 @@ type UoWEntry struct {
 	ID          string // Full moniker for matching (Longname: context:module:component:tool)
 	DisplayName string // Short name for display (e.g., "go", "godog")
 	Weight      int    // Scheduling weight for resource allocation
+
+	// Structured identity (from core port UnitInfo)
+	Module        string // Module moniker (e.g., "core", "eac-cli")
+	Component     string // Component name (e.g., "go", "gherkin")
+	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
+	ComponentType string // Component type from component-types.yml
+	Container     bool   // true = container, false = host native
 }
 
 // InitSummaryFlags captures relevant flags for display.
@@ -655,28 +746,38 @@ type InitSummaryFlags struct {
 	SkipDepm     bool
 }
 
-// GetOrCreateUoWState gets or creates a module state for the given moniker.
-// displayName is the short name for tab display.
-func (m *Model) GetOrCreateUoWState(moniker, displayName string, weight int) *UoWState {
-	if state, exists := m.uowStates[moniker]; exists {
+// GetOrCreateUoWState gets or creates a module state from a UoWEntry.
+// For ad-hoc creation (e.g., from progress events with only a moniker), use
+// GetOrCreateUoWStateByID.
+func (m *Model) GetOrCreateUoWState(entry UoWEntry) *UoWState {
+	if state, exists := m.uowStates[entry.ID]; exists {
 		// Update weight if provided (in case it changed)
-		if weight > 0 {
-			state.Weight = weight
+		if entry.Weight > 0 {
+			state.Weight = entry.Weight
 		}
 		// Update display name if provided
-		if displayName != "" {
-			state.DisplayName = displayName
+		if entry.DisplayName != "" {
+			state.DisplayName = entry.DisplayName
+		}
+		// Enrich identity if not yet set
+		if state.ComponentType == "" && entry.ComponentType != "" {
+			state.Module = entry.Module
+			state.Component = entry.Component
+			state.Tool = entry.Tool
+			state.ComponentType = entry.ComponentType
+			state.Container = entry.Container
 		}
 		return state
 	}
 
 	// DEBUG: Log module registration for TUI caching investigation
-	log.Debugf("[TUI-CACHE] GetOrCreateUoWState: registering module=%s displayName=%s weight=%d", moniker, displayName, weight)
+	log.Debugf("[TUI-CACHE] GetOrCreateUoWState: registering module=%s displayName=%s weight=%d", entry.ID, entry.DisplayName, entry.Weight)
 
 	// Increment counter first to get unique index
 	m.nextUoWIdx++
 
 	// Default weight to 1 if not provided
+	weight := entry.Weight
 	if weight <= 0 {
 		weight = 1
 	}
@@ -689,17 +790,32 @@ func (m *Model) GetOrCreateUoWState(moniker, displayName string, weight int) *Uo
 		uowBufferSize = 200 // Fallback
 	}
 	state := &UoWState{
-		Moniker:     moniker,
-		DisplayName: displayName,
-		Index:       m.nextUoWIdx, // Unique 1-based index from counter
-		Weight:      weight,
-		Buffer:      NewRingBuffer(uowBufferSize),
-		Status:      UoWPending, // Start as pending until slot acquired
+		Moniker:       entry.ID,
+		DisplayName:   entry.DisplayName,
+		Index:         m.nextUoWIdx, // Unique 1-based index from counter
+		Weight:        weight,
+		Buffer:        NewRingBuffer(uowBufferSize),
+		Status:        UoWPending, // Start as pending until slot acquired
+		Module:        entry.Module,
+		Component:     entry.Component,
+		Tool:          entry.Tool,
+		ComponentType: entry.ComponentType,
+		Container:     entry.Container,
 	}
-	m.uowStates[moniker] = state
-	m.uowOrder = append(m.uowOrder, moniker)
+	m.uowStates[entry.ID] = state
+	m.uowOrder = append(m.uowOrder, entry.ID)
 
 	return state
+}
+
+// GetOrCreateUoWStateByID is a convenience wrapper for ad-hoc creation
+// from progress events that only have a moniker string.
+func (m *Model) GetOrCreateUoWStateByID(moniker, displayName string, weight int) *UoWState {
+	return m.GetOrCreateUoWState(UoWEntry{
+		ID:          moniker,
+		DisplayName: displayName,
+		Weight:      weight,
+	})
 }
 
 // MarkUoWRunning marks a module as actively running (slot acquired).
@@ -721,46 +837,6 @@ func (m *Model) MarkUoWRunning(moniker string) {
 	state.Status = UoWRunning
 	state.StartTime = time.Now() // Start timing when execution actually begins
 
-	// Track tool usage for lamp display
-	// Extract tool from moniker (format: context:module:component:tool)
-	parts := strings.Split(moniker, ":")
-	if len(parts) >= 4 {
-		tool := parts[len(parts)-1]
-
-		// Check if this tool is a container tool and track it
-		for _, ct := range m.plannedContainerTools {
-			if ct == tool {
-				found := false
-				for _, seen := range m.seenContainerTools {
-					if seen == tool {
-						found = true
-						break
-					}
-				}
-				if !found {
-					m.seenContainerTools = append(m.seenContainerTools, tool)
-				}
-				break
-			}
-		}
-
-		// Check if this tool is a system tool and track it
-		for _, st := range m.plannedSystemTools {
-			if st == tool {
-				found := false
-				for _, seen := range m.seenSystemTools {
-					if seen == tool {
-						found = true
-						break
-					}
-				}
-				if !found {
-					m.seenSystemTools = append(m.seenSystemTools, tool)
-				}
-				break
-			}
-		}
-	}
 }
 
 // MarkUoWComplete marks a module as completed with the given exit code.
@@ -772,7 +848,7 @@ func (m *Model) MarkUoWComplete(moniker string, exitCode int) {
 		// Module not registered - create it now so we can set the correct status
 		// This handles race conditions where complete arrives before start
 		log.Debugf("[TUI-CACHE] MarkUoWComplete: module=%s exitCode=%d - creating state", moniker, exitCode)
-		state = m.GetOrCreateUoWState(moniker, "", 1)
+		state = m.GetOrCreateUoWStateByID(moniker, "", 1)
 	}
 
 	// Always set the status from exit code - this is the authoritative source
@@ -943,10 +1019,10 @@ func (m *Model) UpdateCachedMetrics() {
 	m.lastMetricsUpdate = time.Now()
 }
 
-// calculateOptimalTabColumns determines the minimum number of columns (1-6)
+// calculateOptimalPaneCols determines the minimum number of columns (1-10)
 // needed to display all UoWs without scrolling in the visible panel area.
 // Simple math: cols = ceil(totalUoWs / uowPerColumn)
-func (m *Model) calculateOptimalTabColumns() int {
+func (m *Model) calculateOptimalPaneCols() int {
 	// Use UoWCount from initSummary - this is the actual count of scheduled work items
 	// (number of scheduled work items, not just components)
 	totalUoWs := 0
@@ -965,28 +1041,80 @@ func (m *Model) calculateOptimalTabColumns() int {
 	// cols = ceil(totalUoWs / uowPerCol)
 	cols := (totalUoWs + uowPerCol - 1) / uowPerCol
 
-	// Clamp to valid range (min 2 for better readability)
+	// Clamp to valid range
 	if cols < 2 {
 		cols = 2
 	}
-	if cols > 6 {
-		cols = 6
+	maxCols := m.maxPaneWidthCols()
+	if cols > maxCols {
+		cols = maxCols
 	}
 
 	return cols
 }
 
-// ComponentsWidth returns the width of the components panel based on tab columns.
+// maxPaneWidth returns the single source of truth for how wide the
+// components panel is allowed to be: the smaller of (terminal - 40) and
+// 60% of terminal, with a floor of 20.
+func (m Model) maxPaneWidth() int {
+	const minLogsWidth = 40
+	// Two constraints — take the tighter one
+	byLogs := m.width - minLogsWidth
+	byPercent := m.width * 60 / 100
+	max := byLogs
+	if byPercent < max {
+		max = byPercent
+	}
+	if max < 20 {
+		max = 20
+	}
+	return max
+}
+
+// ComponentsWidth returns the width of the components panel.
+// Derived from paneWidthCols (column count) and tabWidth (per-tab width).
+// When the max-width constraint reduces available space, the column count
+// is recomputed so the panel is sized to exactly fit — no empty gap.
 func (m Model) ComponentsWidth() int {
-	const tabWidth = 15
-	// Width = columns * tabWidth + spaces_between_tabs + borders
-	// Tabs are joined with spaces, so N columns = N-1 spaces between them
-	// Borders = 2 (left + right)
-	width := m.tabColumns*tabWidth + (m.tabColumns - 1) + 2
+	cols := m.paneWidthCols
+	if cols < 1 {
+		cols = 1
+	}
+	width := cols*m.tabWidth + (cols-1)*tabGap + tabBorder
+	if max := m.maxPaneWidth(); width > max {
+		// Recompute how many columns actually fit, then size to match exactly
+		cols = (max - tabBorder + tabGap) / (m.tabWidth + tabGap)
+		if cols < 1 {
+			cols = 1
+		}
+		width = cols*m.tabWidth + (cols-1)*tabGap + tabBorder
+	}
 	if width < 20 {
 		width = 20
 	}
 	return width
+}
+
+// maxPaneWidthCols returns the maximum useful number of columns.
+// Capped by panel max width (consistent with ComponentsWidth) and UoW count.
+func (m Model) maxPaneWidthCols() int {
+	maxWidth := m.maxPaneWidth()
+	if maxWidth < m.tabWidth+tabBorder {
+		return 1
+	}
+	maxCols := (maxWidth - tabBorder + tabGap) / (m.tabWidth + tabGap)
+	if maxCols < 1 {
+		maxCols = 1
+	}
+	if maxCols > 10 {
+		maxCols = 10
+	}
+	// Never more columns than UoWs — extra columns would just be empty space
+	uowCount := len(m.uowOrder)
+	if uowCount > 0 && maxCols > uowCount {
+		maxCols = uowCount
+	}
+	return maxCols
 }
 
 // GetCapacityInfo returns the current capacity state for display.

@@ -84,11 +84,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 
 // generateTUISummary creates TUI summary data from execution results.
 func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
-	// Use component-level results if available, otherwise fall back to module-level
-	if len(ctx.ModuleResultSets) > 0 {
-		return generateComponentTUISummary(ctx, totalTime)
-	}
-	return generateModuleTUISummary(ctx, totalTime)
+	return generateComponentTUISummary(ctx, totalTime)
 }
 
 // moduleCache holds precomputed data for a module to avoid repeated calculations.
@@ -333,11 +329,14 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 					}
 					details = append(details, fmt.Sprintf("    %s: %s", comp.Component, warnMsg))
 				}
-				// Show log path
+				break // Only show first failed component per module
+			}
+
+			// List ALL log paths from every component in this module
+			for _, comp := range cache.sortedComps {
 				if comp.LogPath != "" {
 					details = append(details, fmt.Sprintf("    Log: %s", comp.LogPath))
 				}
-				break // Only show first failed component per module
 			}
 		}
 		if failCount >= maxFailures && totalFailures > maxFailures {
@@ -357,113 +356,9 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 	return data
 }
 
-// generateModuleTUISummary creates TUI summary showing module-level results (legacy).
-func generateModuleTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
-	results := ctx.Results
-	successCount := ctx.GetSuccessCount()
-	failureCount := ctx.GetFailureCount()
-
-	// Build run summary line
-	runSummary := fmt.Sprintf("%d succeeded", successCount)
-	if failureCount > 0 {
-		runSummary += fmt.Sprintf(", %d failed", failureCount)
-	}
-
-	// Build per-module results
-	var moduleResults []moduleResult
-
-	for _, result := range results {
-		components := ctx.ComponentTypesDisplay[result.Moniker]
-		if components == "" {
-			components = "unknown"
-		}
-
-		mr := moduleResult{
-			moniker:    result.Moniker,
-			components: components,
-			duration:   result.Duration,
-			logPath:    result.LogPath,
-		}
-
-		if result.ExitCode != 0 {
-			mr.status = "failed"
-			mr.errors = result.Errors
-		} else if len(result.Warnings) > 0 {
-			mr.status = "warning"
-			mr.errors = result.Warnings
-		} else {
-			mr.status = "passed"
-		}
-		moduleResults = append(moduleResults, mr)
-	}
-
-	// Sort by moniker
-	sort.Slice(moduleResults, func(i, j int) bool {
-		return moduleResults[i].moniker < moduleResults[j].moniker
-	})
-
-	// Build details with summary table - one row per module
-	var details []string
-	tb := render.NewTableBuilder().
-		WithHeaders("Module", "Components", "Status")
-	for _, mr := range moduleResults {
-		statusIcon := "✓"
-		if mr.status == "failed" {
-			statusIcon = "✗"
-		} else if mr.status == "warning" {
-			statusIcon = "⚠"
-		}
-		tb.AddRow(mr.moniker, mr.components, statusIcon)
-	}
-	// Split table into individual lines for TUI rendering
-	tableStr := tb.Build()
-	for _, line := range strings.Split(tableStr, "\n") {
-		if line != "" {
-			details = append(details, line)
-		}
-	}
-
-	// Add failed/warning results with error details
-	if hasModuleFailures(moduleResults) {
-		details = append(details, "")
-		for _, mr := range moduleResults {
-			if mr.status == "passed" {
-				continue
-			}
-			statusIcon := "✗"
-			if mr.status == "warning" {
-				statusIcon = "⚠"
-			}
-			details = append(details, fmt.Sprintf("%s %s - %s",
-				statusIcon, output.PackageDisplayName(mr.moniker), formatDuration(mr.duration)))
-			for _, err := range mr.errors {
-				details = append(details, formatErrorLines("  Error: ", err)...)
-			}
-			if mr.logPath != "" {
-				details = append(details, fmt.Sprintf("  Log: %s", mr.logPath))
-			}
-		}
-	}
-
-	// Create summary data matching TUI structure
-	data := &tui.SummaryData{
-		Success:    failureCount == 0,
-		TotalTime:  totalTime,
-		RunSummary: runSummary,
-		Details:    details,
-	}
-
-	return data
-}
-
 // printConsoleSummary prints a summary to the console for non-TUI mode.
 func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
-	// Use component-level results if available
-	if len(ctx.ModuleResultSets) > 0 {
-		printComponentConsoleSummary(ctx, totalTime)
-		return
-	}
-	printModuleConsoleSummary(ctx, totalTime)
+	printComponentConsoleSummary(ctx, totalTime)
 }
 
 // printComponentConsoleSummary prints component-level summary to console.
@@ -566,83 +461,42 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 		log.Infof("Duration: %s", formatDuration(totalTime))
 	}
 
-	// Show failed components with details
+	// Show failed modules with details and all log paths
 	if moduleFailureCount > 0 {
 		log.Info("")
-		log.Info("Failed components:")
+		log.Info("Failed modules:")
 		for _, idx := range sortedIndices {
 			rs := &resultSets[idx]
 			cache := &caches[idx]
+
+			if cache.status != orchestrator.ModuleStatusFailed {
+				continue
+			}
+
+			moduleName := output.PackageDisplayName(rs.Module)
+			log.Infof("  ✗ %s", moduleName)
+
+			// Show first error from failed components
 			for _, comp := range cache.sortedComps {
 				if comp.ExitCode == 0 {
 					continue
-				}
-				name := output.TruncateComponentName(rs.Module, comp.Component, output.NameWidth)
-				log.Infof("  - %s (exit code %d)", name, comp.ExitCode)
-				if comp.LogPath != "" {
-					log.Infof("    Log: %s", comp.LogPath)
 				}
 				for _, err := range comp.Errors {
 					for _, line := range formatErrorLines("    Error: ", err) {
 						log.Info(line)
 					}
 				}
+				break // Only show first failed component's errors
 			}
-		}
-	}
-}
 
-// printModuleConsoleSummary prints module-level summary to console (legacy).
-func printModuleConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
-	results := ctx.Results
-	successCount := ctx.GetSuccessCount()
-	failureCount := ctx.GetFailureCount()
-
-	log.Info("")
-	log.Info("=== Summary ===")
-	log.Infof("Total: %d modules", len(results))
-	log.Infof("Succeeded: %d", successCount)
-	log.Infof("Failed: %d", failureCount)
-	log.Infof("Duration: %s", formatDuration(totalTime))
-
-	if failureCount > 0 {
-		log.Info("")
-		log.Info("Failed modules:")
-		for _, result := range results {
-			if result.ExitCode > 0 { // Only actual failures, not skipped (-1)
-				log.Infof("  - %s (exit code %d)", output.PackageDisplayName(result.Moniker), result.ExitCode)
-				if result.LogPath != "" {
-					log.Infof("    Log: %s", result.LogPath)
-				}
-				for _, err := range result.Errors {
-					for _, line := range formatErrorLines("    Error: ", err) {
-						log.Info(line)
-					}
+			// List ALL log paths from every component in this module
+			for _, comp := range cache.sortedComps {
+				if comp.LogPath != "" {
+					log.Infof("    Log: %s", comp.LogPath)
 				}
 			}
 		}
 	}
-}
-
-// moduleResult holds per-module result data for summary display.
-type moduleResult struct {
-	moniker    string
-	components string
-	status     string // "passed", "failed", "warning"
-	duration   time.Duration
-	errors     []string
-	logPath    string
-}
-
-
-// hasModuleFailures checks if any module result is not passed.
-func hasModuleFailures(moduleResults []moduleResult) bool {
-	for _, mr := range moduleResults {
-		if mr.status != "passed" {
-			return true
-		}
-	}
-	return false
 }
 
 // formatDuration formats a duration for display.

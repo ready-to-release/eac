@@ -478,11 +478,14 @@ func (sb *SummaryBuilder) appendFailureDetails(details []string, modules []strin
 				}
 				details = append(details, fmt.Sprintf("    %s: %s", comp.Component, warnMsg))
 			}
+			break // Only show first failed component per module
+		}
 
+		// List ALL log paths from every component in this module
+		for _, comp := range cache.components {
 			if comp.LogPath != "" {
 				details = append(details, fmt.Sprintf("    Log: %s", comp.LogPath))
 			}
-			break // Only show first failed component per module
 		}
 	}
 

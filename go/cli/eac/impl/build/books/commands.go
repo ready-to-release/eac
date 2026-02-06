@@ -2,9 +2,9 @@ package books
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"gopkg.in/yaml.v3"
 )
 
@@ -82,18 +83,25 @@ func (p *Preprocessor) runCommand(command string) (string, error) {
 	// Use paths.CommandsBinaryPath() for the canonical binary location
 	cmdBinary := paths.CommandsBinaryPath(p.workspaceRoot)
 
-	cmd := exec.Command(cmdBinary, parts...)
-	cmd.Dir = p.workspaceRoot
-
-	// Set environment to ensure consistent output
-	cmd.Env = append(os.Environ(), "NO_COLOR=1")
-
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(cmdBinary)
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	fullEnv := append(os.Environ(), "NO_COLOR=1")
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: p.workspaceRoot,
+		ModuleRoot:    p.workspaceRoot,
+		StdoutWriter:  &stdout,
+		StderrWriter:  &stderr,
+		FullEnv:       fullEnv,
+		ArgsOverrides: parts,
+	}
 
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%w: %s", err, stderr.String())
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil || result.ExitCode != 0 {
+		errMsg := stderr.String()
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", err, errMsg)
+		}
+		return "", fmt.Errorf("command failed (exit %d): %s", result.ExitCode, errMsg)
 	}
 
 	return stdout.String(), nil

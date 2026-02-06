@@ -482,7 +482,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 		Logln(logWriter, "   Mode: strict (--strict flag enabled)")
 	}
 
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+	exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", buildArgs...)
 
 	if acceptWarnings && exitCode != 0 {
 		Logln(logWriter, "⚠️  Build completed with warnings (accepted)")
@@ -541,7 +541,7 @@ func ensureMkDocsImage(imageName, workspaceRoot, contextPath string, logWriter i
 	// If ImageManager returned a different image ref (e.g., GHCR in CI), tag it as local
 	if resolvedImage != "" && resolvedImage != imageName {
 		Logln(logWriter, "   Tagging %s as %s", resolvedImage, imageName)
-		exitCode := RunCommandWithLog("", logWriter, "docker", "tag", resolvedImage, imageName)
+		exitCode := RunCommandWithLog(context.Background(), "", logWriter, "docker", "tag", resolvedImage, imageName)
 		if exitCode != 0 {
 			return fmt.Errorf("failed to tag image %s as %s", resolvedImage, imageName)
 		}
@@ -711,7 +711,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 			Logln(logWriter, "🔄 Retrying PDF build (attempt %d/%d)...", attempt, maxRetries)
 		}
 
-		exitCode = RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+		exitCode = RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", buildArgs...)
 
 		if exitCode == 0 {
 			break // Success

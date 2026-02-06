@@ -503,6 +503,246 @@ func TestDependencyTracker_HasFailedDependency(t *testing.T) {
 	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
 }
 
+// --- CascadeFail tests ---
+
+func TestDependencyTracker_CascadeFail_Chain(t *testing.T) {
+	// Chain: A -> B -> C (C depends on B, B depends on A)
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+
+	// Mark A as failed
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+
+	// Cascade from A — should get B and C
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	assert.Len(t, cascaded, 2)
+
+	names := make(map[string]bool)
+	for _, c := range cascaded {
+		names[c.Component] = true
+	}
+	assert.True(t, names["B"])
+	assert.True(t, names["C"])
+
+	// Both should be marked failed and completed
+	assert.True(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", Component: "B"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "C"})) // completed = ready
+}
+
+func TestDependencyTracker_CascadeFail_Diamond(t *testing.T) {
+	// Diamond: A -> B, A -> C, B -> D, C -> D
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+		{
+			ID: workunit.UnitID{Module: "mod1", Component: "D"},
+			DependsOn: []workunit.UnitID{
+				{Module: "mod1", Component: "B"},
+				{Module: "mod1", Component: "C"},
+			},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	// B, C, and D should all be cascade-failed (D via B or C)
+	assert.Len(t, cascaded, 3, "diamond should cascade to all 3 dependents")
+
+	names := make(map[string]bool)
+	for _, c := range cascaded {
+		names[c.Component] = true
+	}
+	assert.True(t, names["B"])
+	assert.True(t, names["C"])
+	assert.True(t, names["D"])
+}
+
+func TestDependencyTracker_CascadeFail_Partial(t *testing.T) {
+	// Two independent chains: A->B and C->D
+	// Fail A — only B should cascade, not C or D
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+		{ID: workunit.UnitID{Module: "mod2", Component: "C"}},
+		{
+			ID:        workunit.UnitID{Module: "mod2", Component: "D"},
+			DependsOn: []workunit.UnitID{{Module: "mod2", Component: "C"}},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	assert.Len(t, cascaded, 1, "only B should cascade")
+	assert.Equal(t, "B", cascaded[0].Component)
+}
+
+func TestDependencyTracker_CascadeFail_NoDependents(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", Component: "B"}},
+	}
+
+	dt := NewDependencyTracker(work)
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	assert.Empty(t, cascaded, "no dependents means no cascade")
+}
+
+// --- MarkFailedCascade scheduler tests ---
+
+func TestDependencyScheduler_MarkFailedCascade_Chain(t *testing.T) {
+	// A -> B -> C, fail A — B and C removed from queue
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			Weight:    2,
+			Index:     1,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
+			Weight:    3,
+			Index:     2,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+		},
+	}
+
+	s, err := NewDependencyScheduler(work)
+	require.NoError(t, err)
+
+	// Pop A
+	itemA := s.WaitForReady()
+	require.NotNil(t, itemA)
+	assert.Equal(t, "A", itemA.ID.Component)
+
+	// Cascade fail A
+	cascaded := s.MarkFailedCascade(itemA.ID)
+
+	// B and C should be cascade-failed
+	assert.Len(t, cascaded, 2)
+	names := make(map[string]bool)
+	for _, c := range cascaded {
+		names[c.ID.Component] = true
+	}
+	assert.True(t, names["B"])
+	assert.True(t, names["C"])
+
+	// Queue should be empty
+	assert.Equal(t, 0, s.Len())
+
+	// WaitForReady should return nil (exhausted)
+	item := s.WaitForReady()
+	assert.Nil(t, item)
+}
+
+func TestDependencyScheduler_MarkFailedCascade_PreservesIndex(t *testing.T) {
+	// Verify cascaded specs preserve their original Index
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 5},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			Weight:    2,
+			Index:     10,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+	}
+
+	s, err := NewDependencyScheduler(work)
+	require.NoError(t, err)
+
+	itemA := s.WaitForReady()
+	require.NotNil(t, itemA)
+
+	cascaded := s.MarkFailedCascade(itemA.ID)
+	require.Len(t, cascaded, 1)
+	assert.Equal(t, 10, cascaded[0].Index, "Index should be preserved")
+}
+
+func TestDependencyScheduler_MarkFailedCascade_InFlightNotCascaded(t *testing.T) {
+	// A -> B, both popped. Fail A — B is in-flight (already popped), not in queue.
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			Weight:    2,
+			Index:     1,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+	}
+
+	s, err := NewDependencyScheduler(work)
+	require.NoError(t, err)
+
+	// Pop A
+	itemA := s.WaitForReady()
+	require.NotNil(t, itemA)
+	// Complete A so B becomes ready
+	s.MarkComplete(itemA.ID)
+
+	// Pop B (now in-flight)
+	itemB := s.WaitForReady()
+	require.NotNil(t, itemB)
+	assert.Equal(t, "B", itemB.ID.Component)
+
+	// Now fail A via cascade — B is already popped, so cascade should return empty
+	cascaded := s.MarkFailedCascade(itemA.ID)
+	assert.Empty(t, cascaded, "in-flight items should not be cascade-failed")
+
+	// But HasFailedDependency should still detect the failure
+	assert.True(t, s.HasFailedDependency(itemB.ID))
+}
+
+func TestDependencyScheduler_MarkFailedCascade_NoDependents(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", Component: "B"}, Weight: 2, Index: 1},
+	}
+
+	s, err := NewDependencyScheduler(work)
+	require.NoError(t, err)
+
+	// LPT: B (weight 2) pops first
+	itemB := s.WaitForReady()
+	require.NotNil(t, itemB)
+	assert.Equal(t, "B", itemB.ID.Component)
+
+	// Fail B — A is independent, should not cascade
+	cascaded := s.MarkFailedCascade(itemB.ID)
+	assert.Empty(t, cascaded, "independent items should not cascade")
+
+	// A should still be available
+	itemA := s.WaitForReady()
+	require.NotNil(t, itemA)
+	assert.Equal(t, "A", itemA.ID.Component)
+}
+
 func TestDependencyTracker_GetDependsOn(t *testing.T) {
 	work := []workunit.UnitSpec{
 		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},

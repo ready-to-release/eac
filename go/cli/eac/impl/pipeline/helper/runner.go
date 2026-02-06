@@ -5,10 +5,10 @@ package pipelinerunner
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -163,19 +163,18 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	// Determine what to compare against
 	// If ref is provided and not the current branch, compare against that ref
 	// Otherwise, detect uncommitted changes (diff HEAD)
-	var cmd *exec.Cmd
+	var output []byte
+	var err error
 	if ref != "" && ref != getCurrentBranch(r.repoPath) {
 		// Compare against specific ref
 		log.Infof("Comparing against ref: %s", ref)
-		cmd = exec.Command("git", "diff", "--name-only", ref)
+		output, err = gitexec.Run(r.repoPath, "diff", "--name-only", ref)
 	} else {
 		// Detect uncommitted changes
 		log.Info("Detecting uncommitted changes...")
-		cmd = exec.Command("git", "diff", "--name-only", "HEAD")
+		output, err = gitexec.Run(r.repoPath, "diff", "--name-only", "HEAD")
 	}
 
-	cmd.Dir = r.repoPath
-	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to get changed files: %w", err)
 	}
@@ -212,9 +211,7 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 
 // getCurrentBranch gets the current git branch name.
 func getCurrentBranch(repoPath string) string {
-	cmd := exec.Command("git", "branch", "--show-current")
-	cmd.Dir = repoPath
-	output, err := cmd.Output()
+	output, err := gitexec.Run(repoPath, "branch", "--show-current")
 	if err != nil {
 		return ""
 	}

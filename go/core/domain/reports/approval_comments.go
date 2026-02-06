@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/git"
+	"github.com/ready-to-release/eac/go/core/github"
 )
 
 // ErrPRNotFound is returned when a PR cannot be found.
@@ -70,12 +70,16 @@ type GitHubCLI interface {
 // ghCLI holds the GitHub CLI executor for testing (allows mock injection).
 var ghCLI GitHubCLI
 
+// ghCLIExecutor holds the CLIExecutor for the real GitHub CLI implementation.
+// Set via SetGitHubCLIExecutor during CLI bootstrap.
+var ghCLIExecutor github.CLIExecutor
+
 // getGitHubCLI returns the GitHub CLI executor.
 func getGitHubCLI() GitHubCLI {
 	if ghCLI != nil {
 		return ghCLI
 	}
-	return &realGitHubCLI{}
+	return &realGitHubCLI{executor: ghCLIExecutor}
 }
 
 // SetGitHubCLI allows tests to inject a mock GitHub CLI.
@@ -83,16 +87,23 @@ func SetGitHubCLI(cli GitHubCLI) {
 	ghCLI = cli
 }
 
-// realGitHubCLI implements GitHubCLI using actual gh command.
-type realGitHubCLI struct{}
+// SetGitHubCLIExecutor sets the CLIExecutor used by the real GitHub CLI implementation.
+// Called during CLI bootstrap to wire through the tool registry.
+func SetGitHubCLIExecutor(executor github.CLIExecutor) {
+	ghCLIExecutor = executor
+}
+
+// realGitHubCLI implements GitHubCLI using an injected CLIExecutor.
+type realGitHubCLI struct {
+	executor github.CLIExecutor
+}
 
 func (r *realGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, error) {
-	// Execute: gh pr view <number> --json number,title,author,body,mergedAt,mergeCommit,files,reviews
-	cmd := exec.Command("gh", "pr", "view", strconv.Itoa(prNumber), //nolint:gosec // G204: prNumber is an int, safe from injection
+	if r.executor == nil {
+		return nil, fmt.Errorf("GitHub CLI executor not configured (call SetGitHubCLIExecutor during bootstrap)")
+	}
+	output, err := r.executor.Exec("pr", "view", strconv.Itoa(prNumber),
 		"--json", "number,title,author,body,mergedAt,mergeCommit,files,reviews")
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh command failed: %w", err)
 	}

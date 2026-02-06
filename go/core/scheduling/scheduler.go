@@ -47,6 +47,12 @@ type WorkScheduler interface {
 	// Must be called exactly once per item returned by Next/WaitForReady.
 	MarkFailed(id workunit.UnitID)
 
+	// MarkFailedCascade signals failure and proactively cascade-fails all
+	// transitive dependents still in the queue. Returns the specs that were
+	// removed from the queue. The caller must process these (store results,
+	// emit TUI events) but must NOT execute them.
+	MarkFailedCascade(id workunit.UnitID) []workunit.UnitSpec
+
 	// HasFailedDependency returns true if any dependency of the unit failed.
 	// Used to skip execution and propagate failures.
 	HasFailedDependency(id workunit.UnitID) bool

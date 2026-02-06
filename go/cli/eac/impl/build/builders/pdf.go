@@ -170,7 +170,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 	}
 
 	// Run preprocessing pipeline (pdfMode=true for link normalization)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, true, opts.CacheConfig)
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, true)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return 1

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -23,8 +22,6 @@ type Preprocessor struct {
 	pdfMode          bool
 	warnAsError      bool             // Treat warnings as errors (fail build on warnings)
 	linkTranslator   *LinkTranslator  // Handles source → staging path translations
-	assetCache       *AssetCache      // Persistent cache for expensive operations (mermaid, etc.)
-	cacheConfig      *cache.Config    // Cache control configuration (--skip-cache flag)
 	referencedAssets map[string]bool  // Asset paths referenced by markdown (for lazy copying)
 	fileIndex        *FileIndex       // Pre-built file index to avoid repeated WalkDir calls
 	warnings         []string         // Collected warnings for warnAsError mode
@@ -32,8 +29,7 @@ type Preprocessor struct {
 
 // NewPreprocessor creates a new book preprocessor
 // pdfMode enables PDF-specific processing like link normalization.
-// cacheConfig controls cache behavior (--skip-cache flag). Pass nil for default behavior.
-func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool, cacheConfig *cache.Config) *Preprocessor {
+func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
 	return &Preprocessor{
 		book:           book,
 		workspaceRoot:  workspaceRoot,
@@ -42,8 +38,6 @@ func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWri
 		pdfMode:        pdfMode,
 		warnAsError:    true, // Default: fail build on warnings
 		linkTranslator: NewLinkTranslator(workspaceRoot, stagingDir, logWriter, pdfMode),
-		assetCache:     NewAssetCache(workspaceRoot, cacheConfig),
-		cacheConfig:    cacheConfig,
 	}
 }
 
@@ -191,19 +185,6 @@ func (p *Preprocessor) Preprocess() error {
 
 	elapsed := time.Since(startTime)
 	p.log("✅ Book preprocessing complete: %s (took %v)", p.book.Name, elapsed)
-
-	// Log cache statistics
-	stats := p.assetCache.Stats()
-	if stats.MermaidHits+stats.MermaidMisses > 0 {
-		hitRate := float64(stats.MermaidHits) / float64(stats.MermaidHits+stats.MermaidMisses) * 100
-		p.log("   📊 Mermaid cache: %d hits, %d misses (%.1f%% hit rate)",
-			stats.MermaidHits, stats.MermaidMisses, hitRate)
-	}
-	if stats.DrawioHits+stats.DrawioMisses > 0 {
-		hitRate := float64(stats.DrawioHits) / float64(stats.DrawioHits+stats.DrawioMisses) * 100
-		p.log("   📊 Drawio cache: %d hits, %d misses (%.1f%% hit rate)",
-			stats.DrawioHits, stats.DrawioMisses, hitRate)
-	}
 
 	// Check for warnings in warnAsError mode
 	if p.warnAsError && len(p.warnings) > 0 {

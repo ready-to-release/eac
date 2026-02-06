@@ -28,7 +28,6 @@ package work
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -305,11 +305,9 @@ func switchToTargetBranch(targetBranch, repoRoot string) error {
 	targetWorktree, err := findWorktreeForBranch(targetBranch)
 	if err != nil {
 		// Branch not checked out anywhere, try normal checkout
-		cmd := exec.Command("git", "checkout", targetBranch)
-		cmd.Dir = repoRoot
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to switch to %s: %w\nOutput: %s", targetBranch, err, string(output))
+		_, checkoutErr := gitexec.Run(repoRoot, "checkout", targetBranch)
+		if checkoutErr != nil {
+			return fmt.Errorf("failed to switch to %s: %w", targetBranch, checkoutErr)
 		}
 		return nil
 	}
@@ -326,8 +324,7 @@ func switchToTargetBranch(targetBranch, repoRoot string) error {
 // findWorktreeForBranch finds the worktree path where a branch is checked out
 // Returns empty string and error if branch is not checked out in any worktree.
 func findWorktreeForBranch(branch string) (string, error) {
-	cmd := exec.Command("git", "worktree", "list", "--porcelain")
-	output, err := cmd.Output()
+	output, err := gitexec.Run(".", "worktree", "list", "--porcelain")
 	if err != nil {
 		return "", fmt.Errorf("failed to list worktrees: %w", err)
 	}
@@ -350,10 +347,9 @@ func findWorktreeForBranch(branch string) (string, error) {
 
 // updateTargetBranch updates the target branch from remote.
 func updateTargetBranch(targetBranch string) error {
-	cmd := exec.Command("git", "pull", "origin", targetBranch)
-	output, err := cmd.CombinedOutput()
+	_, err := gitexec.Run(".", "pull", "origin", targetBranch)
 	if err != nil {
-		return fmt.Errorf("failed to update %s: %w\nOutput: %s", targetBranch, err, string(output))
+		return fmt.Errorf("failed to update %s: %w", targetBranch, err)
 	}
 	return nil
 }

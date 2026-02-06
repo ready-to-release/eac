@@ -13,7 +13,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/artifacts"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
+
 	"github.com/ready-to-release/eac/go/cli/eac/impl/show"
 	testresults "github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/results"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
@@ -75,6 +75,15 @@ type TestFrameworkConfig struct {
 	// Component mapping for clean directory names
 	// Maps "cleanComponent" (e.g., "docs-drawio-cache/godog") to full pkgPath
 	ComponentToPkgPath map[string]string
+
+	// UoWTags stores pre-computed tag summaries keyed by UoW longname.
+	// Populated by ResolveTestUnitSpecs, consumed by writeUoWTestManifest.
+	UoWTags map[string]workunit.TagSummary
+
+	// Pre-computed module input hashes for cache consistency.
+	// Computed once before test execution, used by both detection and workers.
+	// Prevents hash divergence when go generate modifies source files.
+	ModuleInputHashes map[string]string
 
 	// Execution state
 	ExecCtx       *TestExecutionContext
@@ -418,6 +427,11 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 		testParallelism = 1
 	}
 
+	// Pre-compute module input hashes if detection was skipped (CI, force-retest, dry-run)
+	if testCfg.ModuleInputHashes == nil {
+		testCfg.ModuleInputHashes = preComputeModuleHashes(ctx, testCfg)
+	}
+
 	testCfg.ExecCtx = &TestExecutionContext{
 		testsByPackage:  testCfg.TestsByPackage,
 		modulePathToPkg: nil, // No longer needed - using package paths directly
@@ -498,47 +512,7 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		return nil
 	}
 
-	results := testCfg.ExecCtx.collectResults()
-	testDuration := time.Since(testCfg.TestStartTime)
-	repoCfg := ctx.EACConfig.Repository
-
-	// Parse cucumber results by module
-	cucumberResultsByModule := make(map[string][]manifests.CucumberTestResult)
-	for _, result := range results {
-		moniker := result.ModuleMoniker
-		if moniker == "" {
-			parts := strings.Split(result.PackageName, "/")
-			if len(parts) > 0 {
-				moniker = parts[0]
-			}
-		}
-		if moniker != "" {
-			if _, exists := cucumberResultsByModule[moniker]; !exists {
-				moduleTestDir := repoCfg.TestModuleDirAbs(ctx.WorkspaceRoot, moniker)
-				for _, r := range testresults.ParseCucumberResults(moduleTestDir) {
-					cucumberResultsByModule[moniker] = append(cucumberResultsByModule[moniker], manifests.CucumberTestResult{
-						ScenarioName: r.ScenarioName,
-						FeaturePath:  r.FeaturePath,
-						Status:       r.Status,
-						DurationMs:   r.DurationMs,
-						Tags:         r.Tags,
-					})
-				}
-			}
-		}
-	}
-
-	// Generate test manifests
-	manifests.GenerateTestManifests(
-		results,
-		testCfg.TestsByPackage,
-		cucumberResultsByModule,
-		testCfg.SuiteName,
-		testDuration,
-		ctx.WorkspaceRoot,
-		repoCfg,
-		ctx.EACConfig,
-	)
+	// UoW manifests are written per-worker in writeUoWTestManifest via RecordComplete.
 
 	// Aggregate reports
 	if path := testresults.AggregateCucumberReports(testCfg.TestRunDir); path != "" {
@@ -547,9 +521,6 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	if path := testresults.AggregateCTRFReports(testCfg.TestRunDir); path != "" {
 		log.Infof("Aggregated CTRF report: %s", path)
 	}
-
-	// UoW manifests are written immediately in writeUoWTestManifest via RecordComplete
-	// No explicit state update needed here
 
 	// Show timing analysis if requested
 	if ctx.Config.ShowTimings {
@@ -570,7 +541,7 @@ func assertTestManifestsExist(ctx *cmdframework.ExecutionContext) error {
 }
 
 // testWorker runs tests for a module path.
-func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter io.Writer) int {
+func testWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, modulePath string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
@@ -582,7 +553,7 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 	}
 
 	tests := testCfg.ExecCtx.testsByPackage[modulePath]
-	result := testCfg.ExecCtx.runPackageTests(modulePath, tests, logWriter)
+	result := testCfg.ExecCtx.runPackageTests(goCtx, modulePath, tests, logWriter)
 
 	testCfg.ExecCtx.mu.Lock()
 	testCfg.ExecCtx.results[modulePath] = result
@@ -598,7 +569,7 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 // This is called by the UnitScheduler for parallel test component execution.
 // The component parameter is in "componentType:toolName:testname" format (e.g., "go:gotest:impl-build").
 // The orchestrator (UoW) creates the log file and output directory - worker just writes to logWriter.
-func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
@@ -668,10 +639,17 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		}
 	}
 
-	// Compute input hash before running tests
+	// Use pre-computed input hash for cache consistency.
+	// This ensures the hash written to the manifest matches the hash used for detection.
 	var inputHash string
-	if contract, ok := ctx.ModuleRegistry.Get(module); ok {
-		inputHash, _ = computeTestInputHash(ctx, contract)
+	if testCfg.ModuleInputHashes != nil {
+		inputHash = testCfg.ModuleInputHashes[module]
+	}
+	if inputHash == "" {
+		// Fallback: compute if not pre-computed (shouldn't happen in normal flow)
+		if contract, ok := ctx.ModuleRegistry.Get(module); ok {
+			inputHash, _ = computeTestInputHash(ctx, contract)
+		}
 	}
 
 	startTime := time.Now()
@@ -679,7 +657,7 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 	// Run tests - UoW manages log file, we just write to logWriter
 	// Use the testname as result key for aggregation (unique within module:componentType)
 	resultKey := testname
-	result := testCfg.ExecCtx.runPackageTestsDirect(pkgPath, tests, logWriter)
+	result := testCfg.ExecCtx.runPackageTestsDirect(goCtx, pkgPath, tests, logWriter)
 
 	testCfg.ExecCtx.mu.Lock()
 	testCfg.ExecCtx.results[resultKey] = result
@@ -920,9 +898,28 @@ func detectUoWIncrementalTestChanges(ctx *cmdframework.ExecutionContext, testCfg
 		}
 	}
 
-	// Use shared helpers for change detection and aggregation
+	// Pre-compute module input hashes ONCE for consistency.
+	// Workers will reuse these instead of recomputing after go generate runs.
+	moduleInputHashes := make(map[string]string)
+	for module, files := range moduleFiles {
+		h, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to compute input hash for %s: %v", module, err)
+			continue
+		}
+		moduleInputHashes[module] = h
+	}
+	testCfg.ModuleInputHashes = moduleInputHashes
+
+	// Use pre-computed hashes for detection (same hashes workers will use)
 	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	getInputHash := coreoutput.InputHashProvider(hash.NewModuleInputHashProvider(ctx.WorkspaceRoot, moduleFiles))
+	getInputHash := coreoutput.InputHashProvider(func(id workunit.UnitID) (string, error) {
+		h, ok := moduleInputHashes[id.Module]
+		if !ok {
+			return "", nil
+		}
+		return h, nil
+	})
 
 	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextTest, expectedUoWs, getInputHash)
 	if err != nil {
@@ -1011,7 +1008,7 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 		SetTestInfo(&initsummary.TestInfo{
 			SuiteName:             suite.Name,
 			SuiteDescription:      suite.Description,
-			SuitesIncluded:        manifests.GetSuitesIncluded(suite.Moniker),
+			SuitesIncluded:        getSuitesIncluded(suite.Moniker),
 			TotalDiscovered:       stats.TotalDiscovered,
 			Skipped:               stats.Skipped,
 			NotMatchingSuite:      stats.NotMatchingSuite,
@@ -1088,6 +1085,107 @@ func computeTestInputHash(ctx *cmdframework.ExecutionContext, contract interface
 	return hash.Files(ctx.WorkspaceRoot, files)
 }
 
+// preComputeModuleHashes computes input hashes for all modules in scope.
+// Called once before test execution to ensure detection and workers use identical hashes.
+func preComputeModuleHashes(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) map[string]string {
+	if ctx.ModuleRegistry == nil || testCfg.TestsByPackage == nil {
+		return nil
+	}
+
+	moduleHashes := make(map[string]string)
+	seen := make(map[string]bool)
+
+	for pkgPath := range testCfg.TestsByPackage {
+		moniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
+		if moniker == "" || seen[moniker] {
+			continue
+		}
+		seen[moniker] = true
+
+		contract, ok := ctx.ModuleRegistry.Get(moniker)
+		if !ok {
+			continue
+		}
+
+		h, err := computeTestInputHash(ctx, contract)
+		if err != nil {
+			log.Debugf("Failed to pre-compute hash for %s: %v", moniker, err)
+			continue
+		}
+		moduleHashes[moniker] = h
+	}
+
+	return moduleHashes
+}
+
+// getSuitesIncluded parses composite suite syntax.
+// Handles "unit+integration" -> ["unit", "integration"]. For single suites, returns nil.
+func getSuitesIncluded(suiteMoniker string) []string {
+	if strings.Contains(suiteMoniker, "+") {
+		return strings.Split(suiteMoniker, "+")
+	}
+	return nil
+}
+
+// collectTestArtifacts scans the UoW output directory for test output files
+// and returns them as artifacts for the UoW manifest.
+func collectTestArtifacts(uowDir string) []coreoutput.Artifact {
+	var artifacts []coreoutput.Artifact
+
+	type artifactSpec struct {
+		id      string
+		artType string
+	}
+
+	knownFiles := map[string]artifactSpec{
+		// test.log is excluded — it is owned by the orchestrator which appends
+		// [memory] after: instrumentation after the worker has already hashed it,
+		// causing every cache check to see a hash mismatch and re-execute.
+		"cucumber.json": {id: "cucumber-report", artType: "cucumber-report"},
+		"unit.json":     {id: "ctrf-report", artType: "ctrf-report"},
+		"coverage.out":  {id: "coverage", artType: "coverage"},
+	}
+
+	entries, err := os.ReadDir(uowDir)
+	if err != nil {
+		return artifacts
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if entry.Name() == "uow.manifest.json" {
+			continue
+		}
+
+		spec, known := knownFiles[entry.Name()]
+		if !known {
+			if strings.HasSuffix(entry.Name(), ".cucumber.json") {
+				spec = artifactSpec{id: "cucumber-report", artType: "cucumber-report"}
+			} else {
+				continue
+			}
+		}
+
+		fullPath := filepath.Join(uowDir, entry.Name())
+		size, hash, err := coreoutput.HashFile(fullPath)
+		if err != nil {
+			continue
+		}
+
+		artifacts = append(artifacts, coreoutput.Artifact{
+			ID:     spec.id,
+			Path:   entry.Name(),
+			SHA256: hash,
+			Size:   size,
+			Type:   spec.artType,
+		})
+	}
+
+	return artifacts
+}
+
 // writeUoWTestManifest writes a UoW manifest for a completed test.
 func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, unitID workunit.UnitID, inputHash string, startTime time.Time, exitCode int) {
 	// Initialize tracker if needed (thread-safe)
@@ -1097,6 +1195,21 @@ func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 	}
 	tracker := testCfg.Tracker
 	testCfg.ExecCtx.mu.Unlock()
+
+	// Compute UoW directory path to collect artifacts
+	uowDir := filepath.Join(ctx.WorkspaceRoot, "out", "test", unitID.Module, unitID.DirName())
+
+	// Collect artifacts from UoW output directory
+	artifacts := collectTestArtifacts(uowDir)
+
+	// Compute output hash from artifact hashes
+	outputHash := coreoutput.ComputeOutputHash(artifacts)
+
+	// Look up pre-computed tag summary for this UoW
+	var tags workunit.TagSummary
+	if testCfg.UoWTags != nil {
+		tags = testCfg.UoWTags[unitID.Longname()]
+	}
 
 	// Create and record the manifest
 	// Include Extra field for testname which ensures unique directory names
@@ -1110,11 +1223,15 @@ func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 		ExecutedAt: startTime,
 		ExitCode:   exitCode,
 		Duration:   time.Since(startTime),
+		Artifacts:  artifacts,
+		OutputHash: outputHash,
+		Tags:       tags,
 	}
 
 	if err := tracker.RecordComplete(unitID, manifest); err != nil {
 		log.Debugf("[TEST-UOW-CACHE] Failed to write UoW manifest for %s: %v", unitID.Longname(), err)
 	} else {
-		log.Debugf("[TEST-UOW-CACHE] Wrote UoW manifest for %s (exitCode=%d)", unitID.Longname(), exitCode)
+		log.Debugf("[TEST-UOW-CACHE] Wrote UoW manifest for %s (exitCode=%d, artifacts=%d)",
+			unitID.Longname(), exitCode, len(artifacts))
 	}
 }

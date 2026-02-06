@@ -677,3 +677,220 @@ func TestDefaultRegistry_CanonicalLookup_RequirementsRecursive(t *testing.T) {
 	})
 }
 
+// =============================================================================
+// DefaultBinding (ExecutorMode) Tests
+// =============================================================================
+
+func TestDefaultRegistry_DefaultBinding_Container(t *testing.T) {
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeContainer,
+		SystemTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+	}
+
+	r := NewRegistry()
+	r.SetVerifier(func(tool *ToolDefinition) bool { return true })
+	r.RegisterFromConfig(config)
+
+	tool, ok := r.Get("my-tool")
+	if !ok {
+		t.Fatal("should find tool")
+	}
+	if tool.Type != ToolTypeContainer {
+		t.Errorf("Type = %q, want %q (executor-mode=container should force container)", tool.Type, ToolTypeContainer)
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_System(t *testing.T) {
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeSystem,
+		SystemTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+	}
+
+	r := NewRegistry()
+	r.RegisterFromConfig(config)
+
+	tool, ok := r.Get("my-tool")
+	if !ok {
+		t.Fatal("should find tool")
+	}
+	if tool.Type != ToolTypeSystem {
+		t.Errorf("Type = %q, want %q (executor-mode=system should force system)", tool.Type, ToolTypeSystem)
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_PerToolOverride(t *testing.T) {
+	// executor-mode is container, but per-tool binding forces system for "go"
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeContainer,
+		SystemTools: map[string]*ToolDefinition{
+			"go":      {Type: ToolTypeSystem, Binary: "go"},
+			"my-tool": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"go":      {Type: ToolTypeContainer, Image: "golang", Tag: "1.22"},
+			"my-tool": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+		ToolBindings: map[string]ToolBinding{
+			"go": ToolBindingSystem, // Per-tool override
+		},
+	}
+
+	r := NewRegistry()
+	r.RegisterFromConfig(config)
+
+	// "go" should resolve to system (per-tool binding overrides executor-mode)
+	goTool, ok := r.Get("go")
+	if !ok {
+		t.Fatal("should find go tool")
+	}
+	if goTool.Type != ToolTypeSystem {
+		t.Errorf("go Type = %q, want %q (per-tool binding should override executor-mode)", goTool.Type, ToolTypeSystem)
+	}
+
+	// "my-tool" should resolve to container (follows executor-mode)
+	myTool, ok := r.Get("my-tool")
+	if !ok {
+		t.Fatal("should find my-tool")
+	}
+	if myTool.Type != ToolTypeContainer {
+		t.Errorf("my-tool Type = %q, want %q (should follow executor-mode=container)", myTool.Type, ToolTypeContainer)
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_Auto(t *testing.T) {
+	// Explicit auto mode should behave like the default
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeAuto,
+		SystemTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+	}
+
+	r := NewRegistry()
+	r.SetVerifier(func(tool *ToolDefinition) bool { return true })
+	r.RegisterFromConfig(config)
+
+	// Auto mode with available system tool should prefer system
+	tool, ok := r.Get("my-tool")
+	if !ok {
+		t.Fatal("should find tool")
+	}
+	if tool.Type != ToolTypeSystem {
+		t.Errorf("Type = %q, want %q (auto mode should prefer available system tool)", tool.Type, ToolTypeSystem)
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_ContainerMode_SystemOnlyTool(t *testing.T) {
+	// executor-mode=container but tool only has system variant → not found (strict)
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeContainer,
+		SystemTools: map[string]*ToolDefinition{
+			"system-only": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+	}
+
+	r := NewRegistry()
+	r.RegisterFromConfig(config)
+
+	_, ok := r.Get("system-only")
+	if ok {
+		t.Error("should NOT find tool when executor-mode=container and only system variant exists")
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_SystemMode_ContainerOnlyTool(t *testing.T) {
+	// executor-mode=system but tool only has container variant → not found (strict)
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeSystem,
+		ContainerTools: map[string]*ToolDefinition{
+			"container-only": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+	}
+
+	r := NewRegistry()
+	r.RegisterFromConfig(config)
+
+	_, ok := r.Get("container-only")
+	if ok {
+		t.Error("should NOT find tool when executor-mode=system and only container variant exists")
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_AutoMode_FallbackPreserved(t *testing.T) {
+	// In auto mode, direct-ID fallback should still work (for ad-hoc tools)
+	r := NewRegistry()
+	r.Register(&ToolDefinition{ID: "adhoc-tool", Type: ToolTypeSystem, Binary: "echo"})
+
+	tool, ok := r.Get("adhoc-tool")
+	if !ok {
+		t.Fatal("auto mode should find ad-hoc tools via direct-ID fallback")
+	}
+	if tool.Binary != "echo" {
+		t.Errorf("Binary = %q, want %q", tool.Binary, "echo")
+	}
+}
+
+func TestDefaultRegistry_DefaultBinding_ExplicitSuffixBypassesMode(t *testing.T) {
+	// Even with executor-mode=system, explicit :container suffix should work
+	config := &ToolConfig{
+		ExecutorMode: ExecutorModeSystem,
+		SystemTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeSystem, Binary: "echo"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"my-tool": {Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"},
+		},
+	}
+
+	r := NewRegistry()
+	r.RegisterFromConfig(config)
+
+	// Explicit suffix should bypass executor-mode
+	tool, ok := r.Get("my-tool:container")
+	if !ok {
+		t.Fatal("should find tool via explicit :container suffix")
+	}
+	if tool.Type != ToolTypeContainer {
+		t.Errorf("Type = %q, want %q", tool.Type, ToolTypeContainer)
+	}
+}
+
+func TestDefaultRegistry_GetExecutorMode(t *testing.T) {
+	tests := []struct {
+		name string
+		mode ExecutorMode
+		want ExecutorMode
+	}{
+		{"auto", ExecutorModeAuto, ExecutorModeAuto},
+		{"container", ExecutorModeContainer, ExecutorModeContainer},
+		{"system", ExecutorModeSystem, ExecutorModeSystem},
+		{"empty defaults to auto", "", ExecutorModeAuto},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &ToolConfig{ExecutorMode: tt.mode}
+			r := NewRegistry()
+			r.RegisterFromConfig(config)
+
+			got := r.GetExecutorMode()
+			if got != tt.want {
+				t.Errorf("GetExecutorMode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+

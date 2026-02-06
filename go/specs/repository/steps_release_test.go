@@ -105,7 +105,7 @@ func (c *repositoryContext) scanReleaseDirectoryForChangelogFiles() error {
 			}
 		}
 
-		if !hasChangelog {
+		if !hasChangelog && !c.isCalVerModule(entry.Name()) {
 			c.releaseChangelogErrs[entry.Name()] = append(c.releaseChangelogErrs[entry.Name()],
 				"missing CHANGELOG.md")
 		}
@@ -134,6 +134,15 @@ func (c *repositoryContext) noUnexpectedFilesInReleaseSubdirs() error {
 			len(c.unexpectedReleaseFiles), strings.Join(c.unexpectedReleaseFiles, "\n  "))
 	}
 	return nil
+}
+
+// isCalVerModule returns true if the named module uses CalVer versioning.
+func (c *repositoryContext) isCalVerModule(name string) bool {
+	if c.moduleReport == nil {
+		return false
+	}
+	mod, exists := c.moduleReport.Registry().Get(name)
+	return exists && mod.GetVersioningScheme() == "CalVer"
 }
 
 // Helper functions.

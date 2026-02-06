@@ -40,6 +40,8 @@ func (o *TUIObserver) OnEvent(event interfaces.ExecutionEvent) {
 		o.onOutputLine(e)
 	case interfaces.SummaryReadyEvent:
 		o.onSummaryReady(e)
+	case interfaces.ConfigReadyEvent:
+		o.onConfigReady(e)
 	case interfaces.InitSummaryEvent:
 		o.onInitSummary(e)
 	}
@@ -124,6 +126,8 @@ func (o *TUIObserver) onToolStatus(e interfaces.ToolStatusEvent) {
 		UsedSystemTools:       e.UsedSystem,
 		RunningContainerCount: e.ContainerInstancesRunning,
 		TotalContainerCount:   e.ContainerInstancesTotal,
+		RunningSystemCount:    e.SystemInvocationsRunning,
+		TotalSystemCount:      e.SystemInvocationsTotal,
 	})
 }
 
@@ -152,6 +156,11 @@ func (o *TUIObserver) onSummaryReady(e interfaces.SummaryReadyEvent) {
 	})
 }
 
+func (o *TUIObserver) onConfigReady(e interfaces.ConfigReadyEvent) {
+	o.console.SendConfigReady(e.CommandName, e.ExecutionContext, e.ParallelismMode,
+		e.EffectiveWorkers, e.WeightedCapacity, e.OutputDir)
+}
+
 func (o *TUIObserver) onInitSummary(e interfaces.InitSummaryEvent) {
 	// Convert to TUI InitSummary format
 	modules := make([]ExecutionModule, len(e.Modules))
@@ -159,9 +168,15 @@ func (o *TUIObserver) onInitSummary(e interfaces.InitSummaryEvent) {
 		uows := make([]UoWEntry, len(mod.Units))
 		for k, unit := range mod.Units {
 			uows[k] = UoWEntry{
-				ID:          unit.ID,
-				DisplayName: unit.DisplayName,
-				Weight:      unit.Weight,
+				ID:            unit.ID,
+				DisplayName:   unit.DisplayName,
+				Weight:        unit.Weight,
+				Tags:          unit.Tags,
+				Module:        unit.Module,
+				Component:     unit.Component,
+				Tool:          unit.Tool,
+				ComponentType: unit.ComponentType,
+				Container:     unit.Container,
 			}
 		}
 		modules[i] = ExecutionModule{

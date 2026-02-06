@@ -154,7 +154,7 @@ func (op *OutputPipe) trySendLine(line tuicontract.Line) (ok bool) {
 		select {
 		case op.lineChan <- line:
 			return true
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(500 * time.Millisecond):
 			// Timeout - drop line but don't block forever
 			return true
 		}

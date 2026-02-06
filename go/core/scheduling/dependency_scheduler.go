@@ -123,6 +123,40 @@ func (ds *DependencyScheduler) MarkFailed(id workunit.UnitID) {
 	ds.mu.Unlock()
 }
 
+// MarkFailedCascade signals failure and proactively fails all transitive dependents.
+// Returns the specs that were cascade-failed (removed from the queue).
+// This prevents dependent UoWs from being scheduled, saving worker slots.
+func (ds *DependencyScheduler) MarkFailedCascade(id workunit.UnitID) []workunit.UnitSpec {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	// Mark the original item as failed
+	ds.tracker.MarkFailed(id)
+
+	// Cascade to all transitive dependents
+	cascadedIDs := ds.tracker.CascadeFail(id)
+
+	// Build set for fast lookup
+	cascadedSet := make(map[string]bool, len(cascadedIDs))
+	for _, cid := range cascadedIDs {
+		cascadedSet[cid.Longname()] = true
+	}
+
+	// Remove cascade-failed items from heap (walk backwards for stable indices)
+	var cascadedSpecs []workunit.UnitSpec
+	for i := len(ds.items) - 1; i >= 0; i-- {
+		if cascadedSet[ds.items[i].ID.Longname()] {
+			removed := heap.Remove(&ds.items, i).(workunit.UnitSpec)
+			cascadedSpecs = append(cascadedSpecs, removed)
+		}
+	}
+
+	// Wake waiters — some may now see the scheduler exhausted
+	ds.notReady.Broadcast()
+
+	return cascadedSpecs
+}
+
 // HasFailedDependency checks if any dependency failed.
 func (ds *DependencyScheduler) HasFailedDependency(id workunit.UnitID) bool {
 	ds.mu.Lock()

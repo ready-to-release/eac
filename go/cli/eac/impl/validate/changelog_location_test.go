@@ -40,8 +40,8 @@ func TestChangelogLocationValidation(t *testing.T) {
 		moduleContract, exists := moduleRegistry.Get(moniker)
 		require.True(t, exists, "module %s should exist in registry", moniker)
 
-		// Skip modules without versioning or with Implicit versioning (no explicit releases)
-		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme == "Implicit" {
+		// Skip modules without versioning, Implicit versioning (no explicit releases), or CalVer (no changelogs)
+		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme == "Implicit" || moduleContract.Versioning.Scheme == "CalVer" {
 			continue
 		}
 
@@ -144,8 +144,8 @@ func TestAllModulesWithVersioningHaveChangelogs(t *testing.T) {
 		moduleContract, exists := moduleRegistry.Get(moniker)
 		require.True(t, exists)
 
-		// Skip modules without versioning or with Implicit versioning (no explicit releases)
-		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme == "Implicit" {
+		// Skip modules without versioning, Implicit versioning (no explicit releases), or CalVer (no changelogs)
+		if moduleContract.Versioning == nil || moduleContract.Versioning.Scheme == "Implicit" || moduleContract.Versioning.Scheme == "CalVer" {
 			continue
 		}
 

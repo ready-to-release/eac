@@ -1,12 +1,14 @@
 package cmdframework
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
+	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -136,6 +138,12 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 		return nil
 	}
 
+	// Inject inter-module dependencies into UnitSpec.DependsOn.
+	// Module-level depends_on (from repository.yml) is not encoded in UnitSpecs
+	// by work providers — this step wires them so the scheduler can enforce
+	// inter-module ordering and propagate failures across module boundaries.
+	allWork = injectModuleDependencies(allWork, ctx.ModuleRegistry)
+
 	// Create incremental summary builder with component counts per module
 	componentCounts := computeComponentCounts(allWork)
 	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
@@ -157,9 +165,9 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 		})
 	}
 
-	// Wrap worker to match orchestrator signature
-	orchWorker := func(module, component string, logWriter io.Writer) int {
-		return worker(ctx, module, component, logWriter)
+	// Wrap worker to match orchestrator signature, forwarding cancellation context
+	orchWorker := func(goCtx context.Context, module, component string, logWriter io.Writer) int {
+		return worker(goCtx, ctx, module, component, logWriter)
 	}
 
 	// Execute components with dependency-based parallel scheduling
@@ -201,6 +209,41 @@ func computeComponentCounts(units []workunit.UnitSpec) map[string]int {
 		counts[work.ID.Module]++
 	}
 	return counts
+}
+
+// injectModuleDependencies adds inter-module dependency edges to UnitSpecs.
+// For each UoW in a module that depends on another module, DependsOn entries
+// are added for ALL UoWs in the dependency module. This ensures:
+//  1. UoWs wait until all dependency module UoWs complete
+//  2. If any dependency module UoW fails, dependent UoWs see it via HasFailedDependency
+func injectModuleDependencies(work []workunit.UnitSpec, registry *modules.Registry) []workunit.UnitSpec {
+	if registry == nil || len(work) == 0 {
+		return work
+	}
+
+	// Build module -> UnitIDs index (which UoWs exist for each module)
+	moduleUnitIDs := make(map[string][]workunit.UnitID)
+	for _, w := range work {
+		moduleUnitIDs[w.ID.Module] = append(moduleUnitIDs[w.ID.Module], w.ID)
+	}
+
+	// For each UoW, add DependsOn entries for all UoWs in dependency modules
+	for i := range work {
+		module, exists := registry.Get(work[i].ID.Module)
+		if !exists {
+			continue
+		}
+
+		for _, depModule := range module.GetDependencies() {
+			depUnitIDs, hasDeps := moduleUnitIDs[depModule]
+			if !hasDeps {
+				continue // Dependency module not in current execution set
+			}
+			work[i].DependsOn = append(work[i].DependsOn, depUnitIDs...)
+		}
+	}
+
+	return work
 }
 
 // GetExitCode returns the overall exit code from results (0 if all succeeded).

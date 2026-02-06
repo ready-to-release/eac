@@ -27,9 +27,9 @@
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -37,6 +37,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -335,8 +337,8 @@ func validatePREnvironment(config *prConfig) error {
 
 // checkGHCLI checks if GitHub CLI is installed and available.
 func checkGHCLI() error {
-	cmd := exec.Command("gh", "--version")
-	if err := cmd.Run(); err != nil {
+	_, err := ghexec.Run(".", "--version")
+	if err != nil {
 		return fmt.Errorf("gh CLI not found\nInstall GitHub CLI: https://cli.github.com/")
 	}
 	return nil
@@ -379,8 +381,7 @@ func generatePRContent(config *prConfig) (string, string, error) {
 	config.base.Logger.Debug("Getting commit messages",
 		zap.String("range", fmt.Sprintf("origin/%s..HEAD", config.targetBranch)))
 
-	cmd := exec.Command("git", "log", fmt.Sprintf("origin/%s..HEAD", config.targetBranch), "--pretty=format:%s")
-	output, err := cmd.Output()
+	output, err := gitexec.Run(".", "log", fmt.Sprintf("origin/%s..HEAD", config.targetBranch), "--pretty=format:%s")
 	if err != nil {
 		config.base.Logger.Debug("Failed to get commit messages", zap.Error(err))
 		return "", "", fmt.Errorf("failed to get commit messages: %w", err)
@@ -394,8 +395,7 @@ func generatePRContent(config *prConfig) (string, string, error) {
 	config.base.Logger.Debug("Getting diff statistics",
 		zap.String("range", fmt.Sprintf("origin/%s...HEAD", config.targetBranch)))
 
-	cmd = exec.Command("git", "diff", fmt.Sprintf("origin/%s...HEAD", config.targetBranch), "--stat")
-	diffOutput, err := cmd.Output()
+	diffOutput, err := gitexec.Run(".", "diff", fmt.Sprintf("origin/%s...HEAD", config.targetBranch), "--stat")
 	if err != nil {
 		config.base.Logger.Debug("Failed to get diff", zap.Error(err))
 		return "", "", fmt.Errorf("failed to get diff: %w", err)
@@ -476,17 +476,19 @@ func generatePRDescription(commits []string, diffStat string) string {
 func createPullRequest(title, description, head, base string) (string, error) {
 	log.Debugf("Executing gh pr create command: title=%s, head=%s, base=%s, descriptionLength=%d", title, head, base, len(description))
 
-	cmd := exec.Command("gh", "pr", "create",
+	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "pr", "create",
 		"--title", title,
 		"--body", description,
 		"--base", base,
 		"--head", head,
 	)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Debugf("Failed to execute gh pr create: error=%v, output=%s", err, string(output))
-		return "", fmt.Errorf("failed to create pull request: %w\nOutput: %s", err, string(output))
+		log.Debugf("Failed to execute gh pr create: error=%v", err)
+		return "", fmt.Errorf("failed to create pull request: %w", err)
+	}
+	if exitCode != 0 {
+		log.Debugf("Failed to execute gh pr create: exit=%d, output=%s", exitCode, string(output))
+		return "", fmt.Errorf("failed to create pull request (exit %d)\nOutput: %s", exitCode, string(output))
 	}
 
 	// Extract PR URL from output

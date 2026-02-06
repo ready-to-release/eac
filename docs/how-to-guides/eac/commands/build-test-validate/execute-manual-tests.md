@@ -279,7 +279,7 @@ eac test merge-results --module eac-commands --version v1.2.0
 
 - Reads manual results from `test-results/eac-commands/v1.2.0/manual-results.json`
 - Transforms into test entries
-- Updates or creates `out/test/eac-commands/test.manifest.json`
+- Updates or creates `out/test/eac-commands/manual-merge/uow.manifest.json`
 - Replaces existing manual suite
 - Recalculates summary statistics
 
@@ -287,9 +287,8 @@ eac test merge-results --module eac-commands --version v1.2.0
 
 ```text
 Merged manual test results for eac-commands v1.2.0
-  Location: out/test/eac-commands/test.manifest.json
+  Location: out/test/eac-commands/manual-merge/
   Manual tests: 8 passed, 2 failed, 1 skipped
-  Total tests in manifest: 788
 ```
 
 ## Example Scenario: Release Testing
@@ -351,9 +350,8 @@ eac test merge-results --module $MODULE --version $VERSION
 
 # Output:
 # Merged manual test results for eac-commands v1.2.0
-#   Location: out/test/eac-commands/test.manifest.json
+#   Location: out/test/eac-commands/manual-merge/
 #   Manual tests: 8 passed, 2 failed, 1 skipped
-#   Total tests in manifest: 788
 ```
 
 ### View Results

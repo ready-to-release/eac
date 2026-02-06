@@ -73,19 +73,21 @@ type ToolVerifier func(tool *ToolDefinition) bool
 
 // DefaultRegistry is the thread-safe in-memory implementation of Registry.
 type DefaultRegistry struct {
-	mu          sync.RWMutex
-	tools       map[string]*ToolDefinition
-	bindings    map[string]ToolBinding // canonical name -> binding mode
-	verifier    ToolVerifier           // custom verifier for tests (nil = use default)
-	verifyCache map[string]bool        // cache for tool availability checks
+	mu             sync.RWMutex
+	tools          map[string]*ToolDefinition
+	bindings       map[string]ToolBinding // canonical name -> binding mode
+	defaultBinding ToolBinding            // global default from ExecutorMode
+	verifier       ToolVerifier           // custom verifier for tests (nil = use default)
+	verifyCache    map[string]bool        // cache for tool availability checks
 }
 
 // NewRegistry creates a new tool registry.
 func NewRegistry() *DefaultRegistry {
 	return &DefaultRegistry{
-		tools:       make(map[string]*ToolDefinition),
-		bindings:    make(map[string]ToolBinding),
-		verifyCache: make(map[string]bool),
+		tools:          make(map[string]*ToolDefinition),
+		bindings:       make(map[string]ToolBinding),
+		defaultBinding: ToolBindingAuto,
+		verifyCache:    make(map[string]bool),
 	}
 }
 
@@ -177,6 +179,9 @@ func (r *DefaultRegistry) RegisterFromConfig(config *ToolConfig) error {
 	// Store bindings for canonical resolution
 	r.bindings = config.ToolBindings
 
+	// Store global default binding from executor-mode
+	r.defaultBinding = config.ExecutorMode.ToToolBinding()
+
 	return nil
 }
 
@@ -202,9 +207,12 @@ func (r *DefaultRegistry) Get(toolID string) (*ToolDefinition, bool) {
 		return tool, true
 	}
 
-	// Fallback: direct ID lookup (backward compatibility for tests/legacy)
-	if tool, ok := r.tools[toolID]; ok {
-		return tool.Clone(), true
+	// Direct-ID fallback only in auto mode (for ad-hoc tools and backward compat).
+	// In explicit system/container mode, canonical lookup must succeed or fail cleanly.
+	if r.defaultBinding == ToolBindingAuto || r.defaultBinding == "" {
+		if tool, ok := r.tools[toolID]; ok {
+			return tool.Clone(), true
+		}
 	}
 
 	return nil, false
@@ -214,7 +222,10 @@ func (r *DefaultRegistry) Get(toolID string) (*ToolDefinition, bool) {
 func (r *DefaultRegistry) getCanonicalUnlocked(canonicalName string) (*ToolDefinition, bool) {
 	binding := r.bindings[canonicalName]
 	if binding == "" {
-		binding = ToolBindingAuto
+		binding = r.defaultBinding
+		if binding == "" {
+			binding = ToolBindingAuto
+		}
 	}
 
 	systemID := canonicalName + ":system"
@@ -497,4 +508,28 @@ func (r *DefaultRegistry) GetMissingTools(toolIDs []string) []string {
 // IsAvailable checks if a tool is available (convenience function).
 func (r *DefaultRegistry) IsAvailable(toolID string) bool {
 	return r.VerifyTool(toolID).Available
+}
+
+// GetExecutorMode returns the current global executor mode.
+func (r *DefaultRegistry) GetExecutorMode() ExecutorMode {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	switch r.defaultBinding {
+	case ToolBindingContainer:
+		return ExecutorModeContainer
+	case ToolBindingSystem:
+		return ExecutorModeSystem
+	default:
+		return ExecutorModeAuto
+	}
+}
+
+// GetOrAdhoc returns a registered tool by ID, or creates an ad-hoc system tool
+// definition for the given binary name. This allows callers to route any command
+// through the tool executor without requiring prior registration.
+func (r *DefaultRegistry) GetOrAdhoc(binary string) *ToolDefinition {
+	if td, ok := r.Get(binary); ok {
+		return td
+	}
+	return &ToolDefinition{ID: binary, Type: ToolTypeSystem, Binary: binary}
 }

@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,10 +11,13 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	RegisterHandler(&DockerHandler{})
+	h := &DockerHandler{}
+	RegisterHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(h)
 }
 
 // resolveDockerfilePath resolves a dockerfile path template.
@@ -82,7 +86,7 @@ func (h *DockerHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 		goModPath := filepath.Join(goModulePath, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
 			Logln(logWriter, "Running: go mod tidy")
-			if exitCode := RunCommandWithLog(goModulePath, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			if exitCode := RunCommandWithLog(context.Background(), goModulePath, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 				Logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
 			}
@@ -176,7 +180,7 @@ func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []st
 
 	// Use buildx to enable BuildKit cache mounts (RUN --mount=type=cache)
 	// This significantly speeds up subsequent builds by caching Go modules and build artifacts
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+	exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", args...)
 
 	if exitCode != 0 {
 		Logln(logWriter, "\n❌ Docker build failed")
@@ -242,7 +246,7 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 
 	args = append(args, "--load", ".")
 
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+	exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", args...)
 
 	if exitCode != 0 {
 		Logln(logWriter, "\n❌ Docker build failed")
@@ -280,7 +284,7 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 
 	args = append(args, "-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath), ".")
 
-	exitCode = RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+	exitCode = RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", args...)
 
 	if exitCode != 0 {
 		Logln(logWriter, "\n❌ Multi-platform build failed")
@@ -291,7 +295,7 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 
 	// Compress the OCI archive
 	Logln(logWriter, "Compressing OCI archive...")
-	exitCode = RunCommandWithLog(outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
+	exitCode = RunCommandWithLog(context.Background(), outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
 	if exitCode != 0 {
 		Logln(logWriter, "⚠️  Warning: failed to compress archive")
 	}

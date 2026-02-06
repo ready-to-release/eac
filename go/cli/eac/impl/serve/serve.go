@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -489,12 +488,22 @@ func runBuild(workspaceRoot, moduleMoniker string) error {
 
 	log.Debugf("Running build command: binary=%s, module=%s", binaryPath, moduleMoniker)
 
-	cmd := exec.Command(binaryPath, "build", moduleMoniker, "--no-tui")
-	cmd.Dir = workspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(binaryPath)
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: workspaceRoot,
+		ModuleRoot:    workspaceRoot,
+		StdoutWriter:  os.Stdout,
+		StderrWriter:  os.Stderr,
+		ArgsOverrides: []string{"build", moduleMoniker, "--no-tui"},
+	}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("build command failed with exit code %d", result.ExitCode)
+	}
+	return nil
 }
 
 // handleStop stops the running server.

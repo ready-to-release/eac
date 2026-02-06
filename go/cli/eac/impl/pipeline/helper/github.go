@@ -3,13 +3,15 @@
 package pipelinerunner
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
@@ -50,22 +52,19 @@ func NewGitHubCLI(repoPath string) GitHubCLI {
 // TriggerWorkflow triggers a GitHub workflow and returns the run ID.
 func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error) {
 	// Trigger the workflow
-	cmd := exec.Command("gh", "workflow", "run", workflowFile, "--ref", ref)
-	cmd.Dir = g.repoPath
-
-	output, err := cmd.CombinedOutput()
+	output, exitCode, err := ghexec.RunCombined(context.Background(), g.repoPath, "workflow", "run", workflowFile, "--ref", ref)
 	if err != nil {
-		return "", fmt.Errorf("failed to trigger workflow %s: %w\nOutput: %s", workflowFile, err, string(output))
+		return "", fmt.Errorf("failed to trigger workflow %s: %w", workflowFile, err)
+	}
+	if exitCode != 0 {
+		return "", fmt.Errorf("failed to trigger workflow %s (exit %d)\nOutput: %s", workflowFile, exitCode, string(output))
 	}
 
 	// Wait a bit for the workflow to be created
 	time.Sleep(config.CIDispatchSettleTime())
 
 	// Get the most recent run ID for this workflow
-	cmd = exec.Command("gh", "run", "list", "--workflow="+workflowFile, "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId")
-	cmd.Dir = g.repoPath
-
-	output, err = cmd.Output()
+	output, err = ghexec.Run(g.repoPath, "run", "list", "--workflow="+workflowFile, "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId")
 	if err != nil {
 		return "", fmt.Errorf("failed to get run ID for %s: %w", workflowFile, err)
 	}
@@ -80,13 +79,12 @@ func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error
 
 // WatchRun watches a workflow run until completion and returns error if it fails.
 func (g *GitHubCLIImpl) WatchRun(runID string) error {
-	cmd := exec.Command("gh", "run", "watch", runID, "--exit-status")
-	cmd.Dir = g.repoPath
-
-	// Run and capture output
-	output, err := cmd.CombinedOutput()
+	output, exitCode, err := ghexec.RunCombined(context.Background(), g.repoPath, "run", "watch", runID, "--exit-status")
 	if err != nil {
-		return fmt.Errorf("workflow run %s failed: %w\nOutput: %s", runID, err, string(output))
+		return fmt.Errorf("workflow run %s failed: %w", runID, err)
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("workflow run %s failed (exit %d)\nOutput: %s", runID, exitCode, string(output))
 	}
 
 	return nil
@@ -116,17 +114,13 @@ func (g *GitHubCLIImpl) GetCommitSHA(ref string) (string, error) {
 	}
 
 	// First try git to get the SHA locally (faster)
-	cmd := exec.Command("git", "rev-parse", ref)
-	cmd.Dir = g.repoPath
-	output, err := cmd.Output()
+	output, err := gitexec.Run(g.repoPath, "rev-parse", ref)
 	if err == nil {
 		return strings.TrimSpace(string(output)), nil
 	}
 
 	// Fallback to gh API if git fails (e.g., for remote refs not fetched locally)
-	cmd = exec.Command("gh", "api", "repos/{owner}/{repo}/commits/"+ref, "--jq", ".sha")
-	cmd.Dir = g.repoPath
-	output, err = cmd.Output()
+	output, err = ghexec.Run(g.repoPath, "api", "repos/{owner}/{repo}/commits/"+ref, "--jq", ".sha")
 	if err != nil {
 		return "", fmt.Errorf("failed to get commit SHA for ref %s: %w", ref, err)
 	}
@@ -137,12 +131,9 @@ func (g *GitHubCLIImpl) GetCommitSHA(ref string) (string, error) {
 // ListWorkflowRuns lists all workflow runs for a given commit SHA.
 func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error) {
 	// Use gh run list with commit filter
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(g.repoPath, "run", "list",
 		"--commit", commitSHA,
 		"--json", "name,status,conclusion,workflowName")
-	cmd.Dir = g.repoPath
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflow runs for commit %s: %w", commitSHA, err)
 	}
@@ -226,9 +217,7 @@ func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 	}
 
 	// Try to get actual commit SHA from repo if it exists
-	cmd := exec.Command("git", "rev-parse", ref)
-	cmd.Dir = m.repoPath
-	output, err := cmd.Output()
+	output, err := gitexec.Run(m.repoPath, "rev-parse", ref)
 	if err == nil {
 		return strings.TrimSpace(string(output)), nil
 	}

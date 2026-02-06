@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"context"
 	"io"
 	"sort"
 	"time"
@@ -42,10 +43,11 @@ type WorkResult struct {
 	Type string
 }
 
-// WorkerFunc is a function that processes a single work item
-// It receives the moniker and should return an exit code (0 for success)
+// WorkerFunc is a function that processes a single work item.
+// It receives a context (for cancellation/timeout), the moniker, and a log writer.
 // All output should go to the provided logWriter (not stdout/stderr).
-type WorkerFunc func(moniker string, logWriter io.Writer) int
+// Returns an exit code (0 for success).
+type WorkerFunc func(ctx context.Context, moniker string, logWriter io.Writer) int
 
 // Config holds orchestrator configuration options.
 type Config struct {
@@ -86,6 +88,20 @@ type Config struct {
 	Turbo float64
 }
 
+// ConfigUpdate holds configuration fields that can be updated after creation.
+// Only non-zero/non-nil fields are applied. This enables creating an
+// orchestrator with minimal config and updating it once full config is loaded.
+type ConfigUpdate struct {
+	WorkspaceRoot         string
+	OutputBaseDir         string
+	LogFileName           string
+	MaxConcurrency        int
+	Turbo                 float64
+	ComponentTypesDisplay map[string]string
+	ShowTimings           bool
+	DryRun                bool
+}
+
 // UnitResult represents the outcome of executing a single work unit.
 type UnitResult struct {
 	// Module is the module moniker
@@ -113,9 +129,9 @@ type UnitResult struct {
 }
 
 // UnitWorkerFunc processes a single work unit.
-// It receives the module, component name, and log writer.
+// It receives a context (for cancellation/timeout), the module, component name, and log writer.
 // Returns an exit code (0 for success).
-type UnitWorkerFunc func(module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(ctx context.Context, module, component string, logWriter io.Writer) int
 
 // ModuleStatus represents the execution status of a module.
 type ModuleStatus int

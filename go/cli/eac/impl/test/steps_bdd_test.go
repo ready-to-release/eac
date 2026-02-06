@@ -6,10 +6,10 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
@@ -20,8 +20,236 @@ type testResultsState struct {
 	testTimestamp string
 }
 
+const defaultTestTimestamp = "2026-01-07T15:42:56Z"
+
+// writeUoWManifest writes a UoW manifest with the given artifact to the specified directory.
+func writeUoWManifest(ctx *eacgodog.TestContext, uowDir string, module, component, tool string, artifact artifactJSON, durationSec float64, timestamp string) error {
+	dur := time.Duration(durationSec * float64(time.Second))
+	manifest := uowManifestJSON{
+		Context:    "test",
+		Module:     module,
+		Component:  component,
+		Tool:       tool,
+		ExitCode:   0,
+		InputHash:  "sha256:mock",
+		ExecutedAt: timestamp,
+		Duration:   int64(dur),
+		Artifacts:  []artifactJSON{artifact},
+		OutputHash: "sha256:mock",
+		Version:    "1.0.0",
+	}
+	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal UoW manifest: %w", err)
+	}
+	return eacgodog.CreateFile(ctx, filepath.Join(uowDir, "uow.manifest.json"), string(manifestJSON))
+}
+
+// createCTRFUoW creates a UoW manifest + CTRF unit.json artifact for a module.
+// component and tool define the UoW directory name: out/test/<module>/<component>-<tool>/
+func createCTRFUoW(ctx *eacgodog.TestContext, module, component, tool string, tests []ctrfTestEntry, durationSec float64) error {
+	return createCTRFUoWWithTimestamp(ctx, module, component, tool, tests, durationSec, defaultTestTimestamp)
+}
+
+// createCucumberUoW creates a UoW manifest + cucumber.json artifact for a module.
+func createCucumberUoW(ctx *eacgodog.TestContext, module, component, tool string, features []cucumberFeatureJSON, durationSec float64) error {
+	uowDir := fmt.Sprintf("out/test/%s/%s-%s", module, component, tool)
+
+	cucumberJSON, err := json.MarshalIndent(features, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal cucumber report: %w", err)
+	}
+
+	if err := eacgodog.CreateFile(ctx, filepath.Join(uowDir, "results.cucumber.json"), string(cucumberJSON)); err != nil {
+		return err
+	}
+
+	artifact := artifactJSON{ID: "cucumber", Path: "results.cucumber.json", SHA256: "sha256:mock", Size: int64(len(cucumberJSON)), Type: "cucumber-report"}
+	return writeUoWManifest(ctx, uowDir, module, component, tool, artifact, durationSec, defaultTestTimestamp)
+}
+
+// JSON types for building UoW manifests in tests.
+type uowManifestJSON struct {
+	Context    string         `json:"context"`
+	Module     string         `json:"module"`
+	Component  string         `json:"component"`
+	Tool       string         `json:"tool"`
+	ExitCode   int            `json:"exit_code"`
+	InputHash  string         `json:"input_hash"`
+	ExecutedAt string         `json:"executed_at"`
+	Duration   int64          `json:"duration"`
+	Artifacts  []artifactJSON `json:"artifacts"`
+	OutputHash string         `json:"output_hash"`
+	Version    string         `json:"version"`
+}
+
+type artifactJSON struct {
+	ID     string `json:"id"`
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+	Size   int64  `json:"size"`
+	Type   string `json:"type"`
+}
+
+// CTRF JSON types for building unit.json artifacts.
+type ctrfReportJSON struct {
+	Results ctrfResultsJSON `json:"results"`
+}
+
+type ctrfResultsJSON struct {
+	Tool    ctrfToolJSON    `json:"tool"`
+	Summary ctrfSummaryJSON `json:"summary"`
+	Tests   []ctrfTestEntry `json:"tests"`
+}
+
+type ctrfToolJSON struct {
+	Name string `json:"name"`
+}
+
+type ctrfSummaryJSON struct {
+	Tests   int `json:"tests"`
+	Passed  int `json:"passed"`
+	Failed  int `json:"failed"`
+	Skipped int `json:"skipped"`
+}
+
+type ctrfTestEntry struct {
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Duration int64  `json:"duration"`
+	Suite    string `json:"suite,omitempty"`
+	FilePath string `json:"filePath,omitempty"`
+}
+
+func buildCTRFReport(toolName string, tests []ctrfTestEntry) ctrfReportJSON {
+	passed, failed, skipped := 0, 0, 0
+	for _, t := range tests {
+		switch t.Status {
+		case "passed":
+			passed++
+		case "failed":
+			failed++
+		case "skipped":
+			skipped++
+		}
+	}
+	return ctrfReportJSON{
+		Results: ctrfResultsJSON{
+			Tool: ctrfToolJSON{Name: toolName},
+			Summary: ctrfSummaryJSON{
+				Tests:   len(tests),
+				Passed:  passed,
+				Failed:  failed,
+				Skipped: skipped,
+			},
+			Tests: tests,
+		},
+	}
+}
+
+// Cucumber JSON types for building results.cucumber.json artifacts.
+type cucumberFeatureJSON struct {
+	URI      string                `json:"uri"`
+	Name     string                `json:"name"`
+	Elements []cucumberElementJSON `json:"elements"`
+}
+
+type cucumberElementJSON struct {
+	Name  string              `json:"name"`
+	Type  string              `json:"type"`
+	Tags  []cucumberTagJSON   `json:"tags,omitempty"`
+	Steps []cucumberStepJSON  `json:"steps"`
+}
+
+type cucumberTagJSON struct {
+	Name string `json:"name"`
+}
+
+type cucumberStepJSON struct {
+	Name   string             `json:"name"`
+	Result cucumberResultJSON `json:"result"`
+}
+
+type cucumberResultJSON struct {
+	Status   string `json:"status"`
+	Duration int64  `json:"duration"`
+}
+
+// makeCucumberScenario builds a cucumber scenario element.
+func makeCucumberScenario(name string, tags []string, status string, durationMs int64) cucumberElementJSON {
+	tagList := make([]cucumberTagJSON, len(tags))
+	for i, t := range tags {
+		tagList[i] = cucumberTagJSON{Name: t}
+	}
+	return cucumberElementJSON{
+		Name: name,
+		Type: "scenario",
+		Tags: tagList,
+		Steps: []cucumberStepJSON{
+			{Name: "step 1", Result: cucumberResultJSON{Status: status, Duration: durationMs * 1_000_000}},
+		},
+	}
+}
+
+// godogAssetFeatures returns the cucumber features equivalent to eac-cli-with-godog.manifest.json.
+func godogAssetFeatures() []cucumberFeatureJSON {
+	return []cucumberFeatureJSON{
+		{
+			URI:  "specs/eac-commands/create-commit-message/specification.feature",
+			Name: "Create commit message",
+			Elements: []cucumberElementJSON{
+				makeCucumberScenario("Generate message from commits", []string{"@L2", "@control:au-2", "@deps:go"}, "passed", 1200),
+			},
+		},
+		{
+			URI:  "specs/eac-commands/create-design/specification.feature",
+			Name: "Create design",
+			Elements: []cucumberElementJSON{
+				makeCucumberScenario("Generate design from existing code", []string{"@L2", "@control:ai-2", "@deps:go"}, "passed", 2500),
+				makeCucumberScenario("Generate design with custom output path", []string{"@L2", "@control:ai-2", "@deps:go"}, "passed", 2400),
+				makeCucumberScenario("Generate design fails when module not found", []string{"@L2", "@control:ai-2", "@deps:go"}, "passed", 1500),
+			},
+		},
+		{
+			URI:  "specs/eac-commands/validate-design/specification.feature",
+			Name: "Validate design",
+			Elements: []cucumberElementJSON{
+				makeCucumberScenario("Validate repository structure", []string{"@L2", "@control:cm-2", "@deps:go"}, "passed", 1800),
+			},
+		},
+	}
+}
+
+// core5PassedTests returns the CTRF test entries equivalent to core-5-passed.manifest.json.
+func core5PassedTests() []ctrfTestEntry {
+	return []ctrfTestEntry{
+		{Name: "TestConfig", Status: "passed", Duration: 500, Suite: "unit", FilePath: "github.com/ready-to-release/eac/go/eac/core/config"},
+		{Name: "TestRepository", Status: "passed", Duration: 600, Suite: "unit", FilePath: "github.com/ready-to-release/eac/go/eac/core/repo"},
+		{Name: "TestModules", Status: "passed", Duration: 400, Suite: "unit", FilePath: "github.com/ready-to-release/eac/go/eac/core/modules"},
+		{Name: "TestLoader", Status: "passed", Duration: 500, Suite: "unit", FilePath: "github.com/ready-to-release/eac/go/eac/core/loader"},
+		{Name: "TestValidator", Status: "passed", Duration: 500, Suite: "unit", FilePath: "github.com/ready-to-release/eac/go/eac/core/validator"},
+	}
+}
+
+// eacCLI10PassedTests returns the CTRF test entries equivalent to eac-cli-10-passed.manifest.json.
+func eacCLI10PassedTests() []ctrfTestEntry {
+	names := []string{"TestBuild", "TestTest", "TestValidate", "TestShow", "TestGet", "TestCreate", "TestRelease", "TestWork", "TestScan", "TestInit"}
+	tests := make([]ctrfTestEntry, len(names))
+	for i, name := range names {
+		dur := int64(500)
+		if name == "TestInit" {
+			dur = 200
+		}
+		tests[i] = ctrfTestEntry{Name: name, Status: "passed", Duration: dur, Suite: "unit"}
+	}
+	return tests
+}
+
 // registerSteps registers step definitions for test-results command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
+	// Wire in-process command dispatch to avoid subprocess overhead
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
+
 	state := &testResultsState{}
 
 	// Given steps - test data setup
@@ -32,41 +260,18 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^module "([^"]*)" has test manifest with (\d+) passed tests$`, func(module string, count int) error {
-		// Select appropriate test manifest asset
-		var assetName string
 		switch {
 		case module == "core" && count == 5:
-			assetName = "core-5-passed.manifest.json"
+			return createCTRFUoW(ctx, module, "go", "gotest", core5PassedTests(), 2.5)
 		case module == "eac-cli" && count == 10:
-			assetName = "eac-cli-10-passed.manifest.json"
+			return createCTRFUoW(ctx, module, "go", "gotest", eacCLI10PassedTests(), 5.2)
 		default:
-			// For other cases, use the godog manifest as a base
-			assetName = "eac-cli-with-godog.manifest.json"
+			return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
 		}
-
-		// Read asset file from configured assets directory
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", assetName)
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset %s: %w", assetName, err)
-		}
-
-		// Create manifest in isolated test directory
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
 	})
 
 	sc.Step(`^module "([^"]*)" has godog test for feature "([^"]*)"$`, func(module, feature string) error {
-		// Use the godog manifest asset
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read godog test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^the feature has (\d+) scenarios, all passed$`, func(count int) error {
@@ -75,59 +280,30 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^module "([^"]*)" has godog tests for features:$`, func(module string, table *godog.Table) error {
-		// Parse table to get features and scenario counts
-		// Expected columns: feature, scenarios
-		timestamp := "2026-01-07T15:42:56Z"
-
-		// Build test entries from table
-		tests := make([]string, 0, len(table.Rows))
-		totalScenarios := 0
-		for i, row := range table.Rows[1:] { // Skip header row
+		// Build cucumber features from table
+		var features []cucumberFeatureJSON
+		for _, row := range table.Rows[1:] { // Skip header row
 			featureName := row.Cells[0].Value
 			scenarioCount := 0
 			_, _ = fmt.Sscanf(row.Cells[1].Value, "%d", &scenarioCount) //nolint:errcheck // Parsing error means count stays 0
-			totalScenarios += scenarioCount
 
-			// Create test entries for each scenario in the feature
+			var elements []cucumberElementJSON
 			for j := 0; j < scenarioCount; j++ {
-				testEntry := fmt.Sprintf(`    {
-      "name": "Scenario %d for %s",
-      "package": "github.com/ready-to-release/eac/go/cli/eac",
-      "type": "godog",
-      "suite": "integration",
-      "status": "passed",
-      "duration_ms": %d,
-      "tags": ["@L2", "@control:ai-2", "@deps:go"],
-      "file_path": "specs/eac-cli/%s/specification.feature"
-    }`, j+1, featureName, 1000+i*100+j*10, featureName)
-				tests = append(tests, testEntry)
+				elements = append(elements, makeCucumberScenario(
+					fmt.Sprintf("Scenario %d for %s", j+1, featureName),
+					[]string{"@L2", "@control:ai-2", "@deps:go"},
+					"passed", 1000,
+				))
 			}
+
+			features = append(features, cucumberFeatureJSON{
+				URI:      fmt.Sprintf("specs/eac-cli/%s/specification.feature", featureName),
+				Name:     featureName,
+				Elements: elements,
+			})
 		}
 
-		// Build complete manifest JSON
-		manifestJSON := fmt.Sprintf(`{
-  "test_id": "test-123",
-  "test_agent": "devbox",
-  "moniker": "%s",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 5.5,
-  "summary": {
-    "total": %d,
-    "passed": %d,
-    "failed": 0,
-    "skipped": 0
-  },
-  "tests": [
-%s
-  ],
-  "artifacts": [],
-  "version": "1.0"
-}`, module, timestamp, totalScenarios, totalScenarios, strings.Join(tests, ",\n"))
-
-		// Create manifest in isolated test directory
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, manifestJSON)
+		return createCucumberUoW(ctx, module, "gherkin", "godog", features, 5.5)
 	})
 
 	sc.Step(`^godog tests have "([^"]*)" tag$`, func(tag string) error {
@@ -136,61 +312,29 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^(\d+) tests with ([a-z0-9-]+) passed in module "([^"]*)"$`, func(count int, control, module string) error {
-		// Create a manifest with the specified number of tests tagged with the control
-		timestamp := "2026-01-07T15:42:56Z"
-
-		// Build test entries
-		tests := []string{}
+		// Build cucumber features with control-tagged scenarios
+		var elements []cucumberElementJSON
 		for i := 0; i < count; i++ {
-			testEntry := fmt.Sprintf(`    {
-      "name": "Test %d with control %s",
-      "package": "github.com/ready-to-release/eac/go/cli/eac",
-      "type": "godog",
-      "suite": "integration",
-      "status": "passed",
-      "duration_ms": %d,
-      "tags": ["@L2", "@control:%s", "@deps:go"],
-      "file_path": "specs/eac-cli/feature-%d/specification.feature"
-    }`, i+1, control, 1000+i*10, control, i+1)
-			tests = append(tests, testEntry)
+			elements = append(elements, makeCucumberScenario(
+				fmt.Sprintf("Test %d with control %s", i+1, control),
+				[]string{"@L2", fmt.Sprintf("@control:%s", control), "@deps:go"},
+				"passed", 1000,
+			))
 		}
 
-		// Build complete manifest JSON
-		manifestJSON := fmt.Sprintf(`{
-  "test_id": "test-123",
-  "test_agent": "devbox",
-  "moniker": "%s",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 3.5,
-  "summary": {
-    "total": %d,
-    "passed": %d,
-    "failed": 0,
-    "skipped": 0
-  },
-  "tests": [
-%s
-  ],
-  "artifacts": [],
-  "version": "1.0"
-}`, module, timestamp, count, count, strings.Join(tests, ",\n"))
+		features := []cucumberFeatureJSON{
+			{
+				URI:      fmt.Sprintf("specs/eac-cli/feature-%s/specification.feature", control),
+				Name:     fmt.Sprintf("Feature for %s", control),
+				Elements: elements,
+			},
+		}
 
-		// Create manifest in isolated test directory
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, manifestJSON)
+		return createCucumberUoW(ctx, module, "gherkin", "godog", features, 3.5)
 	})
 
 	sc.Step(`^test has tags \["([^"]*)", "([^"]*)", "([^"]*)"\]$`, func(tag1, tag2, tag3 string) error {
-		// Use a manifest with tests that have these tags
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read godog test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^no test manifests exist in out/test/$`, func() error {
@@ -199,48 +343,22 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^module "([^"]*)" has corrupted manifest file$`, func(module string) error {
-		// Create invalid manifest for error handling test
-		dir := fmt.Sprintf("out/test/%s", module)
-		if err := eacgodog.CreateDirectory(ctx, dir); err != nil {
-			return err
-		}
-		if err := eacgodog.CreateFile(ctx, fmt.Sprintf("%s/test.manifest.json", dir), "{invalid json"); err != nil {
+		// Create a corrupted UoW manifest
+		corruptDir := fmt.Sprintf("out/test/%s/go-gotest", module)
+		if err := eacgodog.CreateFile(ctx, filepath.Join(corruptDir, "uow.manifest.json"), "{invalid json"); err != nil {
 			return err
 		}
 
-		// Also create a valid manifest for another module so there's something to process
-		// This verifies the command can skip corrupted manifests and continue
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "core-5-passed.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-		manifestPath := "out/test/eac-cli/test.manifest.json"
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		// Also create a valid UoW for another module so there's something to process
+		return createCTRFUoW(ctx, "eac-cli", "go", "gotest", core5PassedTests(), 2.5)
 	})
 
 	sc.Step(`^test manifests exist$`, func() error {
-		// Create a minimal test manifest for scenarios that just need "any" manifest
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "core-5-passed.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/core/test.manifest.json", string(content))
+		return createCTRFUoW(ctx, "core", "go", "gotest", core5PassedTests(), 2.5)
 	})
 
 	sc.Step(`^test "([^"]*)" in manifest has:$`, func(testName string, table *godog.Table) error {
-		// Use the godog manifest which has a test named "Generate message from commits"
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read godog test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	// When steps - command execution
@@ -370,40 +488,14 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 
 	// Then steps - output verification for show test-results
 	sc.Step(`^test execution data is available$`, func() error {
-		// Create a test manifest with godog tests so show test-results has spec_coverage data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-		manifestPath := "out/test/eac-cli/test.manifest.json"
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^multiple modules with test results$`, func() error {
-		// Create manifests for multiple modules
-		// Use godog manifest for eac-cli so spec_coverage is generated
-		// Use regular manifest for core
-		manifests := map[string]string{
-			"core": "core-5-passed.manifest.json",
-			"eac-cli": "eac-cli-with-godog.manifest.json",
+		if err := createCTRFUoW(ctx, "core", "go", "gotest", core5PassedTests(), 2.5); err != nil {
+			return err
 		}
-
-		for module, assetName := range manifests {
-			assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", assetName)
-			content, err := os.ReadFile(assetPath)
-			if err != nil {
-				return fmt.Errorf("failed to read test asset %s: %w", assetName, err)
-			}
-			// Update moniker if needed (eac-cli-with-godog already has correct moniker)
-			updatedContent := strings.Replace(string(content), `"moniker": "core"`, fmt.Sprintf(`"moniker": "%s"`, module), 1)
-			updatedContent = strings.Replace(updatedContent, `"moniker": "eac-cli"`, fmt.Sprintf(`"moniker": "%s"`, module), 1)
-			manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-			if err := eacgodog.CreateFile(ctx, manifestPath, updatedContent); err != nil {
-				return err
-			}
-		}
-		return nil
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^the output uses markdown template$`, func() error {
@@ -540,7 +632,6 @@ paths:
 	})
 
 	sc.Step(`^(\d+) modules were tested$`, func(count int) error {
-		// Create test manifests for the specified number of modules
 		modules := []string{"core", "eac-cli", "eac-test", "eac-utils", "eac-types", "eac-specs"}
 
 		timestamp := state.testTimestamp
@@ -549,69 +640,21 @@ paths:
 		}
 
 		for i := 0; i < count && i < len(modules); i++ {
-			// Create a manifest using correct field names (moniker, test_time, not module, timestamp)
-			var manifestJSON string
+			var tests []ctrfTestEntry
+			var dur float64
 			if modules[i] == "core" {
-				manifestJSON = fmt.Sprintf(`{
-  "test_id": "test-123",
-  "test_agent": "devbox",
-  "moniker": "%s",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 2.5,
-  "summary": {
-    "total": 1,
-    "passed": 1,
-    "failed": 0,
-    "skipped": 0
-  },
-  "tests": [
-    {
-      "name": "TestConfig",
-      "package": "github.com/ready-to-release/eac/go/core",
-      "type": "gotest",
-      "suite": "unit",
-      "status": "passed",
-      "duration_ms": 500,
-      "tags": ["L2", "deps:go"]
-    }
-  ],
-  "artifacts": [],
-  "version": "1.0"
-}`, modules[i], timestamp)
+				tests = []ctrfTestEntry{
+					{Name: "TestConfig", Status: "passed", Duration: 500, Suite: "unit"},
+				}
+				dur = 2.5
 			} else {
-				manifestJSON = fmt.Sprintf(`{
-  "test_id": "test-123",
-  "test_agent": "devbox",
-  "moniker": "%s",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 33.1,
-  "summary": {
-    "total": 1,
-    "passed": 1,
-    "failed": 0,
-    "skipped": 0
-  },
-  "tests": [
-    {
-      "name": "TestExample",
-      "package": "github.com/ready-to-release/eac/go/cli/eac",
-      "type": "godog",
-      "suite": "integration",
-      "status": "passed",
-      "duration_ms": 1200,
-      "tags": ["L2", "deps:go"]
-    }
-  ],
-  "artifacts": [],
-  "version": "1.0"
-}`, modules[i], timestamp)
+				tests = []ctrfTestEntry{
+					{Name: "TestExample", Status: "passed", Duration: 1200, Suite: "integration"},
+				}
+				dur = 33.1
 			}
 
-			// Create manifest for this module
-			manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", modules[i])
-			if err := eacgodog.CreateFile(ctx, manifestPath, manifestJSON); err != nil {
+			if err := createCTRFUoWWithTimestamp(ctx, modules[i], "go", "gotest", tests, dur, timestamp); err != nil {
 				return err
 			}
 		}
@@ -623,16 +666,7 @@ paths:
 	})
 
 	sc.Step(`^module "([^"]*)" has (\d+) tests: (\d+) passed, (\d+) failed$`, func(module string, total, passed, failed int) error {
-		// Create a manifest for this module with the specified test counts
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^module has control tags: \[([^\]]+)\]$`, func(controls string) error {
@@ -650,15 +684,7 @@ paths:
 	})
 
 	sc.Step(`^feature "([^"]*)" has (\d+) scenarios: (\d+) passed, (\d+) failed$`, func(feature string, total, passed, failed int) error {
-		// Create a manifest with godog test data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^feature has control tags: \[([^\]]+)\]$`, func(controls string) error {
@@ -676,15 +702,7 @@ paths:
 	})
 
 	sc.Step(`^(\d+) features with scenarios$`, func(count int) error {
-		// Create a manifest with godog test data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^(\d+) total scenarios: (\d+) passed, (\d+) failed$`, func(total, passed, failed int) error {
@@ -698,15 +716,7 @@ paths:
 	})
 
 	sc.Step(`^control "([^"]*)" has (\d+) tests across (\d+) modules$`, func(control string, tests, modules int) error {
-		// Create a manifest with control tags
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", string(content))
+		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^all (\d+) tests passed$`, func(count int) error {
@@ -728,58 +738,19 @@ paths:
 	})
 
 	sc.Step(`^tests with different statuses:$`, func(table *godog.Table) error {
-		// Create a manifest with tests having different statuses from the table
-		timestamp := "2026-01-07T15:42:56Z"
-		tests := make([]string, 0, len(table.Rows))
-		passed, failed, skipped := 0, 0, 0
-
+		var tests []ctrfTestEntry
 		for i, row := range table.Rows[1:] { // Skip header
 			name := row.Cells[0].Value
 			status := row.Cells[1].Value
-
-			switch status {
-			case "passed":
-				passed++
-			case "failed":
-				failed++
-			case "skipped":
-				skipped++
-			}
-
-			testEntry := fmt.Sprintf(`    {
-      "name": "%s",
-      "package": "github.com/ready-to-release/eac/go/cli/eac",
-      "type": "gotest",
-      "suite": "unit",
-      "status": "%s",
-      "duration_ms": %d,
-      "tags": ["@L2", "@deps:go"]
-    }`, name, status, 100+i*10)
-			tests = append(tests, testEntry)
+			tests = append(tests, ctrfTestEntry{
+				Name:     name,
+				Status:   status,
+				Duration: int64(100 + i*10),
+				Suite:    "unit",
+			})
 		}
 
-		manifestJSON := fmt.Sprintf(`{
-  "test_id": "test-status-formatting",
-  "test_agent": "devbox",
-  "moniker": "eac-cli",
-  "type": "go",
-  "test_time": "%s",
-  "duration_seconds": 1.5,
-  "summary": {
-    "total": %d,
-    "passed": %d,
-    "failed": %d,
-    "skipped": %d
-  },
-  "tests": [
-%s
-  ],
-  "artifacts": [],
-  "version": "1.0"
-}`, timestamp, len(tests), passed, failed, skipped, strings.Join(tests, ",\n"))
-
-		// Create manifest in isolated test directory
-		return eacgodog.CreateFile(ctx, "out/test/eac-cli/test.manifest.json", manifestJSON)
+		return createCTRFUoW(ctx, "eac-cli", "go", "gotest", tests, 1.5)
 	})
 
 	sc.Step(`^status is formatted with icons:$`, func(table *godog.Table) error {
@@ -812,43 +783,38 @@ paths:
 	})
 
 	sc.Step(`^module "([^"]*)" has duration (\d+)\.(\d+) seconds$`, func(module string, whole, decimal int) error {
-		// Create a manifest with specified duration
 		duration := float64(whole) + float64(decimal)/10.0
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-		// Replace duration in the manifest
-		updatedContent := strings.Replace(string(content), `"duration_seconds": 33.1`, fmt.Sprintf(`"duration_seconds": %.1f`, duration), 1)
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, updatedContent)
+		return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), duration)
 	})
 
 	sc.Step(`^module "([^"]*)" has (\d+) tests$`, func(module string, count int) error {
-		// For large test counts, just use the godog manifest (it will show the breakdown sections)
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^module "([^"]*)" has tests with various statuses$`, func(module string) error {
-		// Use the godog manifest which has tests
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-cli-with-godog.manifest.json")
-		content, err := os.ReadFile(assetPath)
-		if err != nil {
-			return fmt.Errorf("failed to read test asset: %w", err)
-		}
-		manifestPath := fmt.Sprintf("out/test/%s/test.manifest.json", module)
-		return eacgodog.CreateFile(ctx, manifestPath, string(content))
+		return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^shows test type, name, suite, status, and tags$`, func() error {
 		// Check for table headers
 		return eacgodog.OutputContainsAny(ctx, "Type", "Name", "Suite", "Status", "Tags")
 	})
+}
+
+// createCTRFUoWWithTimestamp is like createCTRFUoW but allows custom timestamp.
+func createCTRFUoWWithTimestamp(ctx *eacgodog.TestContext, module, component, tool string, tests []ctrfTestEntry, durationSec float64, timestamp string) error {
+	uowDir := fmt.Sprintf("out/test/%s/%s-%s", module, component, tool)
+
+	report := buildCTRFReport(tool, tests)
+	ctrfJSON, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal CTRF report: %w", err)
+	}
+
+	if err := eacgodog.CreateFile(ctx, filepath.Join(uowDir, "unit.json"), string(ctrfJSON)); err != nil {
+		return err
+	}
+
+	artifact := artifactJSON{ID: "ctrf", Path: "unit.json", SHA256: "sha256:mock", Size: int64(len(ctrfJSON)), Type: "ctrf-report"}
+	return writeUoWManifest(ctx, uowDir, module, component, tool, artifact, durationSec, timestamp)
 }

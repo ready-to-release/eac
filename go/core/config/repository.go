@@ -4,7 +4,6 @@ package config
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -170,13 +169,9 @@ func (r RemoteConfig) deriveRegistryURL() string {
 
 // detectRepoName gets the repository name from git remote or directory name.
 func detectRepoName(repoRoot string) string {
-	// Try git remote first
-	cmd := exec.Command("git", "remote", "get-url", "origin")
-	cmd.Dir = repoRoot
-	out, err := cmd.Output()
-	if err == nil {
-		url := strings.TrimSpace(string(out))
-		// Extract repo name from URL
+	// Try git remote via injected provider (pure go-git, no exec)
+	url, err := resolveGitRemoteURL(repoRoot, "origin")
+	if err == nil && url != "" {
 		url = strings.TrimSuffix(url, ".git")
 		if idx := strings.LastIndex(url, "/"); idx >= 0 {
 			return url[idx+1:]
@@ -191,13 +186,10 @@ func detectRepoName(repoRoot string) string {
 
 // detectGitRemoteURL attempts to get the remote URL from git.
 func detectGitRemoteURL(repoRoot string) string {
-	cmd := exec.Command("git", "remote", "get-url", "origin")
-	cmd.Dir = repoRoot
-	out, err := cmd.Output()
-	if err != nil {
+	url, err := resolveGitRemoteURL(repoRoot, "origin")
+	if err != nil || url == "" {
 		return ""
 	}
-	url := strings.TrimSpace(string(out))
 	// Convert SSH URLs to HTTPS
 	if strings.HasPrefix(url, "git@github.com:") {
 		url = strings.Replace(url, "git@github.com:", "https://github.com/", 1)
@@ -379,19 +371,6 @@ func (c *RepositoryConfig) TestModuleDirAbs(workspaceRoot, moniker string) strin
 	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker))
 }
 
-// TestManifestPath returns the path to a module's test manifest file.
-// Path: out/test/<module>/test.manifest.json
-// Sanitizes moniker for filesystem safety (replaces : with _).
-func (c *RepositoryConfig) TestManifestPath(moniker string) string {
-	return c.Paths.Out.Test + "/" + sanitizeMonikerForPath(moniker) + "/test.manifest.json"
-}
-
-// TestManifestPathAbs returns the absolute path to a module's test manifest file.
-// Sanitizes moniker for filesystem safety (replaces : with _).
-func (c *RepositoryConfig) TestManifestPathAbs(workspaceRoot, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker), "test.manifest.json")
-}
-
 // TestPackageDir returns the path to a package's test output within a module.
 // Path: out/test/<module>/packages/<package>
 // Sanitizes moniker for filesystem safety (replaces : with _).
@@ -509,17 +488,6 @@ func (c *RepositoryConfig) ScanModuleOutputPath(moduleName string) string {
 // ScanModuleOutputPathAbs returns the absolute path to a module's scan output directory.
 func (c *RepositoryConfig) ScanModuleOutputPathAbs(workspaceRoot, moduleName string) string {
 	return filepath.Join(workspaceRoot, c.Paths.Out.Scan, moduleName)
-}
-
-// ScanManifestPath returns the path to a module's scan manifest file.
-// Path: out/scan/<module>/scan.manifest.json.
-func (c *RepositoryConfig) ScanManifestPath(moniker string) string {
-	return c.Paths.Out.Scan + "/" + moniker + "/scan.manifest.json"
-}
-
-// ScanManifestPathAbs returns the absolute path to a module's scan manifest file.
-func (c *RepositoryConfig) ScanManifestPathAbs(workspaceRoot, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Scan, moniker, "scan.manifest.json")
 }
 
 // LogsPathAbs returns the absolute path to logs for a command with optional path segments
@@ -655,15 +623,26 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 	// Get owner from repository config
 	owner := c.Repository.Remote.Owner
 
-	// Build set of explicitly defined monikers for container discovery
-	explicitMonikers := make(map[string]bool)
+	// Collect claimed namespaces to prevent duplicate container auto-discovery.
+	// Includes module monikers and container directory names used as component roots.
+	// Example: oci-tools module with component root "containers/pdf-oci" claims
+	// "pdf-oci", preventing auto-discovery of a separate pdf-oci module.
+	claimedNamespaces := make(map[string]bool)
 	for _, m := range c.Modules {
-		explicitMonikers[m.Moniker] = true
+		claimedNamespaces[m.Moniker] = true
+		for _, comp := range m.Components {
+			if comp == nil || comp.Root == "" {
+				continue
+			}
+			if name := extractContainerName(comp.Root); name != "" {
+				claimedNamespaces[name] = true
+			}
+		}
 	}
 
 	// Discover container modules not explicitly defined (mono repos only)
 	if c.Repository.Type == "mono" {
-		discoveredContainers := DiscoverContainerModules(repoRoot, explicitMonikers)
+		discoveredContainers := DiscoverContainerModules(repoRoot, claimedNamespaces)
 		if len(discoveredContainers) > 0 {
 			c.Modules = append(c.Modules, discoveredContainers...)
 		}
@@ -680,6 +659,21 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 	}
 
 	return nil
+}
+
+// extractContainerName returns the container directory name from a component root
+// under "containers/", or empty string if the root is not a container path.
+// Example: "containers/pdf-oci" → "pdf-oci", "go/core" → ""
+func extractContainerName(root string) string {
+	root = filepath.ToSlash(root)
+	if !strings.HasPrefix(root, "containers/") {
+		return ""
+	}
+	name := strings.TrimPrefix(root, "containers/")
+	if idx := strings.Index(name, "/"); idx >= 0 {
+		name = name[:idx]
+	}
+	return name
 }
 
 // EffectiveParallelism returns the maximum number of parallel workers

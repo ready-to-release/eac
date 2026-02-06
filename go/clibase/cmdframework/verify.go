@@ -62,9 +62,10 @@ func phaseVerify(ctx *ExecutionContext) error {
 	summary.Flags.SkipDepm = ctx.Config.SkipDepm
 	summary.Flags.ForceRebuild = ctx.Config.ForceRebuild
 
-	// System dependency verification (if hook provided)
-	if !ctx.Config.SkipDeps && depsVerifier != nil {
-		depsStatus := depsVerifier(ctx)
+	// System dependency verification - collect from async check started in phaseInitDeferred.
+	// This overlaps the Docker check (~100-500ms) with config loading and module resolution.
+	if ctx.asyncDepsResult != nil {
+		depsStatus := ctx.asyncDepsResult.wait()
 		if depsStatus != nil {
 			summary.DepsStatus = *depsStatus
 		}
@@ -84,6 +85,33 @@ func phaseVerify(ctx *ExecutionContext) error {
 
 	ctx.InitSummary = summary
 	return nil
+}
+
+// asyncDepsCheck holds the result of a background dependency verification.
+// Started in phaseInitDeferred, collected in phaseVerify.
+type asyncDepsCheck struct {
+	done   chan struct{}
+	result *initsummary.DepsStatus
+}
+
+// startAsyncDepsCheck begins dependency verification in a goroutine.
+// Returns nil if deps are skipped or no verifier is registered.
+func startAsyncDepsCheck(ctx *ExecutionContext) *asyncDepsCheck {
+	if ctx.Config.SkipDeps || depsVerifier == nil {
+		return nil
+	}
+	check := &asyncDepsCheck{done: make(chan struct{})}
+	go func() {
+		defer close(check.done)
+		check.result = depsVerifier(ctx)
+	}()
+	return check
+}
+
+// wait blocks until the background check completes and returns the result.
+func (c *asyncDepsCheck) wait() *initsummary.DepsStatus {
+	<-c.done
+	return c.result
 }
 
 // DepsVerifier is a function that verifies system dependencies.
@@ -290,9 +318,14 @@ func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []tui.ExecutionModule 
 	for _, spec := range units {
 		module := spec.ID.Module
 		entry := tui.UoWEntry{
-			ID:          spec.ID.Longname(),
-			DisplayName: spec.ID.DisplayName(),
-			Weight:      spec.Weight,
+			ID:            spec.ID.Longname(),
+			DisplayName:   spec.ID.DisplayName(),
+			Weight:        spec.Weight,
+			Module:        spec.ID.Module,
+			Component:     spec.ID.Component,
+			Tool:          spec.ID.Tool,
+			ComponentType: spec.ComponentType,
+			Container:     spec.Container,
 		}
 		moduleUoWs[module] = append(moduleUoWs[module], entry)
 

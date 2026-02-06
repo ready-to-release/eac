@@ -2,12 +2,12 @@
 package internal
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
@@ -85,17 +85,12 @@ func (g *defaultGitOps) CreateWorktree(path, branch, base string) error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "worktree", "add", path, "-b", branch, base)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "worktree", "add", path, "-b", branch, base)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: createWorktree | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: createWorktree | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to create worktree: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to create worktree: %w", err)
 	}
 	return nil
 }
@@ -106,17 +101,12 @@ func (g *defaultGitOps) RemoveWorktree(path string) error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "worktree", "remove", path)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "worktree", "remove", path)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: removeWorktree | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: removeWorktree | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to remove worktree: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to remove worktree: %w", err)
 	}
 	return nil
 }
@@ -127,12 +117,7 @@ func (g *defaultGitOps) ListWorktrees() ([]Worktree, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "worktree", "list", "--porcelain")
-	cmd.Dir = g.repoRoot
-
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(g.repoRoot, "worktree", "list", "--porcelain")
 
 	log.Debugf("Git operation completed: listWorktrees | duration=%v output=%q err=%v", time.Since(start), string(output), err)
 
@@ -164,23 +149,14 @@ func (g *defaultGitOps) BranchExists(branch string) (bool, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "rev-parse", "--verify", fmt.Sprintf("refs/heads/%s", branch))
-	cmd.Dir = g.repoRoot
+	_, exitCode, err := gitexec.RunCombined(context.Background(), g.repoRoot, "rev-parse", "--verify", fmt.Sprintf("refs/heads/%s", branch))
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	err := cmd.Run()
-
-	log.Debugf("Git operation completed: branchExists | duration=%v exists=%v err=%v", time.Since(start), err == nil, err)
+	log.Debugf("Git operation completed: branchExists | duration=%v exists=%v err=%v", time.Since(start), exitCode == 0, err)
 
 	if err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			return false, nil
-		}
 		return false, fmt.Errorf("failed to check branch: %w", err)
 	}
-	return true, nil
+	return exitCode == 0, nil
 }
 
 // GetCurrentBranch returns the current branch name.
@@ -189,12 +165,7 @@ func (g *defaultGitOps) GetCurrentBranch(path string) (string, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	cmd.Dir = path
-
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(path, "rev-parse", "--abbrev-ref", "HEAD")
 	branch := strings.TrimSpace(string(output))
 
 	log.Debugf("Git operation completed: getCurrentBranch | duration=%v branch=%s output=%q err=%v", time.Since(start), branch, string(output), err)
@@ -215,17 +186,12 @@ func (g *defaultGitOps) DeleteBranch(branch string, force bool) error {
 	if force {
 		flag = "-D"
 	}
-	cmd := exec.Command("git", "branch", flag, branch)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "branch", flag, branch)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: deleteBranch | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: deleteBranch | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to delete branch %s: %w\nOutput: %s", branch, err, string(output))
+		return fmt.Errorf("failed to delete branch %s: %w", branch, err)
 	}
 	return nil
 }
@@ -236,12 +202,7 @@ func (g *defaultGitOps) IsWorktreeClean(path string) (bool, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = path
-
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(path, "status", "--porcelain")
 	isClean := strings.TrimSpace(string(output)) == ""
 
 	log.Debugf("Git operation completed: isWorktreeClean | duration=%v isClean=%v output=%q err=%v", time.Since(start), isClean, string(output), err)
@@ -258,17 +219,12 @@ func (g *defaultGitOps) FetchBranch(branch string) error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "fetch", "origin", branch)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "fetch", "origin", branch)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: fetchBranch | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: fetchBranch | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to fetch origin/%s: %w\nOutput: %s", branch, err, string(output))
+		return fmt.Errorf("failed to fetch origin/%s: %w", branch, err)
 	}
 	return nil
 }
@@ -283,17 +239,12 @@ func (g *defaultGitOps) PushBranch(branch string, force bool) error {
 	if force {
 		args = append(args, "--force")
 	}
-	cmd := exec.Command("git", args...)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, args...)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: pushBranch | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: pushBranch | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to push %s: %w\nOutput: %s", branch, err, string(output))
+		return fmt.Errorf("failed to push %s: %w", branch, err)
 	}
 	return nil
 }
@@ -304,17 +255,12 @@ func (g *defaultGitOps) Rebase(target string) error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "rebase", fmt.Sprintf("origin/%s", target))
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "rebase", fmt.Sprintf("origin/%s", target))
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: rebase | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: rebase | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("rebase failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("rebase failed: %w", err)
 	}
 	return nil
 }
@@ -331,17 +277,12 @@ func (g *defaultGitOps) Merge(branch string, squash bool) error {
 	}
 	args = append(args, branch)
 
-	cmd := exec.Command("git", args...)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, args...)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: merge | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: merge | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("merge failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("merge failed: %w", err)
 	}
 	return nil
 }
@@ -352,17 +293,12 @@ func (g *defaultGitOps) MergeAbort() error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "merge", "--abort")
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "merge", "--abort")
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: mergeAbort | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: mergeAbort | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("merge abort failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("merge abort failed: %w", err)
 	}
 	return nil
 }
@@ -373,17 +309,12 @@ func (g *defaultGitOps) RebaseAbort() error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "rebase", "--abort")
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "rebase", "--abort")
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: rebaseAbort | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: rebaseAbort | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("rebase abort failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("rebase abort failed: %w", err)
 	}
 	return nil
 }
@@ -394,17 +325,12 @@ func (g *defaultGitOps) Stash(message string) error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "stash", "push", "-m", message)
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "stash", "push", "-m", message)
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: stash | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: stash | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to stash changes: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to stash changes: %w", err)
 	}
 	return nil
 }
@@ -415,17 +341,12 @@ func (g *defaultGitOps) StashPop() error {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "stash", "pop")
-	cmd.Dir = g.repoRoot
+	_, err := gitexec.Run(g.repoRoot, "stash", "pop")
 
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.CombinedOutput()
-
-	log.Debugf("Git operation completed: stashPop | duration=%v output=%q err=%v", time.Since(start), string(output), err)
+	log.Debugf("Git operation completed: stashPop | duration=%v err=%v", time.Since(start), err)
 
 	if err != nil {
-		return fmt.Errorf("failed to reapply stashed changes: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to reapply stashed changes: %w", err)
 	}
 	return nil
 }
@@ -436,12 +357,7 @@ func (g *defaultGitOps) GetCommitCount(base, head string) (int, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "rev-list", "--count", fmt.Sprintf("%s..%s", base, head))
-	cmd.Dir = g.repoRoot
-
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(g.repoRoot, "rev-list", "--count", fmt.Sprintf("%s..%s", base, head))
 
 	var count int
 	if err == nil {
@@ -465,12 +381,7 @@ func (g *defaultGitOps) GetConflictingFiles() ([]string, error) {
 
 	start := time.Now()
 
-	cmd := exec.Command("git", "diff", "--name-only", "--diff-filter=U")
-	cmd.Dir = g.repoRoot
-
-	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
-
-	output, err := cmd.Output()
+	output, err := gitexec.Run(g.repoRoot, "diff", "--name-only", "--diff-filter=U")
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	var conflicts []string

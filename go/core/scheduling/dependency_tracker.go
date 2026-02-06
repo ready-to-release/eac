@@ -76,6 +76,28 @@ func (dt *DependencyTracker) MarkFailed(id workunit.UnitID) {
 	dt.completed[longname] = true
 }
 
+// CascadeFail marks all transitive dependents of the given ID as failed.
+// Returns the list of cascade-failed IDs (NOT including the original ID,
+// which should already be marked failed by the caller).
+func (dt *DependencyTracker) CascadeFail(id workunit.UnitID) []workunit.UnitID {
+	var cascaded []workunit.UnitID
+	dt.cascadeFailRecursive(id, &cascaded)
+	return cascaded
+}
+
+func (dt *DependencyTracker) cascadeFailRecursive(id workunit.UnitID, cascaded *[]workunit.UnitID) {
+	for _, dependent := range dt.blocks[id.Longname()] {
+		depKey := dependent.Longname()
+		if dt.failed[depKey] {
+			continue // Already failed — avoid infinite loops on diamond deps
+		}
+		dt.failed[depKey] = true
+		dt.completed[depKey] = true
+		*cascaded = append(*cascaded, dependent)
+		dt.cascadeFailRecursive(dependent, cascaded)
+	}
+}
+
 // GetDependsOn returns the units that this unit depends on (forward deps).
 func (dt *DependencyTracker) GetDependsOn(id workunit.UnitID) []workunit.UnitID {
 	return dt.depsOf[id.Longname()]

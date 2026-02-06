@@ -189,6 +189,14 @@ func (r *DefaultResolver) Resolve(componentType string, operation OperationType)
 
 	tool, ok := r.registry.Get(toolID)
 	if !ok {
+		if dr, ok := r.registry.(*DefaultRegistry); ok {
+			mode := dr.GetExecutorMode()
+			if mode != ExecutorModeAuto {
+				return nil, fmt.Errorf(
+					"tool %q not found for %s/%s (executor-mode=%s; tool may lack a %s variant)",
+					toolID, componentType, operation, mode, mode)
+			}
+		}
 		return nil, fmt.Errorf("tool %q not found in registry (for %s/%s)", toolID, componentType, operation)
 	}
 
@@ -259,6 +267,14 @@ func (r *DefaultResolver) ResolveMultiple(componentType string, operation Operat
 	for _, toolID := range toolIDs {
 		tool, ok := r.registry.Get(toolID)
 		if !ok {
+			if dr, ok := r.registry.(*DefaultRegistry); ok {
+				mode := dr.GetExecutorMode()
+				if mode != ExecutorModeAuto {
+					return nil, fmt.Errorf(
+						"tool %q not found (executor-mode=%s; tool may lack a %s variant)",
+						toolID, mode, mode)
+				}
+			}
 			return nil, fmt.Errorf("tool %q not found in registry", toolID)
 		}
 		tools = append(tools, tool)

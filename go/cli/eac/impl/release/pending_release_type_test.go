@@ -11,40 +11,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds modules with versioning configs.
-// Only 4 modules have explicit versioning: r2r-cli, ext-eac, docs (published) and r2r-eac-bundle (bundle).
+// TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds modules with changelogs.
+// SemVer modules with changelogs: r2r-cli, ext-eac (published), r2r-eac-bundle (bundle).
+// CalVer modules (docs) have no changelogs.
 func TestFindModulesWithChangelogsAll(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
 	// Load module registry to get modules with changelogs
 	modules := findModulesWithChangelogsAll(workspaceRoot)
 
-	// Should find modules with versioning configs
+	// Should find SemVer modules with changelogs
 	assert.NotEmpty(t, modules, "should find modules with changelogs")
 
-	// Check that we find published modules (r2r-cli, ext-eac, docs)
-	hasPublished := false
+	// Check that we find SemVer published modules (r2r-cli, ext-eac)
+	hasSemVerPublished := false
 	for _, mod := range modules {
-		if mod == "r2r-cli" || mod == "docs" || mod == "ext-eac" {
-			hasPublished = true
+		if mod == "r2r-cli" || mod == "ext-eac" {
+			hasSemVerPublished = true
 			break
 		}
 	}
-	assert.True(t, hasPublished, "should find at least one published module")
+	assert.True(t, hasSemVerPublished, "should find at least one SemVer published module")
 
-	// Check that we find bundle module
-	hasBundle := false
+	// CalVer modules should NOT appear (no changelogs)
 	for _, mod := range modules {
-		if mod == "r2r-eac-bundle" {
-			hasBundle = true
-			break
-		}
+		assert.NotEqual(t, "docs", mod, "CalVer module docs should not have a changelog")
 	}
-	assert.True(t, hasBundle, "should find the bundle module")
 }
 
 // TestFilterModulesByReleaseType tests filtering modules by release type.
-// Only 4 modules have versioning: r2r-cli, ext-eac, docs (published) and r2r-eac-bundle (bundle).
+// Only SemVer modules have changelogs: r2r-cli, ext-eac (published).
+// CalVer modules (docs, r2r-eac-bundle) have no changelogs, so they won't be in the input set.
 func TestFilterModulesByReleaseType(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
@@ -57,19 +54,19 @@ func TestFilterModulesByReleaseType(t *testing.T) {
 		{
 			name:          "filter published only",
 			filterType:    "published",
-			shouldInclude: []string{"r2r-cli", "docs", "ext-eac"},
+			shouldInclude: []string{"r2r-cli", "ext-eac"},
 			shouldExclude: []string{"r2r-eac-bundle"},
 		},
 		{
 			name:          "filter bundle only",
 			filterType:    "bundle",
-			shouldInclude: []string{"r2r-eac-bundle"},
-			shouldExclude: []string{"r2r-cli", "docs", "ext-eac"},
+			shouldInclude: []string{},
+			shouldExclude: []string{"r2r-cli", "ext-eac"},
 		},
 		{
 			name:          "no filter (all)",
 			filterType:    "",
-			shouldInclude: []string{"r2r-cli", "ext-eac", "docs", "r2r-eac-bundle"},
+			shouldInclude: []string{"r2r-cli", "ext-eac"},
 			shouldExclude: []string{},
 		},
 	}

@@ -42,6 +42,8 @@ import (
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/docs"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/docs-manifest"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/evidence"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/go-mod-sums"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/go-tidy"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/lint"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/pdf-screenshots"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/structurizr"

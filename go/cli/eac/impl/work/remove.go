@@ -31,9 +31,9 @@
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -42,6 +42,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -161,9 +162,7 @@ func Remove() int {
 	config.base.Logger.Info("Removing workspace...")
 
 	// Use git to find the actual common git directory (works correctly in worktrees)
-	cmd := exec.Command("git", "rev-parse", "--git-common-dir")
-	cmd.Dir = config.worktreePath
-	output, err := cmd.Output()
+	output, err := gitexec.Run(config.worktreePath, "rev-parse", "--git-common-dir")
 	if err != nil {
 		config.base.Logger.Debug("Phase 5: Failed - git common dir detection",
 			zap.String("phase", "phase5"),
@@ -182,18 +181,14 @@ func Remove() int {
 
 	// Run git worktree remove from the detected repository root
 	// On Windows, use --force by default to handle locked files
-	cmd = exec.Command("git", "worktree", "remove", "--force", config.worktreePath)
-	cmd.Dir = actualRepoRoot
-	output, err = cmd.CombinedOutput()
+	output, err = gitexec.Run(actualRepoRoot, "worktree", "remove", "--force", config.worktreePath)
 	if err != nil {
 		// On Windows, even with --force, git may fail to delete locked directories
 		// Check if it's a permission error and if the worktree was successfully unregistered
 		outputStr := string(output)
 		if strings.Contains(outputStr, "Permission denied") || strings.Contains(outputStr, "failed to delete") {
 			// Check if worktree is still registered
-			cmd = exec.Command("git", "worktree", "list")
-			cmd.Dir = actualRepoRoot
-			listOutput, listErr := cmd.Output()
+			listOutput, listErr := gitexec.Run(actualRepoRoot, "worktree", "list")
 			if listErr == nil && !strings.Contains(string(listOutput), config.worktreePath) {
 				// Worktree was successfully unregistered, just couldn't delete directory
 				config.base.Logger.Debug("Worktree unregistered but directory couldn't be deleted",
@@ -395,35 +390,41 @@ func isInWorkspace(worktreePath, repoRoot string) bool {
 func switchToMain(repoRoot string) error {
 	// First verify which branch exists
 	// Try "main" first (preferred for modern git repositories)
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/main")
-	cmd.Dir = repoRoot
-	mainExists := cmd.Run() == nil
+	_, mainExitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/main")
+	if err != nil {
+		return fmt.Errorf("failed to check main branch: %w", err)
+	}
+	mainExists := mainExitCode == 0
 
-	cmd = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/master")
-	cmd.Dir = repoRoot
-	masterExists := cmd.Run() == nil
+	_, masterExitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/master")
+	if err != nil {
+		return fmt.Errorf("failed to check master branch: %w", err)
+	}
+	masterExists := masterExitCode == 0
 
 	// Try to checkout main if it exists
 	if mainExists {
-		cmd = exec.Command("git", "checkout", "main")
-		cmd.Dir = repoRoot
-		output, err := cmd.CombinedOutput()
-		if err == nil {
+		output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "checkout", "main")
+		if err != nil {
+			return fmt.Errorf("checkout main failed: %w", err)
+		}
+		if exitCode == 0 {
 			return nil
 		}
 		// If main exists but checkout failed, return detailed error
-		return fmt.Errorf("branch 'main' exists but checkout failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("branch 'main' exists but checkout failed (exit %d)\nOutput: %s", exitCode, string(output))
 	}
 
 	// Try to checkout master if it exists
 	if masterExists {
-		cmd = exec.Command("git", "checkout", "master")
-		cmd.Dir = repoRoot
-		output, err := cmd.CombinedOutput()
-		if err == nil {
+		output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "checkout", "master")
+		if err != nil {
+			return fmt.Errorf("checkout master failed: %w", err)
+		}
+		if exitCode == 0 {
 			return nil
 		}
-		return fmt.Errorf("branch 'master' exists but checkout failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("branch 'master' exists but checkout failed (exit %d)\nOutput: %s", exitCode, string(output))
 	}
 
 	// Neither branch exists - this shouldn't happen in a valid repository
@@ -433,9 +434,7 @@ func switchToMain(repoRoot string) error {
 // getDefaultBranch detects the default/trunk branch name (main or master).
 func getDefaultBranch(repoRoot string) string {
 	// Try to get the default branch from git config
-	cmd := exec.Command("git", "config", "--get", "init.defaultBranch")
-	cmd.Dir = repoRoot
-	if output, err := cmd.Output(); err == nil && len(output) > 0 {
+	if output, err := gitexec.Run(repoRoot, "config", "--get", "init.defaultBranch"); err == nil && len(output) > 0 {
 		branch := strings.TrimSpace(string(output))
 		if branch != "" {
 			return branch
@@ -444,9 +443,7 @@ func getDefaultBranch(repoRoot string) string {
 
 	// Check which branches actually exist locally using git branch --list
 	// This is more reliable than rev-parse in worktree contexts
-	cmd = exec.Command("git", "branch", "--list")
-	cmd.Dir = repoRoot
-	if output, err := cmd.Output(); err == nil {
+	if output, err := gitexec.Run(repoRoot, "branch", "--list"); err == nil {
 		branches := string(output)
 		// Check for main first (preferred)
 		if strings.Contains(branches, " main\n") || strings.Contains(branches, "* main\n") {
@@ -464,20 +461,19 @@ func getDefaultBranch(repoRoot string) string {
 
 // deleteRemoteBranch deletes the remote branch.
 func deleteRemoteBranch(repoRoot, branch string) error {
-	cmd := exec.Command("git", "push", "origin", "--delete", branch)
-	cmd.Dir = repoRoot
-	output, err := cmd.CombinedOutput()
+	output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "push", "origin", "--delete", branch)
 	if err != nil {
-		return fmt.Errorf("failed to delete remote branch: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to delete remote branch: %w", err)
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("failed to delete remote branch (exit %d)\nOutput: %s", exitCode, string(output))
 	}
 	return nil
 }
 
 // remoteExists checks if a branch exists on the remote.
 func remoteExists(repoRoot, branch string) bool {
-	cmd := exec.Command("git", "ls-remote", "--heads", "origin", branch)
-	cmd.Dir = repoRoot
-	output, err := cmd.Output()
+	output, err := gitexec.Run(repoRoot, "ls-remote", "--heads", "origin", branch)
 	if err != nil {
 		return false
 	}

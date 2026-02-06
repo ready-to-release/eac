@@ -32,6 +32,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 func init() {
@@ -394,7 +396,7 @@ func checkModuleCIValidityWithAPI(module, headSHA string, mockStatus map[string]
 
 	// Use provided API or create a new client
 	if api == nil {
-		api = github.NewGHClient(workspaceRoot)
+		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 	}
 
 	// Query GitHub for last successful CI run

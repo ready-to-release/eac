@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- Release Highlights (since 0.0.24)
+
+  Internal:
+  - Relocated from go/r2r to go/cli/r2r (no user-facing changes)
+  - Optimized startup time
+  - Allow unauthenticated public extension discovery
+
+-->
+
 ## [0.0.24] - 2025-12-29
 
 ### Changed

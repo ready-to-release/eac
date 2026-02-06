@@ -23,6 +23,8 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 func init() {
@@ -69,7 +71,7 @@ func PipelineFindRunID() int {
 	// Use GitHub API
 	api := github.Global()
 	if api == nil {
-		api = github.NewGHClient(workspaceRoot)
+		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 	}
 
 	// List runs and filter

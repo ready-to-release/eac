@@ -21,14 +21,16 @@ package pipeline
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 func init() {
@@ -79,9 +81,7 @@ func PipelineCheckRecentRun() int {
 
 	// Default to HEAD
 	if sha == "" {
-		cmd := exec.Command("git", "rev-parse", "HEAD")
-		cmd.Dir = workspaceRoot
-		output, err := cmd.Output()
+		output, err := gitexec.Run(workspaceRoot, "rev-parse", "HEAD")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to get HEAD SHA: %v\n", err)
 			return 1
@@ -92,7 +92,7 @@ func PipelineCheckRecentRun() int {
 	// Use GitHub API
 	api := github.Global()
 	if api == nil {
-		api = github.NewGHClient(workspaceRoot)
+		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 	}
 
 	hasRecent, err := api.HasRecentSuccess(workflow, sha, since)

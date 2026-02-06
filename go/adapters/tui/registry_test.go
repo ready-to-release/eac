@@ -34,6 +34,9 @@ func (m *mockConsole) MarkUoWCompleteWithCacheInfo(moniker string, exitCode int,
 }
 func (m *mockConsole) SendSummary(data *SummaryData)       {}
 func (m *mockConsole) SetInitSummary(summary *InitSummary) {}
+func (m *mockConsole) SendConfigReady(commandName, executionContext, parallelismMode string,
+	effectiveWorkers, weightedCapacity int, outputDir string) {
+}
 
 // mockFactory creates a factory that returns a mockConsole with the given name.
 func mockFactory(name string) ConsoleFactory {

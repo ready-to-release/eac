@@ -5,11 +5,23 @@ package help
 
 import (
 	"github.com/cucumber/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
 
+// registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.
+func registryLookup(cmdName string) (func() int, bool) {
+	reg := registry.GetCommand(cmdName)
+	if reg == nil {
+		return nil, false
+	}
+	return reg.Func, true
+}
+
 // registerSteps registers step definitions for help-related command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
+	// Wire in-process command dispatch to avoid subprocess overhead
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
 	// Then steps - output verification for show-help
 	sc.Step(`^I see a list of commands with descriptions$`, func() error {
 		// Check that output contains command-like patterns

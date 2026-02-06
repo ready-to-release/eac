@@ -8,13 +8,13 @@
 package validate
 
 import (
-	"bytes"
+	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/goexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -105,19 +105,15 @@ func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {
 
 	for _, modulePath := range goModules {
 		// Run go mod tidy -diff
-		cmd := exec.Command("go", "mod", "tidy", "-diff")
-		cmd.Dir = modulePath
+		output, exitCode, err := goexec.RunCombined(context.Background(), modulePath, "mod", "tidy", "-diff")
+		if err != nil {
+			report.untidyModules[modulePath] = err.Error()
+			continue
+		}
 
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
-		err := cmd.Run()
-		output := stdout.String() + stderr.String()
-
-		// If command failed or has output, module is not tidy
-		if err != nil || strings.TrimSpace(output) != "" {
-			report.untidyModules[modulePath] = output
+		// If command exited non-zero or has output, module is not tidy
+		if exitCode != 0 || strings.TrimSpace(string(output)) != "" {
+			report.untidyModules[modulePath] = string(output)
 		} else {
 			report.tidyModules++
 		}
@@ -147,7 +143,7 @@ func printGoTidyReport(report *goTidyReport) {
 			}
 		}
 		log.Info("")
-		log.Info("To fix, run: go mod tidy")
+		log.Info("To fix, run: eac update go-tidy")
 		log.Info("")
 	} else {
 		log.Info("✅ All Go modules have tidy dependencies!")

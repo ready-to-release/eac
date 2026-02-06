@@ -1,13 +1,15 @@
-// structurizr.go provides Structurizr diagram processing for book builds
+// structurizr.go provides Structurizr diagram processing for book builds.
+// Reads pre-rendered SVGs from the structurizr builder output (structurizr-index.json)
+// and replaces <!-- structurizr:module:viewKey --> markers with img tags.
 package books
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 
-	design "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -26,15 +28,24 @@ type StructurizrMarker struct {
 //   - <!-- structurizr:r2r-cli:Containers -->
 var structurizrMarkerPattern = regexp.MustCompile(`<!--\s*structurizr:([^:]+):([^>\s]+)\s*-->`)
 
-// processStructurizrDiagrams scans staging markdown for Structurizr markers
-// and replaces them with img tags pointing to cached SVGs.
-func (p *Preprocessor) processStructurizrDiagrams() error {
-	// Build cache of DSL hashes for each module
-	dslHashes := make(map[string]string)
+// structurizrIndexEntry mirrors the builder's index entry for JSON unmarshaling.
+type structurizrIndexEntry struct {
+	Module      string `json:"module"`
+	ViewKey     string `json:"view_key"`
+	DSLHash     string `json:"dsl_hash"`
+	SVGFilename string `json:"svg_filename"`
+}
 
+// structurizrIndex mirrors the builder's index manifest for JSON unmarshaling.
+type structurizrIndex struct {
+	Entries []structurizrIndexEntry `json:"entries"`
+}
+
+// processStructurizrDiagrams scans staging markdown for Structurizr markers
+// and replaces them with img tags pointing to builder output SVGs.
+func (p *Preprocessor) processStructurizrDiagrams() error {
 	// Scan for markers in staging directory using file index
 	markersByFile := make(map[string][]StructurizrMarker)
-	modulesUsed := make(map[string]bool)
 
 	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
@@ -45,9 +56,6 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 		markers := extractStructurizrMarkers(string(content))
 		if len(markers) > 0 {
 			markersByFile[path] = markers
-			for _, m := range markers {
-				modulesUsed[m.Module] = true
-			}
 		}
 	}
 
@@ -56,22 +64,56 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 		return nil
 	}
 
-	// Get DSL hashes for all used modules
-	for module := range modulesUsed {
-		hash, err := design.GetModuleDSLHash(module)
-		if err != nil {
-			p.warn("could not get DSL hash for %s: %v", module, err)
-			continue
-		}
-		dslHashes[module] = hash
-	}
-
-	// Count total markers and replace them
+	// Count total markers
 	totalMarkers := 0
 	for _, markers := range markersByFile {
 		totalMarkers += len(markers)
 	}
 	p.log("    Found %d Structurizr marker(s) in %d file(s)", totalMarkers, len(markersByFile))
+
+	// Collect unique module names from markers
+	moduleSet := make(map[string]struct{})
+	for _, markers := range markersByFile {
+		for _, m := range markers {
+			moduleSet[m.Module] = struct{}{}
+		}
+	}
+
+	// Load per-module structurizr-index.json files and build combined lookup
+	svgLookup := make(map[string]string)
+	// Also track which builder output directory each module's SVGs live in
+	moduleBuildDirs := make(map[string]string)
+	for moduleName := range moduleSet {
+		builderOutputDir := paths.StructurizrModuleBuildOutputPath(p.workspaceRoot, moduleName)
+		indexPath := filepath.Join(builderOutputDir, "structurizr-index.json")
+
+		indexData, err := os.ReadFile(indexPath)
+		if err != nil {
+			// Index not found — markers referencing this module will be reported as missing below
+			p.warn("structurizr builder output not found for module %s (build structurizr for that module first)", moduleName)
+			continue
+		}
+
+		var idx structurizrIndex
+		if err := json.Unmarshal(indexData, &idx); err != nil {
+			p.warn("corrupt structurizr-index.json for module %s: %v", moduleName, err)
+			continue
+		}
+
+		moduleBuildDirs[moduleName] = builderOutputDir
+		for _, entry := range idx.Entries {
+			key := entry.Module + ":" + entry.ViewKey
+			svgLookup[key] = entry.SVGFilename
+		}
+	}
+
+	log.Debugf("structurizr: loaded builder indexes for %d module(s) with %d total entries", len(moduleSet), len(svgLookup))
+
+	// Copy builder SVGs to staging rendered directory
+	stagingDir := paths.RenderedAssetsPath(p.stagingDir, "structurizr")
+	if err := os.MkdirAll(stagingDir, 0o755); err != nil {
+		return fmt.Errorf("creating staging directory: %w", err)
+	}
 
 	// Replace markers with img tags
 	replaced := 0
@@ -89,42 +131,32 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 		for i := len(markers) - 1; i >= 0; i-- {
 			marker := markers[i]
 
-			// Get DSL hash for this module
-			dslHash, ok := dslHashes[marker.Module]
-			if !ok {
-				p.warn("no DSL hash for module %s (marker: %s:%s)",
-					marker.Module, marker.Module, marker.ViewKey)
+			// Look up SVG from builder index
+			lookupKey := marker.Module + ":" + marker.ViewKey
+			svgFilename, found := svgLookup[lookupKey]
+			if !found {
+				p.warn("structurizr SVG not found in builder output for %s:%s",
+					marker.Module, marker.ViewKey)
 				missing++
 				continue
 			}
 
-			// Build expected cache path (source location)
-			sourceCachePath := paths.StructurizrDocsCachePath(p.workspaceRoot, marker.Module, marker.ViewKey, dslHash)
+			// Copy SVG from per-module builder output to staging
+			srcPath := filepath.Join(moduleBuildDirs[marker.Module], svgFilename)
+			stagingPath := filepath.Join(stagingDir, svgFilename)
 
-			// Check if cached SVG exists in source
-			if _, err := os.Stat(sourceCachePath); os.IsNotExist(err) {
-				p.warn("cached SVG not found for %s:%s (expected: %s)",
-					marker.Module, marker.ViewKey, filepath.Base(sourceCachePath))
+			if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+				p.warn("structurizr SVG file missing: %s", srcPath)
 				missing++
 				continue
 			}
 
-			// Calculate staging cache path
-			// Source: docs/assets/cache/structurizr/file.svg
-			// Staging: [stagingDir]/assets/cache/structurizr/file.svg
-			svgFilename := filepath.Base(sourceCachePath)
-			stagingCachePath := filepath.Join(p.stagingDir, "assets", "cache", "structurizr", svgFilename)
-
-			// Verify the SVG was copied to staging
-			if _, err := os.Stat(stagingCachePath); os.IsNotExist(err) {
-				p.warn("SVG not found in staging for %s:%s (expected: %s)",
-					marker.Module, marker.ViewKey, filepath.Base(stagingCachePath))
-				missing++
-				continue
+			if err := copyFile(srcPath, stagingPath); err != nil {
+				return fmt.Errorf("copying SVG to staging: %w", err)
 			}
 
 			// Calculate relative path from markdown file to staging SVG
-			relPath, err := p.linkTranslator.CalculateRelativePath(filePath, stagingCachePath)
+			relPath, err := p.linkTranslator.CalculateRelativePath(filePath, stagingPath)
 			if err != nil {
 				return fmt.Errorf("calculating relative path for %s:%s: %w",
 					marker.Module, marker.ViewKey, err)
@@ -157,7 +189,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 	p.log("    Replaced %d marker(s), %d missing", replaced, missing)
 
 	if missing > 0 {
-		p.log("    Run 'r2r eac update structurizr' to generate missing diagrams")
+		return fmt.Errorf("%d structurizr diagram(s) not found in builder output (run structurizr build first)", missing)
 	}
 
 	return nil

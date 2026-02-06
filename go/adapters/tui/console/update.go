@@ -21,6 +21,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.invalidateLayoutMetrics()
+		// Clamp pane columns to fit new terminal width
+		if maxCols := m.maxPaneWidthCols(); m.paneWidthCols > maxCols {
+			m.paneWidthCols = maxCols
+		}
 		// Reset scroll offsets when window size changes
 		for _, pane := range m.panes {
 			if pane != nil && !pane.autoScroll {
@@ -38,42 +43,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case batchLineMsg:
+		lines := []Line(msg)
+		m.processLinesBatch(lines)
+
+		// Continue listening for more lines
+		if !m.linesDone {
+			return m, m.listenForLines()
+		}
+		return m, nil
+
 	case lineMsg:
-		line := Line(msg)
-
-		// Route to per-UoW buffer only - no aggregate stream
-		// Each unit of work's output is isolated to its own buffer
-		if line.Source != "" && line.Source != "system" && m.activePhase == PhaseRun {
-			// Check if this is a known UoW (has a state)
-			if state, exists := m.uowStates[line.Source]; exists {
-				state.Buffer.Push(line)
-			} else {
-				// Create UoW state on first output
-				state := m.GetOrCreateUoWState(line.Source, "", 0)
-				state.Buffer.Push(line)
-			}
-		} else {
-			// System/phase lines go to the pane's buffer (init, summary phases)
-			pane := m.panes[m.activePhase]
-			pane.Buffer.Push(line)
-		}
-
-		// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
-		// Only increment if this line affects the currently viewed buffer
-		pane := m.panes[m.activePhase]
-		if pane != nil && !pane.autoScroll && pane.scrollOffset > 0 {
-			// Get effective tab (defaults to first UoW if none selected)
-			effectiveTab := m.getEffectiveActiveTab()
-			if line.Source == effectiveTab {
-				// Only lines for the active UoW increment scroll
-				pane.scrollOffset++
-			}
-		}
-
-		// Track errors for sticky display
-		if line.Level == LevelError {
-			m.lastError = &line
-		}
+		// Single-line fallback (kept for compatibility)
+		m.processLinesBatch([]Line{Line(msg)})
 
 		// Continue listening for more lines
 		if !m.linesDone {
@@ -102,6 +84,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resultsBuffer.Push(msg.Line)
 		return m, nil
 
+	case ConfigReadyMsg:
+		m.configMeta = &ConfigMeta{
+			CommandName:      msg.CommandName,
+			ExecutionContext: msg.ExecutionContext,
+			ParallelismMode:  msg.ParallelismMode,
+			EffectiveWorkers: msg.EffectiveWorkers,
+			WeightedCapacity: msg.WeightedCapacity,
+			OutputDir:        msg.OutputDir,
+		}
+		if m.bootState < BootConfig {
+			m.bootState = BootConfig
+		}
+		// Pre-set capacity values for status bar rendering
+		if msg.WeightedCapacity > 0 {
+			m.roof = msg.WeightedCapacity
+			m.pressureTarget = msg.WeightedCapacity
+		}
+		return m, nil
+
 	case InitSummaryMsg:
 		// Store init summary for structured rendering
 		m.initSummary = msg.Summary
@@ -112,24 +113,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, module := range msg.Summary.ExecutionTree {
 				for _, uow := range module.UoWs {
 					// Use full ID (Longname) for matching, DisplayName for tab labels
-					m.GetOrCreateUoWState(uow.ID, uow.DisplayName, uow.Weight)
+					m.GetOrCreateUoWState(uow)
 				}
 			}
 
 			// Calculate initial tab columns to fit all UoWs without scrolling
-			m.tabColumns = m.calculateOptimalTabColumns()
-		}
-
-		// Pre-populate tool lamps from PlannedTools
-		// All tools shown from start (inactive), light up when active
-		if msg.Summary != nil && len(msg.Summary.PlannedTools) > 0 {
-			for _, tool := range msg.Summary.PlannedTools {
-				if tool.IsContainer {
-					m.plannedContainerTools = append(m.plannedContainerTools, tool.Name)
-				} else {
-					m.plannedSystemTools = append(m.plannedSystemTools, tool.Name)
-				}
-			}
+			m.paneWidthCols = m.calculateOptimalPaneCols()
 		}
 
 		// Initialize capacity tracking from WeightedCapacity
@@ -138,6 +127,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Summary != nil && msg.Summary.WeightedCapacity > 0 {
 			m.roof = msg.Summary.WeightedCapacity
 			m.pressureTarget = msg.Summary.WeightedCapacity
+		}
+		// Advance boot state
+		if m.bootState < BootTabs {
+			m.bootState = BootTabs
 		}
 		return m, nil
 
@@ -223,7 +216,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, moniker := range status.Running {
 			if !oldRunningSet[moniker] {
 				// New running module - create state if needed and mark as running
-				state := m.GetOrCreateUoWState(moniker, "", 0)
+				state := m.GetOrCreateUoWStateByID(moniker, "", 0)
 				state.Status = UoWRunning
 				state.StartTime = time.Now()
 			}
@@ -278,43 +271,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Update active tools only if provided (preserve across partial status updates)
-		// Different observer events send partial Status - don't let progress updates wipe tool status
-		if len(status.ActiveContainerTools) > 0 || len(status.UsedContainerTools) > 0 {
-			m.activeContainerTools = status.ActiveContainerTools
-			// Track seen containers (containers that have been used at least once)
-			for _, c := range status.ActiveContainerTools {
-				if !containsString(m.seenContainerTools, c) {
-					m.seenContainerTools = append(m.seenContainerTools, c)
-				}
-			}
-		}
-		if len(status.ActiveSystemTools) > 0 || len(status.UsedSystemTools) > 0 {
-			m.activeSystemTools = status.ActiveSystemTools
-			// Track seen system tools (tools that have been used at least once)
-			for _, t := range status.ActiveSystemTools {
-				if !containsString(m.seenSystemTools, t) {
-					m.seenSystemTools = append(m.seenSystemTools, t)
-				}
-			}
-		}
-
 		// Update Docker memory metrics only if explicitly set (preserve across partial updates)
 		// dockerAvailable is "sticky" - once Docker becomes available, it stays available
 		// This handles slow machines where Docker pool may initialize after first status events
 		if status.DockerAvailable {
 			m.cachedDockerMemPercent = status.DockerMemPercent
 			m.dockerAvailable = true // sticky - never reset to false
-		}
-
-		// Update container instance counts (for Containers lamps)
-		// Only update if provided - totalContainerCount should never decrease
-		if status.TotalContainerCount > 0 || status.RunningContainerCount > 0 {
-			m.runningContainerCount = status.RunningContainerCount
-			// Total should only increase (lamps persist)
-			if status.TotalContainerCount > m.totalContainerCount {
-				m.totalContainerCount = status.TotalContainerCount
-			}
 		}
 
 		if !m.statusDone {
@@ -338,6 +300,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update cached system metrics (CPU/memory) - do this early so View() has fresh values
 		// These gopsutil calls are expensive, so we cache them and only update periodically
 		m.UpdateCachedMetrics()
+
+		// Advance boot state when CPU metrics become available
+		if m.bootState == BootChrome && len(m.cachedCPUPercent) > 0 {
+			m.bootState = BootMetrics
+		}
+
+		// Recompute layout metrics (cached for View and mouse handlers until next tick)
+		m.invalidateLayoutMetrics()
 
 		// Clean up decayed tabs on each tick
 		m.CleanupDecayedTabs()
@@ -427,12 +397,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case UoWStartMsg:
 		// Create module state when module starts (pending state)
-		m.GetOrCreateUoWState(msg.Moniker, msg.DisplayName, msg.Weight)
+		m.GetOrCreateUoWStateByID(msg.Moniker, msg.DisplayName, msg.Weight)
 		return m, nil
 
 	case UoWRunningMsg:
 		// Mark module as running (slot acquired)
 		m.MarkUoWRunning(msg.Moniker)
+		if m.bootState < BootRunning {
+			m.bootState = BootRunning
+		}
 		return m, nil
 
 	case UoWCompleteMsg:
@@ -450,10 +423,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Auto-select next running tab if:
-		// 1. The completed module was the effective active tab (including default first tab)
-		// 2. User hasn't interacted (would indicate they're manually navigating)
+		// 1. The completed module finished successfully (exit code 0 or cached)
+		// 2. The completed module was the effective active tab (including default first tab)
+		// 3. User hasn't interacted (would indicate they're manually navigating)
+		// Failed jobs (ExitCode > 0) keep their tab focused so the user can see the error output.
+		// ExitCode <= 0 covers success (0) and dep-skipped/cached (<0).
 		effectiveTab := m.getEffectiveActiveTab()
-		if msg.Moniker == effectiveTab && !m.userHasInteracted {
+		if msg.ExitCode <= 0 && msg.Moniker == effectiveTab && !m.userHasInteracted {
 			// Find next running module to select
 			for _, moniker := range m.uowOrder {
 				if state, exists := m.uowStates[moniker]; exists {
@@ -488,6 +464,48 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// processLinesBatch routes a batch of lines to their appropriate buffers.
+// This is called for both batchLineMsg and single lineMsg.
+func (m *Model) processLinesBatch(lines []Line) {
+	pane := m.panes[m.activePhase]
+	effectiveTab := m.getEffectiveActiveTab()
+	scrollIncrement := 0
+
+	for i := range lines {
+		line := &lines[i]
+
+		// Route to per-UoW buffer only - no aggregate stream
+		if line.Source != "" && line.Source != "system" && m.activePhase == PhaseRun {
+			if state, exists := m.uowStates[line.Source]; exists {
+				state.Buffer.Push(*line)
+			} else {
+				state := m.GetOrCreateUoWStateByID(line.Source, "", 0)
+				state.Buffer.Push(*line)
+			}
+		} else {
+			pane.Buffer.Push(*line)
+		}
+
+		// Count scroll increments for the active UoW
+		if pane != nil && !pane.autoScroll && pane.scrollOffset > 0 {
+			if line.Source == effectiveTab {
+				scrollIncrement++
+			}
+		}
+
+		// Track errors for sticky display
+		if line.Level == LevelError {
+			lineCopy := *line
+			m.lastError = &lineCopy
+		}
+	}
+
+	// Apply scroll offset in bulk
+	if scrollIncrement > 0 && pane != nil {
+		pane.scrollOffset += scrollIncrement
+	}
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -538,7 +556,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "0":
 		// Reserved - no aggregate view
 	case "t":
-		// Tree view removed - only tab grid view is supported
+		// Cycle tab view mode: Name → Module → Type → Tool → Mode → State → Name
+		m.tabViewMode = (m.tabViewMode + 1) % tabViewModeCount
 	case "m":
 		// Toggle mouse mode: ON = scrolling/clicking, OFF = text selection
 		m.mouseMode = !m.mouseMode
@@ -546,17 +565,30 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.EnableMouseAllMotion
 		}
 		return m, tea.DisableMouse
+	case "up":
+		// Narrow each tab by 1 char
+		if m.tabWidth > tabWidthMin {
+			m.tabWidth--
+			m.tabsScrollOffset = 0
+		}
+	case "down":
+		// Widen each tab by 1 char
+		if m.tabWidth < tabWidthMax {
+			m.tabWidth++
+			m.tabsScrollOffset = 0
+		}
 	case "left":
-		// Decrease tab columns (min 2)
-		if m.tabColumns > 2 {
-			m.tabColumns--
-			m.tabsScrollOffset = 0 // Reset scroll when changing layout
+		// Remove one column
+		if m.paneWidthCols > 1 {
+			m.paneWidthCols--
+			m.tabsScrollOffset = 0
 		}
 	case "right":
-		// Increase tab columns (max 6)
-		if m.tabColumns < 6 {
-			m.tabColumns++
-			m.tabsScrollOffset = 0 // Reset scroll when changing layout
+		// Add one column
+		maxCols := m.maxPaneWidthCols()
+		if m.paneWidthCols < maxCols {
+			m.paneWidthCols++
+			m.tabsScrollOffset = 0
 		}
 	}
 	return m, nil
@@ -676,98 +708,18 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// - Click on tab bar → switch tabs
 	// - Shift+Click → select text (standard terminal behavior, bypasses mouse mode)
 
-	// Resource zone detection helper for Resources pane
-	// IMPORTANT: Uses calculateLayoutMetrics() as single source of truth for Y offset.
-	// This ensures hover detection aligns with rendered output regardless of layout changes.
-	detectResourceZoneAt := func(x, y int) string {
-		metrics := m.calculateLayoutMetrics()
-
-		// Resources pane only exists if it has lines
-		if metrics.ResourcesLines == 0 {
-			return ""
-		}
-
-		// Resources pane layout (0-indexed Y coordinates):
-		// Y = InitLines - 1: Resources header (contains freeze-button)
-		// Y = InitLines:     Row 1 (CPU, Time, empty, Mem, Docker Mem)
-		// Y = InitLines + 1: Row 2 (Host, Host weight, counters, Native, Containers)
-		// Y = InitLines + 2: Row 3 (Docker, Docker weight, progress, Tools placeholder, Container tools)
-		// Y = InitLines + 3: Resources footer
-
-		resourcesStartY := metrics.InitLines - 1 // Header line
-		row1Y := metrics.InitLines
-		row2Y := metrics.InitLines + 1
-		row3Y := metrics.InitLines + 2
-
-		// Column boundaries (matching renderResourcesPane 5-column layout)
-		// col1Width=24, col2Width=11, col3Width=12, col4Width=24, col5Width=28
-		// Plus 3 chars for each separator " │ " and 2 chars for border "│ "
-		const (
-			borderLeft = 2                             // "│ "
-			col1End    = borderLeft + 24               // End of column 1
-			col2End    = col1End + 3 + 11              // + separator + column 2
-			col3End    = col2End + 3 + 12              // + separator + column 3
-			col4End    = col3End + 3 + 24              // + separator + column 4
-			col5End    = col4End + 3 + 28              // + separator + column 5
-		)
-
-		// Check header line for freeze button
-		if y == resourcesStartY {
-			// Freeze button is at the right end of the header
-			if x > m.width-20 { // Approximate freeze button location
-				return "freeze-button"
+	// Resource zone detection helper — resource widgets are now zone-marked in the status bar.
+	// bubblezone's InBounds() auto-tracks rendered positions.
+	detectResourceZoneAt := func() string {
+		for _, zoneID := range []string{
+			"res-mem", "res-host", "res-dmem", "res-docker",
+			"res-cpu", "res-counters", "res-slots",
+			"progress-count", "status-text", "freeze-button",
+		} {
+			if zone.Get(zoneID).InBounds(msg) {
+				return zoneID
 			}
-			return ""
 		}
-
-		// Row 1: CPU | Time | (empty) | Mem | Docker Mem
-		if y == row1Y {
-			if x < col1End {
-				return "res-cpu"
-			} else if x < col2End {
-				return "res-timer"
-			} else if x < col3End {
-				return "" // empty column
-			} else if x < col4End {
-				return "res-mem"
-			} else if x < col5End {
-				return "res-dmem"
-			}
-			return ""
-		}
-
-		// Row 2: Host | Host weight | counters | Native | Containers
-		if y == row2Y {
-			if x < col1End {
-				return "res-host"
-			} else if x < col2End {
-				return "res-host-weight"
-			} else if x < col3End {
-				return "res-counters"
-			} else if x < col4End {
-				return "res-native"
-			} else if x < col5End {
-				return "res-jobs"
-			}
-			return ""
-		}
-
-		// Row 3: Docker | Docker weight | progress | Tools placeholder | Container tools
-		if y == row3Y {
-			if x < col1End {
-				return "res-docker"
-			} else if x < col2End {
-				return "res-docker-weight"
-			} else if x < col3End {
-				return "" // progress (no help text)
-			} else if x < col4End {
-				return "" // placeholder (no help text)
-			} else if x < col5End {
-				return "res-ctools"
-			}
-			return ""
-		}
-
 		return ""
 	}
 
@@ -813,19 +765,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Account for scroll offset - add it to get the actual content row
 		row += m.tabsScrollOffset
 
-		// Tab grid mode - compact single-line tabs
-		// Use configured tab columns (matches renderTabGridContent)
-		const tabWidth = 15
-		tabsPerRow := m.tabColumns
-		if tabsPerRow < 1 {
-			tabsPerRow = 1
-		}
-		if tabsPerRow > 6 {
-			tabsPerRow = 6
-		}
+		// Tab grid mode - use same sizing as rendering
+		sizing := ComputeTabSizing(componentsWidth, m.tabWidth, 0, m.asciiMode)
+		tabsPerRow := sizing.TabColumns
 
-		// Calculate column from X (accounting for left border and tab width)
-		col := (x - 1) / tabWidth
+		// Calculate column from X (accounting for left border and tab width + gap)
+		col := (x - 1) / (sizing.TabWidth + tabGap)
 		if col < 0 || col >= tabsPerRow {
 			return ""
 		}
@@ -856,15 +801,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// Calculate max scroll based on content
 			tabs := m.GetVisibleTabs()
 			// Tab grid: count lines (1 line per row of compact tabs)
-			// Uses configured tab columns (adjustable with left/right arrows)
-			tabsPerRow := m.tabColumns
-			if tabsPerRow < 1 {
-				tabsPerRow = 1
-			}
-			if tabsPerRow > 6 {
-				tabsPerRow = 6
-			}
-			rows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
+			scrollSizing := ComputeTabSizing(componentsWidth, m.tabWidth, 0, m.asciiMode)
+			rows := (len(tabs) + scrollSizing.TabColumns - 1) / scrollSizing.TabColumns
 			maxScroll := rows
 			// Leave some visible content (at least 5 lines)
 			maxScroll -= 5
@@ -985,9 +923,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Handle mouse motion for hover effect
 	if msg.Action == tea.MouseActionMotion {
-		// Check Resources pane zones first (help text display)
-		// Uses layout-aware detection for accurate Y positioning
-		resourceZone := detectResourceZoneAt(msg.X, msg.Y)
+		// Check status bar zones first (help text display)
+		resourceZone := detectResourceZoneAt()
 		if resourceZone != "" {
 			if m.hoveredZone != resourceZone {
 				m.hoveredZone = resourceZone
@@ -1203,14 +1140,4 @@ func (m Model) getPaneAtPosition(y int) int {
 // IsDone returns true if both line and status channels are done.
 func (m Model) IsDone() bool {
 	return m.linesDone && m.statusDone
-}
-
-// containsString checks if a slice contains a string.
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }

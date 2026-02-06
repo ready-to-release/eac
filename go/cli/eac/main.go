@@ -15,7 +15,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/help"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/domain/reports"
+	"github.com/ready-to-release/eac/go/core/git"
 )
 
 // InitialWorkingDir stores the working directory when the program started.
@@ -67,6 +71,20 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	// Bootstrap dependency providers before any command runs.
+	// Git remote provider: lets config package resolve remote URLs via go-git
+	// instead of exec.Command("git", ...).
+	config.SetGitRemoteProvider(func(repoRoot, remoteName string) (string, error) {
+		repo, err := git.NewManager(nil).Open(repoRoot)
+		if err != nil {
+			return "", err
+		}
+		return repo.RemoteURL(remoteName)
+	})
+
+	// GitHub CLI executor: routes gh commands through the tool registry.
+	reports.SetGitHubCLIExecutor(ghexec.New(InitialWorkingDir))
 
 	if len(os.Args) < 2 {
 		printUsage()

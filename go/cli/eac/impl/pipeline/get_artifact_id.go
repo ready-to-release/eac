@@ -23,10 +23,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -116,16 +116,13 @@ func PipelineGetArtifactID() int {
 }
 
 func findRunID(workflow, sha, workspaceRoot string) (string, error) {
-	cmd := exec.Command("gh", "run", "list",
+	output, err := ghexec.Run(workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--commit", sha,
 		"--status", "success",
 		"--json", "databaseId",
 		"-q", ".[0].databaseId",
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to find run: %w", err)
 	}
@@ -139,12 +136,9 @@ func findRunID(workflow, sha, workspaceRoot string) (string, error) {
 }
 
 func getArtifactIDFromRun(runID, artifactName, workspaceRoot string) (string, error) {
-	cmd := exec.Command("gh", "api",
+	output, err := ghexec.Run(workspaceRoot, "api",
 		fmt.Sprintf("repos/{owner}/{repo}/actions/runs/%s/artifacts", runID),
 	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to query artifacts: %w", err)
 	}

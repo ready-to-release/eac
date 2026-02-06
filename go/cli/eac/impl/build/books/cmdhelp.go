@@ -3,10 +3,10 @@ package books
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -14,6 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"gopkg.in/yaml.v3"
 )
 
@@ -544,15 +545,21 @@ func (p *Preprocessor) getCategoryStats(cmdBinary string) ([]CategoryStats, erro
 func (p *Preprocessor) getCommandHelp(cmdBinary, cmdName string) (*CommandHelp, error) {
 	// Run command with --help
 	args := append(strings.Fields(cmdName), "--help")
-	cmd := exec.Command(cmdBinary, args...)
-	cmd.Dir = p.workspaceRoot
-	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(cmdBinary)
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	fullEnv := append(os.Environ(), "NO_COLOR=1")
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: p.workspaceRoot,
+		ModuleRoot:    p.workspaceRoot,
+		StdoutWriter:  &stdout,
+		StderrWriter:  &stderr,
+		FullEnv:       fullEnv,
+		ArgsOverrides: args,
+	}
 
-	if err := cmd.Run(); err != nil {
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil || result.ExitCode != 0 {
 		errOutput := stderr.String()
 		errLower := strings.ToLower(errOutput)
 		// Check if command doesn't exist
@@ -561,6 +568,9 @@ func (p *Preprocessor) getCommandHelp(cmdBinary, cmdName string) (*CommandHelp, 
 			strings.Contains(errLower, "not a valid command") ||
 			strings.Contains(errLower, "no such command") {
 			return nil, fmt.Errorf("%w: '%s'", ErrCommandNotFound, cmdName)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to run '%s --help': %v", cmdName, err)
 		}
 		return nil, fmt.Errorf("failed to run '%s --help': %s", cmdName, errOutput)
 	}
@@ -833,15 +843,20 @@ func (p *Preprocessor) formatCommandHelp(help *CommandHelp, headingLevel int, in
 
 // getValidCommands retrieves the list of all valid commands.
 func (p *Preprocessor) getValidCommands(cmdBinary string) ([]CommandInfo, error) {
-	cmd := exec.Command(cmdBinary, "get", "valid-commands")
-	cmd.Dir = p.workspaceRoot
-	cmd.Env = append(os.Environ(), "NO_COLOR=1")
-
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(cmdBinary)
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	fullEnv := append(os.Environ(), "NO_COLOR=1")
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: p.workspaceRoot,
+		ModuleRoot:    p.workspaceRoot,
+		StdoutWriter:  &stdout,
+		StderrWriter:  &stderr,
+		FullEnv:       fullEnv,
+		ArgsOverrides: []string{"get", "valid-commands"},
+	}
 
-	if err := cmd.Run(); err != nil {
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err != nil || result.ExitCode != 0 {
 		return nil, fmt.Errorf("failed to get valid-commands: %s", stderr.String())
 	}
 

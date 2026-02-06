@@ -95,6 +95,10 @@ type UoWManifest struct {
 	// Metadata contains optional context-specific key-value pairs.
 	// Used to store testset, build_id, and other UoW-specific information.
 	Metadata map[string]string `json:"metadata,omitempty"`
+
+	// Tags carries classified tag data for test UoWs.
+	// Populated pre-execution from source-level TestReference data.
+	Tags workunit.TagSummary `json:"tags,omitempty"`
 }
 
 // DirName returns the unique directory name for this manifest.

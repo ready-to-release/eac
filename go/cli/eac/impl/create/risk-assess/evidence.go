@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/evidence"
 	coreconfig "github.com/ready-to-release/eac/go/core/config"
 )
@@ -26,16 +26,16 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		Warnings:    []string{},
 	}
 
-	// Collect test evidence from test manifest (read-only)
+	// Collect test evidence from UoW manifests (read-only)
 	cfg, cfgErr := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
 	if cfgErr == nil && cfg != nil {
-		testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
-		manifest, err := internal.LoadTestManifest(testDir)
+		view, err := testview.LoadModuleTestView(config.WorkspaceRoot, moduleName)
 
-		if err == nil && manifest != nil {
+		if err == nil && view != nil {
 			// Check test evidence age
-			age := time.Since(manifest.TestTime)
-			if !manifest.TestTime.IsZero() && age >= config.MaxEvidenceAge {
+			age := time.Since(view.ExecutedAt)
+			if !view.ExecutedAt.IsZero() && age >= config.MaxEvidenceAge {
+				testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
 				relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 				if err != nil {
 					relPath = testDir
@@ -47,28 +47,29 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 					formatDuration(age),
 					formatDuration(config.MaxEvidenceAge),
 					relPath,
-					manifest.TestTime.Format("2006-01-02 15:04:05 MST"),
+					view.ExecutedAt.Format("2006-01-02 15:04:05 MST"),
 				)
 				collection.Warnings = append(collection.Warnings, warning)
 			}
 
 			// Convert to simplified manifest data
-			collection.TestManifestData = convertToManifestData(manifest)
+			collection.TestManifestData = convertViewToManifestData(view)
 			collection.TestSummary = &evidence.TestSummary{
-				Total:   manifest.Summary.Total,
-				Passed:  manifest.Summary.Passed,
-				Failed:  manifest.Summary.Failed,
-				Skipped: manifest.Summary.Skipped,
+				Total:   view.Summary.Total,
+				Passed:  view.Summary.Passed,
+				Failed:  view.Summary.Failed,
+				Skipped: view.Summary.Skipped,
 			}
 		} else {
-			// No test manifest found - add warning
+			// No test data found - add warning
+			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
 			relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 			if err != nil {
 				relPath = testDir
 			}
 			relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
 			warning := fmt.Sprintf(
-				"⚠️  No test manifest found for module '%s' - Expected location: %s/test.manifest.json",
+				"⚠️  No test data found for module '%s' - Expected location: %s/",
 				moduleName,
 				relPath,
 			)
@@ -173,7 +174,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			return nil, fmt.Errorf(`no evidence found for module '%s'
 
 Expected locations:
-  - Test manifest: %s/test.manifest.json
+  - Test results: %s/
   - Security scans: %s/*.json
 
 Run tests and scans to generate evidence:
@@ -245,16 +246,16 @@ Run tests or scans to update evidence:
 	return collection, nil
 }
 
-// convertToManifestData converts internal.TestManifest to simplified evidence.TestManifestData.
-func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManifestData {
-	if manifest == nil {
+// convertViewToManifestData converts a testview.TestModuleView to simplified evidence.TestManifestData.
+func convertViewToManifestData(view *testview.TestModuleView) *evidence.TestManifestData {
+	if view == nil {
 		return nil
 	}
 
 	// Convert test entries
-	tests := make([]evidence.TestEntryData, len(manifest.Tests))
-	for i := range manifest.Tests {
-		test := &manifest.Tests[i]
+	tests := make([]evidence.TestEntryData, len(view.Tests))
+	for i := range view.Tests {
+		test := &view.Tests[i]
 		tests[i] = evidence.TestEntryData{
 			Name:     test.Name,
 			Package:  test.Package,
@@ -268,33 +269,29 @@ func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManife
 
 	// Convert suites
 	suites := make(map[string]evidence.SuiteResultData)
-	for name, suite := range manifest.Suites {
+	for name, suite := range view.Suites {
 		suites[name] = evidence.SuiteResultData{
 			RunTime:         suite.RunTime,
-			DurationSeconds: suite.DurationSeconds,
-			Total:           suite.Tests.Total,
-			Passed:          suite.Tests.Passed,
-			Failed:          suite.Tests.Failed,
-			Skipped:         suite.Tests.Skipped,
+			DurationSeconds: view.Duration.Seconds(),
+			Total:           suite.Total,
+			Passed:          suite.Passed,
+			Failed:          suite.Failed,
+			Skipped:         suite.Skipped,
 		}
 	}
 
 	// Convert artifacts
-	artifacts := make([]evidence.TestArtifactData, len(manifest.Artifacts))
-	for i, artifact := range manifest.Artifacts {
+	artifacts := make([]evidence.TestArtifactData, len(view.Artifacts))
+	for i, artifact := range view.Artifacts {
 		artifacts[i] = evidence.TestArtifactData{
 			Type: artifact.Type,
-			Name: artifact.Name,
+			Name: filepath.Base(artifact.Path),
 			Path: artifact.Path,
 		}
 	}
 
 	return &evidence.TestManifestData{
-		TestID:    manifest.TestID,
-		TestAgent: manifest.TestAgent,
-		GitCommit: manifest.GitCommit,
-		BuildID:   manifest.BuildID,
-		TestTime:  manifest.TestTime,
+		TestTime:  view.ExecutedAt,
 		Tests:     tests,
 		Suites:    suites,
 		Artifacts: artifacts,

@@ -108,6 +108,143 @@ component-tools:
 	})
 }
 
+func TestMergeToolConfig_ExecutorMode(t *testing.T) {
+	t.Run("override wins", func(t *testing.T) {
+		base := &ToolConfig{ExecutorMode: ExecutorModeAuto}
+		override := &ToolConfig{ExecutorMode: ExecutorModeContainer}
+		mergeToolConfig(base, override)
+		if base.ExecutorMode != ExecutorModeContainer {
+			t.Errorf("ExecutorMode = %q, want %q", base.ExecutorMode, ExecutorModeContainer)
+		}
+	})
+
+	t.Run("default preserved when override empty", func(t *testing.T) {
+		base := &ToolConfig{ExecutorMode: ExecutorModeSystem}
+		override := &ToolConfig{} // ExecutorMode is zero value ""
+		mergeToolConfig(base, override)
+		if base.ExecutorMode != ExecutorModeSystem {
+			t.Errorf("ExecutorMode = %q, want %q", base.ExecutorMode, ExecutorModeSystem)
+		}
+	})
+
+	t.Run("nil override is safe", func(t *testing.T) {
+		base := &ToolConfig{ExecutorMode: ExecutorModeAuto}
+		mergeToolConfig(base, nil)
+		if base.ExecutorMode != ExecutorModeAuto {
+			t.Errorf("ExecutorMode = %q, want %q", base.ExecutorMode, ExecutorModeAuto)
+		}
+	})
+}
+
+func TestLoadToolConfig_ExecutorMode(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	t.Run("parses executor-mode from defaults", func(t *testing.T) {
+		defaultConfig := `
+executor-mode: container
+system-tools:
+  docker:
+    binary: docker
+  go:
+    binary: go
+`
+		if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		config, err := LoadToolConfig(tmpDir, configDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if config.ExecutorMode != ExecutorModeContainer {
+			t.Errorf("ExecutorMode = %q, want %q", config.ExecutorMode, ExecutorModeContainer)
+		}
+	})
+
+	t.Run("project override wins", func(t *testing.T) {
+		defaultConfig := `
+executor-mode: auto
+system-tools:
+  docker:
+    binary: docker
+  go:
+    binary: go
+`
+		if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		projectConfig := `
+executor-mode: system
+`
+		if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(projectConfig), 0644); err != nil {
+			t.Fatalf("failed to write project config: %v", err)
+		}
+
+		config, err := LoadToolConfig(tmpDir, configDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if config.ExecutorMode != ExecutorModeSystem {
+			t.Errorf("ExecutorMode = %q, want %q", config.ExecutorMode, ExecutorModeSystem)
+		}
+
+		// Clean up project override for other subtests
+		os.Remove(filepath.Join(configDir, "tool-config.yml"))
+	})
+}
+
+func TestLoadToolConfig_ToolBindingsLoad(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	defaultConfig := `
+system-tools:
+  docker:
+    binary: docker
+  go:
+    binary: go
+tool-bindings:
+  go: system
+  docker: system
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	config, err := LoadToolConfig(tmpDir, configDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(config.ToolBindings) != 2 {
+		t.Fatalf("expected 2 tool-bindings, got %d", len(config.ToolBindings))
+	}
+	if config.ToolBindings["go"] != ToolBindingSystem {
+		t.Errorf("go binding = %q, want %q", config.ToolBindings["go"], ToolBindingSystem)
+	}
+	if config.ToolBindings["docker"] != ToolBindingSystem {
+		t.Errorf("docker binding = %q, want %q", config.ToolBindings["docker"], ToolBindingSystem)
+	}
+}
+
 func TestMergeToolAssignment(t *testing.T) {
 	base := &ToolAssignment{
 		Builder: "base-builder",
@@ -162,7 +299,7 @@ component-tools:
 		t.Fatalf("failed to write config: %v", err)
 	}
 
-	registry, resolver, err := InitializeFromConfig(tmpDir, configDir)
+	registry, resolver, _, err := InitializeFromConfig(tmpDir, configDir)
 	if err != nil {
 		t.Fatalf("InitializeFromConfig failed: %v", err)
 	}
@@ -697,5 +834,151 @@ func TestApplyToolConfigDefaults(t *testing.T) {
 	if tool3.Serve.HostPortRange != "9000-9999" {
 		t.Errorf("tool-with-serve.Serve.HostPortRange = %q, want %q",
 			tool3.Serve.HostPortRange, "9000-9999")
+	}
+}
+
+func TestMergeCredentials(t *testing.T) {
+	t.Run("override adds to base", func(t *testing.T) {
+		base := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"GITHUB_TOKEN"},
+				CIEnv:   []string{"CI"},
+			},
+		}
+		override := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"NPM_TOKEN"},
+				CIEnv:   []string{"GITHUB_ACTIONS"},
+			},
+		}
+		mergeToolConfig(base, override)
+
+		if len(base.Credentials.HostEnv) != 2 {
+			t.Fatalf("HostEnv length = %d, want 2", len(base.Credentials.HostEnv))
+		}
+		if base.Credentials.HostEnv[0] != "GITHUB_TOKEN" || base.Credentials.HostEnv[1] != "NPM_TOKEN" {
+			t.Errorf("HostEnv = %v, want [GITHUB_TOKEN NPM_TOKEN]", base.Credentials.HostEnv)
+		}
+		if len(base.Credentials.CIEnv) != 2 {
+			t.Fatalf("CIEnv length = %d, want 2", len(base.Credentials.CIEnv))
+		}
+	})
+
+	t.Run("no duplicates on merge", func(t *testing.T) {
+		base := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"GITHUB_TOKEN", "NPM_TOKEN"},
+			},
+		}
+		override := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"GITHUB_TOKEN", "SEMGREP_TOKEN"},
+			},
+		}
+		mergeToolConfig(base, override)
+
+		if len(base.Credentials.HostEnv) != 3 {
+			t.Fatalf("HostEnv length = %d, want 3 (no duplicate GITHUB_TOKEN)", len(base.Credentials.HostEnv))
+		}
+	})
+
+	t.Run("nil base credentials", func(t *testing.T) {
+		base := &ToolConfig{}
+		override := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"GITHUB_TOKEN"},
+			},
+		}
+		mergeToolConfig(base, override)
+
+		if base.Credentials == nil {
+			t.Fatal("Credentials should be set after merge")
+		}
+		if len(base.Credentials.HostEnv) != 1 {
+			t.Errorf("HostEnv length = %d, want 1", len(base.Credentials.HostEnv))
+		}
+	})
+
+	t.Run("nil override credentials", func(t *testing.T) {
+		base := &ToolConfig{
+			Credentials: &CredentialsConfig{
+				HostEnv: []string{"GITHUB_TOKEN"},
+			},
+		}
+		override := &ToolConfig{}
+		mergeToolConfig(base, override)
+
+		if len(base.Credentials.HostEnv) != 1 {
+			t.Errorf("HostEnv length = %d, want 1 (unchanged)", len(base.Credentials.HostEnv))
+		}
+	})
+}
+
+func TestMergeUniqueStrings(t *testing.T) {
+	tests := []struct {
+		name string
+		base []string
+		add  []string
+		want int
+	}{
+		{"empty base", nil, []string{"a", "b"}, 2},
+		{"empty add", []string{"a"}, nil, 1},
+		{"no overlap", []string{"a"}, []string{"b"}, 2},
+		{"with overlap", []string{"a", "b"}, []string{"b", "c"}, 3},
+		{"all overlap", []string{"a", "b"}, []string{"a", "b"}, 2},
+		{"both empty", nil, nil, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeUniqueStrings(tt.base, tt.add)
+			if len(got) != tt.want {
+				t.Errorf("mergeUniqueStrings(%v, %v) len = %d, want %d", tt.base, tt.add, len(got), tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadToolConfig_WithCredentials(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create contracts dir: %v", err)
+	}
+
+	config := `
+system-tools:
+  docker:
+    binary: docker
+  go:
+    binary: go
+credentials:
+  host-env:
+    - GITHUB_TOKEN
+    - NPM_TOKEN
+  ci-env:
+    - CI
+    - GITHUB_ACTIONS
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	loaded, err := LoadToolConfig(tmpDir, "")
+	if err != nil {
+		t.Fatalf("LoadToolConfig failed: %v", err)
+	}
+
+	if loaded.Credentials == nil {
+		t.Fatal("Credentials should be loaded from YAML")
+	}
+	if len(loaded.Credentials.HostEnv) != 2 {
+		t.Errorf("HostEnv length = %d, want 2", len(loaded.Credentials.HostEnv))
+	}
+	if len(loaded.Credentials.CIEnv) != 2 {
+		t.Errorf("CIEnv length = %d, want 2", len(loaded.Credentials.CIEnv))
+	}
+	if loaded.Credentials.HostEnv[0] != "GITHUB_TOKEN" {
+		t.Errorf("HostEnv[0] = %q, want %q", loaded.Credentials.HostEnv[0], "GITHUB_TOKEN")
 	}
 }

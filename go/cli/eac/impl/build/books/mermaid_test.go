@@ -1,11 +1,13 @@
 package books
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 func TestExtractMermaidBlocks(t *testing.T) {
@@ -206,38 +208,43 @@ func TestCheckMermaidCache(t *testing.T) {
 	// Create temp directory for testing
 	tmpDir := t.TempDir()
 
-	// The cache system uses docs/assets/cache as root, then mermaid/ subdirectory
-	// For staging, it checks {staging}/assets/cache/mermaid/
-	stagingCacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
+	// The new checkMermaidCache reads mermaid-index.json from builder output
+	builderOutputDir := paths.MermaidBuildOutputPath(tmpDir)
 
 	// Create a preprocessor
 	p := &Preprocessor{
 		stagingDir:    tmpDir,
 		workspaceRoot: tmpDir,
 		logWriter:     os.Stdout,
-		assetCache:    NewAssetCache(tmpDir, nil),
 	}
 
-	// Create some test blocks with content that will be hashed
+	// Create test blocks with real content hashes
+	block0Content := "graph TD\n    A --> B"
+	block1Content := "graph TD\n    C --> D"
+	block2Content := "graph TD\n    E --> F"
+
 	blocks := []MermaidBlock{
 		{
-			Content:  "graph TD\n    A --> B",
-			Hash:     "aaaaaaaa",
-			Filename: "test_mermaid_0_aaaaaaaa.svg",
+			Content:    block0Content,
+			Hash:       HashContent(block0Content),
+			BlockIndex: 0,
+			Filename:   "test_mermaid_0_" + HashContent(block0Content) + ".svg",
 		},
 		{
-			Content:  "graph TD\n    C --> D",
-			Hash:     "bbbbbbbb",
-			Filename: "test_mermaid_1_bbbbbbbb.svg",
+			Content:    block1Content,
+			Hash:       HashContent(block1Content),
+			BlockIndex: 1,
+			Filename:   "test_mermaid_1_" + HashContent(block1Content) + ".svg",
 		},
 		{
-			Content:  "graph TD\n    E --> F",
-			Hash:     "cccccccc",
-			Filename: "test_mermaid_2_cccccccc.svg",
+			Content:    block2Content,
+			Hash:       HashContent(block2Content),
+			BlockIndex: 2,
+			Filename:   "test_mermaid_2_" + HashContent(block2Content) + ".svg",
 		},
 	}
 
-	// First check - all should be cache misses
+	// First check - no builder output, all should be cache misses
 	statuses, err := p.checkMermaidCache(blocks)
 	if err != nil {
 		t.Fatalf("checkMermaidCache failed: %v", err)
@@ -247,30 +254,37 @@ func TestCheckMermaidCache(t *testing.T) {
 		t.Fatalf("Expected 3 statuses, got %d", len(statuses))
 	}
 
-	// All should be cache misses
 	for i, status := range statuses {
 		if status.Cached {
 			t.Errorf("Block %d: expected cache miss, got hit", i)
 		}
-		if status.CachePath == "" {
-			t.Errorf("Block %d: cachePath should be set", i)
-		}
 	}
 
-	t.Logf("✓ First check: All 3 diagrams are cache misses")
+	t.Logf("✓ First check: All 3 diagrams are cache misses (no builder output)")
 
-	// Create cache directory
-	if err := os.MkdirAll(stagingCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create cache dir: %v", err)
+	// Create builder output with index for first two blocks
+	if err := os.MkdirAll(builderOutputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create builder output dir: %v", err)
 	}
 
-	// Create dummy SVG files for first two blocks using their actual cache paths
-	// The cache system uses content-hash based filenames computed by AssetCache
+	// Write mermaid-index.json with entries for first two blocks
+	indexJSON := fmt.Sprintf(`{
+		"entries": [
+			{"source_file": "test.md", "block_index": 0, "content_hash": "%s", "svg_filename": "diagram_0.svg"},
+			{"source_file": "test.md", "block_index": 1, "content_hash": "%s", "svg_filename": "diagram_1.svg"}
+		]
+	}`, HashContent(block0Content), HashContent(block1Content))
+
+	indexPath := filepath.Join(builderOutputDir, "mermaid-index.json")
+	if err := os.WriteFile(indexPath, []byte(indexJSON), 0o644); err != nil {
+		t.Fatalf("Failed to write mermaid-index.json: %v", err)
+	}
+
+	// Create corresponding SVG files in builder output
 	for i := 0; i < 2; i++ {
-		// Use the cache path that checkMermaidCache computed (extract from previous status)
-		svgPath := statuses[i].CachePath
+		svgPath := filepath.Join(builderOutputDir, fmt.Sprintf("diagram_%d.svg", i))
 		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0o644); err != nil {
-			t.Fatalf("Failed to create cached SVG: %v", err)
+			t.Fatalf("Failed to create SVG file: %v", err)
 		}
 	}
 
@@ -280,7 +294,6 @@ func TestCheckMermaidCache(t *testing.T) {
 		t.Fatalf("checkMermaidCache failed: %v", err)
 	}
 
-	// Check results
 	if !statuses[0].Cached {
 		t.Errorf("Block 0: expected cache hit")
 	}
@@ -291,20 +304,18 @@ func TestCheckMermaidCache(t *testing.T) {
 		t.Errorf("Block 2: expected cache miss")
 	}
 
-	t.Logf("✓ Second check: 2 hits, 1 miss (66.7%% hit rate)")
-
-	// Verify cache paths are in the correct directory
-	for i, status := range statuses {
-		if !filepath.HasPrefix(status.CachePath, stagingCacheDir) {
-			t.Errorf("Block %d: cachePath = %s, expected to be under %s",
-				i, status.CachePath, stagingCacheDir)
+	// Verify cache paths for hits point to builder output
+	for i := 0; i < 2; i++ {
+		expectedPath := filepath.Join(builderOutputDir, fmt.Sprintf("diagram_%d.svg", i))
+		if statuses[i].CachePath != expectedPath {
+			t.Errorf("Block %d: cachePath = %s, expected %s", i, statuses[i].CachePath, expectedPath)
 		}
 	}
 
-	t.Logf("✓ Cache paths are correct")
+	t.Logf("✓ Second check: 2 hits, 1 miss (builder output index)")
 }
 
-func TestCacheDirectoryCreation(t *testing.T) {
+func TestCheckMermaidCacheNoBuilderOutput(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()
 
@@ -312,22 +323,16 @@ func TestCacheDirectoryCreation(t *testing.T) {
 		stagingDir:    tmpDir,
 		workspaceRoot: tmpDir,
 		logWriter:     os.Stdout,
-		assetCache:    NewAssetCache(tmpDir, nil),
 	}
 
-	// Cache directory shouldn't exist yet (staging cache location)
-	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
-	if _, err := os.Stat(cacheDir); err == nil {
-		t.Fatal("Cache directory should not exist yet")
-	}
-
-	// Call checkMermaidCache with a block to trigger directory creation
-	// Empty blocks won't create the directory since there's nothing to cache
+	// Builder output directory doesn't exist
+	// checkMermaidCache should gracefully return all cache misses
 	blocks := []MermaidBlock{
 		{
-			Content:  "graph TD\n    A --> B",
-			Hash:     "aaaaaaaa",
-			Filename: "test_mermaid_0_aaaaaaaa.svg",
+			Content:    "graph TD\n    A --> B",
+			Hash:       HashContent("graph TD\n    A --> B"),
+			BlockIndex: 0,
+			Filename:   "test_mermaid_0.svg",
 		},
 	}
 	statuses, err := p.checkMermaidCache(blocks)
@@ -335,25 +340,15 @@ func TestCacheDirectoryCreation(t *testing.T) {
 		t.Fatalf("checkMermaidCache failed: %v", err)
 	}
 
-	// Verify status was returned
 	if len(statuses) != 1 {
 		t.Fatalf("Expected 1 status, got %d", len(statuses))
 	}
 
-	// Note: checkMermaidCache doesn't create the staging cache directory itself -
-	// it only checks if files exist in staging. The directory is created when
-	// files are copied from docs/assets/cache during preprocessing.
-	// This test verifies that checkMermaidCache works correctly when the
-	// cache directory doesn't exist (returns cache miss status).
 	if statuses[0].Cached {
-		t.Errorf("Expected cache miss for non-existent directory")
-	}
-	if statuses[0].CachePath == "" {
-		t.Errorf("CachePath should still be set even for cache miss")
+		t.Errorf("Expected cache miss when builder output doesn't exist")
 	}
 
-	t.Logf("✓ checkMermaidCache handles non-existent cache directory correctly")
-	t.Logf("  CachePath: %s", statuses[0].CachePath)
+	t.Logf("✓ checkMermaidCache handles missing builder output gracefully")
 }
 
 func TestFormatDockerVolumePath(t *testing.T) {

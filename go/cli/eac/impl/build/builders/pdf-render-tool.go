@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -732,7 +733,7 @@ print(f'TOC entries: {len(bookmarks)}')
 
 	args = append(args, imageName, "python3", "-c", pythonScript)
 
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+	exitCode := RunCommandWithLog(context.Background(), workspaceRoot, logWriter, "docker", args...)
 	if exitCode != 0 {
 		return fmt.Errorf("PDF merge exited with code %d", exitCode)
 	}

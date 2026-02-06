@@ -3,6 +3,7 @@ package repository
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -348,30 +349,72 @@ func (c *repositoryContext) checkStructurizrViewsAgainstCache() error {
 		return err
 	}
 
-	cacheDir := paths.StructurizrCachePath(c.repoRoot)
 	c.uncachedStructurizrViews = []structurizrViewInfo{}
 
+	// Collect unique modules from discovered views
+	moduleViews := make(map[string][]structurizrViewInfo)
 	for _, view := range c.structurizrViews {
-		// Check if cached SVG exists: {module}_{viewKey}_{hash}.svg
-		cachePath := paths.StructurizrDocsCachePath(c.repoRoot, view.module, view.viewKey, view.dslHash)
-		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
-			c.uncachedStructurizrViews = append(c.uncachedStructurizrViews, view)
+		moduleViews[view.module] = append(moduleViews[view.module], view)
+	}
+
+	// Check each module's per-module builder output
+	for moduleName, views := range moduleViews {
+		builderOutputDir := paths.StructurizrModuleBuildOutputPath(c.repoRoot, moduleName)
+		indexPath := filepath.Join(builderOutputDir, "structurizr-index.json")
+
+		indexData, err := os.ReadFile(indexPath)
+		if err != nil {
+			// Builder output missing for this module - all its views are uncached
+			c.uncachedStructurizrViews = append(c.uncachedStructurizrViews, views...)
+			continue
+		}
+
+		// Parse index manifest
+		var idx struct {
+			Entries []struct {
+				Module      string `json:"module"`
+				ViewKey     string `json:"view_key"`
+				DSLHash     string `json:"dsl_hash"`
+				SVGFilename string `json:"svg_filename"`
+			} `json:"entries"`
+		}
+		if err := json.Unmarshal(indexData, &idx); err != nil {
+			// Corrupt index - treat all views for this module as uncached
+			c.uncachedStructurizrViews = append(c.uncachedStructurizrViews, views...)
+			continue
+		}
+
+		// Build lookup: "module:viewKey" -> exists
+		builtViews := make(map[string]bool, len(idx.Entries))
+		for _, entry := range idx.Entries {
+			key := entry.Module + ":" + entry.ViewKey
+			// Verify SVG file actually exists in builder output
+			svgPath := filepath.Join(builderOutputDir, entry.SVGFilename)
+			if _, err := os.Stat(svgPath); err == nil {
+				builtViews[key] = true
+			}
+		}
+
+		for _, view := range views {
+			key := view.module + ":" + view.viewKey
+			if !builtViews[key] {
+				c.uncachedStructurizrViews = append(c.uncachedStructurizrViews, view)
+			}
 		}
 	}
-	_ = cacheDir // Prevent unused variable warning
 	return nil
 }
 
 func (c *repositoryContext) allStructurizrViewsShouldHaveCachedSVGs() error {
 	if len(c.uncachedStructurizrViews) > 0 {
 		var details strings.Builder
-		details.WriteString(fmt.Sprintf("Found %d Structurizr view(s) missing from cache:\n\n", len(c.uncachedStructurizrViews)))
+		details.WriteString(fmt.Sprintf("Found %d Structurizr view(s) missing from build output:\n\n", len(c.uncachedStructurizrViews)))
 
 		for _, view := range c.uncachedStructurizrViews {
 			details.WriteString(fmt.Sprintf("  - %s:%s (hash %s)\n", view.module, view.viewKey, view.dslHash))
 		}
 
-		details.WriteString("\nRun 'r2r eac update structurizr' to update the Structurizr cache.\n")
+		details.WriteString("\nRun 'r2r eac build --module docs' to build the Structurizr diagrams.\n")
 		return fmt.Errorf("%s", details.String())
 	}
 	return nil

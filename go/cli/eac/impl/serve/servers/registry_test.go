@@ -30,7 +30,7 @@ func findRepoRoot(t *testing.T) string {
 func TestHasServer(t *testing.T) {
 	// Initialize tool system from default config
 	repoRoot := findRepoRoot(t)
-	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
+	registry, _, _, err := tool.InitializeFromConfig(repoRoot, "")
 	if err != nil {
 		t.Fatalf("failed to initialize tool system: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestHasServer(t *testing.T) {
 func TestGetAllServableTools(t *testing.T) {
 	// Initialize tool system from default config
 	repoRoot := findRepoRoot(t)
-	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
+	registry, _, _, err := tool.InitializeFromConfig(repoRoot, "")
 	if err != nil {
 		t.Fatalf("failed to initialize tool system: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestGetAllServableTools(t *testing.T) {
 func TestAllServersRegistered(t *testing.T) {
 	// Initialize tool system from default config
 	repoRoot := findRepoRoot(t)
-	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
+	registry, _, _, err := tool.InitializeFromConfig(repoRoot, "")
 	if err != nil {
 		t.Fatalf("failed to initialize tool system: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestAllServersRegistered(t *testing.T) {
 func TestGetServerToolByID(t *testing.T) {
 	// Initialize tool system from default config
 	repoRoot := findRepoRoot(t)
-	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
+	registry, _, _, err := tool.InitializeFromConfig(repoRoot, "")
 	if err != nil {
 		t.Fatalf("failed to initialize tool system: %v", err)
 	}

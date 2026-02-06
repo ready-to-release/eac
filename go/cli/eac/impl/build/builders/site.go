@@ -150,7 +150,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 	}
 
 	// Run preprocessing pipeline (pdfMode=false for site builds)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, false, opts.CacheConfig)
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, false)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return 1

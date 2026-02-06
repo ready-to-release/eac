@@ -5,6 +5,11 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/ai"      // register templates install ai
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/claude"   // register templates install claude
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/docs"     // register templates install docs
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/reports"  // register templates install reports
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/specs" // register templates install specs
 	eacgodog "github.com/ready-to-release/eac/go/godog"
 )
 

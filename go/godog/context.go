@@ -14,6 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/core/testing"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // TestContext wraps the core SharedTestContext with additional spec-specific state.
@@ -49,6 +50,11 @@ type TestContext struct {
 	// This is NOT for isolated/mocked test repositories - only the real repo.
 	// This dramatically improves performance by avoiding repeated git/file operations.
 	OriginalRepoCache *TestCache
+
+	// CommandDispatcher, when set, routes command execution in-process instead of
+	// spawning a subprocess. The function receives parsed command args (e.g., ["show", "test-results"])
+	// and returns (combined output, exit code). This dramatically speeds up BDD tests.
+	CommandDispatcher func(args []string) (string, int)
 }
 
 // NewTestContext creates a new test context.
@@ -267,6 +273,18 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		return fmt.Errorf("empty command")
 	}
 
+	// Use in-process dispatch if available (avoids subprocess overhead)
+	if c.CommandDispatcher != nil {
+		output, exitCode := c.CommandDispatcher(parts)
+		c.CommandOutput = output
+		c.ExitCode = exitCode
+		c.CommandError = nil
+		if exitCode != 0 {
+			c.CommandError = fmt.Errorf("exit code %d", exitCode)
+		}
+		return nil
+	}
+
 	// Try to use pre-built binary for better performance
 	cmd := c.createCommand(parts)
 
@@ -406,6 +424,7 @@ func (c *TestContext) formatCommandExecutionError(cmd *exec.Cmd, cmdLine string,
 // createCommand creates an exec.Cmd for running commands.
 // Uses paths.CommandsBinaryPath() to locate the pre-built binary.
 // The binary must exist - tests should have @depm:eac-cli dependency.
+// The command is placed in its own process group so it can be killed cleanly on timeout.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 	binaryPath := paths.CommandsBinaryPath(c.OriginalRepoRoot)
 
@@ -414,7 +433,9 @@ func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 		c.logBinaryNotFoundDiagnostics(binaryPath)
 	}
 
-	return exec.Command(binaryPath, parts...)
+	cmd := exec.Command(binaryPath, parts...)
+	tool.SetProcessGroup(cmd)
+	return cmd
 }
 
 // logBinaryNotFoundDiagnostics outputs comprehensive diagnostic information

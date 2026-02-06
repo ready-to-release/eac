@@ -3,6 +3,8 @@ package interfaces
 import (
 	"io"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // ExecutionPhase represents the phase of execution.
@@ -91,10 +93,8 @@ type UnitQueuedEvent struct {
 	Time        time.Time
 	ID          string // Globally unique ID (Longname: context:module:component:tool)
 	DisplayName string // Short display name (module:component)
-	Module      string
-	Component   string
-	Handler     string
 	Weight      int
+	Tags        workunit.TagSummary // Classified tag data (test UoWs only)
 }
 
 func (e UnitQueuedEvent) EventType() string    { return "unit_queued" }
@@ -168,6 +168,10 @@ type ToolStatusEvent struct {
 	// Container instance counts (for "Containers" lamps - actual processes, not tool types)
 	ContainerInstancesRunning int // Currently running container instances (lit lamps)
 	ContainerInstancesTotal   int // Total container instances started (total lamps)
+
+	// System tool instance counts (for "Native" lamps - actual invocations, not tool types)
+	SystemInvocationsRunning int // Currently running system tool invocations (lit lamps)
+	SystemInvocationsTotal   int // Total system tool invocations started (total lamps)
 }
 
 func (e ToolStatusEvent) EventType() string    { return "tool_status" }
@@ -209,6 +213,21 @@ type SummaryReadyEvent struct {
 func (e SummaryReadyEvent) EventType() string    { return "summary_ready" }
 func (e SummaryReadyEvent) Timestamp() time.Time { return e.Time }
 
+// ConfigReadyEvent is emitted when basic configuration is loaded.
+// This fires before module resolution, enabling progressive TUI display.
+type ConfigReadyEvent struct {
+	Time             time.Time
+	CommandName      string
+	ExecutionContext string
+	ParallelismMode  string
+	EffectiveWorkers int
+	WeightedCapacity int
+	OutputDir        string
+}
+
+func (e ConfigReadyEvent) EventType() string    { return "config_ready" }
+func (e ConfigReadyEvent) Timestamp() time.Time { return e.Time }
+
 // InitSummaryEvent provides structured init phase information.
 // This replaces tui.InitSummary with a generic representation.
 type InitSummaryEvent struct {
@@ -244,6 +263,14 @@ type UnitInfo struct {
 	ID          string
 	DisplayName string
 	Weight      int
+	Tags        workunit.TagSummary
+
+	// Structured identity (decomposed from UnitSpec/UnitID)
+	Module        string
+	Component     string
+	Tool          string
+	ComponentType string
+	Container     bool
 }
 
 // ParallelismInfo describes parallelism configuration.

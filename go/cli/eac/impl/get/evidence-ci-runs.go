@@ -35,6 +35,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 func init() {
@@ -133,7 +135,7 @@ func getEvidenceCIRuns(moniker, workspaceRoot string) (*EvidenceCIRunsResult, er
 	depsToCheck := getTransitiveDependencies(moniker, moduleRegistry)
 
 	// Create GitHub API client
-	api := github.NewGHClient(workspaceRoot)
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	result := &EvidenceCIRunsResult{
 		Module:  moniker,

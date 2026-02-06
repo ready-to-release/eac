@@ -2,6 +2,7 @@
 package aisummary
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -135,7 +136,7 @@ func getAnalysisWeight(analysisType string) int {
 }
 
 // aiSummaryUnitWorker executes a single AI analysis unit.
-func aiSummaryUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func aiSummaryUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	// Get module contract
 	moduleContract, exists := ctx.ModuleRegistry.Get(module)
 	if !exists {

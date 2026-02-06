@@ -2,7 +2,7 @@
 // Short: Get test execution results from test manifests
 // Long: Get test execution results from test manifests in structured format.
 // Long:
-// Long: This command reads test.manifest.json files from out/test/ and provides
+// Long: This command reads test UoW manifests from out/test/ and provides
 // Long: comprehensive test execution data including results, timing, coverage, and
 // Long: security control mappings. The output can be formatted as YAML, JSON, or TOML.
 // Long:
@@ -29,8 +29,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -43,7 +42,7 @@ func init() {
 func GetTestResults() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
 
@@ -85,33 +84,30 @@ func GetTestResults() int {
 			return nil, fmt.Errorf("failed to find repository root: %w", err)
 		}
 
-		// Load test manifests for specified modules (or all if no modules specified)
-		var manifestList []*implinternal.TestManifest
+		// Load test views from UoW manifests
+		var views []*testview.TestModuleView
 		if len(monikers) == 0 {
-			// No modules specified - scan all modules with test manifests
-			manifestList, err = manifests.LoadAllTestManifests(repoRoot)
+			views, err = testview.LoadAllTestViews(repoRoot)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load manifests: %w", err)
+				return nil, fmt.Errorf("failed to load test data: %w", err)
 			}
 		} else {
-			// Specific modules requested
-			manifestList, err = manifests.LoadTestManifestsForModules(repoRoot, monikers)
+			views, err = testview.LoadTestViewsForModules(repoRoot, monikers)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load manifests: %w", err)
+				return nil, fmt.Errorf("failed to load test data: %w", err)
 			}
 		}
 
-		if len(manifestList) == 0 {
+		if len(views) == 0 {
 			if len(monikers) == 0 {
 				return nil, fmt.Errorf("no test manifests found (run tests first)")
 			}
 			return nil, fmt.Errorf("no test manifests found for modules: %s (run tests first)", strings.Join(monikers, ", "))
 		}
 
-		// Use shared function to build complete test data
-		data := manifests.BuildCompleteTestData(manifestList)
+		// Build complete test data from UoW-based views
+		data := testview.BuildCompleteTestData(views)
 
-		// Return complete data structure
 		return data, nil
 	})
 }

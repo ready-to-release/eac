@@ -235,7 +235,7 @@ def cmd_render(args):
     from render import render_diagram
 
     try:
-        render_diagram(args.input, args.output)
+        render_diagram(args.input, args.output, max_width=args.max_width)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -350,6 +350,8 @@ Examples:
                                help="Input .drawio.png or decoded XML file")
     render_parser.add_argument("-o", "--output", required=True,
                                help="Output PNG file (rendered image)")
+    render_parser.add_argument("--max-width", type=int, default=0,
+                               help="Maximum output width in pixels (0 = no limit)")
 
     args = parser.parse_args()
 

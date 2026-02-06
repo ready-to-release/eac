@@ -39,9 +39,10 @@ eac update lint --no-tui
 
 ```text
 out/lint/<module>/
-├── lint.log              # Human-readable output
-├── lint.json             # Structured results (success/failure)
-└── lint.manifest.json    # Execution metadata
+├── <component>-<tool>/     # UoW directory (e.g., go-golangci-lint)
+│   ├── uow.manifest.json    # Execution metadata
+│   ├── lint.log              # Human-readable output
+│   └── lint.json             # Structured results (success/failure)
 ```
 
 ## See Also

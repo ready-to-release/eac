@@ -38,6 +38,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -49,7 +50,6 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/adapters/tui"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/runners"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
@@ -59,8 +59,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/platform"
 	"github.com/ready-to-release/eac/go/core/testing"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 var log = logging.C()
@@ -113,8 +113,18 @@ type TestExecutionContext struct {
 	results map[string]PackageResult
 }
 
-// PackageResult is an alias for manifests.PackageResult.
-type PackageResult = manifests.PackageResult
+// PackageResult holds per-package test execution results.
+type PackageResult struct {
+	ModuleMoniker string // Module this package belongs to (for aggregation)
+	PackageName   string
+	LogFilePath   string
+	TestsPassed   int
+	TestsFailed   int
+	TestsSkipped  int
+	TestsTotal    int
+	PackageFailed bool
+	Duration      time.Duration
+}
 
 // Test is the unified entry point for testing modules.
 func Test() int {
@@ -240,9 +250,9 @@ func parseTestArgs(args []string) *TestConfig {
 
 // createWorker returns an orchestrator worker function for test execution.
 func (ctx *TestExecutionContext) createWorker() orchestrator.WorkerFunc {
-	return func(pkgPath string, tuiWriter io.Writer) int {
+	return func(goCtx context.Context, pkgPath string, tuiWriter io.Writer) int {
 		tests := ctx.testsByPackage[pkgPath]
-		result := ctx.runPackageTests(pkgPath, tests, tuiWriter)
+		result := ctx.runPackageTests(goCtx, pkgPath, tests, tuiWriter)
 
 		ctx.mu.Lock()
 		ctx.results[pkgPath] = result
@@ -266,7 +276,7 @@ func (ctx *TestExecutionContext) getEffectiveTestRunDir(tests []testing.TestRefe
 
 // runPackageTests executes tests for a single package with streaming output
 // modulePath is the module-based path (e.g., core/config) used for output organization.
-func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []testing.TestReference, tuiWriter io.Writer) PackageResult {
+func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePath string, tests []testing.TestReference, tuiWriter io.Writer) PackageResult {
 	// Look up original package path for test execution
 	// modulePath is what the orchestrator uses for output directories
 	// originalPkgPath is what the runner uses to find test files
@@ -290,6 +300,7 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 
 	// Use the module path directly as the output path (orchestrator already uses this)
 	cfg := runners.RunConfig{
+		Ctx:              goCtx,
 		WorkspaceRoot:    ctx.workspaceRoot,
 		TestRunDir:       effectiveTestRunDir,
 		Coverage:         ctx.coverage,
@@ -316,7 +327,7 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 // runPackageTestsDirect executes tests for a single package.
 // The orchestrator (UoW) manages log files and output directories.
 // logWriter is provided by the orchestrator for all output.
-func (ctx *TestExecutionContext) runPackageTestsDirect(pkgPath string, tests []testing.TestReference, logWriter io.Writer) PackageResult {
+func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pkgPath string, tests []testing.TestReference, logWriter io.Writer) PackageResult {
 	// Determine test type and get appropriate runner
 	testType := getPackageTestType(tests)
 	testRunner := runners.Get(testType)
@@ -325,6 +336,7 @@ func (ctx *TestExecutionContext) runPackageTestsDirect(pkgPath string, tests []t
 	effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
 
 	cfg := runners.RunConfig{
+		Ctx:            goCtx,
 		WorkspaceRoot:  ctx.workspaceRoot,
 		TestRunDir:     effectiveTestRunDir,
 		Coverage:       ctx.coverage,
@@ -408,18 +420,19 @@ func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests
 	fmt.Fprintf(logFile, "Command: npx %s\n\n", strings.Join(args, " "))
 
 	// Execute npx cucumber-js
-	wrappedName, wrappedArgs := platform.WrapCommand("npx", args...)
-	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = moduleRoot
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
-
-	// Capture output
-	output, runErr := cmd.CombinedOutput()
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("npx")
+	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    moduleRoot,
+		FullEnv:       fullEnv,
+		ArgsOverrides: args,
+	}
+	execResult, runErr := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	output := append(execResult.Stdout, execResult.Stderr...)
 	fmt.Fprintf(logFile, "%s\n", output)
 
 	// Parse results
-	if runErr != nil {
+	if runErr != nil || execResult.ExitCode != 0 {
 		result.PackageFailed = true
 		result.TestsFailed = len(tests)
 		fmt.Fprintf(tuiWriter, "❌ cucumber-js failed\n")
@@ -479,18 +492,19 @@ func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []te
 	fmt.Fprintf(logFile, "Command: npm %s\n\n", strings.Join(args, " "))
 
 	// Execute npm test
-	wrappedName, wrappedArgs := platform.WrapCommand("npm", args...)
-	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = moduleRoot
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
-
-	// Capture output
-	output, runErr := cmd.CombinedOutput()
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
+	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
+	execCtx := &tool.ExecutionContext{
+		ModuleRoot:    moduleRoot,
+		FullEnv:       fullEnv,
+		ArgsOverrides: args,
+	}
+	execResult, runErr := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	output := append(execResult.Stdout, execResult.Stderr...)
 	fmt.Fprintf(logFile, "%s\n", output)
 
 	// Parse results
-	if runErr != nil {
+	if runErr != nil || execResult.ExitCode != 0 {
 		result.PackageFailed = true
 		result.TestsFailed = len(tests)
 		fmt.Fprintf(tuiWriter, "❌ mocha tests failed\n")
@@ -517,6 +531,7 @@ func (ctx *TestExecutionContext) collectResults() []PackageResult {
 }
 
 // newCommand creates a new exec.Cmd (abstraction for testing).
+// Kept as exec.Command for test mock injection.
 var newCommand = func(name string, args ...string) *exec.Cmd {
 	return exec.Command(name, args...)
 }
@@ -636,7 +651,7 @@ func testTUISummary(
 	// Format suite name(s) for display
 	displaySuiteNames := suiteName
 	suiteLabel := "suite"
-	if suitesIncluded := manifests.GetSuitesIncluded(suiteMoniker); len(suitesIncluded) > 0 {
+	if suitesIncluded := getSuitesIncluded(suiteMoniker); len(suitesIncluded) > 0 {
 		displaySuiteNames = strings.Join(suitesIncluded, ", ")
 		suiteLabel = "suite(s)"
 	}

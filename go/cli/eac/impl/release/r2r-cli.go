@@ -16,15 +16,16 @@
 package release
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -205,8 +206,7 @@ func buildTagName(moduleName, version string) string {
 
 // tagExists checks if a git tag already exists.
 func tagExists(tagName string) bool {
-	cmd := exec.Command("git", "tag", "-l", tagName)
-	output, err := cmd.Output()
+	output, err := gitexec.Run(".", "tag", "-l", tagName)
 	if err != nil {
 		return false
 	}
@@ -217,16 +217,10 @@ func tagExists(tagName string) bool {
 
 // createGitTag creates a git tag with the given name.
 func createGitTag(tagName string) error {
-	cmd := exec.Command("git", "tag", "-a", tagName, "-m", fmt.Sprintf("Release %s", tagName))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return gitexec.RunSilent(context.Background(), ".", "tag", "-a", tagName, "-m", fmt.Sprintf("Release %s", tagName))
 }
 
 // pushGitTag pushes a git tag to the remote repository.
 func pushGitTag(tagName string) error {
-	cmd := exec.Command("git", "push", "origin", tagName)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return gitexec.RunSilent(context.Background(), ".", "push", "origin", tagName)
 }

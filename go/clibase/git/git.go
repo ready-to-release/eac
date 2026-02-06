@@ -2,15 +2,14 @@
 package git
 
 import (
-	"os/exec"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/clibase/gitexec"
 )
 
 // GetCommitSHA returns the current git commit SHA for the workspace.
 func GetCommitSHA(workspaceRoot string) string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
+	output, err := gitexec.Run(workspaceRoot, "rev-parse", "HEAD")
 	if err != nil {
 		return ""
 	}
