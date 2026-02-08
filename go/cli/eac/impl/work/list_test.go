@@ -56,8 +56,8 @@ func TestParseListConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work list <args>)
-			os.Args = append([]string{"r2r", "work", "list"}, tt.args...)
+			// Set test args (simulate command: clie work list <args>)
+			os.Args = append([]string{"clie", "work", "list"}, tt.args...)
 
 			config, err := parseListConfig()
 			if err != nil {

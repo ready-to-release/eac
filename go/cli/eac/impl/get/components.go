@@ -26,14 +26,9 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetComponents)
-}
 
 // componentFilters holds the parsed filter flags.
 type componentFilters struct {

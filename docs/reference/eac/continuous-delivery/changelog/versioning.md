@@ -173,7 +173,7 @@ Version comparison rules:
 **Current status:**
 
 - Repository: `0.0.2` (pre-1.0 development)
-- r2r-cli: May be 1.x (stable)
+- clie-cli: May be 1.x (stable)
 
 ## Calendar Versioning
 
@@ -238,8 +238,8 @@ Version comparison rules:
 | Module            | Versioning      | Rationale                               |
 | ----------------- | --------------- | --------------------------------------- |
 | repository        | SemVer          | Repository infrastructure and contracts |
-| r2r-cli           | SemVer          | CLI application with API                |
-| ext-eac           | SemVer          | Docker extension with interface         |
+| clie-cli           | SemVer          | CLI application with API                |
+| eac-ext           | SemVer          | Docker extension with interface         |
 | vscode-commit     | SemVer          | VSCode extension with API               |
 | docs              | CalVer          | Documentation site (time-based)         |
 | books             | CalVer          | PDF documentation (time-based)          |
@@ -306,12 +306,12 @@ repository/0.0.2
 **Modules (SemVer):**
 
 ```text
-r2r-cli/1.0.0
-r2r-cli/1.1.0
-r2r-cli/2.0.0
+clie-cli/1.0.0
+clie-cli/1.1.0
+clie-cli/2.0.0
 
-ext-eac/0.1.0
-ext-eac/0.2.0
+eac-ext/0.1.0
+eac-ext/0.2.0
 ```
 
 **Modules (CalVer):**
@@ -334,8 +334,8 @@ git tag {moniker}/{version}
 git push origin {moniker}/{version}
 
 # Examples
-git tag r2r-cli/1.3.0
-git push origin r2r-cli/1.3.0
+git tag clie-cli/1.3.0
+git push origin clie-cli/1.3.0
 
 git tag docs/2025.12.15
 git push origin docs/2025.12.15
@@ -348,7 +348,7 @@ git push origin docs/2025.12.15
 git tag
 
 # List tags for specific module
-git tag -l 'r2r-cli/*'
+git tag -l 'clie-cli/*'
 
 # List tags with dates
 git tag -l --format='%(refname:short) %(creatordate:short)'
@@ -364,8 +364,8 @@ git tag -d {moniker}/{version}
 git push --delete origin {moniker}/{version}
 
 # Example
-git tag -d r2r-cli/1.3.0
-git push --delete origin r2r-cli/1.3.0
+git tag -d clie-cli/1.3.0
+git push --delete origin clie-cli/1.3.0
 ```
 
 ## Version Comparison

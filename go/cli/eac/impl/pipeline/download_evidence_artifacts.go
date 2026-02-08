@@ -10,8 +10,8 @@
 // Long: Fails if any dependency with a CI workflow has no successful CI run.
 // Long:
 // Long: Example:
-// Long:   pipeline download-evidence-artifacts r2r-cli
-// Long:   pipeline download-evidence-artifacts ext-eac --output-dir custom/path
+// Long:   pipeline download-evidence-artifacts clie-cli
+// Long:   pipeline download-evidence-artifacts eac-ext --output-dir custom/path
 // Args: module (required) - Module moniker to download evidence artifacts for
 // Flag.output-dir: type=string, default=out, usage=Base output directory (test/ and scan/ subdirs will be created)
 package pipeline
@@ -26,15 +26,10 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineDownloadEvidenceArtifacts)
-}
 
 // DownloadResult tracks what was downloaded.
 type DownloadResult struct {

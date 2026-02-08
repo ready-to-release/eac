@@ -32,7 +32,7 @@ func NewMapper(registry *modules.Registry, baseModulePath string) *Mapper {
 func (m *Mapper) buildMappings() {
 	for _, module := range m.registry.All() {
 		// Build expected module path from go package root
-		// Example: go package root = "go/cli/r2r" -> module path = "github.com/ready-to-release/eac/go/cli/r2r"
+		// Example: go package root = "go/cli/clie" -> module path = "github.com/ready-to-release/eac/go/cli/clie"
 		goRoot := module.GetComponentRoot("go")
 		if goRoot == "" {
 			continue // Skip modules without go package
@@ -54,7 +54,7 @@ func (m *Mapper) buildMappings() {
 }
 
 // GetMonikerFromPath converts a go.mod module path to a module moniker
-// Example: "github.com/ready-to-release/eac/go/cli/r2r" -> "r2r-cli".
+// Example: "github.com/ready-to-release/eac/go/cli/clie" -> "clie-cli".
 func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	if moniker, ok := m.pathToMoniker[modulePath]; ok {
 		return moniker, nil
@@ -89,7 +89,7 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 }
 
 // GetPathFromMoniker converts a module moniker to a go.mod module path
-// Example: "r2r-cli" -> "github.com/ready-to-release/eac/go/cli/r2r".
+// Example: "clie-cli" -> "github.com/ready-to-release/eac/go/cli/clie".
 func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 	if path, ok := m.monikerToPath[moniker]; ok {
 		return path, nil
@@ -110,7 +110,7 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 }
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
-// Example: "go/cli/r2r" -> "r2r-cli"
+// Example: "go/cli/clie" -> "clie-cli"
 // Also handles subdirectories: "go/eac/core/ai" -> "core".
 func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators

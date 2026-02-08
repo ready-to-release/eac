@@ -185,8 +185,8 @@ func TestFormatDockerVolume(t *testing.T) {
 	}{
 		{
 			name:     "Windows absolute path",
-			input:    `C:\source\everything-as-code\eac\specs\r2r-cli\.design`,
-			expected: "/c/source/everything-as-code/eac/specs/r2r-cli/.design",
+			input:    `C:\source\everything-as-code\eac\specs\clie-cli\.design`,
+			expected: "/c/source/everything-as-code/eac/specs/clie-cli/.design",
 		},
 		{
 			name:     "Windows path with different drive",
@@ -200,8 +200,8 @@ func TestFormatDockerVolume(t *testing.T) {
 		},
 		{
 			name:     "Relative path (no conversion)",
-			input:    "specs/r2r-cli/.design",
-			expected: "specs/r2r-cli/.design",
+			input:    "specs/clie-cli/.design",
+			expected: "specs/clie-cli/.design",
 		},
 	}
 

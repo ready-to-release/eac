@@ -13,28 +13,28 @@ import (
 const (
 	// EnvHostRepoRoot is the environment variable that contains the host repository root
 	// when running inside a Docker container (DinD mode).
-	EnvHostRepoRoot = "R2R_HOST_REPOROOT"
+	EnvHostRepoRoot = "CLIE_HOST_REPOROOT"
 
 	// EnvContainerRepoRoot is the environment variable that contains the container's
 	// view of the repository root (typically /var/task).
-	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
+	EnvContainerRepoRoot = "CLIE_CONTAINER_REPOROOT"
 
-	// EnvDockerMode is explicitly set by r2r CLI when launching containers.
-	EnvDockerMode = "R2R_DOCKER_MODE"
+	// EnvDockerMode is explicitly set by clie CLI when launching containers.
+	EnvDockerMode = "CLIE_DOCKER_MODE"
 
 	// DefaultContainerRepoRoot is the default path where the repository is mounted
-	// inside the r2r CLI container.
+	// inside the clie CLI container.
 	DefaultContainerRepoRoot = "/var/task"
 )
 
 // IsDinD returns true if running inside a Docker container (DinD mode).
 // Uses multiple signals for robust detection:
-// 1. R2R_HOST_REPOROOT environment variable (primary indicator)
-// 2. R2R_DOCKER_MODE explicit flag
+// 1. CLIE_HOST_REPOROOT environment variable (primary indicator)
+// 2. CLIE_DOCKER_MODE explicit flag
 // 3. Windows host path while running on Linux
 // 4. /.dockerenv file exists.
 func IsDinD() bool {
-	// Primary check: R2R_HOST_REPOROOT is set
+	// Primary check: CLIE_HOST_REPOROOT is set
 	if os.Getenv(EnvHostRepoRoot) != "" {
 		return true
 	}
@@ -44,8 +44,8 @@ func IsDinD() bool {
 		return true
 	}
 
-	// Fallback: R2R_HOST_REPOROOT is set with Windows path but we're on Linux
-	// This catches old r2r CLI binaries that don't set R2R_DOCKER_MODE
+	// Fallback: CLIE_HOST_REPOROOT is set with Windows path but we're on Linux
+	// This catches old clie CLI binaries that don't set CLIE_DOCKER_MODE
 	hostRoot := os.Getenv(EnvHostRepoRoot)
 	if hostRoot != "" && runtime.GOOS == "linux" {
 		// Windows paths have backslashes or drive letters
@@ -63,7 +63,7 @@ func IsDinD() bool {
 }
 
 // GetHostRepoRoot returns the host's repository root path.
-// In DinD mode, this comes from the R2R_HOST_REPOROOT environment variable.
+// In DinD mode, this comes from the CLIE_HOST_REPOROOT environment variable.
 // In direct host mode, this returns an error as the repository root must be determined elsewhere.
 func GetHostRepoRoot() (string, error) {
 	if hostRoot := os.Getenv(EnvHostRepoRoot); hostRoot != "" {
@@ -90,7 +90,7 @@ func GetContainerRepoRoot() (string, error) {
 //
 // In DinD mode:
 //   - Input path is relative to container repo root (/var/task)
-//   - Output path is translated to host repo root (R2R_HOST_REPOROOT)
+//   - Output path is translated to host repo root (CLIE_HOST_REPOROOT)
 //
 // In direct host mode:
 //   - Path is returned unchanged (already a host path)
@@ -98,7 +98,7 @@ func GetContainerRepoRoot() (string, error) {
 // Example (DinD mode):
 //
 //	Input: /var/task/docs
-//	R2R_HOST_REPOROOT: C:\projects\eac
+//	CLIE_HOST_REPOROOT: C:\projects\eac
 //	Output: C:\projects\eac\docs
 func TranslatePathForMount(localPath string) (string, error) {
 	if !IsDinD() {

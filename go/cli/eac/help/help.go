@@ -24,9 +24,9 @@ func PrintHelp(w io.Writer, reg *registry.CommandRegistration, subRegs map[strin
 
 	// Print usage
 	if reg.IsParent {
-		fmt.Fprintf(w, "Usage: r2r %s <subcommand> [args...]\n", reg.ActualCommand)
+		fmt.Fprintf(w, "Usage: clie %s <subcommand> [args...]\n", reg.ActualCommand)
 	} else {
-		fmt.Fprintf(w, "Usage: r2r %s [flags]\n", reg.ActualCommand)
+		fmt.Fprintf(w, "Usage: clie %s [flags]\n", reg.ActualCommand)
 	}
 	fmt.Fprintln(w)
 
@@ -103,6 +103,6 @@ func PrintHelp(w io.Writer, reg *registry.CommandRegistration, subRegs map[strin
 
 	// Print footer for parent commands
 	if reg.IsParent {
-		fmt.Fprintf(w, "Use 'r2r %s <subcommand> --help' for more information about a command.\n", reg.ActualCommand)
+		fmt.Fprintf(w, "Use 'clie %s <subcommand> --help' for more information about a command.\n", reg.ActualCommand)
 	}
 }

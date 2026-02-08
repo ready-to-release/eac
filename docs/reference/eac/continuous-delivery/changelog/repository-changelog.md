@@ -96,7 +96,7 @@ Changes to repository-level configuration:
 ```markdown
 ### Added
 - feat: commands for docs and design
-- feat(multi-module): add ext-eac Docker extension and CI/CD workflows
+- feat(multi-module): add eac-ext Docker extension and CI/CD workflows
 
 ### Changed
 - chore(multi-module): restructure testing framework and add module isolation

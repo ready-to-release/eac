@@ -21,6 +21,8 @@ var (
 	schemaValidatorErr  error
 )
 
+var reEnvVarSubstitution = regexp.MustCompile(`\$\{([^}]+)\}`)
+
 // LoadConfig loads and parses agent configuration from a single file.
 // For full team+personal merge behavior, use LoadConfigWithOverrides.
 func LoadConfig(path string) (*Config, error) {
@@ -101,10 +103,10 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 }
 
 // loadAIProviderDefaults loads AI provider defaults from contracts folder.
-// Container-aware: uses R2R_CONTAINER_ROOT when running in container.
+// Container-aware: uses CLIE_CONTAINER_ROOT when running in container.
 func loadAIProviderDefaults(repoRoot string) (*Config, error) {
 	root := repoRoot
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		root = containerRoot
 	}
 	if root == "" {
@@ -290,7 +292,7 @@ func applyEnvVarSubstitution(config *Config) error {
 //   - No side effects - doesn't modify environment
 func substituteEnvVars(s string) (string, []string) {
 	var missing []string
-	re := regexp.MustCompile(`\$\{([^}]+)\}`)
+	re := reEnvVarSubstitution
 	result := re.ReplaceAllStringFunc(s, func(match string) string {
 		// Extract VAR_NAME from ${VAR_NAME}
 		varName := match[2 : len(match)-1]

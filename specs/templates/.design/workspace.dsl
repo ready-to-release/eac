@@ -3,7 +3,7 @@ workspace "Templates" "Reusable templates for specifications and documentation" 
     model {
         # External systems
         eac_commands = softwareSystem "EAC Commands" "Applies templates" "Consumer"
-        r2r_cli = softwareSystem "R2R CLI" "Template installation" "Consumer"
+        clie_cli = softwareSystem "CLIE CLI" "Template installation" "Consumer"
 
         # Templates system
         templates = softwareSystem "Templates" "Reusable templates for project artifacts" {
@@ -25,7 +25,7 @@ workspace "Templates" "Reusable templates for specifications and documentation" 
 
         # Relationships
         eac_commands -> templates "Applies templates from"
-        r2r_cli -> templates "Installs templates from"
+        clie_cli -> templates "Installs templates from"
         spec_templates -> eac_commands "Provides risk control specs to"
     }
 

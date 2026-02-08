@@ -12,9 +12,9 @@
 // Long:   - Exit code 1 if any dependency CI failed or timeout occurred
 // Long:
 // Long: Example:
-// Long:   release await-deps ext-eac                    # Check deps for ext-eac
-// Long:   release await-deps ext-eac --timeout 600     # Wait up to 10 minutes
-// Long:   release await-deps ext-eac --skip-static     # Skip static modules (default)
+// Long:   release await-deps eac-ext                    # Check deps for eac-ext
+// Long:   release await-deps eac-ext --timeout 600     # Wait up to 10 minutes
+// Long:   release await-deps eac-ext --skip-static     # Skip static modules (default)
 // Flag.timeout: type=int, usage=Maximum wait time per dependency in seconds (default: 300)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
 // Flag.skip-static: type=bool, usage=Skip static modules without CI workflows (default: true)
@@ -34,14 +34,9 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ReleaseAwaitDeps)
-}
 
 // DepCIStatus represents the CI status for a dependency.
 type DepCIStatus struct {
@@ -578,7 +573,7 @@ func printAwaitDepsUsage() {
 	log.Info("  DEPS_LIST=\"dep1,dep2,...\"")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  release await-deps ext-eac")
-	log.Info("  release await-deps ext-eac --timeout 600")
-	log.Info("  eval $(release await-deps ext-eac --format shell)")
+	log.Info("  release await-deps eac-ext")
+	log.Info("  release await-deps eac-ext --timeout 600")
+	log.Info("  eval $(release await-deps eac-ext --format shell)")
 }

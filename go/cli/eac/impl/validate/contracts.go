@@ -26,16 +26,11 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(ValidateContracts)
-}
 
 // ValidateContracts validates all repository contracts against JSON schemas.
 func ValidateContracts() int {

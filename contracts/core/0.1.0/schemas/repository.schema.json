@@ -550,7 +550,7 @@
       "properties": {
         "title_format": {
           "type": "string",
-          "description": "Release title template with placeholders. Use {label} for version, {label_version} for explicit version. Example: '{r2r} ({r2r_version}) + {eac} ({eac_version})'"
+          "description": "Release title template with placeholders. Use {label} for version, {label_version} for explicit version. Example: '{clie} ({clie_version}) + {eac} ({eac_version})'"
         },
         "headline": {
           "type": "object",
@@ -889,7 +889,7 @@
       "properties": {
         "tag_format": {
           "type": "string",
-          "description": "Expected format of release tags on images. Use {module} and {version} placeholders. Example: '{module}/{version}' matches 'ext-eac/1.0.0'",
+          "description": "Expected format of release tags on images. Use {module} and {version} placeholders. Example: '{module}/{version}' matches 'eac-ext/1.0.0'",
           "default": "{module}/{version}"
         }
       }

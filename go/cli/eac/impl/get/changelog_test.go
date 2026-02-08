@@ -24,7 +24,7 @@ func TestGetChangelog(t *testing.T) {
 		},
 		{
 			name:         "valid module",
-			args:         []string{"eac", "get", "changelog", "ext-eac"},
+			args:         []string{"eac", "get", "changelog", "eac-ext"},
 			wantErr:      false,
 			expectedExit: 0,
 		},

@@ -57,20 +57,20 @@ func TestValidateChangelog_DefaultPath(t *testing.T) {
 	// Use mock registry with a SemVer module using default changelog path
 	// Note: Only SemVer modules get the default release/{moniker}/CHANGELOG.md path
 	moduleRegistry := eactesting.NewMockRegistry(
-		eactesting.WithModule("r2r-cli",
+		eactesting.WithModule("clie-cli",
 			eactesting.WithSemver(),
 			// No explicit changelog = uses default path for SemVer
 			eactesting.WithReleaseType("published"),
 		),
 	)
 
-	moduleContract, exists := moduleRegistry.Get("r2r-cli")
+	moduleContract, exists := moduleRegistry.Get("clie-cli")
 	require.True(t, exists, "mock module should always exist")
 
-	result := validateChangelog("r2r-cli", moduleContract, workspaceRoot)
+	result := validateChangelog("clie-cli", moduleContract, workspaceRoot)
 
-	assert.Equal(t, "r2r-cli", result.Module)
-	expectedPath := "release/r2r-cli/CHANGELOG.md"
+	assert.Equal(t, "clie-cli", result.Module)
+	expectedPath := "release/clie-cli/CHANGELOG.md"
 	assert.Equal(t, expectedPath, result.Path)
 }
 
@@ -100,8 +100,8 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 func TestValidateRelease_PublishedModules(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	// Published SemVer modules with versioning: r2r-cli, ext-eac (docs is CalVer, no changelog)
-	publishedModules := []string{"r2r-cli", "ext-eac"}
+	// Published SemVer modules with versioning: clie-cli, eac-ext (docs is CalVer, no changelog)
+	publishedModules := []string{"clie-cli", "eac-ext"}
 
 	for _, moniker := range publishedModules {
 		t.Run(moniker, func(t *testing.T) {

@@ -87,8 +87,8 @@ func TestParsePullConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work pull <args>)
-			os.Args = append([]string{"r2r", "work", "pull"}, tt.args...)
+			// Set test args (simulate command: clie work pull <args>)
+			os.Args = append([]string{"clie", "work", "pull"}, tt.args...)
 
 			config, err := parsePullConfig()
 			if err != nil {
@@ -111,7 +111,7 @@ func TestPullConfigDefaults(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "pull"}
+	os.Args = []string{"clie", "work", "pull"}
 
 	config, err := parsePullConfig()
 	if err != nil {
@@ -177,7 +177,7 @@ func TestValidatePullEnvironment(t *testing.T) {
 
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
-				GitOps:   internal.GetGitOps("."),
+				GitOps:   internal.NewDefaultGitOps("."),
 				RepoRoot: ".",
 				Logger:   logger,
 			}
@@ -217,7 +217,7 @@ func TestPullConfigWorktreeBranchDetection(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "pull"}
+	os.Args = []string{"clie", "work", "pull"}
 
 	config, err := parsePullConfig()
 	if err != nil {

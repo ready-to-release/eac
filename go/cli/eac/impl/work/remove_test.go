@@ -95,8 +95,8 @@ func TestParseRemoveConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work remove <args>)
-			os.Args = append([]string{"r2r", "work", "remove"}, tt.args...)
+			// Set test args (simulate command: clie work remove <args>)
+			os.Args = append([]string{"clie", "work", "remove"}, tt.args...)
 
 			config, err := parseRemoveConfig()
 			if err != nil {
@@ -119,7 +119,7 @@ func TestRemoveConfigDefaults(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "remove"}
+	os.Args = []string{"clie", "work", "remove"}
 
 	config, err := parseRemoveConfig()
 	if err != nil {
@@ -179,7 +179,7 @@ func TestValidateRemoveEnvironment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
-				GitOps:   internal.GetGitOps("."),
+				GitOps:   internal.NewDefaultGitOps("."),
 				RepoRoot: ".",
 			}
 

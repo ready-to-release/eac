@@ -81,14 +81,14 @@ Rule: Creates project directory structure
   @ov
   Scenario: Initialize in empty directory
     Given I am in an empty folder
-    When I run "r2r init"
-    Then a file named "r2r.yaml" should be created
+    When I run "cli init"
+    Then a file named "cli.yaml" should be created
     And a directory named "src/" should exist
 
   @ov
   Scenario: Initialize in existing project
-    Given I am in a directory with "r2r.yaml"
-    When I run "r2r init"
+    Given I am in a directory with "cli.yaml"
+    When I run "cli init"
     Then the command should fail
     And stderr should contain "already initialized"
 ```
@@ -350,8 +350,8 @@ flowchart TD
 | Specification (WHAT)             | Implementation (HOW)                 |
 | -------------------------------- | ------------------------------------ |
 | `Given I have an account`        | `testDB.CreateUser(username, hash)`  |
-| `When I run "r2r login"`         | `exec.Command("r2r", "login").Run()` |
-| `Then I should be authenticated` | `os.ReadFile("~/.r2r/session")`      |
+| `When I run "cli login"`         | `exec.Command("cli", "login").Run()` |
+| `Then I should be authenticated` | `os.ReadFile("~/.cli/session")`      |
 
 **Key Insight**:
 
@@ -380,9 +380,9 @@ Rule: Valid credentials grant access
   @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
-    When I run "r2r login --user admin --password secret"
+    When I run "cli login --user admin --password secret"
     Then I should be authenticated
-    And my session token should be stored in ~/.r2r/session
+    And my session token should be stored in ~/.cli/session
     And I should see "Login successful"
 ```
 
@@ -394,14 +394,14 @@ Rule: Valid credentials grant access within rate limits
   @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
-    When I run "r2r login --user admin --password secret"
+    When I run "cli login --user admin --password secret"
     Then I should be authenticated
-    And my session token should be stored in ~/.r2r/session
+    And my session token should be stored in ~/.cli/session
 
   @ov
   Scenario: User exceeds login attempt rate limit
     Given I have failed to login 5 times in the last minute
-    When I run "r2r login --user admin --password secret"
+    When I run "cli login --user admin --password secret"
     Then I should see "Rate limit exceeded. Try again in 60 seconds"
     And I should not be authenticated
 ```

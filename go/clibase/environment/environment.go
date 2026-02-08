@@ -13,7 +13,7 @@ import (
 // Env captures execution environment flags.
 type Env struct {
 	IsCI           bool // Running in CI (GitHub Actions, GitLab CI, etc.)
-	IsContainer    bool // Running in r2r-cli container
+	IsContainer    bool // Running in clie-cli container
 	IsTestContext  bool // Running inside a test harness
 	IsLocalConsole bool // Interactive local development
 }
@@ -22,10 +22,10 @@ type Env struct {
 // It checks for common test context environment variables.
 func Detect() *Env {
 	return DetectWithTestVars(
-		environments.EnvR2RTestRunID,
+		environments.EnvCLIETestRunID,
 		environments.EnvGodogFormat,
-		environments.EnvR2RMockSecurity,
-		environments.EnvR2RMockDocker,
+		environments.EnvCLIEMockSecurity,
+		environments.EnvCLIEMockDocker,
 	)
 }
 
@@ -35,7 +35,7 @@ func DetectWithTestVars(testEnvVars ...string) *Env {
 		IsCI: os.Getenv(environments.EnvCI) != "" ||
 			os.Getenv(environments.EnvGitHubActions) != "" ||
 			os.Getenv(environments.EnvGitLabCI) != "",
-		IsContainer: logging.GetExecutionContext() == logging.ContextR2RCLI,
+		IsContainer: logging.GetExecutionContext() == logging.ContextCLIECLI,
 	}
 
 	for _, v := range testEnvVars {

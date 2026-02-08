@@ -6,7 +6,7 @@ Examples
 
 - EAC — Everything as Code (the system used in this repo)
 - MCP — Model Context Protocol
-- R2R — Repository‑to‑Release CLI
+- CLIE — Repository‑to‑Release CLI
 
 Conventions
 

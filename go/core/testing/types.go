@@ -22,7 +22,7 @@ type TestReference struct {
 
 	// Dependency tracking
 	SystemDependencies []string // System deps extracted from @deps:<name> (e.g., "docker", "git")
-	ModuleDependencies []string // Module deps extracted from @depm:<module> (e.g., "r2r-cli", "eac-cli")
+	ModuleDependencies []string // Module deps extracted from @depm:<module> (e.g., "clie-cli", "eac-cli")
 
 	// Risk control linkage
 	RiskControls []string // All @risk-control:<name>-<id> references

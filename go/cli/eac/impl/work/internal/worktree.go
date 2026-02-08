@@ -20,7 +20,7 @@ type Worktree struct {
 
 // GetWorktrees returns all worktrees in the repository.
 func GetWorktrees(repoRoot string) ([]Worktree, error) {
-	return GetGitOps(repoRoot).ListWorktrees()
+	return NewDefaultGitOps(repoRoot).ListWorktrees()
 }
 
 // parseWorktreeList parses the output of `git worktree list --porcelain`.
@@ -118,9 +118,9 @@ func GenerateWorktreePath(repoName, branchName string) string {
 
 // IsWorktreeClean checks if a worktree has uncommitted changes.
 func IsWorktreeClean(path string) (bool, error) {
-	// Note: GetGitOps requires repoRoot, but IsWorktreeClean in GitOps
+	// Note: NewDefaultGitOps requires repoRoot, but IsWorktreeClean in GitOps
 	// uses the path parameter as the directory, so we pass path as repoRoot
-	return GetGitOps(path).IsWorktreeClean(path)
+	return NewDefaultGitOps(path).IsWorktreeClean(path)
 }
 
 // GetRepoName extracts the repository name from the repo root path.
@@ -142,12 +142,12 @@ func WorktreeExists(branch, repoRoot string) (bool, error) {
 
 // BranchExists checks if a branch exists in the repository.
 func BranchExists(branch, repoRoot string) (bool, error) {
-	return GetGitOps(repoRoot).BranchExists(branch)
+	return NewDefaultGitOps(repoRoot).BranchExists(branch)
 }
 
 // GetCurrentBranch returns the current branch name.
 func GetCurrentBranch(path string) (string, error) {
-	return GetGitOps(path).GetCurrentBranch(path)
+	return NewDefaultGitOps(path).GetCurrentBranch(path)
 }
 
 // EnsureInGitRepo checks if we're in a git repository.

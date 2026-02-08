@@ -26,12 +26,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowApproveSummary)
-}
 
 // ShowApproveSummary generates a release approval summary.
 func ShowApproveSummary() int {

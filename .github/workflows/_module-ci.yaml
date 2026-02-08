@@ -26,29 +26,29 @@
 #
 # For modules needing Windows testing:
 #   jobs:
-#     ci-r2r-cli:
+#     ci-clie-cli:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
-#         module: r2r-cli
+#         module: clie-cli
 #         test-on-windows: true
 #         cross-compile-windows: true
 #
 # For modules needing macOS testing:
 #   jobs:
-#     ci-r2r-cli:
+#     ci-clie-cli:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
-#         module: r2r-cli
+#         module: clie-cli
 #         test-on-macos: true
 #
 # For container modules:
 #   jobs:
-#     ci-ext-eac:
+#     ci-eac-ext:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
-#         module: ext-eac
+#         module: eac-ext
 #         container: true
-#         download-modules: r2r-cli  # Specific modules needed for integration testing
+#         download-modules: clie-cli  # Specific modules needed for integration testing
 
 name: Module CI
 

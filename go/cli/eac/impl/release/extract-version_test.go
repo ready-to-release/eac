@@ -17,11 +17,11 @@ func TestExtractVersionLogic_TagRef(t *testing.T) {
 	}{
 		{
 			name:        "semver from tag ref",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
-			ref:         "refs/tags/r2r-cli/1.2.3",
+			ref:         "refs/tags/clie-cli/1.2.3",
 			wantVersion: "1.2.3",
-			wantTag:     "r2r-cli/1.2.3",
+			wantTag:     "clie-cli/1.2.3",
 			wantValid:   true,
 		},
 		{
@@ -35,26 +35,26 @@ func TestExtractVersionLogic_TagRef(t *testing.T) {
 		},
 		{
 			name:        "invalid semver with v prefix",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
-			ref:         "refs/tags/r2r-cli/v1.2.3",
+			ref:         "refs/tags/clie-cli/v1.2.3",
 			wantVersion: "v1.2.3",
-			wantTag:     "r2r-cli/v1.2.3",
+			wantTag:     "clie-cli/v1.2.3",
 			wantValid:   false,
 		},
 		{
 			name:        "explicit version semver",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
 			ref:         "",
 			version:     "2.0.0",
 			wantVersion: "2.0.0",
-			wantTag:     "r2r-cli/2.0.0",
+			wantTag:     "clie-cli/2.0.0",
 			wantValid:   true,
 		},
 		{
 			name:        "no version provided semver",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
 			ref:         "",
 			version:     "",
@@ -73,12 +73,12 @@ func TestExtractVersionLogic_TagRef(t *testing.T) {
 			wantValid:   true,
 		},
 		{
-			name:        "ext-eac semver from tag",
-			module:      "ext-eac",
+			name:        "eac-ext semver from tag",
+			module:      "eac-ext",
 			versionType: "semver",
-			ref:         "refs/tags/ext-eac/0.5.0",
+			ref:         "refs/tags/eac-ext/0.5.0",
 			wantVersion: "0.5.0",
-			wantTag:     "ext-eac/0.5.0",
+			wantTag:     "eac-ext/0.5.0",
 			wantValid:   true,
 		},
 		{
@@ -213,7 +213,7 @@ func TestGenerateCalver(t *testing.T) {
 func TestExtractVersionOutput_Struct(t *testing.T) {
 	output := ExtractVersionOutput{
 		Version: "1.2.3",
-		TagName: "r2r-cli/1.2.3",
+		TagName: "clie-cli/1.2.3",
 		IsValid: true,
 		Message: "",
 	}
@@ -221,8 +221,8 @@ func TestExtractVersionOutput_Struct(t *testing.T) {
 	if output.Version != "1.2.3" {
 		t.Errorf("Version = %q, want %q", output.Version, "1.2.3")
 	}
-	if output.TagName != "r2r-cli/1.2.3" {
-		t.Errorf("TagName = %q, want %q", output.TagName, "r2r-cli/1.2.3")
+	if output.TagName != "clie-cli/1.2.3" {
+		t.Errorf("TagName = %q, want %q", output.TagName, "clie-cli/1.2.3")
 	}
 	if !output.IsValid {
 		t.Error("IsValid = false, want true")
@@ -240,7 +240,7 @@ func TestExtractVersionLogic_ErrorMessages(t *testing.T) {
 	}{
 		{
 			name:        "no version provided semver",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
 			ref:         "",
 			version:     "",
@@ -248,7 +248,7 @@ func TestExtractVersionLogic_ErrorMessages(t *testing.T) {
 		},
 		{
 			name:        "invalid semver format",
-			module:      "r2r-cli",
+			module:      "clie-cli",
 			versionType: "semver",
 			ref:         "",
 			version:     "v1.0.0",

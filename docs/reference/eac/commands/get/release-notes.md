@@ -6,7 +6,7 @@
 
 The command reads from: `release/<module>/RELEASE-NOTES.md`
 
-**Example:** For module `ext-eac`, reads from `release/ext-eac/RELEASE-NOTES.md`
+**Example:** For module `eac-ext`, reads from `release/eac-ext/RELEASE-NOTES.md`
 
 ## See Also
 

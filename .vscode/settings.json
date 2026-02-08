@@ -9,13 +9,13 @@
 
   // YAML Schema associations (Red Hat YAML extension)
   "yaml.schemas": {
-    "contracts/core/0.1.0/schemas/environments.schema.json": ".r2r/**/environments.yml",
-    "contracts/core/0.1.0/schemas/test-suites.schema.json": ".r2r/**/test-suites.yml",
-    "contracts/core/0.1.0/schemas/testing-tags.schema.json": ".r2r/**/testing-tags.yml",
-    "contracts/core/0.1.0/schemas/repository.schema.json": [".eac/repository.yml", ".r2r/**/repository.yml"],
+    "contracts/core/0.1.0/schemas/environments.schema.json": ".clie/**/environments.yml",
+    "contracts/core/0.1.0/schemas/test-suites.schema.json": ".clie/**/test-suites.yml",
+    "contracts/core/0.1.0/schemas/testing-tags.schema.json": ".clie/**/testing-tags.yml",
+    "contracts/core/0.1.0/schemas/repository.schema.json": [".eac/repository.yml", ".clie/**/repository.yml"],
     "contracts/core/0.1.0/schemas/component-types.schema.json": "contracts/**/schemas/defaults/component-types.yml",
     "contracts/core/0.1.0/schemas/books.schema.json": ".eac/books.yml",
-    "contracts/r2r-cli/0.1.0/schemas/r2r-cli.schema.json": [".r2r/r2r-cli.yml", "r2r-cli.yml"]
+    "contracts/clie-cli/0.1.0/schemas/clie-cli.schema.json": [".clie/clie-cli.yml", "clie-cli.yml"]
   },
 
   // Markdown settings (built-in preview)

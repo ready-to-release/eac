@@ -13,7 +13,7 @@ import (
 type VersionInfo struct {
 	Module         string // Module moniker
 	VersionNumber  string // Actual version number or "Unreleased"
-	GitTag         string // Git tag for this version (e.g., "ext-eac/0.0.7")
+	GitTag         string // Git tag for this version (e.g., "eac-ext/0.0.7")
 	PreviousGitTag string // Git tag for previous version (empty if first release)
 	IsUnreleased   bool   // True if this represents unreleased changes
 	IsLatest       bool   // True if this is the latest released version

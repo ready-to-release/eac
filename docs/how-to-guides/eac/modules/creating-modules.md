@@ -17,14 +17,14 @@ A module is a logical unit of code with:
 
 Select the appropriate type based on your module's purpose:
 
-| Purpose               | Component Type  | Build Support                           | Test Support          |
-| --------------------- | --------------- | --------------------------------------- | --------------------- |
-| Go CLI application    | `go-cli`        | ✅ Full (cross-compile, version inject) | ✅ gotest, godog      |
-| Go library            | `go-library`    | ✅ Go module                            | ✅ gotest, godog      |
-| Go commands library   | `go-commands`   | ✅ Go module with CLI wrapper           | ✅ gotest, godog      |
-| Documentation site    | `mkdocs-site`   | ✅ MkDocs HTML                          | ❌ No tests           |
-| R2R extension         | `r2r-extension` | ✅ Docker buildx                        | Depends on container  |
-| Configuration files   | `configuration` | ❌ No build                             | ❌ No tests           |
+| Purpose             | Component Type   | Build Support                           | Test Support         |
+| ------------------- | ---------------- | --------------------------------------- | -------------------- |
+| Go CLI application  | `go-cli`         | ✅ Full (cross-compile, version inject) | ✅ gotest, godog     |
+| Go library          | `go-library`     | ✅ Go module                            | ✅ gotest, godog     |
+| Go commands library | `go-commands`    | ✅ Go module with CLI wrapper           | ✅ gotest, godog     |
+| Documentation site  | `mkdocs-site`    | ✅ MkDocs HTML                          | ❌ No tests          |
+| CLIE extension      | `clie-extension` | ✅ Docker buildx                        | Depends on container |
+| Configuration files | `configuration`  | ❌ No build                             | ❌ No tests          |
 
 See [Component Types Reference](../../../reference/eac/architecture/component-types.md) for all available types and configuration options.
 
@@ -117,14 +117,14 @@ modules:
 
 Component types define build behavior and defaults for modules:
 
-| Type            | Description                    | Capabilities                    |
-| --------------- | ------------------------------ | ------------------------------- |
-| `go-cli`        | Go CLI with cross-compilation  | go_module, executable           |
-| `go-library`    | Go library package             | go_module                       |
-| `go-commands`   | Go library with CLI wrapper    | go_module                       |
-| `mkdocs-site`   | MkDocs documentation           | documentation                   |
-| `r2r-extension` | Docker container extension     | container, buildx               |
-| `configuration` | Configuration files            | none                            |
+| Type             | Description                   | Capabilities          |
+| ---------------- | ----------------------------- | --------------------- |
+| `go-cli`         | Go CLI with cross-compilation | go_module, executable |
+| `go-library`     | Go library package            | go_module             |
+| `go-commands`    | Go library with CLI wrapper   | go_module             |
+| `mkdocs-site`    | MkDocs documentation          | documentation         |
+| `clie-extension` | Docker container extension    | container, buildx     |
+| `configuration`  | Configuration files           | none                  |
 
 See available types:
 
@@ -229,9 +229,9 @@ eac validate contracts
 
 ## Troubleshooting
 
-| Problem            | Solution                                               |
-| ------------------ | ------------------------------------------------------ |
-| Overlapping files  | Use `exclude` patterns or adjust ownership             |
-| Missing type       | Check component type in `component-types.yml`          |
-| Build fails        | Check `build_deps` are available (docker, go)          |
-| Wrong files listed | Verify glob patterns and root directory                |
+| Problem            | Solution                                      |
+| ------------------ | --------------------------------------------- |
+| Overlapping files  | Use `exclude` patterns or adjust ownership    |
+| Missing type       | Check component type in `component-types.yml` |
+| Build fails        | Check `build_deps` are available (docker, go) |
+| Wrong files listed | Verify glob patterns and root directory       |

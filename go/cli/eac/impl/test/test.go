@@ -17,7 +17,7 @@
 // Long:
 // Long: Example:
 // Long:   test eac-cli                    # Test single module
-// Long:   test core r2r-cli                # Test multiple modules
+// Long:   test core clie-cli                # Test multiple modules
 // Long:   test                                 # Test all modules
 // Long:   test eac-cli --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
@@ -55,7 +55,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -64,10 +63,6 @@ import (
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(Test)
-}
 
 // TestConfig holds test execution configuration.
 type TestConfig struct {
@@ -376,7 +371,7 @@ var newCommand = func(name string, args ...string) *exec.Cmd {
 func printTestUsage() {
 	log.Info("Test one or more modules by moniker")
 	log.Info("")
-	log.Info("Usage: r2r eac test [module1] [module2] ... [options]")
+	log.Info("Usage: clie eac test [module1] [module2] ... [options]")
 	log.Info("")
 	log.Info("Options:")
 	log.Info("  --suite <name>         Filter tests by suite (default: unit+integration)")
@@ -405,11 +400,11 @@ func printTestUsage() {
 	log.Info("  unit+integration+acceptance           # Run multiple suites together")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r eac test                          # Test all modules (default suites)")
-	log.Info("  r2r eac test eac-cli             # Test single module")
-	log.Info("  r2r eac test r2r-cli core         # Test multiple modules")
-	log.Info("  r2r eac test --suite acceptance       # Run acceptance suite")
-	log.Info("  r2r eac test eac-cli --no-tui    # Disable TUI display")
+	log.Info("  clie eac test                          # Test all modules (default suites)")
+	log.Info("  clie eac test eac-cli             # Test single module")
+	log.Info("  clie eac test clie-cli core         # Test multiple modules")
+	log.Info("  clie eac test --suite acceptance       # Run acceptance suite")
+	log.Info("  clie eac test eac-cli --no-tui    # Disable TUI display")
 }
 
 // printTestSummary prints unified test summary to a writer (for non-TUI mode)

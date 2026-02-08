@@ -18,14 +18,8 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
-
-// commandFlags defines valid flags for the test list-suites command.
-func init() {
-	registry.Register(ListSuites)
-}
 
 // ListSuites lists all available test suites.
 func ListSuites() int {

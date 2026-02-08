@@ -19,40 +19,40 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 }
 
 // extractModuleFromPath extracts the module moniker from a test file path
-// Handles go/eac/<module>/..., go/r2r/<module>/..., and specs/<module>/... formats
+// Handles go/eac/<module>/..., go/clie/<module>/..., and specs/<module>/... formats
 // Supports both absolute and relative paths.
 func extractModuleFromPath(filePath string) string {
 	// Normalize path separators to forward slashes
 	normalizedPath := filepath.ToSlash(filePath)
 
-	// Special case: go/eac/specs/impl/<module>/... or go/r2r/specs/impl/<module>/...
-	// These are test implementations that belong to <module>, not eac-specs/r2r-specs
-	// Must check this BEFORE the general /go/eac/ or /go/r2r/ boundary check
-	for _, implPattern := range []string{"/go/eac/specs/impl/", "/go/r2r/specs/impl/", "go/eac/specs/impl/", "go/r2r/specs/impl/"} {
+	// Special case: go/eac/specs/impl/<module>/... or go/clie/specs/impl/<module>/...
+	// These are test implementations that belong to <module>, not eac-specs/clie-specs
+	// Must check this BEFORE the general /go/eac/ or /go/clie/ boundary check
+	for _, implPattern := range []string{"/go/eac/specs/impl/", "/go/clie/specs/impl/", "go/eac/specs/impl/", "go/clie/specs/impl/"} {
 		idx := strings.Index(normalizedPath, implPattern)
 		if idx >= 0 {
 			// Extract module name after impl/
 			relativePath := normalizedPath[idx+len(implPattern):]
 			parts := strings.Split(relativePath, "/")
 			if len(parts) >= 1 && parts[0] != "" {
-				return parts[0] // Return module name directly (e.g., "core", "r2r-cli")
+				return parts[0] // Return module name directly (e.g., "core", "clie-cli")
 			}
 		}
 	}
 
 	// Find "/go/eac/" in the path (handles both absolute and relative paths)
 	// For paths like /project/go/cli/eac/..., extract "eac-cli"
-	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
+	for _, boundary := range []string{"/go/eac/", "/go/clie/"} {
 		idx := strings.Index(normalizedPath, boundary)
 		if idx >= 0 {
 			// Extract module name from path after boundary
 			relativePath := normalizedPath[idx+len(boundary):]
 			parts := strings.Split(relativePath, "/")
 			if len(parts) >= 1 && parts[0] != "" {
-				// Return as eac-<part1> or r2r-<part1>
+				// Return as eac-<part1> or clie-<part1>
 				prefix := "eac"
-				if boundary == "/go/r2r/" {
-					prefix = "r2r"
+				if boundary == "/go/clie/" {
+					prefix = "clie"
 				}
 				return prefix + "-" + parts[0]
 			}
@@ -72,14 +72,14 @@ func extractModuleFromPath(filePath string) string {
 		}
 	}
 
-	// Also check for paths starting with "go/eac/" or "go/r2r/" (relative paths)
-	for _, prefix := range []string{"go/eac/", "go/r2r/"} {
+	// Also check for paths starting with "go/eac/" or "go/clie/" (relative paths)
+	for _, prefix := range []string{"go/eac/", "go/clie/"} {
 		if strings.HasPrefix(normalizedPath, prefix) {
 			parts := strings.Split(normalizedPath[len(prefix):], "/")
 			if len(parts) >= 1 && parts[0] != "" {
 				monikerPrefix := "eac"
-				if prefix == "go/r2r/" {
-					monikerPrefix = "r2r"
+				if prefix == "go/clie/" {
+					monikerPrefix = "clie"
 				}
 				return monikerPrefix + "-" + parts[0]
 			}

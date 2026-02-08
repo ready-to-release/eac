@@ -314,7 +314,7 @@ func TestNew_OutsideWorkspace(t *testing.T) {
 	// Create a temporary directory that is NOT a git repository
 	tempDir := t.TempDir()
 
-	// Set R2R_REPO_ROOT to the temp directory to simulate being outside workspace
+	// Set CLIE_REPO_ROOT to the temp directory to simulate being outside workspace
 	// This overrides workspace detection
 	cleanup := workspace.ForTesting(t, tempDir)
 	defer cleanup()

@@ -9,3 +9,6 @@ nav:
   - repository-layout.md
   - viewing-diagrams.md
   - creating-commands.md
+  - build-execution.md
+  - cache-system.md
+  - component-resolution.md

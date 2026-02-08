@@ -21,7 +21,7 @@
 // Long:
 // Long: Example:
 // Long:   validate artifacts eac-cli
-// Long:   validate artifacts r2r-cli --os linux --arch amd64
+// Long:   validate artifacts clie-cli --os linux --arch amd64
 // Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
 //
 // Args: module
@@ -40,15 +40,10 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateArtifacts)
-}
 
 func ValidateArtifacts() int {
 	// Validate flags against registry metadata

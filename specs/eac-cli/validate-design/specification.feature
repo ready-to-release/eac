@@ -1,9 +1,9 @@
 @L2 @deps:docker @ov @env:isolated-test-project
 Feature: eac-cli_validate-design
 
-  # Note: Tests use real fixture modules (core, docs, r2r-cli) instead of
+  # Note: Tests use real fixture modules (core, docs, clie-cli) instead of
   # dynamic test modules. This matches production workflow and avoids module
-  # registration complexity. The mock validator is enabled via R2R_MOCK_STRUCTURIZR
+  # registration complexity. The mock validator is enabled via CLIE_MOCK_STRUCTURIZR
   # environment variable, which is set automatically by the test context.
 
   Background:

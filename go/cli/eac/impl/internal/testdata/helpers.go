@@ -10,11 +10,11 @@ import (
 )
 
 // FindRepoRoot finds the repository root by looking for .git directory.
-// In isolated test environments, respects R2R_REPO_ROOT environment variable.
+// In isolated test environments, respects CLIE_REPO_ROOT environment variable.
 func FindRepoRoot(startPath string) (string, error) {
 	// Check if running in isolated test environment
 	// Trust this environment variable when set - it's explicitly configured by the test framework
-	if repoRoot := os.Getenv(environments.EnvR2RRepoRoot); repoRoot != "" {
+	if repoRoot := os.Getenv(environments.EnvCLIERepoRoot); repoRoot != "" {
 		return repoRoot, nil
 	}
 

@@ -18,13 +18,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 )
-
-func init() {
-	registry.Register(ShowConfig)
-}
 
 func ShowConfig() int {
 	// Validate flags against registry metadata
@@ -214,7 +209,7 @@ func ShowConfig() int {
 		}
 	}
 
-	fmt.Println("Use 'r2r get config' for full YAML output with all fields.")
+	fmt.Println("Use 'clie get config' for full YAML output with all fields.")
 
 	return 0
 }
@@ -222,7 +217,7 @@ func ShowConfig() int {
 func printShowConfigUsage() {
 	fmt.Println("Display all EAC configuration in human-readable format")
 	fmt.Println("")
-	fmt.Println("Usage: r2r show config [flags]")
+	fmt.Println("Usage: clie show config [flags]")
 	fmt.Println("")
 	fmt.Println("Flags:")
 	fmt.Println("  --verbose, -v  Show all config source files with layers and value counts")
@@ -238,7 +233,7 @@ func printShowConfigUsage() {
 	fmt.Println("  - User configuration from .eac/")
 	fmt.Println("  - File existence status and value counts")
 	fmt.Println("")
-	fmt.Println("For full structured output, use 'r2r get config'.")
+	fmt.Println("For full structured output, use 'clie get config'.")
 }
 
 // valueOrDefault returns the value if non-empty, otherwise the default.

@@ -35,13 +35,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-func init() {
-	registry.Register(Pull)
-}
 
 // Pull syncs the current branch with target branch via rebase.
 func Pull() int {
@@ -240,8 +235,8 @@ func parsePullConfig() (*pullConfig, error) {
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments
-	// Check R2R_PWD first (for test isolation)
-	cwd := os.Getenv(environments.EnvR2RPWD)
+	// Check CLIE_PWD first (for test isolation)
+	cwd := os.Getenv(environments.EnvCLIEPWD)
 	if cwd == "" {
 		// Fall back to actual working directory
 		var err error
@@ -273,8 +268,8 @@ func validatePullEnvironment(config *pullConfig) error {
 
 	// Check for uncommitted changes if not using autostash
 	if !config.autostash {
-		// Check R2R_PWD first (for test isolation)
-		cwd := os.Getenv(environments.EnvR2RPWD)
+		// Check CLIE_PWD first (for test isolation)
+		cwd := os.Getenv(environments.EnvCLIEPWD)
 		if cwd == "" {
 			// Fall back to actual working directory
 			var err error

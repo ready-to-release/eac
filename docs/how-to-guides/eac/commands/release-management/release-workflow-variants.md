@@ -84,16 +84,16 @@ graph LR
 
 ```bash
 # Check if module has pending changes
-r2r release pending my-module
+eac release pending my-module
 
 # Generate changelog entry
-r2r release this my-module
+eac release this my-module
 
 # Review generated changelog
 cat release/my-module/CHANGELOG.md
 
 # Validate format
-r2r validate release my-module
+eac validate release my-module
 ```
 
 **What happens**: Changelog updated with new version section in `release/my-module/CHANGELOG.md`
@@ -202,10 +202,10 @@ graph LR
 
 ```bash
 # Same as CDe pattern - always prepare on main first
-r2r release pending my-module
-r2r release this my-module
+eac release pending my-module
+eac release this my-module
 cat release/my-module/CHANGELOG.md
-r2r validate release my-module
+eac validate release my-module
 ```
 
 **Why main?** Keeps main as single source of truth, enables release branch creation
@@ -249,13 +249,13 @@ git push origin release/my-module/v1.2.4
 
 ```bash
 # View test results
-r2r show test-summary my-module
+eac show test-summary my-module
 
 # View security scan results
-r2r show scan-summary my-module
+eac show scan-summary my-module
 
 # View approval comments (if using GitHub)
-r2r show approval-comments
+eac show approval-comments
 ```
 
 #### Step 5: Main Continues Ahead (Parallel)
@@ -318,7 +318,7 @@ Both CDe and RA use the **same changelog preparation process**:
 ### 1. Check Pending Changes
 
 ```bash
-r2r release pending <module>
+eac release pending <module>
 ```
 
 **Output**:
@@ -336,7 +336,7 @@ change_summary:
 ### 2. Generate Changelog
 
 ```bash
-r2r release this <module>
+eac release this <module>
 ```
 
 **What happens**:
@@ -349,7 +349,7 @@ r2r release this <module>
 ### 3. Validate Format
 
 ```bash
-r2r validate release <module>
+eac validate release <module>
 ```
 
 **Checks**:

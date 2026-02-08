@@ -32,13 +32,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ReleasePrune)
-}
 
 func ReleasePrune() int {
 	// Validate flags before parsing

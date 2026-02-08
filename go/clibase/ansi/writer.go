@@ -1,5 +1,5 @@
 // Package ansi provides utilities for handling ANSI escape sequences in output.
-// Based on go/cli/r2r/internal/docker/ansi_filter.go with added configurability.
+// Based on go/cli/clie/internal/docker/ansi_filter.go with added configurability.
 package ansi
 
 import (

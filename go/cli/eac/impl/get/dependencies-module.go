@@ -13,9 +13,9 @@
 // Long:   - List of module monikers this module depends on
 // Long:
 // Long: Examples:
-// Long:   get dependencies r2r-cli                    # YAML list
-// Long:   get dependencies r2r-cli --format space     # Space-separated: "dep1 dep2 dep3"
-// Long:   get dependencies r2r-cli --format list      # One per line
+// Long:   get dependencies clie-cli                    # YAML list
+// Long:   get dependencies clie-cli --format space     # Space-separated: "dep1 dep2 dep3"
+// Long:   get dependencies clie-cli --format list      # One per line
 package get
 
 import (
@@ -24,13 +24,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
-
-func init() {
-	registry.Register(GetDependenciesModule)
-}
 
 // DependenciesOutput represents the output structure.
 type DependenciesOutput struct {

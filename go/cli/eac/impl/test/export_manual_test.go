@@ -602,8 +602,8 @@ func setupTestRepository(t *testing.T, tmpDir, module string, featureFiles map[s
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
 
 	// Create .eac directory
-	r2rDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(r2rDir, 0755))
+	clieDir := filepath.Join(tmpDir, ".eac")
+	require.NoError(t, os.MkdirAll(clieDir, 0755))
 
 	// Create repository.yml with correct format
 	repoYAML := `repository:
@@ -618,7 +618,7 @@ modules:
         type: go
         root: /` + module + `
 `
-	repoFile := filepath.Join(r2rDir, "repository.yml")
+	repoFile := filepath.Join(clieDir, "repository.yml")
 	require.NoError(t, os.WriteFile(repoFile, []byte(repoYAML), 0644))
 
 	// Create feature files
@@ -677,8 +677,8 @@ func setupMinimalRepository(t *testing.T, tmpDir string) {
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
 
 	// Create .eac directory
-	r2rDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(r2rDir, 0755))
+	clieDir := filepath.Join(tmpDir, ".eac")
+	require.NoError(t, os.MkdirAll(clieDir, 0755))
 
 	// Create minimal repository.yml
 	repoYAML := `repository:
@@ -686,7 +686,7 @@ func setupMinimalRepository(t *testing.T, tmpDir string) {
 
 modules: []
 `
-	repoFile := filepath.Join(r2rDir, "repository.yml")
+	repoFile := filepath.Join(clieDir, "repository.yml")
 	require.NoError(t, os.WriteFile(repoFile, []byte(repoYAML), 0644))
 }
 

@@ -43,7 +43,7 @@ type TestContext struct {
 	FixturePool *coretesting.FixturePool
 
 	// MockOverrides holds per-scenario mock environment variable overrides.
-	// Keys are env var names (e.g., "R2R_MOCK_AI_SPECS"), values are mock file names.
+	// Keys are env var names (e.g., "CLIE_MOCK_AI_SPECS"), values are mock file names.
 	MockOverrides map[string]string
 
 	// OriginalRepoCache provides cached data from the ORIGINAL repository root.
@@ -91,7 +91,7 @@ func (c *TestContext) EnsureOriginalRepoCache() error {
 }
 
 // SetMockOverride sets a mock environment variable override for this scenario.
-// The key should be the env var name (e.g., "R2R_MOCK_AI_SPECS"),
+// The key should be the env var name (e.g., "CLIE_MOCK_AI_SPECS"),
 // and value is the mock file name (e.g., "mock-response-conflict.txt").
 func (c *TestContext) SetMockOverride(key, value string) {
 	if c.MockOverrides == nil {
@@ -161,11 +161,11 @@ func (c *TestContext) getEffectiveWorkDir() string {
 }
 
 // buildBaseEnvironment creates base environment, filtering out test-specific vars.
-// For isolated tests, filters out R2R_TEST_LOGGING_ACTIVE so unified log works.
+// For isolated tests, filters out CLIE_TEST_LOGGING_ACTIVE so unified log works.
 func (c *TestContext) buildBaseEnvironment() []string {
 	env := make([]string, 0, len(os.Environ()))
 	for _, e := range os.Environ() {
-		if c.IsolatedDir != "" && strings.HasPrefix(e, environments.EnvR2RTestLoggingActive+"=") {
+		if c.IsolatedDir != "" && strings.HasPrefix(e, environments.EnvCLIETestLoggingActive+"=") {
 			continue // Don't inherit - isolated tests need unified log to work
 		}
 		env = append(env, e)
@@ -174,29 +174,29 @@ func (c *TestContext) buildBaseEnvironment() []string {
 }
 
 // buildIsolationEnvironment adds isolation-specific environment variables.
-// Sets R2R_PWD, R2R_REPO_ROOT, and R2R_TEST_SCOPE for isolated test execution.
+// Sets CLIE_PWD, CLIE_REPO_ROOT, and CLIE_TEST_SCOPE for isolated test execution.
 func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 	if c.IsolatedDir == "" {
 		return env
 	}
 
-	// R2R_PWD: current working directory (may be worktree)
-	// R2R_REPO_ROOT: main repository root (never changes)
-	// R2R_TEST_SCOPE: marker indicating we're inside a spec test
+	// CLIE_PWD: current working directory (may be worktree)
+	// CLIE_REPO_ROOT: main repository root (never changes)
+	// CLIE_TEST_SCOPE: marker indicating we're inside a spec test
 	workDir := c.getEffectiveWorkDir()
-	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RPWD, workDir))
-	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RRepoRoot, c.IsolatedDir))
-	env = append(env, fmt.Sprintf("%s=1", environments.EnvR2RTestScope))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEPWD, workDir))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIERepoRoot, c.IsolatedDir))
+	env = append(env, fmt.Sprintf("%s=1", environments.EnvCLIETestScope))
 	return env
 }
 
 // buildMockingEnvironment adds mocking environment variables for tests.
-// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, R2R_MOCK_SECURITY, and R2R_MOCK_STRUCTURIZR.
+// Sets CLIE_CONTAINER_ROOT, CLIE_MOCK_AI_DIR, CLIE_MOCK_SECURITY, and CLIE_MOCK_STRUCTURIZR.
 func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// Set distribution root for template loading
 	// Templates are NOT copied to isolated test directories - they live in the original repo
 	// This allows AI commands to load system default templates from templates/ai/
-	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RContainerRoot, c.OriginalRepoRoot))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEContainerRoot, c.OriginalRepoRoot))
 
 	// Load mock configuration from .eac/testing-mocks.yml
 	// Falls back to environment variables if config file doesn't exist (backward compatibility)
@@ -217,13 +217,13 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// Process mock env vars to make relative paths absolute
 	// The mock_dir in config is relative to repo root, but subprocess runs from isolated dir
 	for i, e := range mockEnvVars {
-		if strings.HasPrefix(e, environments.EnvR2RMockAIDir+"=") {
+		if strings.HasPrefix(e, environments.EnvCLIEMockAIDir+"=") {
 			// Extract the path and make it absolute if relative
-			mockDir := strings.TrimPrefix(e, environments.EnvR2RMockAIDir+"=")
+			mockDir := strings.TrimPrefix(e, environments.EnvCLIEMockAIDir+"=")
 			if mockDir != "" && !filepath.IsAbs(mockDir) {
 				mockDir = filepath.Join(c.OriginalRepoRoot, mockDir)
 			}
-			mockEnvVars[i] = fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, mockDir)
+			mockEnvVars[i] = fmt.Sprintf("%s=%s", environments.EnvCLIEMockAIDir, mockDir)
 		}
 	}
 
@@ -233,7 +233,7 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// This ensures backward compatibility with existing tests
 	hasAIDir := false
 	for _, e := range mockEnvVars {
-		if strings.HasPrefix(e, environments.EnvR2RMockAIDir+"=") {
+		if strings.HasPrefix(e, environments.EnvCLIEMockAIDir+"=") {
 			hasAIDir = true
 			break
 		}
@@ -245,7 +245,7 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 		if assetsRoot != "" {
 			assetsDir := filepath.Join(assetsRoot, c.AssetsPath)
 			if _, err := os.Stat(assetsDir); err == nil {
-				env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, assetsDir))
+				env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEMockAIDir, assetsDir))
 			}
 		}
 	}
@@ -455,7 +455,7 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 	fmt.Fprintf(os.Stderr, "  Expected binary:    %s\n", binaryPath)
 	fmt.Fprintf(os.Stderr, "  OriginalRepoRoot:   %s\n", c.OriginalRepoRoot)
 	fmt.Fprintf(os.Stderr, "  IsolatedDir:        %s\n", c.IsolatedDir)
-	fmt.Fprintf(os.Stderr, "  R2R_CONTAINER_ROOT: %s\n", os.Getenv(environments.EnvR2RContainerRoot))
+	fmt.Fprintf(os.Stderr, "  CLIE_CONTAINER_ROOT: %s\n", os.Getenv(environments.EnvCLIEContainerRoot))
 	fmt.Fprintf(os.Stderr, "\n")
 
 	// Check tools directory

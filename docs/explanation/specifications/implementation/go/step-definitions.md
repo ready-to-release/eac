@@ -12,7 +12,7 @@ Step definitions are Go functions that implement the behavior described in Gherk
 
 ```gherkin
 Given I am in an empty folder     # → iAmInAnEmptyFolder()
-When I run "r2r init"             # → iRun("r2r init")
+When I run "cli init"             # → iRun("cli init")
 Then a file should exist          # → aFileShouldExist()
 ```
 

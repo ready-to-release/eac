@@ -28,6 +28,11 @@ type ContainerProvider func() container.ContainerPort
 // defaultContainerProvider is set by the application to provide the container runtime.
 var defaultContainerProvider ContainerProvider
 
+var (
+	reAtLineNumberStructurizr = regexp.MustCompile(`(?i)at line (\d+)`)
+	reLineNumberStructurizr   = regexp.MustCompile(`(?i)line (\d+)`)
+)
+
 // SetContainerProvider sets the container provider for structurizr validation.
 func SetContainerProvider(provider ContainerProvider) {
 	defaultContainerProvider = provider
@@ -245,11 +250,11 @@ func (v *DockerValidator) parseValidationOutput(raw string) *ValidationResult {
 		if isError {
 			// Extract line number from patterns like "at line 62", "line 62", or "Line 15:"
 			lineNum := 0
-			if matches := regexp.MustCompile(`(?i)at line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			if matches := reAtLineNumberStructurizr.FindStringSubmatch(line); len(matches) > 1 {
 				if n, err := strconv.Atoi(matches[1]); err == nil {
 					lineNum = n
 				}
-			} else if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			} else if matches := reLineNumberStructurizr.FindStringSubmatch(line); len(matches) > 1 {
 				if n, err := strconv.Atoi(matches[1]); err == nil {
 					lineNum = n
 				}
@@ -266,7 +271,7 @@ func (v *DockerValidator) parseValidationOutput(raw string) *ValidationResult {
 		if strings.Contains(line, "WARNING") || strings.Contains(line, "warning") {
 			// Extract line number from warnings too
 			lineNum := 0
-			if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			if matches := reLineNumberStructurizr.FindStringSubmatch(line); len(matches) > 1 {
 				if n, err := strconv.Atoi(matches[1]); err == nil {
 					lineNum = n
 				}

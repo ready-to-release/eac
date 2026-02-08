@@ -11,9 +11,9 @@
 // Long:   - Exit code 0 on success, 1 on failure
 // Long:
 // Long: Example:
-// Long:   pipeline ci dispatch-and-wait --workflow ci-r2r-cli.yaml --ref main
+// Long:   pipeline ci dispatch-and-wait --workflow ci-clie-cli.yaml --ref main
 // Long:   pipeline ci dispatch-and-wait --run-id 12345678
-// Long:   pipeline ci dispatch-and-wait --workflow ci-r2r-cli.yaml --ref main --timeout 600
+// Long:   pipeline ci dispatch-and-wait --workflow ci-clie-cli.yaml --ref main --timeout 600
 // Flag.workflow: type=string, usage=Workflow file name to dispatch
 // Flag.ref: type=string, usage=Git ref to run workflow on (default: current branch)
 // Flag.run-id: type=string, usage=Existing run ID to wait for (skips dispatch)
@@ -32,14 +32,9 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineCIDispatchAndWait)
-}
 
 func PipelineCIDispatchAndWait() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci dispatch-and-wait")
@@ -232,7 +227,7 @@ func printDispatchAndWaitUsage() {
 	log.Info("Usage: pipeline ci dispatch-and-wait [flags]")
 	log.Info("")
 	log.Info("Flags:")
-	log.Info("  --workflow <name>    Workflow file name to dispatch (e.g., ci-r2r-cli.yaml)")
+	log.Info("  --workflow <name>    Workflow file name to dispatch (e.g., ci-clie-cli.yaml)")
 	log.Info("  --ref <ref>          Git ref to run workflow on (default: current branch)")
 	log.Info("  --run-id <id>        Existing run ID to wait for (skips dispatch)")
 	log.Info("  --timeout <seconds>  Timeout in seconds (default: 300)")
@@ -240,7 +235,7 @@ func printDispatchAndWaitUsage() {
 	log.Info("  -h, --help           Show this help message")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  pipeline ci dispatch-and-wait --workflow ci-r2r-cli.yaml --ref main")
+	log.Info("  pipeline ci dispatch-and-wait --workflow ci-clie-cli.yaml --ref main")
 	log.Info("  pipeline ci dispatch-and-wait --run-id 12345678 --timeout 600")
-	log.Info("  pipeline ci dispatch-and-wait --workflow ci-r2r-cli.yaml --inputs '{\"version\":\"1.0.0\"}'")
+	log.Info("  pipeline ci dispatch-and-wait --workflow ci-clie-cli.yaml --inputs '{\"version\":\"1.0.0\"}'")
 }

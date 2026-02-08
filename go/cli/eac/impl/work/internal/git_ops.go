@@ -54,29 +54,10 @@ type defaultGitOps struct {
 	repoRoot string
 }
 
-// gitOps holds the current git operations implementation.
-// In production, this is nil and defaults to real git commands.
-// In tests, this can be set to a mock implementation.
-var gitOps WorkGitOperations
-
-// GetGitOps returns the git operations interface.
-// If a mock has been set via SetGitOps, returns that.
-// Otherwise, returns a new real implementation.
-func GetGitOps(repoRoot string) WorkGitOperations {
-	if gitOps != nil {
-		return gitOps
-	}
+// NewDefaultGitOps returns the production WorkGitOperations implementation
+// that shells out to real git commands rooted at repoRoot.
+func NewDefaultGitOps(repoRoot string) WorkGitOperations {
 	return &defaultGitOps{repoRoot: repoRoot}
-}
-
-// SetGitOps allows tests to inject a mock implementation.
-func SetGitOps(ops WorkGitOperations) {
-	gitOps = ops
-}
-
-// ResetGitOps clears the mock implementation (for test cleanup).
-func ResetGitOps() {
-	gitOps = nil
 }
 
 // CreateWorktree creates a new git worktree.

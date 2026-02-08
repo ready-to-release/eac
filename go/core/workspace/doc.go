@@ -5,8 +5,8 @@
 //
 // # Detection Precedence (highest to lowest)
 //
-//  1. R2R_REPO_ROOT - Explicit override (test isolation, CI, scripts)
-//  2. R2R_DOCKER_MODE=true - Container mode -> /var/task
+//  1. CLIE_REPO_ROOT - Explicit override (test isolation, CI, scripts)
+//  2. CLIE_DOCKER_MODE=true - Container mode -> /var/task
 //  3. Git detection - Walk up from cwd looking for .git
 //  4. Fallback error - No valid workspace found
 //
@@ -39,13 +39,13 @@
 //
 //	func TestIntegration(t *testing.T) {
 //	    workspace.RequireIsolation(t)
-//	    // Test will fail immediately if R2R_REPO_ROOT not set
+//	    // Test will fail immediately if CLIE_REPO_ROOT not set
 //	}
 //
 // # Environment Variables
 //
-//   - R2R_REPO_ROOT: Explicit workspace root override
-//   - R2R_PWD: Working directory override (distinct from repo root for worktrees)
-//   - R2R_DOCKER_MODE: Container detection flag ("true" when in container)
-//   - R2R_CONTAINER_ROOT: Distribution root for tool binaries in containers
+//   - CLIE_REPO_ROOT: Explicit workspace root override
+//   - CLIE_PWD: Working directory override (distinct from repo root for worktrees)
+//   - CLIE_DOCKER_MODE: Container detection flag ("true" when in container)
+//   - CLIE_CONTAINER_ROOT: Distribution root for tool binaries in containers
 package workspace

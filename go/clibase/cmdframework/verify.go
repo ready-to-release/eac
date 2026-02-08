@@ -13,10 +13,10 @@ import (
 )
 
 // detectExecutionContext returns a human-readable execution context string.
-// Combines container detection (r2r vs implicit) with environment (CI vs devbox).
-// Returns: "implicit-cli (devbox)", "implicit-cli (CI)", "r2r-cli (devbox)", "r2r-cli (CI)".
+// Combines container detection (clie vs implicit) with environment (CI vs devbox).
+// Returns: "implicit-cli (devbox)", "implicit-cli (CI)", "clie-cli (devbox)", "clie-cli (CI)".
 func detectExecutionContext() string {
-	// CLI mode: r2r-cli (container) or implicit-cli (local)
+	// CLI mode: clie-cli (container) or implicit-cli (local)
 	cliMode := string(logging.GetExecutionContext())
 
 	// Environment: CI or devbox

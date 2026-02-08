@@ -19,14 +19,9 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	showinternal "github.com/ready-to-release/eac/go/cli/eac/impl/show/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowArtifacts)
-}
 
 // ShowArtifacts displays resolved artifacts for a module.
 func ShowArtifacts() int {

@@ -350,13 +350,13 @@ func TestLoadTestingMocks_EnvironmentFallback(t *testing.T) {
 		{
 			name: "all environment variables set",
 			envVars: map[string]string{
-				"R2R_MOCK_AI":             "true",
-				"R2R_MOCK_AI_DIR":         "env/mock/dir",
-				"R2R_MOCK_SECURITY":       "true",
-				"R2R_MOCK_SECURITY_TOOLS": "trivy,semgrep",
-				"R2R_MOCK_DOCKER":         "true",
-				"R2R_MOCK_GITHUB":         "true",
-				"R2R_MOCK_GITHUB_NO_WORKFLOWS": "true",
+				"CLIE_MOCK_AI":             "true",
+				"CLIE_MOCK_AI_DIR":         "env/mock/dir",
+				"CLIE_MOCK_SECURITY":       "true",
+				"CLIE_MOCK_SECURITY_TOOLS": "trivy,semgrep",
+				"CLIE_MOCK_DOCKER":         "true",
+				"CLIE_MOCK_GITHUB":         "true",
+				"CLIE_MOCK_GITHUB_NO_WORKFLOWS": "true",
 			},
 			fileYAML: "", // Missing file
 			want: TestingMocksConfig{
@@ -371,9 +371,9 @@ func TestLoadTestingMocks_EnvironmentFallback(t *testing.T) {
 		{
 			name: "partial environment variables",
 			envVars: map[string]string{
-				"R2R_MOCK_AI":       "true",
-				"R2R_MOCK_AI_DIR":   "env/ai",
-				"R2R_MOCK_SECURITY": "false",
+				"CLIE_MOCK_AI":       "true",
+				"CLIE_MOCK_AI_DIR":   "env/ai",
+				"CLIE_MOCK_SECURITY": "false",
 			},
 			fileYAML: "", // Missing file
 			want: TestingMocksConfig{
@@ -388,8 +388,8 @@ func TestLoadTestingMocks_EnvironmentFallback(t *testing.T) {
 		{
 			name: "file config takes precedence over environment",
 			envVars: map[string]string{
-				"R2R_MOCK_AI":     "false",
-				"R2R_MOCK_AI_DIR": "env/dir",
+				"CLIE_MOCK_AI":     "false",
+				"CLIE_MOCK_AI_DIR": "env/dir",
 			},
 			fileYAML: `mocks:
   ai:
@@ -426,10 +426,10 @@ func TestLoadTestingMocks_EnvironmentFallback(t *testing.T) {
 		{
 			name: "boolean parsing from strings",
 			envVars: map[string]string{
-				"R2R_MOCK_AI":       "1",
-				"R2R_MOCK_SECURITY": "yes",
-				"R2R_MOCK_DOCKER":   "TRUE",
-				"R2R_MOCK_GITHUB":   "on",
+				"CLIE_MOCK_AI":       "1",
+				"CLIE_MOCK_SECURITY": "yes",
+				"CLIE_MOCK_DOCKER":   "TRUE",
+				"CLIE_MOCK_GITHUB":   "on",
 			},
 			fileYAML: "", // Missing file
 			want: TestingMocksConfig{
@@ -757,9 +757,9 @@ func TestLoadTestingMocks_RealWorldScenarios(t *testing.T) {
 			baseYAML: "", // No file
 			personalYAML: "",
 			envVars: map[string]string{
-				"R2R_MOCK_SECURITY":       "true",
-				"R2R_MOCK_SECURITY_TOOLS": "trivy",
-				"R2R_MOCK_DOCKER":         "true",
+				"CLIE_MOCK_SECURITY":       "true",
+				"CLIE_MOCK_SECURITY_TOOLS": "trivy",
+				"CLIE_MOCK_DOCKER":         "true",
 			},
 			description: "Backward compatibility with old environment-based config",
 			want: TestingMocksConfig{
@@ -969,14 +969,14 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_AI=true",
-				"R2R_MOCK_AI_DIR=test/mocks/ai",
-				"R2R_MOCK_SECURITY=true",
-				"R2R_MOCK_SECURITY_TOOLS=trivy,semgrep",
-				"R2R_MOCK_DOCKER=true",
-				"R2R_MOCK_STRUCTURIZR=true",
-				"R2R_MOCK_GITHUB_CLI=true",
-				"R2R_MOCK_NO_WORKFLOWS=true",
+				"CLIE_MOCK_AI=true",
+				"CLIE_MOCK_AI_DIR=test/mocks/ai",
+				"CLIE_MOCK_SECURITY=true",
+				"CLIE_MOCK_SECURITY_TOOLS=trivy,semgrep",
+				"CLIE_MOCK_DOCKER=true",
+				"CLIE_MOCK_STRUCTURIZR=true",
+				"CLIE_MOCK_GITHUB_CLI=true",
+				"CLIE_MOCK_NO_WORKFLOWS=true",
 			},
 		},
 		{
@@ -1005,7 +1005,7 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_AI=true",
+				"CLIE_MOCK_AI=true",
 			},
 		},
 		{
@@ -1022,7 +1022,7 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_SECURITY=true",
+				"CLIE_MOCK_SECURITY=true",
 			},
 		},
 		{
@@ -1039,7 +1039,7 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_GITHUB_CLI=true",
+				"CLIE_MOCK_GITHUB_CLI=true",
 			},
 		},
 		{
@@ -1053,8 +1053,8 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_DOCKER=true",
-				"R2R_MOCK_STRUCTURIZR=true",
+				"CLIE_MOCK_DOCKER=true",
+				"CLIE_MOCK_STRUCTURIZR=true",
 			},
 		},
 		{
@@ -1074,10 +1074,10 @@ func TestTestingMocksConfig_ToEnvironmentVariables(t *testing.T) {
 				},
 			},
 			want: []string{
-				"R2R_MOCK_AI=true",
-				"R2R_MOCK_AI_DIR=custom/path",
-				"R2R_MOCK_SECURITY=true",
-				"R2R_MOCK_SECURITY_TOOLS=zap",
+				"CLIE_MOCK_AI=true",
+				"CLIE_MOCK_AI_DIR=custom/path",
+				"CLIE_MOCK_SECURITY=true",
+				"CLIE_MOCK_SECURITY_TOOLS=zap",
 			},
 		},
 	}
@@ -1118,14 +1118,14 @@ func TestToEnvironmentVariables_RoundTrip(t *testing.T) {
 
 	// Verify all expected env vars are present
 	expectedEnvVars := []string{
-		"R2R_MOCK_AI=true",
-		"R2R_MOCK_AI_DIR=test/dir",
-		"R2R_MOCK_SECURITY=true",
-		"R2R_MOCK_SECURITY_TOOLS=trivy,semgrep",
-		"R2R_MOCK_DOCKER=true",
-		"R2R_MOCK_STRUCTURIZR=true",
-		"R2R_MOCK_GITHUB_CLI=true",
-		"R2R_MOCK_NO_WORKFLOWS=true",
+		"CLIE_MOCK_AI=true",
+		"CLIE_MOCK_AI_DIR=test/dir",
+		"CLIE_MOCK_SECURITY=true",
+		"CLIE_MOCK_SECURITY_TOOLS=trivy,semgrep",
+		"CLIE_MOCK_DOCKER=true",
+		"CLIE_MOCK_STRUCTURIZR=true",
+		"CLIE_MOCK_GITHUB_CLI=true",
+		"CLIE_MOCK_NO_WORKFLOWS=true",
 	}
 
 	assert.ElementsMatch(t, expectedEnvVars, envVars, "Should generate all expected env vars")

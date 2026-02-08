@@ -30,12 +30,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ReleaseCalver)
-}
 
 func ReleaseCalver() int {
 	// Validate flags before parsing

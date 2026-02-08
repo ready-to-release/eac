@@ -9,10 +9,10 @@
 // Group.Release: release, release-version, version
 // Group.Design: design
 // Group.Artifacts: artifacts, control-tags
-// Example: r2r validate contracts
-// Example: r2r validate dependencies
-// Example: r2r validate test-tags
-// Example: r2r validate module-hierarchy
+// Example: clie validate contracts
+// Example: clie validate dependencies
+// Example: clie validate test-tags
+// Example: clie validate module-hierarchy
 package validate
 
 import (
@@ -26,10 +26,6 @@ import (
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/adapters/tui/selector"
 )
-
-func init() {
-	registry.Register(Validate)
-}
 
 // subcommands defines all available validate subcommands.
 var subcommands = []tui.SubcommandInfo{

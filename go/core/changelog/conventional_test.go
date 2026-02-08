@@ -216,14 +216,14 @@ func TestCommitsToVersion(t *testing.T) {
 
 func TestFilterCommitsByModule(t *testing.T) {
 	commits := []*Commit{
-		{SHA: "1", Files: []string{"go/cli/r2r/main.go"}},
+		{SHA: "1", Files: []string{"go/cli/clie/main.go"}},
 		{SHA: "2", Files: []string{"go/eac/core/types.go"}},
 		{SHA: "3", Files: []string{"docs/readme.md"}},
-		{SHA: "4", Files: []string{"go/cli/r2r/config.go", "go/eac/core/utils.go"}},
+		{SHA: "4", Files: []string{"go/cli/clie/config.go", "go/eac/core/utils.go"}},
 	}
 
-	// Filter for go/cli/r2r/**
-	patterns := []string{"go/cli/r2r/**"}
+	// Filter for go/cli/clie/**
+	patterns := []string{"go/cli/clie/**"}
 	filtered := FilterCommitsByModule(commits, patterns)
 
 	assert.Len(t, filtered, 2)
@@ -233,7 +233,7 @@ func TestFilterCommitsByModule(t *testing.T) {
 
 func TestFilterCommitsByModule_EmptyPatterns(t *testing.T) {
 	commits := []*Commit{
-		{SHA: "1", Files: []string{"go/cli/r2r/main.go"}},
+		{SHA: "1", Files: []string{"go/cli/clie/main.go"}},
 		{SHA: "2", Files: []string{"go/eac/core/types.go"}},
 	}
 
@@ -249,24 +249,24 @@ func TestMatchGlobPattern(t *testing.T) {
 		want    bool
 	}{
 		// Literal matches
-		{"go/cli/r2r/main.go", "go/cli/r2r/main.go", true},
-		{"go/cli/r2r/main.go", "go/eac/core/main.go", false},
+		{"go/cli/clie/main.go", "go/cli/clie/main.go", true},
+		{"go/cli/clie/main.go", "go/eac/core/main.go", false},
 
 		// ** patterns (prefix/**)
-		{"go/cli/r2r/main.go", "go/cli/r2r/**", true},
-		{"go/cli/r2r/internal/config.go", "go/cli/r2r/**", true},
-		{"go/eac/core/main.go", "go/cli/r2r/**", false},
+		{"go/cli/clie/main.go", "go/cli/clie/**", true},
+		{"go/cli/clie/internal/config.go", "go/cli/clie/**", true},
+		{"go/eac/core/main.go", "go/cli/clie/**", false},
 
 		// Note: **/*.go pattern is not supported by our simple matcher
 		// Use the full gobwas/glob library if needed
 
 		// * patterns
-		{"go/cli/r2r/main.go", "go/cli/r2r/*.go", true},
-		{"go/cli/r2r/internal/config.go", "go/cli/r2r/*.go", false}, // * doesn't match /
+		{"go/cli/clie/main.go", "go/cli/clie/*.go", true},
+		{"go/cli/clie/internal/config.go", "go/cli/clie/*.go", false}, // * doesn't match /
 
 		// Prefix patterns
-		{"go/cli/r2r/main.go", "go/cli/r2r", true},
-		{"go/cli/r2r/internal/config.go", "go/cli/r2r", true},
+		{"go/cli/clie/main.go", "go/cli/clie", true},
+		{"go/cli/clie/internal/config.go", "go/cli/clie", true},
 	}
 
 	for _, tt := range tests {

@@ -112,7 +112,11 @@ See [Measuring and Improving Flow](./explanation/everything-as-code/measuring-an
 ### EAC (Everything as Code)
 
 The principle that all aspects of software development should be defined as code:
-configuration, architecture, specifications, tests, and infrastructure. See [Everything as Code](./explanation/everything-as-code/index.md).
+configuration, architecture, specifications, tests, and infrastructure.
+
+See [Everything as Code](./explanation/everything-as-code/index.md).
+
+It is also a full automation platform to manage everything as code software delivery.
 
 ### Execution Order
 
@@ -122,9 +126,9 @@ Command: [get execution order](./reference/eac/commands/get/execution-order.md).
 
 ### Extension
 
-A Docker-based plugin for the R2R CLI that provides additional commands.
+A Docker-based plugins for the CLIE CLI that provides additional commands.
 
-EAC is delivered as the `ext-eac:latest` extension.
+EAC is also delivered as the `eac-ext:latest` extension, making the eac executable into a CLIE extension.
 
 ---
 
@@ -190,13 +194,19 @@ An orchestrated sequence of build, test, and deployment steps. See [Pipeline Com
 
 ## R
 
-### R2R (Ready to Release)
+### CLIE (Cli Extender)
 
-An enterprise CLI framework for containerized workflow execution. EAC is delivered as an R2R extension. See [R2R and EAC](./reference/eac/architecture/index.md).
+An enterprise CLI framework for containerized workflow execution.
+
+EAC is delivered as an CLIE extension, as well as a stand-alone executable.
+
+See [EAC and CLIE](./reference/eac/architecture/index.md).
 
 ### Release Gate
 
-A checkpoint in the release process requiring validation before proceeding. See [Quality Gates](./explanation/continuous-delivery/quality-gates/index.md).
+A checkpoint in the release process requiring validation before proceeding.
+
+See [Quality Gates](./explanation/continuous-delivery/quality-gates/index.md).
 
 ---
 
@@ -204,11 +214,15 @@ A checkpoint in the release process requiring validation before proceeding. See 
 
 ### SAST (Static Application Security Testing)
 
-Analysis of source code for security vulnerabilities without executing it. Command: [scan](./reference/eac/commands/scan/scan.md) with `--scanner sast`.
+Analysis of source code for security vulnerabilities without executing it.
+
+Command: [scan](./reference/eac/commands/scan/scan.md) with `--scanner sast`.
 
 ### SBOM (Software Bill of Materials)
 
-A complete inventory of components in a software product. Command: [scan](./reference/eac/commands/scan/scan.md) with `--scanner sbom`.
+A complete inventory of components in a software product.
+
+Command: [scan](./reference/eac/commands/scan/scan.md) with `--scanner sbom`.
 
 ### SemVer (Semantic Versioning)
 
@@ -321,7 +335,7 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 | **`/out`**       | Build artifacts and intermediate files |
 | **`/specs`**     | Gherkin feature files (specifications) |
 | **`/docs`**      | Documentation (MkDocs site)            |
-| **`/.r2r`**      | R2R CLI configuration and contracts    |
+| **`/.clie`**     | CLIE CLI configuration and contracts   |
 | **`/.github`**   | GitHub workflows and CI configuration  |
 | **`/contracts`** | Module contract definitions (YAML)     |
 
@@ -348,10 +362,10 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 | CI/CD   | Continuous Integration/Continuous Deployment | DevOps        |
 | DAST    | Dynamic Application Security Testing         | Security      |
 | DORA    | DevOps Research and Assessment               | Metrics       |
-| EAC     | Everything as Code                           | Philosophy    |
+| EAC     | Everything as Code                           | Framework      |
 | MCP     | Model Context Protocol                       | Integration   |
 | OSCAL   | Open Security Controls Assessment Language   | Compliance    |
-| R2R     | Ready to Release                             | Framework     |
+| CLIE    | Cli Extender                                 | Framework     |
 | SAST    | Static Application Security Testing          | Security      |
 | SBOM    | Software Bill of Materials                   | Security      |
 | SemVer  | Semantic Versioning                          | Release       |
@@ -364,6 +378,6 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 
 - [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md) - Command organization
 - [Naming Conventions](./reference/eac/commands/overview/naming-conventions.md) - Command naming patterns
-- [R2R and EAC](./reference/eac/architecture/index.md) - System architecture
+- [EAC and CLIE](./reference/eac/architecture/index.md) - System architecture
 - [Decision Records](./reference/eac/decision-records/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy

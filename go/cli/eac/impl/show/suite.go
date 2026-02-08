@@ -18,16 +18,11 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	contractsreports "github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 	testing "github.com/ready-to-release/eac/go/core/testing"
 )
-
-func init() {
-	registry.Register(ShowSuite)
-}
 
 // ShowSuite displays detailed information about a test suite in markdown table format
 //

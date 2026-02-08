@@ -244,7 +244,7 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	npxToolDef := tool.GlobalRegistry().GetOrAdhoc("npx")
 	npxExecCtx := &tool.ExecutionContext{
 		ModuleRoot:    env.WorkDir,
-		FullEnv:       append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true"),
+		FullEnv:       append(env.Env, "CLIE_TEST_LOGGING_ACTIVE=true"),
 		ArgsOverrides: args,
 	}
 	execResult, runErr := tool.GlobalExecutor().Execute(context.Background(), npxToolDef, npxExecCtx)

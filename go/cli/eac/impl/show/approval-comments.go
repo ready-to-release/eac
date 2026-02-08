@@ -13,10 +13,10 @@
 // Long: - Markdown table with columns: PR, Title, Reviewer, Review State, Reviewed At
 // Long:
 // Long: Example:
-// Long:   show approval-comments ext-eac
-// Long:   show approval-comments ext-eac latest
-// Long:   show approval-comments ext-eac unreleased
-// Long:   show approval-comments ext-eac --include-all-reviews
+// Long:   show approval-comments eac-ext
+// Long:   show approval-comments eac-ext latest
+// Long:   show approval-comments eac-ext unreleased
+// Long:   show approval-comments eac-ext --include-all-reviews
 // Flag.include-all-reviews: type=bool, usage=Include all review states (not just APPROVED)
 // Flag.branch: type=string, usage=Branch to query (default: trunk branch from config, usually "main"). Use "HEAD" for current branch
 // Args: module [version]
@@ -28,14 +28,9 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowApprovalComments)
-}
 
 func ShowApprovalComments() int {
 	// Validate flags against registry metadata

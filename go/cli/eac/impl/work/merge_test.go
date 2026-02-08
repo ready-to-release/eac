@@ -111,8 +111,8 @@ func TestParseMergeConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work merge <args>)
-			os.Args = append([]string{"r2r", "work", "merge"}, tt.args...)
+			// Set test args (simulate command: clie work merge <args>)
+			os.Args = append([]string{"clie", "work", "merge"}, tt.args...)
 
 			config, err := parseMergeConfig()
 			if err != nil {
@@ -135,7 +135,7 @@ func TestMergeConfigDefaults(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "merge"}
+	os.Args = []string{"clie", "work", "merge"}
 
 	config, err := parseMergeConfig()
 	if err != nil {
@@ -205,7 +205,7 @@ func TestValidateMergeEnvironment(t *testing.T) {
 
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
-				GitOps:   internal.GetGitOps("."),
+				GitOps:   internal.NewDefaultGitOps("."),
 				RepoRoot: ".",
 				Logger:   logger,
 			}

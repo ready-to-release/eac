@@ -302,10 +302,6 @@ func (v *Validator) validateCodeBlock(block CodeBlock) error {
 		var data interface{}
 		return yaml.Unmarshal([]byte(block.Content), &data)
 
-	// Add more language validators as needed
-	// case "go":
-	//     // Could use go/parser to validate Go syntax
-
 	default:
 		// Unknown language - skip validation
 		return nil

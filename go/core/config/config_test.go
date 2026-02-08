@@ -317,7 +317,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 		{
 			name: "container-multiarch module - should aggregate",
 			module: Module{
-				Moniker:   "ext-eac",
+				Moniker:   "eac-ext",
 				Template:  "container-multiarch",
 				DependsOn: []string{"eac-cli"},
 			},
@@ -326,8 +326,8 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 		{
 			name: "bundle release type - should aggregate",
 			module: Module{
-				Moniker:   "r2r-eac-bundle",
-				DependsOn: []string{"r2r-cli", "ext-eac"},
+				Moniker:   "clie-eac-bundle",
+				DependsOn: []string{"clie-cli", "eac-ext"},
 				Versioning: &ModuleVersioning{
 					ReleaseType: "bundle",
 				},

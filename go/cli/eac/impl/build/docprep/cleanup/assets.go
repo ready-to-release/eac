@@ -3,8 +3,9 @@ package cleanup
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/staging"
 )
 
 // AssetExtensions are file extensions considered assets (images, PDFs, etc.)
@@ -19,9 +20,9 @@ var AssetExtensions = map[string]bool{
 	".pdf":  true,
 }
 
-// assetReferencePattern matches asset references in markdown and HTML.
-// Captures paths from: ![](path), [](path), src="path", href="path".
-var assetReferencePattern = regexp.MustCompile(`(?:\]\(|src="|href=")([^)"]+)`)
+// assetReferencePattern is the shared regex for matching asset references in markdown/HTML.
+// Defined in staging.AssetReferencePattern to avoid import cycles.
+var assetReferencePattern = staging.AssetReferencePattern
 
 // CleanupUnreferencedAssets removes asset files from staging that are not
 // referenced by any markdown. Runs after all preprocessing to ensure only

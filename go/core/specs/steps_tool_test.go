@@ -26,8 +26,8 @@ type toolTestState struct {
 	toolConfig        *tool.ToolConfig
 	loadError         error
 	repoRoot          string
-	origRepoRoot      string // Original R2R_REPO_ROOT value
-	origContainerRoot string // Original R2R_CONTAINER_ROOT value
+	origRepoRoot      string // Original CLIE_REPO_ROOT value
+	origContainerRoot string // Original CLIE_CONTAINER_ROOT value
 }
 
 var toolState *toolTestState
@@ -47,8 +47,8 @@ func registerToolHooks(sc *godog.ScenarioContext) {
 
 func beforeToolScenario(c context.Context, _ *godog.Scenario) (context.Context, error) {
 	toolState = &toolTestState{
-		origRepoRoot:      os.Getenv(environments.EnvR2RRepoRoot),
-		origContainerRoot: os.Getenv(environments.EnvR2RContainerRoot),
+		origRepoRoot:      os.Getenv(environments.EnvCLIERepoRoot),
+		origContainerRoot: os.Getenv(environments.EnvCLIEContainerRoot),
 	}
 	config.ClearCache()
 	return c, nil
@@ -111,8 +111,8 @@ func cleanupToolTestState() {
 	if toolState == nil {
 		return
 	}
-	restoreToolEnvVar("R2R_REPO_ROOT", toolState.origRepoRoot)
-	restoreToolEnvVar("R2R_CONTAINER_ROOT", toolState.origContainerRoot)
+	restoreToolEnvVar("CLIE_REPO_ROOT", toolState.origRepoRoot)
+	restoreToolEnvVar("CLIE_CONTAINER_ROOT", toolState.origContainerRoot)
 	config.ClearCache()
 	toolState = nil
 }
@@ -143,9 +143,9 @@ func toolSetupAfterIsolation(ctx *eacgodog.TestContext) {
 	}
 
 	toolState.repoRoot = ctx.IsolatedDir
-	os.Setenv(environments.EnvR2RRepoRoot, ctx.IsolatedDir)
+	os.Setenv(environments.EnvCLIERepoRoot, ctx.IsolatedDir)
 	if toolRoot != "" {
-		os.Setenv(environments.EnvR2RContainerRoot, toolRoot)
+		os.Setenv(environments.EnvCLIEContainerRoot, toolRoot)
 	}
 }
 

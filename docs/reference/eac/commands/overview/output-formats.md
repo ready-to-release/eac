@@ -397,7 +397,7 @@ import subprocess
 
 # Get module data
 result = subprocess.run(
-    ['r2r', 'eac', 'get', 'modules'],
+    ['clie', 'eac', 'get', 'modules'],
     capture_output=True,
     text=True
 )

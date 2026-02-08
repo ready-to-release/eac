@@ -76,7 +76,7 @@ type GitRepository interface {
 	// CommitsSince returns all commits since a given tag or reference.
 	CommitsSince(ref string) ([]CommitInfo, error)
 
-	// TagsMatching returns tags matching a glob pattern (e.g., "r2r-cli/*").
+	// TagsMatching returns tags matching a glob pattern (e.g., "clie-cli/*").
 	TagsMatching(pattern string) ([]string, error)
 
 	// LatestTag returns the most recent tag matching the pattern.

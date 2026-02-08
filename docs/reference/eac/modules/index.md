@@ -104,7 +104,7 @@ Component types define:
 
 ### Other Families
 
-**Docker**: `r2r-extension` - Container image with multi-platform builds
+**Docker**: `clie-extension` - Container image with multi-platform builds
 
 **Documentation**: `mkdocs-site`, `mkdocs-pdf` - MkDocs HTML/PDF generation
 
@@ -410,7 +410,7 @@ artifacts:
     verify: existence
 ```
 
-**Container Image (r2r-extension)**:
+**Container Image (clie-extension)**:
 
 ```yaml
 artifacts:
@@ -431,7 +431,7 @@ eac validate-artifacts <module>
 
 ### Build Cache
 
-**Location**: `.r2r/cache/build/`
+**Location**: `.clie/cache/build/`
 
 **Invalidation**:
 
@@ -542,8 +542,8 @@ eac update-design <module>
 
 | Module      | Type          | Purpose                              |
 | ----------- | ------------- | ------------------------------------ |
-| **r2r-cli** | go-cli        | CLI framework (Docker orchestration) |
-| **ext-eac** | r2r-extension | EAC Docker extension image           |
+| **clie-cli** | go-cli        | CLI framework (Docker orchestration) |
+| **eac-ext** | clie-extension | EAC Docker extension image           |
 
 ### Libraries
 

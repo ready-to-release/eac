@@ -17,7 +17,7 @@ Create changelog from Git commits with automatic version detection and formattin
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r release this my-module
+eac release this my-module
 ```
 
 **What happens**:
@@ -53,7 +53,7 @@ code release/my-module/CHANGELOG.md
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r validate release my-module
+eac validate release my-module
 ```
 
 **What happens**: Checks changelog follows Keep a Changelog format standards
@@ -75,7 +75,7 @@ Preparing my-module release after multiple commits:
 
 ```bash
 # Generate changelog for my-module
-r2r release this my-module
+eac release this my-module
 
 # Output:
 moniker: my-module
@@ -103,7 +103,7 @@ cat release/my-module/CHANGELOG.md
 # ...
 
 # Validate format
-r2r validate release my-module
+eac validate release my-module
 # Output:
 # ✓ Changelog exists: release/my-module/CHANGELOG.md
 # ✓ Valid header format
@@ -111,7 +111,7 @@ r2r validate release my-module
 # ✓ Versions in descending order
 
 # Get version for verification
-r2r release get-version my-module
+eac release get-version my-module
 # Output: 1.2.4
 ```
 

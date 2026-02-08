@@ -16,8 +16,6 @@
 # Go module files
 /go.mod -export-ignore
 /go.sum -export-ignore
-# GitHub workflows (for transparency/reproducibility)
-/.github/workflows/*r2r-cli*.yml -export-ignore
 # Docs
 /documentation -export-ignore
 # Keep the gitignore and gitattributes for proper repo setup

@@ -35,13 +35,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/fileutil"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 )
-
-func init() {
-	registry.Register(ImportManual)
-}
 
 // ManualTestResults represents the imported manual test results.
 type ManualTestResults struct {

@@ -70,7 +70,7 @@ func RunTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 
 	// Build full environment
 	fullEnv := os.Environ()
-	fullEnv = append(fullEnv, "R2R_TEST_LOGGING_ACTIVE=true")
+	fullEnv = append(fullEnv, "CLIE_TEST_LOGGING_ACTIVE=true")
 	if env != nil {
 		for key, value := range env {
 			fullEnv = append(fullEnv, fmt.Sprintf("%s=%s", key, value))

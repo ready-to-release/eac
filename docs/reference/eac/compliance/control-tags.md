@@ -105,7 +105,7 @@ eac validate control-tags
 eac test <module> --suite acceptance
 
 # Collect compliance evidence
-r2r create risk-assess <module> --profile specs/.risk-controls/<module>.profile.json
+clie create risk-assess <module> --profile specs/.risk-controls/<module>.profile.json
 
 # Output: out/risk/<module>/assessment-results.json
 # Contains: Controls + Test Evidence + Satisfied/Not-Satisfied Status

@@ -90,7 +90,7 @@ type ComponentLogger struct {
 // C creates a ComponentLogger, inferring the component name from the call site.
 // If an explicit component name is provided, it uses that instead.
 //
-// The inferred name is derived from the caller's package path relative to go/eac/ or go/r2r/,
+// The inferred name is derived from the caller's package path relative to go/eac/ or go/clie/,
 // giving unique, unambiguous component identifiers like:
 //   - "commands/impl/security/sast"
 //   - "core/logging"
@@ -142,7 +142,7 @@ func Component(component ...string) *ComponentLogger {
 
 // inferComponent extracts the component path from the caller's package.
 // Uses runtime reflection to get the full package path, then extracts
-// the relative path from go/eac/ or go/r2r/ for unambiguous identification.
+// the relative path from go/eac/ or go/clie/ for unambiguous identification.
 //
 // Call stack: runtime.Caller(0)=inferComponent, (1)=C/Component, (2)=caller.
 func inferComponent() string {
@@ -156,10 +156,10 @@ func inferComponent() string {
 	if fn := runtime.FuncForPC(pc); fn != nil {
 		name := fn.Name()
 		// name looks like: github.com/ready-to-release/eac/go/cli/eac/impl/security/sast.init
-		// or: github.com/ready-to-release/eac/go/cli/r2r/cmd.Execute
+		// or: github.com/ready-to-release/eac/go/cli/clie/cmd.Execute
 
-		// Find the /go/eac/ or /go/r2r/ boundary in the package path
-		for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
+		// Find the /go/eac/ or /go/clie/ boundary in the package path
+		for _, boundary := range []string{"/go/eac/", "/go/clie/"} {
 			if idx := strings.Index(name, boundary); idx != -1 {
 				// Extract everything after the boundary up to the function name
 				pkgPath := name[idx+len(boundary):] // "commands/impl/security/sast.init"
@@ -175,8 +175,8 @@ func inferComponent() string {
 	// Fallback: extract from file path (for edge cases)
 	file = filepath.ToSlash(file)
 
-	// Look for /go/eac/ or /go/r2r/ in the file path
-	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
+	// Look for /go/eac/ or /go/clie/ in the file path
+	for _, boundary := range []string{"/go/eac/", "/go/clie/"} {
 		if idx := strings.Index(file, boundary); idx != -1 {
 			relPath := file[idx+len(boundary):] // "commands/impl/security/sast/sast.go"
 			relPath = filepath.Dir(relPath)     // "commands/impl/security/sast"

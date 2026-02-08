@@ -233,7 +233,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 			name: "published release type",
 			versioning: &ModuleVersioning{
 				Scheme:      "SemVer",
-				Changelog:   "release/r2r-cli/CHANGELOG.md",
+				Changelog:   "release/clie-cli/CHANGELOG.md",
 				ReleaseType: "published",
 			},
 			wantType:    "published",
@@ -253,7 +253,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 			name: "bundle release type",
 			versioning: &ModuleVersioning{
 				Scheme:      "CalVer",
-				Changelog:   "release/r2r-eac-bundle/CHANGELOG.md",
+				Changelog:   "release/clie-eac-bundle/CHANGELOG.md",
 				ReleaseType: "bundle",
 			},
 			wantType:    "bundle",
@@ -300,10 +300,10 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 		{
 			name: "published with release/ changelog - OK",
 			contract: BaseContract{
-				Moniker: "r2r-cli",
+				Moniker: "clie-cli",
 				Versioning: &ModuleVersioning{
 					Scheme:      "SemVer",
-					Changelog:   "release/r2r-cli/CHANGELOG.md",
+					Changelog:   "release/clie-cli/CHANGELOG.md",
 					ReleaseType: "published",
 				},
 			},
@@ -352,10 +352,10 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 		{
 			name: "bundle with release/ changelog - OK",
 			contract: BaseContract{
-				Moniker: "r2r-eac-bundle",
+				Moniker: "clie-eac-bundle",
 				Versioning: &ModuleVersioning{
 					Scheme:      "CalVer",
-					Changelog:   "release/r2r-eac-bundle/CHANGELOG.md",
+					Changelog:   "release/clie-eac-bundle/CHANGELOG.md",
 					ReleaseType: "bundle",
 				},
 			},

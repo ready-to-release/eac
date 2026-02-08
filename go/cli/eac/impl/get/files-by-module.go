@@ -28,13 +28,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-func init() {
-	registry.Register(GetFilesByModule)
-}
 
 func GetFilesByModule() int {
 	// Parse arguments

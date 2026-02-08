@@ -23,8 +23,8 @@ type configTestState struct {
 	cfg               *config.EACConfig
 	loadError         error
 	repoRoot          string
-	origRepoRoot      string // Original R2R_REPO_ROOT value
-	origContainerRoot string // Original R2R_CONTAINER_ROOT value
+	origRepoRoot      string // Original CLIE_REPO_ROOT value
+	origContainerRoot string // Original CLIE_CONTAINER_ROOT value
 }
 
 var cfgState *configTestState
@@ -35,8 +35,8 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	sc.Before(func(c context.Context, sc *godog.Scenario) (context.Context, error) {
 		cfgState = &configTestState{}
 		// Save original env vars and clear config cache
-		cfgState.origRepoRoot = os.Getenv(environments.EnvR2RRepoRoot)
-		cfgState.origContainerRoot = os.Getenv(environments.EnvR2RContainerRoot)
+		cfgState.origRepoRoot = os.Getenv(environments.EnvCLIERepoRoot)
+		cfgState.origContainerRoot = os.Getenv(environments.EnvCLIEContainerRoot)
 		config.ClearCache()
 		return c, nil
 	})
@@ -66,7 +66,7 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		return configTheRepositoryHasFileWith(ctx, path, content.Content)
 	})
 	sc.Step(`^the contracts directory does not exist$`, func() error {
-		os.Unsetenv(environments.EnvR2RContainerRoot)
+		os.Unsetenv(environments.EnvCLIEContainerRoot)
 		return nil
 	})
 
@@ -125,14 +125,14 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 func cleanupConfigTestState() {
 	if cfgState != nil {
 		if cfgState.origRepoRoot != "" {
-			os.Setenv(environments.EnvR2RRepoRoot, cfgState.origRepoRoot)
+			os.Setenv(environments.EnvCLIERepoRoot, cfgState.origRepoRoot)
 		} else {
-			os.Unsetenv(environments.EnvR2RRepoRoot)
+			os.Unsetenv(environments.EnvCLIERepoRoot)
 		}
 		if cfgState.origContainerRoot != "" {
-			os.Setenv(environments.EnvR2RContainerRoot, cfgState.origContainerRoot)
+			os.Setenv(environments.EnvCLIEContainerRoot, cfgState.origContainerRoot)
 		} else {
-			os.Unsetenv(environments.EnvR2RContainerRoot)
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
 		}
 		config.ClearCache()
 	}
@@ -157,9 +157,9 @@ func configSetupAfterIsolation(ctx *eacgodog.TestContext) {
 
 	cfgState.repoRoot = ctx.IsolatedDir
 
-	os.Setenv(environments.EnvR2RRepoRoot, ctx.IsolatedDir)
+	os.Setenv(environments.EnvCLIERepoRoot, ctx.IsolatedDir)
 	if toolRoot != "" {
-		os.Setenv(environments.EnvR2RContainerRoot, toolRoot)
+		os.Setenv(environments.EnvCLIEContainerRoot, toolRoot)
 	}
 }
 

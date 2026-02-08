@@ -33,24 +33,24 @@ func TestBuildMockingEnvironment_LoadsConfigFromFile(t *testing.T) {
 	hasMockGitHub := false
 
 	for _, e := range env {
-		if strings.HasPrefix(e, "R2R_CONTAINER_ROOT=") {
+		if strings.HasPrefix(e, "CLIE_CONTAINER_ROOT=") {
 			hasContainerRoot = true
 		}
-		if strings.HasPrefix(e, "R2R_MOCK_SECURITY=") {
+		if strings.HasPrefix(e, "CLIE_MOCK_SECURITY=") {
 			hasMockSecurity = true
 		}
-		if strings.HasPrefix(e, "R2R_MOCK_DOCKER=") || strings.HasPrefix(e, "R2R_MOCK_STRUCTURIZR=") {
+		if strings.HasPrefix(e, "CLIE_MOCK_DOCKER=") || strings.HasPrefix(e, "CLIE_MOCK_STRUCTURIZR=") {
 			hasMockDocker = true
 		}
-		if strings.HasPrefix(e, "R2R_MOCK_GITHUB_CLI=") {
+		if strings.HasPrefix(e, "CLIE_MOCK_GITHUB_CLI=") {
 			hasMockGitHub = true
 		}
 	}
 
-	assert.True(t, hasContainerRoot, "Should set R2R_CONTAINER_ROOT")
-	assert.True(t, hasMockSecurity, "Should set R2R_MOCK_SECURITY from config")
-	assert.True(t, hasMockDocker, "Should set R2R_MOCK_DOCKER from config")
-	assert.True(t, hasMockGitHub, "Should set R2R_MOCK_GITHUB_CLI from config")
+	assert.True(t, hasContainerRoot, "Should set CLIE_CONTAINER_ROOT")
+	assert.True(t, hasMockSecurity, "Should set CLIE_MOCK_SECURITY from config")
+	assert.True(t, hasMockDocker, "Should set CLIE_MOCK_DOCKER from config")
+	assert.True(t, hasMockGitHub, "Should set CLIE_MOCK_GITHUB_CLI from config")
 }
 
 // TestBuildMockingEnvironment_FallbackToEnvVars tests that buildMockingEnvironment
@@ -69,12 +69,12 @@ func TestBuildMockingEnvironment_FallbackToEnvVars(t *testing.T) {
 	// Should still have container root set
 	hasContainerRoot := false
 	for _, e := range env {
-		if strings.HasPrefix(e, "R2R_CONTAINER_ROOT=") {
+		if strings.HasPrefix(e, "CLIE_CONTAINER_ROOT=") {
 			hasContainerRoot = true
 		}
 	}
 
-	assert.True(t, hasContainerRoot, "Should set R2R_CONTAINER_ROOT even without config file")
+	assert.True(t, hasContainerRoot, "Should set CLIE_CONTAINER_ROOT even without config file")
 }
 
 // TestBuildMockingEnvironment_PreservesExistingEnv tests that buildMockingEnvironment
@@ -106,7 +106,7 @@ func TestBuildMockingEnvironment_PreservesExistingEnv(t *testing.T) {
 	// Verify new mock vars are added
 	hasMockVars := false
 	for _, e := range env {
-		if strings.HasPrefix(e, "R2R_MOCK_") {
+		if strings.HasPrefix(e, "CLIE_MOCK_") {
 			hasMockVars = true
 			break
 		}
@@ -122,16 +122,16 @@ func findRepoRoot() (string, error) {
 	}
 
 	for {
-		// Check if .r2r directory exists
-		r2rDir := filepath.Join(dir, ".r2r")
-		if _, err := os.Stat(r2rDir); err == nil {
+		// Check if .clie directory exists
+		clieDir := filepath.Join(dir, ".clie")
+		if _, err := os.Stat(clieDir); err == nil {
 			return dir, nil
 		}
 
 		// Move up one directory
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// Reached root without finding .r2r
+			// Reached root without finding .clie
 			return "", os.ErrNotExist
 		}
 		dir = parent

@@ -17,5 +17,5 @@ Feature: repository_docs-structurizr-cache
       Then all Structurizr views should have cached SVGs
       And if any views are missing from cache, I should see:
         """
-        Run 'r2r eac build --module docs' to build the Structurizr diagrams.
+        Run 'clie eac build --module docs' to build the Structurizr diagrams.
         """

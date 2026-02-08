@@ -27,14 +27,9 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
-
-func init() {
-	registry.Register(TestTags)
-}
 
 // package-level config for use by helper functions.
 var eacConfig *config.EACConfig

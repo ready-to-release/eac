@@ -20,16 +20,15 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message/internal"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
@@ -37,36 +36,15 @@ import (
 
 var log = logging.C()
 
-// logDebugArtifact logs debug content with labeled sections to the log file.
-// This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
+// logDebugArtifact delegates to the shared AI utility for debug artifact logging.
 func logDebugArtifact(label, content string) {
-	log.Debug(fmt.Sprintf("=== %s START ===", label))
-	log.Debug(content)
-	log.Debug(fmt.Sprintf("=== %s END ===", label))
+	aiutil.LogDebugArtifact(log, label, content)
 }
 
 // logDebugArtifactf logs debug content with a formatted label.
 func logDebugArtifactf(format, content string, args ...interface{}) {
 	label := fmt.Sprintf(format, args...)
 	logDebugArtifact(label, content)
-}
-
-// gitRepoProvider provides lazy-initialized git repository with test injection support.
-var gitRepoProvider = &git.LazyRepo{}
-
-// getGitRepo returns the git repository, initializing it if needed.
-func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	return gitRepoProvider.Get(workspaceRoot)
-}
-
-// SetGitRepo allows tests to inject a mock repository.
-func SetGitRepo(repo git.GitRepository) {
-	gitRepoProvider.Set(repo)
-}
-
-// ResetGitRepo clears the repository and manager for test cleanup.
-func ResetGitRepo() {
-	gitRepoProvider.Reset()
 }
 
 // ValidationError is an alias for commitmessageinternal.ValidationError for external access.
@@ -99,6 +77,10 @@ type executionConfig struct {
 }
 
 func CreateCommitMessage() int {
+	return createCommitMessageWithDeps(defaultDeps())
+}
+
+func createCommitMessageWithDeps(deps *Deps) int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
@@ -127,11 +109,11 @@ func CreateCommitMessage() int {
 			log.Warnf("retry attempt: attempt=%d, max=%d", attempt, maxRetries)
 		}
 
-		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(workspaceRoot, debug)
+		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(deps, workspaceRoot, debug)
 		if !shouldRetry {
 			// If successful and auto-commit is enabled, perform the commit
 			if result == 0 && autoCommit && generatedMessage != "" {
-				return performAutoCommit(workspaceRoot, generatedMessage)
+				return performAutoCommit(deps, workspaceRoot, generatedMessage)
 			}
 			return result
 		}
@@ -155,21 +137,21 @@ func CreateCommitMessage() int {
 
 // commitAIAttempt performs a single attempt at generating and committing
 // Returns (exit code, should retry).
-func commitAIAttempt(workspaceRoot string, debug bool) (int, bool) {
-	exitCode, shouldRetry, _ := commitAIAttemptWithMessage(workspaceRoot, debug)
+func commitAIAttempt(deps *Deps, workspaceRoot string, debug bool) (int, bool) {
+	exitCode, shouldRetry, _ := commitAIAttemptWithMessage(deps, workspaceRoot, debug)
 	return exitCode, shouldRetry
 }
 
 // commitAIAttemptWithMessage performs a single attempt at generating commit message
 // Returns (exit code, should retry, generated message).
-func commitAIAttemptWithMessage(workspaceRoot string, debug bool) (int, bool, string) {
+func commitAIAttemptWithMessage(deps *Deps, workspaceRoot string, debug bool) (int, bool, string) {
 	// Phase 1: Verify Contract Implementation
 	if err := verifyContractImplementation(workspaceRoot); err != nil {
 		return 1, false, ""
 	}
 
 	// Phase 2: Build Execution Context
-	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, debug)
+	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(deps, workspaceRoot, debug)
 	if err != nil {
 		log.Errorf("ERROR: Build context failed: %v", err)
 		return 1, false, ""
@@ -180,14 +162,14 @@ func commitAIAttemptWithMessage(workspaceRoot string, debug bool) (int, bool, st
 	}
 
 	// Phase 3: Generate Top-Level Summary
-	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats)
+	topLevel, err := generateTopLevelSummary(deps, cfg, stagedFilesTable, diffStats)
 	if err != nil {
 		log.Errorf("ERROR: Top-level generation failed: %v", err)
 		return 1, false, ""
 	}
 
 	// Phase 4: Generate Module Sections
-	moduleSections, err := generateModuleSections(cfg)
+	moduleSections, err := generateModuleSections(deps, cfg)
 	if err != nil {
 		log.Errorf("ERROR: Module section generation failed: %v", err)
 		return 1, false, ""
@@ -245,7 +227,7 @@ func verifyContractImplementation(workspaceRoot string) error {
 }
 
 // Phase 3: Build Execution Context.
-func buildExecutionContext(workspaceRoot string, debug bool) (*executionConfig, string, string, error) {
+func buildExecutionContext(deps *Deps, workspaceRoot string, debug bool) (*executionConfig, string, string, error) {
 	log.Debug("buildExecutionContext: start")
 	// Validate inputs
 	if workspaceRoot == "" {
@@ -273,7 +255,7 @@ func buildExecutionContext(workspaceRoot string, debug bool) (*executionConfig, 
 
 	// Get git diff and stats
 	log.Debug("buildExecutionContext: calling getGitDiffAndStats")
-	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot)
+	gitDiff, diffStats, err := getGitDiffAndStats(deps, workspaceRoot)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -339,10 +321,10 @@ func extractAffectedModules(report *reports.FilesModulesReport) []string {
 }
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes.
-func getGitDiffAndStats(workspaceRoot string) (string, string, error) {
+func getGitDiffAndStats(deps *Deps, workspaceRoot string) (string, string, error) {
 	log.Debug("getGitDiffAndStats: start")
 	log.Debug("getGitDiffAndStats: calling getGitRepo")
-	repo, err := getGitRepo(workspaceRoot)
+	repo, err := deps.GetGitRepo(workspaceRoot)
 	if err != nil {
 		return "", "", err
 	}
@@ -375,7 +357,7 @@ func getGitDiffAndStats(workspaceRoot string) (string, string, error) {
 }
 
 // Phase 4: Generate Top-Level Summary.
-func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable, diffStats string) (string, error) {
+func generateTopLevelSummary(deps *Deps, cfg *executionConfig, stagedFilesTable, diffStats string) (string, error) {
 	topLevelContext := buildTopLevelContext(stagedFilesTable, cfg.gitDiff, diffStats, cfg.affectedModules)
 
 	logDebugArtifact("TOP-LEVEL-CONTEXT", topLevelContext)
@@ -383,7 +365,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable, diffStats s
 	var topLevelOutput string
 	var providerName string
 	err := commitmessageinternal.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		result, genErr := generateWithPromptResult("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
+		result, genErr := generateWithPromptResult(deps, "top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
 		if result != nil {
 			topLevelOutput = result.Output
 			providerName = result.ProviderName
@@ -409,11 +391,11 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable, diffStats s
 }
 
 // Phase 5: Generate Module Sections (multi-module only).
-func generateModuleSections(cfg *executionConfig) ([]string, error) {
+func generateModuleSections(deps *Deps, cfg *executionConfig) ([]string, error) {
 	// Use parallel implementation for performance (60-70% speedup for multi-module commits)
 	// Sequential: N modules × 5s = 15s for 3 modules
 	// Parallel:   max(5s) = 5s for 3 modules
-	return generateModuleSectionsParallel(cfg, nil)
+	return generateModuleSectionsParallel(deps, cfg, nil)
 }
 
 // Phase 6: Assemble Final Message.
@@ -465,15 +447,15 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 
 // performAutoCommit creates a git commit with the generated message.
 // This is called when --commit flag is provided and message generation succeeds.
-func performAutoCommit(workspaceRoot, message string) int {
-	repo, err := getGitRepo(workspaceRoot)
+func performAutoCommit(deps *Deps, workspaceRoot, message string) int {
+	repo, err := deps.GetGitRepo(workspaceRoot)
 	if err != nil {
 		log.Errorf("auto-commit failed: %v", err)
 		return 1
 	}
 
 	// Get author info from git config (use git command for reliability)
-	authorName, authorEmail := getGitAuthorInfo(workspaceRoot)
+	authorName, authorEmail := getGitAuthorInfo(deps, workspaceRoot)
 	if authorName == "" || authorEmail == "" {
 		log.Error("Auto-commit failed: git user.name and user.email must be configured")
 		log.Info("Run: git config user.name \"Your Name\"")
@@ -495,7 +477,7 @@ func performAutoCommit(workspaceRoot, message string) int {
 
 // getGitAuthorInfo retrieves git user.name and user.email from git config.
 // Returns empty strings if not configured.
-func getGitAuthorInfo(workspaceRoot string) (name, email string) {
+func getGitAuthorInfo(deps *Deps, workspaceRoot string) (name, email string) {
 	// Try to get from environment first (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
 	name = os.Getenv(environments.EnvGitAuthorName)
 	email = os.Getenv(environments.EnvGitAuthorEmail)
@@ -505,26 +487,19 @@ func getGitAuthorInfo(workspaceRoot string) (name, email string) {
 
 	// Fall back to git config command
 	// Using exec.Command because go-git config reading can be complex
-	nameCmd := execCommand("git", "config", "user.name")
+	nameCmd := deps.ExecCmd("git", "config", "user.name")
 	nameCmd.Dir = workspaceRoot
 	if nameOut, err := nameCmd.Output(); err == nil {
 		name = strings.TrimSpace(string(nameOut))
 	}
 
-	emailCmd := execCommand("git", "config", "user.email")
+	emailCmd := deps.ExecCmd("git", "config", "user.email")
 	emailCmd.Dir = workspaceRoot
 	if emailOut, err := emailCmd.Output(); err == nil {
 		email = strings.TrimSpace(string(emailOut))
 	}
 
 	return name, email
-}
-
-// execCommand is a variable to allow mocking in tests.
-var execCommand = execCommandReal
-
-func execCommandReal(name string, args ...string) *exec.Cmd {
-	return exec.Command(name, args...)
 }
 
 // stripModuleSectionsFromTopLevel removes any module-like sections that appear

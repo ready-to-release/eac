@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var rePlaceholder = regexp.MustCompile(`<[^>]+>`)
+
 // FeatureStep represents a step from a Gherkin feature file.
 type FeatureStep struct {
 	Text     string // step text without keyword (e.g., "I run the command \"foo\"")
@@ -132,8 +134,7 @@ func NormalizeForMatching(stepText string) string {
 	// For example, <format> becomes "ABC" which matches patterns like:
 	// ([A-Z]+), ([a-zA-Z]+), (.*), (\w+), etc.
 	// This allows step definitions to match Scenario Outline steps
-	placeholderPattern := regexp.MustCompile(`<[^>]+>`)
-	normalized := placeholderPattern.ReplaceAllString(stepText, "ABC")
+	normalized := rePlaceholder.ReplaceAllString(stepText, "ABC")
 	return normalized
 }
 

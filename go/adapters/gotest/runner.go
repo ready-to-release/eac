@@ -266,8 +266,8 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 	testRunID := filepath.Base(cfg.TestRunDir)
 
 	envOverrides := map[string]string{
-		"R2R_TEST_RUN_ID":         testRunID,
-		"R2R_TEST_LOGGING_ACTIVE": "true",
+		"CLIE_TEST_RUN_ID":         testRunID,
+		"CLIE_TEST_LOGGING_ACTIVE": "true",
 	}
 
 	if isGodogTest {

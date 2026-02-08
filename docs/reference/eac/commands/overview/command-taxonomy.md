@@ -271,7 +271,7 @@ Release commands manage the release process from changelog generation through ta
 - `release this` - Finalize changelog and prepare module for release
 - `release get-version` - Extract latest version from changelog
 - `release generate-module-calver` - Generate CalVer tag for a module
-- `release r2r-cli` - Create SemVer tag for releasing r2r-cli
+- `release clie-cli` - Create SemVer tag for releasing clie-cli
 - `release check-ci` - Check CI status before releasing
 - `release tag-pending` - Check for changelog versions without git tags
 
@@ -362,13 +362,13 @@ Commands that don't fit into the verb-based categorization:
 
 - `help` - Display help information for commands
 - `init` - Initialize AI provider configuration for the project
-- `extension-meta` - Output extension metadata for r2r CLI
+- `extension-meta` - Output extension metadata for clie CLI
 
 **When to use**:
 
 - `help`: Anytime you need command information
 - `init`: First-time setup or when changing AI providers
-- `extension-meta`: When integrating with r2r CLI
+- `extension-meta`: When integrating with clie CLI
 
 **See also**: [Build Commands Category](../categories/build.md)
 

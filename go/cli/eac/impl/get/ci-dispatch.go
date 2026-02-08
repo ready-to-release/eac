@@ -28,17 +28,12 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
-
-func init() {
-	registry.Register(GetCIDispatch)
-}
 
 // ciDispatchFlags defines valid flags for the get ci-dispatch command
 
@@ -437,7 +432,7 @@ func getLastSuccessfulWorkflowSHAWithAPI(workflowName string, api github.API) (s
 func printCIDispatchUsage() {
 	fmt.Println("Filter modules for CI dispatch based on existing valid CI")
 	fmt.Println("")
-	fmt.Println("Usage: r2r get ci-dispatch [flags]")
+	fmt.Println("Usage: clie get ci-dispatch [flags]")
 	fmt.Println("")
 	fmt.Println("Flags:")
 	fmt.Println("  --directly-changed <modules>  Space-separated list of directly changed modules")
@@ -465,20 +460,20 @@ func printCIDispatchUsage() {
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  # Normal usage in CI")
-	fmt.Println("  r2r get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\"")
+	fmt.Println("  clie get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\"")
 	fmt.Println("")
 	fmt.Println("  # Shell format for workflow scripting")
-	fmt.Println("  eval $(r2r get ci-dispatch --format shell --invalidated \"r2r-cli ext-eac\")")
+	fmt.Println("  eval $(clie get ci-dispatch --format shell --invalidated \"clie-cli eac-ext\")")
 	fmt.Println("  for module in $DISPATCH; do")
 	fmt.Println("    gh workflow run \"ci-${module}.yaml\" --ref main")
 	fmt.Println("  done")
 	fmt.Println("")
 	fmt.Println("  # Local testing with mock data")
-	fmt.Println("  r2r get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\" \\")
+	fmt.Println("  clie get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\" \\")
 	fmt.Println("    --mock '{\"eac-cli\": true, \"docs\": false}'")
 	fmt.Println("")
 	fmt.Println("  # Output as JSON")
-	fmt.Println("  r2r get ci-dispatch --as-json --directly-changed \"core\" --invalidated \"docs\"")
+	fmt.Println("  clie get ci-dispatch --as-json --directly-changed \"core\" --invalidated \"docs\"")
 }
 
 func min(a, b int) int {

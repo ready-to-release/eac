@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-**Problem**: You want to develop and test r2r extensions without pushing to remote registries during development.
+**Problem**: You want to develop and test clie extensions without pushing to remote registries during development.
 
 **Solution**: Use different workflows depending on where you're working:
 
@@ -22,10 +22,10 @@ When developing in the EAC repository itself, use `importer.ps1` to load command
 .\scripts\pwsh\importer.ps1
 
 # Set commands path
-$env:R2R_COMMANDS_PATH = '.\go\cli\eac'
+$env:CLIE_COMMANDS_PATH = '.\go\cli\eac'
 
 # Load commands
-r2r load-commands
+clie load-commands
 
 # Test your changes immediately
 eac <command>
@@ -77,14 +77,14 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 # Navigate to EAC repository
 cd C:\source\ready-to-release\eac
 
-# Run importer to install/update r2r binary
+# Run importer to install/update clie binary
 .\scripts\pwsh\importer.ps1
 
 # Set commands path
-$env:R2R_COMMANDS_PATH = '.\go\cli\eac'
+$env:CLIE_COMMANDS_PATH = '.\go\cli\eac'
 
 # Load commands directly from source
-r2r load-commands
+clie load-commands
 
 # Test immediately
 eac help
@@ -93,7 +93,7 @@ eac help
 ### Development Iteration
 
 1. **Make code changes** in `go/cli/eac/`
-2. **Reload commands**: `r2r load-commands`
+2. **Reload commands**: `clie load-commands`
 3. **Test immediately**: `eac <command>`
 4. **No Docker rebuild needed**
 
@@ -106,7 +106,7 @@ This section covers testing your EAC extension in external repositories using Do
 The Docker-based workflow uses three scripts:
 
 1. **Docker Image Builder** (`build-local.ps1`) - Builds local Docker images
-2. **Local Config Generator** (`init-local.ps1`) - Creates r2r configuration
+2. **Local Config Generator** (`init-local.ps1`) - Creates clie configuration
 3. **Setup Orchestrator** (`setup-local-dev.ps1`) - Coordinates complete setup
 
 ### Prerequisites
@@ -134,9 +134,9 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 This will:
 
 1. Check prerequisites
-2. Build the Docker image as `ext-eac:dev` in EAC repo
-3. Install the r2r binary (if not already installed)
-4. Create `.r2r/r2r-cli.local.yml` configuration in the external repo
+2. Build the Docker image as `eac-ext:dev` in EAC repo
+3. Install the clie binary (if not already installed)
+4. Create `.clie/clie-cli.local.yml` configuration in the external repo
 5. Test the setup
 
 ## Step-by-Step Setup for External Repositories
@@ -152,7 +152,7 @@ Build the EAC extension Docker image locally in the EAC repository:
 .\scripts\pwsh\local-dev\build-local.ps1
 
 # With custom tag
-.\scripts\pwsh\local-dev\build-local.ps1 -Tag "ext-eac:my-feature"
+.\scripts\pwsh\local-dev\build-local.ps1 -Tag "eac-ext:my-feature"
 
 # Multi-platform build (amd64 and arm64)
 .\scripts\pwsh\local-dev\build-local.ps1 -MultiPlatform
@@ -162,7 +162,7 @@ Build the EAC extension Docker image locally in the EAC repository:
 
 | Parameter        | Description                    | Default       |
 | ---------------- | ------------------------------ | ------------- |
-| `-Tag`           | Docker image tag               | `ext-eac:dev` |
+| `-Tag`           | Docker image tag               | `eac-ext:dev` |
 | `-Platform`      | Target platform                | `linux/amd64` |
 | `-MultiPlatform` | Build for both amd64 and arm64 | `false`       |
 | `-Push`          | Push to registry after build   | `false`       |
@@ -171,19 +171,19 @@ Build the EAC extension Docker image locally in the EAC repository:
 **Verify the build:**
 
 ```powershell
-docker images ext-eac:dev
+docker images eac-ext:dev
 ```
 
 ### 2. Create Local Configuration
 
-Create a local r2r configuration that uses your Docker image:
+Create a local clie configuration that uses your Docker image:
 
 ```powershell
 # Basic configuration
 .\scripts\pwsh\cli\init-local.ps1
 
 # With custom image tag
-.\scripts\pwsh\cli\init-local.ps1 -ImageTag "ext-eac:my-feature"
+.\scripts\pwsh\cli\init-local.ps1 -ImageTag "eac-ext:my-feature"
 
 # With workspace mounting for live development
 .\scripts\pwsh\cli\init-local.ps1 -MountWorkspace
@@ -196,12 +196,12 @@ Create a local r2r configuration that uses your Docker image:
 
 | Parameter         | Description                           | Default       |
 | ----------------- | ------------------------------------- | ------------- |
-| `-ImageTag`       | Docker image tag to use               | `ext-eac:dev` |
+| `-ImageTag`       | Docker image tag to use               | `eac-ext:dev` |
 | `-Force`          | Overwrite existing config             | `false`       |
 | `-MountWorkspace` | Add volume mount for live development | `false`       |
 | `-EnableDebug`    | Add debug environment variables       | `false`       |
 
-This creates `.r2r/r2r-cli.local.yml` with:
+This creates `.clie/clie-cli.local.yml` with:
 
 ```yaml
 # Local development configuration (gitignored)
@@ -209,7 +209,7 @@ load_local: true
 
 extensions:
   - name: 'eac'
-    image: 'ext-eac:dev'
+    image: 'eac-ext:dev'
     load_local: true
     image_pull_policy: 'Never'
     auto_remove_children: false
@@ -220,13 +220,13 @@ extensions:
 For each terminal session, set the repository root:
 
 ```powershell
-$env:R2R_REPO_ROOT = (Get-Location)
+$env:CLIE_REPO_ROOT = (Get-Location)
 ```
 
 Or for a specific path:
 
 ```powershell
-$env:R2R_REPO_ROOT = "C:\path\to\your\repository"
+$env:CLIE_REPO_ROOT = "C:\path\to\your\repository"
 ```
 
 ### 4. Test Your Setup
@@ -243,10 +243,10 @@ eac show modules
 
 ### Local Override Files
 
-r2r uses a configuration hierarchy:
+clie uses a configuration hierarchy:
 
-1. `.r2r/r2r-cli.yml` - Base configuration (committed to git)
-2. `.r2r/r2r-cli.local.yml` - Local overrides (gitignored)
+1. `.clie/clie-cli.yml` - Base configuration (committed to git)
+2. `.clie/clie-cli.local.yml` - Local overrides (gitignored)
 
 Local files override base configuration for development.
 
@@ -259,7 +259,7 @@ load_local: true                    # Skip registry pulls (global)
 
 extensions:
   - name: 'eac'
-    image: 'ext-eac:dev'           # Local Docker image tag
+    image: 'eac-ext:dev'           # Local Docker image tag
     load_local: true               # Skip registry pulls (per-extension)
     image_pull_policy: 'Never'     # Fail if image not found locally
     auto_remove_children: false    # Keep containers for debugging
@@ -282,7 +282,7 @@ extensions:
     env:
       - name: 'EAC_DEBUG'
         value: 'true'
-      - name: 'R2R_LOCAL_DEV'
+      - name: 'CLIE_LOCAL_DEV'
         value: 'true'
 ```
 
@@ -332,7 +332,7 @@ When developing and testing in external repositories:
 
    ```powershell
    cd C:\path\to\external-repo
-   $env:R2R_REPO_ROOT = (Get-Location)
+   $env:CLIE_REPO_ROOT = (Get-Location)
    eac <command>
    ```
 
@@ -342,7 +342,7 @@ When developing and testing in external repositories:
 
 | Workflow                | Code Changes | Test Changes        | Iteration Time |
 | ----------------------- | ------------ | ------------------- | -------------- |
-| importer.ps1 (EAC repo) | Edit code    | `r2r load-commands` | Seconds        |
+| importer.ps1 (EAC repo) | Edit code    | `clie load-commands` | Seconds        |
 | Docker (external repo)  | Edit code    | Rebuild image       | Minutes        |
 
 **Recommendation**: Develop and debug in EAC repo with `importer.ps1`, then validate in external repos with Docker.
@@ -355,10 +355,10 @@ Use meaningful tags for feature branches:
 
 ```powershell
 # Build with feature tag
-.\scripts\pwsh\local-dev\build-local.ps1 -Tag "ext-eac:feature-xyz"
+.\scripts\pwsh\local-dev\build-local.ps1 -Tag "eac-ext:feature-xyz"
 
 # Configure to use feature tag
-.\scripts\pwsh\cli\init-local.ps1 -ImageTag "ext-eac:feature-xyz"
+.\scripts\pwsh\cli\init-local.ps1 -ImageTag "eac-ext:feature-xyz"
 ```
 
 ### Multi-Platform Development
@@ -379,7 +379,7 @@ Skip parts of the setup process:
 # Skip Docker build (use existing image)
 .\scripts\pwsh\setup-local-dev.ps1 -SkipBuild
 
-# Skip r2r installation (already installed)
+# Skip clie installation (already installed)
 .\scripts\pwsh\setup-local-dev.ps1 -SkipInstall
 
 # Skip validation tests
@@ -395,7 +395,7 @@ Skip parts of the setup process:
 **Solution**: Verify image exists locally:
 
 ```powershell
-docker images ext-eac:dev
+docker images eac-ext:dev
 ```
 
 If missing, rebuild:
@@ -411,7 +411,7 @@ If missing, rebuild:
 **Solution**: Check your local configuration:
 
 ```powershell
-cat .r2r\r2r-cli.local.yml
+cat .clie\clie-cli.local.yml
 ```
 
 Ensure it contains:
@@ -428,16 +428,16 @@ extensions:
 
 **Problem**: Commands create files in wrong location
 
-**Solution**: Set `R2R_REPO_ROOT` environment variable:
+**Solution**: Set `CLIE_REPO_ROOT` environment variable:
 
 ```powershell
-$env:R2R_REPO_ROOT = (Get-Location)
+$env:CLIE_REPO_ROOT = (Get-Location)
 ```
 
 Verify it's set correctly:
 
 ```powershell
-echo $env:R2R_REPO_ROOT
+echo $env:CLIE_REPO_ROOT
 ```
 
 ### Configuration Not Applied
@@ -448,10 +448,10 @@ echo $env:R2R_REPO_ROOT
 
 ```powershell
 # Verify file exists
-Test-Path .r2r\r2r-cli.local.yml
+Test-Path .clie\clie-cli.local.yml
 
 # Check for YAML syntax errors
-cat .r2r\r2r-cli.local.yml
+cat .clie\clie-cli.local.yml
 ```
 
 ### Build Failures
@@ -469,7 +469,7 @@ cat .r2r\r2r-cli.local.yml
 2. **Check Dockerfile exists**:
 
    ```powershell
-   Test-Path containers\ext-eac\Dockerfile
+   Test-Path containers\eac-ext\Dockerfile
    ```
 
 3. **Try legacy builder**:
@@ -490,8 +490,8 @@ cat .r2r\r2r-cli.local.yml
 2. **Validate with Docker**: Test in external repos with Docker for realistic validation
 3. **Use descriptive tags**: Tag images with feature names or versions
 4. **Rebuild after changes**: Always rebuild the Docker image after code changes
-5. **Keep configs gitignored**: Never commit `.r2r/*.local.yml` files
-6. **Set environment variables**: Remember to set `R2R_REPO_ROOT` in each session
+5. **Keep configs gitignored**: Never commit `.clie/*.local.yml` files
+6. **Set environment variables**: Remember to set `CLIE_REPO_ROOT` in each session
 7. **Clean up old images**: Periodically remove unused Docker images
 
 ## Reference
@@ -503,32 +503,32 @@ cat .r2r\r2r-cli.local.yml
 | Build Script   | Build local Docker images    | `scripts/pwsh/local-dev/build-local.ps1` |
 | Init Script    | Create local config          | `scripts/pwsh/cli/init-local.ps1`        |
 | Setup Script   | Complete setup orchestration | `scripts/pwsh/local-dev/setup.ps1`       |
-| Install Script | Install r2r binary           | `scripts/pwsh/cli/install.ps1`           |
+| Install Script | Install clie binary           | `scripts/pwsh/cli/install.ps1`           |
 
 ### Configuration Files
 
 | File                     | Purpose            | Committed       |
 | ------------------------ | ------------------ | --------------- |
-| `.r2r/r2r-cli.yml`       | Base configuration | Yes             |
-| `.r2r/r2r-cli.local.yml` | Local overrides    | No (gitignored) |
+| `.clie/clie-cli.yml`       | Base configuration | Yes             |
+| `.clie/clie-cli.local.yml` | Local overrides    | No (gitignored) |
 
 ### Environment Variables
 
 | Variable        | Purpose                    | Example                          |
 | --------------- | -------------------------- | -------------------------------- |
-| `R2R_REPO_ROOT` | Repository root path       | `C:\source\ready-to-release\eac` |
+| `CLIE_REPO_ROOT` | Repository root path       | `C:\source\ready-to-release\eac` |
 | `EAC_DEBUG`     | Enable debug logging       | `true`                           |
-| `R2R_LOCAL_DEV` | Flag for local development | `true`                           |
+| `CLIE_LOCAL_DEV` | Flag for local development | `true`                           |
 
 ## Related Guides
 
-- [Creating Extensions](../r2r/creating-extensions.md) - Learn how to create r2r extensions
-- [Testing in External Repositories](../r2r/testing-in-external-repos.md) - Test extensions in other projects
+- [Creating Extensions](../clie/creating-extensions.md) - Learn how to create clie extensions
+- [Testing in External Repositories](../clie/testing-in-external-repos.md) - Test extensions in other projects
 
 ## See Also
 
-- [R2R CLI init command](../../reference/r2r/commands/init.md) - Initialize R2R configuration
-- [R2R CLI Configuration](../../reference/r2r/commands/configuration.md) - Configuration file reference
+- [CLIE CLI init command](../../reference/clie/commands/init.md) - Initialize CLIE configuration
+- [CLIE CLI Configuration](../../reference/clie/commands/configuration.md) - Configuration file reference
 - [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the two-tier system
 
 {{ diataxis_footer() }}

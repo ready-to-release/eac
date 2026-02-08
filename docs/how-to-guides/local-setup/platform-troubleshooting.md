@@ -1,6 +1,6 @@
 # Platform Troubleshooting
 
-Common platform-specific issues and their solutions for R2R and EAC development.
+Common platform-specific issues and their solutions for EAC and CLIE development.
 
 ## Windows
 
@@ -116,11 +116,11 @@ processors=4
 
 ### Gatekeeper Blocking Binaries
 
-If macOS blocks the R2R binary:
+If macOS blocks the CLIE binary:
 
 ```bash
 # Remove quarantine attribute
-xattr -d com.apple.quarantine /usr/local/bin/r2r
+xattr -d com.apple.quarantine /usr/local/bin/clie
 ```
 
 Or right-click the binary > Open > Open Anyway.
@@ -198,8 +198,8 @@ docker info
 docker system prune -a
 
 # Re-install extension
-r2r cleanup --all
-r2r install eac
+clie cleanup --all
+clie install eac
 ```
 
 ### Container Startup Failures
@@ -209,7 +209,7 @@ r2r install eac
 docker logs $(docker ps -lq)
 
 # Run interactively for debugging
-r2r interactive eac
+clie interactive eac
 ```
 
 ### Disk Space Issues
@@ -255,7 +255,7 @@ If you encounter issues not covered here:
 
 1. Check [GitHub Issues](https://github.com/ready-to-release/eac/issues)
 2. Include: OS version, Docker version, error message, steps to reproduce
-3. Run diagnostics: `r2r verify` and include output
+3. Run diagnostics: `clie verify` and include output
 
 ## Related Resources
 

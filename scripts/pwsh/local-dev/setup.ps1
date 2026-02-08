@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Setup external repositories to use local R2R/EAC Docker images
+    Setup external repositories to use local CLIE/EAC Docker images
 
 .DESCRIPTION
     Configures external repositories to use locally built EAC Docker images for testing.
@@ -9,7 +9,7 @@
     NOTE: For development in the EAC repository itself, use importer.ps1 instead.
     This script is for testing the EAC extension in OTHER repositories.
 
-    Performs: Docker image build, r2r binary installation, and local configuration.
+    Performs: Docker image build, clie binary installation, and local configuration.
 
 .PARAMETER TargetRepo
     Target repository path for configuration. Must be a different repository than EAC.
@@ -18,13 +18,13 @@
     Skip Docker image build (use if image already exists).
 
 .PARAMETER SkipInstall
-    Skip r2r binary installation (use if already installed).
+    Skip clie binary installation (use if already installed).
 
 .PARAMETER SkipTest
     Skip validation tests after setup.
 
 .PARAMETER ImageTag
-    Docker image tag to use. Default is 'ext-eac:dev'.
+    Docker image tag to use. Default is 'eac-ext:dev'.
 
 .PARAMETER Force
     Force overwrite of existing configurations.
@@ -64,7 +64,7 @@ param(
     [switch]$SkipTest,
 
     [Parameter(Mandatory=$false)]
-    [string]$ImageTag = "ext-eac:dev",
+    [string]$ImageTag = "eac-ext:dev",
 
     [Parameter(Mandatory=$false)]
     [switch]$Force
@@ -133,13 +133,13 @@ function Get-EacRepositoryPath {
     # So go up 3 levels: scripts/pwsh/local-dev -> scripts/pwsh -> scripts -> eac (root)
     $possibleRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $scriptDir))
 
-    if (Test-Path (Join-Path $possibleRoot "containers\ext-eac\Dockerfile")) {
+    if (Test-Path (Join-Path $possibleRoot "containers\eac-ext\Dockerfile")) {
         return $possibleRoot
     }
 
     # Try current directory
     $currentRoot = Get-RepositoryRoot -StartPath "."
-    if ($currentRoot -and (Test-Path (Join-Path $currentRoot "containers\ext-eac\Dockerfile"))) {
+    if ($currentRoot -and (Test-Path (Join-Path $currentRoot "containers\eac-ext\Dockerfile"))) {
         return $currentRoot
     }
 
@@ -148,7 +148,7 @@ function Get-EacRepositoryPath {
 
 # Main script
 Write-ColorOutput "═══════════════════════════════════════════════════════" "Green"
-Write-ColorOutput "  R2R External Repository Setup" "Green"
+Write-ColorOutput "  CLIE External Repository Setup" "Green"
 Write-ColorOutput "  Configure external repos to use local EAC Docker images" "Green"
 Write-ColorOutput "═══════════════════════════════════════════════════════" "Green"
 Write-ColorOutput ""
@@ -161,7 +161,7 @@ Write-Step "Phase 1: Checking Prerequisites"
 $prerequisites = @{
     "Docker" = Test-Command "docker"
     "Git" = Test-Command "git"
-    "R2R Binary" = Test-Command "r2r"
+    "CLIE Binary" = Test-Command "clie"
 }
 
 $allPrerequisitesMet = $true
@@ -170,7 +170,7 @@ foreach ($prereq in $prerequisites.GetEnumerator()) {
         Write-ColorOutput "  ✓ $($prereq.Key)" "Green"
     }
     else {
-        if ($prereq.Key -eq "R2R Binary" -and -not $SkipInstall) {
+        if ($prereq.Key -eq "CLIE Binary" -and -not $SkipInstall) {
             Write-ColorOutput "  ○ $($prereq.Key) (will be installed)" "Yellow"
         }
         else {
@@ -229,8 +229,8 @@ if ($eacRepoNormalized -eq $targetRepoNormalized) {
     Write-ColorOutput "  .\scripts\pwsh\importer.ps1" "White"
     Write-ColorOutput ""
     Write-ColorOutput "Then load commands with:" "Yellow"
-    Write-ColorOutput "  `$env:R2R_COMMANDS_PATH = '.\go\cli\eac'" "White"
-    Write-ColorOutput "  r2r load-commands" "White"
+    Write-ColorOutput "  `$env:CLIE_COMMANDS_PATH = '.\go\cli\eac'" "White"
+    Write-ColorOutput "  clie load-commands" "White"
     Write-ColorOutput ""
     exit 1
 }
@@ -276,9 +276,9 @@ else {
     }
 }
 
-# Phase 3: Install R2R Binary
+# Phase 3: Install CLIE Binary
 if (-not $SkipInstall) {
-    Write-Step "Phase 3: Installing R2R Binary"
+    Write-Step "Phase 3: Installing CLIE Binary"
 
     $installScript = Join-Path $eacRepo "scripts\pwsh\cli\install.ps1"
     if (-not (Test-Path $installScript)) {
@@ -289,19 +289,19 @@ if (-not $SkipInstall) {
     & $installScript
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput ""
-        Write-ColorOutput "Error: R2R installation failed" "Red"
+        Write-ColorOutput "Error: CLIE installation failed" "Red"
         exit $LASTEXITCODE
     }
 }
 else {
-    Write-Step "Phase 3: Skipping R2R Installation"
+    Write-Step "Phase 3: Skipping CLIE Installation"
 
-    if (Test-Command "r2r") {
-        $r2rVersion = r2r --version 2>&1 | Select-String "Version:" | ForEach-Object { $_.Line }
-        Write-ColorOutput "  ✓ R2R is installed: $r2rVersion" "Green"
+    if (Test-Command "clie") {
+        $clieVersion = clie --version 2>&1 | Select-String "Version:" | ForEach-Object { $_.Line }
+        Write-ColorOutput "  ✓ CLIE is installed: $clieVersion" "Green"
     }
     else {
-        Write-ColorOutput "  ✗ R2R is not installed" "Red"
+        Write-ColorOutput "  ✗ CLIE is not installed" "Red"
         Write-ColorOutput "  Remove -SkipInstall flag to install" "Yellow"
     }
 }
@@ -339,11 +339,11 @@ if (-not $SkipTest) {
     Write-Step "Phase 5: Validating Setup"
 
     # Set environment variable for test
-    $env:R2R_REPO_ROOT = $targetRepoRoot
+    $env:CLIE_REPO_ROOT = $targetRepoRoot
 
-    # Test r2r command
-    Write-ColorOutput "  Testing r2r eac help..." "White"
-    $testOutput = r2r eac help 2>&1
+    # Test clie command
+    Write-ColorOutput "  Testing clie eac help..." "White"
+    $testOutput = clie eac help 2>&1
 
     if ($LASTEXITCODE -eq 0) {
         Write-ColorOutput "  ✓ Test successful" "Green"
@@ -370,7 +370,7 @@ Write-ColorOutput "Configuration Summary:" "Cyan"
 Write-ColorOutput "  Docker Image: $ImageTag" "White"
 Write-ColorOutput "  EAC Repository: $eacRepo" "White"
 Write-ColorOutput "  Target Repository: $targetRepoRoot" "White"
-Write-ColorOutput "  Config File: $targetRepoRoot\.r2r\r2r-cli.local.yml" "White"
+Write-ColorOutput "  Config File: $targetRepoRoot\.clie\clie-cli.local.yml" "White"
 Write-ColorOutput ""
 
 Write-ColorOutput "Usage Instructions:" "Cyan"
@@ -378,16 +378,16 @@ Write-ColorOutput "  1. Navigate to your repository:" "White"
 Write-ColorOutput "     cd $targetRepoRoot" "Gray"
 Write-ColorOutput ""
 Write-ColorOutput "  2. Set environment variable (required for each session):" "White"
-Write-ColorOutput "     `$env:R2R_REPO_ROOT = `"$targetRepoRoot`"" "Gray"
+Write-ColorOutput "     `$env:CLIE_REPO_ROOT = `"$targetRepoRoot`"" "Gray"
 Write-ColorOutput ""
 Write-ColorOutput "  3. Run EAC commands:" "White"
-Write-ColorOutput "     r2r eac help" "Gray"
-Write-ColorOutput "     r2r eac init" "Gray"
-Write-ColorOutput "     r2r eac show modules" "Gray"
+Write-ColorOutput "     clie eac help" "Gray"
+Write-ColorOutput "     clie eac init" "Gray"
+Write-ColorOutput "     clie eac show modules" "Gray"
 Write-ColorOutput ""
 
 Write-ColorOutput "Tips:" "Cyan"
-Write-ColorOutput "  • The local config (.r2r/r2r-cli.local.yml) is gitignored" "White"
+Write-ColorOutput "  • The local config (.clie/clie-cli.local.yml) is gitignored" "White"
 Write-ColorOutput "  • For EAC repository development, use importer.ps1 instead of Docker" "White"
 Write-ColorOutput "  • Rebuild the Docker image when you make changes in EAC repo:" "White"
 Write-ColorOutput "    $eacRepo\scripts\pwsh\local-dev\build-local.ps1" "Gray"

@@ -1,7 +1,7 @@
 // Command: get cli-release-notes
 // Short: Generate release notes for CLI releases
-// Flag.module: type=string, default=r2r-cli, usage=Module name
-// Flag.binary-prefix: type=string, default=r2r, usage=Binary name prefix
+// Flag.module: type=string, default=clie-cli, usage=Module name
+// Flag.binary-prefix: type=string, default=clie, usage=Binary name prefix
 // Flag.version: type=string, usage=Version string (required)
 // Flag.tag: type=string, usage=Git tag name (required)
 // Flag.commit: type=string, usage=Git commit SHA (required)
@@ -13,7 +13,7 @@
 // Long: security information about build attestations.
 // Long:
 // Long: Example:
-// Long:   get cli-release-notes --version 1.0.0 --tag r2r-cli/1.0.0 --commit abc123
+// Long:   get cli-release-notes --version 1.0.0 --tag clie-cli/1.0.0 --commit abc123
 package get
 
 import (
@@ -23,13 +23,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetCLIReleaseNotes)
-}
 
 func GetCLIReleaseNotes() int {
 	// Validate flags against registry metadata
@@ -40,8 +35,8 @@ func GetCLIReleaseNotes() int {
 
 	args := os.Args[3:] // Skip program name, "get", and "cli-release-notes"
 
-	module := "r2r-cli"
-	binaryPrefix := "r2r"
+	module := "clie-cli"
+	binaryPrefix := "clie"
 	version := ""
 	tag := ""
 	commit := ""

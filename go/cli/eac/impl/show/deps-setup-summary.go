@@ -24,12 +24,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowDepsSetupSummary)
-}
 
 // ShowDepsSetupSummary generates a dependencies setup summary.
 func ShowDepsSetupSummary() int {

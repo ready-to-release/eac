@@ -10,37 +10,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-// aiExecutor holds the AI executor instance for executing prompts.
-// In production, this is initialized lazily. For tests, it can be injected via SetAIExecutor.
-var aiExecutor *ai.Executor
-
-// SetAIExecutor allows tests to inject a mock executor.
-func SetAIExecutor(executor *ai.Executor) {
-	aiExecutor = executor
-}
-
-// ResetAIExecutor clears the executor for test cleanup.
-func ResetAIExecutor() {
-	aiExecutor = nil
-}
-
-// getAIExecutor returns the AI executor, initializing it if needed.
-func getAIExecutor(repoRoot string) *ai.Executor {
-	if aiExecutor != nil {
-		return aiExecutor
-	}
-
-	// Create new executor and register built-in providers
-	executor := ai.NewExecutor(repoRoot)
-	providers.RegisterBuiltIn(executor)
-
-	return executor
-}
 
 // GenerateConfig uses AI to generate repository configuration from scan results.
 // It loads the AI prompt template, executes it with scan results as custom data,
@@ -55,6 +26,11 @@ func getAIExecutor(repoRoot string) *ai.Executor {
 //   - Generated YAML configuration as string
 //   - Error if template loading, AI execution, or parsing fails
 func GenerateConfig(repoRoot string, scanResult *ScanResult, aiProvider string) (string, error) {
+	return generateConfig(defaultDeps(), repoRoot, scanResult, aiProvider)
+}
+
+// generateConfig is the internal implementation of GenerateConfig with injectable dependencies.
+func generateConfig(deps *Deps, repoRoot string, scanResult *ScanResult, aiProvider string) (string, error) {
 	// Validate inputs
 	if repoRoot == "" {
 		return "", fmt.Errorf("repository root cannot be empty")
@@ -82,7 +58,7 @@ func GenerateConfig(repoRoot string, scanResult *ScanResult, aiProvider string) 
 	}
 
 	// Get AI executor
-	executor := getAIExecutor(repoRoot)
+	executor := deps.GetAIExecutor(repoRoot)
 
 	// Execute AI prompt
 	ctx := context.Background()
@@ -104,7 +80,7 @@ func loadPromptTemplate(repoRoot string) (string, error) {
 	// Check if local template exists
 	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
 		// Try system templates (for container/installed environments)
-		systemRoot := os.Getenv(environments.EnvR2RContainerRoot)
+		systemRoot := os.Getenv(environments.EnvCLIEContainerRoot)
 		if systemRoot != "" {
 			templatePath = filepath.Join(systemRoot, "templates", "ai", "init", "scan-repository.md")
 		}

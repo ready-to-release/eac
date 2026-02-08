@@ -20,8 +20,12 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 
 	// Get cached modules map from build context (set during incremental detection)
 	var cachedModules map[string]bool
+	var componentFilter []string
 	if bctx, ok := ctx.Config.BuildCmdContext.(*buildContext); ok && bctx != nil {
 		cachedModules = bctx.cachedModules
+		if buildCfg, ok := ctx.Config.BuildCmdConfig.(*BuildConfig); ok && buildCfg != nil {
+			componentFilter = buildCfg.Components
+		}
 	}
 
 	monikers := ctx.GetExecutionMonikers()
@@ -79,7 +83,53 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 		specs = append(specs, moduleSpecs...)
 	}
 
+	// Apply component filter if specified
+	if len(componentFilter) > 0 {
+		specs = filterByComponents(specs, componentFilter)
+	}
+
 	return specs
+}
+
+// filterByComponents filters specs to only those whose component name matches the filter.
+// When filter is empty, all specs are returned unchanged.
+// Filtered-out DependsOn references are removed and specs are re-indexed.
+func filterByComponents(specs []workunit.UnitSpec, filter []string) []workunit.UnitSpec {
+	if len(filter) == 0 {
+		return specs
+	}
+
+	// Build lookup set for filter
+	allowed := make(map[string]bool, len(filter))
+	for _, c := range filter {
+		allowed[c] = true
+	}
+
+	// Collect matching specs and build a set of kept longnames
+	var filtered []workunit.UnitSpec
+	kept := make(map[string]bool)
+	for _, spec := range specs {
+		if allowed[spec.ID.Component] {
+			filtered = append(filtered, spec)
+			kept[spec.ID.Longname()] = true
+		}
+	}
+
+	// Clean up DependsOn references and re-index
+	for i := range filtered {
+		if len(filtered[i].DependsOn) > 0 {
+			var validDeps []workunit.UnitID
+			for _, dep := range filtered[i].DependsOn {
+				if kept[dep.Longname()] {
+					validDeps = append(validDeps, dep)
+				}
+			}
+			filtered[i].DependsOn = validDeps
+		}
+		filtered[i].Index = i
+	}
+
+	return filtered
 }
 
 // CountUnits returns the total number of component work items.

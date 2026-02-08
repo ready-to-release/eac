@@ -313,7 +313,7 @@ eac release check-ci --branch release/v1.2.0
 
 ```bash
 # Run specific stage
-eac pipeline run --stage build r2r-cli
+eac pipeline run --stage build clie-cli
 
 # Wait with custom timeout
 eac pipeline wait --timeout 120 --interval 60

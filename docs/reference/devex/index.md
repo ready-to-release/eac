@@ -1,6 +1,6 @@
 # Developer Experience
 
-Cross-cutting reference documentation for developers working with R2R and EAC.
+Cross-cutting reference documentation for developers working with EAC and CLIE.
 
 This section serves two distinct audiences:
 
@@ -10,7 +10,7 @@ This section serves two distinct audiences:
 
 **For developers contributing to the EAC repository itself.**
 
-Working on the R2R CLI, EAC commands, or supporting modules? The [Internal](./internal/index.md) section covers:
+Working on the CLIE CLI, EAC commands, or supporting modules? The [Internal](./internal/index.md) section covers:
 
 - Repository structure and layout
 - CLI vs Extensions architecture
@@ -39,7 +39,7 @@ Adopting EAC in your repository? The [External](./external/index.md) section cov
 **Use Internal if you are:**
 
 - Adding new EAC commands
-- Modifying the R2R CLI
+- Modifying the CLIE CLI
 - Working on eac-core or eac-commands modules
 - Contributing to the EAC repository
 

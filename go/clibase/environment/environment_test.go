@@ -10,9 +10,9 @@ func TestDetect_LocalConsole(t *testing.T) {
 	os.Unsetenv("CI")
 	os.Unsetenv("GITHUB_ACTIONS")
 	os.Unsetenv("GITLAB_CI")
-	os.Unsetenv("R2R_TEST_RUN_ID")
+	os.Unsetenv("CLIE_TEST_RUN_ID")
 	os.Unsetenv("GODOG_FORMAT")
-	os.Unsetenv("R2R_MOCK_SECURITY")
+	os.Unsetenv("CLIE_MOCK_SECURITY")
 
 	env := Detect()
 

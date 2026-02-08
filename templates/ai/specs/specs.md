@@ -40,7 +40,7 @@ Generate ONLY valid Gherkin syntax directly - no JSON intermediate format.
 **name**: Pattern `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$`
 
 - Must follow pattern: lowercase module, underscore, lowercase feature name
-- Examples: `eac-commands_commit`, `r2r-cli_init-command`
+- Examples: `eac-commands_commit`, `clie-cli_init-command`
 
 **description**: Brief feature description (1-2 sentences)
 
@@ -86,7 +86,7 @@ Each scenario is a concrete example under a Rule.
   - `@ppv` - Production Performance Verification
 - **Optional tags**:
   - `@deps:<system>` - External system dependencies (e.g., `@deps:docker`)
-  - `@depm:<module>` - Internal module dependencies (e.g., `@depm:r2r-cli`)
+  - `@depm:<module>` - Internal module dependencies (e.g., `@depm:clie-cli`)
   - `@control:<control-id>` - OSCAL control evidence link (e.g., `@control:ac-2`)
   - `@controls:<id1>,<id2>` - Multiple controls (e.g., `@controls:ac-2,au-3`)
   - `@skip:<reason>` - Temporarily excluded (e.g., `@skip:wip`)
@@ -229,7 +229,7 @@ Feature: eac-commands_init
     @ov
     Scenario: Initialize creates directory structure
       Given I am in a git repository
-      When I run "r2r init"
+      When I run "clie init"
       Then the ".eac" directory is created
       And the "specs" directory is created
       And the "templates" directory is created
@@ -237,7 +237,7 @@ Feature: eac-commands_init
     @ov
     Scenario: Initialize creates configuration files
       Given I am in a git repository
-      When I run "r2r init"
+      When I run "clie init"
       Then the "repository.yml" file is created
       And the file contains valid YAML
 
@@ -246,7 +246,7 @@ Feature: eac-commands_init
     @ov
     Scenario: Initialize outside git repository
       Given I am not in a git repository
-      When I run "r2r init"
+      When I run "clie init"
       Then the command exits with error
       And an error message "must be run in a git repository" is displayed
 ```

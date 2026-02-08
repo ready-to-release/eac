@@ -22,7 +22,7 @@ description: Remove orphaned tags and partial releases after failure
 
 inputs:
   tag_name:
-    description: 'Tag name to clean up (e.g., r2r-cli/1.0.0)'
+    description: 'Tag name to clean up (e.g., clie-cli/1.0.0)'
     required: false
     default: ''
 

@@ -4,12 +4,12 @@
 // Group.Workspace Lifecycle: create, list, remove
 // Group.Development Workflow: commit, pull
 // Group.Completion: merge, pr
-// Example: r2r work create feature/authentication
-// Example: r2r work commit --all
-// Example: r2r work pull
-// Example: r2r work merge
-// Example: r2r work pr
-// Example: r2r work list
+// Example: clie work create feature/authentication
+// Example: clie work commit --all
+// Example: clie work pull
+// Example: clie work merge
+// Example: clie work pr
+// Example: clie work list
 package work
 
 import (
@@ -25,10 +25,6 @@ import (
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(Work)
-}
 
 // printHelp prints the help for the work command using registry metadata.
 func printHelp() {

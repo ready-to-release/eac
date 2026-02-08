@@ -21,6 +21,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+var (
+	reAtLineNumber = regexp.MustCompile(`(?i)at line (\d+)`)
+	reLineNumber   = regexp.MustCompile(`(?i)line (\d+)`)
+)
+
 // FileValidationResult represents the outcome of validating a single DSL file.
 type FileValidationResult struct {
 	FileName      string              `json:"file_name"`      // File name (e.g., "workspace.dsl")
@@ -34,7 +39,7 @@ type FileValidationResult struct {
 
 // ValidationResult represents the outcome of validating a module's workspace(s).
 type ValidationResult struct {
-	Module        string                 `json:"module"`          // Module name (e.g., "r2r-cli")
+	Module        string                 `json:"module"`          // Module name (e.g., "clie-cli")
 	WorkspacePath string                 `json:"workspace_path"`  // Path to workspace.dsl file (backward compat)
 	Valid         bool                   `json:"valid"`           // Overall validation status
 	Errors        []ValidationMessage    `json:"errors"`          // Validation errors (backward compat)
@@ -86,10 +91,10 @@ type StructurizrValidator interface {
 type StructurizrValidatorImpl struct{}
 
 // NewValidator creates a new Structurizr validator.
-// Returns a mock validator if R2R_MOCK_DOCKER is set.
+// Returns a mock validator if CLIE_MOCK_DOCKER is set.
 func NewValidator() (StructurizrValidator, error) {
 	// Check for mock mode
-	if os.Getenv(environments.EnvR2RMockDocker) != "" {
+	if os.Getenv(environments.EnvCLIEMockDocker) != "" {
 		return NewMockValidator(), nil
 	}
 	return &StructurizrValidatorImpl{}, nil
@@ -562,9 +567,9 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 			// Extract line number from patterns like "at line 62", "line 62", or "Line 15:"
 			// Parse errors default to line 0 (file-level error)
 			lineNum := 0
-			if matches := regexp.MustCompile(`(?i)at line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			if matches := reAtLineNumber.FindStringSubmatch(line); len(matches) > 1 {
 				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
-			} else if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			} else if matches := reLineNumber.FindStringSubmatch(line); len(matches) > 1 {
 				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
 			}
 
@@ -579,7 +584,7 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 		if strings.Contains(line, "WARNING") || strings.Contains(line, "warning") {
 			// Extract line number from warnings too (default 0 on parse error)
 			lineNum := 0
-			if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+			if matches := reLineNumber.FindStringSubmatch(line); len(matches) > 1 {
 				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
 			}
 

@@ -113,7 +113,7 @@ ctx.Step(`^a file named "([^"]*)" should exist$`, aFileNamedShouldExist)
 
 ```go
 ctx.Step(`^I run the init command$`, iRunInitCommand)
-ctx.Step(`^the r2r\.yaml file should exist$`, theR2RYamlShouldExist)
+ctx.Step(`^the clie\.yaml file should exist$`, theCLIEYamlShouldExist)
 ```
 
 ---

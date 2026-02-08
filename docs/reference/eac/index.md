@@ -1,4 +1,4 @@
-# R2R and EAC System Overview
+# EAC and CLIE System Overview
 
 ## What is EAC?
 
@@ -38,18 +38,18 @@ See [Component Types Reference](./architecture/component-types.md) for detailed 
 
 ---
 
-## EAC as an R2R Extension
+## EAC as an CLIE Extension
 
-**EAC is delivered as an extension to R2R** (Ready to Release), an enterprise CLI framework for containerized workflow execution.
+**EAC is delivered as an extension to CLIE**, an enterprise CLI framework for multi-platform containerized workflow execution.
 
-**R2R** provides:
+**CLIE** provides:
 
-- Cross-platform CLI (`r2r`, `r2r.exe`) for Windows, macOS, and Linux
+- Cross-platform CLI (`clie`, `clie.exe`) for Windows, macOS, and Linux
 - Docker-based extension execution with isolated, reproducible environments
 - Git-aware working directory mounting
-- Configurable extension management via `.r2r/r2r-cli.yml`
+- Configurable extension management via `.clie/clie-cli.yml`
 
-**The EAC extension** (`ext-eac:latest`) provides:
+**The EAC extension** (`eac-ext:latest`) provides:
 
 - **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
 - **Three execution models**: Docker CLI (`eac <command>`), MCP server for LLM tools, and fallback mode for debugging
@@ -59,7 +59,7 @@ See [Component Types Reference](./architecture/component-types.md) for detailed 
 **Integration pattern**:
 
 ```text
-Developer → R2R CLI → Docker Container (ext-eac:latest) → EAC Commands → Repository
+Developer → CLIE CLI → Docker Container (eac-ext:latest) → EAC Commands → Repository
 ```
 
 **Commands are organized by purpose**:
@@ -81,7 +81,7 @@ The repository is organized as a **modular monorepo** with clearly defined modul
 
 ```text
 cli/
-├── .r2r/                       # R2R and EAC configuration
+├── .clie/                       # EAC and CLIE configuration
 │   ├── cache/                  # Build cache
 │   └── eac/                    # User configuration overrides
 │       ├── repository.yml      # Module registry
@@ -102,8 +102,8 @@ cli/
 │   │   ├── core/               # eac-core (domain libraries)
 │   │   ├── mcp/                # eac-mcp-commands (MCP server)
 │   │   └── specs/              # eac-specs (BDD infrastructure)
-│   └── r2r/                    # R2R CLI
-│       └── cli/                # r2r-cli (CLI application)
+│   └── clie/                    # CLIE CLI
+│       └── cli/                # clie-cli (CLI application)
 │
 ├── specs/                      # Gherkin BDD specifications
 │   ├── eac-commands/           # Specs for commands module
@@ -124,7 +124,7 @@ cli/
 │   └── evidence/               # Compliance evidence
 │
 ├── containers/                 # Docker container definitions
-│   └── ext-eac/                # EAC extension Dockerfile
+│   └── eac-ext/                # EAC extension Dockerfile
 │
 ├── .github/                    # GitHub Actions workflows
 │   └── workflows/              # CI/CD pipelines
@@ -137,8 +137,8 @@ cli/
 
 **Deployable Modules** - Independently built, versioned, and deployed:
 
-- **r2r-cli** - Go CLI application with cross-platform executables
-- **ext-eac** - Docker extension for R2R CLI
+- **clie-cli** - Go CLI application with cross-platform executables
+- **eac-ext** - Docker extension for CLIE CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 
 **Supporting Modules** - Shared code and infrastructure:

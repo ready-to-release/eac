@@ -1,12 +1,12 @@
 // Command: extension-meta
-// Short: Output extension metadata for r2r CLI
+// Short: Output extension metadata for clie CLI
 // Long: Outputs YAML-formatted metadata describing the extension's capabilities,
-// Long: commands, requirements, and configuration for integration with the r2r CLI.
-// Long: This command is used by r2r CLI to discover and configure extensions.
+// Long: commands, requirements, and configuration for integration with the clie CLI.
+// Long: This command is used by clie CLI to discover and configure extensions.
 // Long:
 // Long: Expected Output:
 // Long:   - YAML-formatted metadata describing extension capabilities
-// Long:   - Commands, requirements, and configuration for r2r CLI integration
+// Long:   - Commands, requirements, and configuration for clie CLI integration
 package extension
 
 import (
@@ -27,7 +27,7 @@ func init() {
 
 var log = logging.C()
 
-// Metadata defines the extension metadata structure for r2r CLI.
+// Metadata defines the extension metadata structure for clie CLI.
 type Metadata struct {
 	Name               string             `yaml:"name"`
 	Version            string             `yaml:"version"`
@@ -64,7 +64,7 @@ type Command struct {
 
 // Requirements defines extension requirements.
 type Requirements struct {
-	R2RCLIVersion    string `yaml:"r2r-version"`
+	CLIECLIVersion    string `yaml:"clie-version"`
 	ContainerRuntime string `yaml:"container-runtime"`
 	MinimumMemory    string `yaml:"minimum-memory"`
 	MinimumCPU       string `yaml:"minimum-cpu"`
@@ -79,7 +79,7 @@ type ExtensionMetadata struct {
 	Tags          []string `yaml:"tags"`
 }
 
-// ExtensionMeta outputs extension metadata in YAML format for r2r CLI.
+// ExtensionMeta outputs extension metadata in YAML format for clie CLI.
 func ExtensionMeta() int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -115,7 +115,7 @@ func ExtensionMeta() int {
 	metadata := Metadata{
 		Name:          "eac",
 		Version:       "1.0.0",
-		Description:   "Everything as Code - Repository management tooling for R2R CLI",
+		Description:   "Everything as Code - Repository management tooling for CLIE CLI",
 		SchemaVersion: "0.1.0",
 		Capabilities: []string{
 			"repository-management",
@@ -131,7 +131,7 @@ func ExtensionMeta() int {
 		},
 		Commands: commands,
 		Requirements: Requirements{
-			R2RCLIVersion:    ">=1.0.0",
+			CLIECLIVersion:    ">=1.0.0",
 			ContainerRuntime: "docker",
 			MinimumMemory:    "256Mi",
 			MinimumCPU:       "0.1",
@@ -164,7 +164,7 @@ func ExtensionMeta() int {
 			{Name: "GODOG_REPORT_FORMAT"},
 			{Name: "GODOG_REPORT_NAME"},
 			{Name: "GODOG_PATHS"},
-			{Name: "R2R_TEST_RUN_ID"},
+			{Name: "CLIE_TEST_RUN_ID"},
 			{Name: "ANTHROPIC_API_KEY"},
 		},
 		Metadata: ExtensionMetadata{
@@ -190,7 +190,7 @@ func ExtensionMeta() int {
 // PrintAvailableCommands prints a user-friendly list of available commands.
 func PrintAvailableCommands() {
 	fmt.Println("EAC - Everything as Code")
-	fmt.Println("Repository management tooling for R2R CLI")
+	fmt.Println("Repository management tooling for CLIE CLI")
 	fmt.Println()
 	fmt.Println("Available commands:")
 	fmt.Println("  extension-meta    Display extension metadata (YAML)")

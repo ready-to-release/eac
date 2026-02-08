@@ -37,13 +37,8 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-func init() {
-	registry.Register(Merge)
-}
 
 // Merge merges the current workspace into the target branch.
 func Merge() int {
@@ -219,8 +214,8 @@ func parseMergeConfig() (*mergeConfig, error) {
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments
-	// Check R2R_PWD first (for test isolation)
-	cwd := os.Getenv(environments.EnvR2RPWD)
+	// Check CLIE_PWD first (for test isolation)
+	cwd := os.Getenv(environments.EnvCLIEPWD)
 	if cwd == "" {
 		// Fall back to actual working directory
 		var err error
@@ -258,8 +253,8 @@ func validateMergeEnvironment(config *mergeConfig) error {
 	}
 
 	// Check for uncommitted changes
-	// Check R2R_PWD first (for test isolation)
-	cwd := os.Getenv(environments.EnvR2RPWD)
+	// Check CLIE_PWD first (for test isolation)
+	cwd := os.Getenv(environments.EnvCLIEPWD)
 	if cwd == "" {
 		// Fall back to actual working directory
 		var err error
@@ -368,9 +363,9 @@ func performSquashMerge(config *mergeConfig) error {
 	defer func() { os.Args = oldArgs }()
 
 	if config.base.Debug {
-		os.Args = []string{"r2r", "commit", "message", "--debug"}
+		os.Args = []string{"clie", "commit", "message", "--debug"}
 	} else {
-		os.Args = []string{"r2r", "commit", "message"}
+		os.Args = []string{"clie", "commit", "message"}
 	}
 
 	exitCode := commitmessage.CreateCommitMessage()
@@ -407,8 +402,8 @@ func getWorktreePath(base *internal.BaseConfig) (string, error) {
 	}
 
 	// Find current worktree path
-	// Check R2R_PWD first (for test isolation)
-	cwd := os.Getenv(environments.EnvR2RPWD)
+	// Check CLIE_PWD first (for test isolation)
+	cwd := os.Getenv(environments.EnvCLIEPWD)
 	if cwd == "" {
 		var wdErr error
 		cwd, wdErr = os.Getwd()

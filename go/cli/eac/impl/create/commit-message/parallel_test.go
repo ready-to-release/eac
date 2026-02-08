@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +39,7 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 	}{
 		{
 			name:            "three modules maintain order",
-			affectedModules: []string{"r2r-cli", "core", "eac-cli"},
+			affectedModules: []string{"clie-cli", "core", "eac-cli"},
 		},
 		{
 			name:            "five modules maintain order",
@@ -62,13 +61,11 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := createTestConfig(tt.affectedModules)
-			logger, _ := logging.NewDefault("test", t.TempDir())
-			defer logger.Sync()
 
 			// Create mock executor with deterministic responses
 			mockExecutor := createMockExecutor(tt.affectedModules)
 
-			sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
+			sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, mockExecutor)
 
 			require.NoError(t, err, "generateModuleSectionsParallel should not return error")
 			assert.Len(t, sections, len(tt.affectedModules),
@@ -86,12 +83,10 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 // TestGenerateModuleSectionsParallel_SingleModule verifies that single-module
 // commits skip module section generation (returning empty slice).
 func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
-	cfg := createTestConfig([]string{"r2r-cli"})
-	logger, _ := logging.NewDefault("test", t.TempDir())
-	defer logger.Sync()
-	mockExecutor := createMockExecutor([]string{"r2r-cli"})
+	cfg := createTestConfig([]string{"clie-cli"})
+	mockExecutor := createMockExecutor([]string{"clie-cli"})
 
-	sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
+	sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, mockExecutor)
 
 	require.NoError(t, err)
 	assert.Empty(t, sections, "Single-module commits should skip module sections")
@@ -101,11 +96,9 @@ func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 // are rejected with an error (edge case that shouldn't occur in practice).
 func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 	cfg := createTestConfig([]string{})
-	logger, _ := logging.NewDefault("test", t.TempDir())
-	defer logger.Sync()
 	mockExecutor := createMockExecutor([]string{})
 
-	sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
+	sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, mockExecutor)
 
 	require.Error(t, err, "Empty modules should return an error")
 	assert.Contains(t, err.Error(), "affectedModules cannot be empty", "Error message should indicate empty modules")
@@ -117,8 +110,6 @@ func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 func TestGenerateModuleSectionsParallel_ErrorPropagation(t *testing.T) {
 	modules := []string{"mod-success", "mod-fail", "mod-success2"}
 	cfg := createTestConfig(modules)
-	logger, _ := logging.NewDefault("test", t.TempDir())
-	defer logger.Sync()
 
 	// Create mock executor that fails for specific module
 	executor := ai.NewExecutor(".")
@@ -128,7 +119,7 @@ func TestGenerateModuleSectionsParallel_ErrorPropagation(t *testing.T) {
 	executor.RegisterProvider("mock", mockFactory)
 	executor.RegisterProvider("claude-cli", mockFactory)
 
-	sections, err := generateModuleSectionsParallel(cfg, logger, executor)
+	sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, executor)
 
 	// Should return error from the failed module
 	require.Error(t, err, "Should return error when module generation fails")

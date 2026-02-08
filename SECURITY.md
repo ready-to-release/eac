@@ -26,7 +26,7 @@ This is a **multi-module Go workspace**. All modules are currently in active dev
 | EaC CLI          | `go/cli/eac`          | Active Development | 1.24+      |
 | EaC MCP Commands | `go/cli/mcp`          | Active Development | 1.24+      |
 | EaC Specs        | `go/specs`            | Active Development | 1.24+      |
-| R2R CLI          | `go/cli/r2r`          | Active Development | 1.24+      |
+| CLIE CLI          | `go/cli/clie`          | Active Development | 1.24+      |
 
 Security patches are applied to the main branch and will be included in the next release.
 

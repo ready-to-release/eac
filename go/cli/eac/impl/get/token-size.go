@@ -29,10 +29,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/tokensize"
 )
 
-func init() {
-	registry.Register(GetTokenSize)
-}
-
 type tokenSizeOptions struct {
 	Threshold    int
 	HasThreshold bool

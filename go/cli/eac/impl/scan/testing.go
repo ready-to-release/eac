@@ -16,10 +16,10 @@ func ReadEvidence(filepath string) (*Evidence, error) {
 
 // SetupMocks configures mock outputs for all security tools.
 // Security scanners now use the tool executor which mocks at the Docker client level.
-// Set R2R_MOCK_DOCKER=true environment variable to enable mocking.
+// Set CLIE_MOCK_DOCKER=true environment variable to enable mocking.
 func SetupMocks() {
 	// No-op: mocking is now handled at the Docker client level in adapters/docker.
-	// Set R2R_MOCK_DOCKER=true to enable mock Docker client.
+	// Set CLIE_MOCK_DOCKER=true to enable mock Docker client.
 }
 
 // ResetMocks clears all mock outputs.

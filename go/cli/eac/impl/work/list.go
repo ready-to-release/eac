@@ -29,12 +29,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowWorkspaces)
-}
 
 // ShowWorkspaces displays all git worktrees in a formatted table.
 func ShowWorkspaces() int {

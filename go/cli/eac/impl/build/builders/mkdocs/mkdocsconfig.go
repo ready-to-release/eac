@@ -19,6 +19,14 @@ const (
 	TemplatePDF  TemplateType = "pdf"
 )
 
+var (
+	reExtraCssTheme      = regexp.MustCompile(`(?m)^(  - )assets/templates/pdf-(dark|light)/styles\.css\s*$`)
+	reExporterCssTheme   = regexp.MustCompile(`(?m)^(            - )assets/templates/pdf-(dark|light)/styles\.css\s*$`)
+	reMermaidTheme       = regexp.MustCompile(`(?m)^(\s+theme:\s*)(dark|light)\s*$`)
+	rePDFConcurrency     = regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
+	rePDFPageLimit       = regexp.MustCompile(`(?m)^(\s+page_limit:\s*)\d+\s*$`)
+)
+
 // GetTemplateType returns the template type for a given output format.
 func GetTemplateType(outputFormat string) TemplateType {
 	if outputFormat == "site" {
@@ -142,17 +150,14 @@ func updatePDFThemeString(content, theme, docsDir string) string {
 
 	// Update extra_css first (2 spaces indentation - MkDocs resolves relative to docs_dir)
 	// Must do this BEFORE the exporter pattern since we're matching by exact indentation
-	extraCssPattern := regexp.MustCompile(`(?m)^(  - )assets/templates/pdf-(dark|light)/styles\.css\s*$`)
-	content = extraCssPattern.ReplaceAllString(content, fmt.Sprintf("${1}%s", extraCssPath))
+	content = reExtraCssTheme.ReplaceAllString(content, fmt.Sprintf("${1}%s", extraCssPath))
 
 	// Update exporter plugin stylesheets (12 spaces indentation - needs docsDir prefix)
-	exporterPattern := regexp.MustCompile(`(?m)^(            - )assets/templates/pdf-(dark|light)/styles\.css\s*$`)
-	content = exporterPattern.ReplaceAllString(content, fmt.Sprintf("${1}%s", exporterPath))
+	content = reExporterCssTheme.ReplaceAllString(content, fmt.Sprintf("${1}%s", exporterPath))
 
 	// Update mermaid-to-svg theme setting
 	// Match "theme: dark" or "theme: light" within mermaid-to-svg config
-	themePattern := regexp.MustCompile(`(?m)^(\s+theme:\s*)(dark|light)\s*$`)
-	content = themePattern.ReplaceAllString(content, fmt.Sprintf("${1}%s", theme))
+	content = reMermaidTheme.ReplaceAllString(content, fmt.Sprintf("${1}%s", theme))
 
 	return content
 }
@@ -160,17 +165,13 @@ func updatePDFThemeString(content, theme, docsDir string) string {
 // replacePDFConcurrency updates the PDF exporter concurrency setting
 // Matches "concurrency: N" within the exporter plugin's pdf formats section.
 func replacePDFConcurrency(content string, concurrency int) string {
-	// Match "concurrency: <number>" with proper indentation (10 spaces in pdf formats section)
-	pattern := regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
-	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
+	return rePDFConcurrency.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
 }
 
 // replacePDFPageLimit updates the PDF exporter page_limit setting
 // Matches "page_limit: N" within the exporter plugin's pdf formats section.
 func replacePDFPageLimit(content string, pageLimit int) string {
-	// Match "page_limit: <number>" with proper indentation
-	pattern := regexp.MustCompile(`(?m)^(\s+page_limit:\s*)\d+\s*$`)
-	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", pageLimit))
+	return rePDFPageLimit.ReplaceAllString(content, fmt.Sprintf("${1}%d", pageLimit))
 }
 
 // injectAggregatorBookInfo adds book_title and book_description to the aggregator config section.

@@ -6,7 +6,7 @@ type WorkspacePort interface {
 	Root() string
 
 	// Source indicates how the workspace was detected.
-	// Values: "env:R2R_REPO_ROOT", "env:R2R_DOCKER_MODE", "git"
+	// Values: "env:CLIE_REPO_ROOT", "env:CLIE_DOCKER_MODE", "git"
 	Source() string
 
 	// IsContainer returns true when running inside a container.
@@ -39,7 +39,7 @@ type WorkspaceDetectMode int
 const (
 	// WorkspaceModeAuto tries env vars first, then git detection.
 	WorkspaceModeAuto WorkspaceDetectMode = iota
-	// WorkspaceModeExplicit requires R2R_REPO_ROOT to be set.
+	// WorkspaceModeExplicit requires CLIE_REPO_ROOT to be set.
 	WorkspaceModeExplicit
 	// WorkspaceModeGitOnly skips env vars and uses only git detection.
 	WorkspaceModeGitOnly

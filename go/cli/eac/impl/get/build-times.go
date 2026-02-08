@@ -21,15 +21,10 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 )
-
-func init() {
-	registry.Register(GetBuildTimes)
-}
 
 // BuildTiming represents timing data for a single module build.
 type BuildTiming struct {

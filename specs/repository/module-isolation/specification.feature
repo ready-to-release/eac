@@ -9,10 +9,10 @@ Feature: repository_module-isolation
     Given the repository contains the following Go modules:
       | Module          | Path              | Role                          |
       | go/core         | go/core           | Foundational library          |
-      | go/cli/r2r      | go/cli/r2r        | CLI binary (isolated)         |
+      | go/cli/clie      | go/cli/clie        | CLI binary (isolated)         |
       | go/cli/eac      | go/cli/eac        | Command implementations + AI  |
       | go/clibase      | go/clibase        | Shared CLI framework          |
-      | ext-eac         | containers/ext-eac| R2R CLI extension (Docker)    |
+      | eac-ext         | containers/eac-ext| CLIE CLI extension (Docker)    |
       | go/mcp/commands | go/mcp/commands   | MCP server                    |
 
   Rule: go/core is the foundational module with no local dependencies
@@ -24,21 +24,21 @@ Feature: repository_module-isolation
     Scenario: go/core has no local module dependencies
       Given I am checking module "go/core"
       When I scan all .go files for import statements
-      Then no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      Then no files should import "github.com/ready-to-release/eac/go/cli/clie"
       And no files should import "github.com/ready-to-release/eac/go/cli/eac"
       And no files should import "github.com/ready-to-release/eac/go/mcp"
       And no files should import "github.com/ready-to-release/eac/go/clibase"
 
-  Rule: go/cli/r2r is fully isolated with no local dependencies
+  Rule: go/cli/clie is fully isolated with no local dependencies
 
     The CLI binary must remain lightweight and independently distributable.
     Production code must not import any other local modules.
     Test code MAY import local modules for test infrastructure.
 
     @L0 @ov
-    Scenario: go/cli/r2r production code has no local module imports
-      Given I am checking module "go/cli/r2r"
-      When I scan all production .go files in "go/cli/r2r"
+    Scenario: go/cli/clie production code has no local module imports
+      Given I am checking module "go/cli/clie"
+      When I scan all production .go files in "go/cli/clie"
       Then no production files should import "github.com/ready-to-release/eac/go/core"
       And no production files should import "github.com/ready-to-release/eac/go/cli/eac"
       And no production files should import "github.com/ready-to-release/eac/go/mcp"
@@ -55,7 +55,7 @@ Feature: repository_module-isolation
       When I scan all .go files for import statements
       Then files may import "github.com/ready-to-release/eac/go/core"
       And files may import "github.com/ready-to-release/eac/go/clibase"
-      But no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      But no files should import "github.com/ready-to-release/eac/go/cli/clie"
       And no files should import "github.com/ready-to-release/eac/go/mcp"
 
   Rule: go/mcp/commands depends only on go/core
@@ -68,7 +68,7 @@ Feature: repository_module-isolation
       Given I am checking module "go/mcp/commands"
       When I scan all .go files for import statements
       Then files may import "github.com/ready-to-release/eac/go/core"
-      But no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      But no files should import "github.com/ready-to-release/eac/go/cli/clie"
       And no files should import "github.com/ready-to-release/eac/go/cli/eac"
       And no files should import "github.com/ready-to-release/eac/go/clibase"
 
@@ -83,5 +83,5 @@ Feature: repository_module-isolation
       And the dependency order should be:
         | Layer | Modules                                                     |
         | 0     | go/core                                                     |
-        | 1     | go/cli/r2r, go/clibase, go/mcp/commands, go/cli/eac        |
-        | 2     | ext-eac                                                     |
+        | 1     | go/cli/clie, go/clibase, go/mcp/commands, go/cli/eac        |
+        | 2     | eac-ext                                                     |

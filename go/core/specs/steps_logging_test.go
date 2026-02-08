@@ -87,7 +87,7 @@ func registerLoggingSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) 
 
 func aLoggingModuleConfiguredFor(module string) error {
 	// Clear test logging env var so library tests can verify unified log behavior
-	os.Unsetenv("R2R_TEST_LOGGING_ACTIVE")
+	os.Unsetenv("CLIE_TEST_LOGGING_ACTIVE")
 
 	// Create a unique temp directory for this scenario
 	count := atomic.AddInt64(&loggingTestCounter, 1)

@@ -19,7 +19,7 @@
 // Long: Example:
 // Long:   pipeline run                    # Run all modules
 // Long:   pipeline run --changed-only     # Run only changed modules
-// Long:   pipeline run core r2r-cli   # Run specific modules
+// Long:   pipeline run core clie-cli   # Run specific modules
 // Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
 // Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
 // Flag.wait: type=bool, usage=Wait for pipeline completion before returning
@@ -34,13 +34,8 @@ import (
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineRun)
-}
 
 func PipelineRun() int {
 	// Validate flags before parsing

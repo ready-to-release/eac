@@ -75,7 +75,7 @@ type ImageTagRules struct {
 type GitHubReleaseRules struct {
 	// TagFormat specifies the expected format of release tags on images.
 	// Use {module} and {version} placeholders.
-	// Example: "{module}/{version}" matches "ext-eac/1.0.0"
+	// Example: "{module}/{version}" matches "eac-ext/1.0.0"
 	// Default: "{module}/{version}"
 	TagFormat string `yaml:"tag_format" json:"tag_format"`
 }

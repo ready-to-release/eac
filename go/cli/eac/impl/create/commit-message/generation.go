@@ -14,19 +14,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-// mockAIResponse holds the mock response for testing. When set, AI calls return this.
-var mockAIResponse string
-
-// SetMockAIResponse sets a mock AI response for testing.
-func SetMockAIResponse(response string) {
-	mockAIResponse = response
-}
-
-// ResetMockAIResponse clears the mock AI response.
-func ResetMockAIResponse() {
-	mockAIResponse = ""
-}
-
 // GenerationResult holds the result of AI generation including metadata.
 type GenerationResult struct {
 	Output       string // The generated output
@@ -35,8 +22,8 @@ type GenerationResult struct {
 
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
 // If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing).
-func generateWithPrompt(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
-	result, err := generateWithPromptResult(promptName, userPrompt, workspaceRoot, affectedModules, debugEnabled, testExecutor)
+func generateWithPrompt(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
+	result, err := generateWithPromptResult(deps, promptName, userPrompt, workspaceRoot, affectedModules, debugEnabled, testExecutor)
 	if err != nil {
 		return "", err
 	}
@@ -44,7 +31,7 @@ func generateWithPrompt(promptName, userPrompt, workspaceRoot string, affectedMo
 }
 
 // generateWithPromptResult generates output and returns full metadata including provider info.
-func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
+func generateWithPromptResult(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	// Use subcommand-aware mock lookup for module sections to allow different mock responses
 	var mock string
@@ -70,14 +57,14 @@ func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affe
 	}
 
 	// Check for mock response (test mode - in-process testing)
-	if mockAIResponse != "" {
+	if deps.AIResponse != "" {
 		// Format mock JSON to conventional commit format
 		var formattedOutput string
 		var err error
 		if promptName == "module" {
-			formattedOutput, err = FormatModuleSection(mockAIResponse)
+			formattedOutput, err = FormatModuleSection(deps.AIResponse)
 		} else {
-			formattedOutput, err = FormatCommitMessage(mockAIResponse)
+			formattedOutput, err = FormatCommitMessage(deps.AIResponse)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to format mock response: %w", err)

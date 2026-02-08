@@ -14,7 +14,7 @@
 // Long:   - run_id: the GitHub Actions run ID to download artifacts from
 // Long:
 // Long: Example usage in CI:
-// Long:   CI_RUNS=$(commands get evidence-ci-runs r2r-cli --format json)
+// Long:   CI_RUNS=$(commands get evidence-ci-runs clie-cli --format json)
 // Long:   echo "$CI_RUNS" | jq -c '.[]' | while read entry; do
 // Long:     module=$(echo "$entry" | jq -r '.module')
 // Long:     run_id=$(echo "$entry" | jq -r '.run_id')
@@ -31,17 +31,12 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
-
-func init() {
-	registry.Register(GetEvidenceCIRuns)
-}
 
 // EvidenceCIRun represents a CI run to download artifacts from.
 type EvidenceCIRun struct {

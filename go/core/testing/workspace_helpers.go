@@ -99,7 +99,7 @@ func RealRepoRoot(t testing.TB) string {
 //
 //	func TestModifyChangelog(t *testing.T) {
 //	    tempRoot := coretesting.CopyToTempWorkspace(t, []string{
-//	        "release/ext-eac/CHANGELOG.md",
+//	        "release/eac-ext/CHANGELOG.md",
 //	        ".eac/repository.yml",
 //	    })
 //	    // Modify files in tempRoot safely

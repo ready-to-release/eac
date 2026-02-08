@@ -45,6 +45,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
+var reDockerMemoryValue = regexp.MustCompile(`^([\d.]+)\s*(GiB|MiB|TiB|KiB|GB|MB|TB|KB|G|M|T|K)?$`)
+
 const (
 	// memoryPerSlot is the memory unit for calculating pressure capacity.
 	// Based on build log analysis showing ~0MB memory delta per build,
@@ -154,7 +156,7 @@ func parseDockerMemoryValue(s string) uint64 {
 	}
 
 	// Handle GiB, MiB, TiB, KiB (binary prefixes used by Docker)
-	re := regexp.MustCompile(`^([\d.]+)\s*(GiB|MiB|TiB|KiB|GB|MB|TB|KB|G|M|T|K)?$`)
+	re := reDockerMemoryValue
 	matches := re.FindStringSubmatch(s)
 	if len(matches) < 2 {
 		return 0

@@ -26,13 +26,10 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-func init() {
-	registry.Register(GetTestTimings)
-}
+var reScenarioTiming = regexp.MustCompile(`^\s+---\s+(PASS|FAIL):\s+\S+/(.+?)\s+\(([0-9.]+)s\)`)
 
 // testTimingsFlags defines valid flags for the get test-timings command
 
@@ -239,7 +236,7 @@ func parseTestLog(logPath string) ([]TestTiming, error) {
 	// Fallback to regex parsing for non-JSON logs
 	_, _ = file.Seek(0, 0) //nolint:errcheck // reset position, error doesn't affect parsing
 	scanner = bufio.NewScanner(file)
-	scenarioRe := regexp.MustCompile(`^\s+---\s+(PASS|FAIL):\s+\S+/(.+?)\s+\(([0-9.]+)s\)`)
+	scenarioRe := reScenarioTiming
 
 	for scanner.Scan() {
 		line := scanner.Text()

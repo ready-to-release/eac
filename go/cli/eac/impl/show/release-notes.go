@@ -11,9 +11,9 @@
 // Long: - All sections with headers (###) and content formatted as markdown
 // Long:
 // Long: Example:
-// Long:   show release-notes ext-eac
-// Long:   show release-notes ext-eac latest
-// Long:   show release-notes ext-eac 0.0.7
+// Long:   show release-notes eac-ext
+// Long:   show release-notes eac-ext latest
+// Long:   show release-notes eac-ext 0.0.7
 // Args: module [version]
 package show
 
@@ -22,15 +22,10 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/releasenotes"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowReleaseNotes)
-}
 
 func ShowReleaseNotes() int {
 	// Validate flags against registry metadata

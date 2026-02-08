@@ -1,8 +1,8 @@
 // Command: release extract-version
 // Short: Extract and validate release version from tag or input
-// Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
+// Flag.module: type=string, usage=Module prefix (e.g., clie-cli, docs)
 // Flag.type: type=string, default=semver, usage=Version type (semver or calver)
-// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/r2r-cli/1.0.0)
+// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/clie-cli/1.0.0)
 // Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
 // Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
 // Long: The release extract-version command extracts version information from a git tag ref
@@ -14,13 +14,13 @@
 // Long:
 // Long: Expected Output (--format shell):
 // Long:   VERSION="1.0.0"
-// Long:   TAG_NAME="r2r-cli/1.0.0"
+// Long:   TAG_NAME="clie-cli/1.0.0"
 // Long:   IS_VALID="true"
 // Long:
 // Long: Example:
-// Long:   release extract-version --module r2r-cli --ref refs/tags/r2r-cli/1.0.0
+// Long:   release extract-version --module clie-cli --ref refs/tags/clie-cli/1.0.0
 // Long:   release extract-version --module docs --type calver --version ""
-// Long:   eval $(release extract-version --module r2r-cli --ref "$GITHUB_REF" --format shell)
+// Long:   eval $(release extract-version --module clie-cli --ref "$GITHUB_REF" --format shell)
 package release
 
 import (
@@ -32,13 +32,13 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"gopkg.in/yaml.v3"
 )
 
-func init() {
-	registry.Register(ExtractVersion)
-}
+var (
+	reCalver       = regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)
+	reSemverNoV    = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
+)
 
 // ExtractVersionOutput contains the extracted version information.
 type ExtractVersionOutput struct {
@@ -173,8 +173,7 @@ func generateCalver() string {
 
 // isValidCalver validates a calver string (YYYY.MMDD.HHMM).
 func isValidCalver(version string) bool {
-	calverRegex := regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)
-	return calverRegex.MatchString(version)
+	return reCalver.MatchString(version)
 }
 
 // isValidSemver validates a semver string (x.y.z without v prefix).
@@ -183,6 +182,5 @@ func isValidSemver(version string) bool {
 	if strings.HasPrefix(version, "v") || strings.HasPrefix(version, "V") {
 		return false
 	}
-	semverRegex := regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
-	return semverRegex.MatchString(version)
+	return reSemverNoV.MatchString(version)
 }

@@ -130,8 +130,8 @@ func ProcessStructurizrDiagrams(
 
 	debugf("structurizr: loaded builder indexes for %d module(s) with %d total entries", len(moduleSet), len(svgLookup))
 
-	renderedDir := paths.RenderedAssetsPath(stagingDir, "structurizr")
-	if err := os.MkdirAll(renderedDir, 0o755); err != nil {
+	cacheDir := filepath.Join(stagingDir, "assets", "cache", "structurizr")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return fmt.Errorf("creating staging directory: %w", err)
 	}
 
@@ -159,7 +159,7 @@ func ProcessStructurizrDiagrams(
 			}
 
 			srcPath := filepath.Join(moduleBuildDirs[marker.Module], svgFilename)
-			stagingPath := filepath.Join(renderedDir, svgFilename)
+			stagingPath := filepath.Join(cacheDir, svgFilename)
 
 			if _, err := os.Stat(srcPath); os.IsNotExist(err) {
 				warnf("structurizr SVG file missing: %s", srcPath)

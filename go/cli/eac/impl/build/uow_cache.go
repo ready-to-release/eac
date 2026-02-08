@@ -80,7 +80,7 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 	}
 
 	// Create dependency resolver from module registry for cross-module
-	// build cache invalidation (e.g., ext-eac depends on eac-cli binary).
+	// build cache invalidation (e.g., eac-ext depends on eac-cli binary).
 	var depResolver coreoutput.DependencyResolver
 	if ctx.ModuleRegistry != nil {
 		depResolver = func(module string) []string {
@@ -207,15 +207,6 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 
 	log.Debugf("Incremental (UoW mode): %d modules to build, %d cached, %d UoWs cached",
 		len(changedList), len(cachedList), len(bctx.cachedUoWs))
-}
-
-// isUoWCached checks if a specific UoW is cached.
-// Used by buildUnitWorker when UoW caching is enabled.
-func isUoWCached(bctx *buildContext, unitID workunit.UnitID) bool {
-	if bctx.cachedUoWs == nil {
-		return false
-	}
-	return bctx.cachedUoWs[unitID.Longname()]
 }
 
 // getUoWCacheTime returns the cache time for a specific UoW.

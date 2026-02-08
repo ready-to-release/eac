@@ -88,10 +88,10 @@ For complete CLI commands and workflow details, see:
 
 Complete implementation guide including:
 
-- `r2r release pending` - Check for unreleased changes
-- `r2r release this` - Finalize changelog for release
-- `r2r release tag-pending` - Check for untagged versions
-- `r2r release validate` - Validate changelog format
+- `eac release pending` - Check for unreleased changes
+- `eac release this` - Finalize changelog for release
+- `eac release tag-pending` - Check for untagged versions
+- `eac release validate` - Validate changelog format
 - Workflow automation details
 - Troubleshooting guide
 

@@ -67,21 +67,21 @@ permissions:
 
 | Workflow               | Module          | Release Type | Artifact Type           | Destination     | Versioning |
 | ---------------------- | --------------- | ------------ | ----------------------- | --------------- | ---------- |
-| `release-r2r-cli.yaml` | r2r-cli         | published    | Cross-platform binaries | GitHub Releases | SemVer     |
-| `release-ext-eac.yaml` | ext-eac         | published    | Docker extension        | Docker Hub      | SemVer     |
+| `release-clie-cli.yaml` | clie-cli         | published    | Cross-platform binaries | GitHub Releases | SemVer     |
+| `release-eac-ext.yaml` | eac-ext         | published    | Docker extension        | Docker Hub      | SemVer     |
 | `release-docs.yaml`    | docs            | published    | Static site             | GitHub Pages    | CalVer     |
 | `release-books.yaml`   | books           | published    | PDF documents           | GitHub Releases | CalVer     |
-| `release-bundle.yaml`  | r2r-eac-bundle  | bundle       | Meta-release bundle     | GitHub Releases | SemVer     |
+| `release-bundle.yaml`  | clie-eac-bundle  | bundle       | Meta-release bundle     | GitHub Releases | SemVer     |
 
-**Note**: Internal modules (eac-cli, eac-mcp-server, r2r-installer, vscode-commit) do not have release workflows because they are not released independently.
+**Note**: Internal modules (eac-cli, eac-mcp-server, clie-installer, vscode-commit) do not have release workflows because they are not released independently.
 
-## Example: release-r2r-cli.yaml
+## Example: release-clie-cli.yaml
 
-Complete specification for the R2R CLI binary release workflow.
+Complete specification for the CLIE CLI binary release workflow.
 
-**File:** `.github/workflows/release-r2r-cli.yaml`
+**File:** `.github/workflows/release-clie-cli.yaml`
 
-**Module:** r2r-cli
+**Module:** clie-cli
 
 **Artifact:** Cross-platform binaries (Linux, macOS, Windows)
 
@@ -91,7 +91,7 @@ Complete specification for the R2R CLI binary release workflow.
 on:
   push:
     tags:
-      - 'r2r-cli/*'
+      - 'clie-cli/*'
       - 'src-cli/*'  # Legacy tag format for backwards compatibility
   workflow_dispatch:
     inputs:
@@ -103,7 +103,7 @@ on:
 
 **Tag Format:**
 
-- Current: `r2r-cli/1.0.0`
+- Current: `clie-cli/1.0.0`
 - Legacy: `src-cli/1.0.0` (supported for backwards compatibility)
 
 ### Permissions
@@ -144,7 +144,7 @@ Verifies that CI has run successfully on the commit being released.
 - name: Check CI status
   run: |
     commands release check-ci \
-      --workflow ci-r2r-cli.yaml \
+      --workflow ci-clie-cli.yaml \
       --commit ⟪ github.sha ⟫ \
       --timeout 300
   env:
@@ -153,7 +153,7 @@ Verifies that CI has run successfully on the commit being released.
 
 **Behavior:**
 
-- Queries GitHub API for successful `ci-r2r-cli.yaml` run on the commit
+- Queries GitHub API for successful `ci-clie-cli.yaml` run on the commit
 - Waits up to 300 seconds for CI to complete if still running
 - Fails if no successful CI run found
 
@@ -166,7 +166,7 @@ Verifies that CI has run successfully on the commit being released.
   id: extract_version
   uses: ./.github/actions/extract-release-version
   with:
-    module-prefix: r2r-cli
+    module-prefix: clie-cli
     legacy-prefixes: src-cli
     commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
@@ -174,7 +174,7 @@ Verifies that CI has run successfully on the commit being released.
 **Outputs:**
 
 - `version` - Extracted version (e.g., `1.0.0`)
-- `tag_name` - Full tag name (e.g., `r2r-cli/1.0.0`)
+- `tag_name` - Full tag name (e.g., `clie-cli/1.0.0`)
 - `is_valid` - Boolean indicating valid semver format
 
 **Validation:**
@@ -221,7 +221,7 @@ Verifies that CI has run successfully on the commit being released.
   env:
     VERSION: ⟪ steps.extract_version.outputs.version ⟫
   run: |
-    commands build r2r-cli --all --version "$VERSION" --no-tidy
+    commands build clie-cli --all --version "$VERSION" --no-tidy
 ```
 
 **Build Targets:**
@@ -245,16 +245,16 @@ Verifies that CI has run successfully on the commit being released.
 ```yaml
 - name: Verify binaries
   run: |
-    ls -lh out/build/r2r-cli/
+    ls -lh out/build/clie-cli/
 
     REQUIRED_FILES=(
-      "out/build/r2r-cli/r2r-linux-amd64"
-      "out/build/r2r-cli/r2r-linux-amd64-upx"
-      "out/build/r2r-cli/r2r-linux-arm64"
-      "out/build/r2r-cli/r2r-darwin-amd64"
-      "out/build/r2r-cli/r2r-darwin-arm64"
-      "out/build/r2r-cli/r2r-windows-amd64.exe"
-      "out/build/r2r-cli/r2r-windows-amd64-upx.exe"
+      "out/build/clie-cli/clie-linux-amd64"
+      "out/build/clie-cli/clie-linux-amd64-upx"
+      "out/build/clie-cli/clie-linux-arm64"
+      "out/build/clie-cli/clie-darwin-amd64"
+      "out/build/clie-cli/clie-darwin-arm64"
+      "out/build/clie-cli/clie-windows-amd64.exe"
+      "out/build/clie-cli/clie-windows-amd64-upx.exe"
     )
 
     for file in "${REQUIRED_FILES[@]}"; do
@@ -265,8 +265,8 @@ Verifies that CI has run successfully on the commit being released.
     done
 
     # Test binary execution
-    chmod +x out/build/r2r-cli/r2r-linux-amd64
-    ./out/build/r2r-cli/r2r-linux-amd64 version
+    chmod +x out/build/clie-cli/clie-linux-amd64
+    ./out/build/clie-cli/clie-linux-amd64 version
 ```
 
 #### Step 9: Generate Build Attestations
@@ -276,13 +276,13 @@ Verifies that CI has run successfully on the commit being released.
   uses: actions/attest-build-provenance@v3
   with:
     subject-path: |
-      out/build/r2r-cli/r2r-linux-amd64
-      out/build/r2r-cli/r2r-linux-amd64-upx
-      out/build/r2r-cli/r2r-linux-arm64
-      out/build/r2r-cli/r2r-darwin-amd64
-      out/build/r2r-cli/r2r-darwin-arm64
-      out/build/r2r-cli/r2r-windows-amd64.exe
-      out/build/r2r-cli/r2r-windows-amd64-upx.exe
+      out/build/clie-cli/clie-linux-amd64
+      out/build/clie-cli/clie-linux-amd64-upx
+      out/build/clie-cli/clie-linux-arm64
+      out/build/clie-cli/clie-darwin-amd64
+      out/build/clie-cli/clie-darwin-arm64
+      out/build/clie-cli/clie-windows-amd64.exe
+      out/build/clie-cli/clie-windows-amd64-upx.exe
 ```
 
 **Purpose:** Supply chain security via Sigstore attestations
@@ -290,7 +290,7 @@ Verifies that CI has run successfully on the commit being released.
 **Verification:**
 
 ```bash
-gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
+gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
 ```
 
 #### Step 10: Create Release Notes
@@ -300,11 +300,11 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
   id: release_notes
   run: |
     cat << EOF > release_notes.md
-    # r2r CLI ⟪ steps.extract_version.outputs.version ⟫
+    # clie CLI ⟪ steps.extract_version.outputs.version ⟫
 
     ## What's New
 
-    Release of r2r CLI version ⟪ steps.extract_version.outputs.version ⟫.
+    Release of clie CLI version ⟪ steps.extract_version.outputs.version ⟫.
 
     ## Installation
 
@@ -335,17 +335,17 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
     if [ "⟪ github.event_name ⟫" = "workflow_dispatch" ]; then
       # Manual trigger: create tag and release together
       gh release create "$TAG_NAME" \
-        --title "r2r CLI v$VERSION" \
+        --title "clie CLI v$VERSION" \
         --notes-file release_notes.md \
         --target "⟪ github.sha ⟫" \
-        out/build/r2r-cli/*
+        out/build/clie-cli/*
     else
       # Tag trigger: use existing tag
       gh release create "$TAG_NAME" \
-        --title "r2r CLI v$VERSION" \
+        --title "clie CLI v$VERSION" \
         --notes-file release_notes.md \
         --verify-tag \
-        out/build/r2r-cli/*
+        out/build/clie-cli/*
     fi
   env:
     GH_TOKEN: ⟪ github.token ⟫
@@ -386,7 +386,7 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 - name: Summary (success)
   if: success()
   run: |
-    echo "## r2r CLI Released" >> $GITHUB_STEP_SUMMARY
+    echo "## clie CLI Released" >> $GITHUB_STEP_SUMMARY
     # Release details and download link
 ```
 
@@ -409,10 +409,10 @@ Users can verify artifact authenticity:
 
 ```bash
 # Download binary and attestation
-gh release download r2r-cli/1.0.0 -p 'r2r-linux-amd64'
+gh release download clie-cli/1.0.0 -p 'clie-linux-amd64'
 
 # Verify attestation
-gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
+gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
 ```
 
 **Output:**
@@ -430,7 +430,7 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 
 **Examples:**
 
-- `r2r CLI v1.0.0`
+- `clie CLI v1.0.0`
 - `EAC Extension v0.1.0`
 - `Documentation Site (2025.12.01)`
 
@@ -440,8 +440,8 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 
 **Examples:**
 
-- `r2r-cli/1.0.0`
-- `ext-eac/0.1.0`
+- `clie-cli/1.0.0`
+- `eac-ext/0.1.0`
 - `docs/2025.12.01`
 - `books/2025.12.01`
 
@@ -456,9 +456,9 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 
 **Examples:**
 
-- `r2r-linux-amd64`
-- `r2r-windows-amd64.exe`
-- `r2r-linux-amd64-upx`
+- `clie-linux-amd64`
+- `clie-windows-amd64.exe`
+- `clie-linux-amd64-upx`
 
 ## Manual Release Workflow
 
@@ -466,11 +466,11 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 
 ```bash
 # Create and push tag (triggers release automatically)
-git tag r2r-cli/1.0.0
-git push origin r2r-cli/1.0.0
+git tag clie-cli/1.0.0
+git push origin clie-cli/1.0.0
 
 # Or trigger manually via workflow dispatch
-gh workflow run release-r2r-cli.yaml -f version=1.0.0
+gh workflow run release-clie-cli.yaml -f version=1.0.0
 ```
 
 ### Release Checklist
@@ -490,7 +490,7 @@ gh workflow run release-r2r-cli.yaml -f version=1.0.0
 
 ```bash
 # List recent release runs
-gh run list --workflow release-r2r-cli.yaml --limit 10
+gh run list --workflow release-clie-cli.yaml --limit 10
 
 # View specific run
 gh run view <run-id>
@@ -504,7 +504,7 @@ gh run view <run-id> --log
 ```bash
 # Check if CI passed for a commit
 eac release check-ci \
-  --workflow ci-r2r-cli.yaml \
+  --workflow ci-clie-cli.yaml \
   --commit <sha>
 ```
 
@@ -519,11 +519,11 @@ eac validate release-version 1.0.0
 
 ```bash
 # Build release binaries locally
-eac build r2r-cli --all --version 1.0.0
+eac build clie-cli --all --version 1.0.0
 
 # Verify binaries
-ls -lh out/build/r2r-cli/
-./out/build/r2r-cli/r2r-linux-amd64 version
+ls -lh out/build/clie-cli/
+./out/build/clie-cli/clie-linux-amd64 version
 ```
 
 ## References

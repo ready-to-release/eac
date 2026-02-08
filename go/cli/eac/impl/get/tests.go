@@ -22,12 +22,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(GetTests)
-}
 
 // testsFlags defines valid flags for the get tests command
 

@@ -739,7 +739,7 @@ type ExecutionContext struct {
 
 	// DinD support: Host paths for volume mounts when running inside a container.
 	// When set, mount sources are translated from container paths to host paths.
-	// This is populated automatically by the executor when R2R_HOST_REPOROOT is set.
+	// This is populated automatically by the executor when CLIE_HOST_REPOROOT is set.
 	HostWorkspaceRoot string // Host's view of workspace (e.g., "C:\projects\eac")
 	ContainerRepoRoot string // Container's view (e.g., "/var/task")
 }

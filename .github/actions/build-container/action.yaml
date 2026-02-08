@@ -20,7 +20,7 @@
 #         - uses: ./.github/actions/build-container
 #           id: build
 #           with:
-#             module: ext-eac
+#             module: eac-ext
 #           env:
 #             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

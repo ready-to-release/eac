@@ -10,7 +10,7 @@ Before starting:
 - [ ] Git repository initialized
 - [ ] Terminal access (bash, zsh, or PowerShell)
 
-## Step 1: Install R2R CLI
+## Step 1: Install CLIE CLI
 
 ### Linux/macOS
 
@@ -27,21 +27,21 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 ### Verify Installation
 
 ```bash
-r2r version
+clie version
 ```
 
-## Step 2: Initialize R2R
+## Step 2: Initialize CLIE
 
 ```bash
-r2r init
+clie init
 ```
 
-This creates `.r2r/r2r-cli.yml` with extension registry settings.
+This creates `.clie/clie-cli.yml` with extension registry settings.
 
 ## Step 3: Install EAC Extension
 
 ```bash
-r2r install eac
+clie install eac
 ```
 
 This pulls the EAC Docker image.
@@ -99,8 +99,8 @@ After setup, your project includes:
 
 ```text
 your-project/
-├── .r2r/
-│   ├── r2r-cli.yml          # R2R CLI configuration
+├── .clie/
+│   ├── clie-cli.yml          # CLIE CLI configuration
 │   └── eac/
 │       └── repository.yml    # Module definitions
 └── ... (your code)
@@ -130,7 +130,7 @@ eac test my-app
 | Problem              | Solution                         |
 | -------------------- | -------------------------------- |
 | "Docker not running" | Start Docker Desktop             |
-| "Image not found"    | Run `r2r install eac`            |
+| "Image not found"    | Run `clie install eac`            |
 | "Module not found"   | Check `repository.yml` syntax    |
 | "Invalid type"       | Use valid component type (go, typescript, etc.) |
 

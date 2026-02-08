@@ -24,12 +24,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioEmbed)
-}
 
 // DrawioEmbed embeds XML into a .drawio.png file.
 func DrawioEmbed() int {

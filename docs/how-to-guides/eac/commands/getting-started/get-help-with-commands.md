@@ -8,9 +8,9 @@ Discover available EAC commands and learn how to use them effectively using the 
 
 ### Required Knowledge
 
-**New to r2r?** Learn these concepts first:
+**New to eac?** Learn these concepts first:
 
-- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Install r2r and understand basic commands
+- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Install eac and understand basic commands
 
 ### Required Setup
 

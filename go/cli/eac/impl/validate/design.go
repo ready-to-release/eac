@@ -24,15 +24,10 @@ import (
 
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateDesign)
-}
 
 // ValidateDesign validates workspace files using Structurizr CLI.
 func ValidateDesign() int {
@@ -229,9 +224,9 @@ func printDesignValidateUsage() {
 	log.Info("(for !include) and skipped. Runs validation in Docker using Structurizr CLI.")
 	log.Info("")
 	log.Info("Usage:")
-	log.Info("  r2r validate design <module>              Validate all DSL files in module")
-	log.Info("  r2r validate design <module> --file=NAME  Validate specific DSL file")
-	log.Info("  r2r validate design --all                 Validate all modules")
+	log.Info("  clie validate design <module>              Validate all DSL files in module")
+	log.Info("  clie validate design <module> --file=NAME  Validate specific DSL file")
+	log.Info("  clie validate design --all                 Validate all modules")
 	log.Info("")
 	log.Info("Flags:")
 	log.Info("  --all, -a           Validate all DSL files in specs/*/.design/")
@@ -241,11 +236,11 @@ func printDesignValidateUsage() {
 	log.Info("  --help, -h          Show this help message")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r validate design r2r-cli                    # All DSL files")
-	log.Info("  r2r validate design r2r-cli --file=workspace   # Just workspace.dsl")
-	log.Info("  r2r validate design r2r-cli --file=landscape   # Just landscape.dsl")
-	log.Info("  r2r validate design eac-cli --verbose")
-	log.Info("  r2r validate design --all")
+	log.Info("  clie validate design clie-cli                    # All DSL files")
+	log.Info("  clie validate design clie-cli --file=workspace   # Just workspace.dsl")
+	log.Info("  clie validate design clie-cli --file=landscape   # Just landscape.dsl")
+	log.Info("  clie validate design eac-cli --verbose")
+	log.Info("  clie validate design --all")
 	log.Info("")
 	log.Info("Multi-DSL Support:")
 	log.Info("  specs/module/.design/")

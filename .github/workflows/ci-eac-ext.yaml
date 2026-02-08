@@ -1,0 +1,270 @@
+name: "ci-eac-ext (stage 1-7)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        description: 'Git ref to checkout'
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+jobs:
+  # =============================================================================
+  # Build eac-ext container
+  # =============================================================================
+  build:
+    name: Build (eac-ext)
+    runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.container.outputs.image-name }}
+      image-tag: ${{ steps.container.outputs.image-tag }}
+      short-sha: ${{ steps.container.outputs.short-sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Build Container
+        id: container
+        uses: ./.github/actions/build-container
+        with:
+          module: eac-ext
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # =============================================================================
+  # Run module tests (specs/unit tests if defined)
+  # =============================================================================
+  test:
+    name: Test (eac-ext)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: eac-ext
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          suites: unit,integration
+          results-artifact-name: test-results-eac-ext
+
+  # =============================================================================
+  # Container tests with clie CLI and direct Docker
+  # =============================================================================
+  integration-test:
+    name: Container Test (eac-ext)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull CI image from GHCR
+        env:
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+        run: |
+          echo "Pulling CI image..."
+          docker pull "$IMAGE_NAME:$IMAGE_TAG"
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" eac-ext:ci-test
+          docker images eac-ext:ci-test
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: build-artifacts-eac-ext
+          path: out/build/
+
+      - name: Download clie-cli for testing
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: clie-cli
+          commit-sha: ${{ inputs.sha || github.sha }}
+
+      - name: Setup clie CLI
+        run: |
+          echo "Setting up clie CLI from build artifacts..."
+          cp out/build/clie-cli/go/clie-linux-amd64 ./clie
+          chmod +x ./clie
+          echo "✓ clie-cli ready"
+
+      - name: Test Extension via clie CLI
+        run: |
+          echo "Testing eac extension through clie CLI..."
+
+          # Create isolated test environment
+          mkdir -p /tmp/eac-ext-test
+          cd /tmp/eac-ext-test
+          mkdir -p .git
+          cp -r $GITHUB_WORKSPACE/contracts ./contracts
+
+          # Configure to use CI test image
+          mkdir -p .clie
+          cat > .clie/clie-cli.yml << EOF
+          extensions:
+            - name: 'eac'
+              image: 'eac-ext:ci-test'
+              image_pull_policy: 'Never'
+          EOF
+
+          cp $GITHUB_WORKSPACE/clie ./clie
+          chmod +x ./clie
+
+          echo ""
+          echo "Testing 'show modules' command..."
+          timeout 120 ./clie run eac show modules
+
+          echo ""
+          echo "Testing 'extension-meta' command..."
+          timeout 30 ./clie run eac extension-meta
+
+          echo ""
+          echo "Extension tests passed"
+
+      - name: Test Direct Docker Execution
+        run: |
+          echo "Testing extension directly with Docker..."
+
+          echo ""
+          echo "Test 1: Help command"
+          docker run --rm -v $(pwd):/var/task eac-ext:ci-test help 2>&1 | head -20 || true
+
+          echo ""
+          echo "Test 2: Extension metadata"
+          docker run --rm eac-ext:ci-test extension-meta
+
+          echo ""
+          echo "Direct Docker tests passed"
+
+      - name: Test Summary
+        if: success()
+        env:
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+        run: |
+          echo "## Container Test: eac-ext" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Method | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| show modules | clie CLI | List repository modules |" >> $GITHUB_STEP_SUMMARY
+          echo "| extension-meta | clie CLI | Extension metadata |" >> $GITHUB_STEP_SUMMARY
+          echo "| help | Docker | Direct container execution |" >> $GITHUB_STEP_SUMMARY
+          echo "| extension-meta | Docker | Direct container execution |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Tested Image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Build Evidence Books
+  # =============================================================================
+  evidence:
+    name: Evidence (eac-ext)
+    needs: [build, test, integration-test]
+    if: success()
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.evidence.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build Evidence Books
+        id: evidence
+        uses: ./.github/actions/build-evidence-books
+        with:
+          module: eac-ext
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
+  # =============================================================================
+  # Summary - Centralized status and failure handling
+  # =============================================================================
+  summary:
+    name: CI Summary (eac-ext)
+    needs: [build, test, integration-test, evidence]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate Summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          INTEGRATION_RESULT: ${{ needs.integration-test.result }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
+        run: |
+          echo "## CI Summary: eac-ext" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT --evidence-enabled --evidence=$EVIDENCE_RESULT >> $GITHUB_STEP_SUMMARY
+
+      - name: Diagnostic Link on Failure
+        if: contains(needs.*.result, 'failure')
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY

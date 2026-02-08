@@ -32,17 +32,12 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/oscal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 var ctlog = logging.C()
-
-func init() {
-	registry.Register(ControlTags)
-}
 
 var (
 	controlTagPattern  = regexp.MustCompile(`@control:([a-z]{2,4}-\d+(?:\(\d+\))?)`)

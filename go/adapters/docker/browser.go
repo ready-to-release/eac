@@ -19,26 +19,26 @@ func shouldOpenBrowser() bool {
 	}
 
 	// Don't open browsers in test contexts
-	// R2R_TEST_RUN_ID: set by test runner for subprocess isolation
+	// CLIE_TEST_RUN_ID: set by test runner for subprocess isolation
 	// GODOG_FORMAT: set when running godog BDD tests
-	// R2R_TEST_SCOPE: set by godog framework for isolated test scenarios
-	if os.Getenv("R2R_TEST_RUN_ID") != "" || os.Getenv("GODOG_FORMAT") != "" || os.Getenv("R2R_TEST_SCOPE") != "" {
+	// CLIE_TEST_SCOPE: set by godog framework for isolated test scenarios
+	if os.Getenv("CLIE_TEST_RUN_ID") != "" || os.Getenv("GODOG_FORMAT") != "" || os.Getenv("CLIE_TEST_SCOPE") != "" {
 		return false
 	}
 
 	// Check DinD mode for backward compatibility
-	// (R2R_HOST_REPOROOT indicates Docker-in-Docker)
+	// (CLIE_HOST_REPOROOT indicates Docker-in-Docker)
 	if util.IsDinD() {
 		return false
 	}
 
 	// Check if running in container mode
-	if os.Getenv(environments.EnvR2RContext) == "r2r-cli" {
+	if os.Getenv(environments.EnvCLIEContext) == "clie-cli" {
 		return false
 	}
 
 	// Check explicit no-browser flag
-	if os.Getenv(environments.EnvR2RNoBrowser) == "true" {
+	if os.Getenv(environments.EnvCLIENoBrowser) == "true" {
 		return false
 	}
 
@@ -46,7 +46,7 @@ func shouldOpenBrowser() bool {
 }
 
 // OpenBrowser opens the default web browser to the given URL.
-// In DinD mode or when R2R_NO_BROWSER=true, this is a no-op.
+// In DinD mode or when CLIE_NO_BROWSER=true, this is a no-op.
 // Returns an error only if browser opening fails in normal mode.
 func OpenBrowser(url string) error {
 	if !shouldOpenBrowser() {
@@ -57,7 +57,7 @@ func OpenBrowser(url string) error {
 }
 
 // OpenBrowserWithFallback opens the browser and returns whether it was skipped.
-// Returns (false, nil) if browser opening is disabled (DinD mode or R2R_NO_BROWSER=true).
+// Returns (false, nil) if browser opening is disabled (DinD mode or CLIE_NO_BROWSER=true).
 // This allows callers to show appropriate messages.
 func OpenBrowserWithFallback(url string) (opened bool, err error) {
 	if !shouldOpenBrowser() {

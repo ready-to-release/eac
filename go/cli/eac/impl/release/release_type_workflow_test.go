@@ -17,10 +17,10 @@ import (
 
 // TestReleaseTypeWorkflowValidation_PublishedModules tests that published SemVer modules
 // are allowed to trigger release workflows and have changelogs.
-// Published SemVer modules: r2r-cli, ext-eac (docs is CalVer, no changelog)
+// Published SemVer modules: clie-cli, eac-ext (docs is CalVer, no changelog)
 func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 	// Published SemVer modules that should be allowed to release
-	publishedModules := []string{"r2r-cli", "ext-eac"}
+	publishedModules := []string{"clie-cli", "eac-ext"}
 
 	// Use mock registry with predictable data
 	registryOpts := make([]eactesting.RegistryOption, 0, len(publishedModules))
@@ -55,8 +55,8 @@ func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 // TestReleaseTypeWorkflowValidation_BundleModules tests that CalVer bundle modules
 // have no changelog (auto-managed releases).
 func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
-	// Bundle modules - r2r-eac-bundle is CalVer, so no changelog
-	bundleModules := []string{"r2r-eac-bundle"}
+	// Bundle modules - clie-eac-bundle is CalVer, so no changelog
+	bundleModules := []string{"clie-eac-bundle"}
 
 	// Use mock registry with CalVer bundle (no changelog)
 	registryOpts := make([]eactesting.RegistryOption, 0, len(bundleModules))

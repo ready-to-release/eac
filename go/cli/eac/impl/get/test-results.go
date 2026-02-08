@@ -14,9 +14,9 @@
 // Long:
 // Long: Example:
 // Long:   get test-results
-// Long:   get test-results ext-eac
-// Long:   get test-results ext-eac r2r-cli
-// Long:   get test-results ext-eac --as-json
+// Long:   get test-results eac-ext
+// Long:   get test-results eac-ext clie-cli
+// Long:   get test-results eac-ext --as-json
 // Args: [module...]
 // Flag.as-yaml: type=bool, usage=Output as YAML (default format)
 // Flag.as-json: type=bool, usage=Output as JSON
@@ -32,12 +32,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(GetTestResults)
-}
 
 func GetTestResults() int {
 	// Validate flags before parsing

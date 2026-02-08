@@ -3,7 +3,7 @@
 // Long: Checks GitHub releases for a list of modules and returns their status.
 // Long:
 // Long: This command queries GitHub releases API to determine which modules
-// Long: have releases and their current versions. Used by release-r2r-eac-bundle.
+// Long: have releases and their current versions. Used by release-clie-eac-bundle.
 // Long:
 // Long: SHA Detection:
 // Long:   1. --sha flag (explicit)
@@ -15,8 +15,8 @@
 // Long:   --format shell: RELEASED="mod1 mod2" MISSING="mod3"
 // Long:
 // Long: Example:
-// Long:   get release-status --modules "r2r-cli ext-eac docs"
-// Long:   get release-status --modules "r2r-cli ext-eac" --format shell
+// Long:   get release-status --modules "clie-cli eac-ext docs"
+// Long:   get release-status --modules "clie-cli eac-ext" --format shell
 // Flag.modules: type=string, usage=Space-separated list of modules to check
 // Flag.format: type=string, usage=Output format (json, shell)
 package get
@@ -28,13 +28,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetReleaseStatus)
-}
 
 // ModuleReleaseStatus represents the release status of a module.
 type ModuleReleaseStatus struct {
@@ -114,7 +109,7 @@ func GetReleaseStatus() int {
 // checkModuleRelease queries GitHub for the latest release of a module.
 func checkModuleRelease(module, workspaceRoot string) ModuleReleaseStatus {
 	// Query GitHub releases for this module's tag pattern
-	// Tags are formatted as: module/version (e.g., r2r-cli/1.0.0)
+	// Tags are formatted as: module/version (e.g., clie-cli/1.0.0)
 	output, err := ghexec.Run(workspaceRoot, "release", "list",
 		"--limit", "10",
 		"--json", "tagName",

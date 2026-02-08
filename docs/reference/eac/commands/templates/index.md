@@ -16,19 +16,19 @@ Install project templates for documentation, AI prompts, reports, specifications
 
 ```bash
 # Install documentation templates
-r2r templates install docs
+clie templates install docs
 
 # Install to custom location
-r2r templates install docs --destination ./custom-docs
+clie templates install docs --destination ./custom-docs
 
 # Install AI templates
-r2r templates install ai
+clie templates install ai
 
 # Install Claude Code templates
 eac templates install claude
 
 # Install with debug logging
-r2r templates install reports --debug
+clie templates install reports --debug
 ```
 
 ## Available Template Types

@@ -6,14 +6,14 @@ import (
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
-// containerAdapter executes EAC commands through the ext-eac container.
+// containerAdapter executes EAC commands through the eac-ext container.
 type containerAdapter struct {
 	workspaceRoot string
 	executor      *tool.DefaultExecutor
 	toolDef       *tool.ToolDefinition
 }
 
-// NewContainer creates an EAC adapter that uses the ext-eac container.
+// NewContainer creates an EAC adapter that uses the eac-ext container.
 func NewContainer(workspaceRoot string, executor *tool.DefaultExecutor, toolDef *tool.ToolDefinition) EACPort {
 	return &containerAdapter{
 		workspaceRoot: workspaceRoot,

@@ -67,8 +67,8 @@ After adding new authentication specs:
 eac validate specs
 
 # Output:
-# ✓ specs/r2r-cli/user-login/specification.feature
-# ✗ specs/r2r-cli/user-registration/specification.feature
+# ✓ specs/clie-cli/user-login/specification.feature
+# ✗ specs/clie-cli/user-registration/specification.feature
 #   Line 12: Undefined step "Given user has valid email"
 #   Line 15: Missing scenario description
 #   Line 8: Missing required tag @L0-@L4 on scenario
@@ -81,7 +81,7 @@ eac get specs-unused-steps
 # Output:
 # {
 #   "unused_steps": [
-#     "go/specs/impl/r2r-cli/steps_user_login.go:25: When user clicks legacy button"
+#     "go/specs/impl/clie-cli/steps_user_login.go:25: When user clicks legacy button"
 #   ]
 # }
 

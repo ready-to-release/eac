@@ -22,7 +22,7 @@ func TestLoadPrompt_ThreeTierPriority(t *testing.T) {
 
 	// Setup directory structure
 	systemDefaultDir := filepath.Join(tmpDir, paths.TemplatesDir, "ai", "test-type")
-	teamOverrideDir := filepath.Join(tmpDir, paths.R2RDir, paths.EACDir, "templates", "ai", "test-type")
+	teamOverrideDir := filepath.Join(tmpDir, paths.CLIEDir, paths.EACDir, "templates", "ai", "test-type")
 
 	if err := os.MkdirAll(systemDefaultDir, 0755); err != nil {
 		t.Fatalf("Failed to create system default dir: %v", err)
@@ -270,7 +270,7 @@ func TestLoadPrompt_RealWorldScenarios(t *testing.T) {
 		}
 
 		// Create team override
-		teamDir := filepath.Join(baseDir, paths.R2RDir, paths.EACDir, "templates", "ai", "commit")
+		teamDir := filepath.Join(baseDir, paths.CLIEDir, paths.EACDir, "templates", "ai", "commit")
 		if err := os.MkdirAll(teamDir, 0755); err != nil {
 			t.Fatalf("Failed to create team dir: %v", err)
 		}
@@ -307,7 +307,7 @@ func TestLoadPrompt_RealWorldScenarios(t *testing.T) {
 		}
 
 		// Create team override
-		teamDir := filepath.Join(baseDir, paths.R2RDir, paths.EACDir, "templates", "ai", "design")
+		teamDir := filepath.Join(baseDir, paths.CLIEDir, paths.EACDir, "templates", "ai", "design")
 		if err := os.MkdirAll(teamDir, 0755); err != nil {
 			t.Fatalf("Failed to create team dir: %v", err)
 		}

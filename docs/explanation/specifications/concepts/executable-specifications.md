@@ -90,8 +90,8 @@ Then the Config struct is populated
 **Good**:
 
 ```gherkin
-When I run "r2r init"
-Then a file named "r2r.yaml" should be created
+When I run "eac init"
+Then a file named "eac.yaml" should be created
 And the configuration should contain default values
 ```
 
@@ -111,7 +111,7 @@ And the configuration should contain default values
 
 **Green Cards** (Examples):
 
-> 1. Initialize in empty directory → creates r2r.yaml
+> 1. Initialize in empty directory → creates xyz.yaml
 > 2. Initialize in existing project → shows error
 
 **Pink Card** (Questions):
@@ -135,15 +135,15 @@ Feature: cli_init-project
     @ov
     Scenario: Initialize in empty directory
       Given I am in an empty folder
-      When I run "r2r init"
-      Then a file named "r2r.yaml" should be created
+      When I run "cli init"
+      Then a file named "cli.yaml" should be created
       And a directory named "src" should be created
       And I should see "Project initialized successfully"
 
     @ov
     Scenario: Initialize in existing project
-      Given I am in a directory with "r2r.yaml"
-      When I run "r2r init"
+      Given I am in a directory with "cli.yaml"
+      When I run "cli init"
       Then the command should fail
       And I should see error "Project already initialized"
 ```

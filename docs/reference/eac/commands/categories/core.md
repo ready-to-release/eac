@@ -46,7 +46,7 @@ The lint command automatically selects appropriate linters based on module compo
 ### Extension Metadata
 
 ```bash
-# Output extension metadata for r2r CLI
+# Output extension metadata for clie CLI
 eac extension-meta
 ```
 

@@ -90,11 +90,11 @@ func TestLoadEnvironmentContract_WorkspaceDetectionFailure(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Clear any workspace override to force detection to fail
-	oldEnv := os.Getenv(EnvR2RRepoRoot)
-	os.Unsetenv(EnvR2RRepoRoot)
+	oldEnv := os.Getenv(EnvCLIERepoRoot)
+	os.Unsetenv(EnvCLIERepoRoot)
 	defer func() {
 		if oldEnv != "" {
-			os.Setenv(EnvR2RRepoRoot, oldEnv)
+			os.Setenv(EnvCLIERepoRoot, oldEnv)
 		}
 	}()
 

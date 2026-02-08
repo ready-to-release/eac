@@ -15,6 +15,9 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+// errCircularDependency is returned when a circular dependency is detected.
+var errCircularDependency = fmt.Errorf("circular dependency")
+
 var log = logging.C()
 
 // PipelineRunner orchestrates execution of module pipelines.
@@ -102,12 +105,24 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 
 	log.Infof("Calculating execution order for: %v", monikers)
 
+	// Load registry for dependency information
+	registry, err := modules.LoadFromWorkspace(r.repoPath)
+	if err != nil {
+		return fmt.Errorf("failed to load module registry: %w", err)
+	}
+
 	// Filter to only modules with workflow files
 	filteredOrder := r.filterModulesWithWorkflows(monikers)
 
 	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")
 		return nil
+	}
+
+	// Sort by dependency order
+	filteredOrder, err = topologicalSort(registry, filteredOrder)
+	if err != nil {
+		return fmt.Errorf("%w detected among modules", err)
 	}
 
 	log.Info("")
@@ -142,6 +157,12 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")
 		return nil
+	}
+
+	// Sort by dependency order
+	filteredOrder, err = topologicalSort(registry, filteredOrder)
+	if err != nil {
+		return fmt.Errorf("%w detected among modules", err)
 	}
 
 	log.Info("")
@@ -279,4 +300,63 @@ func (r *PipelineRunner) filterModulesWithWorkflows(order []string) []string {
 	}
 
 	return filtered
+}
+
+// topologicalSort sorts monikers by their dependency order using Kahn's algorithm.
+// Returns an error if a circular dependency is detected.
+func topologicalSort(registry *modules.Registry, monikers []string) ([]string, error) {
+	depGraph := registry.GetDependencyGraph()
+
+	// Build a set of monikers we care about
+	monikerSet := make(map[string]bool, len(monikers))
+	for _, m := range monikers {
+		monikerSet[m] = true
+	}
+
+	// Build in-degree map and adjacency list scoped to our monikers
+	inDegree := make(map[string]int, len(monikers))
+	// dependents[A] = list of modules that depend on A (A must come before them)
+	dependents := make(map[string][]string)
+
+	for _, m := range monikers {
+		inDegree[m] = 0
+	}
+
+	for _, m := range monikers {
+		for _, dep := range depGraph[m] {
+			if monikerSet[dep] {
+				inDegree[m]++
+				dependents[dep] = append(dependents[dep], m)
+			}
+		}
+	}
+
+	// Collect nodes with zero in-degree
+	var queue []string
+	for _, m := range monikers {
+		if inDegree[m] == 0 {
+			queue = append(queue, m)
+		}
+	}
+
+	var sorted []string
+	for len(queue) > 0 {
+		// Pop first element
+		node := queue[0]
+		queue = queue[1:]
+		sorted = append(sorted, node)
+
+		for _, dependent := range dependents[node] {
+			inDegree[dependent]--
+			if inDegree[dependent] == 0 {
+				queue = append(queue, dependent)
+			}
+		}
+	}
+
+	if len(sorted) != len(monikers) {
+		return nil, errCircularDependency
+	}
+
+	return sorted, nil
 }

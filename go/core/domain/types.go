@@ -99,7 +99,7 @@ type ModuleLinting struct {
 
 // ReleaseBundle configures how the release module creates GitHub releases.
 type ReleaseBundle struct {
-	TitleFormat string                  `yaml:"title_format" json:"title_format"` // Title template, e.g., "{r2r} ({r2r_version}) + {eac} ({eac_version})"
+	TitleFormat string                  `yaml:"title_format" json:"title_format"` // Title template, e.g., "{clie} ({clie_version}) + {eac} ({eac_version})"
 	Headline    map[string]string       `yaml:"headline" json:"headline"`         // Map of label -> moniker for title modules
 	Categories  []ReleaseBundleCategory `yaml:"categories" json:"categories"`     // Grouped modules for release notes
 }

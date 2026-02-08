@@ -18,19 +18,19 @@ EAC (Everything as Code) provides automation for:
 | ------------------------------------------- | ------------------------------------ |
 | [Getting Started](./getting-started.md)     | First steps adopting EAC             |
 | [Configuration](./configuration.md)         | Configure EAC for your project       |
-| [Project Structure](./project-structure.md) | Recommended `.r2r/` directory layout |
+| [Project Structure](./project-structure.md) | Recommended `.clie/` directory layout |
 
 ## Quick Start
 
 ```bash
-# 1. Install R2R CLI
+# 1. Install CLIE CLI
 curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
 
-# 2. Initialize R2R
-r2r init
+# 2. Initialize CLIE
+clie init
 
 # 3. Install EAC extension
-r2r install eac
+clie install eac
 
 # 4. Initialize EAC in your project
 eac init
@@ -79,13 +79,13 @@ eac create-spec            # Generate Gherkin specifications
 
 - **Docker** - EAC runs as a container
 - **Git** - Version control
-- **R2R CLI** - The framework that runs EAC
+- **CLIE CLI** - The framework that runs EAC
 
 ## Next Steps
 
 1. [Getting Started](./getting-started.md) - Detailed setup guide
 2. [Configuration](./configuration.md) - Customize EAC for your needs
-3. [Project Structure](./project-structure.md) - Organize your `.r2r/` directory
+3. [Project Structure](./project-structure.md) - Organize your `.clie/` directory
 
 ## See Also
 

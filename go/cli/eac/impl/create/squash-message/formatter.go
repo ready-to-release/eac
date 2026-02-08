@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 )
 
 // SquashJSON matches contracts/core/0.1.0/squash-message.schema.json.
@@ -107,30 +109,5 @@ func FormatSquashMessage(jsonOutput string) (string, error) {
 
 // extractFirstSentence extracts the first sentence from text for auditor summary.
 func extractFirstSentence(text string) string {
-	text = strings.TrimSpace(text)
-
-	// Find first sentence ending
-	for _, delim := range []string{". ", ".\n", "? ", "?\n", "! ", "!\n"} {
-		if idx := strings.Index(text, delim); idx != -1 {
-			sentence := strings.TrimSpace(text[:idx+1])
-			return sentence
-		}
-	}
-
-	// If no sentence delimiter found, check if text ends with punctuation
-	if strings.HasSuffix(text, ".") || strings.HasSuffix(text, "?") || strings.HasSuffix(text, "!") {
-		lines := strings.Split(text, "\n")
-		return strings.TrimSpace(lines[0])
-	}
-
-	// Fallback: use first line and add period
-	lines := strings.Split(text, "\n")
-	firstLine := strings.TrimSpace(lines[0])
-	if firstLine == "" {
-		return "Summary of changes."
-	}
-	if !strings.HasSuffix(firstLine, ".") {
-		firstLine += "."
-	}
-	return firstLine
+	return aiutil.ExtractFirstSentence(text, "")
 }

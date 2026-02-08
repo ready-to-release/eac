@@ -174,7 +174,7 @@ types:
 | `capabilities` | array  | ❌       | Type capabilities (executable, go_module, etc.) |
 | `build`        | object | ❌       | Build artifacts configuration                   |
 | `defaults`     | object | ❌       | Default values inherited by modules             |
-| `docker_build` | object | ❌       | Docker build config (r2r-extension only)        |
+| `docker_build` | object | ❌       | Docker build config (clie-extension only)        |
 
 ### Capabilities
 
@@ -213,7 +213,7 @@ build:
 
 **Docker Family**:
 
-- `r2r-extension` - R2R extension packaged as container
+- `clie-extension` - CLIE extension packaged as container
 
 **Documentation Family**:
 

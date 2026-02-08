@@ -18,7 +18,7 @@ var (
 type DetectionError struct {
 	Op      string // "detect", "validate", "resolve"
 	Path    string // Path that was checked (if applicable)
-	Source  string // "env:R2R_REPO_ROOT", "git", "docker", etc.
+	Source  string // "env:CLIE_REPO_ROOT", "git", "docker", etc.
 	Message string
 	Err     error
 }

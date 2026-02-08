@@ -2,12 +2,12 @@
 
 ## Overview
 
-**EAC (Everything-as-Code)** is a containerized R2R extension providing automation commands for build,
+**EAC (Everything-as-Code)** is a containerized CLIE extension providing automation commands for build,
 test, validation, security scanning, and release management in modular Go repositories.
 
 **Purpose**: Command collection for everything-as-code workflows
-**Package**: `ext-eac:latest` Docker container
-**Integration**: R2R CLI extension, MCP server for AI tools
+**Package**: `eac-ext:latest` Docker container
+**Integration**: CLIE CLI extension, MCP server for AI tools
 
 The EAC extension implements a **contract-driven, module-based architecture** where all repository structure,
 modules, dependencies, and configurations are defined in YAML contracts validated against JSON schemas.
@@ -25,10 +25,10 @@ eac serve design
 
 **Design files:**
 
-- **eac-commands**: [specs/eac-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-commands/.design/)
-- **eac-core**: [specs/eac-core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-core/.design/)
-- **eac-mcp-commands**: [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/)
-- **ext-eac**: [specs/ext-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ext-eac/.design/)
+- **eac-cli**: [specs/eac-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-cli/.design/)
+- **core**: [specs/core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/core/.design/)
+- **eac-mcp-server**: [specs/eac-mcp-server/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-server/.design/)
+- **eac-ext**: [specs/eac-ext/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-ext/.design/)
 
 See [Viewing Architecture](./viewing-diagrams.md) for detailed instructions.
 
@@ -38,15 +38,15 @@ See [Viewing Architecture](./viewing-diagrams.md) for detailed instructions.
 
 ```mermaid
 graph TB
-    Dev[Developer] -->|eac| CLI[R2R CLI]
+    Dev[Developer] -->|eac| CLI[CLIE CLI]
     LLM[LLM Tools] -->|MCP| MCP[MCP Server]
 
-    CLI -->|Docker| Ext[ext-eac Container]
+    CLI -->|Docker| Ext[eac-ext Container]
     MCP -->|Direct| Commands[eac-commands]
 
     Ext --> Commands
-    Commands --> Core[eac-core]
-    Commands --> Specs[eac-specs]
+    Commands --> Core[core]
+    Commands --> Specs[godog-adapter]
 
     Core --> Contracts[YAML Contracts]
     Core --> Modules[Go Modules]
@@ -59,7 +59,7 @@ graph TB
 **EAC operates in two execution modes**:
 
 1. **Containerized**
-   (via R2R CLI): Developer runs `eac <command>` → R2R CLI launches ext-eac Docker container → Command executes in isolated environment
+   (via CLIE CLI): Developer runs `eac <command>` → CLIE CLI launches eac-ext Docker container → Command executes in isolated environment
 2. **Direct**
    (via MCP): LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly (no container overhead)
 
@@ -71,10 +71,10 @@ graph TB
 
 | Module               | Purpose                                                                  | Type        |
 | -------------------- | ------------------------------------------------------------------------ | ----------- |
-| **eac-commands**     | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
-| **eac-core**         | Domain libraries, contract system, dependency graph                      | go-library  |
-| **eac-specs**        | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
-| **eac-mcp-commands** | MCP server for LLM tool integration                                      | go-mcp      |
+| **eac-cli**          | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
+| **core**             | Domain libraries, contract system, dependency graph                      | go-library  |
+| **godog-adapter**    | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
+| **eac-mcp-server**   | MCP server for LLM tool integration                                      | go-mcp      |
 
 See [Modules Reference](../modules/index.md) for detailed module documentation.
 
@@ -84,8 +84,6 @@ See [Modules Reference](../modules/index.md) for detailed module documentation.
 | --------------------- | -------------------------------------------------- |
 | **docs**              | MkDocs documentation site generation               |
 | **templates**         | Template management for specs, reports, AI prompts |
-| **r2r-installer**     | Cross-platform CLI installer                       |
-| **implicit-cli**      | Devbox CLI configuration                           |
 | **vscode-commit**     | VS Code commit message extension                   |
 
 See [Modules Reference](../modules/index.md) for details on all modules.
@@ -93,9 +91,9 @@ See [Modules Reference](../modules/index.md) for details on all modules.
 ### Container Structure
 
 ```text
-ext-eac:latest
-├── /app/eac              # Compiled commands binary
-├── /workspace            # Mounted repository (volume)
+eac-ext:latest
+├── /app/out/tools/eac    # Compiled commands binary
+├── /var/task             # Mounted repository (volume)
 └── /usr/local/bin        # System dependencies (git, gh, etc.)
 ```
 
@@ -115,7 +113,7 @@ All repository structure is defined in **YAML contracts** validated against **JS
 | **books.yml**           | `books.schema.json`           | Documentation book configuration    |
 | **test-suites.yml**     | `test-suites.schema.json`     | Test suite definitions              |
 
-Contracts are loaded by `eac-core` at runtime and validated before any operation. This ensures:
+Contracts are loaded by `core` at runtime and validated before any operation. This ensures:
 
 - **Type safety**: Invalid configurations fail fast with clear error messages
 - **Documentation**: Schemas serve as machine-readable documentation
@@ -127,7 +125,7 @@ See [Contracts System](./contracts.md) for detailed specification.
 
 Modules are the fundamental unit of organization in EAC repositories. Each module:
 
-- Has a unique moniker (e.g., `eac-commands`, `r2r-cli`)
+- Has a unique moniker (e.g., `eac-commands`, `clie-cli`)
 - Owns specific files (defined in `modules.yml`)
 - Declares dependencies on other modules
 - Has a module type that determines build/test/release behavior
@@ -151,11 +149,8 @@ EAC uses this graph to:
 - **Change detection**: Rebuild only changed modules and dependents
 - **CI optimization**: Dispatch workflows only for affected modules
 
-**Dependency types**:
-
-- **build_deps**: Required for building (code dependencies)
-- **test_deps**: Required for testing (test utilities, fixtures)
-- **deploy_deps**: Required for deployment (runtime dependencies)
+All module dependencies are declared via a single `depends_on` field that covers
+build, test, and deployment relationships.
 
 See [Dependency System](./dependencies.md) for graph algorithms and caching strategies.
 
@@ -176,12 +171,12 @@ See [Dependency System](./dependencies.md) for graph algorithms and caching stra
 | **AI**         | `create-commit-message`, `create-spec`, `create-design`, `create-pr` |
 | **CI/CD**      | `pipeline-run`, `pipeline-wait`, `get-changed-modules-ci`            |
 
-All commands are implemented in `eac-commands` following a consistent pattern:
+All commands are implemented in `eac-cli` following a consistent pattern:
 
 ```go
 // All commands follow this pattern
 type BuildHandler struct {
-    repo *Repository  // From eac-core
+    repo *Repository  // From core
 }
 
 func (h *BuildHandler) Execute(args []string) error {
@@ -231,9 +226,8 @@ api_key_env: ANTHROPIC_API_KEY
 
 **Implementation**:
 
-- Provider implementations: `go/adapters/ai/providers/`
+- Tool handler: `go/adapters/ai/toolhandler/handler.go`
 - Configuration loading: `go/adapters/ai/config_loader.go`
-- AI execution: `go/adapters/ai/executor.go`
 
 AI commands use a **retry strategy** with exponential backoff for rate limiting and transient errors.
 
@@ -286,7 +280,7 @@ This hierarchy allows:
 
 **Container-level technologies**:
 
-(Docker, Docker SDK) are provided by the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/).
+(Docker, Docker SDK) are provided by the [CLIE CLI framework](https://ready-to-release.github.io/eac/reference/clie/architecture/).
 
 ---
 
@@ -309,7 +303,7 @@ This hierarchy allows:
 
 **Container-level security**:
 
-(isolation, non-root execution, network restrictions) is provided by [R2R CLI](https://ready-to-release.github.io/eac/reference/r2r/architecture/#security-model).
+(isolation, non-root execution, network restrictions) is provided by [CLIE CLI](https://ready-to-release.github.io/eac/reference/clie/architecture/#security-model).
 
 ---
 
@@ -323,31 +317,43 @@ This hierarchy allows:
 
 ### Caching
 
-- **Build artifacts**: Cached in `.r2r/cache/` for incremental builds
+- **UoW manifests**: Each Unit of Work writes a manifest to `out/` with input/output hashes
+- **Mtime-optimized hashing**: File modification times provide fast-path cache checks via `.cache/eac/`
 - **Go modules**: Module cache for dependency downloads
-- **Git change detection**: Skip unchanged modules entirely
 - **Docker layers**: Layer caching for fast container image builds
+
+See [Cache System](./cache-system.md) for the full caching architecture.
 
 ### Change Detection
 
-EAC uses **git change detection** to minimize unnecessary work:
+EAC uses **UoW manifest-based change detection** to minimize unnecessary work:
 
-1. **Local**: Compare working tree vs. last build (`.r2r/cache/last-build-sha`)
-2. **CI**: Compare current commit vs. last successful CI run
-3. **Dependency propagation**: Rebuild dependents of changed modules
+1. **Input hashing**: SHA256 of all source files matched by component patterns
+2. **Manifest comparison**: Compare current input hash against stored UoW manifest
+3. **Cross-context invalidation**: Rebuild tests when builds produce new output
+4. **Dependency propagation**: Rebuild dependents of changed modules
 
-This reduces build times from ~45 minutes (full build) to ~2-5 minutes (incremental).
+See [Cache System](./cache-system.md) for the detection algorithm.
+
+### Build Execution
+
+All commands (build, test, lint, scan) are executed through a unified
+orchestrator that manages parallel UoW execution with capacity-aware
+scheduling.
+
+See [Build Execution System](./build-execution.md) for the full
+architecture.
 
 ---
 
-## Integration with R2R CLI
+## Integration with CLIE CLI
 
-EAC extends the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/). The relationship:
+EAC extends the [CLIE CLI framework](https://ready-to-release.github.io/eac/reference/clie/architecture/). The relationship:
 
-- **R2R provides**: Container orchestration, git discovery, volume mounting, configuration loading
+- **CLIE provides**: Container orchestration, git discovery, volume mounting, configuration loading
 - **EAC provides**: Commands, contracts, modules, AI integration, security scanning
 
-See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC boundary and extension contract.
+See [CLI Integration](./cli-integration.md) for details on the CLIE ↔ EAC boundary and extension contract.
 
 ---
 
@@ -355,13 +361,16 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 
 ### Architecture
 
-- [R2R CLI Architecture](https://ready-to-release.github.io/eac/reference/r2r/architecture/) - Framework overview and container model
+- [CLIE CLI Architecture](https://ready-to-release.github.io/eac/reference/clie/architecture/) - Framework overview and container model
 - [Modules Reference](../modules/index.md) - Module documentation and C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
 - [Dependency System](./dependencies.md) - Module dependency graph
 - [Component Types](./component-types.md) - Component type reference
 - [Repository Layout](./repository-layout.md) - File organization conventions
-- [CLI Integration](./cli-integration.md) - R2R ↔ EAC integration details
+- [CLI Integration](./cli-integration.md) - CLIE ↔ EAC integration details
+- [Build Execution System](./build-execution.md) - UoW orchestration and parallel scheduling
+- [Cache System](./cache-system.md) - Incremental builds and input hashing
+- [Component Resolution](./component-resolution.md) - How contracts become executable UoWs
 
 ### How-To Guides
 

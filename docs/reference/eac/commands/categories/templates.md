@@ -15,28 +15,28 @@ AI prompts, reports, and specifications.
 
 ```bash
 # Install to default location
-r2r templates install docs
+clie templates install docs
 
 # Install to custom location
-r2r templates install docs --destination ./custom-docs
+clie templates install docs --destination ./custom-docs
 ```
 
 ### Install AI Prompt Templates
 
 ```bash
-r2r templates install ai
+clie templates install ai
 ```
 
 ### Install Report Templates
 
 ```bash
-r2r templates install reports --debug
+clie templates install reports --debug
 ```
 
 ### Install Specification Templates
 
 ```bash
-r2r templates install specs
+clie templates install specs
 ```
 
 ## Key Features

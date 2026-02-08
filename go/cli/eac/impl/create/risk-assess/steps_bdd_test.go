@@ -56,7 +56,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		if err != nil {
 			return err
 		}
-		return eacgodog.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
+		return eacgodog.CreateFile(ctx, ".clie/test/ai-mock.txt", mockContent)
 	})
 
 	// Assessment file setup

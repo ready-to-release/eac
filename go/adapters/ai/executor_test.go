@@ -313,7 +313,7 @@ git:
 	}
 
 	// Verify no .eac/logs directory was created
-	logsPath := filepath.Join(tmpDir, ".r2r", "logs")
+	logsPath := filepath.Join(tmpDir, ".clie", "logs")
 	if _, err := os.Stat(logsPath); !os.IsNotExist(err) {
 		t.Errorf("Execute() created .eac/logs directory, but should not create any log files")
 	}

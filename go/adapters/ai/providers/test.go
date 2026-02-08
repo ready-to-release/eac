@@ -16,7 +16,7 @@ import (
 //
 // Mock Response Resolution Order:
 //  1. File: .eac/test/ai-mock.txt (relative to repo root)
-//  2. Environment variable: R2R_TEST_AI_RESPONSE
+//  2. Environment variable: CLIE_TEST_AI_RESPONSE
 //  3. Error if neither is available
 type TestProvider struct{}
 
@@ -42,11 +42,11 @@ func (p *TestProvider) Execute(ctx context.Context, input string, opts ...ai.Opt
 	}
 
 	// 2. Fall back to environment variable
-	if response := os.Getenv(environments.EnvR2RTestAIResponse); response != "" {
+	if response := os.Getenv(environments.EnvCLIETestAIResponse); response != "" {
 		return response, nil
 	}
 
 	// 3. Error if no mock response configured
 	return "", fmt.Errorf("test provider: no mock response configured. " +
-		"Set R2R_TEST_AI_RESPONSE env var or create .eac/test/ai-mock.txt file")
+		"Set CLIE_TEST_AI_RESPONSE env var or create .eac/test/ai-mock.txt file")
 }

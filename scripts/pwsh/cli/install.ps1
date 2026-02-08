@@ -1,10 +1,10 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    R2R CLI Installer for Windows
+    CLIE CLI Installer for Windows
 
 .DESCRIPTION
-    Downloads and installs the R2R CLI from GitHub releases.
+    Downloads and installs the CLIE CLI from GitHub releases.
 
 .PARAMETER System
     Install to Program Files (requires Administrator). Default installs to user's local app data.
@@ -43,9 +43,9 @@ $ErrorActionPreference = "Stop"
 
 # Configuration
 $Repo = "ready-to-release/eac"
-$BinaryName = "r2r.exe"
-$UserInstallDir = Join-Path $env:LOCALAPPDATA "r2r"
-$SystemInstallDir = Join-Path $env:ProgramFiles "r2r"
+$BinaryName = "clie.exe"
+$UserInstallDir = Join-Path $env:LOCALAPPDATA "clie"
+$SystemInstallDir = Join-Path $env:ProgramFiles "clie"
 
 # Determine install directory (custom > system > user)
 if (-not $InstallDir) {
@@ -62,20 +62,20 @@ function Write-ColorOutput {
 
 function Get-LatestVersion {
     # Skip API call in test mode
-    if ($env:__R2R_TEST_MOCK -eq "1") {
-        Write-ColorOutput "Test mode: Using mock version r2r-cli/v0.0.0-test" "Gray"
-        return "r2r-cli/v0.0.0-test"
+    if ($env:__CLIE_TEST_MOCK -eq "1") {
+        Write-ColorOutput "Test mode: Using mock version clie-cli/v0.0.0-test" "Gray"
+        return "clie-cli/v0.0.0-test"
     }
 
     try {
-        # Fetch releases and find the latest r2r-cli/* release (monorepo has multiple release tags)
+        # Fetch releases and find the latest clie-cli/* release (monorepo has multiple release tags)
         $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=20" -UseBasicParsing
         foreach ($release in $releases) {
-            if ($release.tag_name -like "r2r-cli/*") {
+            if ($release.tag_name -like "clie-cli/*") {
                 return $release.tag_name
             }
         }
-        Write-ColorOutput "No r2r-cli release found" "Red"
+        Write-ColorOutput "No clie-cli release found" "Red"
         exit 1
     }
     catch {
@@ -97,16 +97,16 @@ function Install-Binary {
 
     # Binary filename for Windows (use UPX version if requested)
     if ($Upx) {
-        $binaryFilename = "r2r-windows-amd64-upx.exe"
+        $binaryFilename = "clie-windows-amd64-upx.exe"
         Write-ColorOutput "Binary type: UPX-compressed (smaller, slightly slower startup)" "Cyan"
     } else {
-        $binaryFilename = "r2r-windows-amd64.exe"
+        $binaryFilename = "clie-windows-amd64.exe"
         Write-ColorOutput "Binary type: Standard" "Cyan"
     }
     $downloadUrl = "https://github.com/$Repo/releases/download/$InstallVersion/$binaryFilename"
 
     # Create temp directory
-    $tempDir = Join-Path $env:TEMP "r2r-install-$(Get-Random)"
+    $tempDir = Join-Path $env:TEMP "clie-install-$(Get-Random)"
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
     try {
@@ -114,7 +114,7 @@ function Install-Binary {
         $tempFile = Join-Path $tempDir $BinaryName
 
         # Test mode: Use pre-built binary from out/build instead of downloading
-        if ($env:__R2R_TEST_MOCK -eq "1") {
+        if ($env:__CLIE_TEST_MOCK -eq "1") {
             # In test mode, still validate that version looks realistic
             # Reject obviously invalid versions like v999.999.999
             if ($InstallVersion -match "v999\.") {
@@ -126,15 +126,15 @@ function Install-Binary {
 
             Write-ColorOutput "Test mode: Using pre-built binary from out/build (skipping download)" "Gray"
 
-            # Use the actual built r2r-cli binary from the build output
-            # This is available because r2r-installer depends on r2r-cli module
-            # When running from build output: out/build/r2r-installer/pwsh-scripts/
-            # Go up 2 levels to out/build, then access r2r-cli/go-go/
-            $builtBinary = Join-Path $PSScriptRoot "..\..\r2r-cli\go-go\r2r-windows-amd64.exe"
+            # Use the actual built clie-cli binary from the build output
+            # This is available because clie-installer depends on clie-cli module
+            # When running from build output: out/build/clie-installer/pwsh-scripts/
+            # Go up 2 levels to out/build, then access clie-cli/go-go/
+            $builtBinary = Join-Path $PSScriptRoot "..\..\clie-cli\go-go\clie-windows-amd64.exe"
 
             if (-not (Test-Path $builtBinary)) {
                 Write-ColorOutput "Test mode: Pre-built binary not found at $builtBinary" "Red"
-                Write-ColorOutput "Ensure r2r-cli module is built before running installer tests" "Yellow"
+                Write-ColorOutput "Ensure clie-cli module is built before running installer tests" "Yellow"
                 exit 1
             }
 
@@ -143,7 +143,7 @@ function Install-Binary {
         }
         else {
             # Real download in production mode
-            Write-ColorOutput "Downloading R2R CLI $InstallVersion..." "Cyan"
+            Write-ColorOutput "Downloading CLIE CLI $InstallVersion..." "Cyan"
             Write-ColorOutput "URL: $downloadUrl" "Gray"
 
             try {
@@ -174,11 +174,11 @@ function Install-Binary {
         Write-ColorOutput "Installing to $targetPath..." "Cyan"
 
         # Stop any running instances
-        Get-Process -Name "r2r" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Get-Process -Name "clie" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
         Move-Item -Path $tempFile -Destination $targetPath -Force
 
-        Write-ColorOutput "Successfully installed R2R CLI $InstallVersion" "Green"
+        Write-ColorOutput "Successfully installed CLIE CLI $InstallVersion" "Green"
     }
     finally {
         # Cleanup
@@ -192,7 +192,7 @@ function Add-ToPath {
     )
 
     # Skip PATH modification during tests to avoid polluting system PATH
-    if ($env:__R2R_TEST_NO_PATH_UPDATE -eq "1") {
+    if ($env:__CLIE_TEST_NO_PATH_UPDATE -eq "1") {
         Write-ColorOutput "Skipping PATH modification (test mode)" "Gray"
         return
     }
@@ -240,7 +240,7 @@ function Test-Installation {
 
 # Main installation flow
 function Main {
-    Write-ColorOutput "R2R CLI Installer for Windows" "Green"
+    Write-ColorOutput "CLIE CLI Installer for Windows" "Green"
     Write-ColorOutput "" "White"
 
     # Check for admin if system install requested
@@ -269,7 +269,7 @@ function Main {
     # Verify
     if (Test-Installation) {
         Write-ColorOutput "" "White"
-        Write-ColorOutput "Done! Run 'r2r --help' to get started." "Green"
+        Write-ColorOutput "Done! Run 'clie --help' to get started." "Green"
 
         if (-not $System) {
             Write-ColorOutput "" "White"

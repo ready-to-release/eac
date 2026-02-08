@@ -114,7 +114,7 @@ func ServeDesign() int {
 		log.Infof("❌ Workspace not found: %s", workspacePath)
 		log.Info("")
 		log.Info("💡 Create one first with:")
-		log.Infof("   r2r design create %s", module)
+		log.Infof("   clie design create %s", module)
 		return 1
 	}
 
@@ -153,14 +153,14 @@ func printServeUsage() {
 	log.Info("The viewer displays interactive C4 model diagrams defined in workspace.dsl.")
 	log.Info("")
 	log.Info("Usage:")
-	log.Info("  r2r design serve <module>")
+	log.Info("  clie design serve <module>")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r design serve r2r-cli")
-	log.Info("  r2r design serve eac-cli")
+	log.Info("  clie design serve clie-cli")
+	log.Info("  clie design serve eac-cli")
 	log.Info("")
 	log.Info("Module Locations:")
-	log.Info("  r2r-cli        → specs/r2r-cli/.design/workspace.dsl")
+	log.Info("  clie-cli        → specs/clie-cli/.design/workspace.dsl")
 	log.Info("  eac-cli   → specs/eac-cli/.design/workspace.dsl")
 	log.Info("")
 	log.Info("What It Does:")

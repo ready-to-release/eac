@@ -41,7 +41,7 @@ func TestLoadPromptWithFallback(t *testing.T) {
 
 			// Create local prompt if needed (in new contract structure)
 			if tt.createLocalPrompt {
-				localPath := filepath.Join(tmpDir, ".r2r", "contracts", "ai", "specifications", "0.1.0", "specification.md")
+				localPath := filepath.Join(tmpDir, ".clie", "contracts", "ai", "specifications", "0.1.0", "specification.md")
 				if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
 					t.Fatalf("failed to create local contract prompt directory: %v", err)
 				}
@@ -170,97 +170,97 @@ func TestParseConfig_Flags(t *testing.T) {
 	}{
 		{
 			name:     "simple description",
-			args:     []string{"r2r", "specs", "create", "Add user authentication"},
+			args:     []string{"clie", "specs", "create", "Add user authentication"},
 			wantDesc: "Add user authentication",
 			wantErr:  false,
 		},
 		{
 			name:      "debug flag short",
-			args:      []string{"r2r", "specs", "create", "-d", "Test description"},
+			args:      []string{"clie", "specs", "create", "-d", "Test description"},
 			wantDebug: true,
 			wantDesc:  "Test description",
 			wantErr:   false,
 		},
 		{
 			name:      "debug flag long",
-			args:      []string{"r2r", "specs", "create", "--debug", "Test description"},
+			args:      []string{"clie", "specs", "create", "--debug", "Test description"},
 			wantDebug: true,
 			wantDesc:  "Test description",
 			wantErr:   false,
 		},
 		{
 			name:      "force flag short",
-			args:      []string{"r2r", "specs", "create", "-f", "Test description"},
+			args:      []string{"clie", "specs", "create", "-f", "Test description"},
 			wantForce: true,
 			wantDesc:  "Test description",
 			wantErr:   false,
 		},
 		{
 			name:      "force flag long",
-			args:      []string{"r2r", "specs", "create", "--force", "Test description"},
+			args:      []string{"clie", "specs", "create", "--force", "Test description"},
 			wantForce: true,
 			wantDesc:  "Test description",
 			wantErr:   false,
 		},
 		{
 			name:       "module flag short",
-			args:       []string{"r2r", "specs", "create", "-m", "eac-cli", "Test description"},
+			args:       []string{"clie", "specs", "create", "-m", "eac-cli", "Test description"},
 			wantModule: "eac-cli",
 			wantDesc:   "Test description",
 			wantErr:    false,
 		},
 		{
 			name:       "module flag long",
-			args:       []string{"r2r", "specs", "create", "--module", "core", "Test description"},
+			args:       []string{"clie", "specs", "create", "--module", "core", "Test description"},
 			wantModule: "core",
 			wantDesc:   "Test description",
 			wantErr:    false,
 		},
 		{
 			name:       "output flag short",
-			args:       []string{"r2r", "specs", "create", "-o", "custom/path.feature", "Test description"},
+			args:       []string{"clie", "specs", "create", "-o", "custom/path.feature", "Test description"},
 			wantOutput: "custom/path.feature",
 			wantDesc:   "Test description",
 			wantErr:    false,
 		},
 		{
 			name:       "output flag long",
-			args:       []string{"r2r", "specs", "create", "--output", "specs/out.feature", "Test description"},
+			args:       []string{"clie", "specs", "create", "--output", "specs/out.feature", "Test description"},
 			wantOutput: "specs/out.feature",
 			wantDesc:   "Test description",
 			wantErr:    false,
 		},
 		{
 			name:       "prompt flag",
-			args:       []string{"r2r", "specs", "create", "--prompt", "custom-prompt.md", "Test description"},
+			args:       []string{"clie", "specs", "create", "--prompt", "custom-prompt.md", "Test description"},
 			wantPrompt: "custom-prompt.md",
 			wantDesc:   "Test description",
 			wantErr:    false,
 		},
 		{
 			name:       "multiple flags combined",
-			args:       []string{"r2r", "specs", "create", "-d", "-f", "-m", "r2r-cli", "Complex feature description"},
+			args:       []string{"clie", "specs", "create", "-d", "-f", "-m", "clie-cli", "Complex feature description"},
 			wantDebug:  true,
 			wantForce:  true,
-			wantModule: "r2r-cli",
+			wantModule: "clie-cli",
 			wantDesc:   "Complex feature description",
 			wantErr:    false,
 		},
 		{
 			name:     "multi-word description",
-			args:     []string{"r2r", "specs", "create", "Add", "user", "authentication", "with", "email"},
+			args:     []string{"clie", "specs", "create", "Add", "user", "authentication", "with", "email"},
 			wantDesc: "Add user authentication with email",
 			wantErr:  false,
 		},
 		{
 			name:        "missing description",
-			args:        []string{"r2r", "specs", "create"},
+			args:        []string{"clie", "specs", "create"},
 			wantErr:     true,
 			errContains: "description is required",
 		},
 		{
 			name:        "empty description after flags",
-			args:        []string{"r2r", "specs", "create", "-d"},
+			args:        []string{"clie", "specs", "create", "-d"},
 			wantErr:     true,
 			errContains: "description is required",
 		},
@@ -327,7 +327,7 @@ func TestParseConfig_DescriptionTruncation(t *testing.T) {
 
 	// Create a very long description (> 1000 chars)
 	longDesc := strings.Repeat("a", 1500)
-	args := []string{"r2r", "specs", "create", longDesc}
+	args := []string{"clie", "specs", "create", longDesc}
 
 	var config *SpecsConfig
 	var err error

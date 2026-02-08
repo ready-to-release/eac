@@ -6,17 +6,17 @@
 
 For **container/bundle modules** with dependencies, specs are **aggregated from all dependent modules**.
 
-Example: `ext-eac` depends on `eac-commands` and `r2r-cli`:
+Example: `eac-ext` depends on `eac-commands` and `clie-cli`:
 
 ```bash
-eac get specs ext-eac --as-json
+eac get specs eac-ext --as-json
 ```
 
 Returns specs from:
 
 - `specs/eac-commands/` (dependency)
-- `specs/r2r-cli/` (dependency)
-- `specs/ext-eac/` (if any)
+- `specs/clie-cli/` (dependency)
+- `specs/eac-ext/` (if any)
 
 ## File Location
 

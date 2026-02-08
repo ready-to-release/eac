@@ -70,7 +70,7 @@ func TestSafetyChecker_PreservePatterns(t *testing.T) {
 }
 
 func TestSafetyChecker_ReleaseCorrelation(t *testing.T) {
-	releases := []Release{{TagName: "ext-eac/1.0.0"}}
+	releases := []Release{{TagName: "eac-ext/1.0.0"}}
 	checker := NewPackageSafetyChecker(
 		[]string{}, // No preserve patterns - testing release protection only
 		[]string{"sha-*"},
@@ -80,13 +80,13 @@ func TestSafetyChecker_ReleaseCorrelation(t *testing.T) {
 
 	t.Run("version with release tag is protected", func(t *testing.T) {
 		v := PackageVersion{
-			Tags:      []string{"sha-abc1234", "ext-eac/1.0.0"},
+			Tags:      []string{"sha-abc1234", "eac-ext/1.0.0"},
 			CreatedAt: time.Now().AddDate(0, 0, -30),
 		}
 		result := checker.Assess(v)
 		assert.True(t, result.Protected)
 		assert.Equal(t, ReasonHasRelease, result.Reason)
-		assert.Equal(t, "ext-eac/1.0.0", result.MatchedTag)
+		assert.Equal(t, "eac-ext/1.0.0", result.MatchedTag)
 	})
 
 	t.Run("version without release tag is prunable", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestSafetyChecker_ProtectionPriority(t *testing.T) {
 	})
 
 	t.Run("release tag takes priority over age", func(t *testing.T) {
-		releases := []Release{{TagName: "ext-eac/1.0.0"}}
+		releases := []Release{{TagName: "eac-ext/1.0.0"}}
 		checker := NewPackageSafetyChecker(
 			[]string{},
 			[]string{"*"}, // Everything matches prune
@@ -310,7 +310,7 @@ func TestSafetyChecker_ProtectionPriority(t *testing.T) {
 			releases,
 		)
 		v := PackageVersion{
-			Tags:      []string{"ext-eac/1.0.0"},
+			Tags:      []string{"eac-ext/1.0.0"},
 			CreatedAt: time.Now().AddDate(0, 0, -1), // Very recent
 		}
 		result := checker.Assess(v)
@@ -372,32 +372,32 @@ func TestExtractBundleModuleVersions(t *testing.T) {
 			name: "extracts module versions from bundle release body",
 			releases: []Release{
 				{
-					TagName: "r2r-eac-bundle/2025.01.15",
+					TagName: "clie-eac-bundle/2025.01.15",
 					Body: `## Core Tools
-- ext-eac: v1.0.0
-- r2r-cli: v2.3.4
+- eac-ext: v1.0.0
+- clie-cli: v2.3.4
 
 ## Documentation
 - docs: 2025.01.15`,
 				},
 			},
-			expected: []string{"ext-eac/1.0.0", "r2r-cli/2.3.4", "docs/2025.01.15"},
+			expected: []string{"eac-ext/1.0.0", "clie-cli/2.3.4", "docs/2025.01.15"},
 		},
 		{
 			name: "extracts module/version format",
 			releases: []Release{
 				{
 					TagName: "test-bundle/1.0.0",
-					Body:    "Includes ext-eac/1.2.3 and r2r-cli/4.5.6",
+					Body:    "Includes eac-ext/1.2.3 and clie-cli/4.5.6",
 				},
 			},
-			expected: []string{"ext-eac/1.2.3", "r2r-cli/4.5.6"},
+			expected: []string{"eac-ext/1.2.3", "clie-cli/4.5.6"},
 		},
 		{
 			name: "ignores non-bundle releases",
 			releases: []Release{
 				{
-					TagName: "ext-eac/1.0.0",
+					TagName: "eac-ext/1.0.0",
 					Body:    "This is a regular release",
 				},
 			},
@@ -426,8 +426,8 @@ func TestExtractBundleModuleVersions(t *testing.T) {
 func TestSafetyChecker_BundleProtection(t *testing.T) {
 	releases := []Release{
 		{
-			TagName: "r2r-eac-bundle/2025.01.15",
-			Body:    "Includes ext-eac/1.0.0 and r2r-cli/2.0.0",
+			TagName: "clie-eac-bundle/2025.01.15",
+			Body:    "Includes eac-ext/1.0.0 and clie-cli/2.0.0",
 		},
 	}
 	checker := NewPackageSafetyChecker(
@@ -440,7 +440,7 @@ func TestSafetyChecker_BundleProtection(t *testing.T) {
 
 	t.Run("version referenced by bundle is protected", func(t *testing.T) {
 		v := PackageVersion{
-			Tags:      []string{"ext-eac/1.0.0"},
+			Tags:      []string{"eac-ext/1.0.0"},
 			CreatedAt: time.Now().AddDate(0, 0, -30),
 		}
 		result := checker.Assess(v)
@@ -450,7 +450,7 @@ func TestSafetyChecker_BundleProtection(t *testing.T) {
 
 	t.Run("version not referenced by bundle is prunable", func(t *testing.T) {
 		v := PackageVersion{
-			Tags:      []string{"ext-eac/0.9.0"},
+			Tags:      []string{"eac-ext/0.9.0"},
 			CreatedAt: time.Now().AddDate(0, 0, -30),
 		}
 		result := checker.Assess(v)

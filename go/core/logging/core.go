@@ -142,8 +142,8 @@ func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
 
 	consoleCore := buildConsoleCore(cfg, logCfg)
 
-	// R2R_TEST_LOGGING_ACTIVE=true disables unified log but allows target logs
-	testLoggingActive := os.Getenv("R2R_TEST_LOGGING_ACTIVE") == "true"
+	// CLIE_TEST_LOGGING_ACTIVE=true disables unified log but allows target logs
+	testLoggingActive := os.Getenv("CLIE_TEST_LOGGING_ACTIVE") == "true"
 
 	var closers []io.Closer
 	cores := []zapcore.Core{consoleCore}

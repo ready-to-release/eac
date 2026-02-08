@@ -26,12 +26,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowTriggerSummary)
-}
 
 // ShowTriggerSummary generates a release trigger summary.
 func ShowTriggerSummary() int {

@@ -12,15 +12,10 @@ package ci
 import (
 	"os"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(PipelineCI)
-}
 
 func PipelineCI() int {
 	if len(os.Args) < 4 {

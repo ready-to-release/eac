@@ -7,17 +7,18 @@ PR descriptions, and specification creation.
 
 !!! tip "Start Here"
 
-    This is one of the first commands you should run when setting up EAC. The `init` command creates the configuration file that enables AI features throughout your development workflow.
+    This is one of the first commands you should run when setting up EAC.
+    The `init` command creates the configuration file that enables AI features throughout your development workflow.
 
 ## Prerequisites
 
 ### Required Knowledge
 
-**New to r2r?** Learn these concepts first:
+**New to eac?** Learn these concepts first:
 
 - [Quick Start Guide](../../tutorials/getting-started/quick-start.md)
 
-Initialize r2r and understand AI provider configuration
+Initialize eac and understand AI provider configuration
 
 ### Required Setup
 

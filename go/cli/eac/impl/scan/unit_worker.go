@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -58,13 +57,20 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 	// Get scan context for caching
 	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
 
-	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
-	parts := strings.SplitN(component, ":", 2)
-	compName := parts[0]
-	scannerTypeStr := ""
-	if len(parts) == 2 {
-		scannerTypeStr = parts[1]
+	// Set up shared pipeline for cache + lock orchestration
+	pipeline := &cmdframework.UnitPipeline{
+		CachedUoWs: nil,
+		LockStyle:  cmdframework.AlwaysLock,
+		LockConfigFn: func(m, cd string) locking.Config {
+			return locking.UnitScanConfig(m, cd, paths.OutSecurityRelPath)
+		},
 	}
+	if sctx != nil {
+		pipeline.CachedUoWs = sctx.cachedUoWs
+	}
+
+	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
+	compName, scannerTypeStr := cmdframework.ParseComponent(component)
 
 	// Build UnitID for UoW-level cache lookup
 	unitID := workunit.UnitID{
@@ -75,16 +81,9 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 	}
 
 	// Check UoW-level cache first
-	isCached := sctx != nil && sctx.cachedUoWs != nil && sctx.cachedUoWs[unitID.Longname()]
-	log.Debugf("[SCAN-UOW-CACHE] Component worker for %s: unitID=%s, isCached=%v", component, unitID.Longname(), isCached)
-
-	if isCached {
-		if ctx.Config.DryRun {
-			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", unitID.Longname())
-		} else {
-			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
-		}
-		return -1 // -1 = skipped/cached = blue in TUI
+	log.Debugf("[SCAN-UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
+	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
+		return cacheResult
 	}
 
 	// Get module contract
@@ -110,21 +109,14 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 0
 	}
 
-	// Use dash separator to match UnitID.DirName() for consistent manifest paths
-	componentDir := compName
-	if scannerTypeStr != "" {
-		componentDir = compName + "-" + scannerTypeStr
-	}
-
 	// Acquire lock for this component+scanner with wait
-	lockCfg := locking.UnitScanConfig(moniker, componentDir, paths.OutSecurityRelPath)
-	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
+	componentDir := cmdframework.ComponentDir(compName, scannerTypeStr)
+	release, err := pipeline.AcquireLock(ctx, moniker, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
 	}
-	defer locking.ReleaseTracked(lockFile)
+	defer release()
 
 	// Get component root path
 	componentRoot := module.Components.GetComponentRoot(compName)

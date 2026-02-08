@@ -37,9 +37,9 @@ Image tags are:
 These are tags created via the GitHub Releases API:
 
 ```text
-ext-eac/1.0.0      # Module release
-r2r-cli/2.3.4      # CLI release
-r2r-eac-bundle/2025.01.15  # Bundle release
+eac-ext/1.0.0      # Module release
+clie-cli/2.3.4      # CLI release
+clie-eac-bundle/2025.01.15  # Bundle release
 ```
 
 Release tags are:
@@ -69,7 +69,7 @@ The cleanup system uses multiple layers of protection:
 │     └─ "v*", "latest", "[0-9]*.[0-9]*.[0-9]*"               │
 │                                                             │
 │  2. GitHub Release API Correlation (ALWAYS ON)              │
-│     └─ ext-eac/1.0.0 → protected                            │
+│     └─ eac-ext/1.0.0 → protected                            │
 │                                                             │
 │  3. Release Bundle References (ALWAYS ON)                   │
 │     └─ Versions in bundle release notes → protected         │
@@ -102,22 +102,22 @@ Release bundles aggregate multiple module releases:
 
 ```yaml
 # In repository.yml
-- moniker: r2r-eac-bundle
+- moniker: clie-eac-bundle
   release_bundle:
     headline:
-      r2r: r2r-cli
-      eac: ext-eac
+      clie: clie-cli
+      eac: eac-ext
     categories:
       - name: Core Tools
-        modules: [r2r-cli, ext-eac]
+        modules: [clie-cli, eac-ext]
 ```
 
 When a bundle is released, its release notes list the included module versions:
 
 ```markdown
 ## Core Tools
-- r2r-cli: v2.3.4
-- ext-eac: v1.0.0
+- clie-cli: v2.3.4
+- eac-ext: v1.0.0
 ```
 
 The cleanup system parses these notes and protects all referenced versions, even if they're older than the keep limit.

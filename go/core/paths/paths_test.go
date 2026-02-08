@@ -183,7 +183,7 @@ func TestPathConstants(t *testing.T) {
 		{"OutDir", OutDir, "out"},
 		{"SpecsDir", SpecsDir, "specs"},
 		{"TemplatesDir", TemplatesDir, "templates"},
-		{"R2RDir", R2RDir, ".r2r"},
+		{"CLIEDir", CLIEDir, ".clie"},
 		{"BuildDir", BuildDir, "build"},
 		{"TestDir", TestDir, "test"},
 		{"LogsDir", LogsDir, "logs"},

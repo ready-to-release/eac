@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+var (
+	reModulePath      = regexp.MustCompile(`^module\s+(.+)$`)
+	reRequireBlockStart = regexp.MustCompile(`^require\s*\($`)
+	reRequireBlockEnd   = regexp.MustCompile(`^\)`)
+	reSingleRequire     = regexp.MustCompile(`^require\s+(\S+)\s+(\S+)`)
+	reBlockRequire      = regexp.MustCompile(`^\s*(\S+)\s+(\S+)`)
+	reIndirectComment   = regexp.MustCompile(`//\s*indirect`)
+	reReplaceDirective  = regexp.MustCompile(`^replace\s+(\S+)(?:\s+\S+)?\s+=>\s+(.+)$`)
+)
+
 // ParseGoMod parses a go.mod file and extracts module information.
 func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 	file, err := os.Open(filePath)
@@ -65,14 +75,13 @@ func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 }
 
 // extractModulePath extracts the module declaration from go.mod
-// Example: "module github.com/ready-to-release/eac/go/cli/r2r".
+// Example: "module github.com/ready-to-release/eac/go/cli/clie".
 func extractModulePath(file *os.File) (string, error) {
 	scanner := bufio.NewScanner(file)
-	moduleRegex := regexp.MustCompile(`^module\s+(.+)$`)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if matches := moduleRegex.FindStringSubmatch(line); matches != nil {
+		if matches := reModulePath.FindStringSubmatch(line); matches != nil {
 			return strings.TrimSpace(matches[1]), nil
 		}
 	}
@@ -92,11 +101,11 @@ func extractRequires(file *os.File) ([]Require, error) {
 	inRequireBlock := false
 
 	// Regex patterns
-	requireBlockStart := regexp.MustCompile(`^require\s*\($`)
-	requireBlockEnd := regexp.MustCompile(`^\)`)
-	singleRequire := regexp.MustCompile(`^require\s+(\S+)\s+(\S+)`)
-	blockRequire := regexp.MustCompile(`^\s*(\S+)\s+(\S+)`)
-	indirectComment := regexp.MustCompile(`//\s*indirect`)
+	requireBlockStart := reRequireBlockStart
+	requireBlockEnd := reRequireBlockEnd
+	singleRequire := reSingleRequire
+	blockRequire := reBlockRequire
+	indirectComment := reIndirectComment
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -156,8 +165,7 @@ func extractReplaces(file *os.File) ([]Replace, error) {
 	scanner := bufio.NewScanner(file)
 	var replaces []Replace
 
-	// Regex patterns
-	replaceRegex := regexp.MustCompile(`^replace\s+(\S+)(?:\s+\S+)?\s+=>\s+(.+)$`)
+	replaceRegex := reReplaceDirective
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -225,7 +233,7 @@ func ParseAllGoMods(rootPath string, excludeDirs []string) ([]*GoModInfo, error)
 }
 
 // GetModuleNameFromPath extracts a simple module name from the module directory
-// Example: "go/cli/r2r" -> "cli"
+// Example: "go/cli/clie" -> "cli"
 // Example: "go/eac/mcp/commands" -> "mcp-commands".
 func GetModuleNameFromPath(moduleDir string) string {
 	// Convert to forward slashes for consistency

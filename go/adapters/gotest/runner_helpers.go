@@ -70,7 +70,7 @@ func runGoGenerate(ctx context.Context, pkgDir string, logWriter io.Writer) erro
 	}
 
 	toolDef := tool.GlobalRegistry().GetOrAdhoc("go")
-	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
+	fullEnv := append(os.Environ(), "CLIE_TEST_LOGGING_ACTIVE=true")
 	execCtx := &tool.ExecutionContext{
 		ModuleRoot:    moduleRoot,
 		FullEnv:       fullEnv,

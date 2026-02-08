@@ -17,12 +17,12 @@ The following diagram illustrates how dependencies flow from Trunk through Deplo
 ```yaml
 # In .eac/repository.yml
 modules:
-  - moniker: eac-commands
+  - moniker: eac-cli
     depends_on:
-      - eac-core
+      - core
 ```
 
-**Source**: `go/core/contracts/types.go`
+**Source**: `go/core/domain/modules/types.go`
 
 ```go
 type BaseContract struct {
@@ -50,10 +50,10 @@ Registry (holds all ModuleContract)
 
 | File                                                | Purpose                                       |
 | --------------------------------------------------- | --------------------------------------------- |
-| `go/core/contracts/types.go`                    | `BaseContract.DependsOn` - YAML parsing       |
-| `go/core/contracts/modules/types.go`            | `ModuleContract.GetDependencies()` - accessor |
+| `go/core/domain/modules/types.go`               | `BaseContract.DependsOn` - YAML parsing       |
+| `go/core/domain/modules/types.go`               | `ModuleContract.GetDependencies()` - accessor |
 | `go/core/repository/dependencies.go`            | Graph operations, execution order             |
-| `go/cli/eac/impl/validate/module-hierarchy.go` | Cycle detection                               |
+| `go/cli/eac/impl/validate/`                     | Cycle detection and hierarchy validation      |
 | `go/cli/eac/impl/release/await-deps.go`        | Release-time CI verification                  |
 
 ## Execution Order Algorithm
@@ -70,8 +70,8 @@ Uses **Kahn's topological sort**:
 
 ```go
 type ExecutionPlan struct {
-    Layers         [][]string // [[eac-core], [eac-commands, r2r-cli], [ext-eac]]
-    ExecutionOrder []string   // Flattened: [eac-core, eac-commands, r2r-cli, ext-eac]
+    Layers         [][]string // [[eac-core], [eac-commands, clie-cli], [eac-ext]]
+    ExecutionOrder []string   // Flattened: [eac-core, eac-commands, clie-cli, eac-ext]
     LayerCount     int
 }
 ```
@@ -138,7 +138,7 @@ The `build-module` action defaults to isolated mode (`no-deps: true`).
 # Explicit: build with dependencies (for integration tests)
 - uses: ./.github/actions/build-module
   with:
-    module: r2r-installer
+    module: clie-installer
     no-deps: 'false'  # Download dependency artifacts from other CI runs
 ```
 
@@ -159,14 +159,14 @@ CI workflows run in parallel for all changed modules. Release workflows verify d
 change-trigger.yaml
     │
     └──► Dispatch CI workflows in parallel
-         [eac-core, eac-commands, r2r-cli, ext-eac, docs, books, ...]
+         [eac-core, eac-commands, clie-cli, eac-ext, docs, books, ...]
          No layering, no waiting
 ```
 
 ### Release Verification
 
 ```text
-release-ext-eac.yaml
+release-eac-ext.yaml
     │
     └──► approve-release action
             │
@@ -174,7 +174,7 @@ release-ext-eac.yaml
             │
             └──► await-dependency-ci action
                     │
-                    └──► release await-deps ext-eac
+                    └──► release await-deps eac-ext
                             │
                             ├──► Get transitive deps: [eac-commands, eac-core]
                             │
@@ -208,7 +208,7 @@ release await-deps <module> [--timeout N] [--skip-static]
 **Output example**:
 
 ```text
-Awaiting CI for ext-eac dependencies...
+Awaiting CI for eac-ext dependencies...
 
 Dependencies: eac-commands, eac-core
 
@@ -226,20 +226,16 @@ Dependencies: eac-commands, eac-core
 ## Example Dependency Graph
 
 ```text
-eac-core (root)
+core (root)
     │
-    ├──► eac-commands ──┬──► ext-eac
-    │        │          │
-    │        │          │
-    │        ├──► docs ──► books
-    │        │
-    │        └──► implicit-cli
+    ├──► eac-cli ──┬──► eac-ext
+    │       │      │
+    │       │      │
+    │       └──► docs
     │
-    ├──► r2r-cli ──┬──► ext-eac (also depends on eac-commands)
-    │              │
-    │              └──► r2r-installer
+    ├──► clie-cli ──► eac-ext (also depends on eac-cli)
     │
-    ├──► eac-specs
+    ├──► godog-adapter
     │
-    └──► eac-mcp-commands
+    └──► eac-mcp-server
 ```

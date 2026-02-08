@@ -12,14 +12,9 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/markdown"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateMarkdown)
-}
 
 // ValidateMarkdown validates all markdown files in the repository.
 func ValidateMarkdown() int {
@@ -62,7 +57,7 @@ func ValidateMarkdown() int {
 func printMarkdownUsage() {
 	log.Info("Validate markdown file syntax")
 	log.Info("")
-	log.Info("Usage: r2r validate markdown")
+	log.Info("Usage: clie validate markdown")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Valid markdown syntax")
@@ -71,5 +66,5 @@ func printMarkdownUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all markdown files")
-	log.Info("  r2r validate markdown")
+	log.Info("  clie validate markdown")
 }

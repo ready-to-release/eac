@@ -9,14 +9,15 @@ import (
 // BuildSpecificFlags holds flags that are specific to the build command.
 // These are not shared with other commands (test, lint, scan).
 type BuildSpecificFlags struct {
-	TidyFirst       bool   // --with-tidy: Run go mod tidy before building
-	NoTidy          bool   // --no-tidy: Skip go mod tidy
-	UseExistingDepm bool   // --use-existing-depm: Skip building deps if artifacts exist
-	Version         string // --version: Version string for binary
-	Reproducible    string // --reproducible: MkDocs reproducibility mode
-	AcceptWarnings  bool   // --accept-warnings: Don't fail on MkDocs warnings
-	ListArtifacts   bool   // --list-artifacts: List artifacts without building
-	Artifacts       string // --artifacts: Artifact scope mode (all, reduced). --all is alias for --artifacts all
+	TidyFirst       bool     // --with-tidy: Run go mod tidy before building
+	NoTidy          bool     // --no-tidy: Skip go mod tidy
+	UseExistingDepm bool     // --use-existing-depm: Skip building deps if artifacts exist
+	Version         string   // --version: Version string for binary
+	Reproducible    string   // --reproducible: MkDocs reproducibility mode
+	AcceptWarnings  bool     // --accept-warnings: Don't fail on MkDocs warnings
+	ListArtifacts   bool     // --list-artifacts: List artifacts without building
+	Artifacts       string   // --artifacts: Artifact scope mode (all, reduced). --all is alias for --artifacts all
+	Components      []string // --component: Filter to specific components (repeatable)
 
 	// Declarative tracking field
 	TidyExplicit bool // True if --with-tidy or --no-tidy was used
@@ -96,6 +97,12 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 		}
 		flags.Artifacts = val
 		return true, 1, nil
+	case "--component":
+		if i+1 >= len(args) {
+			return true, 0, fmt.Errorf("--component requires a value")
+		}
+		flags.Components = append(flags.Components, args[i+1])
+		return true, 1, nil
 	}
 
 	// Handle --key=value syntax
@@ -117,6 +124,11 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 			return true, 0, fmt.Errorf("--artifacts must be 'all' or 'reduced'")
 		}
 		flags.Artifacts = val
+		return true, 0, nil
+	}
+	if strings.HasPrefix(arg, "--component=") {
+		val := strings.TrimPrefix(arg, "--component=")
+		flags.Components = append(flags.Components, val)
 		return true, 0, nil
 	}
 

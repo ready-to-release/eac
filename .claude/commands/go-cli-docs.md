@@ -17,7 +17,7 @@ You are updating CLI documentation and help text.
    - Delegate to go-cli-ux agent if needed
    - Use Task tool with subagent_type="go-cli-ux"
    - For eac/commands: Update command registration and help
-   - For r2r/cli: Update Cobra command Short/Long descriptions
+   - For clie/cli: Update Cobra command Short/Long descriptions
    - Add usage examples
    - Document all flags with descriptions
 

@@ -25,4 +25,4 @@ registries:
       # GitHub Release API correlation
       # Note: Released packages are ALWAYS protected - this is non-configurable for safety.
       github_releases:
-        tag_format: "{module}/{version}"  # e.g., ext-eac/1.0.0
+        tag_format: "{module}/{version}"  # e.g., eac-ext/1.0.0

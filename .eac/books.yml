@@ -35,9 +35,9 @@ book-generators:
 
 books:
   # Bundle evidence book (unchanged)
-  - name: release-evidence-r2r-eac-bundle
-    title: "r2r-eac-bundle Release Evidence Package"
-    description: "Complete release evidence for r2r-eac bundle with all module releases"
+  - name: release-evidence-clie-eac-bundle
+    title: "clie-eac-bundle Release Evidence Package"
+    description: "Complete release evidence for clie-eac bundle with all module releases"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
     sources:
@@ -46,11 +46,11 @@ books:
           type: snippet,
           name: module-evidence,
           parameters:
-            { moniker: ext-eac, prefix: "ext-eac-", prefix_title: "ext-eac " },
+            { moniker: eac-ext, prefix: "eac-ext-", prefix_title: "eac-ext " },
         }
       - {
           type: snippet,
           name: module-evidence,
           parameters:
-            { moniker: r2r-cli, prefix: "r2r-cli-", prefix_title: "r2r-cli " },
+            { moniker: clie-cli, prefix: "clie-cli-", prefix_title: "clie-cli " },
         }

@@ -29,7 +29,7 @@ Design CLI commands that are:
 
 - Command purpose and user workflows
 - Expected input/output format
-- Framework in use (Cobra for r2r, custom for eac/commands)
+- Framework in use (Cobra for clie, custom for eac/commands)
 - Target audience (developers, ops, end users)
 
 ## How I Work
@@ -136,7 +136,7 @@ func executeMyCommand(ctx context.Context, args []string) error {
 }
 ```
 
-### For r2r/cli (Cobra)
+### For clie/cli (Cobra)
 
 ```go
 var myCmd = &cobra.Command{

@@ -33,10 +33,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
-func init() {
-	registry.Register(ReleaseCheckPending)
-}
-
 // PendingModule represents a module needing release.
 type PendingModule struct {
 	Module   string `json:"module"`

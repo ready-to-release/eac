@@ -37,10 +37,10 @@ func createEacWorkspace(t *testing.T, dir string) {
 func saveAndClearEnv(t *testing.T) func() {
 	t.Helper()
 	saved := map[string]string{
-		environments.EnvR2RRepoRoot:      os.Getenv(environments.EnvR2RRepoRoot),
-		environments.EnvR2RContainerRoot: os.Getenv(environments.EnvR2RContainerRoot),
-		environments.EnvR2RPWD:           os.Getenv(environments.EnvR2RPWD),
-		environments.EnvR2RDockerMode:    os.Getenv(environments.EnvR2RDockerMode),
+		environments.EnvCLIERepoRoot:      os.Getenv(environments.EnvCLIERepoRoot),
+		environments.EnvCLIEContainerRoot: os.Getenv(environments.EnvCLIEContainerRoot),
+		environments.EnvCLIEPWD:           os.Getenv(environments.EnvCLIEPWD),
+		environments.EnvCLIEDockerMode:    os.Getenv(environments.EnvCLIEDockerMode),
 	}
 
 	// Clear all
@@ -77,8 +77,8 @@ func TestDetect_EnvOverride(t *testing.T) {
 	if ws.Root != tempDir {
 		t.Errorf("Root = %q, want %q", ws.Root, tempDir)
 	}
-	if ws.Source != "env:R2R_REPO_ROOT" {
-		t.Errorf("Source = %q, want %q", ws.Source, "env:R2R_REPO_ROOT")
+	if ws.Source != "env:CLIE_REPO_ROOT" {
+		t.Errorf("Source = %q, want %q", ws.Source, "env:CLIE_REPO_ROOT")
 	}
 }
 
@@ -91,8 +91,8 @@ func TestDetect_EnvOverride_TakesPrecedenceOverGit(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	// Set env to override
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
-	defer os.Unsetenv(environments.EnvR2RRepoRoot)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
+	defer os.Unsetenv(environments.EnvCLIERepoRoot)
 
 	ws, err := Detect()
 	if err != nil {
@@ -100,8 +100,8 @@ func TestDetect_EnvOverride_TakesPrecedenceOverGit(t *testing.T) {
 	}
 
 	// Even though we're inside a git repo (the eac repo), the env override takes precedence
-	if ws.Source != "env:R2R_REPO_ROOT" {
-		t.Errorf("Source = %q, want %q", ws.Source, "env:R2R_REPO_ROOT")
+	if ws.Source != "env:CLIE_REPO_ROOT" {
+		t.Errorf("Source = %q, want %q", ws.Source, "env:CLIE_REPO_ROOT")
 	}
 }
 
@@ -147,8 +147,8 @@ func TestDetect_ModeExplicit_FailsWithoutEnv(t *testing.T) {
 	if !errors.As(err, &detErr) {
 		t.Errorf("error should be *DetectionError, got: %T", err)
 	} else {
-		if detErr.Source != "env:R2R_REPO_ROOT" {
-			t.Errorf("Source = %q, want %q", detErr.Source, "env:R2R_REPO_ROOT")
+		if detErr.Source != "env:CLIE_REPO_ROOT" {
+			t.Errorf("Source = %q, want %q", detErr.Source, "env:CLIE_REPO_ROOT")
 		}
 	}
 }
@@ -159,7 +159,7 @@ func TestDetect_ModeExplicit_SucceedsWithEnv(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	ws, err := DetectWithOptions(Options{
 		Mode: ModeExplicit,
@@ -179,7 +179,7 @@ func TestDetect_ModeGitOnly_IgnoresEnvOverride(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	ws, err := DetectWithOptions(Options{
 		Mode: ModeGitOnly,
@@ -205,7 +205,7 @@ func TestDetect_ValidationFailsForNonexistent(t *testing.T) {
 	defer restore()
 
 	nonexistent := filepath.Join(t.TempDir(), "does-not-exist")
-	os.Setenv(environments.EnvR2RRepoRoot, nonexistent)
+	os.Setenv(environments.EnvCLIERepoRoot, nonexistent)
 
 	_, err := Detect()
 
@@ -236,7 +236,7 @@ func TestDetect_ValidationFailsForFile(t *testing.T) {
 		t.Fatalf("failed to create file: %v", err)
 	}
 
-	os.Setenv(environments.EnvR2RRepoRoot, filePath)
+	os.Setenv(environments.EnvCLIERepoRoot, filePath)
 
 	_, err := Detect()
 
@@ -255,7 +255,7 @@ func TestDetect_ValidationFailsForMissingMarkers(t *testing.T) {
 
 	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	_, err := Detect()
 
@@ -274,7 +274,7 @@ func TestDetect_ValidationDisabled(t *testing.T) {
 
 	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	// With validation disabled, should succeed
 	ws, err := DetectWithOptions(Options{
@@ -298,7 +298,7 @@ func TestDetect_EacWorkspaceValid(t *testing.T) {
 	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	ws, err := Detect()
 	if err != nil {
@@ -317,7 +317,7 @@ func TestDetect_RequireGit(t *testing.T) {
 	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	_, err := DetectWithOptions(Options{
 		Mode:       ModeAuto,
@@ -338,7 +338,7 @@ func TestDetect_DockerMode(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	os.Setenv(environments.EnvR2RDockerMode, "true")
+	os.Setenv(environments.EnvCLIEDockerMode, "true")
 
 	ws, err := DetectWithOptions(Options{
 		Mode:     ModeAuto,
@@ -349,8 +349,8 @@ func TestDetect_DockerMode(t *testing.T) {
 		t.Fatalf("DetectWithOptions() unexpected error: %v", err)
 	}
 
-	if ws.Source != "env:environments.EnvR2RDockerMode" {
-		t.Errorf("Source = %q, want %q", ws.Source, "env:environments.EnvR2RDockerMode")
+	if ws.Source != "env:environments.EnvCLIEDockerMode" {
+		t.Errorf("Source = %q, want %q", ws.Source, "env:environments.EnvCLIEDockerMode")
 	}
 
 	if ws.Root != paths.ContainerRepoRoot {
@@ -369,17 +369,17 @@ func TestDetect_EnvOverrideBeforeDockerMode(t *testing.T) {
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
 
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
-	os.Setenv(environments.EnvR2RDockerMode, "true")
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIEDockerMode, "true")
 
 	ws, err := Detect()
 	if err != nil {
 		t.Fatalf("Detect() unexpected error: %v", err)
 	}
 
-	// R2R_REPO_ROOT should take precedence over environments.EnvR2RDockerMode
-	if ws.Source != "env:R2R_REPO_ROOT" {
-		t.Errorf("Source = %q, want %q", ws.Source, "env:R2R_REPO_ROOT")
+	// CLIE_REPO_ROOT should take precedence over environments.EnvCLIEDockerMode
+	if ws.Source != "env:CLIE_REPO_ROOT" {
+		t.Errorf("Source = %q, want %q", ws.Source, "env:CLIE_REPO_ROOT")
 	}
 
 	if ws.Root != tempDir {
@@ -395,8 +395,8 @@ func TestDetect_DistRoot(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	containerRoot := filepath.Join(tempDir, "container")
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
-	os.Setenv(environments.EnvR2RContainerRoot, containerRoot)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIEContainerRoot, containerRoot)
 
 	ws, err := Detect()
 	if err != nil {
@@ -442,22 +442,22 @@ func TestForTesting(t *testing.T) {
 	createValidWorkspace(t, tempDir)
 
 	// Before ForTesting, env var should be empty
-	if got := os.Getenv(environments.EnvR2RRepoRoot); got != "" {
-		t.Errorf("EnvR2RRepoRoot before ForTesting = %q, want empty", got)
+	if got := os.Getenv(environments.EnvCLIERepoRoot); got != "" {
+		t.Errorf("EnvCLIERepoRoot before ForTesting = %q, want empty", got)
 	}
 
 	cleanup := ForTesting(t, tempDir)
 
 	// During ForTesting, env var should be set
-	if got := os.Getenv(environments.EnvR2RRepoRoot); got != tempDir {
-		t.Errorf("EnvR2RRepoRoot during ForTesting = %q, want %q", got, tempDir)
+	if got := os.Getenv(environments.EnvCLIERepoRoot); got != tempDir {
+		t.Errorf("EnvCLIERepoRoot during ForTesting = %q, want %q", got, tempDir)
 	}
 
 	cleanup()
 
 	// After cleanup, env var should be empty again
-	if got := os.Getenv(environments.EnvR2RRepoRoot); got != "" {
-		t.Errorf("EnvR2RRepoRoot after cleanup = %q, want empty", got)
+	if got := os.Getenv(environments.EnvCLIERepoRoot); got != "" {
+		t.Errorf("EnvCLIERepoRoot after cleanup = %q, want empty", got)
 	}
 }
 
@@ -466,21 +466,21 @@ func TestForTesting_PreservesExistingValue(t *testing.T) {
 	defer restore()
 
 	original := "/original/path"
-	os.Setenv(environments.EnvR2RRepoRoot, original)
+	os.Setenv(environments.EnvCLIERepoRoot, original)
 
 	tempDir := t.TempDir()
 	cleanup := ForTesting(t, tempDir)
 
 	// During ForTesting, should be the new value
-	if got := os.Getenv(environments.EnvR2RRepoRoot); got != tempDir {
-		t.Errorf("EnvR2RRepoRoot during ForTesting = %q, want %q", got, tempDir)
+	if got := os.Getenv(environments.EnvCLIERepoRoot); got != tempDir {
+		t.Errorf("EnvCLIERepoRoot during ForTesting = %q, want %q", got, tempDir)
 	}
 
 	cleanup()
 
 	// After cleanup, should restore original
-	if got := os.Getenv(environments.EnvR2RRepoRoot); got != original {
-		t.Errorf("EnvR2RRepoRoot after cleanup = %q, want %q", got, original)
+	if got := os.Getenv(environments.EnvCLIERepoRoot); got != original {
+		t.Errorf("EnvCLIERepoRoot after cleanup = %q, want %q", got, original)
 	}
 }
 
@@ -499,7 +499,7 @@ func TestRequireIsolation_Fails(t *testing.T) {
 	RequireIsolation(fakeT)
 
 	if !fatalCalled {
-		t.Error("RequireIsolation should have called Fatalf when R2R_REPO_ROOT not set")
+		t.Error("RequireIsolation should have called Fatalf when CLIE_REPO_ROOT not set")
 	}
 }
 
@@ -507,7 +507,7 @@ func TestRequireIsolation_Succeeds(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	os.Setenv(environments.EnvR2RRepoRoot, "/some/path")
+	os.Setenv(environments.EnvCLIERepoRoot, "/some/path")
 
 	var fatalCalled bool
 	fakeT := &fakeTestingT{
@@ -519,7 +519,7 @@ func TestRequireIsolation_Succeeds(t *testing.T) {
 	RequireIsolation(fakeT)
 
 	if fatalCalled {
-		t.Error("RequireIsolation should not have called Fatalf when R2R_REPO_ROOT is set")
+		t.Error("RequireIsolation should not have called Fatalf when CLIE_REPO_ROOT is set")
 	}
 }
 
@@ -529,7 +529,7 @@ func TestRoot(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	root, err := Root()
 	if err != nil {
@@ -546,7 +546,7 @@ func TestWorkingDir_EnvOverride(t *testing.T) {
 	defer restore()
 
 	expected := "/custom/working/dir"
-	os.Setenv(environments.EnvR2RPWD, expected)
+	os.Setenv(environments.EnvCLIEPWD, expected)
 
 	got, err := WorkingDir()
 	if err != nil {
@@ -579,17 +579,17 @@ func TestIsInContainer(t *testing.T) {
 	defer restore()
 
 	if IsInContainer() {
-		t.Error("IsInContainer() should be false when environments.EnvR2RDockerMode not set")
+		t.Error("IsInContainer() should be false when environments.EnvCLIEDockerMode not set")
 	}
 
-	os.Setenv(environments.EnvR2RDockerMode, "true")
+	os.Setenv(environments.EnvCLIEDockerMode, "true")
 	if !IsInContainer() {
-		t.Error("IsInContainer() should be true when environments.EnvR2RDockerMode=true")
+		t.Error("IsInContainer() should be true when environments.EnvCLIEDockerMode=true")
 	}
 
-	os.Setenv(environments.EnvR2RDockerMode, "false")
+	os.Setenv(environments.EnvCLIEDockerMode, "false")
 	if IsInContainer() {
-		t.Error("IsInContainer() should be false when environments.EnvR2RDockerMode=false")
+		t.Error("IsInContainer() should be false when environments.EnvCLIEDockerMode=false")
 	}
 }
 
@@ -599,7 +599,7 @@ func TestDistRoot(t *testing.T) {
 
 	tempDir := t.TempDir()
 	createValidWorkspace(t, tempDir)
-	os.Setenv(environments.EnvR2RRepoRoot, tempDir)
+	os.Setenv(environments.EnvCLIERepoRoot, tempDir)
 
 	// Without container root, should return workspace root
 	got := DistRoot()
@@ -609,7 +609,7 @@ func TestDistRoot(t *testing.T) {
 
 	// With container root, should return container root
 	containerRoot := "/container/root"
-	os.Setenv(environments.EnvR2RContainerRoot, containerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, containerRoot)
 	got = DistRoot()
 	if got != containerRoot {
 		t.Errorf("DistRoot() = %q, want %q", got, containerRoot)
@@ -636,10 +636,10 @@ func TestDetectionError_Error(t *testing.T) {
 			name: "without path",
 			err: &DetectionError{
 				Op:      "validate",
-				Source:  "env:R2R_REPO_ROOT",
+				Source:  "env:CLIE_REPO_ROOT",
 				Message: "not set",
 			},
-			contains: []string{"validate", "env:R2R_REPO_ROOT", "not set"},
+			contains: []string{"validate", "env:CLIE_REPO_ROOT", "not set"},
 		},
 	}
 
@@ -674,7 +674,7 @@ func TestMustDetect_Panics(t *testing.T) {
 	defer restore()
 
 	// Set to nonexistent path
-	os.Setenv(environments.EnvR2RRepoRoot, "/nonexistent/path")
+	os.Setenv(environments.EnvCLIERepoRoot, "/nonexistent/path")
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -690,7 +690,7 @@ func TestRootOrPanic_Panics(t *testing.T) {
 	defer restore()
 
 	// Set to nonexistent path
-	os.Setenv(environments.EnvR2RRepoRoot, "/nonexistent/path")
+	os.Setenv(environments.EnvCLIERepoRoot, "/nonexistent/path")
 
 	defer func() {
 		if r := recover(); r == nil {

@@ -74,7 +74,7 @@ func githubActionsWorkflowsExist(ctx *eacgodog.TestContext) error {
 
 func allWorkflowsPassing(ctx *eacgodog.TestContext) error {
 	// Create a test module - by default all workflows pass in mock
-	// No need to set R2R_MOCK_FAILING_WORKFLOW
+	// No need to set CLIE_MOCK_FAILING_WORKFLOW
 	return createTestModule(ctx, "test-module", nil)
 }
 
@@ -85,7 +85,7 @@ func workflowIsFailing(ctx *eacgodog.TestContext) error {
 	}
 
 	// Set environment variable to simulate failing workflow
-	ctx.SetMockOverride("R2R_MOCK_FAILING_WORKFLOW", "test-module")
+	ctx.SetMockOverride("CLIE_MOCK_FAILING_WORKFLOW", "test-module")
 	return nil
 }
 
@@ -143,7 +143,7 @@ func commitHasWorkflowRuns(ctx *eacgodog.TestContext, commitSHA string) error {
 }
 func noWorkflowsForCommit(ctx *eacgodog.TestContext) error {
 	// Set environment to return no workflows
-	ctx.SetMockOverride(environments.EnvR2RMockNoWorkflows, "true")
+	ctx.SetMockOverride(environments.EnvCLIEMockNoWorkflows, "true")
 	return nil
 }
 

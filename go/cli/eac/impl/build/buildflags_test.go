@@ -153,6 +153,144 @@ func TestParseBuildSpecificFlags_ArtifactsFlag(t *testing.T) {
 	}
 }
 
+func TestParseBuildSpecificFlags_ComponentFlag(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		wantComponents []string
+		wantRemaining  []string
+		wantErr        bool
+	}{
+		{
+			name:           "single component with space",
+			args:           []string{"--component", "site", "module1"},
+			wantComponents: []string{"site"},
+			wantRemaining:  []string{"module1"},
+		},
+		{
+			name:           "single component with equals",
+			args:           []string{"--component=site", "module1"},
+			wantComponents: []string{"site"},
+			wantRemaining:  []string{"module1"},
+		},
+		{
+			name:           "multiple components",
+			args:           []string{"--component", "site", "--component", "pdf", "module1"},
+			wantComponents: []string{"site", "pdf"},
+			wantRemaining:  []string{"module1"},
+		},
+		{
+			name:           "multiple components with equals",
+			args:           []string{"--component=site", "--component=pdf"},
+			wantComponents: []string{"site", "pdf"},
+			wantRemaining:  nil,
+		},
+		{
+			name:    "component missing value",
+			args:    []string{"--component"},
+			wantErr: true,
+		},
+		{
+			name:           "no component flag",
+			args:           []string{"module1"},
+			wantComponents: nil,
+			wantRemaining:  []string{"module1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flags, remaining, err := ParseBuildSpecificFlags(tt.args)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("ParseBuildSpecificFlags() expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("ParseBuildSpecificFlags() error: %v", err)
+			}
+
+			if len(flags.Components) != len(tt.wantComponents) {
+				t.Errorf("Components = %v, want %v", flags.Components, tt.wantComponents)
+			} else {
+				for i, c := range flags.Components {
+					if c != tt.wantComponents[i] {
+						t.Errorf("Components[%d] = %q, want %q", i, c, tt.wantComponents[i])
+					}
+				}
+			}
+
+			if len(remaining) != len(tt.wantRemaining) {
+				t.Errorf("remaining = %v, want %v", remaining, tt.wantRemaining)
+			}
+		})
+	}
+}
+
+func TestRebuildUnconsumedArgs(t *testing.T) {
+	tests := []struct {
+		name       string
+		original   []string
+		remaining  []string
+		positional []string
+		want       []string
+	}{
+		{
+			name:       "preserves order with component flag",
+			original:   []string{"docs", "--no-tui", "--component", "site"},
+			remaining:  []string{"--component"},
+			positional: []string{"docs", "site"},
+			want:       []string{"docs", "--component", "site"},
+		},
+		{
+			name:       "preserves order with version flag",
+			original:   []string{"core", "--version", "1.0.0", "--no-tui"},
+			remaining:  []string{"--version"},
+			positional: []string{"core", "1.0.0"},
+			want:       []string{"core", "--version", "1.0.0"},
+		},
+		{
+			name:       "no remaining flags",
+			original:   []string{"docs", "--no-tui"},
+			remaining:  nil,
+			positional: []string{"docs"},
+			want:       []string{"docs"},
+		},
+		{
+			name:       "equals syntax preserved as single token",
+			original:   []string{"docs", "--component=site", "--no-tui"},
+			remaining:  []string{"--component=site"},
+			positional: []string{"docs"},
+			want:       []string{"docs", "--component=site"},
+		},
+		{
+			name:       "multiple components",
+			original:   []string{"docs", "--component", "site", "--component", "pdf"},
+			remaining:  []string{"--component", "--component"},
+			positional: []string{"docs", "site", "pdf"},
+			want:       []string{"docs", "--component", "site", "--component", "pdf"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := rebuildUnconsumedArgs(tt.original, tt.remaining, tt.positional)
+			if len(got) != len(tt.want) {
+				t.Errorf("rebuildUnconsumedArgs() = %v, want %v", got, tt.want)
+				return
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("rebuildUnconsumedArgs()[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestParseBuildSpecificFlags_OtherFlags(t *testing.T) {
 	tests := []struct {
 		name           string

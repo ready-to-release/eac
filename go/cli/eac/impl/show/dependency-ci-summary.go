@@ -23,12 +23,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowDependencyCISummary)
-}
 
 // ShowDependencyCISummary generates a dependency CI check summary.
 func ShowDependencyCISummary() int {

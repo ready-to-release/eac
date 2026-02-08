@@ -1,7 +1,7 @@
 # Await Module Releases Action
 #
 # Waits for all in-flight module release workflows to complete before proceeding.
-# Used by release-r2r-eac-bundle to ensure the bundle contains all current releases.
+# Used by release-clie-eac-bundle to ensure the bundle contains all current releases.
 #
 # This action:
 # 1. Gets the list of modules in the release bundle
@@ -45,10 +45,10 @@ runs:
         TIMEOUT: ${{ inputs.timeout }}
       run: |
         # Wait for all release workflows except:
-        # - release-r2r-eac-bundle.yaml (ourselves)
+        # - release-clie-eac-bundle.yaml (ourselves)
         # - release-trigger.yaml (the orchestrator that dispatched us)
         ${COMMANDS:?COMMANDS not set} pipeline await-release --timeout $TIMEOUT \
-          --exclude "release-r2r-eac-bundle.yaml,release-trigger.yaml"
+          --exclude "release-clie-eac-bundle.yaml,release-trigger.yaml"
 
     - name: Collect module releases
       id: collect

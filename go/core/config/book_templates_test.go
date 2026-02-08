@@ -29,7 +29,7 @@ func TestBookTemplate_SnippetExpansion(t *testing.T) {
 }
 
 func TestBookTemplate_ParameterSubstitution(t *testing.T) {
-	params := map[string]string{"moniker": "ext-eac"}
+	params := map[string]string{"moniker": "eac-ext"}
 	src := Source{
 		Type:    "command",
 		Command: "show release-notes {moniker} latest",
@@ -37,7 +37,7 @@ func TestBookTemplate_ParameterSubstitution(t *testing.T) {
 
 	result := substituteSourceParams(src, params)
 
-	assert.Equal(t, "show release-notes ext-eac latest", result.Command)
+	assert.Equal(t, "show release-notes eac-ext latest", result.Command)
 }
 
 func TestBookTemplate_TemplateExpansion(t *testing.T) {
@@ -138,8 +138,8 @@ func TestBookTemplate_GeneratorFromCategories(t *testing.T) {
 
 func TestBookTemplate_GeneratorFromModules(t *testing.T) {
 	modules := []Module{
-		{Moniker: "ext-eac", EvidenceBooks: []string{"release-evidence-ext-eac"}},
-		{Moniker: "r2r-cli", EvidenceBooks: []string{"release-evidence-r2r-cli"}},
+		{Moniker: "eac-ext", EvidenceBooks: []string{"release-evidence-eac-ext"}},
+		{Moniker: "clie-cli", EvidenceBooks: []string{"release-evidence-clie-cli"}},
 	}
 
 	raw := &BooksConfigRaw{
@@ -165,14 +165,14 @@ func TestBookTemplate_GeneratorFromModules(t *testing.T) {
 	require.Len(t, expanded.Books, 2)
 
 	// First evidence book
-	assert.Equal(t, "release-evidence-ext-eac", expanded.Books[0].Name)
+	assert.Equal(t, "release-evidence-eac-ext", expanded.Books[0].Name)
 	require.Len(t, expanded.Books[0].Sources, 1)
-	assert.Equal(t, "show release-notes ext-eac latest", expanded.Books[0].Sources[0].Command)
+	assert.Equal(t, "show release-notes eac-ext latest", expanded.Books[0].Sources[0].Command)
 
 	// Second evidence book
-	assert.Equal(t, "release-evidence-r2r-cli", expanded.Books[1].Name)
+	assert.Equal(t, "release-evidence-clie-cli", expanded.Books[1].Name)
 	require.Len(t, expanded.Books[1].Sources, 1)
-	assert.Equal(t, "show release-notes r2r-cli latest", expanded.Books[1].Sources[0].Command)
+	assert.Equal(t, "show release-notes clie-cli latest", expanded.Books[1].Sources[0].Command)
 }
 
 func TestBookTemplate_MergeBooksConfigs(t *testing.T) {
@@ -208,7 +208,7 @@ func TestBookTemplate_MergeBooksConfigs(t *testing.T) {
 }
 
 func TestBookTemplate_FrontmatterSubstitution(t *testing.T) {
-	params := map[string]string{"moniker": "ext-eac", "prefix_title": "EAC "}
+	params := map[string]string{"moniker": "eac-ext", "prefix_title": "EAC "}
 	src := Source{
 		Type:    "command",
 		Command: "show release-notes {moniker} latest",
@@ -222,7 +222,7 @@ func TestBookTemplate_FrontmatterSubstitution(t *testing.T) {
 	result := substituteSourceParams(src, params)
 
 	assert.Equal(t, "EAC Release Notes", result.Frontmatter["title"])
-	assert.Equal(t, "Release notes for ext-eac", result.Frontmatter["description"])
+	assert.Equal(t, "Release notes for eac-ext", result.Frontmatter["description"])
 	assert.Equal(t, 1, result.Frontmatter["order"])
 }
 
@@ -239,7 +239,7 @@ func TestBookTemplate_SnippetWithParameters(t *testing.T) {
 				Type:        "snippet",
 				SnippetName: "evidence",
 				Parameters: map[string]string{
-					"moniker": "ext-eac",
+					"moniker": "eac-ext",
 					"prefix":  "eac-",
 				},
 			}},
@@ -250,7 +250,7 @@ func TestBookTemplate_SnippetWithParameters(t *testing.T) {
 
 	require.Len(t, expanded.Books, 1)
 	require.Len(t, expanded.Books[0].Sources, 1)
-	assert.Equal(t, "show release-notes ext-eac latest", expanded.Books[0].Sources[0].Command)
+	assert.Equal(t, "show release-notes eac-ext latest", expanded.Books[0].Sources[0].Command)
 	assert.Equal(t, "eac-release-notes.md", expanded.Books[0].Sources[0].Target)
 }
 

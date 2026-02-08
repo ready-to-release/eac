@@ -12,7 +12,7 @@ import (
 )
 
 // TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds modules with changelogs.
-// SemVer modules with changelogs: r2r-cli, ext-eac (published), r2r-eac-bundle (bundle).
+// SemVer modules with changelogs: clie-cli, eac-ext (published), clie-eac-bundle (bundle).
 // CalVer modules (docs) have no changelogs.
 func TestFindModulesWithChangelogsAll(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
@@ -23,10 +23,10 @@ func TestFindModulesWithChangelogsAll(t *testing.T) {
 	// Should find SemVer modules with changelogs
 	assert.NotEmpty(t, modules, "should find modules with changelogs")
 
-	// Check that we find SemVer published modules (r2r-cli, ext-eac)
+	// Check that we find SemVer published modules (clie-cli, eac-ext)
 	hasSemVerPublished := false
 	for _, mod := range modules {
-		if mod == "r2r-cli" || mod == "ext-eac" {
+		if mod == "clie-cli" || mod == "eac-ext" {
 			hasSemVerPublished = true
 			break
 		}
@@ -40,8 +40,8 @@ func TestFindModulesWithChangelogsAll(t *testing.T) {
 }
 
 // TestFilterModulesByReleaseType tests filtering modules by release type.
-// Only SemVer modules have changelogs: r2r-cli, ext-eac (published).
-// CalVer modules (docs, r2r-eac-bundle) have no changelogs, so they won't be in the input set.
+// Only SemVer modules have changelogs: clie-cli, eac-ext (published).
+// CalVer modules (docs, clie-eac-bundle) have no changelogs, so they won't be in the input set.
 func TestFilterModulesByReleaseType(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
 
@@ -54,19 +54,19 @@ func TestFilterModulesByReleaseType(t *testing.T) {
 		{
 			name:          "filter published only",
 			filterType:    "published",
-			shouldInclude: []string{"r2r-cli", "ext-eac"},
-			shouldExclude: []string{"r2r-eac-bundle"},
+			shouldInclude: []string{"clie-cli", "eac-ext"},
+			shouldExclude: []string{"clie-eac-bundle"},
 		},
 		{
 			name:          "filter bundle only",
 			filterType:    "bundle",
 			shouldInclude: []string{},
-			shouldExclude: []string{"r2r-cli", "ext-eac"},
+			shouldExclude: []string{"clie-cli", "eac-ext"},
 		},
 		{
 			name:          "no filter (all)",
 			filterType:    "",
-			shouldInclude: []string{"r2r-cli", "ext-eac"},
+			shouldInclude: []string{"clie-cli", "eac-ext"},
 			shouldExclude: []string{},
 		},
 	}
@@ -122,10 +122,10 @@ func TestGetModuleReleaseType(t *testing.T) {
 		module       string
 		expectedType string
 	}{
-		{"r2r-cli", "published"},
-		{"ext-eac", "published"},
+		{"clie-cli", "published"},
+		{"eac-ext", "published"},
 		{"docs", "published"},
-		{"r2r-eac-bundle", "bundle"},
+		{"clie-eac-bundle", "bundle"},
 	}
 
 	for _, tc := range testCases {
@@ -141,7 +141,7 @@ func TestGetModuleReleaseType(t *testing.T) {
 func TestPendingReleaseIncludesReleaseType(t *testing.T) {
 	// Create a sample PendingRelease
 	pending := PendingRelease{
-		Module:         "r2r-cli",
+		Module:         "clie-cli",
 		HasChanges:     true,
 		CurrentVersion: "0.0.24",
 		NextVersion:    "0.0.25",
@@ -149,7 +149,7 @@ func TestPendingReleaseIncludesReleaseType(t *testing.T) {
 	}
 
 	assert.Equal(t, "published", pending.ReleaseType, "should include release type")
-	assert.Equal(t, "r2r-cli", pending.Module)
+	assert.Equal(t, "clie-cli", pending.Module)
 }
 
 // getTestWorkspaceRoot returns the workspace root for tests.

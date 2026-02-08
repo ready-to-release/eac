@@ -105,8 +105,8 @@ func TestParsePRConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work pr <args>)
-			os.Args = append([]string{"r2r", "work", "pr"}, tt.args...)
+			// Set test args (simulate command: clie work pr <args>)
+			os.Args = append([]string{"clie", "work", "pr"}, tt.args...)
 
 			config, err := parsePRConfig()
 			if err != nil {
@@ -127,7 +127,7 @@ func TestParsePRConfig_MissingTitleValue(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "pr", "--title"}
+	os.Args = []string{"clie", "work", "pr", "--title"}
 
 	_, err := parsePRConfig()
 
@@ -149,7 +149,7 @@ func TestPRConfigDefaults(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "pr"}
+	os.Args = []string{"clie", "work", "pr"}
 
 	config, err := parsePRConfig()
 	if err != nil {
@@ -215,7 +215,7 @@ func TestValidatePREnvironment(t *testing.T) {
 
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
-				GitOps:   internal.GetGitOps("."),
+				GitOps:   internal.NewDefaultGitOps("."),
 				RepoRoot: ".",
 				Logger:   logger,
 			}

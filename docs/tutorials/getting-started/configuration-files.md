@@ -10,28 +10,28 @@ Learn about the configuration files in `.eac/` and how they're managed by EAC.
 
 By the end of this tutorial, you'll understand:
 
-- The difference between R2R CLI and EAC configuration
-- What configuration files exist in `.r2r/`
+- The difference between CLIE CLI and EAC configuration
+- What configuration files exist in `.clie/`
 - Which files are created by commands vs. exist as system defaults
 - How to customize configurations when needed
 - Which files to commit to git
 
 ## Configuration Overview
 
-R2R uses two layers of configuration:
+CLIE uses two layers of configuration:
 
 | Layer         | File/Directory     | Purpose               | Created By     |
 | ------------- | ------------------ | --------------------- | -------------- |
-| **Framework** | `.r2r/r2r-cli.yml` | Extension management  | `r2r init`     |
+| **Framework** | `.clie/clie-cli.yml` | Extension management  | `clie init`     |
 | **Extension** | `.eac/`        | EAC-specific settings | `eac init` |
 
-### R2R CLI vs EAC Configuration
+### CLIE CLI vs EAC Configuration
 
 Understanding the two configuration layers:
 
-**`.r2r/r2r-cli.yml`** (Framework Configuration)
+**`.clie/clie-cli.yml`** (Framework Configuration)
 
-- Created by: `r2r init`
+- Created by: `clie init`
 - Purpose: Manages which extensions are available
 - Scope: Framework-level (applies to all extensions)
 - Example content: Extension registry, Docker images
@@ -45,16 +45,16 @@ Understanding the two configuration layers:
 
 See [CLI vs Extensions](../../reference/eac/architecture/cli-integration.md) for detailed architecture explanation.
 
-## R2R CLI Configuration
+## CLIE CLI Configuration
 
-### The `.r2r/r2r-cli.yml` File
+### The `.clie/clie-cli.yml` File
 
-This file is created by `r2r init` and manages extension installation:
+This file is created by `clie init` and manages extension installation:
 
 ```yaml
 extensions:
   - name: 'eac'
-    image: 'ghcr.io/ready-to-release/ext-eac:latest'
+    image: 'ghcr.io/ready-to-release/eac-ext:latest'
     description: 'Everything-as-Code automation'
 ```
 
@@ -66,13 +66,13 @@ extensions:
 
 **When to edit:**
 
-- Adding new extensions (or use `r2r install <extension>`)
+- Adding new extensions (or use `clie install <extension>`)
 - Changing extension versions
 - Configuring local development images
 
 **Should you commit it?** ✅ Yes - team needs to know which extensions are used
 
-For complete reference, see [R2R CLI Configuration Guide](../../reference/r2r/commands/configuration.md).
+For complete reference, see [CLIE CLI Configuration Guide](../../reference/clie/commands/configuration.md).
 
 ## EAC Extension Configuration
 
@@ -317,7 +317,7 @@ EAC automatically adds these patterns to `.gitignore`:
 
 ```gitignore
 # EAC local configuration (never commit)
-.r2r/*.local.yml
+.clie/*.local.yml
 .eac/*.personal.yml
 ```
 
@@ -421,7 +421,7 @@ If you're using system defaults (most users):
 
 **Automatic upgrade:**
 
-- Install new version of r2r CLI
+- Install new version of clie CLI
 - System defaults automatically updated
 - No configuration changes needed
 
@@ -431,7 +431,7 @@ If you've created custom configuration files:
 
 **Manual review:**
 
-- Install new version of r2r CLI
+- Install new version of clie CLI
 - Review release notes for configuration changes
 - Update your custom files if needed
 
@@ -449,7 +449,7 @@ If you've created custom configuration files:
 
 ## Next Steps
 
-- **Next tutorial:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom r2r extension
+- **Next tutorial:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom clie extension
 - **Learn about specifications:** [BDD Fundamentals](../../explanation/specifications/concepts/bdd-fundamentals.md) - Understand Gherkin and BDD
 - **If customizing (advanced):** See reference documentation for configuration file formats
 

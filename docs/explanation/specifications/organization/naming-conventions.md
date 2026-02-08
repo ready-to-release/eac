@@ -150,8 +150,8 @@ Feature: cli_init-project
     @ov
     Scenario: Initialize in empty directory
       Given I am in an empty folder
-      When I run "r2r init"
-      Then a file named "r2r.yaml" should be created
+      When I run "cli init"
+      Then a file named "cli.yaml" should be created
 ```
 
 ---

@@ -13,9 +13,9 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Go modules - go/cli/r2r
+  # Go modules - go/cli/clie
   - package-ecosystem: "gomod"
-    directory: "/go/cli/r2r"
+    directory: "/go/cli/clie"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -101,9 +101,9 @@ updates:
   # Containers - Docker base images
   # ============================================================================
 
-  # Docker - ext-eac container (golang base image)
+  # Docker - eac-ext container (golang base image)
   - package-ecosystem: "docker"
-    directory: "/containers/ext-eac"
+    directory: "/containers/eac-ext"
     schedule:
       interval: "weekly"
       day: "monday"

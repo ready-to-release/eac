@@ -72,7 +72,7 @@ So that [business value]
 
 **Examples:**
 
-- "What if r2r.yaml already exists?"
+- "What if cli.yaml already exists?"
 - "Should we support a --force flag?"
 - "What happens with no network?"
 

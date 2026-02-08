@@ -26,8 +26,8 @@ This classification drives workflow automation, changelog location, and architec
 
 **Examples**:
 
-- `r2r-cli` - CLI binary for end users
-- `ext-eac` - VS Code extension
+- `clie-cli` - CLI binary for end users
+- `eac-ext` - VS Code extension
 - `docs` - HTML documentation site
 - `books` - PDF/EPUB documentation books
 
@@ -36,7 +36,7 @@ This classification drives workflow automation, changelog location, and architec
 ```yaml
 versioning:
   scheme: SemVer
-  changelog: release/r2r-cli/CHANGELOG.md
+  changelog: release/clie-cli/CHANGELOG.md
   release_type: published
 ```
 
@@ -58,7 +58,7 @@ versioning:
 
 - `eac-cli` - Go command implementations
 - `eac-mcp-server` - MCP server command bindings
-- `r2r-installer` - Installation scripts
+- `clie-installer` - Installation scripts
 - `vscode-commit` - VS Code commit message extension
 
 **Workflow**:
@@ -95,19 +95,19 @@ Even though internal modules aren't released, their changelogs serve important p
 
 **Examples**:
 
-- `r2r-eac-bundle` - Combined release of EAC CLI + extensions
+- `clie-eac-bundle` - Combined release of EAC CLI + extensions
 
 **Workflow**:
 
 ```yaml
 versioning:
   scheme: SemVer
-  changelog: release/r2r-eac-bundle/CHANGELOG.md
+  changelog: release/clie-eac-bundle/CHANGELOG.md
   release_type: bundle
 dependencies:
   build_deps:
-    - r2r-cli
-    - ext-eac
+    - clie-cli
+    - eac-ext
 ```
 
 **Bundle Version Strategy**:
@@ -156,8 +156,8 @@ The release type determines changelog location:
 
 | Release Type | Changelog Location              | Example                               |
 | ------------ | ------------------------------- | ------------------------------------- |
-| `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
-| `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/clie-cli/CHANGELOG.md`        |
+| `bundle`     | `release/<module>/CHANGELOG.md` | `release/clie-eac-bundle/CHANGELOG.md` |
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
@@ -174,13 +174,13 @@ The release type determines changelog location:
 Release workflows **automatically filter** by release type:
 
 ```yaml
-# .github/workflows/release-r2r-cli.yaml
+# .github/workflows/release-clie-cli.yaml
 jobs:
   approve:
     steps:
       - uses: ./.github/actions/approve-release
         with:
-          module: r2r-cli
+          module: clie-cli
           # Only proceeds if module.versioning.release_type == "published"
 ```
 
@@ -223,7 +223,7 @@ To promote an internal module to published status:
 3. **Create release workflow**:
 
    ```bash
-   cp .github/workflows/release-r2r-cli.yaml .github/workflows/release-my-module.yaml
+   cp .github/workflows/release-clie-cli.yaml .github/workflows/release-my-module.yaml
    # Update module references in the workflow
    ```
 

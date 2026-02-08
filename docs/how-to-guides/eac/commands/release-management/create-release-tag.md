@@ -46,7 +46,7 @@ graph LR
 
 ```bash
 # Update changelog to add version 1.2.4
-r2r release this my-module
+eac release this my-module
 
 # Commit and create PR
 git add release/my-module/CHANGELOG.md

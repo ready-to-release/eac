@@ -16,6 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/locking"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/core/adapters"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
@@ -41,12 +42,7 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 
 	// Check incremental cache first - if module/UoW is cached, verify artifacts and skip (blue in TUI)
 	// Parse component to build unitID for UoW cache lookup
-	parts := strings.SplitN(component, ":", 2)
-	compName := parts[0]
-	toolName := ""
-	if len(parts) == 2 {
-		toolName = parts[1]
-	}
+	compName, toolName := cmdframework.ParseComponent(component)
 
 	// Build UnitID for UoW-level cache lookup
 	unitID := workunit.UnitID{
@@ -56,44 +52,20 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		Tool:      toolName,
 	}
 
+	// Create pipeline for shared cache/lock/manifest orchestration
+	pipeline := &cmdframework.UnitPipeline{
+		CachedUoWs:             bctx.cachedUoWs,
+		ValidateCacheArtifacts: true,
+		OnCacheInvalidated:     func(ln string) { delete(bctx.cachedUoWs, ln) },
+		LockStyle:              cmdframework.LockUnlessDryRun,
+		LockConfigFn:           func(m, cd string) locking.Config { return locking.UnitBuildConfig(m, cd, paths.OutBuildRelPath) },
+		Tracker:                bctx.tracker,
+	}
+
 	// Check UoW-level cache
-	isCached := isUoWCached(bctx, unitID)
-	log.Debugf("[UOW-CACHE] Component worker for %s: unitID=%s, isCached=%v",
-		component, unitID.Longname(), isCached)
-
-	if isCached {
-		// In dry-run mode, just report what would happen
-		if ctx.Config.DryRun {
-			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", module)
-			return -1 // -1 = skipped/cached = blue in TUI
-		}
-
-		// Verify UoW manifest artifacts are intact before declaring cache hit
-		// If no manifests exist, trust the source hash check (which already passed)
-		// Only fail cache if manifests exist AND integrity check fails (actual tampering)
-		reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-
-		uowID := workunit.UnitID{
-			Action:    core.ActionBuild,
-			Module:    module,
-			Component: compName,
-			Tool:      toolName,
-		}
-		validationResult := reader.ValidateUoW(uowID)
-		if !validationResult.ManifestExists {
-			// No manifest - trust source hash, allow cache hit
-			log.Debugf("UoW cache hit (no manifest to verify)")
-			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
-			return -1
-		}
-		if !validationResult.Valid {
-			output.Writeln(logWriter, "UoW cache miss: artifacts invalid")
-			// Fall through to build - clear cache flag
-			delete(bctx.cachedUoWs, unitID.Longname())
-		} else {
-			output.Writeln(logWriter, "⏭️  Cached (verified)")
-			return -1
-		}
+	log.Debugf("[UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
+	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
+		return cacheResult
 	}
 
 	// Get module contract
@@ -138,29 +110,23 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 
 	// Skip if dependency and artifacts exist (--use-existing-depm)
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
-		if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested()) {
-			output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
-			return 0
+		cfg, err := config.Load(config.DefaultLoadOptions())
+		if err == nil {
+			if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested(), cfg) {
+				output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
+				return 0
+			}
 		}
 	}
 
 	// Acquire component-level lock with wait (skip in dry-run)
-	// Use component-level locking to allow parallel builds of different components within the same module
-	// Use dash separator to match UnitID.DirName() for consistent manifest paths
-	componentDir := compName
-	if builderName != "" {
-		componentDir = compName + "-" + builderName
+	componentDir := cmdframework.ComponentDir(compName, builderName)
+	release, err := pipeline.AcquireLock(ctx, module, componentDir)
+	if err != nil {
+		output.Writeln(logWriter, "Error: %v", err)
+		return 1
 	}
-	if !ctx.Config.DryRun {
-		lockCfg := locking.UnitBuildConfig(module, componentDir, paths.OutBuildRelPath)
-		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
-		if err != nil {
-			output.Writeln(logWriter, "Error: %v", err)
-			return 1
-		}
-		defer locking.ReleaseTracked(lockFile)
-	}
+	defer release()
 
 	// Get the handler for this component/tool
 	// For tool chain components, builderName is the tool name (e.g., "pdf-oci")
@@ -260,19 +226,14 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
 		// Record failure manifest with pre-computed input hash for debugging
-		if bctx.tracker != nil {
-			manifest := &coreoutput.UoWManifest{
-				ExitCode:   exitCode,
-				InputHash:  inputHash, // Use pre-computed hash from before build
-				ExecutedAt: time.Now().UTC(),
-				Artifacts:  nil,
-				OutputHash: "",
-				Version:    "1.0.0",
-			}
-			if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
-				log.Debugf("Failed to record UoW completion for %s: %v", unitID.Longname(), err)
-			}
-		}
+		pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
+			ExitCode:   exitCode,
+			InputHash:  inputHash,
+			ExecutedAt: time.Now().UTC(),
+			Artifacts:  nil,
+			OutputHash: "",
+			Version:    "1.0.0",
+		})
 		return exitCode
 	}
 	if exitCode == -1 {
@@ -289,24 +250,16 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	output.Writeln(logWriter, "✅ Component %s built successfully", compName)
 
 	// Record successful completion with artifacts
-	if bctx.tracker != nil {
-		artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
-
-		// Compute OutputHash from artifact hashes
-		outputHash := computeOutputHash(artifacts)
-
-		manifest := &coreoutput.UoWManifest{
-			ExitCode:   exitCode,
-			InputHash:  inputHash, // Use pre-computed hash from before build
-			ExecutedAt: time.Now().UTC(),
-			Artifacts:  artifacts,
-			OutputHash: outputHash,
-			Version:    "1.0.0",
-		}
-		if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
-			log.Debugf("Failed to record UoW completion for %s: %v", unitID.Longname(), err)
-		}
-	}
+	artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
+	outputHash := computeOutputHash(artifacts)
+	pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
+		ExitCode:   exitCode,
+		InputHash:  inputHash,
+		ExecutedAt: time.Now().UTC(),
+		Artifacts:  artifacts,
+		OutputHash: outputHash,
+		Version:    "1.0.0",
+	})
 
 	// NOTE: UoW manifests are written atomically via tracker.RecordComplete above
 	// No separate module-level state update needed

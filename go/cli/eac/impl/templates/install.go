@@ -44,10 +44,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
-// commandFlags defines valid flags for the templates install command.
-func init() {
-	registry.Register(TemplatesInstall)
-}
 
 // TemplatesInstall is the base handler for templates install commands
 // It handles unknown template names and shows helpful error messages.

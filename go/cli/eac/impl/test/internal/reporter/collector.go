@@ -246,24 +246,24 @@ func extractModuleFromFeaturePath(featurePath string) string {
 		normalized = strings.TrimPrefix(normalized, "../")
 	}
 
-	// Look for "specs/eac-*" or "specs/r2r-*" pattern
-	if strings.HasPrefix(normalized, "specs/eac-") || strings.HasPrefix(normalized, "specs/r2r-") {
+	// Look for "specs/eac-*" or "specs/clie-*" pattern
+	if strings.HasPrefix(normalized, "specs/eac-") || strings.HasPrefix(normalized, "specs/clie-") {
 		parts := strings.Split(strings.TrimPrefix(normalized, "specs/"), "/")
 		if len(parts) > 0 {
 			return parts[0]
 		}
 	}
 
-	// Look for "/go/eac/" or "/go/r2r/" pattern
-	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
+	// Look for "/go/eac/" or "/go/clie/" pattern
+	for _, boundary := range []string{"/go/eac/", "/go/clie/"} {
 		if strings.Contains(normalized, boundary) {
 			idx := strings.Index(normalized, boundary)
 			relativePath := normalized[idx+len(boundary):]
 			parts := strings.Split(relativePath, "/")
 			if len(parts) >= 1 && parts[0] != "" {
 				prefix := "eac"
-				if boundary == "/go/r2r/" {
-					prefix = "r2r"
+				if boundary == "/go/clie/" {
+					prefix = "clie"
 				}
 				return prefix + "-" + parts[0]
 			}

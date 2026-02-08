@@ -35,17 +35,12 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/fileutil"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/specs/export/formats"
 	"github.com/ready-to-release/eac/go/core/specs/gherkin"
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
-
-func init() {
-	registry.Register(ExportManual)
-}
 
 // Type aliases for backward compatibility
 type ManualTestExport = formats.ManualTestExport

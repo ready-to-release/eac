@@ -28,7 +28,7 @@ type InputHashProvider func(id workunit.UnitID) (string, error)
 
 // DependencyResolver returns the list of module dependencies for a given module.
 // Used to check cross-module build invalidation for modules that consume
-// outputs from other modules (e.g., ext-eac consuming eac-cli's binary).
+// outputs from other modules (e.g., eac-ext consuming eac-cli's binary).
 // Returns nil if the module has no dependencies or is not found.
 type DependencyResolver func(module string) []string
 
@@ -157,7 +157,7 @@ func (r *DiskOutputReader) checkUoWChanged(
 
 	// For build context, check if any dependency module was rebuilt since this
 	// manifest was created. This handles cross-module output consumption
-	// (e.g., ext-eac consuming a pre-built binary from eac-cli).
+	// (e.g., eac-ext consuming a pre-built binary from eac-cli).
 	if ctx == core.ActionBuild && depResolver != nil {
 		for _, depModule := range depResolver(id.Module) {
 			if r.hasNewerBuildManifest(depModule, manifest.ExecutedAt) {

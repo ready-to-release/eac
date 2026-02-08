@@ -27,16 +27,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // Semver regex: matches MAJOR.MINOR.PATCH where each is a non-negative integer
 // without leading zeros (except for 0 itself).
 var semverRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
-
-func init() {
-	registry.Register(ValidateReleaseVersion)
-}
 
 // ValidateReleaseVersion validates a release version string.
 func ValidateReleaseVersion() int {
@@ -79,7 +74,7 @@ func ValidateReleaseVersion() int {
 func printReleaseVersionUsage() {
 	log.Info("Validate release version format")
 	log.Info("")
-	log.Info("Usage: r2r validate release-version <version>")
+	log.Info("Usage: clie validate release-version <version>")
 	log.Info("")
 	log.Info("Validates that a version string is a valid semantic version.")
 	log.Info("")
@@ -89,8 +84,8 @@ func printReleaseVersionUsage() {
 	log.Info("  - No leading zeros (except 0 itself)")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r validate release-version 1.2.3      # Valid")
-	log.Info("  r2r validate release-version 0.1.0      # Valid")
-	log.Info("  r2r validate release-version v1.2.3     # Invalid: 'v' prefix")
-	log.Info("  r2r validate release-version 1.2        # Invalid: missing patch")
+	log.Info("  clie validate release-version 1.2.3      # Valid")
+	log.Info("  clie validate release-version 0.1.0      # Valid")
+	log.Info("  clie validate release-version v1.2.3     # Invalid: 'v' prefix")
+	log.Info("  clie validate release-version 1.2        # Invalid: missing patch")
 }

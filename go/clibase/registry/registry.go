@@ -4,6 +4,7 @@ package registry
 import (
 	"bufio"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -90,6 +91,26 @@ func Register(fn CommandFunc) {
 		panic("registry.Register: could not determine caller")
 	}
 
+	registerFromFile(fn, file)
+}
+
+// RegisterAll registers multiple command functions from a central table.
+// Each function's metadata is parsed from its definition source file
+// (not the caller's file), enabling consolidation of init() blocks.
+func RegisterAll(fns ...CommandFunc) {
+	for _, fn := range fns {
+		pc := reflect.ValueOf(fn).Pointer()
+		funcInfo := runtime.FuncForPC(pc)
+		if funcInfo == nil {
+			panic("registry.RegisterAll: could not determine function location")
+		}
+		file, _ := funcInfo.FileLine(pc)
+		registerFromFile(fn, file)
+	}
+}
+
+// registerFromFile registers a command using metadata parsed from the given source file.
+func registerFromFile(fn CommandFunc, file string) {
 	// Extract command metadata from file comments
 	metadata := extractCommandMetadata(file)
 	if metadata.CommandName == "" {

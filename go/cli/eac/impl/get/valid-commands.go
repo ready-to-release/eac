@@ -17,10 +17,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
-func init() {
-	registry.Register(GetValidCommands)
-}
-
 // validCommandsFlags defines valid flags for the get valid-commands command
 
 // CommandInfo represents a command with its description.

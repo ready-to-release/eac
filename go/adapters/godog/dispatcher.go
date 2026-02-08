@@ -64,10 +64,10 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 		origArgs := os.Args
 		origStdout := os.Stdout
 		origStderr := os.Stderr
-		origRepoRoot := os.Getenv("R2R_REPO_ROOT")
-		origContainerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-		origTestScope := os.Getenv("R2R_TEST_SCOPE")
-		origPWD := os.Getenv("R2R_PWD")
+		origRepoRoot := os.Getenv("CLIE_REPO_ROOT")
+		origContainerRoot := os.Getenv("CLIE_CONTAINER_ROOT")
+		origTestScope := os.Getenv("CLIE_TEST_SCOPE")
+		origPWD := os.Getenv("CLIE_PWD")
 		origWd, _ := os.Getwd()
 
 		// Restore everything on exit
@@ -75,10 +75,10 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 			os.Args = origArgs
 			os.Stdout = origStdout
 			os.Stderr = origStderr
-			os.Setenv("R2R_REPO_ROOT", origRepoRoot)
-			os.Setenv("R2R_CONTAINER_ROOT", origContainerRoot)
-			os.Setenv("R2R_TEST_SCOPE", origTestScope)
-			os.Setenv("R2R_PWD", origPWD)
+			os.Setenv("CLIE_REPO_ROOT", origRepoRoot)
+			os.Setenv("CLIE_CONTAINER_ROOT", origContainerRoot)
+			os.Setenv("CLIE_TEST_SCOPE", origTestScope)
+			os.Setenv("CLIE_PWD", origPWD)
 			os.Chdir(origWd)
 		}()
 
@@ -87,22 +87,22 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 
 		// Set environment for isolated test
 		if ctx.IsolatedDir != "" {
-			os.Setenv("R2R_REPO_ROOT", ctx.IsolatedDir)
-			os.Setenv("R2R_TEST_SCOPE", "1")
+			os.Setenv("CLIE_REPO_ROOT", ctx.IsolatedDir)
+			os.Setenv("CLIE_TEST_SCOPE", "1")
 			// Change working directory so commands that resolve relative paths
 			// (e.g., validate specs) operate within the isolated directory.
 			workDir := ctx.IsolatedDir
 			if ctx.CurrentWorkDir != "" {
 				workDir = ctx.CurrentWorkDir
 			}
-			// Set R2R_PWD for relative path resolution within the isolated directory.
+			// Set CLIE_PWD for relative path resolution within the isolated directory.
 			// Mirrors buildIsolationEnvironment() for subprocess execution.
 			// Without it, commands fall back to os.Getwd() which may differ on Windows.
-			os.Setenv("R2R_PWD", workDir)
+			os.Setenv("CLIE_PWD", workDir)
 			os.Chdir(workDir)
 		}
 		if ctx.OriginalRepoRoot != "" {
-			os.Setenv("R2R_CONTAINER_ROOT", ctx.OriginalRepoRoot)
+			os.Setenv("CLIE_CONTAINER_ROOT", ctx.OriginalRepoRoot)
 		}
 
 		// Capture stdout and stderr into a combined buffer

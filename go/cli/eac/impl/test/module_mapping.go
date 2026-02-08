@@ -166,11 +166,11 @@ func extractPathSuffix(pkgPath, moduleMoniker string) string {
 	// Map module monikers to their typical path patterns
 	// core -> go/eac/core
 	// eac-cli -> go/cli/eac
-	// r2r-cli -> go/cli/r2r
+	// clie-cli -> go/cli/clie
 
 	parts := strings.Split(moduleMoniker, "-")
 	if len(parts) >= 2 {
-		prefix := parts[0]                         // "eac" or "r2r"
+		prefix := parts[0]                         // "eac" or "clie"
 		modulePart := strings.Join(parts[1:], "-") // "core", "commands", etc.
 
 		// Try to find "go/<prefix>/<module>/" in the path

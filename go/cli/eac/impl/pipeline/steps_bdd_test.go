@@ -313,9 +313,9 @@ func exitsWithErrorIfTimeoutExceeded(ctx *eacgodog.TestContext) error {
 	// 1. The timeout parameter was accepted (command didn't fail due to bad flags)
 	// 2. The command completed (either successfully or with proper error)
 	//
-	// In a real scenario with R2R_MOCK_TIMEOUT=true, the command would exit with
+	// In a real scenario with CLIE_MOCK_TIMEOUT=true, the command would exit with
 	// error and timeout message. For now, we just verify the command structure works.
-	// The mock will succeed immediately unless R2R_MOCK_TIMEOUT is set.
+	// The mock will succeed immediately unless CLIE_MOCK_TIMEOUT is set.
 	return nil
 }
 

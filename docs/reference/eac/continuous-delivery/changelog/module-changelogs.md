@@ -22,8 +22,8 @@ See [Understanding Release Types](../release-types.md) for complete details.
 
 | Release Type | Changelog Location              | Example                               |
 | ------------ | ------------------------------- | ------------------------------------- |
-| `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
-| `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/clie-cli/CHANGELOG.md`        |
+| `bundle`     | `release/<module>/CHANGELOG.md` | `release/clie-eac-bundle/CHANGELOG.md` |
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
@@ -33,24 +33,24 @@ Changelog in dedicated release directory for public-facing releases:
 
 ```yaml
 modules:
-  - moniker: r2r-cli
+  - moniker: clie-cli
     versioning:
       scheme: SemVer
-      changelog: release/r2r-cli/CHANGELOG.md
+      changelog: release/clie-cli/CHANGELOG.md
       release_type: published
 ```
 
-**Full path:** `release/r2r-cli/CHANGELOG.md`
+**Full path:** `release/clie-cli/CHANGELOG.md`
 
 **Usage:** Published modules and bundles
 
 **Examples:**
 
-- `release/r2r-cli/CHANGELOG.md` (published)
-- `release/ext-eac/CHANGELOG.md` (published)
+- `release/clie-cli/CHANGELOG.md` (published)
+- `release/eac-ext/CHANGELOG.md` (published)
 - `release/docs/CHANGELOG.md` (published)
 - `release/books/CHANGELOG.md` (published)
-- `release/r2r-eac-bundle/CHANGELOG.md` (bundle)
+- `release/clie-eac-bundle/CHANGELOG.md` (bundle)
 
 ### Pattern 2: Module Root (Internal)
 
@@ -73,7 +73,7 @@ modules:
 
 - `go/cli/eac/CHANGELOG.md` (internal)
 - `go/mcp/commands/CHANGELOG.md` (internal)
-- `scripts/CHANGELOG.md` (internal - r2r-installer)
+- `scripts/CHANGELOG.md` (internal - clie-installer)
 - `typescript/vscode-commit/CHANGELOG.md` (internal)
 
 ## Module Changelog Structure
@@ -93,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Examples:**
 
-- `r2r CLI`
+- `clie CLI`
 - `EAC Commands Library`
 - `EAC Core Library`
 
@@ -236,8 +236,8 @@ Modules use either Semantic Versioning or Calendar Versioning:
 
 **Modules using SemVer:**
 
-- `r2r-cli` - CLI application
-- `ext-eac` - Docker extension
+- `clie-cli` - CLI application
+- `eac-ext` - Docker extension
 - `eac-commands` - Go library (not independently versioned)
 - `eac-core` - Go library (not independently versioned)
 
@@ -270,10 +270,10 @@ Each module versions independently:
 
 ```text
 Repository: 0.0.2
-r2r-cli: 1.2.0
+clie-cli: 1.2.0
 eac-commands: (not versioned - library)
 docs: 2025.12.01
-ext-eac: 0.3.0
+eac-ext: 0.3.0
 ```
 
 **Implication:** Module versions don't align with repository version
@@ -285,18 +285,18 @@ Footer links use module-specific tag format:
 ### SemVer Modules
 
 ```markdown
-[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/1.2.0...HEAD
-[1.2.0]: https://github.com/ready-to-release/eac/compare/r2r-cli/1.1.0...r2r-cli/1.2.0
-[1.1.0]: https://github.com/ready-to-release/eac/compare/r2r-cli/1.0.0...r2r-cli/1.1.0
-[1.0.0]: https://github.com/ready-to-release/eac/releases/tag/r2r-cli/1.0.0
+[Unreleased]: https://github.com/ready-to-release/eac/compare/clie-cli/1.2.0...HEAD
+[1.2.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.1.0...clie-cli/1.2.0
+[1.1.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.0.0...clie-cli/1.1.0
+[1.0.0]: https://github.com/ready-to-release/eac/releases/tag/clie-cli/1.0.0
 ```
 
 **Tag format:** `{moniker}/{version}`
 
 **Examples:**
 
-- `r2r-cli/1.2.0`
-- `ext-eac/0.3.0`
+- `clie-cli/1.2.0`
+- `eac-ext/0.3.0`
 
 ### CalVer Modules
 
@@ -351,8 +351,8 @@ Add changes to Unreleased section as you work:
 2. **Update footer links:**
 
    ```markdown
-   [Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/1.3.0...HEAD
-   [1.3.0]: https://github.com/ready-to-release/eac/compare/r2r-cli/1.2.0...r2r-cli/1.3.0
+   [Unreleased]: https://github.com/ready-to-release/eac/compare/clie-cli/1.3.0...HEAD
+   [1.3.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.2.0...clie-cli/1.3.0
    ```
 
 ### Automated Generation
@@ -361,13 +361,13 @@ Generate module changelog from commits:
 
 ```bash
 # Generate changelog for a module
-eac release changelog r2r-cli
+eac release changelog clie-cli
 
 # Update existing changelog
-eac release changelog r2r-cli --update
+eac release changelog clie-cli --update
 
 # Preview without writing
-eac release changelog r2r-cli --dry-run
+eac release changelog clie-cli --dry-run
 ```
 
 **Filtering:**
@@ -385,7 +385,7 @@ When releasing a module version:
 
 ```bash
 # Review and finalize changelog
-eac release this r2r-cli
+eac release this clie-cli
 ```
 
 **Actions:**
@@ -398,15 +398,15 @@ eac release this r2r-cli
 ### Step 2: Commit Changes
 
 ```bash
-git add release/r2r-cli/CHANGELOG.md
-git commit -m "docs(r2r-cli): update changelog for v1.3.0"
+git add release/clie-cli/CHANGELOG.md
+git commit -m "docs(clie-cli): update changelog for v1.3.0"
 ```
 
 ### Step 3: Create Tag
 
 ```bash
-git tag r2r-cli/1.3.0
-git push origin r2r-cli/1.3.0
+git tag clie-cli/1.3.0
+git push origin clie-cli/1.3.0
 ```
 
 ### Step 4: Release Workflow
@@ -414,11 +414,11 @@ git push origin r2r-cli/1.3.0
 Tag push triggers release workflow:
 
 ```yaml
-# .github/workflows/release-r2r-cli.yaml
+# .github/workflows/release-clie-cli.yaml
 on:
   push:
     tags:
-      - "r2r-cli/*"
+      - "clie-cli/*"
 ```
 
 **Actions:**
@@ -433,8 +433,8 @@ on:
 
 | Module            | Changelog Location                          | Versioning | Current Version |
 | ----------------- | ------------------------------------------- | ---------- | --------------- |
-| r2r-cli           | `release/r2r-cli/CHANGELOG.md`              | SemVer     | (varies)        |
-| ext-eac           | `release/ext-eac/CHANGELOG.md`              | SemVer     | (varies)        |
+| clie-cli           | `release/clie-cli/CHANGELOG.md`              | SemVer     | (varies)        |
+| eac-ext           | `release/eac-ext/CHANGELOG.md`              | SemVer     | (varies)        |
 | docs              | `release/docs/CHANGELOG.md`                 | CalVer     | (varies)        |
 | books             | `release/books/CHANGELOG.md`                | CalVer     | (varies)        |
 | vscode-commit     | `typescript/vscode-commit/CHANGELOG.md`     | SemVer     | (varies)        |
@@ -459,7 +459,7 @@ Supporting modules don't maintain separate changelogs as they're not independent
 
 ```bash
 # Get latest version from module changelog
-eac release get-version r2r-cli
+eac release get-version clie-cli
 ```
 
 **Output:** `1.3.0` (latest version from CHANGELOG.md)
@@ -468,7 +468,7 @@ eac release get-version r2r-cli
 
 ```bash
 # Check if module has unreleased changes
-eac release pending r2r-cli
+eac release pending clie-cli
 ```
 
 **Output:**
@@ -480,7 +480,7 @@ eac release pending r2r-cli
 
 ```bash
 # Validate changelog format and structure
-eac validate release r2r-cli
+eac validate release clie-cli
 ```
 
 **Checks:**

@@ -22,12 +22,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioCreate)
-}
 
 // DrawioCreate creates a new .drawio.png file.
 func DrawioCreate() int {

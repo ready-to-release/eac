@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var reRelativePathLink = regexp.MustCompile(`(!?\[.+?\]\()(\.\./)+(.*?)(\)\s*(?:\{[^}]*\})?)`)
+
 // ReplaceOutsideCodeBlocks replaces old with new, but only outside fenced code blocks.
 // It replaces within link contexts (markdown links/images, HTML src/href attributes)
 // to prevent corrupting plain text.
@@ -73,10 +75,8 @@ func ReplaceMarkdownLinks(content, linkPath string, stripLink bool) string {
 // AdjustRelativePaths adjusts all relative paths in content.
 // Only adjusts links that go OUTSIDE the content tree (more ../ than fileDepth).
 func AdjustRelativePaths(content string, depthChange, fileDepth int) string {
-	linkRe := regexp.MustCompile(`(!?\[.+?\]\()(\.\./)+(.*?)(\)\s*(?:\{[^}]*\})?)`)
-
-	return linkRe.ReplaceAllStringFunc(content, func(match string) string {
-		submatches := linkRe.FindStringSubmatch(match)
+	return reRelativePathLink.ReplaceAllStringFunc(content, func(match string) string {
+		submatches := reRelativePathLink.FindStringSubmatch(match)
 		if len(submatches) < 5 {
 			return match
 		}

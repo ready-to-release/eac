@@ -24,13 +24,13 @@ func init() {
 }
 
 // ResolveHostRepoRoot returns the correct repo root path for Docker operations.
-// In Docker-in-Docker mode, uses R2R_HOST_REPOROOT environment variable if set.
+// In Docker-in-Docker mode, uses CLIE_HOST_REPOROOT environment variable if set.
 // Exported for use by mkdocs/pdf.go handler.
 func ResolveHostRepoRoot(containerRoot string, logWriter io.Writer) string {
 	if !IsDockerInDocker() {
 		return containerRoot
 	}
-	if hostRoot := os.Getenv(environments.EnvR2RHostRepoRoot); hostRoot != "" {
+	if hostRoot := os.Getenv(environments.EnvCLIEHostRepoRoot); hostRoot != "" {
 		Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
 		return hostRoot
 	}
@@ -449,7 +449,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 
 	// In Docker-in-Docker mode, run as current user to avoid permission issues
 	// This ensures files created in the container have the same ownership as the host
-	// We use the current process's UID/GID which matches the ext-eac container user
+	// We use the current process's UID/GID which matches the eac-ext container user
 	if isDinD {
 		uid := os.Getuid()
 		gid := os.Getgid()

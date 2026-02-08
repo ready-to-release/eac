@@ -19,12 +19,12 @@
 // Long:   pipeline await-release                              # Auto-detect SHA
 // Long:   pipeline await-release --sha abc123                 # Explicit SHA
 // Long:   pipeline await-release --timeout 300                # 5 minute timeout
-// Long:   pipeline await-release --exclude r2r-eac-bundle     # Exclude bundle workflow
+// Long:   pipeline await-release --exclude clie-eac-bundle     # Exclude bundle workflow
 // Flag.sha: type=string, usage=Commit SHA to filter runs (auto-detected if not provided)
 // Flag.timeout: type=int, default=600, usage=Maximum wait time in seconds (default: 600)
 // Flag.interval: type=int, default=30, usage=Poll interval in seconds (default: 30)
 // Flag.pattern: type=string, default=release-*.yaml, usage=Workflow file pattern to match
-// Flag.exclude: type=string, usage=Workflow name substring to exclude (e.g., r2r-eac-bundle)
+// Flag.exclude: type=string, usage=Workflow name substring to exclude (e.g., clie-eac-bundle)
 package pipeline
 
 import (
@@ -32,13 +32,8 @@ import (
 	"strconv"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineAwaitRelease)
-}
 
 func PipelineAwaitRelease() int {
 	// Get workspace root

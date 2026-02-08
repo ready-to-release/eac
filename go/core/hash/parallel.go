@@ -182,8 +182,9 @@ func FilesParallel(ctx context.Context, workspaceRoot string, files []string, op
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// hashSingleFile reads a file and returns the bytes that would be written to the hasher.
-// This matches the sequential Files() behavior: filename + "\n" + file content.
+// hashSingleFile computes a per-file hash by streaming content through sha256.
+// Returns the 32-byte hash of (filename + "\n" + file content).
+// Streams file content via io.Copy to avoid loading entire files into memory.
 func hashSingleFile(workspaceRoot, file string) ([]byte, error) {
 	path := filepath.Join(workspaceRoot, file)
 	f, err := os.Open(path)
@@ -192,20 +193,11 @@ func hashSingleFile(workspaceRoot, file string) ([]byte, error) {
 	}
 	defer f.Close()
 
-	// Build the data that would be written to hasher
-	// First: filename + newline
-	header := []byte(file + "\n")
-
-	// Then: file content
-	content, err := io.ReadAll(f)
-	if err != nil {
+	h := sha256.New()
+	h.Write([]byte(file + "\n"))
+	if _, err := io.Copy(h, f); err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", file, err)
 	}
 
-	// Combine header and content
-	result := make([]byte, len(header)+len(content))
-	copy(result, header)
-	copy(result[len(header):], content)
-
-	return result, nil
+	return h.Sum(nil), nil
 }

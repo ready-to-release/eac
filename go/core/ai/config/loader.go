@@ -38,7 +38,7 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	}
 
 	// Try user override first (/var/task/.eac/ai-config.yml)
-	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
+	configPath := filepath.Join(l.workspaceRoot, paths.CLIEDir, paths.EACDir, paths.AIConfigFilename)
 	data, err := os.ReadFile(configPath)
 
 	// If not found, fall back to system default (/app/.eac/ai-config.yml)
@@ -48,7 +48,7 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 			// Local dev mode - try workspace root
 			systemRoot = l.workspaceRoot
 		}
-		systemPath := filepath.Join(systemRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
+		systemPath := filepath.Join(systemRoot, paths.CLIEDir, paths.EACDir, paths.AIConfigFilename)
 		data, err = os.ReadFile(systemPath)
 
 		// If still not found, try contracts default (ultimate fallback)
@@ -95,7 +95,7 @@ func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
 
 // LoadPrompt loads a prompt file from ai/prompts/<name>.md.
 func (l *AIConfigLoader) LoadPrompt(promptName string) (string, error) {
-	promptPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, promptsSubdir, promptName)
+	promptPath := filepath.Join(l.workspaceRoot, paths.CLIEDir, paths.EACDir, paths.AIDir, promptsSubdir, promptName)
 	data, err := os.ReadFile(promptPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read prompt %s: %w", promptPath, err)
@@ -115,7 +115,7 @@ func (l *AIConfigLoader) LoadData(typeName, dataKey string) ([]byte, error) {
 		return nil, fmt.Errorf("unknown data key %s for type %s", dataKey, typeName)
 	}
 
-	fullPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, dataPath)
+	fullPath := filepath.Join(l.workspaceRoot, paths.CLIEDir, paths.EACDir, dataPath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read data file %s: %w", fullPath, err)
@@ -242,13 +242,13 @@ func (cl *ContractLoader) LoadPrompt(promptName, fallback string) (string, strin
 
 	// Priority 2: Team override (.eac/templates/ai/<type>/<name>)
 	// Note: Team override uses "ai/<type>" path structure
-	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, paths.AIDir, cl.typeName, promptName)
+	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.CLIEDir, paths.EACDir, paths.TemplatesDir, paths.AIDir, cl.typeName, promptName)
 	if content, err := os.ReadFile(teamOverridePath); err == nil {
 		return string(content), "team override", nil
 	}
 
 	// Priority 3: System default from distribution root
-	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
+	// In container: uses CLIE_CONTAINER_ROOT (/app where Dockerfile copies templates)
 	// In local dev: uses workspaceRoot (repo root where templates/ exists)
 	// This ensures templates work in both container and development scenarios
 	// Note: System default uses "ai/<type>" path structure
@@ -306,7 +306,7 @@ func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error
 
 // GetContractPath returns the path to the AI config directory.
 func (cl *ContractLoader) GetContractPath() string {
-	return filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, cl.typeName)
+	return filepath.Join(cl.loader.workspaceRoot, paths.CLIEDir, paths.EACDir, paths.AIDir, cl.typeName)
 }
 
 // IsAI returns true (all ContractLoader instances are for AI configs).

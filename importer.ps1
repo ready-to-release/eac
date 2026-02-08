@@ -80,45 +80,45 @@ git:
     Write-Host "   File: .eac\ai-provider.personal.yml" -ForegroundColor Gray
 }
 
-# Create r2r alias pointing to the OS-specific binary
-# Binary is now at out/build/r2r-cli/go/ (component-level output structure)
-$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\r2r-cli\go-go"
+# Create clie alias pointing to the OS-specific binary
+# Binary is now at out/build/clie-cli/go/ (component-level output structure)
+$ClieBinaryPath = Join-Path $PSScriptRoot "out\build\clie-cli\go-go"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
-    $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows-amd64.exe"
+    $ClieBinary = Join-Path $ClieBinaryPath "clie-windows-amd64.exe"
 } elseif ($IsMacOS) {
     # Check architecture for macOS
     $arch = uname -m
     if ($arch -eq "arm64") {
-        $R2rBinary = Join-Path $R2rBinaryPath "r2r-darwin-arm64"
+        $ClieBinary = Join-Path $ClieBinaryPath "clie-darwin-arm64"
     } else {
-        $R2rBinary = Join-Path $R2rBinaryPath "r2r-darwin-amd64"
+        $ClieBinary = Join-Path $ClieBinaryPath "clie-darwin-amd64"
     }
 } else {
     # Linux - check architecture
     $arch = uname -m
     if ($arch -eq "aarch64" -or $arch -eq "arm64") {
-        $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux-arm64"
+        $ClieBinary = Join-Path $ClieBinaryPath "clie-linux-arm64"
     } else {
-        $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux-amd64"
+        $ClieBinary = Join-Path $ClieBinaryPath "clie-linux-amd64"
     }
 }
 
-if (Test-Path $R2rBinary) {
+if (Test-Path $ClieBinary) {
     # Create a function that invokes the binary (more reliable than Set-Alias for exe files)
     $funcDef = @"
-function global:r2r {
-    & "$R2rBinary" `$args
+function global:clie {
+    & "$ClieBinary" `$args
 }
 function global:eac {
-    & "$R2rBinary" run eac `$args
+    & "$ClieBinary" run eac `$args
 }
 "@
     Invoke-Expression $funcDef
-    Write-Host "✅ r2r alias created -> $R2rBinary <args>" -ForegroundColor Green
-    Write-Host "✅ eac alias created -> r2r eac <args>" -ForegroundColor Green
+    Write-Host "✅ clie alias created -> $ClieBinary <args>" -ForegroundColor Green
+    Write-Host "✅ eac alias created -> clie eac <args>" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  r2r binary not found at: $R2rBinary" -ForegroundColor Yellow
-    Write-Host "   Run 'build r2r-cli' or 'go run ./go/cli/eac build r2r-cli' to build it" -ForegroundColor Gray
+    Write-Host "⚠️  clie binary not found at: $ClieBinary" -ForegroundColor Yellow
+    Write-Host "   Run 'build clie-cli' or 'go run ./go/cli/eac build clie-cli' to build it" -ForegroundColor Gray
 }
 
 # Create top-level command aliases unless -NoAlias specified

@@ -56,6 +56,10 @@ var log = logging.C()
 // commandFlags defines valid flags for the create design command
 
 func CreateDesign() int {
+	return createDesign(defaultDeps())
+}
+
+func createDesign(deps *Deps) int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
@@ -140,7 +144,7 @@ func CreateDesign() int {
 
 // DesignConfig holds configuration for design create command.
 type DesignConfig struct {
-	Module         string // Module name (e.g., "r2r-cli", "commands")
+	Module         string // Module name (e.g., "clie-cli", "commands")
 	SourcePath     string // Path to source code (e.g., "go/cli/eac")
 	OutputPath     string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath     string // Custom AI prompt file path (empty = default prompt)
@@ -277,7 +281,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 
 	// Validate we have a module name
 	if len(positionalArgs) == 0 {
-		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design r2r-cli")
+		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design clie-cli")
 	}
 
 	return positionalArgs[0], cmdFlags, nil
@@ -304,7 +308,7 @@ func validateModuleExists(config *DesignConfig, out *design.Output) error {
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
-		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design create <module>\nExample: design create r2r-cli (analyzes code in go/cli/r2r/)",
+		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design create <module>\nExample: design create clie-cli (analyzes code in go/cli/clie/)",
 			config.Module, config.SourcePath)
 	}
 

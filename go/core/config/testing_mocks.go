@@ -149,20 +149,20 @@ func loadFromEnvironment() TestingMocksConfig {
 	return TestingMocksConfig{
 		Mocks: MocksConfig{
 			AI: AIMockConfig{
-				Enabled: parseBool(os.Getenv(environments.EnvR2RMockAI)),
-				MockDir: os.Getenv(environments.EnvR2RMockAIDir),
+				Enabled: parseBool(os.Getenv(environments.EnvCLIEMockAI)),
+				MockDir: os.Getenv(environments.EnvCLIEMockAIDir),
 			},
 			Security: SecurityMockConfig{
-				Enabled: parseBool(os.Getenv(environments.EnvR2RMockSecurity)),
-				Tools:   parseTools(os.Getenv(environments.EnvR2RMockSecurityTools)),
+				Enabled: parseBool(os.Getenv(environments.EnvCLIEMockSecurity)),
+				Tools:   parseTools(os.Getenv(environments.EnvCLIEMockSecurityTools)),
 			},
 			Docker: DockerMockConfig{
-				Enabled: parseBool(os.Getenv(environments.EnvR2RMockDocker)),
+				Enabled: parseBool(os.Getenv(environments.EnvCLIEMockDocker)),
 			},
 			GitHub: GitHubMockConfig{
-				// Support both R2R_MOCK_GITHUB and R2R_MOCK_GITHUB_CLI for backward compatibility
-				Enabled:     parseBool(os.Getenv(environments.EnvR2RMockGitHub)) || parseBool(os.Getenv(environments.EnvR2RMockGitHubCLI)),
-				NoWorkflows: parseBool(os.Getenv(environments.EnvR2RMockNoWorkflows)) || parseBool(os.Getenv(environments.EnvR2RMockGitHubNoWorkflows)),
+				// Support both CLIE_MOCK_GITHUB and CLIE_MOCK_GITHUB_CLI for backward compatibility
+				Enabled:     parseBool(os.Getenv(environments.EnvCLIEMockGitHub)) || parseBool(os.Getenv(environments.EnvCLIEMockGitHubCLI)),
+				NoWorkflows: parseBool(os.Getenv(environments.EnvCLIEMockNoWorkflows)) || parseBool(os.Getenv(environments.EnvCLIEMockGitHubNoWorkflows)),
 			},
 		},
 	}
@@ -342,29 +342,29 @@ func (c *TestingMocksConfig) ToEnvironmentVariables() []string {
 	var env []string
 
 	if c.Mocks.AI.Enabled {
-		env = append(env, "R2R_MOCK_AI=true")
+		env = append(env, "CLIE_MOCK_AI=true")
 		if c.Mocks.AI.MockDir != "" {
-			env = append(env, fmt.Sprintf("R2R_MOCK_AI_DIR=%s", c.Mocks.AI.MockDir))
+			env = append(env, fmt.Sprintf("CLIE_MOCK_AI_DIR=%s", c.Mocks.AI.MockDir))
 		}
 	}
 
 	if c.Mocks.Security.Enabled {
-		env = append(env, "R2R_MOCK_SECURITY=true")
+		env = append(env, "CLIE_MOCK_SECURITY=true")
 		if len(c.Mocks.Security.Tools) > 0 {
-			env = append(env, fmt.Sprintf("R2R_MOCK_SECURITY_TOOLS=%s", strings.Join(c.Mocks.Security.Tools, ",")))
+			env = append(env, fmt.Sprintf("CLIE_MOCK_SECURITY_TOOLS=%s", strings.Join(c.Mocks.Security.Tools, ",")))
 		}
 	}
 
 	if c.Mocks.Docker.Enabled {
-		env = append(env, "R2R_MOCK_DOCKER=true")
+		env = append(env, "CLIE_MOCK_DOCKER=true")
 		// Legacy support
-		env = append(env, "R2R_MOCK_STRUCTURIZR=true")
+		env = append(env, "CLIE_MOCK_STRUCTURIZR=true")
 	}
 
 	if c.Mocks.GitHub.Enabled {
-		env = append(env, "R2R_MOCK_GITHUB_CLI=true")
+		env = append(env, "CLIE_MOCK_GITHUB_CLI=true")
 		if c.Mocks.GitHub.NoWorkflows {
-			env = append(env, "R2R_MOCK_NO_WORKFLOWS=true")
+			env = append(env, "CLIE_MOCK_NO_WORKFLOWS=true")
 		}
 	}
 

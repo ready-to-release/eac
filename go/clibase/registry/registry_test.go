@@ -19,8 +19,8 @@ func TestParseParentCommandMetadata(t *testing.T) {
 // Group.Configuration: config
 // Group.Repository Structure: modules, dependencies, execution-order
 // Group.Files and Changes: files, changed-modules
-// Example: r2r get modules
-// Example: r2r get dependencies --format=yaml
+// Example: clie get modules
+// Example: clie get dependencies --format=yaml
 package test
 `
 	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
@@ -70,8 +70,8 @@ package test
 
 	// Test Examples
 	expectedExamples := []string{
-		"r2r get modules",
-		"r2r get dependencies --format=yaml",
+		"clie get modules",
+		"clie get dependencies --format=yaml",
 	}
 	if len(metadata.Examples) != len(expectedExamples) {
 		t.Errorf("Expected %d examples, got %d", len(expectedExamples), len(metadata.Examples))
@@ -136,7 +136,7 @@ func TestCommandRegistrationParentFields(t *testing.T) {
 		Subcommands: []SubcommandGroup{
 			{Name: "Configuration", Subcommands: []string{"config"}},
 		},
-		Examples: []string{"r2r get modules"},
+		Examples: []string{"clie get modules"},
 	}
 
 	if !reg.IsParent {

@@ -20,7 +20,7 @@ eac validate risk-catalog
 eac validate risk-profile
 
 # Create risk artifacts
-r2r create risk-profile assessment.md
+clie create risk-profile assessment.md
 eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ```
 

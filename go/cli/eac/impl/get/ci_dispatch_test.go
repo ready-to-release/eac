@@ -450,7 +450,7 @@ func TestParseModuleList_EdgeCases(t *testing.T) {
 		{"  mod1  mod2  ", []string{"mod1", "mod2"}},
 		{"mod-with-dashes", []string{"mod-with-dashes"}},
 		{"mod_with_underscores", []string{"mod_with_underscores"}},
-		{"core eac-cli r2r-cli", []string{"core", "eac-cli", "r2r-cli"}},
+		{"core eac-cli clie-cli", []string{"core", "eac-cli", "clie-cli"}},
 	}
 
 	for _, tt := range tests {
@@ -662,65 +662,65 @@ func TestComputeCIDispatchOrder_NoDeps(t *testing.T) {
 }
 
 func TestComputeCIDispatchOrder_SimpleDep(t *testing.T) {
-	// ext-eac depends on r2r-cli
-	modules := []string{"ext-eac", "r2r-cli", "core"}
+	// eac-ext depends on clie-cli
+	modules := []string{"eac-ext", "clie-cli", "core"}
 	ciDeps := map[string][]string{
-		"ext-eac": {"r2r-cli"},
+		"eac-ext": {"clie-cli"},
 	}
 
 	result := computeCIDispatchOrder(modules, ciDeps)
 
-	// r2r-cli must come before ext-eac
-	r2rIdx := indexOf(result, "r2r-cli")
-	extIdx := indexOf(result, "ext-eac")
-	if r2rIdx == -1 || extIdx == -1 {
+	// clie-cli must come before eac-ext
+	clieIdx := indexOf(result, "clie-cli")
+	extIdx := indexOf(result, "eac-ext")
+	if clieIdx == -1 || extIdx == -1 {
 		t.Fatalf("missing modules in result: %v", result)
 	}
-	if r2rIdx >= extIdx {
-		t.Errorf("r2r-cli (idx %d) should come before ext-eac (idx %d), got %v", r2rIdx, extIdx, result)
+	if clieIdx >= extIdx {
+		t.Errorf("clie-cli (idx %d) should come before eac-ext (idx %d), got %v", clieIdx, extIdx, result)
 	}
 }
 
 func TestComputeCIDispatchOrder_MultipleDepsOnSameModule(t *testing.T) {
-	// ext-eac, r2r-installer, implicit-cli all depend on r2r-cli
-	modules := []string{"ext-eac", "r2r-installer", "implicit-cli", "r2r-cli", "core"}
+	// eac-ext, clie-installer, implicit-cli all depend on clie-cli
+	modules := []string{"eac-ext", "clie-installer", "implicit-cli", "clie-cli", "core"}
 	ciDeps := map[string][]string{
-		"ext-eac":       {"r2r-cli"},
-		"r2r-installer": {"r2r-cli"},
-		"implicit-cli":  {"r2r-cli"},
+		"eac-ext":       {"clie-cli"},
+		"clie-installer": {"clie-cli"},
+		"implicit-cli":  {"clie-cli"},
 	}
 
 	result := computeCIDispatchOrder(modules, ciDeps)
 
-	// r2r-cli must come before all three dependents
-	r2rIdx := indexOf(result, "r2r-cli")
-	for _, dep := range []string{"ext-eac", "r2r-installer", "implicit-cli"} {
+	// clie-cli must come before all three dependents
+	clieIdx := indexOf(result, "clie-cli")
+	for _, dep := range []string{"eac-ext", "clie-installer", "implicit-cli"} {
 		depIdx := indexOf(result, dep)
 		if depIdx == -1 {
 			t.Fatalf("missing %s in result: %v", dep, result)
 		}
-		if r2rIdx >= depIdx {
-			t.Errorf("r2r-cli (idx %d) should come before %s (idx %d), got %v", r2rIdx, dep, depIdx, result)
+		if clieIdx >= depIdx {
+			t.Errorf("clie-cli (idx %d) should come before %s (idx %d), got %v", clieIdx, dep, depIdx, result)
 		}
 	}
 }
 
 func TestComputeCIDispatchOrder_DepNotInDispatchSet(t *testing.T) {
-	// ext-eac depends on r2r-cli, but r2r-cli is NOT in dispatch set
+	// eac-ext depends on clie-cli, but clie-cli is NOT in dispatch set
 	// (maybe it was skipped because it has valid CI)
-	modules := []string{"ext-eac", "core"}
+	modules := []string{"eac-ext", "core"}
 	ciDeps := map[string][]string{
-		"ext-eac": {"r2r-cli"}, // r2r-cli not in modules list
+		"eac-ext": {"clie-cli"}, // clie-cli not in modules list
 	}
 
 	result := computeCIDispatchOrder(modules, ciDeps)
 
-	// ext-eac should still be included, dep is ignored since not in dispatch set
+	// eac-ext should still be included, dep is ignored since not in dispatch set
 	if len(result) != 2 {
 		t.Errorf("expected 2 modules, got %d: %v", len(result), result)
 	}
-	if indexOf(result, "ext-eac") == -1 {
-		t.Errorf("ext-eac should be in result: %v", result)
+	if indexOf(result, "eac-ext") == -1 {
+		t.Errorf("eac-ext should be in result: %v", result)
 	}
 }
 
@@ -748,10 +748,10 @@ func TestComputeCIDispatchOrder_SingleModule(t *testing.T) {
 
 func TestComputeCIDispatchOrder_Deterministic(t *testing.T) {
 	// Multiple runs should produce the same order
-	modules := []string{"ext-eac", "r2r-cli", "core", "docs", "r2r-installer"}
+	modules := []string{"eac-ext", "clie-cli", "core", "docs", "clie-installer"}
 	ciDeps := map[string][]string{
-		"ext-eac":       {"r2r-cli"},
-		"r2r-installer": {"r2r-cli"},
+		"eac-ext":       {"clie-cli"},
+		"clie-installer": {"clie-cli"},
 	}
 
 	first := computeCIDispatchOrder(modules, ciDeps)
@@ -786,58 +786,58 @@ func TestComputeCIDispatchOrder_ChainedDeps(t *testing.T) {
 func TestFilterCIDispatch_OrderedByDeps(t *testing.T) {
 	// Test that filterCIDispatch returns modules in dependency order
 	mockStatus := map[string]bool{
-		"r2r-cli": false, // needs dispatch
-		"ext-eac": false, // needs dispatch, depends on r2r-cli
+		"clie-cli": false, // needs dispatch
+		"eac-ext": false, // needs dispatch, depends on clie-cli
 		"core":    false, // needs dispatch, no deps
 	}
 
 	ciDeps := map[string][]string{
-		"ext-eac": {"r2r-cli"},
+		"eac-ext": {"clie-cli"},
 	}
 
-	result, err := filterCIDispatchWithDeps("", "r2r-cli ext-eac core", "abc123", mockStatus, "", ciDeps)
+	result, err := filterCIDispatchWithDeps("", "clie-cli eac-ext core", "abc123", mockStatus, "", ciDeps)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// r2r-cli should come before ext-eac in dispatch list
-	r2rIdx := indexOf(result.Dispatch, "r2r-cli")
-	extIdx := indexOf(result.Dispatch, "ext-eac")
+	// clie-cli should come before eac-ext in dispatch list
+	clieIdx := indexOf(result.Dispatch, "clie-cli")
+	extIdx := indexOf(result.Dispatch, "eac-ext")
 
-	if r2rIdx == -1 || extIdx == -1 {
+	if clieIdx == -1 || extIdx == -1 {
 		t.Fatalf("missing modules in dispatch: %v", result.Dispatch)
 	}
-	if r2rIdx >= extIdx {
-		t.Errorf("r2r-cli should come before ext-eac, got %v", result.Dispatch)
+	if clieIdx >= extIdx {
+		t.Errorf("clie-cli should come before eac-ext, got %v", result.Dispatch)
 	}
 }
 
 func TestFilterCIDispatch_CIDependenciesField(t *testing.T) {
 	// Test that CIDependencies field is populated correctly
 	mockStatus := map[string]bool{
-		"r2r-cli": false,
-		"ext-eac": false,
+		"clie-cli": false,
+		"eac-ext": false,
 	}
 
 	ciDeps := map[string][]string{
-		"ext-eac": {"r2r-cli"},
+		"eac-ext": {"clie-cli"},
 	}
 
-	result, err := filterCIDispatchWithDeps("", "r2r-cli ext-eac", "abc123", mockStatus, "", ciDeps)
+	result, err := filterCIDispatchWithDeps("", "clie-cli eac-ext", "abc123", mockStatus, "", ciDeps)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// CIDependencies should contain ext-eac -> [r2r-cli] (filtered to dispatch set)
+	// CIDependencies should contain eac-ext -> [clie-cli] (filtered to dispatch set)
 	if result.CIDependencies == nil {
 		t.Fatal("CIDependencies should not be nil")
 	}
-	deps, ok := result.CIDependencies["ext-eac"]
+	deps, ok := result.CIDependencies["eac-ext"]
 	if !ok {
-		t.Errorf("expected ext-eac in CIDependencies, got %v", result.CIDependencies)
+		t.Errorf("expected eac-ext in CIDependencies, got %v", result.CIDependencies)
 	}
-	if len(deps) != 1 || deps[0] != "r2r-cli" {
-		t.Errorf("expected ext-eac deps [r2r-cli], got %v", deps)
+	if len(deps) != 1 || deps[0] != "clie-cli" {
+		t.Errorf("expected eac-ext deps [clie-cli], got %v", deps)
 	}
 }
 
@@ -862,16 +862,16 @@ func TestFilterCIDispatch_TotalModulesField(t *testing.T) {
 func TestCIDispatchResult_NewFields(t *testing.T) {
 	// Test that the new fields are properly populated
 	result := CIDispatchResult{
-		Dispatch: []string{"core", "r2r-cli", "ext-eac"},
+		Dispatch: []string{"core", "clie-cli", "eac-ext"},
 		Skipped:  []string{"docs"},
 		Reasons: map[string]string{
 			"core":    "directly_changed",
-			"r2r-cli": "mock:no_valid_ci",
-			"ext-eac": "mock:no_valid_ci",
+			"clie-cli": "mock:no_valid_ci",
+			"eac-ext": "mock:no_valid_ci",
 			"docs":    "mock:valid_ci_at_head",
 		},
 		CIDependencies: map[string][]string{
-			"ext-eac": {"r2r-cli"},
+			"eac-ext": {"clie-cli"},
 		},
 		HeadSHA:      "abc123def456",
 		TotalModules: 4,
@@ -889,9 +889,9 @@ func TestCIDispatchResult_NewFields(t *testing.T) {
 	if len(result.CIDependencies) != 1 {
 		t.Errorf("CIDependencies length = %d, want 1", len(result.CIDependencies))
 	}
-	deps, ok := result.CIDependencies["ext-eac"]
-	if !ok || len(deps) != 1 || deps[0] != "r2r-cli" {
-		t.Errorf("CIDependencies[ext-eac] = %v, want [r2r-cli]", deps)
+	deps, ok := result.CIDependencies["eac-ext"]
+	if !ok || len(deps) != 1 || deps[0] != "clie-cli" {
+		t.Errorf("CIDependencies[eac-ext] = %v, want [clie-cli]", deps)
 	}
 }
 

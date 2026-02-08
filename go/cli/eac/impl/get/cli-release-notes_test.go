@@ -17,10 +17,10 @@ func TestGenerateCLIReleaseNotes(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.2.3",
-		"r2r-cli/1.2.3",
+		"clie-cli/1.2.3",
 		"abc123def456",
 		"owner/repo",
 		"12345",
@@ -29,7 +29,7 @@ func TestGenerateCLIReleaseNotes(t *testing.T) {
 
 	// Check required sections exist
 	requiredSections := []string{
-		"# r2r-cli v1.2.3",
+		"# clie-cli v1.2.3",
 		"## Installation",
 		"### Standard Binaries",
 		"### UPX-Compressed Binaries",
@@ -37,7 +37,7 @@ func TestGenerateCLIReleaseNotes(t *testing.T) {
 		"## Release Information",
 		"- **Version**: 1.2.3",
 		"- **Commit**: abc123def456",
-		"- **Tag**: r2r-cli/1.2.3",
+		"- **Tag**: clie-cli/1.2.3",
 		"gh attestation verify",
 		"--repo owner/repo",
 	}
@@ -61,10 +61,10 @@ func TestGenerateCLIReleaseNotes_BinarySizes(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.0.0",
-		"r2r-cli/1.0.0",
+		"clie-cli/1.0.0",
 		"abc123",
 		"owner/repo",
 		"999",
@@ -163,10 +163,10 @@ func TestGenerateCLIReleaseNotes_WithRepoAndRunID(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.0.0",
-		"r2r-cli/1.0.0",
+		"clie-cli/1.0.0",
 		"abc123",
 		"ready-to-release/eac",
 		"67890",
@@ -195,10 +195,10 @@ func TestGenerateCLIReleaseNotes_MissingSizes(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.0.0",
-		"r2r-cli/1.0.0",
+		"clie-cli/1.0.0",
 		"abc123",
 		"",
 		"",
@@ -226,10 +226,10 @@ func TestGenerateCLIReleaseNotes_Structure(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.0.0",
-		"r2r-cli/1.0.0",
+		"clie-cli/1.0.0",
 		"abc123",
 		"owner/repo",
 		"12345",
@@ -238,7 +238,7 @@ func TestGenerateCLIReleaseNotes_Structure(t *testing.T) {
 
 	// Verify section ordering
 	sections := []string{
-		"# r2r-cli v1.0.0",
+		"# clie-cli v1.0.0",
 		"## Installation",
 		"### Standard Binaries",
 		"### UPX-Compressed Binaries",
@@ -271,10 +271,10 @@ func TestGenerateCLIReleaseNotes_PlatformNames(t *testing.T) {
 	}
 
 	notes := generateCLIReleaseNotes(
-		"r2r-cli",
-		"r2r",
+		"clie-cli",
+		"clie",
 		"1.0.0",
-		"r2r-cli/1.0.0",
+		"clie-cli/1.0.0",
 		"abc123",
 		"",
 		"",

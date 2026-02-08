@@ -95,7 +95,7 @@ func TestCreateFile(t *testing.T) {
 func TestCreateConfig_InEmptyDirectory_ShouldSucceed(t *testing.T) {
     // Arrange
     tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "r2r.yaml")
+    configPath := filepath.Join(tmpDir, "clie.yaml")
     config := DefaultConfig()
 
     // Act

@@ -92,7 +92,7 @@ func (c *PackageSafetyChecker) AddReleasedDigest(digest string) {
 }
 
 // AddBundleModuleVersion records a module version as being referenced by a release bundle.
-// Format: "module/version" (e.g., "ext-eac/1.0.0").
+// Format: "module/version" (e.g., "eac-ext/1.0.0").
 func (c *PackageSafetyChecker) AddBundleModuleVersion(moduleVersion string) {
 	c.bundleModules[moduleVersion] = true
 }
@@ -209,14 +209,14 @@ func (c *PackageSafetyChecker) AssessAll(versions []PackageVersion) (protected, 
 	return protected, prunable
 }
 
-// bundleTagPattern matches release bundle tags like "r2r-eac-bundle/2025.01.15".
+// bundleTagPattern matches release bundle tags like "clie-eac-bundle/2025.01.15".
 var bundleTagPattern = regexp.MustCompile(`^[a-z][a-z0-9-]*-bundle/`)
 
 // moduleVersionPattern matches module version references in release notes.
 // Matches patterns like:
-//   - "ext-eac/1.0.0" (module/version format)
-//   - "- ext-eac: v1.0.0" (markdown list format)
-//   - "- ext-eac: 1.0.0" (markdown list format without v prefix)
+//   - "eac-ext/1.0.0" (module/version format)
+//   - "- eac-ext: v1.0.0" (markdown list format)
+//   - "- eac-ext: 1.0.0" (markdown list format without v prefix)
 var moduleVersionPattern = regexp.MustCompile(`(?:^|\s)([a-z][a-z0-9-]*)[/:]\s*v?(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)`)
 
 // ExtractBundleModuleVersions extracts module versions referenced by release bundles.

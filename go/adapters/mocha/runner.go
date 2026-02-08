@@ -160,7 +160,7 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 	npmTool := tool.GlobalRegistry().GetOrAdhoc("npm")
 	cmd := tool.BuildCommand(context.Background(), npmTool, &tool.ExecutionContext{
 		ModuleRoot:    env.WorkDir,
-		FullEnv:       append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true"),
+		FullEnv:       append(env.Env, "CLIE_TEST_LOGGING_ACTIVE=true"),
 		ArgsOverrides: args,
 	})
 

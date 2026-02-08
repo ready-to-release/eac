@@ -224,9 +224,9 @@ assets:
     logo/eac-logo.png:
         active: true
         description: Primary Everything as Code (EAC) project logo
-    r2r/r2r-overview.drawio.png:
+    clie/clie-overview.drawio.png:
         active: true
-        description: R2R CLI ecosystem architecture with Agent/DevBox, distribute CLI, binary release, container registry, and language integrations
+        description: CLIE CLI ecosystem architecture with Agent/DevBox, distribute CLI, binary release, container registry, and language integrations
     references/accelerate.png:
         active: true
         description: "Book cover: Accelerate by Nicole Forsgren, Jez Humble, and Gene Kim - The Science of Lean Software and DevOps"

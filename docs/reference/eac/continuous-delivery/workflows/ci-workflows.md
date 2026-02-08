@@ -182,12 +182,12 @@ Runs both commit and acceptance test suites (full validation)
 | `ci-eac-commands.yaml`      | eac-commands      | Go commands       | Build, Test | commit, acceptance |
 | `ci-eac-core.yaml`          | eac-core          | Go library        | Build, Test | commit, acceptance |
 | `ci-eac-mcp-commands.yaml`  | eac-mcp-commands  | Go MCP server     | Build, Test | commit, acceptance |
-| `ci-ext-eac.yaml`           | ext-eac           | Docker extension  | Build, Test | commit, acceptance |
-| `ci-r2r-cli.yaml`           | r2r-cli           | Go CLI            | Build, Test | commit, acceptance |
+| `ci-eac-ext.yaml`           | eac-ext           | Docker extension  | Build, Test | commit, acceptance |
+| `ci-clie-cli.yaml`           | clie-cli           | Go CLI            | Build, Test | commit, acceptance |
 | `ci-vscode-commit.yaml`     | vscode-commit     | VSCode extension  | Build, Test | commit, acceptance |
 | `ci-books.yaml`             | books             | PDF documentation | Build, Test | commit, acceptance |
 | `ci-docs.yaml`              | docs              | MkDocs site       | Build, Test | commit, acceptance |
-| `ci-r2r-installer.yaml`     | r2r-installer     | Shell scripts     | Build, Test | commit, acceptance |
+| `ci-clie-installer.yaml`     | clie-installer     | Shell scripts     | Build, Test | commit, acceptance |
 | `ci-implicit-cli.yaml`      | implicit-cli      | Shell scripts     | Build, Test | commit, acceptance |
 
 ## Example: ci-eac-commands.yaml
@@ -327,7 +327,7 @@ Each module CI workflow reports a status check to the commit:
 **Examples:**
 
 - `CI: eac-commands`
-- `CI: r2r-cli`
+- `CI: clie-cli`
 - `CI: docs`
 
 **Status Values:**

@@ -1,177 +1,195 @@
-workspace "EAC Core Library" "Core domain libraries for contracts, repository operations, and shared infrastructure" {
+workspace "EAC Core Library" "Foundational Go library providing domain types, repository operations, tool execution, and shared infrastructure" {
 
     model {
         # External actors and systems
-        filesystem = softwareSystem "File System" "Repository files, contracts, and configuration" "External"
-        git_system = softwareSystem "Git" "Version control operations" "External"
+        filesystem = softwareSystem "File System" "Repository files, contracts, configuration, and cache" "External"
+        git_system = softwareSystem "Git" "Version control operations via go-git" "External"
+        github_api = softwareSystem "GitHub API" "Workflows, releases, container packages" "External"
 
-        # Dependents (modules that depend on eac-core per contracts)
+        # Dependents (modules that depend on eac-core)
         eac_commands = softwareSystem "EAC Commands" "CLI command implementations" "Dependent"
         eac_mcp_commands = softwareSystem "EAC MCP Commands" "MCP server for commands" "Dependent"
-        r2r_cli = softwareSystem "R2R CLI" "Containerized workflow CLI" "Dependent"
+        clibase_mod = softwareSystem "Clibase" "CLI execution framework" "Dependent"
+        clie_cli = softwareSystem "CLIE CLI" "Containerized workflow CLI" "Dependent"
+        adapters_mod = softwareSystem "Adapters" "Integration adapters (AI, Docker, TUI)" "Dependent"
         repository_mod = softwareSystem "Repository Module" "Repository validation rules" "Dependent"
-        scripts_cli_installer = softwareSystem "Scripts CLI Installer" "CLI installer scripts" "Dependent"
 
         # Core library system
-        eac_core = softwareSystem "EAC Core Library" "Foundational Go library providing contracts, repository operations, and shared infrastructure" {
+        eac_core = softwareSystem "EAC Core Library" "Foundational Go library providing domain types, repository operations, tool execution, scheduling, and shared infrastructure" {
 
-            # Contracts subsystem
-            contracts = container "Contracts" "Module contract definitions, loading, validation, and schema management" "Go Package" {
-                contract_types = component "Contract Types" "Module, Environment, TestSuite type definitions" "Go"
-                contract_loader = component "Contract Loader" "Loads contracts from YAML files" "Go"
-                contract_validator = component "Contract Validator" "Validates contracts against JSON schema" "Go"
-                contract_registry = component "Contract Registry" "In-memory registry of loaded contracts" "Go"
-                schema_validator = component "Schema Validator" "JSON Schema validation engine" "Go"
-                ai_types = component "AI Types" "AI prompt and template type definitions" "Go"
-                ai_loader = component "AI Loader" "Loads AI prompts and templates" "Go"
-                gherkin_validator = component "Gherkin Validator" "Validates Gherkin specification contracts" "Go"
-            }
+            # Domain
+            domain = container "Domain" "Core domain types including contracts, components, validation, and error types" "Go Package"
 
             # Repository subsystem
-            repository = container "Repository" "Repository discovery, file mapping, and module operations" "Go Package" {
-                repo_discovery = component "Repository Discovery" "Finds repository root and structure" "Go"
-                file_mapper = component "File Mapper" "Maps files to owning modules" "Go"
-                module_resolver = component "Module Resolver" "Resolves module dependencies and order" "Go"
-                definitions_merger = component "Definitions Merger" "Merges definitions.yml files hierarchically" "Go"
-                gomod_analyzer = component "Go.mod Analyzer" "Parses and validates go.mod dependencies" "Go"
-                git_context = component "Git Context" "Provides git status and changed files" "Go"
-            }
+            repository = container "Repository" "Repository discovery, file mapping, module operations, and go.mod analysis" "Go Package"
 
             # Configuration subsystem
-            config = container "Configuration" "EAC configuration loading and management" "Go Package" {
-                config_loader = component "Config Loader" "Loads .eac configuration" "Go"
-                module_types = component "Module Types" "Defines available module types" "Go"
-                test_suites = component "Test Suites" "Test suite configuration" "Go"
-                environments = component "Environments" "Environment definitions" "Go"
-                system_deps = component "System Dependencies" "External tool requirements" "Go"
-                testing_tags = component "Testing Tags" "Test tag contract definitions" "Go"
-            }
+            config = container "Configuration" "Three-layer configuration merge (contract, user, personal) with schema validation" "Go Package"
 
             # Git subsystem
-            git_ops = container "Git Operations" "Git command execution and history analysis" "Go Package" {
-                git_interface = component "Git Interface" "Abstract git operations interface" "Go"
-                git_executor = component "Git Executor" "Executes git commands via os/exec" "Go"
-                git_mock = component "Git Mock" "Mock implementation for testing" "Go"
-                history_analyzer = component "History Analyzer" "Analyzes commit history" "Go"
-            }
+            git_ops = container "Git Operations" "Pure Go git operations using go-git (status, history, tags, branches)" "Go Package"
+
+            # GitHub
+            github = container "GitHub" "GitHub API abstractions for workflows, releases, container packages, and safety checks" "Go Package"
 
             # Changelog subsystem
-            changelog = container "Changelog" "Changelog parsing, generation, and versioning" "Go Package" {
-                changelog_parser = component "Changelog Parser" "Parses CHANGELOG.md files" "Go"
-                changelog_writer = component "Changelog Writer" "Generates changelog entries" "Go"
-                conventional_commits = component "Conventional Commits" "Parses conventional commit messages" "Go"
-                semver_handler = component "Semver Handler" "Semantic versioning operations" "Go"
-            }
+            changelog = container "Changelog" "Parsing, generation, and version management for Keep a Changelog format" "Go Package"
 
             # Logging subsystem
-            logging = container "Logging" "Structured logging with context and formatting" "Go Package" {
-                logger_core = component "Logger Core" "Core logging implementation" "Go"
-                log_config = component "Log Config" "Logging configuration" "Go"
-                formatters = component "Formatters" "Output formatters (JSON, text)" "Go"
-                component_logger = component "Component Logger" "Per-component logging context" "Go"
-            }
+            logging = container "Logging" "Dual-sink structured logging (console + rolling file) with TUI integration" "Go Package"
 
             # Testing subsystem
-            testing_pkg = container "Testing" "Test framework utilities and isolation" "Go Package" {
-                test_context = component "Test Context" "Shared test context management" "Go"
-                test_isolation = component "Test Isolation" "Isolated directory test environments" "Go"
-                test_suite = component "Test Suite" "Test suite execution framework" "Go"
-                feature_parser = component "Feature Parser" "Parses Gherkin feature files" "Go"
-                test_reports = component "Test Reports" "Test result reporting" "Go"
-            }
+            testing_pkg = container "Testing" "Test discovery, tag inference, suite selection, and BDD test isolation" "Go Package"
 
             # Environment subsystem
-            environments_pkg = container "Environments" "Environment contract management and runtime detection" "Go Package" {
-                env_contracts = component "Environment Contracts" "Environment type definitions" "Go"
-                env_runtime = component "Environment Runtime" "Runtime environment detection" "Go"
-            }
+            environments_pkg = container "Environments" "Environment variable constants, runtime detection (DevBox vs CI), and memory calculation" "Go Package"
+
+            # Tool
+            tool = container "Tool" "Unified pluggable tool composition system for any tool assigned to any component" "Go Package"
+
+            # Workspace
+            workspace_pkg = container "Workspace" "Detects workspace root using environment, container, or git walk-up" "Go Package"
+
+            # Paths
+            paths = container "Paths" "Centralized path constants and builder functions (zero internal dependencies)" "Go Package"
+
+            # Scheduling
+            scheduling = container "Scheduling" "Pull-based work unit scheduling with dependency resolution and LPT ordering" "Go Package"
+
+            # Execution
+            execution = container "Execution" "Cache verification interface for dependency-based work unit execution" "Go Package"
+
+            # Workunit
+            workunit = container "Work Unit" "Unified types for work unit identification, state management, locking, and cache invalidation" "Go Package"
+
+            # AI
+            ai = container "AI" "Consolidated AI access with prompt templating, structured generation, retry, and mocks" "Go Package"
+
+            # Resolver
+            resolver = container "Resolver" "Unified component-to-tool resolution mapping modules to executable work units" "Go Package"
+
+            # Resource
+            resource = container "Resource" "Domain types and port interfaces for resource pool management and capacity allocation" "Go Package"
+
+            # Change Detection
+            changedetect = container "Change Detection" "Hybrid git state plus file hash approach for unified change detection" "Go Package"
+
+            # Hash
+            hash = container "Hash" "Deterministic file content hashing with mtime-based cache layer" "Go Package"
+
+            # Cache
+            cache = container "Cache" "Two-dimensional taxonomy (Level x Type) for fine-grained cache control" "Go Package"
+
+            # Evidence
+            evidence = container "Evidence" "Writes and verifies security scan evidence files with SHA256 integrity" "Go Package"
+
+            # Ownership
+            ownership = container "Ownership" "Resolves file ownership to modules and components via directory-root specificity" "Go Package"
+
+            # Ghost
+            ghost = container "Ghost" "Discovers ghost-prefixed files for dark launching and feature toggles" "Go Package"
+
+            # Docsync
+            docsync = container "Docsync" "Scans CLI commands for missing or orphaned documentation files" "Go Package"
+
+            # Release Notes
+            releasenotes = container "Release Notes" "Parses, validates, and generates RELEASE-NOTES.md files" "Go Package"
+
+            # Specs
+            specs = container "Specs" "BDD specification parsing, scenario export, and Godog test runner" "Go Package"
+
+            # Markdown
+            markdown = container "Markdown" "Validation utilities for Markdown structure, code blocks, and heading hierarchy" "Go Package"
 
             # Module Dependencies
-            module_deps = container "Module Dependencies" "Module dependency graph and verification" "Go Package" {
-                dep_types = component "Dependency Types" "Dependency graph type definitions" "Go"
-                dep_verifier = component "Dependency Verifier" "Verifies module dependencies" "Go"
-            }
+            module_deps = container "Module Dependencies" "Verifies availability of internal module dependencies by artifact or source" "Go Package"
 
-            # System Dependencies
-            system_deps_pkg = container "System Dependencies" "External tool dependency verification" "Go Package" {
-                sys_types = component "System Dep Types" "System dependency type definitions" "Go"
-                sys_verifier = component "System Verifier" "Verifies external tools are available" "Go"
-            }
+            # Token Size
+            tokensize = container "Token Size" "Estimates token counts for source files using character-based heuristic" "Go Package"
 
-            # Platform utilities
-            platform = container "Platform" "Cross-platform utilities" "Go Package" {
-                newline_handler = component "Newline Handler" "Platform-specific line endings" "Go"
-                command_executor = component "Command Executor" "Platform-specific command execution" "Go"
-            }
+            # Defaults
+            defaults = container "Defaults" "Default values and path derivation for module contracts" "Go Package"
 
-            # Other utilities
-            utilities = container "Utilities" "Shared utility packages" "Go Package" {
-                markdown_validator = component "Markdown Validator" "Validates markdown syntax" "Go"
-                ai_mock = component "AI Mock" "Mock AI provider for testing" "Go"
-                definitions_loader = component "Definitions Loader" "Loads definitions.yml files" "Go"
-            }
+            # Validation
+            validation = container "Validation" "Structured validation types, error codes, and formatting utilities" "Go Package"
+
+            # Platform
+            platform = container "Platform" "Platform-specific abstractions for command execution and console output" "Go Package"
+
+            # Adapters (bridge layer)
+            adapters = container "Adapters" "Dependency-inversion bridge wrapping concrete domain types to satisfy port interfaces" "Go Package"
         }
 
-        # Dependent relationships (modules that import eac-core per contracts)
+        # Dependent relationships
         eac_commands -> eac_core "Uses core libraries" "Go Import"
         eac_mcp_commands -> eac_core "Uses repository utilities" "Go Import"
-        r2r_cli -> eac_core "Uses repository discovery" "Go Import"
+        clibase_mod -> eac_core "Uses config, modules, scheduling, tool registry" "Go Import"
+        clie_cli -> eac_core "Uses repository discovery" "Go Import"
+        adapters_mod -> eac_core "Uses config, testing, domain types" "Go Import"
         repository_mod -> eac_core "Uses validation libraries" "Go Import"
-        scripts_cli_installer -> eac_core "Uses installer utilities" "Go Import"
 
         # External system relationships
-        contracts -> filesystem "Loads contract YAML files" "File I/O"
         repository -> filesystem "Reads repository structure" "File I/O"
-        repository -> git_system "Gets git status" "CLI"
-        config -> filesystem "Loads configuration" "File I/O"
-        git_ops -> git_system "Executes git commands" "CLI"
+        repository -> git_system "Gets git status and changed files" "go-git"
+        config -> filesystem "Loads .eac configuration" "File I/O"
+        git_ops -> git_system "Executes git operations" "go-git"
         changelog -> filesystem "Reads/writes changelogs" "File I/O"
+        github -> github_api "Queries workflows, releases, packages" "HTTPS"
+        evidence -> filesystem "Writes scan evidence with SHA256" "File I/O"
+        hash -> filesystem "Reads files for hashing" "File I/O"
+        logging -> filesystem "Writes rolling log files" "File I/O"
+        changedetect -> filesystem "Reads files for change detection" "File I/O"
+        workspace_pkg -> filesystem "Walks directories to find root" "File I/O"
 
-        # Internal container relationships
-        repository -> contracts "Uses contract definitions"
-        repository -> git_ops "Gets git context"
+        # Internal container relationships - Configuration layer
+        config -> domain "Uses domain types"
+        config -> defaults "Gets default values"
+        config -> validation "Validates configuration"
+
+        # Internal container relationships - Repository layer
         repository -> config "Loads module types"
-        config -> contracts "Uses contract types"
-        testing_pkg -> contracts "Validates test contracts"
+        repository -> git_ops "Gets git context"
+        repository -> domain "Uses domain types"
+        repository -> ownership "Resolves file ownership"
+        repository -> paths "Uses path utilities"
+
+        # Internal container relationships - Execution layer
+        tool -> domain "Uses tool definitions"
+        tool -> paths "Uses workspace paths"
+        resolver -> tool "Resolves tools for components"
+        resolver -> config "Gets component types"
+        scheduling -> workunit "Schedules work units"
+        scheduling -> resource "Uses capacity allocation"
+        execution -> workunit "Verifies work unit cache"
+        workunit -> hash "Hashes for cache invalidation"
+
+        # Internal container relationships - Change detection
+        changedetect -> git_ops "Gets git status"
+        changedetect -> hash "Hashes file content"
+        changedetect -> config "Gets module boundaries"
+
+        # Internal container relationships - Testing
+        testing_pkg -> config "Gets test suites and tags"
         testing_pkg -> logging "Logs test execution"
+        testing_pkg -> domain "Uses test domain types"
+        specs -> testing_pkg "Uses test infrastructure"
+
+        # Internal container relationships - Reporting
         changelog -> git_ops "Gets commit history"
-        module_deps -> contracts "Uses module contracts"
-        system_deps_pkg -> config "Gets dependency config"
+        releasenotes -> changelog "Uses version information"
+        docsync -> repository "Scans command documentation"
 
-        # Component relationships - Contracts
-        contract_loader -> contract_types "Creates contract instances"
-        contract_loader -> schema_validator "Validates against schema"
-        contract_validator -> schema_validator "Uses schema validation"
-        contract_registry -> contract_loader "Stores loaded contracts"
-        ai_loader -> ai_types "Creates AI prompt instances"
-        gherkin_validator -> contract_types "Uses spec contracts"
+        # Internal container relationships - Utilities
+        module_deps -> config "Gets module dependencies"
+        ghost -> repository "Discovers ghost-prefixed files"
+        evidence -> hash "Verifies integrity with SHA256"
+        cache -> hash "Content-addressable caching"
+        ai -> config "Gets AI configuration"
 
-        # Component relationships - Repository
-        repo_discovery -> git_context "Uses git root detection"
-        file_mapper -> module_resolver "Gets module boundaries"
-        definitions_merger -> repo_discovery "Finds definition files"
-        gomod_analyzer -> repo_discovery "Finds go.mod files"
-
-        # Component relationships - Git
-        git_executor -> git_interface "Implements interface"
-        git_mock -> git_interface "Implements interface"
-        history_analyzer -> git_interface "Uses git operations"
-
-        # Component relationships - Changelog
-        changelog_parser -> semver_handler "Parses versions"
-        changelog_writer -> conventional_commits "Formats commits"
-        changelog_writer -> semver_handler "Generates versions"
-
-        # Component relationships - Logging
-        logger_core -> log_config "Uses configuration"
-        logger_core -> formatters "Formats output"
-        component_logger -> logger_core "Wraps core logger"
-
-        # Component relationships - Testing
-        test_context -> test_isolation "Creates isolated environments"
-        test_suite -> test_context "Uses shared context"
-        test_suite -> feature_parser "Parses test features"
-        test_suite -> test_reports "Generates reports"
+        # Internal container relationships - Bridge
+        adapters -> domain "Wraps domain types for port interfaces"
+        adapters -> config "Wraps config for port interfaces"
+        adapters -> repository "Wraps repository for port interfaces"
     }
 
     views {
@@ -186,42 +204,42 @@ workspace "EAC Core Library" "Core domain libraries for contracts, repository op
             include *
             autoLayout tb
             title "EAC Core Library - Package Architecture"
-            description "Shows all packages in the core library"
+            description "Shows all 34 packages in the core library"
         }
 
-        component contracts "ContractsComponents" {
-            include *
+        container eac_core "ContractsComponents" {
+            include domain config defaults validation adapters
             autoLayout tb
-            title "Contracts Package - Components"
-            description "Contract loading, validation, and schema management"
+            title "Contracts Components"
+            description "Contract loading, parsing, and validation"
         }
 
-        component repository "RepositoryComponents" {
-            include *
+        container eac_core "RepositoryComponents" {
+            include repository ownership paths workspace_pkg config git_ops domain
             autoLayout tb
-            title "Repository Package - Components"
-            description "Repository discovery and file mapping"
+            title "Repository Components"
+            description "Repository discovery and file operations"
         }
 
-        component git_ops "GitComponents" {
-            include *
+        container eac_core "GitComponents" {
+            include git_ops changelog changedetect hash github
             autoLayout tb
-            title "Git Operations - Components"
-            description "Git command execution and history"
+            title "Git Components"
+            description "Git operations and repository state management"
         }
 
-        component logging "LoggingComponents" {
-            include *
+        container eac_core "LoggingComponents" {
+            include logging environments_pkg platform
             autoLayout tb
-            title "Logging Package - Components"
-            description "Structured logging infrastructure"
+            title "Logging Components"
+            description "Structured logging with dual-sink output"
         }
 
-        component testing_pkg "TestingComponents" {
-            include *
+        container eac_core "TestingComponents" {
+            include testing_pkg specs domain logging config
             autoLayout tb
-            title "Testing Package - Components"
-            description "Test framework utilities"
+            title "Testing Components"
+            description "Test utilities and shared test infrastructure"
         }
 
         theme default

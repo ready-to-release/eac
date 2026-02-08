@@ -1,0 +1,179 @@
+# Release clie-cli - CLI Binary Release Workflow
+#
+# This workflow releases the clie CLI binaries using reusable actions:
+# 1. approve-release: Validates CI passed and release preconditions
+# 2. attested-cli-build: Builds, attests, and publishes binaries
+#
+# CI Verification: Requires a successful ci-clie-cli.yaml run on the EXACT commit
+# being released (strict mode). This ensures the specific code was tested.
+
+name: "release-clie-cli (stage 8+)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (semver format: x.y.z)'
+        required: true
+        type: string
+      skip-ci-check:
+        description: 'Skip CI verification (dangerous and only used for testing internals)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    name: Approve Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      tag_name: ${{ steps.gate.outputs.tag_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Approve release
+        id: gate
+        uses: ./.github/actions/approve-release
+        with:
+          module: clie-cli
+          skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
+          timeout: '600'
+
+  release:
+    name: Build & Publish
+    needs: approve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build and release
+        uses: ./.github/actions/attested-cli-build
+        with:
+          version: ${{ needs.approve.outputs.version }}
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  evidence:
+    name: Update Evidence
+    needs: [approve, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      evidence-count: ${{ steps.evidence.outputs.evidence-count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Update evidence
+        id: evidence
+        uses: ./.github/actions/update-evidence
+        with:
+          module: clie-cli
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+          ci-sha: ${{ github.sha }}
+
+  cleanup:
+    name: Cleanup on Failure
+    needs: [approve, release, evidence]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Cleanup failed release
+        uses: ./.github/actions/cleanup-failed-release
+        with:
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  summary:
+    name: Summary
+    needs: [approve, release, evidence, cleanup]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ needs.approve.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          APPROVE_RESULT="${{ needs.approve.result }}"
+          RELEASE_RESULT="${{ needs.release.result }}"
+          EVIDENCE_RESULT="${{ needs.evidence.result }}"
+          EVIDENCE_COUNT="${{ needs.evidence.outputs.evidence-count }}"
+          CLEANUP_RESULT="${{ needs.cleanup.result }}"
+          RUN_ID="${{ github.run_id }}"
+          COMMIT="${{ github.sha }}"
+
+          if [ "$APPROVE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Approval" >> $GITHUB_STEP_SUMMARY
+            if [ "$CLEANUP_RESULT" = "success" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Tag cleaned up. Retry after fixing." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-clie-cli.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Build/Publish" >> $GITHUB_STEP_SUMMARY
+            if [ "$CLEANUP_RESULT" = "success" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Tag cleaned up. Retry with same version." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-clie-cli.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$EVIDENCE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Evidence" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release published but evidence generation failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-clie-cli.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "success" ]; then
+            RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "## :white_check_mark: clie-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Download**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$EVIDENCE_COUNT" ] && [ "$EVIDENCE_COUNT" != "0" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Evidence**: $EVIDENCE_COUNT file(s) attached" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "## :grey_question: Release Status Unknown" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Approve: $APPROVE_RESULT" >> $GITHUB_STEP_SUMMARY
+            echo "Release: $RELEASE_RESULT" >> $GITHUB_STEP_SUMMARY
+            echo "Evidence: $EVIDENCE_RESULT" >> $GITHUB_STEP_SUMMARY
+          fi

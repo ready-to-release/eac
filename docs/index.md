@@ -4,19 +4,25 @@
 
 ---
 
-## What is r2r (Ready to Release)?
+## What is Ready to Release?
 
-**r2r** is an extensible CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline.
+Ready to Release is a set of tools to fully standardize software delivery in regulated spaces.
+
+- **eac** is an extensible cli, that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline.
+- **clie** is a cli extender, making it possible to distribute platforms cli's through a uniform interface.
+  **eac** is provided also as a clie extension, to limit the install surface of the framework(s).
 
 Built by engineers, for engineers.
 
-The CLI is your primary interface for:
+The **eac** CLI is your primary interface for:
 
 - Writing executable specifications that validate your system
 - Running continuous compliance checks on every commit
 - Generating audit evidence as a byproduct of your pipeline
 - Integrating with MCP servers and VSCode for IDE-native workflows
 - Automating delivery flows with containers and GitHub Actions
+
+For larger enterprise settings, with multiple competeting platforms, the CLIE cli extender can be used as a uniform distribution mechanism.
 
 **This repository is both the tool and a working example**:
 
@@ -30,9 +36,9 @@ Traditional compliance creates friction: manual documentation, periodic audits, 
 
 Development teams wait for approvals. Compliance teams scramble during audit prep. Quality suffers.
 
-**The r2r CLI transforms compliance from a bottleneck into automation:**
+**The eac CLI transforms compliance from a bottleneck into automation:**
 
-- **Terminal-First**: Run validation and evidence generation from `r2r` commands
+- **Terminal-First**: Run validation and evidence generation from `eac` commands
 - **Shift-Left Compliance** - Catch issues at commit time (5 minutes) vs. production (days)
 - **Executable Specifications** - Requirements and policies as code in version control
 - **Continuous Validation** - Compliance checked on every commit, not quarterly
@@ -70,7 +76,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p><strong>Information-oriented descriptions</strong></p>
 <p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
 <ul>
-<li><a href="reference/eac/architecture/index.md">R2R and EAC Architecture</a> - System overview and design</li>
+<li><a href="reference/eac/architecture/index.md">EAC and CLIE Architecture</a> - System overview and design</li>
 <li><a href="reference/eac/architecture/repository-layout.md">Repository Layout</a> - File structure</li>
 <li><a href="reference/eac/commands/index.md">Command Reference</a> - CLI commands</li>
 <li><a href="reference/eac/decision-records/index.md">Decision Records</a> - Architectural decisions</li>

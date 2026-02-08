@@ -14,22 +14,22 @@ Feature: eac-cli_pipeline-run
       Given modules exist with dependencies:
         | moniker    | depends_on |
         | core   |            |
-        | r2r-cli    | core   |
+        | clie-cli    | core   |
       When I run "pipeline run"
       Then the exit code is 0
-      And "core" is processed before "r2r-cli"
+      And "core" is processed before "clie-cli"
 
     Scenario: Run pipeline for specific modules
-      Given modules "core" and "r2r-cli" exist
-      When I run "pipeline run r2r-cli"
+      Given modules "core" and "clie-cli" exist
+      When I run "pipeline run clie-cli"
       Then the exit code is 0
-      And only "r2r-cli" and its dependencies are processed
+      And only "clie-cli" and its dependencies are processed
 
   Rule: Changed-only mode filters to modified modules
 
     Scenario: Run only changed modules
       Given module "core" has uncommitted changes
-      And module "r2r-cli" has no changes
+      And module "clie-cli" has no changes
       When I run "pipeline run --changed-only"
       Then the exit code is 0
       And only "core" is processed

@@ -29,7 +29,7 @@ func Run(cfg *CommandConfig, worker CommandWorkerFunc, hooks *Hooks) int {
 	// ISOLATION CHECK: Fail-fast if running build/test/scan/lint within test scope
 	// Tests should not actively run these commands - it's bad isolation.
 	// Use --dry-run for planning/validation within tests.
-	if os.Getenv(environments.EnvR2RTestScope) != "" && !cfg.DryRun {
+	if os.Getenv(environments.EnvCLIETestScope) != "" && !cfg.DryRun {
 		switch cfg.Type {
 		case core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint:
 			log.Errorf("ISOLATION VIOLATION: %s command cannot run within test scope without --dry-run", cfg.Type)

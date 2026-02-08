@@ -444,11 +444,11 @@ func TestPopulateDinDContext_PreservesExistingFields(t *testing.T) {
 
 // TestDinDConstants verifies the expected constant values.
 func TestDinDConstants(t *testing.T) {
-	if EnvHostRepoRoot != "R2R_HOST_REPOROOT" {
-		t.Errorf("EnvHostRepoRoot = %q, want %q", EnvHostRepoRoot, "R2R_HOST_REPOROOT")
+	if EnvHostRepoRoot != "CLIE_HOST_REPOROOT" {
+		t.Errorf("EnvHostRepoRoot = %q, want %q", EnvHostRepoRoot, "CLIE_HOST_REPOROOT")
 	}
-	if EnvContainerRepoRoot != "R2R_CONTAINER_REPOROOT" {
-		t.Errorf("EnvContainerRepoRoot = %q, want %q", EnvContainerRepoRoot, "R2R_CONTAINER_REPOROOT")
+	if EnvContainerRepoRoot != "CLIE_CONTAINER_REPOROOT" {
+		t.Errorf("EnvContainerRepoRoot = %q, want %q", EnvContainerRepoRoot, "CLIE_CONTAINER_REPOROOT")
 	}
 	if paths.ContainerRepoRoot != "/var/task" {
 		t.Errorf("paths.ContainerRepoRoot = %q, want %q", paths.ContainerRepoRoot, "/var/task")

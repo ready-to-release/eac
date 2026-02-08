@@ -37,14 +37,9 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/fileutil"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 )
-
-func init() {
-	registry.Register(MergeResults)
-}
 
 // MergeResults merges manual test results into the test manifest.
 func MergeResults() int {

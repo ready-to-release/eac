@@ -374,8 +374,8 @@ func setupTestRepositoryForMerge(t *testing.T, tmpDir, module string) {
 	gitDir := filepath.Join(tmpDir, ".git")
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
 
-	r2rDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(r2rDir, 0755))
+	clieDir := filepath.Join(tmpDir, ".eac")
+	require.NoError(t, os.MkdirAll(clieDir, 0755))
 
 	repoYAML := `repository:
   type: mono
@@ -389,6 +389,6 @@ modules:
         type: go
         root: /` + module + `
 `
-	repoFile := filepath.Join(r2rDir, "repository.yml")
+	repoFile := filepath.Join(clieDir, "repository.yml")
 	require.NoError(t, os.WriteFile(repoFile, []byte(repoYAML), 0644))
 }

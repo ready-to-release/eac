@@ -40,7 +40,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -54,10 +53,6 @@ var CIExcludedFilePatterns = []string{
 	"README.md",
 	"CONTRIBUTING.md",
 	"LICENSE",
-}
-
-func init() {
-	registry.Register(GetChangedModulesCI)
 }
 
 // CIChangedModulesResult represents the output of the get changed-modules-ci command.
@@ -767,10 +762,10 @@ type mockedCIStatus struct {
 	NoHistory        bool   `json:"NoHistory"`
 }
 
-// loadMockedCIStatus loads mocked CI status from R2R_MOCK_CI_STATUS environment variable.
+// loadMockedCIStatus loads mocked CI status from CLIE_MOCK_CI_STATUS environment variable.
 // Returns nil if no mock is configured.
 func loadMockedCIStatus() map[string]mockedCIStatus {
-	mockPath := os.Getenv(environments.EnvR2RMockCIStatus)
+	mockPath := os.Getenv(environments.EnvCLIEMockCIStatus)
 	if mockPath == "" {
 		return nil
 	}
@@ -787,14 +782,14 @@ func loadMockedCIStatus() map[string]mockedCIStatus {
 	return mocks
 }
 
-// getMockedHeadSHA returns the mocked HEAD SHA if R2R_MOCK_HEAD_SHA is set.
+// getMockedHeadSHA returns the mocked HEAD SHA if CLIE_MOCK_HEAD_SHA is set.
 func getMockedHeadSHA() string {
-	return os.Getenv(environments.EnvR2RMockHeadSHA)
+	return os.Getenv(environments.EnvCLIEMockHeadSHA)
 }
 
-// getMockedChangedFiles returns the mocked changed files if R2R_MOCK_CHANGED_FILES is set.
+// getMockedChangedFiles returns the mocked changed files if CLIE_MOCK_CHANGED_FILES is set.
 func getMockedChangedFiles() []string {
-	files := os.Getenv(environments.EnvR2RMockChangedFiles)
+	files := os.Getenv(environments.EnvCLIEMockChangedFiles)
 	if files == "" {
 		return nil
 	}

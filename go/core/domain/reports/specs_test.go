@@ -3,6 +3,7 @@ package reports
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ready-to-release/eac/go/core/git"
 	coretesting "github.com/ready-to-release/eac/go/core/testing"
@@ -19,24 +20,24 @@ func TestGetSpecs(t *testing.T) {
 	}{
 		{
 			name:           "valid module - unreleased",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "unreleased",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "valid module - latest",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "latest",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "valid module - empty (defaults to unreleased)",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "regular module without dependencies",
@@ -54,7 +55,7 @@ func TestGetSpecs(t *testing.T) {
 		},
 		{
 			name:        "invalid version",
-			module:      "ext-eac",
+			module:      "eac-ext",
 			version:     "99.99.99",
 			wantErr:     true,
 			errContains: "version not found",
@@ -70,6 +71,12 @@ func TestGetSpecs(t *testing.T) {
 	}
 	SetGitRepo(mockRepo)
 	defer SetGitRepo(nil)
+
+	// Set up version resolver mock with tags so "latest" version validation passes
+	versionMock := git.NewMockRepository(workspaceRoot).
+		WithTag("eac-ext/0.0.9", "abc123", time.Now())
+	SetVersionResolverRepo(versionMock)
+	defer SetVersionResolverRepo(nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,11 +143,11 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 	SetGitRepo(mockRepo)
 	defer SetGitRepo(nil)
 
-	// Test ext-eac bundle module (depends on eac-cli and r2r-cli)
-	t.Run("ext-eac aggregates specs from dependencies", func(t *testing.T) {
-		bundleReport, err := GetSpecs(workspaceRoot, "ext-eac", "unreleased", "")
+	// Test eac-ext bundle module (depends on eac-cli and clie-cli)
+	t.Run("eac-ext aggregates specs from dependencies", func(t *testing.T) {
+		bundleReport, err := GetSpecs(workspaceRoot, "eac-ext", "unreleased", "")
 		if err != nil {
-			t.Fatalf("GetSpecs(ext-eac) failed: %v", err)
+			t.Fatalf("GetSpecs(eac-ext) failed: %v", err)
 		}
 
 		// Get specs for dependency module directly
@@ -152,7 +159,7 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 		// Bundle should have at least as many specs as the dependency
 		// (unless dependency has no specs)
 		if len(depReport.SpecFiles) > 0 && len(bundleReport.SpecFiles) < len(depReport.SpecFiles) {
-			t.Errorf("Bundle ext-eac has fewer specs (%d) than dependency eac-cli (%d)",
+			t.Errorf("Bundle eac-ext has fewer specs (%d) than dependency eac-cli (%d)",
 				len(bundleReport.SpecFiles), len(depReport.SpecFiles))
 		}
 
@@ -166,7 +173,7 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 				}
 			}
 			if !foundDepSpec {
-				t.Error("Bundle ext-eac should include specs from dependency eac-cli")
+				t.Error("Bundle eac-ext should include specs from dependency eac-cli")
 			}
 		}
 	})

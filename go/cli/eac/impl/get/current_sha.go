@@ -26,14 +26,9 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetCurrentSHA)
-}
 
 // SHASource indicates where the SHA was detected from.
 type SHASource string

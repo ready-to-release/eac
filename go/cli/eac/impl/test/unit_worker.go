@@ -121,13 +121,15 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		Extra:     map[string]string{"testname": testname},
 	}
 
-	// Check UoW-level cache first
-	isCached := testCfg.CachedUoWs != nil && testCfg.CachedUoWs[unitID.Longname()]
-	log.Debugf("[TEST-UOW-CACHE] Test worker for %s: unitID=%s, isCached=%v", component, unitID.Longname(), isCached)
+	// Check UoW-level cache via shared pipeline
+	pipeline := &cmdframework.UnitPipeline{
+		CachedUoWs: testCfg.CachedUoWs,
+		LockStyle:  cmdframework.NoLock,
+	}
 
-	if isCached {
-		fmt.Fprintf(logWriter, "⏭️  Cached (unchanged)\n")
-		return -1 // -1 = skipped/cached = blue in TUI
+	log.Debugf("[TEST-UOW-CACHE] Test worker for %s: unitID=%s", component, unitID.Longname())
+	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
+		return cacheResult
 	}
 
 	// Look up pkgPath from component mapping using testname

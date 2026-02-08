@@ -10,7 +10,7 @@ This workflow serves as the main entry point for continuous integration and hand
 
 On push to main, after CI workflows complete, the workflow checks for pending releases from two sources:
 
-- **Semver modules**: Changelog versions without corresponding git tags (r2r-cli, ext-eac)
+- **Semver modules**: Changelog versions without corresponding git tags (clie-cli, eac-ext)
 - **Calver modules**: Modules that had CI dispatched and auto-release on every push (docs, books)
 
 Releases are triggered in dependency order, with each layer completing before the next begins.
@@ -204,7 +204,7 @@ PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
   "layers": [
     ["eac-core", "eac-ai"],
     ["eac-commands", "eac-mcp-commands"],
-    ["r2r-cli"]
+    ["clie-cli"]
   ]
 }
 ```
@@ -213,7 +213,7 @@ PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
 
 - Layer 1: `eac-core`, `eac-ai` - No dependencies
 - Layer 2: `eac-commands`, `eac-mcp-commands` - Depend on Layer 1
-- Layer 3: `r2r-cli` - Depends on Layer 2
+- Layer 3: `clie-cli` - Depends on Layer 2
 
 #### Job: `execute-layers`
 
@@ -332,10 +332,10 @@ The change detection includes transitive invalidation:
 **Example:**
 
 ```text
-eac-core (changed) → eac-commands (invalidated) → r2r-cli (invalidated)
+eac-core (changed) → eac-commands (invalidated) → clie-cli (invalidated)
 ```
 
-If `eac-core` changes, both `eac-commands` and `r2r-cli` are rebuilt.
+If `eac-core` changes, both `eac-commands` and `clie-cli` are rebuilt.
 
 ## Workflow Dispatch Parameters
 

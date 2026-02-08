@@ -13,14 +13,9 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateModuleHierarchy)
-}
 
 // ValidateModuleHierarchy validates the module dependency graph.
 func ValidateModuleHierarchy() int {
@@ -231,7 +226,7 @@ func printModuleHierarchyReport(report *moduleHierarchyReport) {
 func printModuleHierarchyUsage() {
 	log.Info("Validate module dependency graph structure")
 	log.Info("")
-	log.Info("Usage: r2r validate module-hierarchy")
+	log.Info("Usage: clie validate module-hierarchy")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Bidirectional consistency (depends_on <-> used_by)")
@@ -241,5 +236,5 @@ func printModuleHierarchyUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate module hierarchy")
-	log.Info("  r2r validate module-hierarchy")
+	log.Info("  clie validate module-hierarchy")
 }

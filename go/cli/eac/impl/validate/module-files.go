@@ -12,15 +12,10 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateModuleFiles)
-}
 
 // ValidateModuleFiles validates file ownership in modules.
 func ValidateModuleFiles() int {
@@ -148,7 +143,7 @@ func printModuleFilesReport(report *moduleFilesReport) {
 func printModuleFilesUsage() {
 	log.Info("Validate module file ownership")
 	log.Info("")
-	log.Info("Usage: r2r validate module-files")
+	log.Info("Usage: clie validate module-files")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - No files belong to the 'unordered' catch-all module")
@@ -156,5 +151,5 @@ func printModuleFilesUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate module file ownership")
-	log.Info("  r2r validate module-files")
+	log.Info("  clie validate module-files")
 }

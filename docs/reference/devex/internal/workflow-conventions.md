@@ -61,7 +61,7 @@ test(eac-commands): add integration tests for build command
 
 - `commands` - EAC commands
 - `core` - eac-core module
-- `cli` - R2R CLI
+- `cli` - CLIE CLI
 - `docs` - Documentation
 - `ci` - CI/CD workflows
 

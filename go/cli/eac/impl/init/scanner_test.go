@@ -617,7 +617,7 @@ func TestScanRepository_EdgeCases(t *testing.T) {
 // TestScanRepository_RealTestRepositories tests against actual test repositories
 func TestScanRepository_RealTestRepositories(t *testing.T) {
 	// Get repo root
-	repoRoot := os.Getenv(environments.EnvR2RRepoRoot)
+	repoRoot := os.Getenv(environments.EnvCLIERepoRoot)
 	if repoRoot == "" {
 		// Try to find it relative to this file
 		cwd, err := os.Getwd()

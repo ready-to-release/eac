@@ -37,10 +37,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-func init() {
-	registry.Register(ValidateConfigCmd)
-}
-
 // ConfigValidationResult holds the result of config validation.
 type ConfigValidationResult struct {
 	Valid       bool              `json:"valid"`

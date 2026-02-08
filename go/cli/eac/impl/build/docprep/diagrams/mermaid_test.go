@@ -409,7 +409,7 @@ Text after.
 		testFile: blocks,
 	}
 
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
@@ -491,7 +491,7 @@ graph TD
 		testFile: blocks,
 	}
 
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
@@ -526,8 +526,8 @@ graph TD
 		t.Errorf("Modified file still contains mermaid blocks")
 	}
 
-	// Site build adds extra "../" so nested/index.html -> ../../../assets/rendered/mermaid/xxx.svg
-	if !strings.Contains(modifiedStr, "../../../assets/rendered/mermaid/") {
+	// Site build adds extra "../" so nested/index.html -> ../../../assets/cache/mermaid/xxx.svg
+	if !strings.Contains(modifiedStr, "../../../assets/cache/mermaid/") {
 		t.Errorf("Modified file doesn't have correct relative path for site build, got: %s", modifiedStr)
 	}
 
@@ -565,7 +565,7 @@ graph TD
 		testFile: blocks,
 	}
 
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
@@ -600,13 +600,13 @@ graph TD
 		t.Errorf("Modified file still contains mermaid blocks")
 	}
 
-	// PDF mode: no extra "../" so nested.md -> ../../assets/rendered/mermaid/xxx.svg
-	if !strings.Contains(modifiedStr, "../../assets/rendered/mermaid/") {
+	// PDF mode: no extra "../" so nested.md -> ../../assets/cache/mermaid/xxx.svg
+	if !strings.Contains(modifiedStr, "../../assets/cache/mermaid/") {
 		t.Errorf("Modified file doesn't have correct relative path for PDF build, got: %s", modifiedStr)
 	}
 
 	// Ensure it does NOT have the extra ../ that site builds need
-	if strings.Contains(modifiedStr, "../../../assets/rendered/mermaid/") {
+	if strings.Contains(modifiedStr, "../../../assets/cache/mermaid/") {
 		t.Errorf("PDF build incorrectly has extra ../ in path, got: %s", modifiedStr)
 	}
 }

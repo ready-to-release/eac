@@ -40,6 +40,8 @@ import (
 
 var log = logging.C()
 
+var rePageNumber = regexp.MustCompile(`^page-(\d+)\.png$`)
+
 const (
 	// pdfToolsImage is the Docker image for PDF operations.
 	pdfToolsImage = "pdf-cli-oci:latest"
@@ -444,7 +446,7 @@ func renameToZeroPadded(dir string) error {
 
 	// Find max page number for padding
 	maxPage := 0
-	pagePattern := regexp.MustCompile(`^page-(\d+)\.png$`)
+	pagePattern := rePageNumber
 
 	for _, entry := range entries {
 		matches := pagePattern.FindStringSubmatch(entry.Name())

@@ -17,9 +17,9 @@
 // Group.Scan: scan-summary
 // Group.Release: release-summary, release-notes
 // Group.CI: ci-summary, dependency-ci-summary, deps-setup-summary, trigger-summary
-// Example: r2r show modules
-// Example: r2r show files-changed
-// Example: r2r show suite integration
+// Example: clie show modules
+// Example: clie show files-changed
+// Example: clie show suite integration
 package show
 
 import (
@@ -36,10 +36,6 @@ import (
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(Show)
-}
 
 // subcommands defines all available show subcommands.
 var subcommands = []tui.SubcommandInfo{

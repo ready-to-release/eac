@@ -11,10 +11,10 @@
 // Long: - Grouped by change type (Added, Changed, Fixed, etc.)
 // Long:
 // Long: Example:
-// Long:   show changelog ext-eac
-// Long:   show changelog ext-eac 0.0.7
-// Long:   show changelog ext-eac latest
-// Long:   show changelog ext-eac unreleased
+// Long:   show changelog eac-ext
+// Long:   show changelog eac-ext 0.0.7
+// Long:   show changelog eac-ext latest
+// Long:   show changelog eac-ext unreleased
 // Args: module [version]
 package show
 
@@ -24,15 +24,10 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowChangelog)
-}
 
 func ShowChangelog() int {
 	// Validate flags against registry metadata

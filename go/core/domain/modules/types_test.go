@@ -62,11 +62,11 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 		},
 		{
 			name:     "specs patterns are repo-root relative",
-			moniker:  "r2r-cli",
-			root:     "go/cli/r2r",
+			moniker:  "clie-cli",
+			root:     "go/cli/clie",
 			source:   []string{"go.mod", "**.go"},
-			specs:    []string{"specs/r2r-cli/**"},
-			expected: []string{"go/cli/r2r/go.mod", "go/cli/r2r/**.go", "specs/r2r-cli/**"},
+			specs:    []string{"specs/clie-cli/**"},
+			expected: []string{"go/cli/clie/go.mod", "go/cli/clie/**.go", "specs/clie-cli/**"},
 		},
 	}
 
@@ -231,10 +231,10 @@ func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
 		filePath string
 		expected bool
 	}{
-		{"specs matches file", "go/cli/r2r", []string{"specs/r2r-cli/**"}, []string{"go.mod"}, "specs/r2r-cli/test.feature", true},
-		{"specs matches nested", "go/cli/r2r", []string{"specs/r2r-cli/**"}, []string{"go.mod"}, "specs/r2r-cli/design/workspace.dsl", true},
-		{"specs doesn't match other specs", "go/cli/r2r", []string{"specs/r2r-cli/**"}, []string{"go.mod"}, "specs/core/test.feature", false},
-		{"source pattern with specs", "go/cli/r2r", []string{"specs/r2r-cli/**"}, []string{"go.mod"}, "go/cli/r2r/go.mod", true},
+		{"specs matches file", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/clie-cli/test.feature", true},
+		{"specs matches nested", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/clie-cli/design/workspace.dsl", true},
+		{"specs doesn't match other specs", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/core/test.feature", false},
+		{"source pattern with specs", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "go/cli/clie/go.mod", true},
 	}
 
 	for _, tt := range tests {
@@ -374,7 +374,7 @@ func Test_matchGlobPattern(t *testing.T) {
 
 		// **/*.ext patterns (previously broken, now fixed)
 		{"double star slash wildcard .go", "go/eac/mcp/vscode/main.go", "**/*.go", true},
-		{"double star slash wildcard .yml", "contracts/modules/0.1.0/r2r-cli.yml", "**/*.yml", true},
+		{"double star slash wildcard .yml", "contracts/modules/0.1.0/clie-cli.yml", "**/*.yml", true},
 		{"double star slash wildcard .md", "docs/guide/getting-started.md", "**/*.md", true},
 		{"double star slash wildcard no match", "go/eac/main.txt", "**/*.go", false},
 		{"prefix double star slash wildcard", "go/eac/mcp/vscode/main.go", "go/**/*.go", true},
@@ -414,7 +414,7 @@ func Test_matchGlobPattern(t *testing.T) {
 		// Complex real-world patterns
 		{"complex: test files", "go/eac/mcp/vscode/module_test.go", "**/*_test.go", true},
 		{"complex: specific test dir", "go/eac/mcp/test/integration.go", "go/**/test/*.go", true},
-		{"complex: yaml in specific dir", "contracts/modules/0.1.0/r2r-cli.yml", "contracts/**/*.yml", true},
+		{"complex: yaml in specific dir", "contracts/modules/0.1.0/clie-cli.yml", "contracts/**/*.yml", true},
 		{"complex: markdown docs", ".claude/agents/boot.md", ".claude/**/*.md", true},
 
 		// Edge cases
@@ -513,7 +513,7 @@ func TestModuleContract_GetDesignPath(t *testing.T) {
 		},
 		{
 			name:            "empty design uses default",
-			moniker:         "r2r-cli",
+			moniker:         "clie-cli",
 			design:          "",
 			expected:        "", // will be computed with filepath.Join
 			useFilepathJoin: true,

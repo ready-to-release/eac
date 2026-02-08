@@ -15,7 +15,7 @@ func TestValidateModuleName_Valid(t *testing.T) {
 		name   string
 		module string
 	}{
-		{"simple name", "r2r-cli"},
+		{"simple name", "clie-cli"},
 		{"with dash", "my-module"},
 		{"with underscore", "my_module"},
 		{"with numbers", "module123"},
@@ -79,13 +79,13 @@ func TestCleanModuleName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"no change", "r2r-cli", "r2r-cli"},
-		{"remove specs prefix", "specs/r2r-cli", "r2r-cli"},
-		{"remove specs prefix windows", "specs\\r2r-cli", "r2r-cli"},
-		{"remove design suffix", "r2r-cli/design", "r2r-cli"},
-		{"remove design suffix windows", "r2r-cli\\design", "r2r-cli"},
-		{"remove both", "specs/r2r-cli/.design", "r2r-cli"},
-		{"remove both windows", "specs\\r2r-cli\\.design", "r2r-cli"},
+		{"no change", "clie-cli", "clie-cli"},
+		{"remove specs prefix", "specs/clie-cli", "clie-cli"},
+		{"remove specs prefix windows", "specs\\clie-cli", "clie-cli"},
+		{"remove design suffix", "clie-cli/design", "clie-cli"},
+		{"remove design suffix windows", "clie-cli\\design", "clie-cli"},
+		{"remove both", "specs/clie-cli/.design", "clie-cli"},
+		{"remove both windows", "specs\\clie-cli\\.design", "clie-cli"},
 		{"remove go prefix", "go/cli/eac", "commands"},
 		{"remove go prefix windows", "go\\eac\\commands", "commands"},
 		{"complex", "specs/go/cli/eac/.design", "commands"},

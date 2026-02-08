@@ -273,13 +273,13 @@ func IsGitRepository(path string) bool {
 }
 
 // GetContainerRoot returns the container's internal root directory if running
-// inside a container (R2R_CONTAINER_ROOT is set), otherwise returns empty string.
+// inside a container (CLIE_CONTAINER_ROOT is set), otherwise returns empty string.
 func GetContainerRoot() string {
-	return os.Getenv(environments.EnvR2RContainerRoot)
+	return os.Getenv(environments.EnvCLIEContainerRoot)
 }
 
 // GetDistRoot returns the distribution root where tool assets live.
-// In container mode, this is R2R_CONTAINER_ROOT. Otherwise falls back to the provided fallback.
+// In container mode, this is CLIE_CONTAINER_ROOT. Otherwise falls back to the provided fallback.
 func GetDistRoot(fallback string) string {
 	if containerRoot := GetContainerRoot(); containerRoot != "" {
 		return containerRoot
@@ -287,9 +287,9 @@ func GetDistRoot(fallback string) string {
 	return fallback
 }
 
-// GetWorkspaceRoot returns the workspace root override (R2R_REPO_ROOT) if set.
+// GetWorkspaceRoot returns the workspace root override (CLIE_REPO_ROOT) if set.
 func GetWorkspaceRoot() string {
-	return os.Getenv(environments.EnvR2RRepoRoot)
+	return os.Getenv(environments.EnvCLIERepoRoot)
 }
 
 // GetRepoEACConfigRoot returns the path to the EAC repository configuration directory.

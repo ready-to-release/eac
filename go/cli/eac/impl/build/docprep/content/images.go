@@ -14,6 +14,9 @@ import (
 // imagePattern matches markdown images: ![alt](path)
 var imagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{[^{}\n]*\})?`)
 
+// reAttrList matches attr_list key-value pairs
+var reAttrList = regexp.MustCompile(`(\w+)\s*=\s*"?([^"\s}]+)"?`)
+
 // imageWithAttrsPattern matches markdown images with attr_list: ![alt](path){attrs}
 var imageWithAttrsPattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)\s*\{:?\s*([^}]+)\}`)
 
@@ -59,7 +62,7 @@ func ConvertAttrListImages(content string, adjustPaths bool) (string, int) {
 func ParseAttrListToHTML(attrs string) string {
 	var htmlParts []string
 
-	attrPattern := regexp.MustCompile(`(\w+)\s*=\s*"?([^"\s}]+)"?`)
+	attrPattern := reAttrList
 	matches := attrPattern.FindAllStringSubmatch(attrs, -1)
 
 	for _, m := range matches {

@@ -112,8 +112,8 @@ func TestParseCommitConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: r2r work commit <args>)
-			os.Args = append([]string{"r2r", "work", "commit"}, tt.args...)
+			// Set test args (simulate command: clie work commit <args>)
+			os.Args = append([]string{"clie", "work", "commit"}, tt.args...)
 
 			config, err := parseCommitConfig()
 			if err != nil {
@@ -153,7 +153,7 @@ func TestParseCommitConfig_MissingMessageValue(t *testing.T) {
 			defer func() { os.Args = oldArgs }()
 
 			// Set test args
-			os.Args = append([]string{"r2r", "work", "commit"}, tt.args...)
+			os.Args = append([]string{"clie", "work", "commit"}, tt.args...)
 
 			_, err := parseCommitConfig()
 
@@ -179,7 +179,7 @@ func TestCommitConfigDefaults(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set test args
-	os.Args = []string{"r2r", "work", "commit"}
+	os.Args = []string{"clie", "work", "commit"}
 
 	config, err := parseCommitConfig()
 	if err != nil {

@@ -5,7 +5,7 @@
 // Long:
 // Long: Template Source and Destination:
 // Long:   Source: templates/reports/ (fixed)
-// Long:   Destination: .r2r/templates/reports/ (fixed)
+// Long:   Destination: .clie/templates/reports/ (fixed)
 // Long:
 // Long: Use Case:
 // Long:   Install templates once to your project, then customize them as needed.
@@ -188,7 +188,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, paths.R2RDir, "templates", "reports")
+	destination := filepath.Join(workspaceRoot, paths.CLIEDir, "templates", "reports")
 
 	cfg := &Config{
 		Destination:   destination,

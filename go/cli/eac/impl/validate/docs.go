@@ -20,13 +20,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateDocs)
-}
 
 // DocsValidationResult represents a single validation issue found in documentation.
 type DocsValidationResult struct {
@@ -248,7 +243,7 @@ func ValidateDocs() int {
 func printDocsUsage() {
 	log.Info("Validate documentation for obsolete references")
 	log.Info("")
-	log.Info("Usage: r2r validate docs [docs-directory]")
+	log.Info("Usage: clie validate docs [docs-directory]")
 	log.Info("")
 	log.Info("Checks for:")
 	log.Info("  - References to deleted files (module-types.yml)")
@@ -256,8 +251,8 @@ func printDocsUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all documentation files")
-	log.Info("  r2r validate docs")
+	log.Info("  clie validate docs")
 	log.Info("")
 	log.Info("  # Validate specific directory")
-	log.Info("  r2r validate docs docs/reference")
+	log.Info("  clie validate docs docs/reference")
 }

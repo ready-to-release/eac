@@ -30,10 +30,10 @@
 // Long:   - Summary of cleanup results
 // Long:
 // Long: Example:
-// Long:   release prune-packages ext-eac           # Dry-run: show what would be deleted
-// Long:   release prune-packages ext-eac --force   # Actually delete versions
+// Long:   release prune-packages eac-ext           # Dry-run: show what would be deleted
+// Long:   release prune-packages eac-ext --force   # Actually delete versions
 // Long:   release prune-packages --all             # Prune all packages (dry-run)
-// Long:   release prune-packages ext-eac --keep 5  # Override keep count
+// Long:   release prune-packages eac-ext --keep 5  # Override keep count
 // Flag.keep: type=int, usage=Override the number of versions to keep (default from config)
 // Flag.all: type=bool, usage=Prune all configured packages
 // Flag.force: type=bool, usage=Actually delete versions (default is dry-run)
@@ -51,17 +51,12 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
-
-func init() {
-	registry.Register(ReleasePrunePackages)
-}
 
 // PrunePackagesResult contains the result of pruning a package.
 type PrunePackagesResult struct {

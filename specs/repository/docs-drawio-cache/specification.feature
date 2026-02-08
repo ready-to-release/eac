@@ -17,5 +17,5 @@ Feature: repository_docs-drawio-cache
       Then all drawio images should have cached optimized PNGs
       And if any images are missing from cache, I should see:
         """
-        Run 'r2r update docs' to update the drawio cache.
+        Run 'clie update docs' to update the drawio cache.
         """

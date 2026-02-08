@@ -21,14 +21,9 @@ import (
 	getinternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetArtifacts)
-}
 
 // artifactsFlags defines valid flags for the get artifacts command
 

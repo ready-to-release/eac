@@ -53,8 +53,8 @@ templates install ai
 # Install report templates
 templates install reports
 # Using templates from templates/reports
-# Installing templates to .r2r/templates/reports...
-# ✓ Report templates installed successfully to .r2r/templates/reports
+# Installing templates to .eac/templates/reports...
+# ✓ Report templates installed successfully to .eac/templates/reports
 
 # Review installed docs
 ls docs/reference/
@@ -85,13 +85,13 @@ templates install claude
 
 ## Template Destinations
 
-| Template Type   | Default Destination       | Custom Path Support   |
-| --------------- | ------------------------- | --------------------- |
-| docs            | `docs/reference/`         | Yes (`--destination`) |
-| ai              | `.eac/templates/ai/`  | No                    |
-| reports         | `.r2r/templates/reports/` | No                    |
-| specs           | `specs/risk-controls/`    | No                    |
-| claude          | `.claude/`                | No                    |
+| Template Type | Default Destination       | Custom Path Support   |
+| ------------- | ------------------------- | --------------------- |
+| docs          | `docs/reference/`         | Yes (`--destination`) |
+| ai            | `.eac/templates/ai/`      | No                    |
+| reports       | `.eac/templates/reports/` | No                    |
+| specs         | `specs/risk-controls/`    | No                    |
+| claude        | `.claude/`                | No                    |
 
 ## Common Issues
 

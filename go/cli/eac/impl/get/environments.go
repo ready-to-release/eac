@@ -17,13 +17,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 )
-
-func init() {
-	registry.Register(GetEnvironments)
-}
 
 // environmentsFlags defines valid flags for the get environments command
 

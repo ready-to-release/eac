@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 )
 
 // CommitJSON matches contracts/core/0.1.0/commit-message.schema.json.
@@ -102,41 +104,10 @@ func FormatCommitMessage(jsonOutput string) (string, error) {
 	return strings.TrimRight(result.String(), "\n") + "\n", nil
 }
 
-// extractAuditorSummary extracts a one-sentence summary for Auditor-Summary field
+// extractAuditorSummary extracts a one-sentence summary for Auditor-Summary field.
 // Uses the first sentence of the body if available, otherwise falls back to subject.
 func extractAuditorSummary(body, subject string) string {
-	if body == "" {
-		return subject + "."
-	}
-
-	// Find first sentence (terminated by period, question mark, or exclamation)
-	body = strings.TrimSpace(body)
-
-	// Find first sentence ending
-	for _, delim := range []string{". ", ".\n", "? ", "?\n", "! ", "!\n"} {
-		if idx := strings.Index(body, delim); idx != -1 {
-			sentence := strings.TrimSpace(body[:idx+1])
-			return sentence
-		}
-	}
-
-	// If no sentence delimiter found, check if body itself ends with punctuation
-	if strings.HasSuffix(body, ".") || strings.HasSuffix(body, "?") || strings.HasSuffix(body, "!") {
-		// Get first line/paragraph
-		lines := strings.Split(body, "\n")
-		return strings.TrimSpace(lines[0])
-	}
-
-	// Fallback: use first line and add period
-	lines := strings.Split(body, "\n")
-	firstLine := strings.TrimSpace(lines[0])
-	if firstLine == "" {
-		return subject + "."
-	}
-	if !strings.HasSuffix(firstLine, ".") {
-		firstLine += "."
-	}
-	return firstLine
+	return aiutil.ExtractFirstSentence(body, subject)
 }
 
 // extractModuleSubject extracts a concise subject line from module changes

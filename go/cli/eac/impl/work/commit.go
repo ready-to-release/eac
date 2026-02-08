@@ -31,12 +31,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(Commit)
-}
 
 // Commit commits changes with AI-generated or custom message.
 func Commit() int {
@@ -227,11 +222,11 @@ func commitWithAI(debug bool) int {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	// Set args to simulate: r2r commit message [--debug]
+	// Set args to simulate: clie commit message [--debug]
 	if debug {
-		os.Args = []string{"r2r", "commit", "message", "--debug"}
+		os.Args = []string{"clie", "commit", "message", "--debug"}
 	} else {
-		os.Args = []string{"r2r", "commit", "message"}
+		os.Args = []string{"clie", "commit", "message"}
 	}
 
 	// Call commit message

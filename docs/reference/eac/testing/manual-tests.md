@@ -404,7 +404,7 @@ eac test merge-results --module <module> --version <version>
 
 - `eac-commands/authentication/login-with-valid-credentials`
 - `eac-core/validation/validate-config-schema`
-- `ext-eac/github/create-pull-request-with-ai-description`
+- `eac-ext/github/create-pull-request-with-ai-description`
 
 ### Generation Algorithm
 

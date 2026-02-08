@@ -4,11 +4,11 @@
     Build local Docker image for EAC extension development
 
 .DESCRIPTION
-    Builds the ext-eac Docker image locally with a development tag.
+    Builds the eac-ext Docker image locally with a development tag.
     Supports single-platform (fast) and multi-platform builds.
 
 .PARAMETER Tag
-    Docker image tag. Default is 'ext-eac:dev'.
+    Docker image tag. Default is 'eac-ext:dev'.
 
 .PARAMETER Platform
     Target platform (linux/amd64 or linux/arm64). Default is linux/amd64.
@@ -32,7 +32,7 @@
 
 .EXAMPLE
     # Custom tag
-    .\build-local.ps1 -Tag "ext-eac:my-feature"
+    .\build-local.ps1 -Tag "eac-ext:my-feature"
 
 .EXAMPLE
     # Build for ARM64
@@ -42,7 +42,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$Tag = "ext-eac:dev",
+    [string]$Tag = "eac-ext:dev",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("linux/amd64", "linux/arm64", "")]
@@ -134,7 +134,7 @@ Push-Location $repoRoot
 
 try {
     # Verify Dockerfile exists
-    $dockerfilePath = Join-Path $repoRoot "containers\ext-eac\Dockerfile"
+    $dockerfilePath = Join-Path $repoRoot "containers\eac-ext\Dockerfile"
     if (-not (Test-Path $dockerfilePath)) {
         Write-ColorOutput "Error: Dockerfile not found at $dockerfilePath" "Red"
         exit 1
@@ -192,7 +192,7 @@ try {
         $buildCmd = "docker buildx build"
         $buildCmd += " --platform linux/amd64,linux/arm64"
         $buildCmd += " -t $Tag"
-        $buildCmd += " -f containers/ext-eac/Dockerfile"
+        $buildCmd += " -f containers/eac-ext/Dockerfile"
 
         if ($Push) {
             $buildCmd += " --push"
@@ -222,7 +222,7 @@ try {
 
         $buildCmd += " --platform $Platform"
         $buildCmd += " -t $Tag"
-        $buildCmd += " -f containers/ext-eac/Dockerfile"
+        $buildCmd += " -f containers/eac-ext/Dockerfile"
         $buildCmd += " ."
     }
 
@@ -274,8 +274,8 @@ try {
 
     Write-ColorOutput ""
     Write-ColorOutput "Next Steps:" "Cyan"
-    Write-ColorOutput "  1. Configure r2r to use this local image:" "White"
-    Write-ColorOutput "     Create .r2r/r2r-cli.local.yml with:" "White"
+    Write-ColorOutput "  1. Configure clie to use this local image:" "White"
+    Write-ColorOutput "     Create .clie/clie-cli.local.yml with:" "White"
     Write-ColorOutput ""
     Write-ColorOutput "     load_local: true" "Gray"
     Write-ColorOutput "     extensions:" "Gray"
@@ -285,7 +285,7 @@ try {
     Write-ColorOutput "         image_pull_policy: 'Never'" "Gray"
     Write-ColorOutput ""
     Write-ColorOutput "  2. Test the image:" "White"
-    Write-ColorOutput "     r2r eac help" "Gray"
+    Write-ColorOutput "     clie eac help" "Gray"
     Write-ColorOutput ""
 
 }

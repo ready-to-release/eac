@@ -76,24 +76,24 @@ func TestGetApprovalComments(t *testing.T) {
 	}{
 		{
 			name:           "valid module - unreleased",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "unreleased",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "valid module - latest",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "latest",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "valid module - empty (defaults to unreleased)",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			version:        "",
 			wantErr:        false,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:           "regular module without dependencies",
@@ -111,7 +111,7 @@ func TestGetApprovalComments(t *testing.T) {
 		},
 		{
 			name:        "invalid version",
-			module:      "ext-eac",
+			module:      "eac-ext",
 			version:     "99.99.99",
 			wantErr:     true,
 			errContains: "version not found",
@@ -203,12 +203,12 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 			},
 			456: {
 				Number:             456,
-				Title:              "Update r2r-cli spec",
+				Title:              "Update clie-cli spec",
 				Author:             "developer2",
-				Body:               "Updates the r2r-cli specification",
+				Body:               "Updates the clie-cli specification",
 				MergedAt:           time.Now(),
-				MergeCommitMessage: "Merge pull request #456\n\nUpdated r2r-cli spec",
-				Files:              []string{"specs/r2r-cli/update.feature"},
+				MergeCommitMessage: "Merge pull request #456\n\nUpdated clie-cli spec",
+				Files:              []string{"specs/clie-cli/update.feature"},
 				Reviews: []ReviewData{
 					{Author: "reviewer3", State: "APPROVED", SubmittedAt: time.Now()},
 				},
@@ -249,7 +249,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 				Subject:  "Merge pull request #456 from user/branch",
 				Author:   "developer2",
 				Date:     time.Now(),
-				Files:    []string{"specs/r2r-cli/update.feature"},
+				Files:    []string{"specs/clie-cli/update.feature"},
 			},
 		},
 		tags: []string{},
@@ -257,20 +257,20 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 	SetGitRepo(mockRepo)
 	defer SetGitRepo(nil)
 
-	// Test ext-eac bundle module (depends on eac-cli and r2r-cli)
-	t.Run("ext-eac returns valid report structure", func(t *testing.T) {
-		bundleReport, err := GetApprovalComments(workspaceRoot, "ext-eac", "unreleased", false, "")
+	// Test eac-ext bundle module (depends on eac-cli and clie-cli)
+	t.Run("eac-ext returns valid report structure", func(t *testing.T) {
+		bundleReport, err := GetApprovalComments(workspaceRoot, "eac-ext", "unreleased", false, "")
 		if err != nil {
-			t.Fatalf("GetApprovalComments(ext-eac) failed: %v", err)
+			t.Fatalf("GetApprovalComments(eac-ext) failed: %v", err)
 		}
 
 		if bundleReport == nil {
-			t.Fatal("GetApprovalComments(ext-eac) returned nil")
+			t.Fatal("GetApprovalComments(eac-ext) returned nil")
 		}
 
 		// Verify structure
-		if bundleReport.Module != "ext-eac" {
-			t.Errorf("Module = %v, want ext-eac", bundleReport.Module)
+		if bundleReport.Module != "eac-ext" {
+			t.Errorf("Module = %v, want eac-ext", bundleReport.Module)
 		}
 
 		if bundleReport.Approvals == nil {
@@ -286,7 +286,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 			// Verify spec files are from queried modules
 			for _, specFile := range approval.SpecFiles {
 				hasValidPrefix := false
-				for _, prefix := range []string{"specs/eac-cli/", "specs/r2r-cli/", "specs/ext-eac/"} {
+				for _, prefix := range []string{"specs/eac-cli/", "specs/clie-cli/", "specs/eac-ext/"} {
 					if strings.HasPrefix(specFile, prefix) {
 						hasValidPrefix = true
 						break
@@ -345,7 +345,7 @@ func TestFilterSpecFiles(t *testing.T) {
 	files := []string{
 		"specs/eac-cli/feature1.feature",
 		"specs/eac-cli/feature2.feature",
-		"specs/r2r-cli/feature3.feature",
+		"specs/clie-cli/feature3.feature",
 		"specs/other-module/feature4.feature",
 		"go/cli/eac/test.go",
 		"README.md",
@@ -363,7 +363,7 @@ func TestFilterSpecFiles(t *testing.T) {
 		},
 		{
 			name:     "multiple modules",
-			modules:  []string{"eac-cli", "r2r-cli"},
+			modules:  []string{"eac-cli", "clie-cli"},
 			expected: 3,
 		},
 		{

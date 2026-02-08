@@ -6,17 +6,17 @@ CLI commands for the changelog-based release system.
 
 ```bash
 # Check for pending changes
-r2r release pending <module>
-r2r release pending --all
+clie release pending <module>
+clie release pending --all
 
 # Finalize changelog for release
-r2r release this <module>
+clie release this <module>
 
 # Check for untagged versions
-r2r release tag-pending <module>
+clie release tag-pending <module>
 
 # Validate changelog format
-r2r release validate <module>
+clie release validate <module>
 ```
 
 ---
@@ -27,13 +27,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-r2r release pending r2r-cli
+clie release pending clie-cli
 
 # Check all modules
-r2r release pending --all
+clie release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-r2r release pending r2r-cli --quiet
+clie release pending clie-cli --quiet
 ```
 
 **Output includes**:
@@ -51,13 +51,13 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-r2r release this r2r-cli
+clie release this clie-cli
 
 # Preview without writing
-r2r release this r2r-cli --dry-run
+clie release this clie-cli --dry-run
 
 # Output as JSON
-r2r release this r2r-cli --json
+clie release this clie-cli --json
 ```
 
 **What it does**:
@@ -74,8 +74,8 @@ r2r release this r2r-cli --json
 Check for changelog versions without corresponding git tags. Used by CI.
 
 ```bash
-r2r release tag-pending r2r-cli
-r2r release tag-pending --all
+clie release tag-pending clie-cli
+clie release tag-pending --all
 ```
 
 ---
@@ -85,8 +85,8 @@ r2r release tag-pending --all
 Validate changelog format and structure.
 
 ```bash
-r2r release validate r2r-cli
-r2r release validate --all
+clie release validate clie-cli
+clie release validate --all
 ```
 
 **Checks**:
@@ -143,9 +143,9 @@ Developer
 
 ```text
 release/
-├── r2r-cli/
+├── clie-cli/
 │   └── CHANGELOG.md    # CLI changelog (semver)
-├── ext-eac/
+├── eac-ext/
     └── CHANGELOG.md    # Extension changelog (semver)
 ```
 
@@ -158,15 +158,15 @@ release/
 | Workflow              | Trigger                                            | Action                                      |
 | --------------------- | -------------------------------------------------- | ------------------------------------------- |
 | `release-auto.yml`    | Push to main with `release/*/CHANGELOG.md` changes | Creates git tag                             |
-| `release-r2r-cli.yml` | `r2r-cli/*` tag                                    | Builds CLI binaries, creates GitHub release |
-| `release-ext-eac.yml` | `ext-eac/*` tag                                    | Retags container images                     |
+| `release-clie-cli.yml` | `clie-cli/*` tag                                    | Builds CLI binaries, creates GitHub release |
+| `release-eac-ext.yml` | `eac-ext/*` tag                                    | Retags container images                     |
 
 ### Tag Format
 
 Tags follow the pattern `<module>/<version>`:
 
-- `r2r-cli/0.1.0`
-- `ext-eac/1.0.0`
+- `clie-cli/0.1.0`
+- `eac-ext/1.0.0`
 
 ---
 
@@ -202,7 +202,7 @@ Commits are filtered by module file patterns. Ensure changes touch files owned b
 
 ### Changelog validation errors
 
-Run `r2r release validate <module>` to check for format issues:
+Run `clie release validate <module>` to check for format issues:
 
 - Invalid version format
 - Duplicate versions

@@ -211,7 +211,7 @@ func Serve() int {
 			}
 
 			if rebuild {
-				if !rebuildModule(workspaceRoot, moduleMoniker) {
+				if !rebuildModule(workspaceRoot, moduleMoniker, moduleConfig.ComponentName) {
 					return 1
 				}
 			}
@@ -226,7 +226,7 @@ func Serve() int {
 	}
 
 	// Check staleness and auto-rebuild if needed
-	if !rebuildIfNeeded(workspaceRoot, moduleConfig, rebuild) {
+	if !rebuildIfNeeded(workspaceRoot, moduleConfig, rebuild, moduleConfig.ComponentName) {
 		return 1
 	}
 
@@ -266,6 +266,7 @@ type ModuleServeConfig struct {
 	ModuleMoniker string
 	ContentPath   string
 	IsSite        bool
+	ComponentName string // Component name for filtered builds (e.g., "site")
 }
 
 // resolveModuleConfigFromEAC resolves serve configuration for a module using pre-loaded config.
@@ -336,9 +337,11 @@ func resolveModuleConfigFromEAC(cfg *config.EACConfig, workspaceRoot, moduleMoni
 	// Determine content path based on type
 	var contentPath string
 	if isSite {
-		// MkDocs outputs to site/ directory within the build staging area
-		// Build structure: out/build/<module>/<component>/site/ (mkdocs output inside staging)
-		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), targetItem, "site")
+		// MkDocs outputs to site/ directory within the build output.
+		// Build directories use component-tool naming (e.g., "site-site" for component=site, tool=site).
+		// Resolve the actual directory from UoW manifests to handle the component-tool format.
+		componentDir := resolveComponentBuildDir(workspaceRoot, moduleMoniker, targetItem)
+		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), componentDir, "site")
 	} else {
 		// For non-site items (PDFs), serve the module root (contains all PDFs)
 		contentPath = paths.BuildOutputPath(workspaceRoot, moduleMoniker)
@@ -348,6 +351,7 @@ func resolveModuleConfigFromEAC(cfg *config.EACConfig, workspaceRoot, moduleMoni
 		ModuleMoniker: moduleMoniker,
 		ContentPath:   contentPath,
 		IsSite:        isSite,
+		ComponentName: targetItem,
 	}, nil
 }
 
@@ -425,10 +429,10 @@ func listServableModulesFromConfig(cfg *config.EACConfig) []string {
 
 // rebuildModule triggers a build for the module.
 // Returns true if successful, false otherwise.
-// Logs are emitted directly.
-func rebuildModule(workspaceRoot, moduleMoniker string) bool {
+// Optional components filter which components to build.
+func rebuildModule(workspaceRoot, moduleMoniker string, components ...string) bool {
 	log.Infof("Rebuilding %s...", moduleMoniker)
-	if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
+	if err := runBuild(workspaceRoot, moduleMoniker, components...); err != nil {
 		log.Errorf("Build failed: %v", err)
 		return false
 	}
@@ -438,15 +442,16 @@ func rebuildModule(workspaceRoot, moduleMoniker string) bool {
 // rebuildIfNeeded triggers a rebuild if forceRebuild is true or build is stale.
 // Returns true if we should continue (no build needed or build succeeded).
 // Returns false if build was needed and failed.
-func rebuildIfNeeded(workspaceRoot string, moduleConfig *ModuleServeConfig, forceRebuild bool) bool {
+// Optional components filter which components to build.
+func rebuildIfNeeded(workspaceRoot string, moduleConfig *ModuleServeConfig, forceRebuild bool, components ...string) bool {
 	if forceRebuild {
-		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker)
+		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker, components...)
 	}
 
 	needsBuild, reason := checkStaleness(workspaceRoot, moduleConfig)
 	if needsBuild {
 		log.Infof("Build is stale: %s", reason)
-		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker)
+		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker, components...)
 	}
 	return true
 }
@@ -481,12 +486,40 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 	return false, ""
 }
 
+// resolveComponentBuildDir finds the actual build output directory for a component.
+// Build directories use component-tool naming (e.g., "site-site" for component=site, tool=site).
+// Falls back to the component name if no manifest is found.
+func resolveComponentBuildDir(workspaceRoot, moduleMoniker, componentName string) string {
+	reader := coreoutput.NewReader(workspaceRoot)
+	manifests, err := reader.ListUoWs(core.ActionBuild, moduleMoniker)
+	if err == nil {
+		for _, m := range manifests {
+			if m.Component == componentName {
+				dirName := m.Component
+				if m.Tool != "" {
+					dirName += "-" + m.Tool
+				}
+				return dirName
+			}
+		}
+	}
+	return componentName
+}
+
 // runBuild executes the build command for a module.
-func runBuild(workspaceRoot, moduleMoniker string) error {
-	log.Debugf("Running build command: module=%s", moduleMoniker)
+// Optional components filter which components to build (e.g., "site").
+func runBuild(workspaceRoot, moduleMoniker string, components ...string) error {
+	log.Debugf("Running build command: module=%s, components=%v", moduleMoniker, components)
+
+	args := []string{"build", moduleMoniker, "--no-tui"}
+	for _, c := range components {
+		if c != "" {
+			args = append(args, "--component="+c)
+		}
+	}
 
 	port := eac.New(workspaceRoot)
-	result, err := port.Execute(context.Background(), []string{"build", moduleMoniker, "--no-tui"}, &eac.ExecConfig{
+	result, err := port.Execute(context.Background(), args, &eac.ExecConfig{
 		WorkspaceRoot: workspaceRoot,
 		StdoutWriter:  os.Stdout,
 		StderrWriter:  os.Stderr,

@@ -232,21 +232,21 @@ Rule: Creates project directory structure
   @ov
   Scenario: Initialize in empty directory
     Given I am in an empty folder
-    When I run "r2r init"
-    Then a file named "r2r.yaml" should be created
+    When I run "cli init"
+    Then a file named "cli.yaml" should be created
     And a directory named "src" should be created
 
   @ov
   Scenario: Initialize in existing project
-    Given I am in a directory with "r2r.yaml"
-    When I run "r2r init"
+    Given I am in a directory with "cli.yaml"
+    When I run "cli init"
     Then the command should fail
     And I should see error "Project already initialized"
 
   @ov
   Scenario: Initialize with custom config
     Given I am in an empty folder
-    When I run "r2r init --config custom.yaml"
+    When I run "cli init --config custom.yaml"
     Then a file named "custom.yaml" should be created
 ```
 

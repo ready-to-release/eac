@@ -6,7 +6,7 @@ workspace "Repository Module" "Root configuration module defining contracts and 
 
         # Dependencies (from module contracts)
         eac_core = softwareSystem "EAC Core" "Core domain libraries for validation" "Dependency"
-        r2r_config = softwareSystem "R2R Config" "Repository configuration definitions" "Dependency"
+        clie_config = softwareSystem "CLIE Config" "Repository configuration definitions" "Dependency"
 
         # Repository module system
         repository = softwareSystem "Repository Module" "Defines repository contracts, validation rules, and module ownership" {
@@ -34,7 +34,7 @@ workspace "Repository Module" "Root configuration module defining contracts and 
 
         # Dependency relationships (from module contracts)
         repository -> eac_core "Uses validation libraries" "Go Import"
-        repository -> r2r_config "Reads configuration from" "File I/O"
+        repository -> clie_config "Reads configuration from" "File I/O"
 
         # External system relationships
         validation_rules -> go_toolchain "Validates Go modules"

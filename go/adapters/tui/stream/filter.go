@@ -20,34 +20,39 @@ type Filter struct {
 	mu          sync.Mutex
 }
 
+var (
+	filterImportantPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)error`),
+		regexp.MustCompile(`(?i)failed`),
+		regexp.MustCompile(`(?i)warning`),
+		regexp.MustCompile(`^panic:`),
+		regexp.MustCompile(`^fatal:`),
+		regexp.MustCompile(`undefined:`),
+		regexp.MustCompile(`cannot find`),
+		regexp.MustCompile(`not found`),
+		regexp.MustCompile(`^FAIL\s`),
+	}
+	filterNoisePatterns = []*regexp.Regexp{
+		regexp.MustCompile(`^\s*$`),                         // Empty lines
+		regexp.MustCompile(`^go: downloading`),              // Download messages
+		regexp.MustCompile(`^=== RUN`),                      // Test run markers
+		regexp.MustCompile(`^=== PAUSE`),                    // Test pause markers
+		regexp.MustCompile(`^=== CONT`),                     // Test continue markers
+		regexp.MustCompile(`^--- PASS:`),                    // Passing test markers
+		regexp.MustCompile(`^PASS$`),                        // Final pass marker
+		regexp.MustCompile(`^ok\s+\S+\s+\d`),                // Package OK line
+		regexp.MustCompile(`^coverage:`),                    // Coverage line
+		regexp.MustCompile(`^\?\s+\S+\s+\[no test files\]`), // No test files
+	}
+)
+
 // NewFilter creates a filter with sensible defaults for Go build/test output.
 func NewFilter() *Filter {
 	return &Filter{
-		importantPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`(?i)error`),
-			regexp.MustCompile(`(?i)failed`),
-			regexp.MustCompile(`(?i)warning`),
-			regexp.MustCompile(`^panic:`),
-			regexp.MustCompile(`^fatal:`),
-			regexp.MustCompile(`undefined:`),
-			regexp.MustCompile(`cannot find`),
-			regexp.MustCompile(`not found`),
-			regexp.MustCompile(`^FAIL\s`),
-		},
-		noisePatterns: []*regexp.Regexp{
-			regexp.MustCompile(`^\s*$`),                         // Empty lines
-			regexp.MustCompile(`^go: downloading`),              // Download messages
-			regexp.MustCompile(`^=== RUN`),                      // Test run markers
-			regexp.MustCompile(`^=== PAUSE`),                    // Test pause markers
-			regexp.MustCompile(`^=== CONT`),                     // Test continue markers
-			regexp.MustCompile(`^--- PASS:`),                    // Passing test markers
-			regexp.MustCompile(`^PASS$`),                        // Final pass marker
-			regexp.MustCompile(`^ok\s+\S+\s+\d`),                // Package OK line
-			regexp.MustCompile(`^coverage:`),                    // Coverage line
-			regexp.MustCompile(`^\?\s+\S+\s+\[no test files\]`), // No test files
-		},
-		recentLines: make(map[string]int),
-		maxRecent:   100,
+		importantPatterns: filterImportantPatterns,
+		noisePatterns:     filterNoisePatterns,
+		recentLines:       make(map[string]int),
+		maxRecent:         100,
 	}
 }
 

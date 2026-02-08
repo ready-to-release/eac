@@ -12,7 +12,7 @@
 // Long: Output: Run ID (empty if not found)
 // Long:
 // Long: Example:
-// Long:   pipeline find-run-id --workflow ci-r2r-cli.yaml --sha abc123
+// Long:   pipeline find-run-id --workflow ci-clie-cli.yaml --sha abc123
 // Long:   pipeline find-run-id --workflow ci-docs.yaml --sha abc123 --status success
 package pipeline
 
@@ -20,16 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
-
-func init() {
-	registry.Register(PipelineFindRunID)
-}
 
 func PipelineFindRunID() int {
 	// Parse flags

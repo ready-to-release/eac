@@ -2,7 +2,7 @@
 
 <!-- book:cmd extension-meta -->
 
-Outputs extension metadata for r2r CLI integration.
+Outputs extension metadata for clie CLI integration.
 
 ## Usage
 
@@ -12,7 +12,7 @@ eac extension-meta
 
 ## Description
 
-The `extension-meta` command outputs YAML-formatted metadata describing the EAC extension's capabilities, commands, requirements, and configuration. This metadata is used by the r2r CLI to discover and configure extensions.
+The `extension-meta` command outputs YAML-formatted metadata describing the EAC extension's capabilities, commands, requirements, and configuration. This metadata is used by the clie CLI to discover and configure extensions.
 
 ## Output
 

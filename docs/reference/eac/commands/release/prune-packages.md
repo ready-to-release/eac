@@ -7,8 +7,8 @@ Remove old container image versions from GitHub Container Registry (GHCR), keepi
 ## Synopsis
 
 ```bash
-r2r release prune-packages <package> [flags]
-r2r release prune-packages --all [flags]
+clie release prune-packages <package> [flags]
+clie release prune-packages --all [flags]
 ```
 
 ## Description
@@ -66,7 +66,7 @@ registries:
           - "ci"
       github_releases:
         # Released packages are ALWAYS protected (non-configurable)
-        tag_format: "{module}/{version}"  # e.g., ext-eac/1.0.0
+        tag_format: "{module}/{version}"  # e.g., eac-ext/1.0.0
 ```
 
 ## Examples
@@ -76,13 +76,13 @@ registries:
 Show what would be deleted without actually deleting:
 
 ```bash
-r2r release prune-packages ext-eac
+clie release prune-packages eac-ext
 ```
 
 Output:
 
 ```text
-Processing package: ext-eac
+Processing package: eac-ext
   Total versions: 45
   Protected: 12
   Prunable: 33 (keeping 10)
@@ -97,25 +97,25 @@ Use --force to actually delete.
 ### Actually delete
 
 ```bash
-r2r release prune-packages ext-eac --force
+clie release prune-packages eac-ext --force
 ```
 
 ### Prune all packages
 
 ```bash
-r2r release prune-packages --all --force
+clie release prune-packages --all --force
 ```
 
 ### Override keep count
 
 ```bash
-r2r release prune-packages ext-eac --keep 5 --force
+clie release prune-packages eac-ext --keep 5 --force
 ```
 
 ### Show protected versions
 
 ```bash
-r2r release prune-packages ext-eac --verbose
+clie release prune-packages eac-ext --verbose
 ```
 
 Output includes:
@@ -123,14 +123,14 @@ Output includes:
 ```text
 Protected versions:
   - sha256:123abc [v1.0.0]: tag matches preserve pattern
-  - sha256:456def [ext-eac/2.0.0]: associated with GitHub release
+  - sha256:456def [eac-ext/2.0.0]: associated with GitHub release
   - sha256:789ghi [sha-recent]: created less than min_age_days ago
 ```
 
 ### JSON output
 
 ```bash
-r2r release prune-packages ext-eac --json
+clie release prune-packages eac-ext --json
 ```
 
 ## Understanding Tags
@@ -140,7 +140,7 @@ This command works with two different types of tags:
 | Type             | Source                          | Examples                          | Purpose                            |
 | ---------------- | ------------------------------- | --------------------------------- | ---------------------------------- |
 | **Image Tags**   | Container registry (OCI/Docker) | `sha-abc1234`, `v1.0.0`, `latest` | Identify specific container images |
-| **Release Tags** | GitHub Releases API             | `ext-eac/1.0.0`, `r2r-cli/2.0.0`  | Mark official releases             |
+| **Release Tags** | GitHub Releases API             | `eac-ext/1.0.0`, `clie-cli/2.0.0`  | Mark official releases             |
 
 The `image_tags` configuration controls which container image tags to preserve or prune.
 The `github_releases` configuration correlates container images with GitHub Releases.

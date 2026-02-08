@@ -19,13 +19,8 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 )
-
-func init() {
-	registry.Register(ShowTestTimings)
-}
 
 func ShowTestTimings() int {
 	// Validate flags against registry metadata

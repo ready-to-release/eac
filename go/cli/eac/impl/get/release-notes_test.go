@@ -24,7 +24,7 @@ func TestGetReleaseNotes(t *testing.T) {
 		},
 		{
 			name:         "valid module",
-			args:         []string{"eac", "get", "release-notes", "ext-eac"},
+			args:         []string{"eac", "get", "release-notes", "eac-ext"},
 			wantErr:      false,
 			expectedExit: 0,
 		},

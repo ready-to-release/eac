@@ -108,14 +108,21 @@ modules:
 - Image tagging and versioning
 - Registry push support
 - Platform targeting (linux/amd64, linux/arm64)
+- Build context and `input_artifacts` for injecting build outputs into Docker builds
 
 **Example:**
 
 ```yaml
-- moniker: ext-eac
+- moniker: eac-ext
   name: EAC Extension Container
   components:
-    dockerfile: containers/ext-eac
+    dockerfile:
+      root: containers/eac-ext
+      build:
+        context: "."
+        input_artifacts:
+          - source: eac-cli
+            type: executable
 ```
 
 ---
@@ -466,17 +473,16 @@ func (h *PythonHandler) Build(ctx context.Context, module *contracts.Module) err
 
 ### 3. Register Handler
 
-Add to `init()` in your handler file:
+Wire the handler in `go/cli/eac/impl/build/unit_worker.go`:
 
 ```go
-func init() {
-    registry.RegisterBuildHandler(&PythonHandler{})
-}
+// In the unit worker's handler map
+"python": &PythonHandler{},
 ```
 
 ### 4. Add Test Runner (Optional)
 
-Implement a runner in `go/cli/eac/impl/test/runners/` if the component type has specific test tooling.
+Implement a runner in `go/adapters/` or `go/clibase/testrunners/` if the component type has specific test tooling.
 
 ---
 
@@ -494,8 +500,10 @@ eac show-modules
 
 ## Related Documentation
 
-- [Modules](./index.md) - Module system and dependency management
+- [Modules](./modules.md) - Module system and dependency management
 - [Contracts](./contracts.md) - Contract system and YAML schemas
 - [Dependencies](./dependencies.md) - Dependency resolution details
-- `contracts/eac-core/0.1.0/defaults/tool-config.yml` - Tool definitions with resource settings
-- `contracts/eac-core/0.1.0/repository.schema.json` - Schema for amp configuration
+- [Build Execution System](./build-execution.md) - UoW orchestration and builders
+- [Component Resolution](./component-resolution.md) - How components become UoWs
+- `contracts/core/0.1.0/schemas/defaults/tool-config.yml` - Tool definitions with resource settings
+- `contracts/core/0.1.0/schemas/repository.schema.json` - Schema for amp configuration

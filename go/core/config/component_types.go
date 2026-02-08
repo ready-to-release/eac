@@ -112,7 +112,7 @@ type ComponentTypeDefaults struct {
 
 	// ArtifactPattern is the default artifact naming pattern for built outputs.
 	// Supports placeholders: {moniker} for module name, {ext} for platform extension.
-	// Example: "{moniker}{ext}" produces "r2r.exe" on Windows, "r2r" on Unix.
+	// Example: "{moniker}{ext}" produces "clie.exe" on Windows, "clie" on Unix.
 	ArtifactPattern string `yaml:"artifact_pattern,omitempty" json:"artifact_pattern,omitempty"`
 }
 

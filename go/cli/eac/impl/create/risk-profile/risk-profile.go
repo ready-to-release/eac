@@ -37,19 +37,6 @@ func init() {
 	registry.Register(CreateRiskProfile)
 }
 
-// MockAIResponse holds mock response for testing.
-var mockAIResponse string
-
-// SetMockAIResponse sets a mock AI response for testing.
-func SetMockAIResponse(response string) {
-	mockAIResponse = response
-}
-
-// ResetMockAIResponse clears the mock AI response.
-func ResetMockAIResponse() {
-	mockAIResponse = ""
-}
-
 // Config holds configuration for create risk-profile command.
 type Config struct {
 	AssessmentPath string
@@ -62,6 +49,10 @@ type Config struct {
 
 // CreateRiskProfile is the entry point for the create risk-profile command.
 func CreateRiskProfile() int {
+	return createRiskProfile(defaultDeps())
+}
+
+func createRiskProfile(deps *Deps) int {
 	config, err := parseConfig()
 	if err != nil {
 		log.Errorf("Error: %v", err)
@@ -116,7 +107,7 @@ func CreateRiskProfile() int {
 
 	// Generate profile using core AI logic (handles retry and validation)
 	log.Info("Calling AI to analyze risks and map controls...")
-	profile, err := generateProfile(config, string(assessmentContent), catalog)
+	profile, err := generateProfile(deps, config, string(assessmentContent), catalog)
 	if err != nil {
 		log.Errorf("Failed to generate profile: %v", err)
 		return 1

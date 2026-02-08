@@ -55,7 +55,7 @@ These are the steps **you** perform as a developer.
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r release pending my-module
+eac release pending my-module
 ```
 
 **Output**:
@@ -86,7 +86,7 @@ change_summary:
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r release this my-module
+eac release this my-module
 ```
 
 **What happens**:
@@ -143,7 +143,7 @@ code release/my-module/CHANGELOG.md
 ```markdown
 # Changelog
 
-All notable changes to **r2r CLI** will be documented in this file.
+All notable changes to **eac CLI** will be documented in this file.
 
 ## [1.2.4] - 2026-01-09
 
@@ -166,7 +166,7 @@ All notable changes to **r2r CLI** will be documented in this file.
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r validate release my-module
+eac validate release my-module
 ```
 
 **Output** (success):
@@ -196,7 +196,7 @@ r2r validate release my-module
 **Action Type**: 🧑 Manual
 
 ```bash
-r2r release check-ci --workflow ci-my-module.yml --commit $(git rev-parse HEAD)
+eac release check-ci --workflow ci-my-module.yml --commit $(git rev-parse HEAD)
 ```
 
 **Output** (passing):

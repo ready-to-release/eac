@@ -25,17 +25,12 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
-
-func init() {
-	registry.Register(PipelineCheckRecentRun)
-}
 
 func PipelineCheckRecentRun() int {
 	// Parse flags

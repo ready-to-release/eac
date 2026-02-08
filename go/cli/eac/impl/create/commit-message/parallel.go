@@ -74,14 +74,14 @@ import (
 // Example:
 //
 //	cfg := &executionConfig{
-//	    affectedModules: []string{"r2r-cli", "core", "eac-cli"},
+//	    affectedModules: []string{"clie-cli", "core", "eac-cli"},
 //	    ...
 //	}
 //	sections, err := generateModuleSectionsParallel(cfg, logger, nil)
-//	// sections[0] corresponds to "r2r-cli"
+//	// sections[0] corresponds to "clie-cli"
 //	// sections[1] corresponds to "core"
 //	// sections[2] corresponds to "eac-cli"
-func generateModuleSectionsParallel(cfg *executionConfig, testExecutor *ai.Executor) ([]string, error) {
+func generateModuleSectionsParallel(deps *Deps, cfg *executionConfig, testExecutor *ai.Executor) ([]string, error) {
 	// Validate inputs
 	if cfg == nil {
 		return nil, fmt.Errorf("executionConfig cannot be nil")
@@ -140,7 +140,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, testExecutor *ai.Execu
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
 			err := commitmessageinternal.WithProgress(progressMsg, func() error {
-				result, genErr := generateWithPromptResult("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
+				result, genErr := generateWithPromptResult(deps, "module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
 				if result != nil {
 					output = result.Output
 					providerName = result.ProviderName

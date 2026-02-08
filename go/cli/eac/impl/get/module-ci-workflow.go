@@ -6,11 +6,11 @@
 // Long:   echo "$MODULES_JSON" | jq -r '.[] | select(.moniker == "X") | .files.workflows.ci'
 // Long:
 // Long: Exit codes:
-// Long:   0 - Workflow found, outputs filename (e.g., ci-r2r-cli.yaml)
+// Long:   0 - Workflow found, outputs filename (e.g., ci-clie-cli.yaml)
 // Long:   1 - Module not found or no CI workflow configured
 // Long:
 // Long: Example:
-// Long:   get module-ci-workflow r2r-cli       # Outputs: ci-r2r-cli.yaml
+// Long:   get module-ci-workflow clie-cli       # Outputs: ci-clie-cli.yaml
 // Long:   get module-ci-workflow core      # Outputs: ci-core.yaml
 // Flag.basename: type=bool, usage=Output only the basename (default true)
 package get
@@ -21,14 +21,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetModuleCIWorkflow)
-}
 
 func GetModuleCIWorkflow() int {
 	// Parse arguments

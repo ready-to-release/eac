@@ -20,7 +20,7 @@ Model Context Protocol (MCP) allows Claude to interact with external tools and d
 }
 ```
 
-**Uses**: `r2r eac <command>` (Docker-based)
+**Uses**: `clie eac <command>` (Docker-based)
 **Startup**: ~2s
 **Best for**: CI/CD, production, consistent environments
 
@@ -50,13 +50,13 @@ Model Context Protocol (MCP) allows Claude to interact with external tools and d
 
 **`EAC_USE_DIRECT_BINARY`**:
 - `true`: Direct binary (development)
-- Not set or `false`: r2r eac (production, default)
+- Not set or `false`: clie eac (production, default)
 
 ## Verification
 
 ```bash
 # Test production mode
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | r2r eac mcp commands
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | clie eac mcp commands
 
 # Test development mode
 EAC_USE_DIRECT_BINARY=true go run ./go/mcp/commands/main.go
@@ -64,7 +64,7 @@ EAC_USE_DIRECT_BINARY=true go run ./go/mcp/commands/main.go
 
 ## Troubleshooting
 
-**Issue**: r2r not found
+**Issue**: clie not found
 - **Solution**: Use development mode
 
 **Issue**: Slow commands
@@ -115,4 +115,4 @@ Once configured, Claude can use these commands via MCP:
 2. Add `.mcp.json` to your project root
 3. Restart Claude Code
 4. Try asking Claude to use MCP commands
-5. Install generic templates: `r2r eac templates install claude`
+5. Install generic templates: `clie eac templates install claude`

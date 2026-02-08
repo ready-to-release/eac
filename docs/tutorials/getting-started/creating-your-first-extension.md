@@ -1,6 +1,6 @@
 # Creating Your First Extension
 
-Learn how to build a custom r2r extension - a containerized command that extends the r2r CLI with your own functionality.
+Learn how to build a custom clie extension - a containerized command that extends the clie CLI with your own functionality.
 
 **Prerequisites:** [Quick Start Guide](./quick-start.md), Docker installed, basic Go knowledge
 
@@ -8,35 +8,35 @@ Learn how to build a custom r2r extension - a containerized command that extends
 
 By the end of this tutorial, you'll be able to:
 
-- Understand what r2r extensions are and how they work
+- Understand what clie extensions are and how they work
 - Set up a proper Go project structure for extensions
 - Implement the required extension metadata
 - Build and test your extension locally
-- Use your extension via the r2r CLI
+- Use your extension via the clie CLI
 
 ## What is an Extension?
 
-An **r2r extension** is a Docker container that adds custom commands to the r2r CLI.
+An **clie extension** is a Docker container that adds custom commands to the clie CLI.
 
 Extensions run in isolation and receive arguments from the CLI.
 
 **Key characteristics:**
 
 - **Containerized** - Packaged as Docker images
-- **CLI-integrated** - Invoked via `r2r <extension-name> <command>`
+- **CLI-integrated** - Invoked via `clie <extension-name> <command>`
 - **Self-describing** - Provide metadata about capabilities and requirements
 - **Portable** - Run consistently across platforms
 
 **Example:** The `ext-env-check` extension validates environment variables:
 
 ```bash
-r2r env-check HOME USER SHELL
+clie env-check HOME USER SHELL
 ```
 
 !!! tip "Complete Guide Available"
 
     This tutorial provides a quick introduction. For comprehensive details, see:
-    - **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Complete reference with production patterns
+    - **[Creating Extensions Guide](../../how-to-guides/clie/creating-extensions.md)** - Complete reference with production patterns
     - **[ext-env-check Repository](https://github.com/ready-to-release/ext-env-check)** - Working example to study
 
 ## Step 1: Create Project Structure
@@ -101,7 +101,7 @@ type Metadata struct {
 }
 
 type Requirements struct {
-    R2RVersion       string `json:"r2r-version"`
+    CLIEVersion       string `json:"clie-version"`
     ContainerRuntime string `json:"container-runtime"`
     MinimumMemory    string `json:"minimum-memory"`
     MinimumCPU       string `json:"minimum-cpu"`
@@ -115,7 +115,7 @@ func Print(version string) {
         SchemaVersion: "1.0",
         Capabilities:  []string{"custom-task"},
         Requirements: Requirements{
-            R2RVersion:       ">=0.1.0",
+            CLIEVersion:       ">=0.1.0",
             ContainerRuntime: "docker",
             MinimumMemory:    "64MB",
             MinimumCPU:       "0.1",
@@ -256,9 +256,9 @@ docker run --rm my-extension:dev --help
 docker run --rm my-extension:dev greet
 ```
 
-## Step 7: Configure for r2r
+## Step 7: Configure for clie
 
-Create `.r2r/r2r-cli.local.yml`:
+Create `.clie/clie-cli.local.yml`:
 
 ```yaml
 version: "1.0"
@@ -269,14 +269,14 @@ extensions:
     image_pull_policy: Never
 ```
 
-## Step 8: Use via r2r CLI
+## Step 8: Use via clie CLI
 
-Test your extension through r2r:
+Test your extension through clie:
 
 ```bash
-r2r my-ext greet
-r2r my-ext --help
-r2r my-ext extension-meta
+clie my-ext greet
+clie my-ext --help
+clie my-ext extension-meta
 ```
 
 ## What You Learned
@@ -287,8 +287,8 @@ Congratulations! You've successfully:
 - ✅ Implemented required extension metadata
 - ✅ Built a multi-stage Docker image
 - ✅ Tested the container locally
-- ✅ Configured r2r to use your extension
-- ✅ Invoked your extension via r2r CLI
+- ✅ Configured clie to use your extension
+- ✅ Invoked your extension via clie CLI
 
 ## Key Concepts Covered
 
@@ -296,7 +296,7 @@ Congratulations! You've successfully:
 - **Project structure** - `cmd/` and `internal/` organization
 - **Docker multi-stage builds** - Optimized container images
 - **Local development** - Building and testing without publishing
-- **r2r integration** - Configuration and invocation
+- **clie integration** - Configuration and invocation
 
 ## Next Steps
 
@@ -314,7 +314,7 @@ Now that you have a working extension, you can:
 
 For production-ready extensions, see:
 
-- **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Complete patterns:
+- **[Creating Extensions Guide](../../how-to-guides/clie/creating-extensions.md)** - Complete patterns:
   - Testing strategies (unit, behavior, container)
   - EAC integration for automated builds
   - Publishing to registries
@@ -330,4 +330,4 @@ For production-ready extensions, see:
 ### Related Guides
 
 - **[Local Development Workflows](../../how-to-guides/local-setup/local-dev-workflows.md)** - Iterate faster
-- **[Testing in External Repos](../../how-to-guides/r2r/testing-in-external-repos.md)** - Validate across projects
+- **[Testing in External Repos](../../how-to-guides/clie/testing-in-external-repos.md)** - Validate across projects

@@ -115,7 +115,7 @@ func loadRepositoryYML(path string) (*repositoryYMLFile, error) {
 // reinitialize handles re-initialization of an existing EAC project.
 // It loads the existing config, re-scans if needed, merges with preservation of user edits,
 // and writes the updated configuration.
-func reinitialize(workspaceRoot, eacDir string, scan bool, aiProvider string) int {
+func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvider string) int {
 	log.Info("🔍 Re-scanning repository structure...")
 
 	// Load existing repository config
@@ -151,7 +151,7 @@ func reinitialize(workspaceRoot, eacDir string, scan bool, aiProvider string) in
 		if aiProvider != "" {
 			log.Info(fmt.Sprintf("🤖 Regenerating configuration with AI (%s)...", aiProvider))
 			// Use AI generator with rule-based fallback
-			aiGen := NewAIGenerator(aiProvider)
+			aiGen := newAIGenerator(aiProvider, deps)
 			ruleGen := NewRuleBasedGenerator()
 
 			// Try AI generation first
@@ -219,7 +219,7 @@ func reinitialize(workspaceRoot, eacDir string, scan bool, aiProvider string) in
 	}
 
 	header := `# EAC Repository Configuration
-# Updated by: r2r eac init
+# Updated by: clie eac init
 #
 # This file defines your repository settings and module domain.
 # Edit this file to customize modules, dependencies, and build settings.
@@ -279,7 +279,7 @@ func reinitialize(workspaceRoot, eacDir string, scan bool, aiProvider string) in
 	log.Info("")
 	log.Info("📋 Next steps:")
 	log.Info("   1. Review changes: git diff .eac/repository.yml")
-	log.Info("   2. Verify modules: r2r eac show modules")
+	log.Info("   2. Verify modules: clie eac show modules")
 	log.Info("   3. Commit updates: git add .eac/ && git commit -m \"Update EAC config\"")
 	log.Info("")
 

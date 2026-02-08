@@ -36,7 +36,6 @@ import (
 	configpkg "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
-	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -49,47 +48,15 @@ func init() {
 	registry.Register(CreateSpec)
 }
 
-// ============================================================================
-// Mock Support for Testing
-// ============================================================================
-
-// mockAIResponse holds the mock response for testing. When set, AI calls return this.
-var mockAIResponse string
-
-// SetMockAIResponse sets a mock AI response for testing.
-func SetMockAIResponse(response string) {
-	mockAIResponse = response
-}
-
-// ResetMockAIResponse clears the mock AI response.
-func ResetMockAIResponse() {
-	mockAIResponse = ""
-}
-
-// gitRepoProvider provides lazy-initialized git repository with test injection support.
-var gitRepoProvider = &git.LazyRepo{}
-
-// getGitRepo returns the git repository, creating one if needed.
-func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	return gitRepoProvider.Get(workspaceRoot)
-}
-
-// SetGitRepo allows tests to inject a mock repository.
-func SetGitRepo(repo git.GitRepository) {
-	gitRepoProvider.Set(repo)
-}
-
-// ResetGitRepo clears the mock git repository.
-func ResetGitRepo() {
-	gitRepoProvider.Reset()
-}
-
-// ============================================================================
-
 // Intent: Create a Gherkin specification from natural language description using AI
 //
 // CreateSpec orchestrates the specification generation workflow.
 func CreateSpec() int {
+	return createSpec(defaultDeps())
+}
+
+// createSpec is the internal implementation that accepts injectable dependencies.
+func createSpec(deps *Deps) int {
 	// Parse configuration
 	specsConfig, err := parseConfig()
 	if err != nil {
@@ -291,7 +258,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	if err != nil {
 		log.Errorf("AI generation failed after retries: %v", err)
 		log.Error("\nTroubleshooting:")
-		log.Error("  1. Ensure AI provider is configured: r2r agent init --ai <provider>")
+		log.Error("  1. Ensure AI provider is configured: clie agent init --ai <provider>")
 		log.Error("  2. Check API key environment variable is set")
 		log.Error("  3. Verify network connectivity to AI provider")
 		return "", fmt.Errorf("AI generation failed: %w", err)
@@ -634,7 +601,7 @@ func buildUserInputSection(config *SpecsConfig) string {
 	} else {
 		prompt.WriteString("## Module Inference\n\n")
 		prompt.WriteString("No specific module was provided. Please infer the most appropriate module based on the description.\n")
-		prompt.WriteString("Common modules include: eac-cli, core, r2r-cli, eac-mcp-server\n\n")
+		prompt.WriteString("Common modules include: eac-cli, core, clie-cli, eac-mcp-server\n\n")
 	}
 
 	// Final instruction

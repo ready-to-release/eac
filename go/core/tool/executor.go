@@ -20,11 +20,11 @@ import (
 const (
 	// EnvHostRepoRoot is the environment variable that contains the host repository root
 	// when running inside a Docker container (DinD mode).
-	EnvHostRepoRoot = "R2R_HOST_REPOROOT"
+	EnvHostRepoRoot = "CLIE_HOST_REPOROOT"
 
 	// EnvContainerRepoRoot is the environment variable that contains the container's
 	// view of the repository root (typically /var/task).
-	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
+	EnvContainerRepoRoot = "CLIE_CONTAINER_REPOROOT"
 )
 
 // Global executor instance for use throughout the codebase.
@@ -655,7 +655,7 @@ func (e *DefaultExecutor) validateRequirements(tool *ToolDefinition) error {
 }
 
 // populateDinDContext sets up DinD-related fields from environment variables.
-// When R2R_HOST_REPOROOT is set, it indicates we're running in DinD mode
+// When CLIE_HOST_REPOROOT is set, it indicates we're running in DinD mode
 // and mount paths need to be translated from container paths to host paths.
 func (e *DefaultExecutor) populateDinDContext(execCtx *ExecutionContext) {
 	hostRoot := os.Getenv(EnvHostRepoRoot)

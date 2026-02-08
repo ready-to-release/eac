@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Generated default config files during init with calculated platform-specific defaults
   - Separated linting and build configuration into provider-based architecture
   - Unified repository and module configuration into single .eac/repository.yml system
-  - Migrated configuration directory from .r2r/eac to .eac
+  - Migrated configuration directory from .clie/eac to .eac
   - Centralized contract system with contract-based validation and loading
   - Handler flags configuration system
   - Module file path specifications for explicit component roots

@@ -20,12 +20,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioEncode)
-}
 
 // DrawioEncode encodes human-readable XML back to DrawIO format.
 func DrawioEncode() int {

@@ -12,8 +12,8 @@
 # 4. execute-layers: Trigger releases in dependency order
 #
 # Releases are processed layer by layer:
-# - Layer 0: Independent modules (r2r-cli, ext-eac, docs, books)
-# - Layer 1: Bundle modules that depend on Layer 0 (r2r-eac-bundle)
+# - Layer 0: Independent modules (clie-cli, eac-ext, docs, books)
+# - Layer 1: Bundle modules that depend on Layer 0 (clie-eac-bundle)
 
 name: "Release Trigger"
 

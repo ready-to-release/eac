@@ -18,14 +18,9 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 )
-
-func init() {
-	registry.Register(ShowBuildTimes)
-}
 
 func ShowBuildTimes() int {
 	return ShowBuildTimesForModules(nil, 20, "")

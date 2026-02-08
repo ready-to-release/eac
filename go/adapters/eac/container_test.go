@@ -11,7 +11,7 @@ func TestContainerAdapter_PlaceholderResolution(t *testing.T) {
 	td := &tool.ToolDefinition{
 		ID:        "eac",
 		Type:      tool.ToolTypeContainer,
-		LocalPath: "containers/ext-eac",
+		LocalPath: "containers/eac-ext",
 	}
 	adapter := NewContainer("/workspace", nil, td)
 	ca := adapter.(*containerAdapter)
@@ -27,7 +27,7 @@ func TestContainerAdapter_NilConfig(t *testing.T) {
 	td := &tool.ToolDefinition{
 		ID:        "eac",
 		Type:      tool.ToolTypeContainer,
-		LocalPath: "containers/ext-eac",
+		LocalPath: "containers/eac-ext",
 	}
 	adapter := NewContainer("/workspace", nil, td)
 	assert.NotNil(t, adapter)

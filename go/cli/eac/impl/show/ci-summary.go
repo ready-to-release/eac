@@ -31,12 +31,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowCISummary)
-}
 
 // ShowCISummary generates a CI workflow summary.
 func ShowCISummary() int {

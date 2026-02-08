@@ -30,7 +30,7 @@ var scanContainerCounter uint64
 // RunZAPScan executes OWASP ZAP dynamic security scan via Docker.
 func RunZAPScan(targetURL, scanType, workspaceRoot, zapImage string) (interface{}, error) {
 	// Check for mock mode via environment variable
-	if os.Getenv("R2R_MOCK_SECURITY") != "" || os.Getenv("R2R_MOCK_DOCKER") == "true" {
+	if os.Getenv("CLIE_MOCK_SECURITY") != "" || os.Getenv("CLIE_MOCK_DOCKER") == "true" {
 		return getDefaultMockZAPOutput(), nil
 	}
 

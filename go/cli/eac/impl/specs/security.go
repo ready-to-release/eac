@@ -9,14 +9,15 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
+var reFeatureLine = regexp.MustCompile(`(?m)^Feature:\s+(.+?)$`)
+
 // ExtractFeatureName extracts module and feature name from Gherkin content
 // Expected format: "Feature: module_feature-name" or "Feature: feature-name"
 //
 // Security: Validates feature line for path traversal, path separators, and control characters.
 func ExtractFeatureName(gherkin string) (string, string, error) {
 	// Find Feature: line
-	re := regexp.MustCompile(`(?m)^Feature:\s+(.+?)$`)
-	matches := re.FindStringSubmatch(gherkin)
+	matches := reFeatureLine.FindStringSubmatch(gherkin)
 	if len(matches) < 2 {
 		return "", "", fmt.Errorf("no Feature: declaration found in generated content")
 	}

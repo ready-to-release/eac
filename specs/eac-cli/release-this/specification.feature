@@ -24,9 +24,9 @@ Feature: eac-cli_release-this
 
     @L2 @ov
     Scenario: Each module has independent release notes
-      Given module "ext-eac" with releases
+      Given module "eac-ext" with releases
       And module "eac-cli" with releases
       When I check release notes locations
-      Then "release/ext-eac/RELEASE-NOTES.md" should be for ext-eac
+      Then "release/eac-ext/RELEASE-NOTES.md" should be for eac-ext
       And "release/eac-cli/RELEASE-NOTES.md" should be for eac-cli
       And there should be no cross-module contamination

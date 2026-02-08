@@ -22,10 +22,10 @@ You are a security controls analyst. Analyze the risk assessment document and id
 Return a JSON array of control IDs (lowercase): ["ac-2", "ia-2", "si-10"]`
 
 // generateProfile generates an OSCAL profile using AI.
-func generateProfile(config *Config, assessmentContent string, catalog *oscalTypes.Catalog) (*oscalTypes.Profile, error) {
-	// Check for mock response
-	if mockAIResponse != "" {
-		return parseProfileFromAI(mockAIResponse, config, catalog)
+func generateProfile(deps *Deps, config *Config, assessmentContent string, catalog *oscalTypes.Catalog) (*oscalTypes.Profile, error) {
+	// Check for injected test response
+	if deps.AIResponse != "" {
+		return parseProfileFromAI(deps.AIResponse, config, catalog)
 	}
 	if mock, ok := coreai.GetMockResponse("risk-profile"); ok {
 		return parseProfileFromAI(mock, config, catalog)

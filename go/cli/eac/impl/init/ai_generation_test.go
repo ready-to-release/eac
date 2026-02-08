@@ -148,12 +148,14 @@ git:
 				0644,
 			))
 
-			// Set injected executor for testing
-			SetAIExecutor(executor)
-			defer ResetAIExecutor()
+			// Create deps with injected executor
+			deps := &Deps{
+				GetAIExecutor: func(root string) *ai.Executor { return executor },
+				GetGitRepo:    defaultDeps().GetGitRepo,
+			}
 
 			// Execute
-			got, err := GenerateConfig(tmpDir, tt.scanResult, "mock")
+			got, err := generateConfig(deps, tmpDir, tt.scanResult, "mock")
 
 			// Verify
 			if tt.wantErr {
@@ -210,15 +212,18 @@ modules: []
 	executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
 		return mockProvider, nil
 	})
-	SetAIExecutor(executor)
-	defer ResetAIExecutor()
+	// Create deps with injected executor
+	deps := &Deps{
+		GetAIExecutor: func(root string) *ai.Executor { return executor },
+		GetGitRepo:    defaultDeps().GetGitRepo,
+	}
 
 	// Empty scan results
 	scanResult := &ScanResult{
 		Modules: []ModuleInfo{},
 	}
 
-	got, err := GenerateConfig(tmpDir, scanResult, "mock")
+	got, err := generateConfig(deps, tmpDir, scanResult, "mock")
 
 	require.NoError(t, err)
 	assert.Contains(t, got, "modules: []")
@@ -311,8 +316,11 @@ git:
 	executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
 		return mockProvider, nil
 	})
-	SetAIExecutor(executor)
-	defer ResetAIExecutor()
+	// Create deps with injected executor
+	deps := &Deps{
+		GetAIExecutor: func(root string) *ai.Executor { return executor },
+		GetGitRepo:    defaultDeps().GetGitRepo,
+	}
 
 	scanResult := &ScanResult{
 		Modules: []ModuleInfo{
@@ -326,7 +334,7 @@ git:
 		},
 	}
 
-	_, err := GenerateConfig(tmpDir, scanResult, "mock")
+	_, err := generateConfig(deps, tmpDir, scanResult, "mock")
 	require.NoError(t, err)
 
 	// Verify the captured input contains valid JSON

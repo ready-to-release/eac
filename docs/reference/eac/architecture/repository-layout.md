@@ -8,7 +8,7 @@ The following diagram illustrates the version control and artifact storage archi
 
 ![Version Control and Artifact Architecture](../../../assets/architecture/modules-version-control.drawio.png)
 
-**Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
+**Quick Reference**: For complete documentation on the CLIE CLI and EAC system, see:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
 - [Modules](../modules/index.md) - Module system and dependency management
@@ -34,7 +34,7 @@ eac/
 │   ├── actions/                # Reusable workflow actions
 │   └── workflows/              # CI/CD pipeline definitions
 │
-├── .r2r/                       # R2R and EAC configuration (Everything as Code)
+├── .clie/                       # EAC and CLIE configuration (Everything as Code)
 │   ├── cache/                  # Build cache
 │   ├── eac/                    # User configuration overrides
 │   │   ├── repository.yml      # Module contracts (central registry)
@@ -46,7 +46,7 @@ eac/
 │
 ├── containers/                 # Docker container definitions
 │   ├── drawio-oci/              # Draw.io diagram CLI
-│   ├── ext-eac/                # R2R CLI extension for EAC
+│   ├── eac-ext/                # CLIE CLI extension for EAC
 │   ├── git-filter-repo/        # Git history filtering tool
 │   ├── gource/                 # Repository visualization
 │   ├── mermaid-cli/            # Mermaid diagram renderer
@@ -67,7 +67,7 @@ eac/
 │   │   ├── component-types.schema.json
 │   │   └── ...
 │   ├── eac-docs/0.1.0/         # Documentation schemas
-│   ├── r2r-cli/0.1.0/          # CLI-specific schemas
+│   ├── clie-cli/0.1.0/          # CLI-specific schemas
 │   └── vscode-commit/          # VSCode extension schemas
 │
 ├── docs/                       # MkDocs documentation site source
@@ -84,15 +84,15 @@ eac/
 │   ├── core/                   # Core domain libraries (eac-core module)
 │   ├── godog/                  # Shared BDD test infrastructure
 │   ├── specs/                  # Specs implementations
-│   └── r2r/                    # R2R implementation
-│       └── cli/                # R2R CLI application (r2r-cli module)
+│   └── clie/                    # CLIE implementation
+│       └── cli/                # CLIE CLI application (clie-cli module)
 │
 ├── release/                    # Release notes and changelogs
 │   ├── books/                  # Books module releases
 │   ├── docs/                   # Docs module releases
-│   ├── ext-eac/                # Extension releases
-│   ├── r2r-cli/                # CLI releases
-│   └── r2r-eac-bundle/         # Bundle releases
+│   ├── eac-ext/                # Extension releases
+│   ├── clie-cli/                # CLI releases
+│   └── clie-eac-bundle/         # Bundle releases
 │
 ├── scripts/                    # Cross-platform scripts
 │   ├── pwsh/                   # PowerShell scripts (Windows)
@@ -101,7 +101,7 @@ eac/
 ├── specs/                      # Gherkin BDD specifications
 │   ├── eac-commands/           # Specs for commands module
 │   ├── eac-core/               # Specs for core module
-│   ├── r2r-cli/                # Specs for CLI module
+│   ├── clie-cli/                # Specs for CLI module
 │   └── repository/             # Repository-level validation specs
 │
 ├── templates/                  # Project templates
@@ -127,8 +127,8 @@ Modules are organized into two categories:
 
 **Deployable Modules** - Independently built, versioned, and deployed:
 
-- **r2r-cli** - Go CLI application with cross-platform executables
-- **ext-eac** - Docker extension for R2R CLI
+- **clie-cli** - Go CLI application with cross-platform executables
+- **eac-ext** - Docker extension for CLIE CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 
 **Supporting Modules** - Shared code and infrastructure:
@@ -173,7 +173,7 @@ For complete module configuration reference, see:
 
 ## Complete Documentation
 
-For comprehensive information about the R2R and EAC system:
+For comprehensive information about the EAC and CLIE system:
 
 ### Core Documentation
 

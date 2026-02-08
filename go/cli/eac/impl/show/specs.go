@@ -9,10 +9,10 @@
 // Long: - Status icons: ✨ Added, 📝 Modified, 🗑️ Deleted
 // Long:
 // Long: Example:
-// Long:   show specs ext-eac
-// Long:   show specs ext-eac latest
-// Long:   show specs ext-eac unreleased
-// Long:   show specs ext-eac 0.0.7
+// Long:   show specs eac-ext
+// Long:   show specs eac-ext latest
+// Long:   show specs eac-ext unreleased
+// Long:   show specs eac-ext 0.0.7
 // Flag.branch: type=string, usage=Branch to query (default: trunk branch from config, usually "main"). Use "HEAD" for current branch
 // Args: module [version]
 package show
@@ -22,14 +22,9 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowSpecs)
-}
 
 // ShowSpecs displays specifications in human-readable markdown format.
 func ShowSpecs() int {

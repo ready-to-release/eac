@@ -11,14 +11,14 @@
 # - Downloads test-results-{module}*  (test results from all platforms)
 # - Downloads scan-results-{module}   (security scan results)
 #
-# Example: r2r-cli depends on eac-core, so r2r-cli evidence includes:
-# - test-results-r2r-cli-* from ci-r2r-cli.yaml
+# Example: clie-cli depends on eac-core, so clie-cli evidence includes:
+# - test-results-clie-cli-* from ci-clie-cli.yaml
 # - test-results-eac-core-* from ci-eac-core.yaml
 #
 # Usage:
 #   - uses: ./.github/actions/build-evidence-books
 #     with:
-#       module: r2r-cli
+#       module: clie-cli
 
 name: Build Evidence Books
 description: Build evidence PDFs for a module, collecting CI artifacts as evidence

@@ -16,7 +16,7 @@
 // Long: Example:
 // Long:   build                           # Build all modules
 // Long:   build eac-cli              # Build a single module
-// Long:   build core r2r-cli          # Build specific modules
+// Long:   build core clie-cli          # Build specific modules
 // Long:   build --tidy-first eac-cli # Build with go mod tidy first
 // Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
 // Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
@@ -39,6 +39,7 @@
 // Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
 // Flag.dry-run: type=bool, usage=Simulate build without running actual commands
 // Flag.turbo: type=bool, usage=Enable turbo mode for faster builds (increases parallelism)
+// Flag.component: type=string, usage=Only build specific component(s) within each module (repeatable)
 // Args: modules
 package build
 
@@ -212,25 +213,30 @@ func Build() int {
 		return 1
 	}
 
-	// Parse build-specific flags from remaining args
-	buildFlags, unknownArgs, err := ParseBuildSpecificFlags(shared.Remaining)
+	// Rebuild unconsumed args in original order for build-specific parsing.
+	// The shared parser splits unknown flags (Remaining) from positional args (Monikers),
+	// but build-specific value-taking flags like --component need their values preserved
+	// in the correct position (e.g., "--component site" must stay together).
+	buildArgs := rebuildUnconsumedArgs(args, shared.Remaining, shared.Monikers)
+
+	// Parse build-specific flags from rebuilt args
+	buildFlags, unknownArgs, err := ParseBuildSpecificFlags(buildArgs)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		printBuildUsage()
 		return 1
 	}
 
-	// Check for unknown flags
+	// Check for unknown flags and extract monikers from remaining args
+	var monikers []string
 	for _, arg := range unknownArgs {
 		if strings.HasPrefix(arg, "--") {
 			log.Errorf("Error: unknown flag: %s", arg)
 			printBuildUsage()
 			return 1
 		}
+		monikers = append(monikers, arg)
 	}
-
-	// Extract values from shared flags
-	monikers := shared.Monikers
 	skipDeps := shared.SkipDeps
 	skipDepm := shared.SkipDepm
 	forceRebuild := shared.CacheConfig.ShouldSkipState()
@@ -344,10 +350,38 @@ func Build() int {
 		UseExistingDepm: useExistingDepm,
 		Reproducible:    reproducible,
 		ArtifactsMode:   artifactsMode,
+		Components:      buildFlags.Components,
 		RequestedSet:    requestedSet,
 	}
 
 	return RunBuildWithFramework(cmdCfg, buildCfg)
+}
+
+// rebuildUnconsumedArgs reconstructs remaining and positional args in their
+// original order. The shared parser separates unknown flags (remaining) from
+// positional args (positional), but this loses ordering information needed for
+// value-taking build-specific flags like --component, --version, --reproducible.
+// By restoring original order, ParseBuildSpecificFlags can correctly pair flags
+// with their values (e.g., "--component site" stays together).
+func rebuildUnconsumedArgs(originalArgs, remaining, positional []string) []string {
+	// Count occurrences of each unconsumed arg
+	unconsumed := make(map[string]int)
+	for _, r := range remaining {
+		unconsumed[r]++
+	}
+	for _, p := range positional {
+		unconsumed[p]++
+	}
+
+	// Scan original args, keeping only unconsumed ones in original order
+	var result []string
+	for _, arg := range originalArgs {
+		if unconsumed[arg] > 0 {
+			result = append(result, arg)
+			unconsumed[arg]--
+		}
+	}
+	return result
 }
 
 // isValidReproducible checks if a reproducible flag value is valid.
@@ -553,6 +587,7 @@ func printBuildUsage() {
 	log.Info("                            all: Build all artifacts for all platforms (CI default)")
 	log.Info("                            reduced: Reduced artifacts for faster local builds (local default)")
 	log.Info("  --all                     Alias for --artifacts all")
+	log.Info("  --component NAME          Only build specific component(s) within each module (repeatable)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("MkDocs modules with books (books.yml):")
@@ -565,22 +600,16 @@ func printBuildUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  build                                # Build all modules")
-	log.Info("  build r2r-cli                        # Build CLI for current platform")
+	log.Info("  build clie-cli                        # Build CLI for current platform")
 	log.Info("  build books                          # Build books (uses books.yml output config)")
-	log.Info("  build r2r-cli --list-artifacts       # List artifacts without building")
+	log.Info("  build clie-cli --list-artifacts       # List artifacts without building")
 }
 
 // hasExistingArtifacts checks if a module's build artifacts already exist AND
 // were built from the same source inputs.
 // Used by --use-existing-depm to skip building modules whose artifacts are present
 // (typically downloaded from previous CI runs).
-func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool) bool {
-	// Load config
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return false
-	}
-
+func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool, cfg *config.EACConfig) bool {
 	// Get module
 	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {

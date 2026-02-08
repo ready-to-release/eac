@@ -110,7 +110,7 @@ Child workflows download artifacts from the trigger workflow using the `trigger_
 Workflow status checks follow a consistent naming pattern:
 
 - **CI workflows:** `CI: {module-name}` (e.g., `CI: eac-commands`)
-- **Release workflows:** `Release: {module-name}` (e.g., `Release: r2r-cli`)
+- **Release workflows:** `Release: {module-name}` (e.g., `Release: clie-cli`)
 - **Orchestration:** `CI Trigger`, `Release Trigger`
 - **Security:** `CodeQL`
 
@@ -183,14 +183,14 @@ Extracts and validates version from git tag or workflow input.
 
 **Inputs:**
 
-- `module-prefix` (required) - Module tag prefix (e.g., r2r-cli)
+- `module-prefix` (required) - Module tag prefix (e.g., clie-cli)
 - `legacy-prefixes` (optional) - Legacy tag prefixes for backwards compatibility
 - `commands-path` (required) - Path to commands binary
 
 **Outputs:**
 
 - `version` - Extracted version (e.g., 1.0.0)
-- `tag_name` - Full tag name (e.g., r2r-cli/1.0.0)
+- `tag_name` - Full tag name (e.g., clie-cli/1.0.0)
 - `is_valid` - Whether version is valid semver (true/false)
 
 **Usage:**
@@ -200,7 +200,7 @@ Extracts and validates version from git tag or workflow input.
   id: extract_version
   uses: ./.github/actions/extract-release-version
   with:
-    module-prefix: r2r-cli
+    module-prefix: clie-cli
     commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
 

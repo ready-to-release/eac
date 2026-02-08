@@ -15,10 +15,10 @@
 // Long:   1 - CI workflow failed or timeout
 // Long:
 // Long: Example:
-// Long:   release check-ci --workflow ci-r2r-cli.yaml --commit abc123
-// Long:   release check-ci --workflow ci-ext-eac.yaml --commit abc123 --timeout 600
-// Long:   release check-ci --workflow ci-r2r-cli.yaml --commit abc123 --strict
-// Flag.workflow: type=string, usage=CI workflow filename (e.g., ci-r2r-cli.yaml)
+// Long:   release check-ci --workflow ci-clie-cli.yaml --commit abc123
+// Long:   release check-ci --workflow ci-eac-ext.yaml --commit abc123 --timeout 600
+// Long:   release check-ci --workflow ci-clie-cli.yaml --commit abc123 --strict
+// Flag.workflow: type=string, usage=CI workflow filename (e.g., ci-clie-cli.yaml)
 // Flag.commit: type=string, usage=Commit SHA to check
 // Flag.timeout: type=int, usage=Maximum wait time in seconds (default: 300)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
@@ -37,14 +37,9 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ReleaseCheckCI)
-}
 
 // CIRunStatus represents the status of a GitHub Actions workflow run.
 type CIRunStatus struct {

@@ -17,12 +17,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioInfo)
-}
 
 // DrawioInfo shows information about a DrawIO file.
 func DrawioInfo() int {

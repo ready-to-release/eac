@@ -15,7 +15,7 @@ Download the script first to pass arguments:
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 -OutFile install.ps1
 
 # Install specific version
-.\install.ps1 -Version "r2r-cli/v1.0.0"
+.\install.ps1 -Version "clie-cli/v1.0.0"
 
 # Install system-wide (requires Administrator)
 .\install.ps1 -System
@@ -24,13 +24,13 @@ Invoke-WebRequest -Uri https://raw.githubusercontent.com/ready-to-release/eac/ma
 .\install.ps1 -Upx
 
 # Custom install directory
-.\install.ps1 -InstallDir "C:\Tools\r2r"
+.\install.ps1 -InstallDir "C:\Tools\clie"
 ```
 
 ## Default Install Location
 
-- **User install**: `%LOCALAPPDATA%\r2r\r2r.exe`
-- **System install**: `%ProgramFiles%\r2r\r2r.exe`
+- **User install**: `%LOCALAPPDATA%\clie\clie.exe`
+- **System install**: `%ProgramFiles%\clie\clie.exe`
 
 ## Note
 

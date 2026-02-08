@@ -109,9 +109,9 @@ func TestComponentTypeDefaultsArtifactPattern(t *testing.T) {
 			defaults: &ComponentTypeDefaults{
 				ArtifactPattern: "{moniker}{ext}",
 			},
-			moniker: "r2r",
+			moniker: "clie",
 			ext:     ".exe",
-			want:    "r2r.exe",
+			want:    "clie.exe",
 		},
 		{
 			name: "pattern without placeholders",
@@ -125,7 +125,7 @@ func TestComponentTypeDefaultsArtifactPattern(t *testing.T) {
 		{
 			name:     "nil defaults returns empty",
 			defaults: nil,
-			moniker:  "r2r",
+			moniker:  "clie",
 			ext:      ".exe",
 			want:     "",
 		},
@@ -134,7 +134,7 @@ func TestComponentTypeDefaultsArtifactPattern(t *testing.T) {
 			defaults: &ComponentTypeDefaults{
 				ArtifactPattern: "",
 			},
-			moniker: "r2r",
+			moniker: "clie",
 			ext:     ".exe",
 			want:    "",
 		},
@@ -218,7 +218,7 @@ func TestDeriveChangelogPath(t *testing.T) {
 		{
 			name: "explicit changelog takes precedence",
 			m: &Module{
-				Moniker: "r2r-cli",
+				Moniker: "clie-cli",
 				Versioning: &ModuleVersioning{
 					ReleaseType: "published",
 					Changelog:   "custom/path/CHANGELOG.md",
@@ -229,22 +229,22 @@ func TestDeriveChangelogPath(t *testing.T) {
 		{
 			name: "published release type derives from moniker",
 			m: &Module{
-				Moniker: "r2r-cli",
+				Moniker: "clie-cli",
 				Versioning: &ModuleVersioning{
 					ReleaseType: "published",
 				},
 			},
-			want: "release/r2r-cli/CHANGELOG.md",
+			want: "release/clie-cli/CHANGELOG.md",
 		},
 		{
 			name: "bundle release type derives from moniker",
 			m: &Module{
-				Moniker: "ext-eac",
+				Moniker: "eac-ext",
 				Versioning: &ModuleVersioning{
 					ReleaseType: "bundle",
 				},
 			},
-			want: "release/ext-eac/CHANGELOG.md",
+			want: "release/eac-ext/CHANGELOG.md",
 		},
 		{
 			name: "internal with go component derives from go_root",

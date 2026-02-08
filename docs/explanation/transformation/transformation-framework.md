@@ -228,7 +228,7 @@ See [Automated Evidence Collection](compliance-as-code.md#principle-4-automated-
 
 !!! tip "Evidence Collection Automation"
 
-    Automation layer (e.g., r2r CLI) accelerates evidence collection and packaging.
+    Automation layer (e.g., **eac** CLI) accelerates evidence collection and packaging.
 
 **Deliverable**: Evidence collection system
 

@@ -17,12 +17,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioRender)
-}
 
 // DrawioRender renders a DrawIO diagram to an actual PNG image.
 func DrawioRender() int {

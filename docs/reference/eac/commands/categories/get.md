@@ -133,7 +133,7 @@ eac get dependencies | jq 'to_entries[] | select(.value | length == 0) | .key'
 
 ```bash
 # Get execution order for parallel builds
-eac get execution order r2r-cli | jq -r '.execution_order[]'
+eac get execution order clie-cli | jq -r '.execution_order[]'
 
 # Get build dependencies
 eac get build-deps src-api | jq '.dependencies[]'

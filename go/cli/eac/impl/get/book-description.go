@@ -20,14 +20,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetBookDescription)
-}
 
 func GetBookDescription() int {
 	// Parse arguments

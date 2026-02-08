@@ -14,14 +14,14 @@ Any module can have a changelog. The changelog location is defined in the module
 
 ```bash
 # 1. Check if there are changes to release
-r2r release pending r2r-cli
+clie release pending clie-cli
 
 # 2. Update the changelog with a new version
-r2r release this r2r-cli
+clie release this clie-cli
 
 # 3. Commit and create a PR
-git add release/r2r-cli/CHANGELOG.md
-git commit -m "release(r2r-cli): 0.1.0"
+git add release/clie-cli/CHANGELOG.md
+git commit -m "release(clie-cli): 0.1.0"
 git push && gh pr create
 
 # 4. After PR is merged, release-auto workflow creates the tag
@@ -80,13 +80,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-r2r release pending r2r-cli
+clie release pending clie-cli
 
 # Check all modules
-r2r release pending --all
+clie release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-r2r release pending r2r-cli --quiet
+clie release pending clie-cli --quiet
 ```
 
 Output includes:
@@ -102,16 +102,16 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-r2r release this r2r-cli
+clie release this clie-cli
 
 # Preview without writing
-r2r release this r2r-cli --dry-run
+clie release this clie-cli --dry-run
 
 # Output as JSON
-r2r release this r2r-cli --json
+clie release this clie-cli --json
 
 # Override release date
-r2r release this r2r-cli --date 2024-01-15
+clie release this clie-cli --date 2024-01-15
 ```
 
 This command:
@@ -128,10 +128,10 @@ Check for changelog versions that don't have corresponding git tags. Used by CI.
 
 ```bash
 # Check single module
-r2r release tag-pending r2r-cli
+clie release tag-pending clie-cli
 
 # Check all modules
-r2r release tag-pending --all
+clie release tag-pending --all
 ```
 
 ### `release validate`
@@ -140,13 +140,13 @@ Validate changelog format and structure.
 
 ```bash
 # Validate single module
-r2r release validate r2r-cli
+clie release validate clie-cli
 
 # Validate all modules
-r2r release validate --all
+clie release validate --all
 
 # Output as JSON
-r2r release validate r2r-cli --json
+clie release validate clie-cli --json
 ```
 
 Checks performed:
@@ -219,7 +219,7 @@ All notable changes to **module-name** will be documented in this file.
 
 ## Versioning
 
-### Semver (r2r-cli, ext-eac)
+### Semver (clie-cli, eac-ext)
 
 Semantic versioning: `MAJOR.MINOR.PATCH`
 
@@ -233,7 +233,7 @@ Calendar versioning: `YYYY.MM.DD` or `YYYY.MM.DD.N` for multiple releases per da
 
 ## Versioning Constraints
 
-The `.r2r/definitions.yml` file can constrain version bumps:
+The `.clie/definitions.yml` file can constrain version bumps:
 
 ```yaml
 # Only allow patch version bumps (no minor or major)
@@ -250,9 +250,9 @@ versioning:
 ```text
 release/
 ├── README.md           # This file
-├── r2r-cli/
+├── clie-cli/
 │   └── CHANGELOG.md    # CLI changelog (semver) - RELEASABLE
-├── ext-eac/
+├── eac-ext/
 │   └── CHANGELOG.md    # Extension changelog (semver) - RELEASABLE
 └── docs/
     └── CHANGELOG.md    # Documentation changelog (calver) - RELEASABLE
@@ -285,13 +285,13 @@ Triggers on push to main when `release/*/CHANGELOG.md` changes. Detects new vers
 
 **This workflow only watches `release/*/CHANGELOG.md`**. Changelogs in other locations are not monitored by this workflow.
 
-### `release-r2r-cli.yml`
+### `release-clie-cli.yml`
 
-Triggers on `r2r-cli/*` tag push. Builds CLI binaries for multiple platforms and creates GitHub release.
+Triggers on `clie-cli/*` tag push. Builds CLI binaries for multiple platforms and creates GitHub release.
 
-### `release-ext-eac.yml`
+### `release-eac-ext.yml`
 
-Triggers on `ext-eac/*` tag push. Retags container images with release version.
+Triggers on `eac-ext/*` tag push. Retags container images with release version.
 
 ### `release-docs.yml`
 
@@ -301,8 +301,8 @@ Triggers on `docs/*` tag push. Deploys documentation.
 
 Tags follow the pattern `<module>/<version>`:
 
-- `r2r-cli/0.1.0`
-- `ext-eac/1.0.0`
+- `clie-cli/0.1.0`
+- `eac-ext/1.0.0`
 - `docs/2024.01.15`
 
 ## Manual Release (Emergency)
@@ -311,16 +311,16 @@ If you need to release without the automated flow:
 
 ```bash
 # 1. Update changelog manually or with release this
-r2r release this r2r-cli
+clie release this clie-cli
 
 # 2. Commit the changelog
-git add release/r2r-cli/CHANGELOG.md
-git commit -m "release(r2r-cli): 0.1.0"
+git add release/clie-cli/CHANGELOG.md
+git commit -m "release(clie-cli): 0.1.0"
 
 # 3. Create and push the tag manually
-git tag -a "r2r-cli/0.1.0" -m "Release r2r-cli v0.1.0"
+git tag -a "clie-cli/0.1.0" -m "Release clie-cli v0.1.0"
 git push origin main
-git push origin "r2r-cli/0.1.0"
+git push origin "clie-cli/0.1.0"
 ```
 
 ## Troubleshooting
@@ -343,7 +343,7 @@ Commits are filtered by module file patterns. Ensure your changes touch files ow
 
 ### Changelog validation errors
 
-Run `r2r release validate <module>` to check for format issues. Common problems:
+Run `clie release validate <module>` to check for format issues. Common problems:
 
 - Invalid version format
 - Duplicate versions

@@ -21,13 +21,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineCIGetRunID)
-}
 
 func PipelineCIGetRunID() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci get-run-id")
@@ -114,7 +109,7 @@ func printGetRunIDUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  pipeline ci get-run-id --workflow ci-docs.yaml --sha abc123def")
-	log.Info("  RUN_ID=$(r2r eac pipeline ci get-run-id --workflow ci-books.yaml --sha $SHA)")
+	log.Info("  RUN_ID=$(clie eac pipeline ci get-run-id --workflow ci-books.yaml --sha $SHA)")
 }
 
 // newError is a helper to create formatted errors.

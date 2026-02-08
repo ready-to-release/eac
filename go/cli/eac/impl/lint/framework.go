@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -194,15 +193,17 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
-	// Parse component parameter to build UnitID for UoW cache lookup
-	parts := strings.SplitN(component, ":", 2)
-	compName := parts[0]
-	providerName := ""
-	if len(parts) == 2 {
-		providerName = parts[1]
+	// Create shared pipeline for cache, lock, and manifest orchestration
+	pipeline := &cmdframework.UnitPipeline{
+		CachedUoWs:             lctx.cachedUoWs,
+		ValidateCacheArtifacts: true,
+		OnCacheInvalidated:     func(ln string) { delete(lctx.cachedUoWs, ln) },
+		LockStyle:              cmdframework.LockUnlessDryRun,
+		LockConfigFn:           func(m, cd string) locking.Config { return locking.UnitLintConfig(m, cd, paths.OutLintRelPath) },
+		Tracker:                lctx.tracker,
 	}
 
-	// Build UnitID for UoW-level cache lookup
+	compName, providerName := cmdframework.ParseComponent(component)
 	unitID := workunit.UnitID{
 		Action:    core.ActionLint,
 		Module:    module,
@@ -210,42 +211,9 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		Tool:      providerName,
 	}
 
-	// Check UoW-level cache
-	isCached := lctx.cachedUoWs != nil && lctx.cachedUoWs[unitID.Longname()]
-	log.Debugf("[LINT-UOW-CACHE] Component worker for %s: unitID=%s, isCached=%v",
-		component, unitID.Longname(), isCached)
-
-	if isCached {
-		if ctx.Config.DryRun {
-			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", module)
-		} else {
-			// Verify UoW manifest artifacts are intact before declaring cache hit
-			reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-			uowID := workunit.UnitID{
-				Action:    core.ActionLint,
-				Module:    module,
-				Component: compName,
-				Tool:      providerName,
-			}
-			validationResult := reader.ValidateUoW(uowID)
-			if !validationResult.ManifestExists {
-				// No manifest - trust source hash, allow cache hit
-				log.Debugf("Lint UoW cache hit (no manifest to verify)")
-				output.Writeln(logWriter, "⏭️  Cached (unchanged)")
-				return -1
-			}
-			if !validationResult.Valid {
-				output.Writeln(logWriter, "UoW cache miss: artifacts invalid")
-				// Fall through to lint - clear cache flag
-				delete(lctx.cachedUoWs, unitID.Longname())
-			} else {
-				output.Writeln(logWriter, "⏭️  Cached (verified)")
-				return -1
-			}
-		}
-		if ctx.Config.DryRun {
-			return -1 // -1 = skipped/cached = blue in TUI
-		}
+	log.Debugf("[LINT-UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
+	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
+		return cacheResult
 	}
 
 	cfg := config.Global()
@@ -278,18 +246,14 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
-	// Acquire component-level lock with wait (use dash separator to match UnitID.DirName())
-	componentDir := compName + "-" + providerName
-	if !ctx.Config.DryRun {
-		lockCfg := locking.UnitLintConfig(module, componentDir, paths.OutLintRelPath)
-		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
-		if err != nil {
-			output.Writeln(logWriter, "Error: %v", err)
-			return 1
-		}
-		defer locking.ReleaseTracked(lockFile)
+	// Acquire component-level lock via pipeline
+	componentDir := cmdframework.ComponentDir(compName, providerName)
+	release, err := pipeline.AcquireLock(ctx, module, componentDir)
+	if err != nil {
+		output.Writeln(logWriter, "Error: %v", err)
+		return 1
 	}
+	defer release()
 
 	// Create output directory for this module+component+provider
 	outputDir := paths.ComponentLintOutputPath(ctx.WorkspaceRoot, module, componentDir)
@@ -355,22 +319,15 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 	}
 	lctx.mu.Unlock()
 
-	// Write UoW manifest via tracker
-	if lctx.tracker != nil {
-		inputHash := computeLintInputHash(ctx, module)
-		manifest := &coreoutput.UoWManifest{
-			ExitCode:   exitCode,
-			InputHash:  inputHash,
-			ExecutedAt: time.Now().UTC(),
-			Duration:   duration,
-			Artifacts:  nil, // Lint doesn't produce artifacts tracked in manifest
-			OutputHash: "",
-			Version:    "1.0.0",
-		}
-		if err := lctx.tracker.RecordComplete(unitID, manifest); err != nil {
-			log.Debugf("Failed to record lint UoW completion for %s: %v", unitID.Longname(), err)
-		}
-	}
+	// Record UoW manifest via pipeline
+	inputHash := computeLintInputHash(ctx, module)
+	pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
+		ExitCode:   exitCode,
+		InputHash:  inputHash,
+		ExecutedAt: time.Now().UTC(),
+		Duration:   duration,
+		Version:    "1.0.0",
+	})
 
 	if exitCode != 0 {
 		output.Writeln(logWriter, "❌ Lint failed for %s:%s with %s", module, compName, providerName)

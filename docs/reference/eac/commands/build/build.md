@@ -18,8 +18,8 @@ Builds respect dependency order automatically:
 
 ```bash
 # Builds dependencies first
-eac build r2r-cli
-# Execution order: eac-core → eac-commands → r2r-cli
+eac build clie-cli
+# Execution order: eac-core → eac-commands → clie-cli
 ```
 
 ## See Also

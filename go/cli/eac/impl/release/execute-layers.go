@@ -40,13 +40,8 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ReleaseExecuteLayers)
-}
 
 // LayerModule represents a module in a release layer.
 type LayerModule struct {
@@ -210,8 +205,8 @@ func ReleaseExecuteLayers() int {
 // dispatchAndGetRunID dispatches a workflow and returns the run ID.
 func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (string, error) {
 	// Dispatch the workflow
-	// Semver releases (r2r-cli, ext-eac) require version input
-	// Calver releases (books, docs, r2r-eac-bundle) auto-generate versions
+	// Semver releases (clie-cli, eac-ext) require version input
+	// Calver releases (books, docs, clie-eac-bundle) auto-generate versions
 	args := []string{"workflow", "run", workflow}
 	if versionType == "semver" {
 		args = append(args, "-f", fmt.Sprintf("version=%s", version))

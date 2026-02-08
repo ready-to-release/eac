@@ -18,10 +18,10 @@ func TestGetChangelog(t *testing.T) {
 	}{
 		{
 			name:           "valid module with changelog",
-			module:         "ext-eac",
+			module:         "eac-ext",
 			wantErr:        false,
 			checkResult:    true,
-			expectedModule: "ext-eac",
+			expectedModule: "eac-ext",
 		},
 		{
 			name:        "non-existent module",

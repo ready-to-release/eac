@@ -43,13 +43,8 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-func init() {
-	registry.Register(Remove)
-}
 
 // Remove removes a workspace and optionally deletes branches.
 func Remove() int {
@@ -338,8 +333,8 @@ func parseRemoveConfig() (*removeConfig, error) {
 		config.worktreePath = worktree.Path
 	} else {
 		// Remove current workspace
-		// Get current working directory - check R2R_PWD first (for test isolation)
-		cwd := os.Getenv(environments.EnvR2RPWD)
+		// Get current working directory - check CLIE_PWD first (for test isolation)
+		cwd := os.Getenv(environments.EnvCLIEPWD)
 		if cwd == "" {
 			// Fall back to actual working directory
 			var err error

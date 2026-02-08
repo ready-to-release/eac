@@ -451,16 +451,16 @@ func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
 	reportsDir := cfg.Repository.Conventions.TemplateReportsDir
 
 	// Priority 1: Team override (.eac/templates/reports/<category>/<template>)
-	teamOverridePath := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
+	teamOverridePath := filepath.Join(workspaceRoot, paths.CLIEDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
 	if _, err := os.Stat(teamOverridePath); err == nil {
 		return teamOverridePath, nil
 	}
 
 	// Priority 2: System default (templates/reports/<category>/<template>)
-	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
+	// In container: uses CLIE_CONTAINER_ROOT (/app where Dockerfile copies templates)
 	// In local dev: uses workspaceRoot (repo root where templates/ exists)
 	distRoot := workspaceRoot
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		distRoot = containerRoot
 	}
 	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, reportsDir, category, templateFilename)

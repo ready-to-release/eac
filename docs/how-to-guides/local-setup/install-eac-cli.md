@@ -6,12 +6,12 @@ Install the standalone EAC CLI binary for native Go performance — no Docker re
 
 ## Which CLI Do I Need?
 
-| CLI | Install method | Requires Docker | Best for |
-|-----|---------------|-----------------|----------|
-| **r2r** + ext-eac | `r2r install eac` | Yes | Full workflow: extensions, Docker-based tools, team standardization |
-| **eac** (standalone) | Installer script below | No | Direct CLI access, CI runners, lightweight environments, development |
+| CLI                  | Install method         | Requires Docker | Best for                                                             |
+| -------------------- | ---------------------- | --------------- | -------------------------------------------------------------------- |
+| **clie** + eac-ext   | `clie install eac`     | Yes             | Full workflow: extensions, Docker-based tools, team standardization  |
+| **eac** (standalone) | Installer script below | No              | Direct CLI access, CI runners, lightweight environments, development |
 
-> Most users should start with [R2R CLI](./install-toolchain.md) which includes EAC via Docker extension.
+> Most users should start with [CLIE CLI](./install-toolchain.md) which includes EAC via Docker extension.
 > Install the standalone EAC CLI if you want native performance or can't use Docker.
 
 ## Prerequisites
@@ -86,10 +86,10 @@ eac help
 
 ## Default Install Locations
 
-| Platform | User install | System install |
-|----------|-------------|----------------|
-| Linux/macOS | `~/.local/bin/eac` | `/usr/local/bin/eac` |
-| Windows | `%LOCALAPPDATA%\eac\eac.exe` | `%ProgramFiles%\eac\eac.exe` |
+| Platform    | User install                 | System install               |
+| ----------- | ---------------------------- | ---------------------------- |
+| Linux/macOS | `~/.local/bin/eac`           | `/usr/local/bin/eac`         |
+| Windows     | `%LOCALAPPDATA%\eac\eac.exe` | `%ProgramFiles%\eac\eac.exe` |
 
 ## Verify Installation
 
@@ -119,11 +119,11 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| "Command not found" | Add install directory to PATH, restart terminal |
-| "Permission denied" | Use `--system` with sudo (Linux) or run as Administrator (Windows) |
-| Download fails | Check network connectivity, verify release exists on [GitHub](https://github.com/ready-to-release/eac/releases?q=eac-cli) |
+| Problem             | Solution                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| "Command not found" | Add install directory to PATH, restart terminal                                                                           |
+| "Permission denied" | Use `--system` with sudo (Linux) or run as Administrator (Windows)                                                        |
+| Download fails      | Check network connectivity, verify release exists on [GitHub](https://github.com/ready-to-release/eac/releases?q=eac-cli) |
 
 ## Next Steps
 
@@ -132,5 +132,5 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac
 
 ## See Also
 
-- [Install R2R CLI](./install-toolchain.md) - Full toolchain with Docker extensions
+- [Install CLIE CLI](./install-toolchain.md) - Full toolchain with Docker extensions
 - [Platform Troubleshooting](./platform-troubleshooting.md)

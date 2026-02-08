@@ -25,9 +25,12 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
-func init() {
-	registry.Register(GetDocumentedCommands)
-}
+var (
+	reCodeBlockStart = regexp.MustCompile(`^` + "```" + `(bash|powershell|pwsh)\s*$`)
+	reCodeBlockEnd   = regexp.MustCompile(`^` + "```" + `\s*$`)
+	reCommandPattern = regexp.MustCompile(`^\s*(?:clie\s+)?eac\s+(.+)$`)
+	reCliePattern    = regexp.MustCompile(`^\s*clie\s+(?:eac\s+)?(.+)$`)
+)
 
 // DocumentedCommand represents a command found in documentation.
 type DocumentedCommand struct {
@@ -147,13 +150,13 @@ func scanMarkdownFile(filePath, workspaceRoot string) ([]commandMatch, error) {
 	scanner := bufio.NewScanner(file)
 
 	// Regex patterns
-	codeBlockStart := regexp.MustCompile("^```(bash|powershell|pwsh)\\s*$")
-	codeBlockEnd := regexp.MustCompile("^```\\s*$")
+	codeBlockStart := reCodeBlockStart
+	codeBlockEnd := reCodeBlockEnd
 
-	// Command patterns - match r2r eac or just eac commands
-	// Handles: r2r eac <cmd>, eac <cmd>, r2r <cmd>
-	commandPattern := regexp.MustCompile(`^\s*(?:r2r\s+)?eac\s+(.+)$`)
-	r2rPattern := regexp.MustCompile(`^\s*r2r\s+(?:eac\s+)?(.+)$`)
+	// Command patterns - match clie eac or just eac commands
+	// Handles: clie eac <cmd>, eac <cmd>, clie <cmd>
+	commandPattern := reCommandPattern
+	cliePattern := reCliePattern
 
 	lineNum := 0
 	inCodeBlock := false
@@ -196,9 +199,9 @@ func scanMarkdownFile(filePath, workspaceRoot string) ([]commandMatch, error) {
 			// Try to match eac command
 			var cmdMatch []string
 			if cmdMatch = commandPattern.FindStringSubmatch(line); cmdMatch != nil {
-				// Matched "eac <cmd>" or "r2r eac <cmd>"
-			} else if cmdMatch = r2rPattern.FindStringSubmatch(line); cmdMatch != nil {
-				// Matched "r2r <cmd>"
+				// Matched "eac <cmd>" or "clie eac <cmd>"
+			} else if cmdMatch = cliePattern.FindStringSubmatch(line); cmdMatch != nil {
+				// Matched "clie <cmd>"
 			}
 
 			if cmdMatch != nil {
@@ -297,8 +300,8 @@ func looksLikeArgument(s string) bool {
 	if len(s) > 0 && s[0] >= '0' && s[0] <= '9' {
 		return true
 	}
-	// Known module name patterns (src-, ext-, eac-, r2r-, etc.)
-	modulePatterns := []string{"src-", "ext-", "eac-", "r2r-", "docs-"}
+	// Known module name patterns (src-, ext-, eac-, clie-, etc.)
+	modulePatterns := []string{"src-", "ext-", "eac-", "clie-", "docs-"}
 	for _, prefix := range modulePatterns {
 		if strings.HasPrefix(s, prefix) {
 			return true

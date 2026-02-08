@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/s
 chmod +x install.sh
 
 # Install specific version
-./install.sh --version r2r-cli/v1.0.0
+./install.sh --version clie-cli/v1.0.0
 
 # Install system-wide (requires sudo)
 ./install.sh --system
@@ -35,5 +35,5 @@ wget -qO- https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh
 
 ## Default Install Location
 
-- **User install**: `~/.local/bin/r2r`
-- **System install**: `/usr/local/bin/r2r`
+- **User install**: `~/.local/bin/clie`
+- **System install**: `/usr/local/bin/clie`

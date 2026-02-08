@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	createDesign "github.com/ready-to-release/eac/go/cli/eac/impl/create/design"
 	designHelper "github.com/ready-to-release/eac/go/cli/eac/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/adapters/ai"
@@ -121,7 +120,7 @@ func UpdateDesign() int {
 
 // UpdateConfig holds configuration for design update command.
 type UpdateConfig struct {
-	Module       string // Module name (e.g., "r2r-cli", "commands")
+	Module       string // Module name (e.g., "clie-cli", "commands")
 	SourcePath   string // Path to source code (e.g., "go/cli/eac")
 	OutputPath   string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath   string // Custom AI prompt file path (empty = default prompt)
@@ -253,7 +252,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 
 	// Validate we have a module name
 	if len(positionalArgs) == 0 {
-		return "", nil, fmt.Errorf("module name required\n\nUsage: design update <module>\nExample: design update r2r-cli")
+		return "", nil, fmt.Errorf("module name required\n\nUsage: design update <module>\nExample: design update clie-cli")
 	}
 
 	return positionalArgs[0], updateFlags, nil
@@ -280,7 +279,7 @@ func validateModuleAndWorkspace(config *UpdateConfig, out *designHelper.Output) 
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
-		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design update <module>\nExample: design update r2r-cli",
+		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design update <module>\nExample: design update clie-cli",
 			config.Module, config.SourcePath)
 	}
 
@@ -413,12 +412,6 @@ func loadPrompt(config *UpdateConfig) (string, error) {
 
 // generateUpdatedWorkspace generates the updated workspace using AI.
 func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, prompt string) (string, error) {
-	// Check for mock AI response (for testing)
-	if mockResponse := createDesign.GetMockAIResponse(); mockResponse != "" {
-		out.Progress("🤖 Using mock AI response (test mode)...")
-		return mockResponse, nil
-	}
-
 	// Create executor
 	executor := ai.NewExecutor(config.TemplateRoot)
 	providers.RegisterBuiltIn(executor)

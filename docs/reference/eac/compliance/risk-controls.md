@@ -17,7 +17,7 @@ eac validate risk-catalog
 eac validate risk-profile
 
 # Create risk profile from assessment document
-r2r create risk-profile assessment.md
+clie create risk-profile assessment.md
 
 # Generate assessment results with evidence
 eac create risk-assess --profile specs/.risk-controls/risk-profile.json
@@ -80,7 +80,7 @@ eac validate risk-profile
 AI-powered command to generate an OSCAL profile from a risk assessment document.
 
 ```bash
-r2r create risk-profile assessment.md
+clie create risk-profile assessment.md
 ```
 
 **Input**: Markdown risk assessment document describing identified risks

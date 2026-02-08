@@ -189,7 +189,7 @@ artifact-matrices:
 	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	params := map[string]string{
-		"moniker": "r2r",
+		"moniker": "clie",
 	}
 
 	artifacts := cfg.ExpandArtifactMatrix("cross-platform-upx", params)
@@ -199,25 +199,25 @@ artifact-matrices:
 
 	// First 3 should be from parent (cross-platform)
 	assert.Equal(t, "linux-amd64", artifacts[0].ID)
-	assert.Equal(t, "r2r-linux-amd64", artifacts[0].Pattern)
+	assert.Equal(t, "clie-linux-amd64", artifacts[0].Pattern)
 	assert.Empty(t, artifacts[0].Compression) // Parent entries have no compression
 
 	assert.Equal(t, "linux-arm64", artifacts[1].ID)
-	assert.Equal(t, "r2r-linux-arm64", artifacts[1].Pattern)
+	assert.Equal(t, "clie-linux-arm64", artifacts[1].Pattern)
 
 	assert.Equal(t, "windows-amd64", artifacts[2].ID)
-	assert.Equal(t, "r2r-windows-amd64.exe", artifacts[2].Pattern)
+	assert.Equal(t, "clie-windows-amd64.exe", artifacts[2].Pattern)
 
 	// Last 2 should be additional entries
 	assert.Equal(t, "linux-amd64-upx", artifacts[3].ID)
-	assert.Equal(t, "r2r-linux-amd64-upx", artifacts[3].Pattern)
+	assert.Equal(t, "clie-linux-amd64-upx", artifacts[3].Pattern)
 	assert.Equal(t, "upx", artifacts[3].Compression)
-	assert.Equal(t, "r2r-linux-amd64", artifacts[3].DeriveFrom)
+	assert.Equal(t, "clie-linux-amd64", artifacts[3].DeriveFrom)
 
 	assert.Equal(t, "windows-amd64-upx", artifacts[4].ID)
-	assert.Equal(t, "r2r-windows-amd64-upx.exe", artifacts[4].Pattern)
+	assert.Equal(t, "clie-windows-amd64-upx.exe", artifacts[4].Pattern)
 	assert.Equal(t, "upx", artifacts[4].Compression)
-	assert.Equal(t, "r2r-windows-amd64.exe", artifacts[4].DeriveFrom)
+	assert.Equal(t, "clie-windows-amd64.exe", artifacts[4].DeriveFrom)
 }
 
 // TestExpandArtifactMatrix_MultiLevelInheritance tests inheritance chains.
@@ -680,8 +680,8 @@ artifact-matrices:
 
 	cfg := parseBlueprintsFromYAML(t, yamlData)
 
-	t.Run("cross-platform for r2r-cli", func(t *testing.T) {
-		artifacts := cfg.ExpandArtifactMatrix("cross-platform", map[string]string{"moniker": "r2r"})
+	t.Run("cross-platform for clie-cli", func(t *testing.T) {
+		artifacts := cfg.ExpandArtifactMatrix("cross-platform", map[string]string{"moniker": "clie"})
 
 		require.Len(t, artifacts, 5)
 
@@ -697,8 +697,8 @@ artifact-matrices:
 		assert.Contains(t, ids, "windows-amd64")
 	})
 
-	t.Run("cross-platform-upx for r2r-cli", func(t *testing.T) {
-		artifacts := cfg.ExpandArtifactMatrix("cross-platform-upx", map[string]string{"moniker": "r2r"})
+	t.Run("cross-platform-upx for clie-cli", func(t *testing.T) {
+		artifacts := cfg.ExpandArtifactMatrix("cross-platform-upx", map[string]string{"moniker": "clie"})
 
 		require.Len(t, artifacts, 7) // 5 base + 2 upx
 
@@ -715,7 +715,7 @@ artifact-matrices:
 		// Verify derive_from is correctly set
 		for _, upx := range upxEntries {
 			assert.NotEmpty(t, upx.DeriveFrom)
-			assert.Contains(t, upx.DeriveFrom, "r2r")
+			assert.Contains(t, upx.DeriveFrom, "clie")
 		}
 	})
 
@@ -782,10 +782,10 @@ artifact-matrices:
 
 	t.Run("expands matrix with inheritance", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "r2r",
+			Moniker:           "clie",
 			ArtifactMatrixRef: "cross-platform-upx",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/r2r"},
+				"go": &ComponentEntry{Root: "go/cli/clie"},
 			},
 		}
 
@@ -796,7 +796,7 @@ artifact-matrices:
 		require.Len(t, goComp.Build.Artifacts, 3) // 2 base + 1 additional
 		assert.Equal(t, "linux-amd64-upx", goComp.Build.Artifacts[2].ID)
 		assert.Equal(t, "upx", goComp.Build.Artifacts[2].Compression)
-		assert.Equal(t, "r2r-linux-amd64", goComp.Build.Artifacts[2].DeriveFrom)
+		assert.Equal(t, "clie-linux-amd64", goComp.Build.Artifacts[2].DeriveFrom)
 	})
 
 	t.Run("does not override existing artifacts", func(t *testing.T) {

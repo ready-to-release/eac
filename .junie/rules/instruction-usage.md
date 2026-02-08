@@ -9,7 +9,7 @@ Before executing any project-specific commands or maintenance tasks, Junie MUST:
     - `.claude/skills/`: Specialized skill instructions (Refactor-safe, Feature workflow, etc.).
     - `docs/how-to-guides/eac/commands/`: Comprehensive manual for the `eac` CLI tool.
 
-## Tool Usage (`eac` / `r2r`)
+## Tool Usage (`eac` / `clie`)
 - The primary tool for repository maintenance is the `eac` CLI, which is available via the `eac` alias after sourcing `importer.sh`.
 - **Validation:** Always use `eac validate` for pre-commit or health checks.
 - **Documentation & Assets:** Use `eac update docs` to sync documentation assets, including command references and diagram caches.

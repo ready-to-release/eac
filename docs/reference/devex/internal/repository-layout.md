@@ -4,7 +4,7 @@
 
 This repository is organized as a **modular monorepo** with clearly defined module boundaries using the EAC (Everything as Code) system.
 
-**Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
+**Quick Reference**: For complete documentation on the CLIE CLI and EAC system, see:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
 - [Modules](../../eac/modules/index.md) - Module system and dependency management
@@ -28,7 +28,7 @@ eac/
 │   ├── workflows/                    # CI/CD pipeline definitions
 |   └── ...
 │
-├── .r2r/                             # R2R and extension configuration
+├── .clie/                             # CLIE and extension configuration
 │   ├── cache/                        # Build cache
 │   └── eac/                          # User configuration overrides
 │       ├── repository.yml            # Module contracts (central registry)
@@ -38,7 +38,7 @@ eac/
 │   └── extensions/                   # Custom VSCode extensions
 │
 ├── containers/                       # Docker container definitions
-│   ├── ext-eac/                      # R2R CLI extension for EAC
+│   ├── eac-ext/                      # CLIE CLI extension for EAC
 │   ├── mkdocs-site/                  # Documentation site builder
 │   ├── mkdocs-pdf/                   # PDF documentation builder
 │   └── ...
@@ -54,7 +54,7 @@ eac/
 │   │   ├── repository.schema.json
 │   │   ├── component-types.schema.json
 │   │   └── ...
-│   └── r2r-cli/0.1.0/                # CLI-specific schemas
+│   └── clie-cli/0.1.0/                # CLI-specific schemas
 │
 ├── docs/                             # MkDocs documentation site source
 │   ├── assets/                       # Images, diagrams, etc.
@@ -70,14 +70,14 @@ eac/
 │   ├── core/                         # Core domain libraries (eac-core module)
 │   ├── godog/                        # Shared BDD test infrastructure
 │   ├── specs/                        # Specs implementations
-│   └── r2r/                          # R2R implementation
-│       └── cli/                      # R2R CLI application (r2r-cli module)
+│   └── clie/                          # CLIE implementation
+│       └── cli/                      # CLIE CLI application (clie-cli module)
 │
 ├── release/                          # Release notes and changelogs
 │   ├── books/                        # Books module releases
 │   ├── docs/                         # Docs module releases
-│   ├── ext-eac/                      # Extension releases
-│   └── r2r-cli/                      # CLI releases
+│   ├── eac-ext/                      # Extension releases
+│   └── clie-cli/                      # CLI releases
 │
 ├── scripts/                          # Cross-platform scripts
 │   ├── pwsh/                         # PowerShell scripts (Windows)
@@ -86,7 +86,7 @@ eac/
 ├── specs/                            # Gherkin BDD specifications
 │   ├── eac-commands/                 # Specs for commands module
 │   ├── eac-core/                     # Specs for core module
-│   ├── r2r-cli/                      # Specs for CLI module
+│   ├── clie-cli/                      # Specs for CLI module
 │   └── repository/                   # Repository-level validation specs
 │
 ├── templates/                        # Project templates
@@ -108,8 +108,8 @@ Modules are organized into two categories:
 
 **Deployable Modules** - Independently built, versioned, and deployed:
 
-- **r2r-cli** - Go CLI application with cross-platform executables
-- **ext-eac** - Docker extension for R2R CLI
+- **clie-cli** - Go CLI application with cross-platform executables
+- **eac-ext** - Docker extension for CLIE CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 
 **Supporting Modules** - Shared code and infrastructure:
@@ -154,7 +154,7 @@ For complete module configuration reference, see:
 
 ## Complete Documentation
 
-For comprehensive information about the R2R and EAC system:
+For comprehensive information about the EAC and CLIE system:
 
 ### Core Documentation
 

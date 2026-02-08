@@ -180,11 +180,11 @@ func drawioDecodeAndVerify(ctx *eacgodog.TestContext, dCtx *drawioContext, filen
 		cmd.Dir = ctx.IsolatedDir
 	}
 
-	// Build environment with R2R_REPO_ROOT for proper path resolution
+	// Build environment with CLIE_REPO_ROOT for proper path resolution
 	env := os.Environ()
 	if ctx.IsolatedDir != "" {
-		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", ctx.IsolatedDir))
-		env = append(env, fmt.Sprintf("R2R_PWD=%s", ctx.IsolatedDir))
+		env = append(env, fmt.Sprintf("CLIE_REPO_ROOT=%s", ctx.IsolatedDir))
+		env = append(env, fmt.Sprintf("CLIE_PWD=%s", ctx.IsolatedDir))
 	}
 	cmd.Env = env
 

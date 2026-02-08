@@ -17,10 +17,10 @@
 // Group.Git: current-sha
 // Group.Evidence: evidence-ci-runs, module-ci-workflow, module-trigger-reason
 // Group.CLI: cli-release-notes
-// Example: r2r get modules
-// Example: r2r get dependencies
-// Example: r2r get changed-modules
-// Example: r2r get changed-modules-ci --as-json
+// Example: clie get modules
+// Example: clie get dependencies
+// Example: clie get changed-modules
+// Example: clie get changed-modules-ci --as-json
 package get
 
 import (
@@ -37,10 +37,6 @@ import (
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(Get)
-}
 
 // printHelp prints the help for the get command using registry metadata.
 func printHelp() {

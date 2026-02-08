@@ -44,7 +44,7 @@ func RegisterBuiltIn(executor ExecutorRegistry) {
 	})
 
 	// Register test provider for acceptance tests
-	// Reads mock response from .r2r/test/ai-mock.txt or R2R_TEST_AI_RESPONSE env var
+	// Reads mock response from .clie/test/ai-mock.txt or CLIE_TEST_AI_RESPONSE env var
 	executor.RegisterProvider("test", func(config *ai.Config) (ai.Provider, error) {
 		return NewTestProvider(), nil
 	})

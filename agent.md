@@ -184,7 +184,7 @@ Each Claude session works independently. The user handles all git coordination.
 
 ### File Organization
 
-- **Modules**: All Go modules are placed in the `go/` directory (`go/cli/eac` for EAC CLI, `go/cli/r2r` for R2R CLI, `go/core` for shared libraries, `go/adapters/*` for external integrations)
+- **Modules**: All Go modules are placed in the `go/` directory (`go/cli/eac` for EAC CLI, `go/cli/clie` for CLIE CLI, `go/core` for shared libraries, `go/adapters/*` for external integrations)
 - **Result files**: DO NOT create result markdown files except in:
   - Module directories (as identified by module contracts or `get-files`)
   - `/out/<my-result-file>.md` for intermediate/temporary files

@@ -70,7 +70,7 @@ modules:
 | `go-library`    | Go library             |
 | `go-commands`   | Go commands library    |
 | `mkdocs-site`   | MkDocs documentation   |
-| `r2r-extension` | R2R extension (Docker) |
+| `clie-extension` | CLIE extension (Docker) |
 | `configuration` | Configuration files    |
 
 ## Dependencies
@@ -253,7 +253,7 @@ modules:
   - moniker: config
     type: configuration
     files:
-      root: .r2r
+      root: .clie
 ```
 
 ## See Also

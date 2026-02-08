@@ -21,7 +21,7 @@
 #         - uses: ./.github/actions/approve-release
 #           id: gate
 #           with:
-#             module: r2r-cli
+#             module: clie-cli
 #             version-type: semver  # or calver for docs/books
 #
 #     release:
@@ -33,7 +33,7 @@ description: Validate CI passed and release preconditions are met
 
 inputs:
   module:
-    description: 'Module name (e.g., r2r-cli, ext-eac, docs, books)'
+    description: 'Module name (e.g., clie-cli, eac-ext, docs, books)'
     required: true
   version-type:
     description: 'Version format: semver (x.y.z) or calver (YYYY.MMDD.HHMM)'
@@ -53,7 +53,7 @@ outputs:
     description: 'Validated version (e.g., 1.0.0)'
     value: ${{ steps.version.outputs.version }}
   tag_name:
-    description: 'Full tag name (e.g., r2r-cli/1.0.0)'
+    description: 'Full tag name (e.g., clie-cli/1.0.0)'
     value: ${{ steps.version.outputs.tag_name }}
   ci_sha:
     description: 'SHA of the commit that passed CI (may differ from release commit if inherited)'

@@ -11,7 +11,7 @@
 // Long:   3. origin/main (devbox)
 // Long:
 // Long: Example:
-// Long:   pipeline get-artifact-id --workflow ci-r2r-cli.yaml --name build-artifacts
+// Long:   pipeline get-artifact-id --workflow ci-clie-cli.yaml --name build-artifacts
 // Long:   pipeline get-artifact-id --run-id 12345 --name commands-binary
 // Flag.workflow: type=string, usage=Workflow name to find run for
 // Flag.run-id: type=string, usage=Specific run ID (alternative to workflow+sha)
@@ -27,13 +27,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineGetArtifactID)
-}
 
 // ArtifactInfo from GitHub API.
 type ArtifactInfo struct {

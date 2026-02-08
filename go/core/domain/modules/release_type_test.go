@@ -61,7 +61,7 @@ func validateReleaseTypeConsistency(contract domain.BaseContract) bool {
 	// Determine if changelog is in release/{module}/ folder (published module pattern)
 	// Only paths like release/<module>/CHANGELOG.md are in release folder (must have subdirectory)
 	isInReleaseFolder := len(changelogPath) >= 8 && changelogPath[:8] == "release/" &&
-		strings.Count(changelogPath, "/") >= 2 // Must have subdirectory (e.g., release/r2r-cli/CHANGELOG.md)
+		strings.Count(changelogPath, "/") >= 2 // Must have subdirectory (e.g., release/clie-cli/CHANGELOG.md)
 
 	switch releaseType {
 	case "published", "bundle":
@@ -85,20 +85,20 @@ func TestLoadedModules_ReleaseTypeConsistency(t *testing.T) {
 	// Build mock registry with predictable test cases
 	moduleRegistry := buildMockRegistry(t, map[string]mockModuleConfig{
 		// Published modules (should be in release/ folder)
-		"r2r-cli": {
+		"clie-cli": {
 			withVersioning: true,
-			changelog:      "release/r2r-cli/CHANGELOG.md",
+			changelog:      "release/clie-cli/CHANGELOG.md",
 			releaseType:    "published",
 		},
-		"ext-eac": {
+		"eac-ext": {
 			withVersioning: true,
-			changelog:      "release/ext-eac/CHANGELOG.md",
+			changelog:      "release/eac-ext/CHANGELOG.md",
 			releaseType:    "published",
 		},
 		// Bundle modules (should be in release/ folder)
-		"r2r-eac-bundle": {
+		"clie-eac-bundle": {
 			withVersioning: true,
-			changelog:      "release/r2r-eac-bundle/CHANGELOG.md",
+			changelog:      "release/clie-eac-bundle/CHANGELOG.md",
 			releaseType:    "bundle",
 		},
 		// Internal modules (should NOT be in release/ folder)
@@ -206,16 +206,16 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 	// Expected release types per the architecture plan
 	expectedReleaseTypes := map[string]string{
 		// Published
-		"r2r-cli": "published",
-		"ext-eac": "published",
+		"clie-cli": "published",
+		"eac-ext": "published",
 		"docs":    "published",
 		"books":   "published",
 		// Bundle
-		"r2r-eac-bundle": "bundle",
+		"clie-eac-bundle": "bundle",
 		// Internal
 		"eac-cli":      "internal",
 		"eac-mcp-server":  "internal",
-		"r2r-installer":     "internal",
+		"clie-installer":     "internal",
 		"vscode-commit": "internal",
 		// None
 		"core": "none",
@@ -239,7 +239,7 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 				config.changelog = "go/cli/eac/CHANGELOG.md"
 			case "eac-mcp-server":
 				config.changelog = "go/eac/mcp/commands/CHANGELOG.md"
-			case "r2r-installer":
+			case "clie-installer":
 				config.changelog = "scripts/CHANGELOG.md"
 			case "vscode-commit":
 				config.changelog = "typescript/vscode-commit/CHANGELOG.md"

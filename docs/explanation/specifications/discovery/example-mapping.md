@@ -82,7 +82,7 @@ So that [business value]
 
 **Pink** (Questions): Capture without solving during workshop
 
-- "What if r2r.yaml already exists?"
+- "What if cli.yaml already exists?"
 - "Should we support a --force flag?"
 
 ---
@@ -303,15 +303,15 @@ Feature: cli_init-project
     @ov
     Scenario: Initialize in empty directory creates structure
       Given I am in an empty folder
-      When I run "r2r init my-project"
+      When I run "cli init my-project"
       Then a directory named "my-project/src/" should exist
       And a directory named "my-project/tests/" should exist
       And a directory named "my-project/docs/" should exist
 
     @ov
     Scenario: Initialize in existing project shows error
-      Given I am in a directory with "r2r.yaml"
-      When I run "r2r init"
+      Given I am in a directory with "cli.yaml"
+      When I run "cli init"
       Then the command should fail
       And stderr should contain "already initialized"
 ```
@@ -373,15 +373,15 @@ Rule: Creates project directory structure
   @ov @ac1
   Scenario: Initialize in empty directory
     Given I am in an empty folder
-    When I run "r2r init"
-    Then a file named "r2r.yaml" should be created
+    When I run "cli init"
+    Then a file named "cli.yaml" should be created
     And a directory named "specs/" should be created
 
   @ov @ac1
   Scenario: Initialize with existing subdirectories
     Given I am in a directory with "src/"
-    When I run "r2r init"
-    Then "r2r.yaml" should be created in current directory
+    When I run "cli init"
+    Then "cli.yaml" should be created in current directory
     And "src/" should remain unchanged
 ```
 

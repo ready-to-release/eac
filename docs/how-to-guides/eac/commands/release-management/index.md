@@ -114,26 +114,26 @@ See [Release Workflow Variants](./release-workflow-variants.md) for complete wor
 1. **Check pending changes** - Determine if module has unreleased commits
 
    ```bash
-   r2r release pending <module>
+   eac release pending <module>
    ```
 
 2. **Generate changelog** - Create changelog entries from conventional commits
 
    ```bash
-   r2r release this <module>
+   eac release this <module>
    ```
 
 3. **Review and validate** - Ensure changelog accuracy and format
 
    ```bash
    cat release/<module>/CHANGELOG.md
-   r2r validate release <module>
+   eac validate release <module>
    ```
 
 4. **Verify CI status** - Confirm all tests pass
 
    ```bash
-   r2r release check-ci --workflow ci-<module>.yml --commit $(git rev-parse HEAD)
+   eac release check-ci --workflow ci-<module>.yml --commit $(git rev-parse HEAD)
    ```
 
 5. **Commit and create PR** - Submit changelog changes for review
@@ -192,15 +192,15 @@ See [Release Workflow Variants](./release-workflow-variants.md) for complete wor
 
 ```bash
 # 1. Check what needs releasing
-r2r release pending my-module
+eac release pending my-module
 # Output: next_version: 1.2.4 (patch)
 
 # 2. Generate changelog
-r2r release this my-module
+eac release this my-module
 
 # 3. Review, validate, commit, PR
 cat release/my-module/CHANGELOG.md
-r2r validate release my-module
+eac validate release my-module
 git add release/my-module/CHANGELOG.md
 git commit -m "release(my-module): prepare 1.2.4 release"
 gh pr create
@@ -213,11 +213,11 @@ gh pr create
 
 ```bash
 # 1. Check what needs releasing
-r2r release pending my-docs
+eac release pending my-docs
 # Output: next_version: 2026.0109 (CalVer)
 
 # 2. Generate changelog
-r2r release this my-docs
+eac release this my-docs
 
 # 3. Review, validate, commit, PR, merge
 # Then CI automatically deploys

@@ -8,8 +8,8 @@
 // Long:
 // Long: Example:
 // Long:   show test-results
-// Long:   show test-results ext-eac
-// Long:   show test-results ext-eac r2r-cli
+// Long:   show test-results eac-ext
+// Long:   show test-results eac-ext clie-cli
 // Args: [module...]
 package show
 
@@ -24,16 +24,11 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	sharedTemplate "github.com/ready-to-release/eac/go/clibase/template"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
-
-func init() {
-	registry.Register(ShowTestResults)
-}
 
 // TestResultsData holds data for the template with formatted time strings.
 type TestResultsData struct {
@@ -93,8 +88,8 @@ func ShowTestResults() int {
 			fmt.Println("  Detailed test results table")
 			fmt.Println("\nExamples:")
 			fmt.Println("  show test-results")
-			fmt.Println("  show test-results ext-eac")
-			fmt.Println("  show test-results ext-eac r2r-cli")
+			fmt.Println("  show test-results eac-ext")
+			fmt.Println("  show test-results eac-ext clie-cli")
 			return 0
 		}
 	}
@@ -213,16 +208,16 @@ func loadTestResultsTemplate(workspaceRoot string) (string, error) {
 	reportsDir := cfg.Repository.Conventions.TemplateReportsDir
 
 	// Priority 1: Team override (.eac/templates/reports/<category>/<template>)
-	teamOverridePath := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
+	teamOverridePath := filepath.Join(workspaceRoot, paths.CLIEDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
 	if _, err := os.Stat(teamOverridePath); err == nil {
 		return teamOverridePath, nil
 	}
 
 	// Priority 2: System default (templates/reports/<category>/<template>)
-	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
+	// In container: uses CLIE_CONTAINER_ROOT (/app where Dockerfile copies templates)
 	// In local dev: uses workspaceRoot (repo root where templates/ exists)
 	distRoot := workspaceRoot
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		distRoot = containerRoot
 	}
 	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, reportsDir, category, templateFilename)

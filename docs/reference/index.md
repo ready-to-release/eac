@@ -1,6 +1,6 @@
 # Reference
 
-Technical reference material for the R2R and EAC ecosystem.
+Technical reference material for the EAC and CLIE ecosystem.
 
 ## Quick Access
 
@@ -12,7 +12,7 @@ Technical reference material for the R2R and EAC ecosystem.
 
 | Product Reference               | Description                             |
 | ------------------------------- | --------------------------------------- |
-| [R2R CLI](./r2r/index.md)       | R2R CLI framework and commands          |
+| [CLIE CLI](./clie/index.md)       | CLIE CLI framework and commands          |
 | [EAC Extension](./eac/index.md) | EAC extension architecture and commands |
 
 ## Repository

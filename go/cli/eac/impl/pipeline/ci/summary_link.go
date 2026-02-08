@@ -32,12 +32,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(PipelineCISummaryLink)
-}
 
 func PipelineCISummaryLink() int {
 	// Validate flags before parsing (args start at index 5 for "pipeline ci summary-link <run-id>")

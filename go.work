@@ -2,10 +2,10 @@ go 1.24.4
 
 use (
 	./contracts/ai-provider/0.1.0
+	./contracts/clie-cli/0.1.0
 	./contracts/container-runtime/0.1.0
 	./contracts/core/0.1.0
 	./contracts/docs/0.1.0
-	./contracts/r2r-cli/0.1.0
 	./contracts/scanner/0.1.0
 	./contracts/tui/0.1.0
 	./go/adapters/ai
@@ -17,8 +17,8 @@ use (
 	./go/adapters/mocha
 	./go/adapters/npm
 	./go/adapters/tui
+	./go/cli/clie
 	./go/cli/eac
-	./go/cli/r2r
 	./go/clibase
 	./go/core
 	./go/mcp/commands

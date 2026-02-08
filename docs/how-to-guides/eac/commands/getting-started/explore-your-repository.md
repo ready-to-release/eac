@@ -8,9 +8,9 @@ Discover what modules, files, and dependencies exist in your repository using sh
 
 ### Required Knowledge
 
-**New to r2r?** Learn these concepts first:
+**New to eac?** Learn these concepts first:
 
-- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Understand r2r basics and repository structure
+- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Understand eac basics and repository structure
 
 ### Required Setup
 

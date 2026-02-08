@@ -7,7 +7,7 @@ const (
 	// ModeAuto uses the full detection chain (env -> docker -> git).
 	ModeAuto Mode = iota
 
-	// ModeExplicit requires R2R_REPO_ROOT to be set, fails otherwise.
+	// ModeExplicit requires CLIE_REPO_ROOT to be set, fails otherwise.
 	// Use for tests that require isolation.
 	ModeExplicit
 

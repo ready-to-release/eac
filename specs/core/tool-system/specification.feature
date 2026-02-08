@@ -1,4 +1,4 @@
-@L1 @ov @depm:foundation
+@L1 @ov @depm:core
 Feature: Tool Resolution for Component Types
 
   As a repository maintainer

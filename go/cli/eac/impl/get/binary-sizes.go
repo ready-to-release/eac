@@ -1,7 +1,7 @@
 // Command: get binary-sizes
 // Short: Get binary file sizes for a module
 // Flag.module: type=string, usage=Module to get binary sizes for (required)
-// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)
+// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., clie for clie-linux-amd64)
 // Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
 // Long: The get binary-sizes command calculates file sizes for binaries produced by a module build.
 // Long:
@@ -15,8 +15,8 @@
 // Long:   ...
 // Long:
 // Long: Example:
-// Long:   get binary-sizes --module r2r-cli --binary-prefix r2r
-// Long:   eval $(get binary-sizes --module r2r-cli --binary-prefix r2r --format shell)
+// Long:   get binary-sizes --module clie-cli --binary-prefix clie
+// Long:   eval $(get binary-sizes --module clie-cli --binary-prefix clie --format shell)
 package get
 
 import (
@@ -28,14 +28,9 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"gopkg.in/yaml.v3"
 )
-
-func init() {
-	registry.Register(GetBinarySizes)
-}
 
 // BinarySize represents a single binary file's size.
 type BinarySize struct {

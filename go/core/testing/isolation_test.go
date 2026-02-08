@@ -76,25 +76,25 @@ func TestTestIsolation_Environment(t *testing.T) {
 
 	var hasPWD, hasRepoRoot bool
 	for _, e := range env {
-		if strings.HasPrefix(e, "R2R_PWD=") {
+		if strings.HasPrefix(e, "CLIE_PWD=") {
 			hasPWD = true
 			if !strings.Contains(e, ti.IsolatedDir()) {
-				t.Error("R2R_PWD does not contain isolated dir")
+				t.Error("CLIE_PWD does not contain isolated dir")
 			}
 		}
-		if strings.HasPrefix(e, "R2R_REPO_ROOT=") {
+		if strings.HasPrefix(e, "CLIE_REPO_ROOT=") {
 			hasRepoRoot = true
 			if !strings.Contains(e, ti.IsolatedDir()) {
-				t.Error("R2R_REPO_ROOT does not contain isolated dir")
+				t.Error("CLIE_REPO_ROOT does not contain isolated dir")
 			}
 		}
 	}
 
 	if !hasPWD {
-		t.Error("Environment() missing R2R_PWD")
+		t.Error("Environment() missing CLIE_PWD")
 	}
 	if !hasRepoRoot {
-		t.Error("Environment() missing R2R_REPO_ROOT")
+		t.Error("Environment() missing CLIE_REPO_ROOT")
 	}
 }
 

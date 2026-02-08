@@ -198,7 +198,7 @@ Security improvements and vulnerability fixes.
 ```markdown
 # Changelog
 
-All notable changes to **r2r-cli** will be documented in this file.
+All notable changes to **clie-cli** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -228,9 +228,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat(commands): implement get and show commands
 - docs: add comprehensive user guide
 
-[Unreleased]: https://github.com/owner/repo/compare/r2r-cli/1.1.0...HEAD
-[1.1.0]: https://github.com/owner/repo/compare/r2r-cli/1.0.0...r2r-cli/1.1.0
-[1.0.0]: https://github.com/owner/repo/releases/tag/r2r-cli/1.0.0
+[Unreleased]: https://github.com/owner/repo/compare/clie-cli/1.1.0...HEAD
+[1.1.0]: https://github.com/owner/repo/compare/clie-cli/1.0.0...clie-cli/1.1.0
+[1.0.0]: https://github.com/owner/repo/releases/tag/clie-cli/1.0.0
 ```
 
 ## Commit Message Conventions

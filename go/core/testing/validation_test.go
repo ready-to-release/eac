@@ -18,15 +18,15 @@ func TestValidateFeatureLevelTags(t *testing.T) {
 		{
 			name: "Feature with L2, Scenario with L3 - should error",
 			featureContent: `@env:isolated-test-project
-@L2 @ov @depm:r2r-installer
-Feature: r2r-installer_cli-installation
+@L2 @ov @depm:clie-installer
+Feature: clie-installer_cli-installation
 
   As a user
   I want to install the CLI
 
   Rule: Installer downloads and installs CLI binary
 
-    @L3 @ov @deps:windows @depm:r2r-installer
+    @L3 @ov @deps:windows @depm:clie-installer
     Scenario: Install latest version on Windows
       Given I am on Windows
       When I run the PowerShell installer
@@ -37,18 +37,18 @@ Feature: r2r-installer_cli-installation
 		},
 		{
 			name: "Feature with L2, Scenario without L-tag - should not error",
-			featureContent: `@L2 @ov @depm:r2r-cli
-Feature: r2r-cli_cli-invocation
+			featureContent: `@L2 @ov @depm:clie-cli
+Feature: clie-cli_cli-invocation
 
   As a user
   I want to run the CLI
 
   Rule: CLI can be invoked
 
-    @ov @depm:r2r-cli
+    @ov @depm:clie-cli
     Scenario: Basic invocation
       Given I have the CLI installed
-      When I run "r2r --help"
+      When I run "clie --help"
       Then I see help output
 `,
 			expectErrors:  0,
@@ -56,15 +56,15 @@ Feature: r2r-cli_cli-invocation
 		},
 		{
 			name: "Feature without L-tag, Scenario with L3 - should not error",
-			featureContent: `@ov @depm:r2r-installer
-Feature: r2r-installer_cli-installation
+			featureContent: `@ov @depm:clie-installer
+Feature: clie-installer_cli-installation
 
   As a user
   I want to install the CLI
 
   Rule: Installer downloads and installs CLI binary
 
-    @L3 @ov @deps:windows @depm:r2r-installer
+    @L3 @ov @deps:windows @depm:clie-installer
     Scenario: Install latest version on Windows
       Given I am on Windows
       When I run the PowerShell installer
@@ -86,13 +86,13 @@ Feature: eac-cli_commit
     @L2 @ov @depm:eac-cli
     Scenario: Generate basic commit message
       Given I have staged changes
-      When I run "r2r commit message"
+      When I run "clie commit message"
       Then a commit message is generated
 
     @L3 @ov @depm:eac-cli
     Scenario: Generate commit with AI
       Given I have staged changes
-      When I run "r2r commit message --ai"
+      When I run "clie commit message --ai"
       Then an AI-generated message is returned
 `,
 			expectErrors:  1,

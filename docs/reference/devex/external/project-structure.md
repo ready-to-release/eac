@@ -8,11 +8,11 @@ Minimal setup for any project:
 
 ```text
 your-project/
-├── .r2r/
-│   ├── r2r-cli.yml              # R2R CLI configuration
+├── .clie/
+│   ├── clie-cli.yml              # CLIE CLI configuration
 │   └── eac/
 │       └── repository.yml        # Module definitions
-├── .gitignore                    # Include .r2r/**/*.personal.yml
+├── .gitignore                    # Include .clie/**/*.personal.yml
 └── ... (your code)
 ```
 
@@ -22,9 +22,9 @@ Complete setup with all features:
 
 ```text
 your-project/
-├── .r2r/
-│   ├── r2r-cli.yml              # R2R CLI configuration
-│   ├── r2r-cli.local.yml        # Local overrides (gitignored)
+├── .clie/
+│   ├── clie-cli.yml              # CLIE CLI configuration
+│   ├── clie-cli.local.yml        # Local overrides (gitignored)
 │   ├── cache/                   # Build cache (gitignored)
 │   └── eac/
 │       ├── repository.yml        # Module definitions
@@ -52,7 +52,7 @@ your-project/
 
 | File                   | Purpose                |
 | ---------------------- | ---------------------- |
-| `.r2r/r2r-cli.yml`     | Extension registry     |
+| `.clie/clie-cli.yml`     | Extension registry     |
 | `.eac/repository.yml`  | Module definitions     |
 | `.eac/ai-provider.yml` | AI config (no secrets) |
 
@@ -62,17 +62,17 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 
 | File/Directory           | Purpose                       |
 | ------------------------ | ----------------------------- |
-| `.r2r/r2r-cli.local.yml` | Local CLI overrides           |
+| `.clie/clie-cli.local.yml` | Local CLI overrides           |
 | `.eac/*.personal.yml`    | Personal configs with secrets |
-| `.r2r/cache/`            | Build cache                   |
+| `.clie/cache/`            | Build cache                   |
 
 ### Recommended .gitignore Entries
 
 ```gitignore
-# R2R/EAC local configuration
-.r2r/r2r-cli.local.yml
+# CLIE/EAC local configuration
+.clie/clie-cli.local.yml
 .eac/*.personal.yml
-.r2r/cache/
+.clie/cache/
 ```
 
 ## Module Organization
@@ -233,8 +233,8 @@ depends_on: [dep1, dep2]  # Good: explicit
 ### Step 1: Initialize
 
 ```bash
-r2r init
-r2r install eac
+clie init
+clie install eac
 eac init
 ```
 

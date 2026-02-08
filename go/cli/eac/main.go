@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/help"
@@ -63,7 +64,7 @@ func main() {
 
 	// Check if we have an original PWD from the CLI wrapper
 	// If not, use current directory
-	InitialWorkingDir = os.Getenv(environments.EnvR2RPWD)
+	InitialWorkingDir = os.Getenv(environments.EnvCLIEPWD)
 	if InitialWorkingDir == "" {
 		var err error
 		InitialWorkingDir, err = os.Getwd()
@@ -215,13 +216,7 @@ func getSubcommands(prefix string) []string {
 	}
 
 	// Sort for consistent output
-	for i := 0; i < len(subcommands); i++ {
-		for j := i + 1; j < len(subcommands); j++ {
-			if subcommands[i] > subcommands[j] {
-				subcommands[i], subcommands[j] = subcommands[j], subcommands[i]
-			}
-		}
-	}
+	slices.Sort(subcommands)
 
 	return subcommands
 }
@@ -264,13 +259,7 @@ func printUsage() {
 	}
 
 	// Sort
-	for i := 0; i < len(names); i++ {
-		for j := i + 1; j < len(names); j++ {
-			if names[i] > names[j] {
-				names[i], names[j] = names[j], names[i]
-			}
-		}
-	}
+	slices.Sort(names)
 
 	for _, name := range names {
 		fmt.Printf("  %s\n", name)

@@ -15,14 +15,9 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/goexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ValidateGoTidy)
-}
 
 // ValidateGoTidy validates that all Go modules have tidy dependencies.
 func ValidateGoTidy() int {
@@ -164,7 +159,7 @@ func indentLines(text, prefix string) string {
 func printGoTidyUsage() {
 	log.Info("Validate Go module dependencies are tidy")
 	log.Info("")
-	log.Info("Usage: r2r validate go-tidy")
+	log.Info("Usage: clie validate go-tidy")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Runs 'go mod tidy -diff' on all Go modules")
@@ -172,5 +167,5 @@ func printGoTidyUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all Go modules")
-	log.Info("  r2r validate go-tidy")
+	log.Info("  clie validate go-tidy")
 }

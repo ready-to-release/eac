@@ -28,12 +28,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ValidateVersion)
-}
 
 // CalVer: YYYY.MMDD.HHMM.
 var calverRegex = regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)

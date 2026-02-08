@@ -53,7 +53,7 @@ func FindGoModFiles(rootPath string, excludeDirs []string) ([]string, error) {
 }
 
 // ExtractModuleDir extracts the relative directory from a go.mod file path
-// Example: /c/projects/eac/go/cli/r2r/go.mod -> go/cli/r2r.
+// Example: /c/projects/eac/go/cli/clie/go.mod -> go/cli/clie.
 func ExtractModuleDir(goModPath, rootPath string) (string, error) {
 	absGoMod, err := filepath.Abs(goModPath)
 	if err != nil {

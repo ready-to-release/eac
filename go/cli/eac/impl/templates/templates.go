@@ -2,9 +2,9 @@
 // Short: Install project templates for documentation, AI prompts, and specifications
 // IsParent: true
 // Group.Template Types: install
-// Example: r2r templates install docs
-// Example: r2r templates install docs --destination ./custom-docs
-// Example: r2r templates install ai --debug
+// Example: clie templates install docs
+// Example: clie templates install docs --destination ./custom-docs
+// Example: clie templates install ai --debug
 package templates
 
 import (
@@ -18,9 +18,6 @@ import (
 
 var log = logging.C()
 
-func init() {
-	registry.Register(Templates)
-}
 
 // printHelp prints the help for the templates command using registry metadata.
 func printHelp() {

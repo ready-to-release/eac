@@ -32,15 +32,10 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetModules)
-}
 
 // moduleFilters holds the parsed filter flags.
 type moduleFilters struct {

@@ -4,7 +4,7 @@ package gomod
 type GoModInfo struct {
 	FilePath   string    // Absolute path to go.mod file
 	ModulePath string    // Module path from "module" declaration
-	ModuleDir  string    // Relative directory (e.g., "go/cli/r2r")
+	ModuleDir  string    // Relative directory (e.g., "go/cli/clie")
 	Requires   []Require // Direct dependencies
 	Replaces   []Replace // Replace directives
 }
@@ -30,9 +30,9 @@ type DependencyGraph struct {
 
 // ModuleNode represents a single module in the dependency graph.
 type ModuleNode struct {
-	Moniker    string   // Module moniker (e.g., "r2r-cli")
+	Moniker    string   // Module moniker (e.g., "clie-cli")
 	ModulePath string   // Full module path
-	SourceRoot string   // Relative source root (e.g., "go/cli/r2r")
+	SourceRoot string   // Relative source root (e.g., "go/cli/clie")
 	GoModPath  string   // Path to go.mod file
 	DependsOn  []string // Monikers of dependencies
 	UsedBy     []string // Monikers of dependents (reverse)

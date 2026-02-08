@@ -19,10 +19,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
-func init() {
-	registry.Register(ShowValidCommands)
-}
-
 func ShowValidCommands() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

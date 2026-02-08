@@ -21,12 +21,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(DrawioDecode)
-}
 
 // DrawioDecode decodes DrawIO content to human-readable XML.
 func DrawioDecode() int {

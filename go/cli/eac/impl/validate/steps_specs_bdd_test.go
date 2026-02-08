@@ -159,20 +159,20 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		return nil
 	})
 
-	// Mock AI configuration - TestProvider looks for .r2r/test/ai-mock.txt in repo root.
-	// Since tests run in isolated directories with R2R_REPO_ROOT pointing there,
+	// Mock AI configuration - TestProvider looks for .clie/test/ai-mock.txt in repo root.
+	// Since tests run in isolated directories with CLIE_REPO_ROOT pointing there,
 	// we need to create the mock file in the isolated directory.
 	sc.Step(`^the mock AI is configured to return a valid specification$`, func() error {
 		mockContent, err := eacgodog.LoadAsset(ctx, "specs/mock-response.txt")
 		if err != nil {
 			return err
 		}
-		return eacgodog.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
+		return eacgodog.CreateFile(ctx, ".clie/test/ai-mock.txt", mockContent)
 	})
 	sc.Step(`^the mock AI generates a feature that would create the same path$`, func() error {
 		// Use subprocess mock system with command-specific override
-		// This sets R2R_MOCK_AI_SPECS=mock-response-conflict.txt
-		ctx.SetMockOverride("R2R_MOCK_AI_SPECS", "mock-response-conflict.txt")
+		// This sets CLIE_MOCK_AI_SPECS=mock-response-conflict.txt
+		ctx.SetMockOverride("CLIE_MOCK_AI_SPECS", "mock-response-conflict.txt")
 		return nil
 	})
 

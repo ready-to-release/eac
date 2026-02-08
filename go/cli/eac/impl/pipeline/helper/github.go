@@ -39,9 +39,9 @@ type GitHubCLIImpl struct {
 }
 
 // NewGitHubCLI creates a new GitHub CLI wrapper.
-// If R2R_MOCK_GITHUB_CLI environment variable is set, returns a mock implementation.
+// If CLIE_MOCK_GITHUB_CLI environment variable is set, returns a mock implementation.
 func NewGitHubCLI(repoPath string) GitHubCLI {
-	if os.Getenv(environments.EnvR2RMockGitHubCLI) == "true" {
+	if os.Getenv(environments.EnvCLIEMockGitHubCLI) == "true" {
 		return &MockGitHubCLI{repoPath: repoPath}
 	}
 	return &GitHubCLIImpl{
@@ -197,7 +197,7 @@ func (m *MockGitHubCLI) WatchRun(runID string) error {
 func (m *MockGitHubCLI) WatchRunWithTimeout(runID string, timeoutSeconds int) error {
 	// Check if we should simulate a timeout
 	// For testing, we can use an environment variable
-	if os.Getenv(environments.EnvR2RMockTimeout) == "true" {
+	if os.Getenv(environments.EnvCLIEMockTimeout) == "true" {
 		return fmt.Errorf("timeout exceeded (%d seconds) waiting for run %s", timeoutSeconds, runID)
 	}
 
@@ -208,7 +208,7 @@ func (m *MockGitHubCLI) WatchRunWithTimeout(runID string, timeoutSeconds int) er
 // GetCommitSHA simulates getting a commit SHA for a ref.
 func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 	// Check if we should simulate invalid ref
-	if os.Getenv(environments.EnvR2RMockInvalidRef) == "true" {
+	if os.Getenv(environments.EnvCLIEMockInvalidRef) == "true" {
 		return "", fmt.Errorf("not found: invalid ref %s", ref)
 	}
 
@@ -230,12 +230,12 @@ func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 // ListWorkflowRuns simulates listing workflow runs for a commit.
 func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error) {
 	// Check if we should return no workflows
-	if os.Getenv("R2R_MOCK_NO_WORKFLOWS") == "true" {
+	if os.Getenv("CLIE_MOCK_NO_WORKFLOWS") == "true" {
 		return []WorkflowRunSummary{}, nil
 	}
 
 	// Check if we should simulate failing workflows
-	failingWorkflow := os.Getenv(environments.EnvR2RMockFailingWorkflow)
+	failingWorkflow := os.Getenv(environments.EnvCLIEMockFailingWorkflow)
 
 	// Read workflows directory to find actual workflows
 	workflowsDir := filepath.Join(m.repoPath, ".github", "workflows")

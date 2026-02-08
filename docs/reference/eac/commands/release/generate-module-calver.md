@@ -5,5 +5,5 @@
 ## See Also
 
 - [release this](./this.md)
-- [release r2r-cli](./r2r-cli.md)
+- [release clie-cli](./clie-cli.md)
 - [release Commands](../categories/release.md)

@@ -1,0 +1,47 @@
+package get
+
+import "github.com/ready-to-release/eac/go/clibase/registry"
+
+func init() {
+	registry.RegisterAll(
+		Get,
+		GetApprovalComments,
+		GetArtifacts,
+		GetBinarySizes,
+		GetBookDescription,
+		GetBuildDeps,
+		GetBuildTimes,
+		GetChangedModules,
+		GetChangedModulesCI,
+		GetChangedModulesLocal,
+		GetChangelog,
+		GetCIDispatch,
+		GetCIWorkflows,
+		GetCLIReleaseNotes,
+		GetComponents,
+		GetConfig,
+		GetCurrentSHA,
+		GetDependencies,
+		GetDependenciesModule,
+		GetDocumentedCommands,
+		GetEnvironments,
+		GetEvidenceCIRuns,
+		GetFiles,
+		GetFilesByModule,
+		GetGhosts,
+		GetModuleCIWorkflow,
+		GetModules,
+		GetModuleTriggerReason,
+		GetReleaseBundle,
+		GetReleaseNotes,
+		GetReleaseStatus,
+		GetSpecs,
+		GetSuite,
+		GetTestResults,
+		GetTests,
+		GetTestTimings,
+		GetTokenSize,
+		GetUnits,
+		GetValidCommands,
+	)
+}

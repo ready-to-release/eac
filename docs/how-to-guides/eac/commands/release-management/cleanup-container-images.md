@@ -11,10 +11,10 @@ Remove old container image versions from GHCR while protecting released packages
 
 ```bash
 # Dry-run (see what would be deleted)
-r2r release prune-packages ext-eac
+eac release prune-packages eac-ext
 
 # Actually delete
-r2r release prune-packages ext-eac --force
+eac release prune-packages eac-ext --force
 ```
 
 ---
@@ -51,13 +51,13 @@ registries:
 Always run a dry-run first:
 
 ```bash
-r2r release prune-packages ext-eac
+eac release prune-packages eac-ext
 ```
 
 **Expected output:**
 
 ```text
-Processing package: ext-eac
+Processing package: eac-ext
   Total versions: 45
   Protected: 12
   Prunable: 33 (keeping 10)
@@ -76,7 +76,7 @@ Use --force to actually delete.
 See why versions are protected:
 
 ```bash
-r2r release prune-packages ext-eac --verbose
+eac release prune-packages eac-ext --verbose
 ```
 
 **Protection reasons:**
@@ -97,7 +97,7 @@ r2r release prune-packages ext-eac --verbose
 When satisfied with dry-run results:
 
 ```bash
-r2r release prune-packages ext-eac --force
+eac release prune-packages eac-ext --force
 ```
 
 ---
@@ -108,10 +108,10 @@ r2r release prune-packages ext-eac --force
 
 ```bash
 # Dry-run all packages
-r2r release prune-packages --all
+eac release prune-packages --all
 
 # Delete from all packages
-r2r release prune-packages --all --force
+eac release prune-packages --all --force
 ```
 
 ### Override Keep Count
@@ -119,7 +119,7 @@ r2r release prune-packages --all --force
 Keep fewer versions for this run:
 
 ```bash
-r2r release prune-packages ext-eac --keep 5 --force
+eac release prune-packages eac-ext --keep 5 --force
 ```
 
 ### Get JSON Output
@@ -127,7 +127,7 @@ r2r release prune-packages ext-eac --keep 5 --force
 For scripting or analysis:
 
 ```bash
-r2r release prune-packages ext-eac --json
+eac release prune-packages eac-ext --json
 ```
 
 ---
@@ -137,7 +137,7 @@ r2r release prune-packages ext-eac --json
 | Type             | Source              | Examples                          |
 | ---------------- | ------------------- | --------------------------------- |
 | **Image Tags**   | Container registry  | `sha-abc1234`, `v1.0.0`, `latest` |
-| **Release Tags** | GitHub Releases API | `ext-eac/1.0.0`, `r2r-cli/2.0.0`  |
+| **Release Tags** | GitHub Releases API | `eac-ext/1.0.0`, `clie-cli/2.0.0`  |
 
 The cleanup command correlates these to protect released images.
 

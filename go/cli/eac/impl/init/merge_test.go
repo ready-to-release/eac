@@ -423,7 +423,7 @@ func TestShowMergeResult_DisplaysSummary(t *testing.T) {
 
 	result := &MergeResult{
 		ModulesAdded:   []string{"api", "mcp"},
-		ModulesUpdated: []string{"core", "cli", "eac", "r2r"},
+		ModulesUpdated: []string{"core", "cli", "eac", "clie"},
 		ModulesRemoved: []string{"deprecated"},
 	}
 

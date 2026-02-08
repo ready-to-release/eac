@@ -14,6 +14,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 )
 
+var (
+	reVersionHeader = regexp.MustCompile(`(?m)^##\s+\[([^\]]+)\]\s+-\s+(\d{4}-\d{2}-\d{2})`)
+	reSectionHeader = regexp.MustCompile(`(?m)^###\s+(.+)`)
+)
+
 // ReleaseNotes represents the structure of a RELEASE-NOTES.md file.
 type ReleaseNotes struct {
 	Versions []ReleaseNotesVersion
@@ -48,10 +53,8 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 		Versions: []ReleaseNotesVersion{},
 	}
 
-	// Regex to match version headers: ## [0.0.7] - 2025-12-11
-	versionHeaderRegex := regexp.MustCompile(`(?m)^##\s+\[([^\]]+)\]\s+-\s+(\d{4}-\d{2}-\d{2})`)
-	// Regex to match section headers: ### Section Name
-	sectionHeaderRegex := regexp.MustCompile(`(?m)^###\s+(.+)`)
+	versionHeaderRegex := reVersionHeader
+	sectionHeaderRegex := reSectionHeader
 
 	lines := strings.Split(content, "\n")
 
@@ -174,9 +177,9 @@ func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, 
 	}
 
 	// Get template path from config
-	// For isolated tests, use R2R_CONTAINER_ROOT to find templates (they're in the real repo, not the temp test dir)
+	// For isolated tests, use CLIE_CONTAINER_ROOT to find templates (they're in the real repo, not the temp test dir)
 	templateRoot := workspaceRoot
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
+	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		templateRoot = containerRoot
 	}
 	templatePath := cfg.TemplatePathAbs(templateRoot, "reports", "release", "release-notes-template.md")

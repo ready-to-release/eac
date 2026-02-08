@@ -141,10 +141,31 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
                 summaryGenerator = component "Summary Generator" "Generates CI summary diagnostics" "Go"
             }
 
+            drawio_commands = container "DrawIO Commands" "Manages draw.io diagram creation, encoding, decoding, rendering, and embedding." "Go" "Command" {
+                drawioCreator = component "DrawIO Creator" "Creates new draw.io diagrams" "Go"
+                drawioEncoder = component "DrawIO Encoder" "Encodes draw.io XML for embedding" "Go"
+                drawioDecoder = component "DrawIO Decoder" "Decodes embedded draw.io data" "Go"
+                drawioRenderer = component "DrawIO Renderer" "Renders draw.io diagrams to images" "Go"
+                drawioEmbedder = component "DrawIO Embedder" "Embeds diagrams in documentation" "Go"
+                drawioInfo = component "DrawIO Info" "Displays diagram metadata" "Go"
+            }
+
+            lint_commands = container "Lint Commands" "Code and configuration linting with pluggable linter providers." "Go" "Command" {
+                lintOrchestrator = component "Lint Orchestrator" "Orchestrates multi-module linting" "Go"
+            }
+
+            update_commands = container "Update Commands" "Updates documentation, design, evidence, caches, and go module sums." "Go" "Command" {
+                docsUpdater = component "Docs Updater" "Updates documentation from templates" "Go"
+                designUpdater = component "Design Updater" "Updates architecture diagrams" "Go"
+                evidenceUpdater = component "Evidence Updater" "Updates security evidence" "Go"
+                cacheCleared = component "Cache Clearer" "Clears build and test caches" "Go"
+                goModUpdater = component "Go Mod Updater" "Updates go.mod sums" "Go"
+            }
+
             other_commands = container "Other Commands" "Miscellaneous commands including help and init." "Go" "Command" {
                 helpProvider = component "Help Provider" "Provides command help and documentation" "Go"
-                initProvider = component "Init Provider" "Project initialization" "Go"
-                extensionMeta = component "Extension Meta" "Outputs extension metadata for r2r CLI" "Go"
+                initProvider = component "Init Provider" "Project initialization with AI-powered generation" "Go"
+                extensionMeta = component "Extension Meta" "Outputs extension metadata for clie CLI" "Go"
             }
 
             render_engine = container "Render Engine" "Provides table rendering, JSON, TOML output, and custom formatters for all commands." "Go" "Infrastructure" {
@@ -189,6 +210,7 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         test_commands -> docker_daemon "Runs Godog test containers" "Docker API"
         docs_commands -> docker_daemon "Runs MkDocs containers" "Docker API"
         design_commands -> docker_daemon "Validates DSL via Docker" "Docker API"
+        drawio_commands -> docker_daemon "Renders diagrams via Docker" "Docker API"
 
         # API relationships
         commit_handler -> claude_api "Generates commit messages" "HTTPS/REST"
@@ -227,6 +249,9 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         command_registry -> release_commands "Routes release commands" "Function calls"
         command_registry -> ci_commands "Routes CI commands" "Function calls"
         command_registry -> other_commands "Routes other commands" "Function calls"
+        command_registry -> drawio_commands "Routes drawio commands" "Function calls"
+        command_registry -> lint_commands "Routes lint commands" "Function calls"
+        command_registry -> update_commands "Routes update commands" "Function calls"
 
         # Render engine relationships
         commit_handler -> render_engine "Renders output" "Function calls"
@@ -242,6 +267,9 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         release_commands -> render_engine "Renders release status" "Function calls"
         ci_commands -> render_engine "Renders CI diagnostics" "Function calls"
         other_commands -> render_engine "Renders output" "Function calls"
+        drawio_commands -> render_engine "Renders diagram info" "Function calls"
+        lint_commands -> render_engine "Renders lint results" "Function calls"
+        update_commands -> render_engine "Renders update status" "Function calls"
 
         # Orchestrator relationships
         build_commands -> orchestrator "Uses for multi-module builds" "Function calls"
@@ -249,6 +277,7 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         pipeline_commands -> orchestrator "Uses for pipeline execution" "Function calls"
         security_commands -> orchestrator "Uses for multi-scan orchestration" "Function calls"
         risk_commands -> orchestrator "Uses for assessment pipeline execution" "Function calls"
+        lint_commands -> orchestrator "Uses for multi-module linting" "Function calls"
 
         # Serve framework relationships
         design_commands -> serve_framework "Manages Structurizr server" "Function calls"
@@ -262,6 +291,7 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         work_commands -> template_engine "Renders PR prompts" "Function calls"
         risk_commands -> template_engine "Renders risk assessment prompts" "Function calls"
         release_commands -> template_engine "Renders changelog prompts" "Function calls"
+        update_commands -> template_engine "Renders documentation templates" "Function calls"
 
         # Component relationships
 
@@ -455,21 +485,23 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
             include ->command_registry->
             include ->test_commands->
             include ->build_commands->
+            include ->lint_commands->
             include ->pipeline_commands->
             include ->orchestrator->
             autoLayout lr
             title "Execution Commands"
-            description "Commands for building, testing, and executing pipelines"
+            description "Commands for building, testing, linting, and executing pipelines"
         }
 
         container commands_system "InfrastructureCommands" {
             include ->command_registry->
             include ->design_commands->
             include ->docs_commands->
+            include ->drawio_commands->
             include ->serve_framework->
             autoLayout lr
             title "Infrastructure Commands"
-            description "Commands for managing architecture, documentation, and services"
+            description "Commands for managing architecture, documentation, diagrams, and services"
         }
 
         container commands_system "DevelopmentCommands" {
@@ -478,9 +510,10 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
             include ->work_commands->
             include ->templates_commands->
             include ->specs_commands->
+            include ->update_commands->
             autoLayout lr
             title "Development Commands"
-            description "Commands for development workflows and artifact generation"
+            description "Commands for development workflows, updates, and artifact generation"
         }
 
         container commands_system "SecurityAndRiskCommands" {

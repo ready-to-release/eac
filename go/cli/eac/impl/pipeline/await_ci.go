@@ -22,7 +22,7 @@
 // Long: Example:
 // Long:   pipeline await-ci                              # Auto-detect SHA, all ci-*.yaml
 // Long:   pipeline await-ci --sha abc123                 # Explicit SHA
-// Long:   pipeline await-ci --pattern ci-r2r-cli.yaml    # Specific workflow
+// Long:   pipeline await-ci --pattern ci-clie-cli.yaml    # Specific workflow
 // Long:   pipeline await-ci --run-id 12345               # Wait for specific run
 // Long:   pipeline await-ci --timeout 600                # 10 minute timeout
 // Long:   pipeline await-ci --exclude ci-foo             # Exclude workflow
@@ -31,7 +31,7 @@
 // Flag.timeout: type=int, default=1800, usage=Maximum wait time in seconds (default: 1800)
 // Flag.interval: type=int, default=30, usage=Poll interval in seconds (default: 30)
 // Flag.pattern: type=string, default=ci-*.yaml, usage=Workflow file pattern to match
-// Flag.exclude: type=string, usage=Workflow name substring to exclude (e.g., r2r-eac-bundle)
+// Flag.exclude: type=string, usage=Workflow name substring to exclude (e.g., clie-eac-bundle)
 package pipeline
 
 import (
@@ -44,13 +44,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineAwaitCI)
-}
 
 func PipelineAwaitCI() int {
 	// Get workspace root

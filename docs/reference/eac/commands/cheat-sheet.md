@@ -313,19 +313,19 @@ eac serve docs --stop
 
 ```bash
 # Install documentation templates
-r2r templates install docs
+clie templates install docs
 
 # Install to custom location
-r2r templates install docs --destination ./custom-docs
+clie templates install docs --destination ./custom-docs
 
 # Install AI prompt templates
-r2r templates install ai
+clie templates install ai
 
 # Install report templates
-r2r templates install reports
+clie templates install reports
 
 # Install specification templates
-r2r templates install specs
+clie templates install specs
 ```
 
 ---
@@ -416,12 +416,12 @@ Consider creating shell aliases for frequently used commands:
 
 ```bash
 # ~/.bashrc or ~/.zshrc
-alias r2r-modules='eac show modules'
-alias r2r-build='eac build'
-alias r2r-test='eac test'
-alias r2r-validate='eac validate'
-alias r2r-commit='eac work commit'
-alias r2r-changed='eac get changed-modules'
+alias clie-modules='eac show modules'
+alias clie-build='eac build'
+alias clie-test='eac test'
+alias clie-validate='eac validate'
+alias clie-commit='eac work commit'
+alias clie-changed='eac get changed-modules'
 ```
 
 ---

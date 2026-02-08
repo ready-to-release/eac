@@ -32,6 +32,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
@@ -48,29 +49,17 @@ func init() {
 
 var log = logging.C()
 
-// logDebugArtifact logs debug content with labeled sections to the log file.
-// This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
+// logDebugArtifact delegates to the shared AI utility for debug artifact logging.
 func logDebugArtifact(label, content string) {
-	log.Debugf("=== %s START ===", label)
-	log.Debug(content)
-	log.Debugf("=== %s END ===", label)
-}
-
-// gitRepoProvider provides lazy-initialized git repository with test injection support.
-var gitRepoProvider = &git.LazyRepo{}
-
-// getGitRepo returns the git repository, initializing it if needed.
-func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	return gitRepoProvider.Get(workspaceRoot)
-}
-
-// SetGitRepo allows tests to inject a mock repository.
-func SetGitRepo(repo git.GitRepository) {
-	gitRepoProvider.Set(repo)
+	aiutil.LogDebugArtifact(log, label, content)
 }
 
 // CreateSquashMessage is the main entry point for the create squash-message command.
 func CreateSquashMessage() int {
+	return createSquashMessage(defaultDeps())
+}
+
+func createSquashMessage(deps *Deps) int {
 	// Phase 1: Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -94,7 +83,7 @@ func CreateSquashMessage() int {
 	log.Debug("Starting create squash-message command")
 
 	// Phase 4: Open git repository
-	repo, err := getGitRepo(workspaceRoot)
+	repo, err := deps.GetGitRepo(workspaceRoot)
 	if err != nil {
 		log.Errorf("Failed to open git repository: %v", err)
 		return 1
@@ -198,7 +187,7 @@ type squashConfig struct {
 
 // parseConfig parses command line arguments.
 func parseConfig() (*squashConfig, error) {
-	args := os.Args[3:] // Skip "r2r", "create", "squash-message"
+	args := os.Args[3:] // Skip "clie", "create", "squash-message"
 
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

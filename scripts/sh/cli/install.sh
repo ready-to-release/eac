@@ -1,5 +1,5 @@
 #!/bin/bash
-# R2R CLI Installer for Linux and macOS
+# CLIE CLI Installer for Linux and macOS
 # Usage: curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
 #    or: ./install.sh [--system] [--version VERSION]
 
@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Configuration
 REPO="ready-to-release/eac"
-BINARY_NAME="r2r"
+BINARY_NAME="clie"
 USER_INSTALL_DIR="$HOME/.local/bin"
 SYSTEM_INSTALL_DIR="/usr/local/bin"
 
@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --help|-h)
-            echo "R2R CLI Installer"
+            echo "CLIE CLI Installer"
             echo ""
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -112,17 +112,17 @@ detect_platform() {
 # Get the latest release version from GitHub
 get_latest_version() {
     # Skip API call in test mode
-    if [[ "${__R2R_TEST_MOCK:-}" == "1" ]]; then
-        echo -e "${BLUE}Test mode: Using mock version r2r-cli/v0.0.0-test${NC}" >&2
-        echo "r2r-cli/v0.0.0-test"
+    if [[ "${__CLIE_TEST_MOCK:-}" == "1" ]]; then
+        echo -e "${BLUE}Test mode: Using mock version clie-cli/v0.0.0-test${NC}" >&2
+        echo "clie-cli/v0.0.0-test"
         return
     fi
 
     local latest
-    # Fetch releases and find the latest r2r-cli/* release (monorepo has multiple release tags)
-    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'r2r-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    # Fetch releases and find the latest clie-cli/* release (monorepo has multiple release tags)
+    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'clie-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ -z "$latest" ]]; then
-        echo -e "${RED}No r2r-cli release found${NC}"
+        echo -e "${RED}No clie-cli release found${NC}"
         exit 1
     fi
     echo "$latest"
@@ -135,13 +135,13 @@ install_binary() {
     local tmp_dir
 
     # Construct binary name based on platform
-    # Format: r2r-{os}-{arch} for all platforms
+    # Format: clie-{os}-{arch} for all platforms
     # Add -upx suffix if UPX version requested (only available for linux-amd64)
     local binary_filename
     if $USE_UPX && [[ "$OS" == "linux" ]] && [[ "$ARCH" == "amd64" ]]; then
-        binary_filename="r2r-${OS}-${ARCH}-upx"
+        binary_filename="clie-${OS}-${ARCH}-upx"
     else
-        binary_filename="r2r-${OS}-${ARCH}"
+        binary_filename="clie-${OS}-${ARCH}"
         if $USE_UPX && [[ "$OS" != "linux" || "$ARCH" != "amd64" ]]; then
             echo -e "${YELLOW}Note: UPX binaries only available for linux-amd64, using standard binary${NC}"
         fi
@@ -160,7 +160,7 @@ install_binary() {
     trap "rm -rf $tmp_dir" EXIT
 
     # Test mode: Use pre-built binary from out/build instead of downloading
-    if [[ "${__R2R_TEST_MOCK:-}" == "1" ]]; then
+    if [[ "${__CLIE_TEST_MOCK:-}" == "1" ]]; then
         # In test mode, still validate that version looks realistic
         # Reject obviously invalid versions like v999.999.999
         if [[ "$version" =~ v999\. ]]; then
@@ -172,16 +172,16 @@ install_binary() {
 
         echo -e "${BLUE}Test mode: Using pre-built binary from out/build (skipping download)${NC}"
 
-        # Use the actual built r2r-cli binary from the build output
-        # This is available because r2r-installer depends on r2r-cli module
-        # When running from build output: out/build/r2r-installer/bash-scripts/
-        # Go up 2 levels to out/build, then access r2r-cli/go-go/
+        # Use the actual built clie-cli binary from the build output
+        # This is available because clie-installer depends on clie-cli module
+        # When running from build output: out/build/clie-installer/bash-scripts/
+        # Go up 2 levels to out/build, then access clie-cli/go-go/
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        built_binary="${script_dir}/../../r2r-cli/go-go/r2r-${OS}-${ARCH}"
+        built_binary="${script_dir}/../../clie-cli/go-go/clie-${OS}-${ARCH}"
 
         if [[ ! -f "$built_binary" ]]; then
             echo -e "${RED}Test mode: Pre-built binary not found at ${built_binary}${NC}"
-            echo -e "${YELLOW}Ensure r2r-cli module is built before running installer tests${NC}"
+            echo -e "${YELLOW}Ensure clie-cli module is built before running installer tests${NC}"
             exit 1
         fi
 
@@ -189,7 +189,7 @@ install_binary() {
         cp "$built_binary" "$tmp_dir/$BINARY_NAME"
     else
         # Real download in production mode
-        echo -e "${BLUE}Downloading R2R CLI ${version}...${NC}"
+        echo -e "${BLUE}Downloading CLIE CLI ${version}...${NC}"
         echo -e "${BLUE}URL: ${download_url}${NC}"
 
         # Download binary (show progress bar)
@@ -220,7 +220,7 @@ install_binary() {
         mv "$tmp_dir/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
     fi
 
-    echo -e "${GREEN}Successfully installed R2R CLI ${version}${NC}"
+    echo -e "${GREEN}Successfully installed CLIE CLI ${version}${NC}"
 }
 
 # Check if install directory is in PATH
@@ -239,7 +239,7 @@ check_path() {
 
 # Main installation flow
 main() {
-    echo -e "${GREEN}R2R CLI Installer${NC}"
+    echo -e "${GREEN}CLIE CLI Installer${NC}"
     echo ""
 
     detect_platform
@@ -267,7 +267,7 @@ main() {
     fi
 
     echo ""
-    echo -e "${GREEN}Done! Run 'r2r --help' to get started.${NC}"
+    echo -e "${GREEN}Done! Run 'clie --help' to get started.${NC}"
 }
 
 main

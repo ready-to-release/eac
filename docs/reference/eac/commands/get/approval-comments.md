@@ -6,17 +6,17 @@
 
 For **container/bundle modules** with dependencies, approvals are **aggregated from all dependent modules**.
 
-Example: `ext-eac` depends on `eac-commands` and `r2r-cli`:
+Example: `eac-ext` depends on `eac-commands` and `clie-cli`:
 
 ```bash
-eac get approval-comments ext-eac --as-json
+eac get approval-comments eac-ext --as-json
 ```
 
 Returns approvals for PRs containing spec files from:
 
 - `specs/eac-commands/` (dependency)
-- `specs/r2r-cli/` (dependency)
-- `specs/ext-eac/` (if any)
+- `specs/clie-cli/` (dependency)
+- `specs/eac-ext/` (if any)
 
 **Regular modules** only return approvals from their own `specs/<module>/` directory.
 

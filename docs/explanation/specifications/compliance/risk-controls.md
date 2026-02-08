@@ -243,7 +243,7 @@ flowchart LR
 **Create with**:
 
 ```bash
-r2r create risk-profile assessment.md
+eac create risk-profile assessment.md
 ```
 
 **Example** (`specs/.risk-controls/risk-profile.json`):
@@ -432,7 +432,7 @@ For CLI commands and validation details, see:
 
 **[Risk Controls Reference](../../../reference/eac/compliance/risk-controls.md)** - Implementation commands including:
 
-- `r2r create risk-profile` - Generate OSCAL profile from assessment
+- `eac create risk-profile` - Generate OSCAL profile from assessment
 - `eac create risk-assess` - Generate assessment results
 - `eac validate control-tags` - Validate @control: tags
 - `eac validate risk-catalog` - Validate OSCAL catalog

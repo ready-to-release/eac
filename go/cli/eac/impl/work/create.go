@@ -32,12 +32,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(Create)
-}
 
 // Create creates a new workspace (git worktree) for parallel development.
 func Create() int {

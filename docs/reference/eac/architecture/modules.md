@@ -47,23 +47,22 @@ See [Viewing Diagrams](./viewing-diagrams.md) for detailed instructions.
 
 Modules are registered with:
 
-- **Moniker** - Unique identifier (e.g., `eac-core`)
-- **Type** - Module type reference (e.g., `go-library`)
+- **Moniker** - Unique identifier (e.g., `core`)
+- **Template** - Blueprint template reference (e.g., `go-library`)
 - **Dependencies** - Module dependencies (e.g., `depends_on: [logging-go]`)
-- **File Ownership** - Glob patterns defining owned files
+- **Components** - Named components with root paths and optional configuration
 
 **Example**:
 
 ```yaml
 modules:
-  - moniker: eac-core
+  - moniker: core
     name: EAC Core Libraries
-    type: go-library
+    template: go-library
     depends_on: [logging-go]
-    files:
-      root: go/core
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
+    components:
+      go:
+        root: go/core
 ```
 
 ---
@@ -72,7 +71,7 @@ modules:
 
 See [Component Types Reference](./component-types.md) for full documentation.
 
-**File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
+**File**: `contracts/core/0.1.0/schemas/defaults/component-types.yml`
 
 Component types define:
 
@@ -112,7 +111,7 @@ Component types define:
 
 ### Other Families
 
-**Docker**: `r2r-extension` - Container image with multi-platform builds
+**Docker**: `clie-extension` - Container image with multi-platform builds
 
 **Documentation**: `mkdocs-site`, `mkdocs-pdf` - MkDocs HTML/PDF generation
 
@@ -135,31 +134,28 @@ For modules deployed to Kubernetes, the following diagram shows Poly-k8s, Mono-k
 ```yaml
 modules:
   - moniker: logging-go
-    type: go-library
+    template: go-library
 
-  - moniker: eac-core
-    type: go-library
+  - moniker: core
+    template: go-library
     depends_on: [logging-go]
 
-  - moniker: eac-commands
-    type: go-commands
-    depends_on: [eac-core]
+  - moniker: eac-cli
+    template: go-exe
+    depends_on: [core]
 ```
 
 **Build Order** (topological sort):
 
 1. `logging-go`
-2. `eac-core`
-3. `eac-commands`
+2. `core`
+3. `eac-cli`
 
 ### Commands
 
 ```bash
 # Show dependency graph
 eac show-dependencies
-
-# Get execution order for specific modules
-eac get-execution-order eac-commands
 
 # Validate dependencies
 eac validate-dependencies
@@ -182,11 +178,12 @@ eac validate-module-hierarchy
 ### Glob Patterns
 
 ```yaml
-files:
-  root: go/core        # Base directory
-  source: ["**/*.go"]      # All .go files
-  tests: ["**/*_test.go"]  # All test files
-  exclude: ["**/vendor/**"] # Exclude vendor
+components:
+  go:
+    root: go/core          # Base directory
+    patterns:
+      source: ["**/*.go"]      # All .go files
+      tests: ["**/*_test.go"]  # All test files
 ```
 
 **Pattern Variables**:
@@ -336,12 +333,11 @@ eac release-this <module>
 modules:
   - moniker: my-new-module
     name: My New Module
-    type: go-library
-    depends_on: [eac-core]
-    files:
-      root: go/my/module
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
+    template: go-library
+    depends_on: [core]
+    components:
+      go:
+        root: go/my/module
 ```
 
 **2. Validate**:
@@ -424,7 +420,7 @@ artifacts:
     verify: existence
 ```
 
-**Container Image (r2r-extension)**:
+**Container Image (clie-extension)**:
 
 ```yaml
 artifacts:
@@ -434,7 +430,10 @@ artifacts:
 
 ### Artifact Location
 
-**Build Artifacts**: `out/build/{module}/`
+**Build Artifacts**: `out/build/{module}/{component}-{tool}/`
+
+Each UoW writes artifacts to a deterministic output path along with a
+`uow.manifest.json` that records input/output hashes.
 
 **Verification**:
 
@@ -445,13 +444,11 @@ eac validate-artifacts <module>
 
 ### Build Cache
 
-**Location**: `.r2r/cache/build/`
+Build caching is based on **UoW manifests** stored in `out/`. Each manifest
+records the input hash at build time. On subsequent builds, the current input
+hash is compared against the manifest — if unchanged, the UoW is skipped.
 
-**Invalidation**:
-
-- File changes (detected via git)
-- Dependency changes
-- Force rebuild flag
+See [Cache System](./cache-system.md) for full details.
 
 **Usage**:
 
@@ -461,6 +458,9 @@ eac build my-module
 
 # Force rebuild
 eac build my-module --force
+
+# Clear all caches
+eac update cache-clear
 ```
 
 ### Incremental Builds
@@ -547,17 +547,17 @@ eac update-design <module>
 
 | Module               | Type        | Purpose                                                                  |
 | -------------------- | ----------- | ------------------------------------------------------------------------ |
-| **eac-core**         | go-library  | Core libraries (contracts, repository, git)                              |
-| **eac-commands**     | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
-| **eac-specs**        | go-library  | BDD test infrastructure (Godog)                                          |
-| **eac-mcp-commands** | go-mcp      | MCP server (LLM tool integration)                                        |
+| **core**             | go-library  | Core libraries (contracts, repository, git)                              |
+| **eac-cli**          | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
+| **godog-adapter**    | go-library  | BDD test infrastructure (Godog)                                          |
+| **eac-mcp-server**   | go-mcp      | MCP server (LLM tool integration)                                        |
 
 ### CLI and Extensions
 
 | Module      | Type          | Purpose                              |
 | ----------- | ------------- | ------------------------------------ |
-| **r2r-cli** | go-cli        | CLI framework (Docker orchestration) |
-| **ext-eac** | r2r-extension | EAC Docker extension image           |
+| **clie-cli** | go-cli        | CLI framework (Docker orchestration) |
+| **eac-ext** | clie-extension | EAC Docker extension image           |
 
 ### Libraries
 

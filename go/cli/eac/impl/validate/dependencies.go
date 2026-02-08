@@ -21,15 +21,10 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/gomod"
 )
-
-func init() {
-	registry.Register(ValidateDependencies)
-}
 
 func ValidateDependencies() int {
 	// Validate flags against registry metadata

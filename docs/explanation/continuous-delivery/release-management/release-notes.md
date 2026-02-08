@@ -133,7 +133,7 @@ Or use the changelog system:
 
 ```bash
 # Generate changelog entries from commits
-r2r release this <module>
+eac release this <module>
 ```
 
 See [Changelog System](./changelog-system.md) for the full release workflow.
@@ -161,8 +161,8 @@ For release commands, see:
 
 Commands including:
 
-- `r2r release this <module>` - Finalize changelog and create release
-- `r2r release pending <module>` - Check for pending changes
+- `eac release this <module>` - Finalize changelog and create release
+- `eac release pending <module>` - Check for pending changes
 
 ---
 

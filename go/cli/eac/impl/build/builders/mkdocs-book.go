@@ -344,7 +344,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 	hostRepoRoot := workspaceRoot
 	isDinD := IsDockerInDocker()
 	if isDinD {
-		if hostRoot := os.Getenv(environments.EnvR2RHostRepoRoot); hostRoot != "" {
+		if hostRoot := os.Getenv(environments.EnvCLIEHostRepoRoot); hostRoot != "" {
 			hostRepoRoot = hostRoot
 		}
 	}

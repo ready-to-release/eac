@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+var (
+	reCamelCaseBoundary = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+	reMultipleHyphens   = regexp.MustCompile(`-+`)
+)
+
 // GenerateTestMoniker generates a unique moniker for a test based on its type.
 // Uses the adapter registry to determine moniker style:
 // - "feature" style: module_feature-name_scenario-name (for BDD/Gherkin tests)
@@ -20,10 +25,10 @@ func GenerateTestMoniker(testRef TestReference, module string) string {
 
 // generateBDDMoniker creates moniker for BDD/Gherkin tests (godog, tscucumber).
 // Format: module_feature-name_scenario-name
-// Example: r2r-cli_cli-invocation_version-flag-displays-version.
+// Example: clie-cli_cli-invocation_version-flag-displays-version.
 func generateBDDMoniker(testRef TestReference, module string) string {
 	// Extract feature name from file path
-	// Path: specs/r2r-cli/cli-invocation/specification.feature
+	// Path: specs/clie-cli/cli-invocation/specification.feature
 	// Feature: cli-invocation
 	featureName := extractFeatureName(testRef.FilePath)
 
@@ -40,10 +45,10 @@ func generateBDDMoniker(testRef TestReference, module string) string {
 
 // generateGoTestMoniker creates moniker for Go unit tests
 // Format: module_test-file_TestName
-// Example: r2r-cli_install-test_TestInstallCommand-CreateConfigFile.
+// Example: clie-cli_install-test_TestInstallCommand-CreateConfigFile.
 func generateGoTestMoniker(testRef TestReference, module string) string {
 	// Extract test file name without extension
-	// Path: C:\projects\eac\go\r2r\cli\cmd\install_test.go
+	// Path: C:\projects\eac\go\clie\cli\cmd\install_test.go
 	// File: install_test
 	fileName := extractTestFileName(testRef.FilePath)
 
@@ -59,7 +64,7 @@ func generateGoTestMoniker(testRef TestReference, module string) string {
 }
 
 // extractFeatureName extracts the feature directory name from a feature file path
-// specs/r2r-cli/cli-invocation/specification.feature -> cli-invocation.
+// specs/clie-cli/cli-invocation/specification.feature -> cli-invocation.
 func extractFeatureName(filePath string) string {
 	normalized := filepath.ToSlash(filePath)
 	parts := strings.Split(normalized, "/")
@@ -81,7 +86,7 @@ func extractFeatureName(filePath string) string {
 }
 
 // extractTestFileName extracts the test file name without _test.go suffix
-// C:\projects\eac\go\r2r\cli\cmd\install_test.go -> install-test.
+// C:\projects\eac\go\clie\cli\cmd\install_test.go -> install-test.
 func extractTestFileName(filePath string) string {
 	base := filepath.Base(filePath)
 
@@ -100,8 +105,7 @@ func toKebabCase(s string) string {
 
 	// Insert hyphens before uppercase letters (for PascalCase/camelCase)
 	// TestInstallCommand -> Test-Install-Command
-	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
-	s = re.ReplaceAllString(s, "${1}-${2}")
+	s = reCamelCaseBoundary.ReplaceAllString(s, "${1}-${2}")
 
 	// Convert to lowercase
 	s = strings.ToLower(s)
@@ -110,8 +114,7 @@ func toKebabCase(s string) string {
 	s = strings.ReplaceAll(s, " ", "-")
 
 	// Remove multiple consecutive hyphens
-	re = regexp.MustCompile(`-+`)
-	s = re.ReplaceAllString(s, "-")
+	s = reMultipleHyphens.ReplaceAllString(s, "-")
 
 	// Trim leading/trailing hyphens
 	s = strings.Trim(s, "-")

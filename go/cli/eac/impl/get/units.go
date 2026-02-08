@@ -32,14 +32,9 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(GetUnits)
-}
 
 // unitFilters holds the parsed filter flags.
 type unitFilters struct {

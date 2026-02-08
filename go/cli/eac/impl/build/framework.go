@@ -78,6 +78,10 @@ type BuildConfig struct {
 	// Use ArtifactsMode.AllArtifactsRequested() to check if all artifacts should be built.
 	ArtifactsMode environments.ArtifactsMode
 
+	// Components filters which components to build within each module.
+	// When empty, all components are built. When set, only matching components are built.
+	Components []string
+
 	// Set of originally requested modules (for --use-existing-depm logic)
 	RequestedSet map[string]bool
 
@@ -189,6 +193,11 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	// Handle --use-existing-depm: filter out deps that already have artifacts
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && len(ctx.ScopeMonikers) > 0 {
+		cfg, err := config.Load(config.DefaultLoadOptions())
+		if err != nil {
+			return fmt.Errorf("failed to load config for --use-existing-depm: %w", err)
+		}
+
 		var filteredScope []string
 
 		for _, m := range ctx.ScopeMonikers {
@@ -198,7 +207,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 				continue
 			}
 			// For deps, check if artifacts exist
-			if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested()) {
+			if hasExistingArtifacts(m, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested(), cfg) {
 				log.Debugf("Skipping dep %s (artifacts exist)", m)
 			} else {
 				filteredScope = append(filteredScope, m)

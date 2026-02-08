@@ -17,5 +17,5 @@ Feature: repository_docs-mermaid-cache
       Then all mermaid diagrams should have cached SVGs
       And if any diagrams are missing from cache, I should see:
         """
-        Run 'r2r update docs' to update the mermaid cache.
+        Run 'clie update docs' to update the mermaid cache.
         """

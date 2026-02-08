@@ -32,13 +32,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-// commandFlags defines valid flags for the test debug command
 // ansiRegex matches ANSI escape sequences for color/formatting.
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-
-func init() {
-	registry.Register(TestDebug)
-}
 
 // Failure represents a test failure found in test results.
 type Failure struct {

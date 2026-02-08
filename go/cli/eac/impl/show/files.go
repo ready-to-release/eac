@@ -17,14 +17,9 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
-
-func init() {
-	registry.Register(ShowFiles)
-}
 
 func ShowFiles() int {
 	// Validate flags against registry metadata

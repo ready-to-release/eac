@@ -6,7 +6,7 @@ Reference documentation for developers contributing to the EAC monorepo.
 
 The EAC repository is a modular monorepo containing:
 
-- **R2R CLI** - The core command-line framework
+- **CLIE CLI** - The core command-line framework
 - **EAC Extension** - Containerized automation tools
 - **Supporting Modules** - Shared libraries and infrastructure
 
@@ -32,7 +32,7 @@ All modules are defined in `.eac/repository.yml`. Each module has:
 
 ### Two-Tier Architecture
 
-1. **R2R CLI (Tier 1)** - Framework running on the host
+1. **CLIE CLI (Tier 1)** - Framework running on the host
 2. **Extensions (Tier 2)** - Tools running in containers
 
 ### Contract-Driven Configuration

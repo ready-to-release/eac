@@ -1050,8 +1050,8 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	oldTime := time.Now().Add(-1 * time.Hour)
 	newTime := time.Now()
 
-	// Create an OLD build manifest for ext-eac (dependent module)
-	extManifest := f.createUoWManifest(core.ActionBuild, "ext-eac", "dockerfile", "buildx")
+	// Create an OLD build manifest for eac-ext (dependent module)
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = oldTime
 	f.saveManifest(extManifest)
@@ -1063,7 +1063,7 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "ext-eac", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
 	}
 
 	// Hash matches - normally would be cached
@@ -1071,9 +1071,9 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 		return "sha256:hash-ext", nil
 	}
 
-	// Dependency resolver: ext-eac depends on eac-cli
+	// Dependency resolver: eac-ext depends on eac-cli
 	depResolver := func(module string) []string {
-		if module == "ext-eac" {
+		if module == "eac-ext" {
 			return []string{"eac-cli"}
 		}
 		return nil
@@ -1082,7 +1082,7 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	result, err := reader.DetectUoWChanges(core.ActionBuild, expectedUoWs, getInputHash, depResolver)
 	require.NoError(t, err)
 
-	// ext-eac should be invalidated because eac-cli was rebuilt more recently
+	// eac-ext should be invalidated because eac-cli was rebuilt more recently
 	assert.Len(t, result.Changed, 1, "build should be invalidated by newer dependency build")
 	assert.Empty(t, result.UpToDate)
 	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "dependency build invalidated")
@@ -1096,8 +1096,8 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	oldTime := time.Now().Add(-1 * time.Hour)
 	newTime := time.Now()
 
-	// Create a NEW build manifest for ext-eac (dependent - built after dep)
-	extManifest := f.createUoWManifest(core.ActionBuild, "ext-eac", "dockerfile", "buildx")
+	// Create a NEW build manifest for eac-ext (dependent - built after dep)
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = newTime
 	f.saveManifest(extManifest)
@@ -1109,7 +1109,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "ext-eac", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1117,7 +1117,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	}
 
 	depResolver := func(module string) []string {
-		if module == "ext-eac" {
+		if module == "eac-ext" {
 			return []string{"eac-cli"}
 		}
 		return nil
@@ -1126,7 +1126,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	result, err := reader.DetectUoWChanges(core.ActionBuild, expectedUoWs, getInputHash, depResolver)
 	require.NoError(t, err)
 
-	// ext-eac should NOT be invalidated because eac-cli build is older
+	// eac-ext should NOT be invalidated because eac-cli build is older
 	assert.Empty(t, result.Changed, "build should NOT be invalidated by older dependency build")
 	assert.Len(t, result.UpToDate, 1)
 }
@@ -1138,8 +1138,8 @@ func TestDetectUoWChanges_NilDependencyResolver_NoInvalidation(t *testing.T) {
 	oldTime := time.Now().Add(-1 * time.Hour)
 	newTime := time.Now()
 
-	// Create an OLD build manifest for ext-eac
-	extManifest := f.createUoWManifest(core.ActionBuild, "ext-eac", "dockerfile", "buildx")
+	// Create an OLD build manifest for eac-ext
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = oldTime
 	f.saveManifest(extManifest)
@@ -1151,7 +1151,7 @@ func TestDetectUoWChanges_NilDependencyResolver_NoInvalidation(t *testing.T) {
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "ext-eac", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1224,7 +1224,7 @@ func TestDetectUoWChanges_DependencyResolver_OnlyAffectsBuildContext(t *testing.
 	newTime := time.Now()
 
 	// Create an OLD test manifest
-	testManifest := f.createUoWManifest(core.ActionTest, "ext-eac", "go", "gotest")
+	testManifest := f.createUoWManifest(core.ActionTest, "eac-ext", "go", "gotest")
 	testManifest.InputHash = "sha256:hash"
 	testManifest.ExecutedAt = oldTime
 	f.saveManifest(testManifest)
@@ -1236,7 +1236,7 @@ func TestDetectUoWChanges_DependencyResolver_OnlyAffectsBuildContext(t *testing.
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "ext-eac", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "eac-ext", Component: "go", Tool: "gotest"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1245,7 +1245,7 @@ func TestDetectUoWChanges_DependencyResolver_OnlyAffectsBuildContext(t *testing.
 
 	// Dep resolver provided but action is test, not build
 	depResolver := func(module string) []string {
-		if module == "ext-eac" {
+		if module == "eac-ext" {
 			return []string{"eac-cli"}
 		}
 		return nil

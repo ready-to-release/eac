@@ -173,7 +173,7 @@ function Invoke-GoSrcCommand {
 
     # Save the original working directory as an environment variable
     # so Go commands can resolve relative paths correctly
-    $env:R2R_PWD = (Get-Location).Path
+    $env:CLIE_PWD = (Get-Location).Path
 
     # Run the command via dispatcher
     Push-Location $commandsPath
@@ -187,7 +187,7 @@ function Invoke-GoSrcCommand {
     } finally {
         Pop-Location
         # Clean up
-        Remove-Item Env:\R2R_PWD -ErrorAction SilentlyContinue
+        Remove-Item Env:\CLIE_PWD -ErrorAction SilentlyContinue
     }
 }
 

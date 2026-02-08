@@ -21,8 +21,8 @@ func TestSetupWorkspaceIsolation(t *testing.T) {
 	root := SetupWorkspaceIsolation(t)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
-		t.Error("R2R_REPO_ROOT not set after SetupWorkspaceIsolation")
+	if envRoot := os.Getenv(environments.EnvCLIERepoRoot); envRoot == "" {
+		t.Error("CLIE_REPO_ROOT not set after SetupWorkspaceIsolation")
 	}
 
 	// Verify return value matches real repo root
@@ -42,8 +42,8 @@ func TestSetupTempWorkspaceIsolation(t *testing.T) {
 	tempRoot := SetupTempWorkspaceIsolation(t)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
-		t.Error("R2R_REPO_ROOT not set after SetupTempWorkspaceIsolation")
+	if envRoot := os.Getenv(environments.EnvCLIERepoRoot); envRoot == "" {
+		t.Error("CLIE_REPO_ROOT not set after SetupTempWorkspaceIsolation")
 	}
 
 	// Verify the returned path is a temp directory
@@ -99,8 +99,8 @@ func TestCopyToTempWorkspace(t *testing.T) {
 	tempRoot := CopyToTempWorkspace(t, filesToCopy)
 
 	// Verify isolation was set up
-	if envRoot := os.Getenv(environments.EnvR2RRepoRoot); envRoot == "" {
-		t.Error("R2R_REPO_ROOT not set after CopyToTempWorkspace")
+	if envRoot := os.Getenv(environments.EnvCLIERepoRoot); envRoot == "" {
+		t.Error("CLIE_REPO_ROOT not set after CopyToTempWorkspace")
 	}
 
 	// Verify the file was copied

@@ -209,9 +209,9 @@ func captureHeadSHA(ctx *eacgodog.TestContext) {
 func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) error {
 	ctx.MustBeIsolated()
 
-	r2rDir := filepath.Join(ctx.IsolatedDir, ".eac")
-	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .r2r directory: %w", err)
+	clieDir := filepath.Join(ctx.IsolatedDir, ".eac")
+	if err := os.MkdirAll(clieDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create .clie directory: %w", err)
 	}
 
 	var mods []cacheModuleConfig
@@ -230,7 +230,7 @@ func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) er
 	}
 
 	repoYAML := generateCacheRepositoryYAML(mods)
-	repoPath := filepath.Join(r2rDir, "repository.yml")
+	repoPath := filepath.Join(clieDir, "repository.yml")
 	if err := os.WriteFile(repoPath, []byte(repoYAML), 0o644); err != nil {
 		return fmt.Errorf("failed to write repository.yml: %w", err)
 	}
@@ -362,13 +362,13 @@ func ensureNoBuildState(ctx *eacgodog.TestContext) error {
 func buildAllModules(ctx *eacgodog.TestContext) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
-	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvR2RContainerRoot)
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
 		} else {
-			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
+			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -486,9 +486,9 @@ func runCommandWithMockedCI(ctx *eacgodog.TestContext, cmdLine string) error {
 		return fmt.Errorf("failed to write mock file: %w", err)
 	}
 
-	ctx.SetMockOverride("R2R_MOCK_CI_STATUS", mockPath)
-	ctx.SetMockOverride("R2R_MOCK_HEAD_SHA", cacheCtx.currentHeadSHA)
-	ctx.SetMockOverride("R2R_MOCK_CHANGED_FILES", strings.Join(cacheCtx.changedFiles, ","))
+	ctx.SetMockOverride("CLIE_MOCK_CI_STATUS", mockPath)
+	ctx.SetMockOverride("CLIE_MOCK_HEAD_SHA", cacheCtx.currentHeadSHA)
+	ctx.SetMockOverride("CLIE_MOCK_CHANGED_FILES", strings.Join(cacheCtx.changedFiles, ","))
 
 	if err := ctx.RunCommand(cmdLine); err != nil {
 		return err
@@ -809,13 +809,13 @@ func mockCIAtDifferentSHA(ctx *eacgodog.TestContext, module string) error {
 func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
-	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvR2RContainerRoot)
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
 		} else {
-			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
+			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -874,13 +874,13 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
-	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvR2RContainerRoot)
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
 		} else {
-			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
+			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
 		}
 	}()
 
@@ -948,13 +948,13 @@ func ensureNoModificationsInDir(ctx *eacgodog.TestContext, dir string) error {
 func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 	ctx.MustBeIsolated()
 
-	origContainerRoot := os.Getenv(environments.EnvR2RContainerRoot)
-	os.Setenv(environments.EnvR2RContainerRoot, ctx.OriginalRepoRoot)
+	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
 	defer func() {
 		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvR2RContainerRoot)
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
 		} else {
-			os.Setenv(environments.EnvR2RContainerRoot, origContainerRoot)
+			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
 		}
 	}()
 

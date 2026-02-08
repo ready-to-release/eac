@@ -6,13 +6,11 @@ import (
 	"testing"
 )
 
-func TestGetGitOps(t *testing.T) {
-	defer ResetGitOps() // Clean up after test
-
-	t.Run("returns default implementation when no mock set", func(t *testing.T) {
-		ops := GetGitOps("/tmp/test-repo")
+func TestNewDefaultGitOps(t *testing.T) {
+	t.Run("returns non-nil implementation", func(t *testing.T) {
+		ops := NewDefaultGitOps("/tmp/test-repo")
 		if ops == nil {
-			t.Fatal("GetGitOps() returned nil")
+			t.Fatal("NewDefaultGitOps() returned nil")
 		}
 
 		// Should be default implementation
@@ -20,31 +18,34 @@ func TestGetGitOps(t *testing.T) {
 			t.Error("Expected defaultGitOps implementation")
 		}
 	})
+}
 
-	t.Run("returns mock implementation when set", func(t *testing.T) {
-		mock := &MockGitOps{}
-		SetGitOps(mock)
+func TestDefaultDeps(t *testing.T) {
+	t.Run("returns deps with production git ops", func(t *testing.T) {
+		deps := DefaultDeps("/tmp/test-repo")
+		if deps == nil {
+			t.Fatal("DefaultDeps() returned nil")
+		}
+		if deps.GitOps == nil {
+			t.Fatal("DefaultDeps().GitOps is nil")
+		}
 
-		ops := GetGitOps("/tmp/test-repo")
-		if ops != mock {
-			t.Error("GetGitOps() did not return mock implementation")
+		// Should be default implementation
+		if _, ok := deps.GitOps.(*defaultGitOps); !ok {
+			t.Error("Expected defaultGitOps implementation")
 		}
 	})
 }
 
-func TestSetResetGitOps(t *testing.T) {
-	mock := &MockGitOps{}
+func TestDepsWithMock(t *testing.T) {
+	t.Run("deps accepts mock implementation", func(t *testing.T) {
+		mock := &MockGitOps{}
+		deps := &Deps{GitOps: mock}
 
-	SetGitOps(mock)
-	if GetGitOps("") != mock {
-		t.Error("SetGitOps() did not set mock")
-	}
-
-	ResetGitOps()
-	ops := GetGitOps("/tmp")
-	if _, ok := ops.(*defaultGitOps); !ok {
-		t.Error("ResetGitOps() did not reset to default")
-	}
+		if deps.GitOps != mock {
+			t.Error("Deps did not hold the mock implementation")
+		}
+	})
 }
 
 // MockGitOps is a mock implementation for testing

@@ -18,42 +18,35 @@ const defaultRiskAnalysisPrompt = `# Risk Analysis Assistant
 Analyze security findings and compute a likelihood score (1-5) following ISO 27005.
 Return JSON: {"computed_likelihood": <1-5>, "reasoning": "<text>", "risk_summary": "<text>", "confidence": <0.0-1.0>}`
 
-// MockAIResponse holds mock response for testing.
-var mockAIResponse string
-
-// SetMockAIResponse sets a mock AI response for testing.
-func SetMockAIResponse(response string) {
-	mockAIResponse = response
-}
-
-// ResetMockAIResponse clears the mock AI response.
-func ResetMockAIResponse() {
-	mockAIResponse = ""
-}
-
 // AIScorer performs AI-powered risk analysis.
 type AIScorer struct {
 	workspaceRoot string
 	providerType  string
 	model         string
 	debug         bool
+	deps          *Deps
 }
 
 // NewAIScorer creates a new AI scorer.
 func NewAIScorer(workspaceRoot, providerType, model string, debug bool) *AIScorer {
+	return newAIScorer(workspaceRoot, providerType, model, debug, defaultDeps())
+}
+
+func newAIScorer(workspaceRoot, providerType, model string, debug bool, deps *Deps) *AIScorer {
 	return &AIScorer{
 		workspaceRoot: workspaceRoot,
 		providerType:  providerType,
 		model:         model,
 		debug:         debug,
+		deps:          deps,
 	}
 }
 
 // AnalyzeRisk performs AI-powered risk analysis on security findings.
 func (s *AIScorer) AnalyzeRisk(ctx context.Context, input *AIAnalysisInput) (*AIRiskAnalysis, error) {
-	// Use mock response if set (for testing)
-	if mockAIResponse != "" {
-		return parseAIResponse(mockAIResponse)
+	// Use injected test response if set
+	if s.deps.AIResponse != "" {
+		return parseAIResponse(s.deps.AIResponse)
 	}
 
 	// Check for mock AI provider (integration testing via environment)
@@ -241,5 +234,5 @@ func countBySeverity(findings []VulnerabilityInput, severity string) int {
 
 // DefaultAIScorer returns an AI scorer with default settings.
 func DefaultAIScorer(workspaceRoot string) *AIScorer {
-	return NewAIScorer(workspaceRoot, "", "", false)
+	return newAIScorer(workspaceRoot, "", "", false, defaultDeps())
 }

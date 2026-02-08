@@ -22,7 +22,7 @@ func TestExtractStructurizrMarkers(t *testing.T) {
 		},
 		{
 			name:     "multiple markers",
-			content:  "<!-- structurizr:eac-cli:SystemContext -->\n\n<!-- structurizr:r2r-cli:Containers -->",
+			content:  "<!-- structurizr:eac-cli:SystemContext -->\n\n<!-- structurizr:clie-cli:Containers -->",
 			expected: 2,
 		},
 		{
@@ -94,7 +94,7 @@ Some text.
 
 More text.
 
-<!-- structurizr:r2r-cli:SystemContext -->
+<!-- structurizr:clie-cli:SystemContext -->
 `
 
 	markers := ExtractStructurizrMarkers(content)
@@ -111,7 +111,7 @@ More text.
 	if modules["eac-cli"] != 2 {
 		t.Errorf("Expected 2 eac-cli markers, got %d", modules["eac-cli"])
 	}
-	if modules["r2r-cli"] != 1 {
-		t.Errorf("Expected 1 r2r-cli marker, got %d", modules["r2r-cli"])
+	if modules["clie-cli"] != 1 {
+		t.Errorf("Expected 1 clie-cli marker, got %d", modules["clie-cli"])
 	}
 }

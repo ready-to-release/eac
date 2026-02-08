@@ -41,8 +41,8 @@ Specifications aren't just documentation - they're automated tests that verify s
 ```gherkin
 Scenario: User creates a project
   Given I am in an empty directory
-  When I run "r2r init my-project"
-  Then a file named "my-project/r2r.yaml" should exist
+  When I run "cli init my-project"
+  Then a file named "my-project/cli.yaml" should exist
 ```
 
 This scenario is both documentation AND an automated test.

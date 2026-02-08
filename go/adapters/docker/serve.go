@@ -59,6 +59,17 @@ type ServeConfig struct {
 
 	// CPUs is the number of CPUs to allocate (0 = no limit)
 	CPUs float64
+
+	// Output is the writer for status messages (nil defaults to os.Stdout)
+	Output io.Writer
+}
+
+// output returns the configured output writer, defaulting to os.Stdout.
+func (c *ServeConfig) output() io.Writer {
+	if c.Output != nil {
+		return c.Output
+	}
+	return os.Stdout
 }
 
 // BuildInfo holds information for building a local Docker image.
@@ -454,7 +465,7 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 	if imageExists && config.BuildInfo != nil {
 		stale, reason := isImageStale(config.BuildInfo.ContextPath, imageCreated)
 		if stale {
-			fmt.Printf("Image %s is stale: %s\n", config.Image, reason)
+			fmt.Fprintf(config.output(), "Image %s is stale: %s\n", config.Image, reason)
 			needsBuild = true
 		}
 	}
@@ -466,7 +477,7 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 	// Build or pull the image
 	if config.BuildInfo != nil {
 		// Build locally using Docker SDK
-		fmt.Printf("Building image %s...\n", config.Image)
+		fmt.Fprintf(config.output(), "Building image %s...\n", config.Image)
 
 		// Create build context tar
 		buildContext, err := createBuildContext(config.BuildInfo.ContextPath, config.BuildInfo.Dockerfile)
@@ -497,15 +508,15 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 		defer resp.Body.Close()
 
 		// Stream build progress
-		err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stdout, os.Stdout.Fd(), true, nil)
+		err = jsonmessage.DisplayJSONMessagesStream(resp.Body, config.output(), os.Stdout.Fd(), true, nil)
 		if err != nil {
 			return fmt.Errorf("error during image build: %w", err)
 		}
 
-		fmt.Printf("\nImage %s built successfully\n", config.Image)
+		fmt.Fprintf(config.output(), "\nImage %s built successfully\n", config.Image)
 	} else {
 		// Pull from registry using Docker SDK
-		fmt.Printf("Pulling image %s...\n", config.Image)
+		fmt.Fprintf(config.output(), "Pulling image %s...\n", config.Image)
 
 		pullOptions := image.PullOptions{}
 		reader, err := cli.ImagePull(ctx, config.Image, pullOptions)
@@ -515,12 +526,12 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 		defer reader.Close()
 
 		// Stream pull progress
-		err = jsonmessage.DisplayJSONMessagesStream(reader, os.Stdout, os.Stdout.Fd(), true, nil)
+		err = jsonmessage.DisplayJSONMessagesStream(reader, config.output(), os.Stdout.Fd(), true, nil)
 		if err != nil {
 			return fmt.Errorf("error during image pull: %w", err)
 		}
 
-		fmt.Printf("\nImage %s pulled successfully\n", config.Image)
+		fmt.Fprintf(config.output(), "\nImage %s pulled successfully\n", config.Image)
 	}
 
 	return nil

@@ -26,17 +26,12 @@ import (
 	"sort"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/ghost"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(ShowGhosts)
-}
 
 func ShowGhosts() int {
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

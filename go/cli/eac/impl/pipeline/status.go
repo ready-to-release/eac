@@ -28,13 +28,8 @@ import (
 
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
-
-func init() {
-	registry.Register(PipelineStatus)
-}
 
 func PipelineStatus() int {
 	// Validate flags before parsing

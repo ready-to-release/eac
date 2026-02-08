@@ -6,7 +6,7 @@
 //
 // Key features:
 //   - Creates temporary directory for test isolation
-//   - Sets R2R_REPO_ROOT and R2R_PWD environment variables (no physical .git needed)
+//   - Sets CLIE_REPO_ROOT and CLIE_PWD environment variables (no physical .git needed)
 //   - Provides hooks for mock injection (git repository, AI responses)
 //   - Handles cleanup automatically
 //
@@ -105,7 +105,7 @@ func (t *TestIsolation) WithMockAIConfig(create bool) *TestIsolation {
 	return t
 }
 
-// WithMockAIResponse sets the mock AI response that will be written to .r2r/test/ai-mock.txt.
+// WithMockAIResponse sets the mock AI response that will be written to .clie/test/ai-mock.txt.
 // The "test" provider reads this file to return predictable responses in acceptance tests.
 // Must be called before Setup().
 func (t *TestIsolation) WithMockAIResponse(response string) *TestIsolation {
@@ -160,9 +160,9 @@ func (t *TestIsolation) Setup() error {
 		}
 
 		// Copy .eac/ directory (unified ai-config.yml and prompts)
-		srcR2REac := filepath.Join(t.originalRepoRoot, ".eac")
-		dstR2REac := filepath.Join(t.isolatedDir, ".eac")
-		if err := copyDir(srcR2REac, dstR2REac); err != nil {
+		srcCLIEEac := filepath.Join(t.originalRepoRoot, ".eac")
+		dstCLIEEac := filepath.Join(t.isolatedDir, ".eac")
+		if err := copyDir(srcCLIEEac, dstCLIEEac); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to copy .eac config: %w", err)
 		}
@@ -193,9 +193,9 @@ func (t *TestIsolation) Setup() error {
 
 	// Create test AI config if requested
 	if t.createMockAIConfig {
-		// Use "test" provider which reads mock responses from .r2r/test/ai-mock.txt
+		// Use "test" provider which reads mock responses from .clie/test/ai-mock.txt
 		testConfig := `# Test AI configuration for acceptance testing
-# Uses the "test" provider which reads responses from .r2r/test/ai-mock.txt
+# Uses the "test" provider which reads responses from .clie/test/ai-mock.txt
 ai:
   provider: test
   model: test-model
@@ -225,7 +225,7 @@ git:
 		mockDir := filepath.Dir(mockPath)
 		if err := os.MkdirAll(mockDir, 0o755); err != nil {
 			t.Cleanup()
-			return fmt.Errorf("failed to create .r2r/test directory: %w", err)
+			return fmt.Errorf("failed to create .clie/test directory: %w", err)
 		}
 		if err := os.WriteFile(mockPath, []byte(t.mockAIResponse), 0o644); err != nil {
 			t.Cleanup()
@@ -374,8 +374,8 @@ func (t *TestIsolation) Environment() []string {
 		return nil
 	}
 	return []string{
-		fmt.Sprintf("R2R_PWD=%s", t.isolatedDir),
-		fmt.Sprintf("R2R_REPO_ROOT=%s", t.isolatedDir),
+		fmt.Sprintf("CLIE_PWD=%s", t.isolatedDir),
+		fmt.Sprintf("CLIE_REPO_ROOT=%s", t.isolatedDir),
 	}
 }
 
@@ -400,7 +400,7 @@ func (t *TestIsolation) SetMockAIResponse(response string) error {
 	mockPath := paths.AITestMockPath(t.isolatedDir)
 	mockDir := filepath.Dir(mockPath)
 	if err := os.MkdirAll(mockDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .r2r/test directory: %w", err)
+		return fmt.Errorf("failed to create .clie/test directory: %w", err)
 	}
 	if err := os.WriteFile(mockPath, []byte(response), 0o644); err != nil {
 		return fmt.Errorf("failed to write ai-mock.txt: %w", err)

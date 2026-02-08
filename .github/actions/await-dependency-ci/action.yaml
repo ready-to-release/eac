@@ -16,7 +16,7 @@
 #       steps:
 #         - uses: ./.github/actions/await-dependency-ci
 #           with:
-#             module: ext-eac
+#             module: eac-ext
 #             timeout: '600'
 
 name: Await Dependency CI
@@ -24,7 +24,7 @@ description: Wait for all dependency module CI workflows to pass
 
 inputs:
   module:
-    description: 'Module name to check dependencies for (e.g., ext-eac, docs)'
+    description: 'Module name to check dependencies for (e.g., eac-ext, docs)'
     required: true
   timeout:
     description: 'Maximum wait time per dependency in seconds'

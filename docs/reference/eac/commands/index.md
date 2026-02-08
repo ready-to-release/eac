@@ -2,14 +2,14 @@
 
 This section documents **EAC extension commands** - the automation tools provided by the EAC extension.
 
-!!! info "Looking for R2R CLI commands?"
-For framework commands like `r2r init`, `r2r install`, and `r2r list`, see:
+!!! info "Looking for CLIE CLI commands?"
+For framework commands like `clie init`, `clie install`, and `clie list`, see:
 
-    **[R2R CLI Command Reference](https://ready-to-release.github.io/eac/reference/r2r/commands/)**
+    **[CLIE CLI Command Reference](https://ready-to-release.github.io/eac/reference/clie/commands/)**
 
-    R2R uses a two-tier architecture:
+    CLIE uses a two-tier architecture:
 
-    - **R2R CLI** (framework) - Manages extensions
+    - **CLIE CLI** (framework) - Manages extensions
     - **EAC Extension** (this section) - Provides automation tools
 
     Learn more: [CLI vs Extensions Architecture](../architecture/cli-integration.md)

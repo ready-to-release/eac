@@ -4,10 +4,10 @@
 
 ## Details
 
-Installs report template files from `templates/reports/` to `.r2r/templates/reports/`.
+Installs report template files from `templates/reports/` to `.clie/templates/reports/`.
 
 **Source**: `templates/reports/` (fixed)
-**Destination**: `.r2r/templates/reports/` (fixed)
+**Destination**: `.clie/templates/reports/` (fixed)
 
 ## Use Case
 

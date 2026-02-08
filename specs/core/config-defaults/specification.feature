@@ -1,4 +1,4 @@
-@L1 @ov @depm:foundation
+@L1 @ov @depm:core
 Feature: Configuration Defaults System
 
   As a repository maintainer

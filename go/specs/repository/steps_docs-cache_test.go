@@ -126,7 +126,7 @@ func (c *repositoryContext) allMermaidDiagramsShouldHaveCachedSVGs() error {
 			details.WriteString(fmt.Sprintf("  - %s [%d]: %s\n", relPath, block.blockIndex, firstLine))
 		}
 
-		details.WriteString("\nRun 'r2r update docs' to update the mermaid cache.\n")
+		details.WriteString("\nRun 'clie update docs' to update the mermaid cache.\n")
 		return fmt.Errorf("%s", details.String())
 	}
 	return nil
@@ -248,7 +248,7 @@ func (c *repositoryContext) allDrawioImagesShouldHaveCachedPNGs() error {
 			details.WriteString(fmt.Sprintf("  - %s\n", img.relPath))
 		}
 
-		details.WriteString("\nRun 'r2r update docs' to update the drawio cache.\n")
+		details.WriteString("\nRun 'clie update docs' to update the drawio cache.\n")
 		return fmt.Errorf("%s", details.String())
 	}
 	return nil
@@ -414,7 +414,7 @@ func (c *repositoryContext) allStructurizrViewsShouldHaveCachedSVGs() error {
 			details.WriteString(fmt.Sprintf("  - %s:%s (hash %s)\n", view.module, view.viewKey, view.dslHash))
 		}
 
-		details.WriteString("\nRun 'r2r eac build --module docs' to build the Structurizr diagrams.\n")
+		details.WriteString("\nRun 'clie eac build --module docs' to build the Structurizr diagrams.\n")
 		return fmt.Errorf("%s", details.String())
 	}
 	return nil

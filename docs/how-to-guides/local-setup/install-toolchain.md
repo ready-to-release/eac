@@ -2,7 +2,15 @@
 
 ## What You'll Accomplish
 
-Install the R2R CLI and EAC extension to enable automation commands in your repository.
+Either:
+
+- Install the CLIE CLI and EAC extension
+
+Or
+
+- Install the eac executable
+
+to enable automation commands in your repository.
 
 ## Prerequisites
 
@@ -33,7 +41,7 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 3. **Verify** installation:
 
 ```bash
-r2r version
+clie version
 ```
 
 ## Post-Installation Setup
@@ -41,15 +49,15 @@ r2r version
 ### 1. Initialize Configuration
 
 ```bash
-r2r init
+clie init
 ```
 
-This creates `.r2r/r2r-cli.yml` with default extension registry settings.
+This creates `.clie/clie-cli.yml` with default extension registry settings.
 
 ### 2. Install EAC Extension
 
 ```bash
-r2r install eac
+clie install eac
 ```
 
 This pulls the EAC Docker image and registers it with the CLI.
@@ -58,10 +66,10 @@ This pulls the EAC Docker image and registers it with the CLI.
 
 ```bash
 # Check CLI version
-r2r version
+clie version
 
 # Verify Docker connectivity
-r2r verify
+clie verify
 
 # Test EAC extension
 eac help
@@ -71,12 +79,12 @@ eac help
 
 | File               | Purpose                                           |
 | ------------------ | ------------------------------------------------- |
-| `.r2r/r2r-cli.yml` | Extension registry and CLI settings               |
+| `.clie/clie-cli.yml` | Extension registry and CLI settings               |
 | `.eac/`        | EAC-specific configuration (created on first use) |
 
 ## Updating
 
-### Update R2R CLI
+### Update CLIE CLI
 
 ```bash
 # Re-run the install script
@@ -86,8 +94,8 @@ curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/s
 ### Update EAC Extension
 
 ```bash
-r2r cleanup --all
-r2r install eac
+clie cleanup --all
+clie install eac
 ```
 
 ## Troubleshooting
@@ -106,5 +114,5 @@ r2r install eac
 
 ## See Also
 
-- [R2R CLI Reference](../../reference/r2r/commands/index.md) - Full CLI command documentation
+- [CLIE CLI Reference](../../reference/clie/commands/index.md) - Full CLI command documentation
 - [CLI vs Extensions](../../reference/devex/internal/cli-vs-extensions.md) - Architecture overview

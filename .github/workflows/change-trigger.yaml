@@ -383,14 +383,14 @@ jobs:
             echo "Waiting for Layer 0 dependencies to complete..."
             echo "=============================================="
 
-            # Layer 1 modules depend on r2r-cli - wait for it if dispatched
-            if echo "$LAYER_0" | grep -qw "r2r-cli"; then
-              echo "Waiting for r2r-cli CI to complete..."
-              ${COMMANDS:?COMMANDS not set} pipeline await-ci --pattern "ci-r2r-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
-                echo "::error::r2r-cli CI did not complete successfully"
+            # Layer 1 modules depend on clie-cli - wait for it if dispatched
+            if echo "$LAYER_0" | grep -qw "clie-cli"; then
+              echo "Waiting for clie-cli CI to complete..."
+              ${COMMANDS:?COMMANDS not set} pipeline await-ci --pattern "ci-clie-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
+                echo "::error::clie-cli CI did not complete successfully"
                 exit 1
               }
-              echo "✅ r2r-cli CI completed"
+              echo "✅ clie-cli CI completed"
             fi
 
             # Dispatch Layer 1
@@ -417,7 +417,7 @@ jobs:
 
           if [ -n "$LAYER_1" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Layer 1 (depends on r2r-cli)" >> $GITHUB_STEP_SUMMARY
+            echo "### Layer 1 (depends on clie-cli)" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "$LAYER_1" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -7,8 +7,12 @@ import (
 	"strings"
 )
 
-// assetRefPattern matches asset references in markdown and HTML.
-var assetRefPattern = regexp.MustCompile(`(?:\]\(|src="|href=")([^)"]+)`)
+// AssetReferencePattern matches asset references in markdown and HTML.
+// Captures paths from: ![](path), [](path), src="path", href="path".
+//
+// Shared by both staging/assetref.go (ScanAssetReferences) and
+// cleanup/assets.go (CleanupUnreferencedAssets).
+var AssetReferencePattern = regexp.MustCompile(`(?:\]\(|src="|href=")([^)"]+)`)
 
 // ScanAssetReferences scans all markdown files in a directory tree and returns
 // a set of all referenced asset paths (normalized relative to the directory).
@@ -29,7 +33,7 @@ func ScanAssetReferences(dir string) (map[string]bool, error) {
 			return nil
 		}
 
-		matches := assetRefPattern.FindAllStringSubmatch(string(content), -1)
+		matches := AssetReferencePattern.FindAllStringSubmatch(string(content), -1)
 		for _, match := range matches {
 			if len(match) <= 1 {
 				continue

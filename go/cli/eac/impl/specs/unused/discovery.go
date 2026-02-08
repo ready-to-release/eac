@@ -12,6 +12,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
+var reSpecsPath = regexp.MustCompile(`SpecsPath:\s*"([^"]+)"`)
+
 // ImplSpecsPair represents a mapping between step implementations and feature specs.
 type ImplSpecsPair struct {
 	ImplDir      string   // absolute path to impl directory
@@ -100,8 +102,7 @@ func parsePairFromGodogFile(godogFile, repoRoot string) (ImplSpecsPair, error) {
 // It extracts the specs-relative path and resolves it from repoRoot.
 func extractSpecsPath(content, repoRoot string) (string, error) {
 	// Match: SpecsPath: "../../../../specs/eac-cli",
-	pattern := regexp.MustCompile(`SpecsPath:\s*"([^"]+)"`)
-	matches := pattern.FindStringSubmatch(content)
+	matches := reSpecsPath.FindStringSubmatch(content)
 	if len(matches) < 2 {
 		return "", fmt.Errorf("SpecsPath not found in file")
 	}

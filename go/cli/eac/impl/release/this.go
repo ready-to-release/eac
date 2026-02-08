@@ -26,10 +26,10 @@
 // Long:   - Changelog file ready to be committed and submitted in a pull request
 // Long:
 // Long: Examples:
-// Long:   release this r2r-cli                      # Update single module changelog
-// Long:   release this r2r-cli ext-eac              # Update multiple modules
-// Long:   release this r2r-cli ext-eac --dry-run    # Preview without writing
-// Long:   release this r2r-cli --json               # Output result as JSON
+// Long:   release this clie-cli                      # Update single module changelog
+// Long:   release this clie-cli eac-ext              # Update multiple modules
+// Long:   release this clie-cli eac-ext --dry-run    # Preview without writing
+// Long:   release this clie-cli --json               # Output result as JSON
 // Flag.dry-run: type=bool, usage=Preview changes without writing to changelog
 // Flag.json: type=bool, usage=Output result in JSON format
 // Flag.date: type=string, usage=Override release date (YYYY-MM-DD format)
@@ -53,10 +53,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/releasenotes"
 )
-
-func init() {
-	registry.Register(ReleaseThis)
-}
 
 // ReleaseResult contains the result of a release operation.
 type ReleaseResult struct {

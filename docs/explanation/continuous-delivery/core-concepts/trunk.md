@@ -267,7 +267,7 @@ rather than deployable module boundary, creates dependency chaos.
 
 **Automation**:
 
-- Monorepo: Change detection, selective builds tooling ([r2r+eac](./../../../reference/index.md), Nx, Bazel, Turborepo)
+- Monorepo: Change detection, selective builds tooling ([eac](./../../../reference/index.md), Nx, Bazel, Turborepo)
 - Both: Build, Test, Scans, Verification, Repository templates, shared pipeline definitions, Dependabot
 
 ---

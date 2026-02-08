@@ -3,7 +3,7 @@ description: Trigger a release workflow and generate step summary
 
 inputs:
   module:
-    description: 'Module name (e.g., docs, books, r2r-cli)'
+    description: 'Module name (e.g., docs, books, clie-cli)'
     required: true
   workflow:
     description: 'Release workflow filename (e.g., release-docs.yaml)'

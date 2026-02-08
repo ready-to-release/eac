@@ -21,8 +21,8 @@
 // Long:     - change_counts: breakdown by change type (added, fixed, changed, etc.)
 // Long:
 // Long: Examples:
-// Long:   release pending r2r-cli            # Check r2r-cli for pending changes
-// Long:   release pending r2r-cli --quiet    # Exit code only (0=changes, 1=no changes)
+// Long:   release pending clie-cli            # Check clie-cli for pending changes
+// Long:   release pending clie-cli --quiet    # Exit code only (0=changes, 1=no changes)
 // Long:   release pending --all              # Check all releasable modules
 // Long:   release pending --published        # Check only published modules
 // Long:   release pending --internal         # Check only internal modules
@@ -49,10 +49,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
-
-func init() {
-	registry.Register(ReleasePending)
-}
 
 // PendingRelease contains release decision data for CI/CD.
 type PendingRelease struct {

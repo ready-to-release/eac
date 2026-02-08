@@ -22,7 +22,7 @@ EAC currently provides native support for **Go** and **TypeScript** projects:
 
 Other languages can use container-based or script-based builds.
 
-See [R2R and EAC Reference](../../reference/eac/index.md#language-support) for details.
+See [EAC and CLIE Reference](../../reference/eac/index.md#language-support) for details.
 
 ## Getting Started
 
@@ -57,4 +57,4 @@ New to EAC? Start here:
 These how-to guides focus on accomplishing tasks. For comprehensive technical details:
 
 - **[Command Reference](../../reference/eac/commands/index.md)** - Complete command syntax and options
-- **[R2R and EAC Reference](../../reference/eac/index.md)** - Architecture, contracts, and extending EAC
+- **[EAC and CLIE Reference](../../reference/eac/index.md)** - Architecture, contracts, and extending EAC

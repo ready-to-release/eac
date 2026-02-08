@@ -23,7 +23,7 @@ type BaseConfig struct {
 // initializes the logger, and sets up git operations.
 //
 // The args parameter should be the command arguments AFTER the subcommand.
-// For example, for "r2r work create feature/test --debug",
+// For example, for "clie work create feature/test --debug",
 // args should be ["feature/test", "--debug"].
 func ParseBaseConfig(args []string) (*BaseConfig, error) {
 	config := &BaseConfig{
@@ -48,7 +48,7 @@ func ParseBaseConfig(args []string) (*BaseConfig, error) {
 	}
 
 	// Initialize git operations
-	config.GitOps = GetGitOps(config.RepoRoot)
+	config.GitOps = NewDefaultGitOps(config.RepoRoot)
 
 	return config, nil
 }

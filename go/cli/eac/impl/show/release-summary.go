@@ -22,12 +22,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 )
-
-func init() {
-	registry.Register(ShowReleaseSummary)
-}
 
 // ReleaseModule represents a module in a release layer.
 type ReleaseModule struct {

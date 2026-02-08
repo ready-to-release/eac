@@ -29,7 +29,7 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
 
 3. **System Default** (fallback)
    - Location: `templates/ai/commit-message/`
-   - Shipped with r2r
+   - Shipped with clie
 
 ### Available Prompts
 

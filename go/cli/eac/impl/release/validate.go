@@ -12,7 +12,7 @@
 // Long:   - No duplicate version numbers
 // Long:
 // Long: Examples:
-// Long:   validate release r2r-cli           # Validate single module
+// Long:   validate release clie-cli           # Validate single module
 // Long:   validate release --all             # Validate all modules with changelogs
 // Flag.all: type=bool, usage=Validate all modules with changelogs
 // Flag.json: type=bool, usage=Output result in JSON format
@@ -36,9 +36,10 @@ import (
 
 var validateLog = logging.C("release")
 
-func init() {
-	registry.Register(ReleaseValidate)
-}
+var (
+	reValidateSemver = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	reValidateCalver = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
+)
 
 // ValidationResult contains the result of changelog validation.
 type ValidationResult struct {
@@ -227,8 +228,8 @@ func validateChangelog(module string, moduleContract *modules.ModuleContract, wo
 	}
 
 	// Validate version format based on type
-	semverRegex := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
-	calverRegex := regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
+	semverRegex := reValidateSemver
+	calverRegex := reValidateCalver
 
 	for i := range cl.Versions {
 		v := &cl.Versions[i]
