@@ -14,8 +14,10 @@ require (
 )
 
 require (
+	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
+	github.com/ready-to-release/eac/go/adapters/npm v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/clibase v0.0.0 // indirect
 )
 

@@ -598,6 +598,7 @@ modules:
         root: typescript/vscode-commit
         patterns:
           config: ["package.json", "tsconfig.json", "*.config.js", "cucumber.js", ".mocharc.json", ".vscodeignore"]
+          data: ["*.md"]
         build:
           post_build:
             copy_to: ".vscode/extensions/vscode-commit/out"
