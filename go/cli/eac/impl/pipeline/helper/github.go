@@ -16,8 +16,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 )
 
-// WorkflowRun represents a GitHub Actions workflow run.
-type WorkflowRun struct {
+// WorkflowRunSummary represents a GitHub Actions workflow run.
+type WorkflowRunSummary struct {
 	Name       string
 	Status     string // "completed", "in_progress", "queued"
 	Conclusion string // "success", "failure", "cancelled", "skipped", etc.
@@ -30,7 +30,7 @@ type GitHubCLI interface {
 	WatchRun(runID string) error
 	WatchRunWithTimeout(runID string, timeoutSeconds int) error
 	GetCommitSHA(ref string) (string, error)
-	ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error)
+	ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error)
 }
 
 // GitHubCLIImpl implements GitHubCLI using the gh CLI tool.
@@ -129,7 +129,7 @@ func (g *GitHubCLIImpl) GetCommitSHA(ref string) (string, error) {
 }
 
 // ListWorkflowRuns lists all workflow runs for a given commit SHA.
-func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error) {
+func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error) {
 	// Use gh run list with commit filter
 	output, err := ghexec.Run(g.repoPath, "run", "list",
 		"--commit", commitSHA,
@@ -141,7 +141,7 @@ func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error
 	// Parse JSON output
 	// For simplicity, we'll use a basic JSON parser
 	// In production, you'd use encoding/json
-	var runs []WorkflowRun
+	var runs []WorkflowRunSummary
 
 	// Simple parsing: look for objects in the array
 	// This is a placeholder - real implementation would use json.Unmarshal
@@ -150,7 +150,7 @@ func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error
 		if strings.Contains(line, "name") {
 			// Parse workflow run from line
 			// This is simplified - real implementation would parse JSON properly
-			run := WorkflowRun{}
+			run := WorkflowRunSummary{}
 			if strings.Contains(line, "success") {
 				run.Status = "completed"
 				run.Conclusion = "success"
@@ -228,10 +228,10 @@ func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 }
 
 // ListWorkflowRuns simulates listing workflow runs for a commit.
-func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error) {
+func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error) {
 	// Check if we should return no workflows
 	if os.Getenv("R2R_MOCK_NO_WORKFLOWS") == "true" {
-		return []WorkflowRun{}, nil
+		return []WorkflowRunSummary{}, nil
 	}
 
 	// Check if we should simulate failing workflows
@@ -242,10 +242,10 @@ func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error
 	entries, err := os.ReadDir(workflowsDir)
 	if err != nil {
 		// If no workflows directory, return empty list
-		return []WorkflowRun{}, nil
+		return []WorkflowRunSummary{}, nil
 	}
 
-	var runs []WorkflowRun
+	var runs []WorkflowRunSummary
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -263,7 +263,7 @@ func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRun, error
 		// Determine if this workflow is failing
 		isFailure := failingWorkflow != "" && workflowName == failingWorkflow
 
-		run := WorkflowRun{
+		run := WorkflowRunSummary{
 			Name:         workflowName,
 			Status:       "completed",
 			WorkflowName: workflowName,

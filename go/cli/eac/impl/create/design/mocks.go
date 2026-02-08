@@ -6,7 +6,6 @@ package design
 
 import (
 	"github.com/ready-to-release/eac/go/core/git"
-	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -30,40 +29,20 @@ func GetMockAIResponse() string {
 	return mockAIResponse
 }
 
-// gitRepo holds the git repository instance for git operations.
-// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var (
-	gitRepo git.GitRepository
-	gitMgr  *git.RepositoryManager
-)
-
-// initGitManager initializes the git repository manager if needed.
-func initGitManager() {
-	if gitMgr == nil {
-		gitMgr = git.NewManager(logging.C().Zap())
-	}
-}
+// gitRepoProvider provides lazy-initialized git repository with test injection support.
+var gitRepoProvider = &git.LazyRepo{}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	if gitRepo != nil {
-		return gitRepo, nil
-	}
-	initGitManager()
-	repo, err := gitMgr.Open(workspaceRoot)
-	if err != nil {
-		return nil, err
-	}
-	return repo, nil
+	return gitRepoProvider.Get(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
 func SetGitRepo(repo git.GitRepository) {
-	gitRepo = repo
+	gitRepoProvider.Set(repo)
 }
 
 // ResetGitRepo clears the repository for test cleanup.
 func ResetGitRepo() {
-	gitRepo = nil
-	gitMgr = nil
+	gitRepoProvider.Reset()
 }

@@ -32,11 +32,6 @@ type DependencyGraphStats struct {
 	MaxDependents     int `json:"max_dependents" yaml:"max_dependents"`     // Maximum dependents for any module
 }
 
-// ExecutionPlan represents an execution plan for modules.
-type ExecutionPlan struct {
-	ExecutionOrder []string `json:"execution_order" yaml:"execution_order"` // Topologically sorted order of modules
-}
-
 // GetModuleDependencyGraph builds a complete dependency graph for all modules.
 func GetModuleDependencyGraph(rootPath string) (*ModuleDependencyGraph, error) {
 	if rootPath == "" {
@@ -58,14 +53,12 @@ func GetModuleDependencyGraph(rootPath string) (*ModuleDependencyGraph, error) {
 
 	// Build edges list for visualization
 	edges := []ModuleDependency{}
-	totalDeps := 0
 	for from, deps := range dependencies {
 		for _, to := range deps {
 			edges = append(edges, ModuleDependency{
 				From: from,
 				To:   to,
 			})
-			totalDeps++
 		}
 	}
 
@@ -118,170 +111,6 @@ func calculateGraphStats(monikers []string, dependencies, dependents map[string]
 	stats.MaxDependents = maxDependents
 
 	return stats
-}
-
-// CalculateExecutionOrder performs topological sort on module dependencies
-// Returns an ExecutionPlan with modules grouped into layers for parallel execution
-//
-// Algorithm: Kahn's topological sort
-// - Layer 0: Modules with no dependencies (can run in parallel)
-// - Layer N: Modules that depend only on layers 0..N-1 (can run in parallel within layer)
-//
-// If monikers is empty or nil, calculates order for all modules
-// Returns error if circular dependencies detected
-//
-// Optional includeDependencies parameter (default true):
-// - true: expands monikers to include all transitive dependencies
-// - false: only builds exactly the specified modules.
-func CalculateExecutionOrder(monikers []string, rootPath string, includeDependencies ...bool) (*ExecutionPlan, error) {
-	// Default to including dependencies
-	includeDeps := true
-	if len(includeDependencies) > 0 {
-		includeDeps = includeDependencies[0]
-	}
-
-	if rootPath == "" {
-		var err error
-		rootPath, err = GetRepositoryRoot("")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	registry, err := modules.LoadFromWorkspace(rootPath)
-	if err != nil {
-		return nil, NewRepositoryError("execution-order", rootPath, err, "failed to load module contracts")
-	}
-
-	// If no monikers specified, use all modules
-	if len(monikers) == 0 {
-		monikers = registry.AllMonikers()
-	}
-
-	// Build set of all modules to include
-	allModules := make(map[string]bool)
-	for _, moniker := range monikers {
-		allModules[moniker] = true
-		// Only expand dependencies if requested (default behavior)
-		if includeDeps {
-			if err := addDependenciesRecursive(moniker, registry, allModules); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	// Build dependency graph for included modules only
-	graph := make(map[string][]string)
-	inDegree := make(map[string]int)
-
-	for moniker := range allModules {
-		module, exists := registry.Get(moniker)
-		if !exists {
-			return nil, NewRepositoryError("execution-order", rootPath, nil,
-				fmt.Sprintf("module '%s' not found in registry", moniker))
-		}
-
-		graph[moniker] = []string{}
-		inDegree[moniker] = 0
-
-		// Only include dependencies that are in our set
-		for _, dep := range module.DependsOn {
-			if allModules[dep] {
-				graph[moniker] = append(graph[moniker], dep)
-				inDegree[moniker]++
-			}
-		}
-	}
-
-	// Kahn's algorithm for topological sort
-	layers := [][]string{}
-	processed := make(map[string]bool)
-
-	for len(processed) < len(allModules) {
-		layer := []string{}
-
-		// Find all modules with in-degree 0 (no unprocessed dependencies)
-		for moniker := range allModules {
-			if !processed[moniker] && inDegree[moniker] == 0 {
-				layer = append(layer, moniker)
-			}
-		}
-
-		if len(layer) == 0 {
-			// Circular dependency detected
-			remaining := []string{}
-			for moniker := range allModules {
-				if !processed[moniker] {
-					remaining = append(remaining, moniker)
-				}
-			}
-			return nil, NewRepositoryError("execution-order", rootPath, nil,
-				fmt.Sprintf("circular dependency detected among: %v", remaining))
-		}
-
-		// Sort layer for consistent output
-		sort.Strings(layer)
-		layers = append(layers, layer)
-
-		// Mark layer as processed and update in-degrees
-		for _, moniker := range layer {
-			processed[moniker] = true
-
-			// Decrease in-degree for all dependents
-			for dependent := range allModules {
-				if processed[dependent] {
-					continue
-				}
-				for _, dep := range graph[dependent] {
-					if dep == moniker {
-						inDegree[dependent]--
-					}
-				}
-			}
-		}
-	}
-
-	// Flatten layers to execution order
-	executionOrder := []string{}
-	for _, layer := range layers {
-		executionOrder = append(executionOrder, layer...)
-	}
-
-	return &ExecutionPlan{
-		ExecutionOrder: executionOrder,
-	}, nil
-}
-
-// addDependenciesRecursive recursively adds all dependencies of a module
-// Returns error listing all missing dependencies found.
-func addDependenciesRecursive(moniker string, registry *modules.Registry, result map[string]bool) error {
-	module, exists := registry.Get(moniker)
-	if !exists {
-		return fmt.Errorf("module '%s' not found in registry", moniker)
-	}
-
-	var missingDeps []string
-
-	for _, dep := range module.DependsOn {
-		// Check if dependency exists in registry
-		if _, exists := registry.Get(dep); !exists {
-			missingDeps = append(missingDeps, fmt.Sprintf("%s->%s", moniker, dep))
-			continue
-		}
-
-		if !result[dep] {
-			result[dep] = true
-			if err := addDependenciesRecursive(dep, registry, result); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(missingDeps) > 0 {
-		return fmt.Errorf("missing dependency contracts: %v", missingDeps)
-	}
-
-	return nil
 }
 
 // GetChangedModules returns modules that own the given changed files.

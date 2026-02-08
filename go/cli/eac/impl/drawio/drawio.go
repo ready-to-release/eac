@@ -11,7 +11,7 @@
 //   - create: Create new .drawio.png with blank or provided content
 //   - info: Show diagram metadata
 //
-// The actual XML manipulation is done by the drawio-tool Docker container.
+// The actual XML manipulation is done by the drawio-oci Docker container.
 // This package provides Go wrappers that handle Docker invocation.
 package drawio
 
@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -33,9 +33,9 @@ import (
 )
 
 const (
-	// DefaultDrawioImageName is the default Docker image for drawio-tool
+	// DefaultDrawioImageName is the default Docker image for drawio-oci
 	// This is used as fallback when tool-config.yml is not loaded.
-	DefaultDrawioImageName = "cli-drawio-tool:latest"
+	DefaultDrawioImageName = "cli-drawio-oci:latest"
 
 	// ContainerWorkdir is where files are mounted in the container
 	ContainerWorkdir = "/docs"
@@ -60,7 +60,7 @@ func GetDrawioImageName() string {
 
 var log = logging.C()
 
-// EnsureDrawioImage builds the drawio-tool Docker image if needed.
+// EnsureDrawioImage builds the drawio-oci Docker image if needed.
 // Uses Docker's layer cache for efficiency.
 func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 	// Get host repo root for Docker build context
@@ -79,12 +79,12 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 
 	if isWindowsHost {
 		// Windows host: use backslash separators
-		dockerfilePath = hostRepoRoot + "\\containers\\drawio-tool\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\drawio-tool"
+		dockerfilePath = hostRepoRoot + "\\containers\\drawio-oci\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\drawio-oci"
 	} else {
 		// Unix host: use forward slash separators
-		dockerfilePath = hostRepoRoot + "/containers/drawio-tool/Dockerfile"
-		contextPath = hostRepoRoot + "/containers/drawio-tool"
+		dockerfilePath = hostRepoRoot + "/containers/drawio-oci/Dockerfile"
+		contextPath = hostRepoRoot + "/containers/drawio-oci"
 	}
 
 	imageName := GetDrawioImageName()
@@ -125,7 +125,7 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 	return nil
 }
 
-// RunDrawioCommand executes a drawio-tool command in the container.
+// RunDrawioCommand executes a drawio-oci command in the container.
 // The workspaceRoot is mounted at /docs in the container.
 func RunDrawioCommand(
 	workspaceRoot string,
@@ -281,9 +281,9 @@ func CheckDockerAvailable(workspaceRoot string) error {
 			imageName := GetDrawioImageName()
 			if !c.ImageExists(context.Background(), imageName) {
 				// Image doesn't exist, build it
-				log.Infof("Building drawio-tool Docker image...")
+				log.Infof("Building drawio-oci Docker image...")
 				if err := EnsureDrawioImage(workspaceRoot, os.Stderr); err != nil {
-					return fmt.Errorf("failed to build drawio-tool image: %w", err)
+					return fmt.Errorf("failed to build drawio-oci image: %w", err)
 				}
 			}
 			return nil
@@ -299,9 +299,9 @@ func CheckDockerAvailable(workspaceRoot string) error {
 	cmd := exec.Command("docker", "image", "inspect", GetDrawioImageName())
 	if err := cmd.Run(); err != nil {
 		// Image doesn't exist, build it
-		log.Infof("Building drawio-tool Docker image...")
+		log.Infof("Building drawio-oci Docker image...")
 		if err := EnsureDrawioImage(workspaceRoot, os.Stderr); err != nil {
-			return fmt.Errorf("failed to build drawio-tool image: %w", err)
+			return fmt.Errorf("failed to build drawio-oci image: %w", err)
 		}
 	}
 

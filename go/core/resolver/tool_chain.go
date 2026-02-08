@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -52,7 +53,7 @@ func expandToolChain(module, component, compType string, tools []string, externa
 			// First tool gets external dependencies (build_after, component depends_on)
 			for _, dep := range externalDeps {
 				spec.DependsOn = append(spec.DependsOn, workunit.UnitID{
-					Context:   workunit.ContextBuild,
+					Action:    core.ActionBuild,
 					Module:    dep.Module,
 					Component: dep.Component,
 					Tool:      dep.Tool,
@@ -62,7 +63,7 @@ func expandToolChain(module, component, compType string, tools []string, externa
 			// Subsequent tools depend on the previous tool in the chain
 			prevTool := tools[i-1]
 			spec.DependsOn = append(spec.DependsOn, workunit.UnitID{
-				Context:   workunit.ContextBuild,
+				Action:    core.ActionBuild,
 				Module:    module,
 				Component: component,
 				Tool:      prevTool,

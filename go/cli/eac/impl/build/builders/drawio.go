@@ -1,4 +1,4 @@
-// drawio.go - Build handler for rendering .drawio.png files via the drawio-tool container.
+// drawio.go - Build handler for rendering .drawio.png files via the drawio-oci container.
 package builders
 
 import (
@@ -8,19 +8,19 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/caching"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
+	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	h := &DrawioRenderHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&DrawioRenderHandler{})
 }
 
-// DrawioRenderHandler renders .drawio.png files via the drawio-tool container.
+// DrawioRenderHandler renders .drawio.png files via the drawio-oci container.
 // Produces rendered PNGs at out/build/docs/drawio/drawio/ preserving relative paths.
 // Uses .cache/eac/drawio/ for incremental builds (skip unchanged files).
 type DrawioRenderHandler struct{}
@@ -33,7 +33,7 @@ func (h *DrawioRenderHandler) IsContainer() bool { return true }
 
 func (h *DrawioRenderHandler) IsHostInstalled() bool { return false }
 
-func (h *DrawioRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *DrawioRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -43,23 +43,22 @@ func (h *DrawioRenderHandler) ValidateModule(module interfaces.ModuleContractPor
 	return nil
 }
 
-func (h *DrawioRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *DrawioRenderHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"drawio/"}
 }
 
 func (h *DrawioRenderHandler) Build(
-	module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
+	module core.ModuleContractPort, workspaceRoot, outputDir string,
 	logWriter io.Writer, opts BuildOptions,
 ) int {
 	Logln(logWriter, "=== Rendering drawio images via container ===")
 
-	// Source files live under docs/assets/
 	docsAssetsDir := filepath.Join(workspaceRoot, "docs", "assets")
 	cacheDir := paths.DrawioAccelCachePath(workspaceRoot)
 	outputDrawioDir := filepath.Join(outputDir, "drawio")
 
 	// 1. Discover all .drawio.png source files
-	images, err := books.FindDrawioImages(docsAssetsDir)
+	images, err := diagrams.FindDrawioImages(docsAssetsDir)
 	if err != nil {
 		Logln(logWriter, "Error scanning for drawio images: %v", err)
 		return 1
@@ -73,66 +72,77 @@ func (h *DrawioRenderHandler) Build(
 
 	Logln(logWriter, "Found %d drawio image(s)", len(images))
 
-	// 2. Ensure directories exist
-	_ = os.MkdirAll(cacheDir, 0o755)
-	_ = os.MkdirAll(outputDrawioDir, 0o755)
-
-	// 3. For each image: check cache, render via container if needed, copy to output
-	rendered := 0
-	cached := 0
-
+	// 2. Convert to itemcache.Item slice and build lookup map
+	imagesByKey := make(map[string]diagrams.DrawioImage, len(images))
+	items := make([]itemcache.Item, 0, len(images))
 	for _, img := range images {
-		cacheKey := books.DrawioCacheKey{
+		cacheKey := caching.DrawioCacheKey{
 			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
-			MaxWidth:   books.MaxImageWidthPDF,
+			MaxWidth:   diagrams.MaxImageWidthPDF,
 		}
-		hashStr := books.HashDrawioKey(cacheKey)
-
-		// Cache file path: .cache/eac/drawio/{identifier}_{hash}.png
+		hashStr := caching.HashDrawioKey(cacheKey)
 		identifier := paths.SanitizeForCacheName(img.RelPath)
 		shortHash := hashStr[:paths.CacheHashLength]
-		cacheFilename := fmt.Sprintf("%s_%s.png", identifier, shortHash)
-		cachePath := filepath.Join(cacheDir, cacheFilename)
 
-		// Output path preserves relative path from docs/assets/
-		outputPath := filepath.Join(outputDrawioDir, img.RelPath)
-		_ = os.MkdirAll(filepath.Dir(outputPath), 0o755)
-
-		// Check cache hit
-		if _, statErr := os.Stat(cachePath); statErr == nil && !opts.ForceRebuild {
-			if cpErr := CopyFile(cachePath, outputPath); cpErr != nil {
-				Logln(logWriter, "Error copying cached drawio %s: %v", img.RelPath, cpErr)
-				return 1
-			}
-			cached++
-			continue
+		item := itemcache.Item{
+			Key:           img.RelPath,
+			ContentHash:   shortHash,
+			CacheFilename: fmt.Sprintf("%s_%s.png", identifier, shortHash),
+			OutputRelPath: img.RelPath,
 		}
+		items = append(items, item)
+		imagesByKey[img.RelPath] = img
+	}
 
-		// Cache miss — render via drawio-tool container
-		bridge := tool.GlobalHandlerToolBridge()
+	// 3. Build function renders each miss via drawio-oci container
+	buildFunc := func(misses []itemcache.Item, dir string) (int, error) {
+		return h.renderMisses(misses, imagesByKey, workspaceRoot, dir, logWriter)
+	}
+
+	// 4. Execute with cache
+	cache := itemcache.New(cacheDir)
+	result, err := cache.Execute(items, outputDrawioDir, buildFunc, opts.ForceRebuild)
+	if err != nil {
+		Logln(logWriter, "Error: %v", err)
+		return 1
+	}
+
+	Logln(logWriter, "Drawio: %d cached, %d rendered (%.1f%% hit rate)",
+		result.CacheHits, result.Built, result.HitRate)
+	Logln(logWriter, "Output: %s (%d files)", outputDrawioDir, result.TotalItems)
+
+	return 0
+}
+
+// renderMisses renders cache-missed drawio images via the drawio-oci container.
+func (h *DrawioRenderHandler) renderMisses(
+	misses []itemcache.Item, imagesByKey map[string]diagrams.DrawioImage,
+	workspaceRoot, cacheDir string, logWriter io.Writer,
+) (int, error) {
+	bridge := tool.GlobalHandlerToolBridge()
+	rendered := 0
+
+	for _, item := range misses {
+		img := imagesByKey[item.Key]
+
 		tc := &tool.ToolContext{
 			WorkspaceRoot: workspaceRoot,
 			OutputDir:     cacheDir,
 			LogWriter:     logWriter,
 		}
 
-		// Convert host paths to container paths
-		// Mount: {workspace} -> /docs, so /docs in container = workspace root
 		containerInput, relErr := filepath.Rel(workspaceRoot, img.SourceFile)
 		if relErr != nil {
-			Logln(logWriter, "Error computing relative path for %s: %v", img.RelPath, relErr)
-			return 1
+			return rendered, fmt.Errorf("computing relative path for %s: %w", img.RelPath, relErr)
 		}
 		containerInputPath := "/docs/" + filepath.ToSlash(containerInput)
-		containerOutputPath := "/output/" + cacheFilename
+		containerOutputPath := "/output/" + item.CacheFilename
 
-		// Substitute into command: {input_path}, {output_path}, {max_width}
-		// Note: {output} is reserved for tc.OutputDir (mount resolution)
 		tc.Variables = map[string]string{
 			"input_path":  containerInputPath,
 			"output_path": containerOutputPath,
-			"max_width":   fmt.Sprintf("%d", books.MaxImageWidthPDF),
+			"max_width":   fmt.Sprintf("%d", diagrams.MaxImageWidthPDF),
 		}
 
 		exitCode, execErr := bridge.ExecuteTool(
@@ -141,29 +151,13 @@ func (h *DrawioRenderHandler) Build(
 			tc,
 		)
 		if execErr != nil {
-			Logln(logWriter, "Error: drawio render failed for %s: %v", img.RelPath, execErr)
-			return 1
+			return rendered, fmt.Errorf("drawio render failed for %s: %w", img.RelPath, execErr)
 		}
 		if exitCode != 0 {
-			Logln(logWriter, "Error: drawio render failed for %s (exit code %d)", img.RelPath, exitCode)
-			return 1
+			return rendered, fmt.Errorf("drawio render failed for %s (exit code %d)", img.RelPath, exitCode)
 		}
 		rendered++
-
-		// Copy from cache to output
-		if cpErr := CopyFile(cachePath, outputPath); cpErr != nil {
-			Logln(logWriter, "Error copying rendered drawio %s: %v", img.RelPath, cpErr)
-			return 1
-		}
 	}
 
-	total := len(images)
-	hitRate := 0.0
-	if total > 0 {
-		hitRate = float64(cached) / float64(total) * 100
-	}
-	Logln(logWriter, "Drawio: %d cached, %d rendered (%.1f%% hit rate)", cached, rendered, hitRate)
-	Logln(logWriter, "Output: %s (%d files)", outputDrawioDir, total)
-
-	return 0
+	return rendered, nil
 }

@@ -55,11 +55,11 @@ func TestParseSharedFlags_AllFlags(t *testing.T) {
 	args := []string{
 		"--turbo",
 		"--roof", "4",
-		"--tui",
+		"--with-tui",
 		"--debug",
 		"--timings",
 		"--skip-cache",
-		"--skip-deps",
+		"--no-deps",
 		"--exclude", "test-*",
 		"--skip-depm",
 		"--dry-run",
@@ -121,7 +121,7 @@ func TestParseSharedFlags_WithRemaining(t *testing.T) {
 	env := &environment.Env{IsLocalConsole: true}
 	args := []string{
 		"--turbo",
-		"--tidy-first",  // Build-specific (unknown flag)
+		"--with-tidy",   // Build-specific (unknown flag)
 		"--version=1.0", // Build-specific (unknown flag)
 		"module1",
 	}
@@ -138,7 +138,7 @@ func TestParseSharedFlags_WithRemaining(t *testing.T) {
 
 	// Unknown flags should be in Remaining
 	if len(flags.Remaining) != 2 {
-		t.Errorf("Remaining = %v, want 2 items (--tidy-first, --version=1.0)", flags.Remaining)
+		t.Errorf("Remaining = %v, want 2 items (--with-tidy, --version=1.0)", flags.Remaining)
 	}
 
 	// Module should be in Monikers

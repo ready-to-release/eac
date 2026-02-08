@@ -7,10 +7,11 @@ import (
 	"sync"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 )
 
 // SummaryBuilder incrementally builds summary data as components complete.
@@ -39,7 +40,7 @@ type SummaryBuilder struct {
 	summarySent bool                  // True if summary was already sent via callback
 
 	// Command context
-	commandType CommandType
+	commandType core.ActionType
 }
 
 // incrementalModuleCache holds pre-computed data for a module, updated incrementally.
@@ -60,7 +61,7 @@ type incrementalModuleCache struct {
 // NewSummaryBuilder creates a new incremental summary builder.
 // expectedModules is the list of modules that will have results.
 // componentCounts maps module -> expected number of components.
-func NewSummaryBuilder(cmdType CommandType, componentCounts map[string]int) *SummaryBuilder {
+func NewSummaryBuilder(cmdType core.ActionType, componentCounts map[string]int) *SummaryBuilder {
 	sb := &SummaryBuilder{
 		moduleCaches:    make(map[string]*incrementalModuleCache),
 		moduleCompCount: make(map[string]int),
@@ -195,7 +196,7 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.UnitResult) {
 // Finalize computes the final summary data.
 // Called once after all components have completed.
 // Returns the summary data ready for TUI display.
-func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
+func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 
@@ -214,16 +215,16 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 	var tb *render.TableBuilder
 
 	switch sb.commandType {
-	case CommandTypeTest:
+	case core.ActionTest:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
-	case CommandTypeLint:
+	case core.ActionLint:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
-	case CommandTypeScan:
+	case core.ActionScan:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
-	default: // CommandTypeBuild
+	default: // core.ActionBuild
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "Time", "Stat")
 	}
@@ -256,7 +257,7 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 
 		// Add row based on command type
 		switch sb.commandType {
-		case CommandTypeTest:
+		case core.ActionTest:
 			testTypes := sb.extractUniqueTestTypes(cache.components)
 			var testCount string
 			if cache.testsTotal > 0 {
@@ -269,9 +270,9 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 				testCount = "-"
 			}
 			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
-		case CommandTypeLint, CommandTypeScan:
+		case core.ActionLint, core.ActionScan:
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
-		default: // CommandTypeBuild
+		default: // core.ActionBuild
 			tb.AddRow(moduleName, components, duration, statusIcon)
 		}
 	}
@@ -288,7 +289,7 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 	details = sb.appendFailureDetails(details, modules)
 
 	// Create summary data
-	data := &tui.SummaryData{
+	data := &display.SummaryData{
 		Success:    sb.failureCount == 0,
 		TotalTime:  totalTime,
 		RunSummary: runSummary,
@@ -302,13 +303,8 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 func (sb *SummaryBuilder) buildRunSummary() string {
 	// Use command-appropriate verb
 	successVerb := "built"
-	switch sb.commandType {
-	case CommandTypeTest:
-		successVerb = "tested"
-	case CommandTypeLint:
-		successVerb = "linted"
-	case CommandTypeScan:
-		successVerb = "scanned"
+	if desc, ok := core.GetActionDescriptor(sb.commandType); ok {
+		successVerb = desc.PastVerb
 	}
 
 	switch {
@@ -419,6 +415,17 @@ func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.UnitR
 	return strings.Join(types, ", ")
 }
 
+// hasRootFailure returns true if the module has at least one component that
+// actually ran and failed (has a log path), not just dependency-skipped.
+func (sb *SummaryBuilder) hasRootFailure(cache *incrementalModuleCache) bool {
+	for _, comp := range cache.components {
+		if comp.ExitCode > 0 && comp.LogPath != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // appendFailureDetails adds failed/warning module details to the details slice.
 func (sb *SummaryBuilder) appendFailureDetails(details []string, modules []string) []string {
 	// Count failures/warnings
@@ -437,19 +444,26 @@ func (sb *SummaryBuilder) appendFailureDetails(details []string, modules []strin
 	}
 
 	details = append(details, "")
-	failCount := 0
-	const maxFailures = 5
 
+	// Order: root failures (ran and failed) before dependency failures
+	failedModules := make([]string, 0, totalFailures)
 	for _, module := range modules {
+		cache := sb.moduleCaches[module]
+		if cache.hasFailure || cache.warnCount > 0 {
+			failedModules = append(failedModules, module)
+		}
+	}
+	sort.SliceStable(failedModules, func(i, j int) bool {
+		return sb.hasRootFailure(sb.moduleCaches[failedModules[i]]) &&
+			!sb.hasRootFailure(sb.moduleCaches[failedModules[j]])
+	})
+
+	const maxFailures = 5
+	for failCount, module := range failedModules {
 		if failCount >= maxFailures {
 			break
 		}
 		cache := sb.moduleCaches[module]
-
-		if !cache.hasFailure && cache.warnCount == 0 {
-			continue
-		}
-		failCount++
 
 		// Module header with status
 		statusIcon := "✗"
@@ -481,16 +495,16 @@ func (sb *SummaryBuilder) appendFailureDetails(details []string, modules []strin
 			break // Only show first failed component per module
 		}
 
-		// List ALL log paths from every component in this module
+		// List log paths from failed components only
 		for _, comp := range cache.components {
-			if comp.LogPath != "" {
+			if comp.LogPath != "" && comp.ExitCode > 0 {
 				details = append(details, fmt.Sprintf("    Log: %s", comp.LogPath))
 			}
 		}
 	}
 
-	if failCount >= maxFailures && totalFailures > maxFailures {
-		remaining := totalFailures - maxFailures
+	if len(failedModules) > maxFailures {
+		remaining := len(failedModules) - maxFailures
 		details = append(details, fmt.Sprintf("  ... and %d more failures", remaining))
 	}
 

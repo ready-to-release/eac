@@ -13,6 +13,7 @@ import (
 var (
 	componentGlobalLogger *Logger
 	componentOnce         sync.Once
+	componentMu           sync.Mutex
 )
 
 // initComponentGlobalLogger lazy-initializes the component global Zap logger.
@@ -43,18 +44,24 @@ func initComponentGlobalLogger() {
 // that restores the previous logger.
 // FOR TESTING ONLY - do not use in production code.
 func SetTestLogger(zapLogger *zap.Logger) func() {
+	componentMu.Lock()
+	defer componentMu.Unlock()
+
 	oldLogger := componentGlobalLogger
 
 	// Reset the once so the test logger takes effect
 	componentOnce = sync.Once{}
+	componentOnce.Do(func() {}) // Mark as done so init doesn't run
 	componentGlobalLogger = &Logger{
 		Logger: zapLogger,
 		config: DefaultConfig("test", "."),
 	}
 
 	return func() {
+		componentMu.Lock()
+		defer componentMu.Unlock()
 		componentGlobalLogger = oldLogger
-		// Reset Once to allow re-initialization if needed
+		// Reset Once to allow re-initialization on next access
 		componentOnce = sync.Once{}
 	}
 }

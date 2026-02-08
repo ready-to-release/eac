@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../contracts/core/0.1.0/testing-mocks.schema.json
+# yaml-language-server: $schema=../../contracts/core/0.1.0/schemas/testing-mocks.schema.json
 #
 # Testing Mocks Configuration
 # Controls mock behavior for BDD test infrastructure

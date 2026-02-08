@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -34,7 +33,7 @@ func NewSiteRenderHandler(workspaceRoot string) *SiteRenderHandler {
 }
 
 // Name returns the handler identifier.
-func (h *SiteRenderHandler) Name() string { return "site-render-oci" }
+func (h *SiteRenderHandler) Name() string { return "mkdocs-render-oci" }
 
 // Requirements returns system dependencies (Docker required).
 func (h *SiteRenderHandler) Requirements() []string { return []string{"docker"} }
@@ -49,7 +48,7 @@ func (h *SiteRenderHandler) Requirements() []string { return []string{"docker"} 
 // The manifestStore parameter is optional - if provided, it checks whether a manifest
 // exists for the same component name (supporting tool_chain where preprocess and render
 // share the same component). If nil, falls back to naming conventions only.
-func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentName string, manifestStore *ManifestStore) string {
+func resolveBaseSiteComponent(module core.ModuleContractPort, componentName string, manifestStore *ManifestStore) string {
 	concrete := adapters.UnwrapModule(module)
 	if concrete != nil {
 		if comp, ok := concrete.Components[componentName]; ok && comp != nil {
@@ -82,7 +81,7 @@ func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentNam
 }
 
 // ValidateModule checks if a module has valid base-site dependency.
-func (h *SiteRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *SiteRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	// Resolve the base-site component this site-render depends on
 	baseSiteComp := resolveBaseSiteComponent(module, component, h.manifestStore)
 
@@ -98,7 +97,7 @@ func (h *SiteRenderHandler) ValidateModule(module interfaces.ModuleContractPort,
 }
 
 // ListArtifacts returns artifact paths that would be produced.
-func (h *SiteRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *SiteRenderHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/", ".manifest.json"}
 }
 
@@ -110,7 +109,7 @@ func (h *SiteRenderHandler) IsHostInstalled() bool { return false }
 
 // Build executes HTML site generation from base-site output.
 func (h *SiteRenderHandler) Build(
-	module interfaces.ModuleContractPort,
+	module core.ModuleContractPort,
 	workspaceRoot, outputDir string,
 	logWriter io.Writer,
 	opts BuildOptions,
@@ -140,7 +139,7 @@ func (h *SiteRenderHandler) Build(
 	}
 
 	// Compute input hash for cache check
-	containerHash := getContainerImageHash(workspaceRoot, "site-render-oci")
+	containerHash := getContainerImageHash(workspaceRoot, "mkdocs-render-oci")
 	inputHash := computeSiteRenderInputHash(baseManifest.OutputHash, containerHash)
 
 	// Check cache - skip if base-site unchanged
@@ -176,18 +175,18 @@ func (h *SiteRenderHandler) Build(
 	// Generate mkdocs.yml config
 	// Use container mount path /staging (where staging dir is mounted in Docker)
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
-	configOpts := books.ConfigOptions{
+	configOpts := ConfigOptions{
 		SiteName:     "Documentation",
 		DocsDir:      "/staging", // Container mount path for staging directory
 		OutputFormat: "site",
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return BuildResult{ExitCode: 1}
 	}
 
 	// Copy mkdocs macros script
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		_ = os.WriteFile(macrosTarget, macrosData, 0o644)
@@ -218,7 +217,7 @@ func (h *SiteRenderHandler) Build(
 		Weight:        weight,
 	}
 
-	exitCode, err := bridge.ExecuteTool(context.Background(), "site-render-oci", tc)
+	exitCode, err := bridge.ExecuteTool(context.Background(), "mkdocs-render-oci", tc)
 	if err != nil {
 		logln(logWriter, "❌ Tool execution failed: %v", err)
 		return BuildResult{ExitCode: 1}

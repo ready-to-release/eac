@@ -6,6 +6,7 @@ var (
 	globalConfig     *EACConfig
 	globalConfigOnce sync.Once
 	globalConfigErr  error
+	globalConfigMu   sync.Mutex
 )
 
 // Global returns the global EACConfig singleton.
@@ -29,6 +30,8 @@ func GlobalWithError() (*EACConfig, error) {
 // SetGlobalForTesting allows tests to inject a mock config.
 // This resets the singleton - use only in tests.
 func SetGlobalForTesting(cfg *EACConfig) {
+	globalConfigMu.Lock()
+	defer globalConfigMu.Unlock()
 	globalConfig = cfg
 	globalConfigErr = nil
 	// Reset Once so it doesn't try to reload
@@ -39,6 +42,8 @@ func SetGlobalForTesting(cfg *EACConfig) {
 // ResetGlobalForTesting resets the global config singleton.
 // Use only in tests to restore normal behavior.
 func ResetGlobalForTesting() {
+	globalConfigMu.Lock()
+	defer globalConfigMu.Unlock()
 	globalConfig = nil
 	globalConfigErr = nil
 	globalConfigOnce = sync.Once{}

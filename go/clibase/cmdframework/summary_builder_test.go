@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 )
 
@@ -13,7 +14,7 @@ func TestNewSummaryBuilder(t *testing.T) {
 		"module-b": 3,
 	}
 
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	if sb == nil {
 		t.Fatal("NewSummaryBuilder returned nil")
@@ -36,7 +37,7 @@ func TestSummaryBuilder_AddResult(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 2,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Add first result
 	result1 := orchestrator.UnitResult{
@@ -80,7 +81,7 @@ func TestSummaryBuilder_AddResult_Failure(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 2,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Add successful result
 	sb.AddResult(orchestrator.UnitResult{
@@ -115,7 +116,7 @@ func TestSummaryBuilder_AddResult_Skipped(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 2,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Add two skipped results (exit code -1)
 	sb.AddResult(orchestrator.UnitResult{
@@ -144,7 +145,7 @@ func TestSummaryBuilder_Finalize(t *testing.T) {
 		"module-a": 1,
 		"module-b": 1,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Add results
 	sb.AddResult(orchestrator.UnitResult{
@@ -189,7 +190,7 @@ func TestSummaryBuilder_Finalize_WithFailure(t *testing.T) {
 		"module-a": 1,
 		"module-b": 1,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
@@ -220,7 +221,7 @@ func TestSummaryBuilder_Finalize_MixedStatus(t *testing.T) {
 		"module-b": 1,
 		"module-c": 1,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Cached
 	sb.AddResult(orchestrator.UnitResult{
@@ -252,7 +253,7 @@ func TestSummaryBuilder_GetResultSets(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 2,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
@@ -293,7 +294,7 @@ func TestSummaryBuilder_TestCommand(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 2,
 	}
-	sb := NewSummaryBuilder(CommandTypeTest, componentCounts)
+	sb := NewSummaryBuilder(core.ActionTest, componentCounts)
 
 	sb.AddResult(orchestrator.UnitResult{
 		Module:      "module-a",
@@ -328,7 +329,7 @@ func TestSummaryBuilder_ConcurrentAddResult(t *testing.T) {
 	componentCounts := map[string]int{
 		"module-a": 100,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Add results concurrently
 	done := make(chan struct{})
@@ -363,7 +364,7 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 		"module-a": 2,
 		"module-b": 1,
 	}
-	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
+	sb := NewSummaryBuilder(core.ActionBuild, componentCounts)
 
 	// Track callback invocations with sync primitives.
 	// The callback runs in a goroutine so we need to wait for it.

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Scanner category constants - must match shared-definitions.schema.json
@@ -98,7 +98,7 @@ type schemaEnum struct {
 // Returns an error with details if there's a mismatch.
 // This should be called in tests to ensure Go and schema stay in sync.
 func ValidateGoMatchesSchema() error {
-	data, err := contracts.FS.ReadFile(contracts.EACCorePath("shared-definitions.schema.json"))
+	data, err := core.FS.ReadFile(core.SchemaPath("shared-definitions.schema.json"))
 	if err != nil {
 		return fmt.Errorf("failed to read shared-definitions.schema.json: %w", err)
 	}

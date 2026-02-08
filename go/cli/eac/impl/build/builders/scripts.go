@@ -8,17 +8,13 @@ import (
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	h := &ScriptsHandler{}
-	// Register in builders registry (legacy code paths)
-	RegisterHandler(h)
-	// Register in tool bridge (for component resolver)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&ScriptsHandler{})
 }
 
 // ScriptsHandler copies script files from source to build output.
@@ -30,7 +26,7 @@ func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_pack
 
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
-func (h *ScriptsHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *ScriptsHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		return fmt.Errorf("invalid module type")
@@ -50,11 +46,11 @@ func (h *ScriptsHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as scripts handler copies files using the host filesystem.
 func (h *ScriptsHandler) IsHostInstalled() bool { return true }
 
-func (h *ScriptsHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *ScriptsHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return nil // Artifacts are the copied files, tracked in manifest
 }
 
-func (h *ScriptsHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *ScriptsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")

@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/caching"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -16,12 +17,8 @@ type PruneResult struct {
 	// Mermaid statistics
 	MermaidCacheFiles     int      // Total files in mermaid cache
 	MermaidActiveHashes   int      // Hashes computed from current markdown
-	MermaidOrphans        []string // Filenames to be pruned (V2 format orphans)
+	MermaidOrphans        []string // Filenames to be pruned
 	MermaidBytesRecovered int64    // Space that would be recovered
-
-	// Legacy mermaid statistics (64-char hash naming convention)
-	LegacyMermaidFiles []string // Legacy filenames to be pruned
-	LegacyMermaidBytes int64    // Space that would be recovered from legacy files
 
 	// Drawio statistics
 	DrawioCacheFiles     int      // Total files in drawio cache
@@ -30,14 +27,14 @@ type PruneResult struct {
 	DrawioBytesRecovered int64    // Space that would be recovered
 }
 
-// TotalOrphans returns the total number of orphaned files (including legacy).
+// TotalOrphans returns the total number of orphaned files.
 func (r *PruneResult) TotalOrphans() int {
-	return len(r.MermaidOrphans) + len(r.DrawioOrphans) + len(r.LegacyMermaidFiles)
+	return len(r.MermaidOrphans) + len(r.DrawioOrphans)
 }
 
-// TotalBytesRecovered returns the total bytes that would be recovered (including legacy).
+// TotalBytesRecovered returns the total bytes that would be recovered.
 func (r *PruneResult) TotalBytesRecovered() int64 {
-	return r.MermaidBytesRecovered + r.DrawioBytesRecovered + r.LegacyMermaidBytes
+	return r.MermaidBytesRecovered + r.DrawioBytesRecovered
 }
 
 // PruneCache identifies orphaned cache files that are no longer needed.
@@ -66,23 +63,17 @@ func PruneCache(repoRoot string, verbose bool) (*PruneResult, error) {
 	}
 	result.DrawioActiveHashes = len(drawioFilenames)
 
-	// Scan mermaid cache directory for orphans and legacy files
+	// Scan mermaid cache directory for orphans
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
-	// Find legacy files first (64-char hash naming convention)
-	legacyFiles, legacyBytes := FindLegacyMermaidFiles(mermaidCacheDir)
-	result.LegacyMermaidFiles = legacyFiles
-	result.LegacyMermaidBytes = legacyBytes
-
-	// Find V2 format orphans (excluding legacy files - they're tracked separately)
-	mermaidOrphans, mermaidBytes, mermaidTotal := findOrphans(mermaidCacheDir, mermaidFilenames, ".svg", true)
+	mermaidOrphans, mermaidBytes, mermaidTotal := findOrphans(mermaidCacheDir, mermaidFilenames, ".svg")
 	result.MermaidOrphans = mermaidOrphans
 	result.MermaidBytesRecovered = mermaidBytes
 	result.MermaidCacheFiles = mermaidTotal
 
-	// Scan drawio cache directory for orphans (no legacy format exists for drawio)
+	// Scan drawio cache directory for orphans
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
-	drawioOrphans, drawioBytes, drawioTotal := findOrphans(drawioCacheDir, drawioFilenames, ".png", false)
+	drawioOrphans, drawioBytes, drawioTotal := findOrphans(drawioCacheDir, drawioFilenames, ".png")
 	result.DrawioOrphans = drawioOrphans
 	result.DrawioBytesRecovered = drawioBytes
 	result.DrawioCacheFiles = drawioTotal
@@ -98,7 +89,6 @@ func DeleteOrphans(result *PruneResult, cacheDir string) (int, error) {
 
 	deleted := 0
 	deleted += deleteFiles(mermaidCacheDir, result.MermaidOrphans)
-	deleted += deleteFiles(mermaidCacheDir, result.LegacyMermaidFiles)
 	deleted += deleteFiles(drawioCacheDir, result.DrawioOrphans)
 
 	return deleted, nil
@@ -141,10 +131,10 @@ func computeMermaidFilenames(docsDir, cacheRoot string) (map[string]bool, error)
 			return fmt.Errorf("reading %s: %w", path, err)
 		}
 
-		blocks := books.ExtractMermaidBlocks(string(content), path, docsDir)
+		blocks := diagrams.ExtractMermaidBlocks(string(content), path, docsDir)
 		for _, block := range blocks {
 			// Use same algorithm as AssetCache - compute the full cache path
-			cleanContent := books.StripSizeDirective(block.Content)
+			cleanContent := diagrams.StripSizeDirective(block.Content)
 			hash := computeMermaidCacheHash(cleanContent)
 			cachePath := paths.MermaidCachePath(cacheRoot, block.SourceFile, block.BlockIndex, hash)
 			filename := filepath.Base(cachePath)
@@ -161,14 +151,14 @@ func computeMermaidFilenames(docsDir, cacheRoot string) (map[string]bool, error)
 func computeDrawioFilenames(docsDir, cacheRoot string) (map[string]bool, error) {
 	filenames := make(map[string]bool)
 
-	images, err := books.FindDrawioImages(docsDir)
+	images, err := diagrams.FindDrawioImages(docsDir)
 	if err != nil {
 		return nil, fmt.Errorf("finding drawio images: %w", err)
 	}
 
 	for _, img := range images {
 		// Use same algorithm as AssetCache - compute the full cache path
-		hash := computeDrawioCacheHash(img.Hash, books.MaxImageWidthPDF)
+		hash := computeDrawioCacheHash(img.Hash, diagrams.MaxImageWidthPDF)
 		cachePath := paths.DrawioCachePath(cacheRoot, img.SourceFile, hash)
 		filename := filepath.Base(cachePath)
 		filenames[filename] = true
@@ -178,22 +168,21 @@ func computeDrawioFilenames(docsDir, cacheRoot string) (map[string]bool, error) 
 }
 
 // computeMermaidCacheHash computes the cache key hash for mermaid content.
-// Uses the exported books.HashMermaidKey to ensure consistency.
+// Uses the exported caching.HashMermaidKey to ensure consistency.
 func computeMermaidCacheHash(code string) string {
-	return books.HashMermaidKey(books.MermaidCacheKey{Code: code})
+	return caching.HashMermaidKey(caching.MermaidCacheKey{Code: code})
 }
 
 // computeDrawioCacheHash computes the cache key hash for drawio images.
-// Uses the exported books.HashDrawioKey to ensure consistency.
+// Uses the exported caching.HashDrawioKey to ensure consistency.
 func computeDrawioCacheHash(sourceHash string, maxWidth int) string {
-	return books.HashDrawioKey(books.DrawioCacheKey{SourceHash: sourceHash, MaxWidth: maxWidth})
+	return caching.HashDrawioKey(caching.DrawioCacheKey{SourceHash: sourceHash, MaxWidth: maxWidth})
 }
 
 // findOrphans scans a cache directory and identifies files that are not in the
-// active filenames set. If skipLegacy is true, files matching the legacy mermaid
-// naming convention (64-char SHA256 hash) are excluded from orphan detection.
+// active filenames set.
 // Returns: (orphan filenames, total orphan bytes, total cache files)
-func findOrphans(cacheDir string, activeFilenames map[string]bool, ext string, skipLegacy bool) ([]string, int64, int) {
+func findOrphans(cacheDir string, activeFilenames map[string]bool, ext string) ([]string, int64, int) {
 	var orphans []string
 	var bytes int64
 	total := 0
@@ -209,11 +198,6 @@ func findOrphans(cacheDir string, activeFilenames map[string]bool, ext string, s
 		}
 
 		total++
-
-		// Skip legacy files if requested (they're tracked separately)
-		if skipLegacy && IsLegacyMermaidCacheFile(entry.Name()) {
-			continue
-		}
 
 		if !activeFilenames[entry.Name()] {
 			orphans = append(orphans, entry.Name())
@@ -237,48 +221,3 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 }
 
-// IsLegacyMermaidCacheFile returns true if the filename matches the legacy
-// 64-character SHA256 hash naming convention (e.g., "abc123...def.svg").
-// Legacy files are pure hash filenames without the traceable identifier prefix.
-func IsLegacyMermaidCacheFile(filename string) bool {
-	basename, found := strings.CutSuffix(filename, ".svg")
-	if !found || len(basename) != 64 {
-		return false
-	}
-
-	for _, c := range basename {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-			return false
-		}
-	}
-	return true
-}
-
-// FindLegacyMermaidFiles scans the mermaid cache directory and returns all
-// legacy cache files (64-char hash naming convention) along with their total size.
-// Returns: (legacy filenames, total bytes)
-func FindLegacyMermaidFiles(mermaidCacheDir string) ([]string, int64) {
-	var legacyFiles []string
-	var totalBytes int64
-
-	entries, err := os.ReadDir(mermaidCacheDir)
-	if err != nil {
-		// Directory doesn't exist or other error - return empty
-		return nil, 0
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		if IsLegacyMermaidCacheFile(entry.Name()) {
-			legacyFiles = append(legacyFiles, entry.Name())
-			if info, err := entry.Info(); err == nil {
-				totalBytes += info.Size()
-			}
-		}
-	}
-
-	return legacyFiles, totalBytes
-}

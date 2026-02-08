@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 )
 
 const (
@@ -45,7 +46,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 
 		if !alreadySent {
 			// Send summary using incremental builder if available, otherwise generate from scratch
-			var summaryData *tui.SummaryData
+			var summaryData *display.SummaryData
 			if ctx.SummaryBuilder != nil {
 				summaryData = ctx.SummaryBuilder.Finalize(totalTime)
 			} else {
@@ -83,7 +84,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 }
 
 // generateTUISummary creates TUI summary data from execution results.
-func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
+func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *display.SummaryData {
 	return generateComponentTUISummary(ctx, totalTime)
 }
 
@@ -101,7 +102,7 @@ type moduleCache struct {
 
 // generateComponentTUISummary creates TUI summary showing module-level aggregated results.
 // Table format varies by command type (build, test, lint, scan).
-func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
+func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *display.SummaryData {
 	resultSets := ctx.ModuleResultSets
 
 	// Pre-compute all module data in a single pass
@@ -141,13 +142,8 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 
 	// Build run summary line with command-appropriate verbs
 	successVerb := "built"
-	switch ctx.Config.Type {
-	case CommandTypeTest:
-		successVerb = "tested"
-	case CommandTypeLint:
-		successVerb = "linted"
-	case CommandTypeScan:
-		successVerb = "scanned"
+	if desc, ok := core.GetActionDescriptor(ctx.Config.Type); ok {
+		successVerb = desc.PastVerb
 	}
 
 	var runSummary string
@@ -184,16 +180,16 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 	var tb *render.TableBuilder
 
 	switch ctx.Config.Type {
-	case CommandTypeTest:
+	case core.ActionTest:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
-	case CommandTypeLint:
+	case core.ActionLint:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
-	case CommandTypeScan:
+	case core.ActionScan:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
-	default: // CommandTypeBuild
+	default: // core.ActionBuild
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "Time", "Stat")
 	}
@@ -244,7 +240,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 
 		// Add row based on command type
 		switch ctx.Config.Type {
-		case CommandTypeTest:
+		case core.ActionTest:
 			// Extract unique test types from component names (format: "subpath:testType")
 			testTypes := extractUniqueTestTypes(cache.sortedComps)
 
@@ -260,9 +256,9 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 				testCount = "-"
 			}
 			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
-		case CommandTypeLint, CommandTypeScan:
+		case core.ActionLint, core.ActionScan:
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
-		default: // CommandTypeBuild
+		default: // core.ActionBuild
 			tb.AddRow(moduleName, components, duration, statusIcon)
 		}
 	}
@@ -288,19 +284,27 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 
 	if hasFailures {
 		details = append(details, "")
-		failCount := 0
-		const maxFailures = 5
+
+		// Order: root failures (ran and failed) before dependency failures
+		failedIndices := make([]int, 0, totalFailures)
 		for _, idx := range sortedIndices {
+			cache := &caches[idx]
+			if cache.status == orchestrator.ModuleStatusFailed || cache.warnCount > 0 {
+				failedIndices = append(failedIndices, idx)
+			}
+		}
+		sort.SliceStable(failedIndices, func(i, j int) bool {
+			return hasRootFailure(caches[failedIndices[i]].sortedComps) &&
+				!hasRootFailure(caches[failedIndices[j]].sortedComps)
+		})
+
+		const maxFailures = 5
+		for failCount, idx := range failedIndices {
 			if failCount >= maxFailures {
 				break
 			}
 			rs := &resultSets[idx]
 			cache := &caches[idx]
-
-			if cache.status != orchestrator.ModuleStatusFailed && cache.warnCount == 0 {
-				continue
-			}
-			failCount++
 
 			// Module header with status
 			statusIcon := "✗"
@@ -332,21 +336,21 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 				break // Only show first failed component per module
 			}
 
-			// List ALL log paths from every component in this module
+			// List log paths from failed components only
 			for _, comp := range cache.sortedComps {
-				if comp.LogPath != "" {
+				if comp.LogPath != "" && comp.ExitCode > 0 {
 					details = append(details, fmt.Sprintf("    Log: %s", comp.LogPath))
 				}
 			}
 		}
-		if failCount >= maxFailures && totalFailures > maxFailures {
-			remaining := totalFailures - maxFailures
+		if len(failedIndices) > maxFailures {
+			remaining := len(failedIndices) - maxFailures
 			details = append(details, fmt.Sprintf("  ... and %d more failures", remaining))
 		}
 	}
 
 	// Create summary data matching TUI structure
-	data := &tui.SummaryData{
+	data := &display.SummaryData{
 		Success:    failureCount == 0,
 		TotalTime:  totalTime,
 		RunSummary: runSummary,
@@ -403,7 +407,7 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 	})
 
 	// Build module-level table for test commands
-	if ctx.Config.Type == CommandTypeTest && len(resultSets) > 0 {
+	if ctx.Config.Type == core.ActionTest && len(resultSets) > 0 {
 		tb := render.NewTableBuilder().
 			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
 
@@ -461,18 +465,26 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 		log.Infof("Duration: %s", formatDuration(totalTime))
 	}
 
-	// Show failed modules with details and all log paths
+	// Show failed modules with details and log paths from failed components
 	if moduleFailureCount > 0 {
 		log.Info("")
 		log.Info("Failed modules:")
+
+		// Order: root failures (ran and failed) before dependency failures
+		failedIndices := make([]int, 0, moduleFailureCount)
 		for _, idx := range sortedIndices {
+			if caches[idx].status == orchestrator.ModuleStatusFailed {
+				failedIndices = append(failedIndices, idx)
+			}
+		}
+		sort.SliceStable(failedIndices, func(i, j int) bool {
+			return hasRootFailure(caches[failedIndices[i]].sortedComps) &&
+				!hasRootFailure(caches[failedIndices[j]].sortedComps)
+		})
+
+		for _, idx := range failedIndices {
 			rs := &resultSets[idx]
 			cache := &caches[idx]
-
-			if cache.status != orchestrator.ModuleStatusFailed {
-				continue
-			}
-
 			moduleName := output.PackageDisplayName(rs.Module)
 			log.Infof("  ✗ %s", moduleName)
 
@@ -489,9 +501,9 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 				break // Only show first failed component's errors
 			}
 
-			// List ALL log paths from every component in this module
+			// List log paths from failed components only
 			for _, comp := range cache.sortedComps {
-				if comp.LogPath != "" {
+				if comp.LogPath != "" && comp.ExitCode > 0 {
 					log.Infof("    Log: %s", comp.LogPath)
 				}
 			}
@@ -551,6 +563,18 @@ func formatErrorLines(prefix, errMsg string) []string {
 	}
 
 	return result
+}
+
+// hasRootFailure returns true if the module has at least one component that
+// actually ran and failed (has a log path), as opposed to only having
+// dependency-skipped failures (no log path).
+func hasRootFailure(comps []orchestrator.UnitResult) bool {
+	for _, comp := range comps {
+		if comp.ExitCode > 0 && comp.LogPath != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // extractUniqueTestTypes extracts unique test types from component results.

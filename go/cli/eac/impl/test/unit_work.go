@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -23,7 +24,7 @@ var componentWorkLog = logging.C()
 //
 // Test keys use the same format as build/lint/scan: "module:component:tool".
 func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
-	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.TestCmdConfig.(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
 	}
@@ -119,7 +120,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			// This gives: Longname = test:eac-cli:go:gotest:impl-build
 			//             DirName  = go-gotest-impl-build
 			unitID := workunit.UnitID{
-				Context:   workunit.ContextTest,
+				Action:    core.ActionTest,
 				Module:    moduleMoniker,
 				Component: compTypeName, // Component TYPE, not path-derived name
 				Tool:      toolName,
@@ -223,7 +224,7 @@ func getTestComponentWeight(moniker, componentName string, tests []testing.TestR
 	baseWeight := 1
 	bridge := tool.GlobalTestBridge()
 	if bridge != nil {
-		if t := bridge.ResolveTool(compTypeName, tool.OperationTest); t != nil {
+		if t := bridge.ResolveTool(compTypeName, core.ActionTest); t != nil {
 			baseWeight = t.Resources.Weight()
 		}
 	}

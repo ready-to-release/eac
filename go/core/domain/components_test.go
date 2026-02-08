@@ -102,9 +102,9 @@ func TestModuleComponents_GetComponentTypes(t *testing.T) {
 		{
 			name: "nil entry uses name as type",
 			mc: ModuleComponents{
-				"markdown": nil,
+				"assets": nil,
 			},
-			expected: []string{"markdown"},
+			expected: []string{"assets"},
 		},
 	}
 	for _, tt := range tests {

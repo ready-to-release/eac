@@ -5,6 +5,32 @@ package tool
 
 import "sync"
 
+// DefaultScannerCategoryMap maps security scanner categories to their default tool IDs.
+// These mappings are used by ScannerToolIDForCategory() and align with the
+// "security" namespace in tool-config.yml.
+//
+// To override at runtime, call OverrideScannerCategoryMap before first use.
+var DefaultScannerCategoryMap = map[string]string{
+	"sbom":       ToolTrivySBOM,
+	"vuln":       ToolTrivyVuln,
+	"secrets":    ToolTrivySecrets,
+	"compliance": ToolTrivyCompliance,
+	"iac":        ToolTrivyIaC,
+	"sast":       ToolSemgrep,
+	"zap":        ToolZap,
+}
+
+// DefaultServerTypeMap maps server types to their default tool IDs.
+// These mappings are used by ServerToolIDForType() and align with the
+// serve-capable tools in tool-config.yml.
+//
+// To override at runtime, call OverrideServerTypeMap before first use.
+var DefaultServerTypeMap = map[string]string{
+	ToolStaticSite:      ToolStaticSite,
+	ToolMkDocsLive:      ToolMkDocsLive,
+	ToolStructurizrLite: ToolStructurizrLite,
+}
+
 // CategoryResolver maps scanner categories to default tool IDs.
 // The mapping is derived from tool-config.yml conventions.
 type CategoryResolver struct {
@@ -27,27 +53,47 @@ func (r *CategoryResolver) initDefaultMappings() {
 		return
 	}
 
-	// Scanner category -> tool ID mapping
-	// Categories are semantic names, tools are concrete implementations
-	r.scannerMap = map[string]string{
-		"sbom":       ToolTrivySBOM,
-		"vuln":       ToolTrivyVuln,
-		"secrets":    ToolTrivySecrets,
-		"compliance": ToolTrivyCompliance,
-		"iac":        ToolTrivyIaC,
-		"sast":       ToolSemgrep,
-		"zap":        ToolZap,
+	// Copy from package-level defaults so callers can override
+	// DefaultScannerCategoryMap / DefaultServerTypeMap before first access.
+	r.scannerMap = make(map[string]string, len(DefaultScannerCategoryMap))
+	for k, v := range DefaultScannerCategoryMap {
+		r.scannerMap[k] = v
 	}
 
-	// Server type -> tool ID mapping
-	// Server types are the canonical identifiers
-	r.serverMap = map[string]string{
-		ToolStaticSite:      ToolStaticSite,
-		ToolMkDocsLive:      ToolMkDocsLive,
-		ToolStructurizrLite: ToolStructurizrLite,
+	r.serverMap = make(map[string]string, len(DefaultServerTypeMap))
+	for k, v := range DefaultServerTypeMap {
+		r.serverMap[k] = v
 	}
 
 	r.initialized = true
+}
+
+// OverrideScannerCategoryMap replaces the active scanner category mappings.
+// This allows config-driven overrides to take effect after initialization.
+// Thread-safe: acquires write lock.
+func OverrideScannerCategoryMap(m map[string]string) {
+	globalCategoryResolver.mu.Lock()
+	defer globalCategoryResolver.mu.Unlock()
+
+	globalCategoryResolver.scannerMap = make(map[string]string, len(m))
+	for k, v := range m {
+		globalCategoryResolver.scannerMap[k] = v
+	}
+	globalCategoryResolver.initialized = true
+}
+
+// OverrideServerTypeMap replaces the active server type mappings.
+// This allows config-driven overrides to take effect after initialization.
+// Thread-safe: acquires write lock.
+func OverrideServerTypeMap(m map[string]string) {
+	globalCategoryResolver.mu.Lock()
+	defer globalCategoryResolver.mu.Unlock()
+
+	globalCategoryResolver.serverMap = make(map[string]string, len(m))
+	for k, v := range m {
+		globalCategoryResolver.serverMap[k] = v
+	}
+	globalCategoryResolver.initialized = true
 }
 
 // ScannerToolIDForCategory returns the default tool ID for a scanner category.
@@ -110,10 +156,3 @@ func IsServerType(s string) bool {
 	return ServerToolIDForType(s) != ""
 }
 
-// CategoryToToolID converts a scanner category to its tool ID.
-// This is an alias for ScannerToolIDForCategory for backward compatibility.
-// Deprecated: Use ScannerToolIDForCategory instead.
-func CategoryToToolID(category string) (string, bool) {
-	toolID := ScannerToolIDForCategory(category)
-	return toolID, toolID != ""
-}

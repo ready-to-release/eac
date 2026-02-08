@@ -782,3 +782,119 @@ func TestDependencyTracker_GetBlocks(t *testing.T) {
 	assert.Contains(t, components, "comp2")
 	assert.Contains(t, components, "comp3")
 }
+
+// --- WithSkipValidation tests ---
+
+func TestNewDependencyScheduler_WithSkipValidation(t *testing.T) {
+	// Normal case: acyclic graph with SkipValidation
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			Weight:    2,
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	s, err := NewDependencyScheduler(work, WithSkipValidation())
+	require.NoError(t, err)
+	assert.NotNil(t, s)
+	assert.Equal(t, 2, s.Len())
+}
+
+func TestNewDependencyScheduler_WithSkipValidation_CyclesNotDetected(t *testing.T) {
+	// WithSkipValidation skips cycle detection - cyclic graph succeeds construction
+	work := []workunit.UnitSpec{
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "A"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+		},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+	}
+
+	// Without SkipValidation - should fail
+	_, err := NewDependencyScheduler(work)
+	require.Error(t, err)
+
+	// With SkipValidation - should succeed (caller guarantees acyclic)
+	s, err := NewDependencyScheduler(work, WithSkipValidation())
+	require.NoError(t, err)
+	assert.NotNil(t, s)
+}
+
+// --- Lazy reverse map tests ---
+
+func TestDependencyTracker_LazyBlocks_NotBuiltUntilNeeded(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+
+	// blocks should be nil (not yet built)
+	assert.Nil(t, dt.blocks, "reverse map should be lazy - not built at construction time")
+
+	// Forward map should work immediately
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp1"}))
+	assert.False(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+}
+
+func TestDependencyTracker_LazyBlocks_BuiltOnGetBlocks(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+	assert.Nil(t, dt.blocks)
+
+	// GetBlocks triggers lazy construction
+	blocks := dt.GetBlocks(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	assert.NotNil(t, dt.blocks, "reverse map should be built after GetBlocks")
+	require.Len(t, blocks, 1)
+	assert.Equal(t, "comp2", blocks[0].Component)
+}
+
+func TestDependencyTracker_LazyBlocks_BuiltOnCascadeFail(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+		},
+	}
+
+	dt := NewDependencyTracker(work)
+	assert.Nil(t, dt.blocks)
+
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+
+	// CascadeFail triggers lazy construction
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	assert.NotNil(t, dt.blocks, "reverse map should be built after CascadeFail")
+	require.Len(t, cascaded, 1)
+	assert.Equal(t, "B", cascaded[0].Component)
+}
+
+func TestDependencyTracker_LazyBlocks_WorkReleasedAfterBuild(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+	}
+
+	dt := NewDependencyTracker(work)
+	assert.NotNil(t, dt.work, "work should be retained before blocks built")
+
+	// Trigger build
+	dt.GetBlocks(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	assert.Nil(t, dt.work, "work should be released after blocks built")
+}

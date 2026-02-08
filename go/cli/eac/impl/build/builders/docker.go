@@ -10,14 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	h := &DockerHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&DockerHandler{})
 }
 
 // resolveDockerfilePath resolves a dockerfile path template.
@@ -37,7 +35,7 @@ func (h *DockerHandler) Capabilities() []string { return []string{"container"} }
 
 func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *DockerHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *DockerHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
@@ -53,11 +51,11 @@ func (h *DockerHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as Docker builds use the local docker CLI.
 func (h *DockerHandler) IsHostInstalled() bool { return true }
 
-func (h *DockerHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *DockerHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *DockerHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *DockerHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moniker := module.GetMoniker()
 	Logln(logWriter, "\n=== Building dockerfile: %s ===", moniker)
 
@@ -135,7 +133,7 @@ func (h *DockerHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 // We explicitly do NOT use :latest as it conflates with registry defaults.
 // The content hash tag changes only when actual source files change.
 // For CI builds, tags are handled differently in the CI workflow.
-func buildDockerTags(moniker string, module interfaces.ModuleContractPort) []string {
+func buildDockerTags(moniker string, module core.ModuleContractPort) []string {
 	tags := []string{
 		fmt.Sprintf("%s:local", moniker),
 	}

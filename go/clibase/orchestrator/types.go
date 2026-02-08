@@ -5,6 +5,8 @@ import (
 	"io"
 	"sort"
 	"time"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // SummaryBuilder defines the interface for incremental summary building.
@@ -55,10 +57,8 @@ type Config struct {
 	WorkspaceRoot string
 	// OutputBaseDir is the base directory for all output (e.g., paths.OutBuildRelPath or paths.OutTestRelPath)
 	OutputBaseDir string
-	// LogFileName is the name of the log file for each module (e.g., "build.log" or "test.log")
-	LogFileName string
-	// ActionVerb is the present continuous verb for status messages (e.g., "building", "testing")
-	ActionVerb string
+	// ActionType identifies the command (build, test, scan, lint) for descriptor lookups.
+	ActionType core.ActionType
 	// MaxConcurrency is the maximum number of concurrent workers (0 = number of CPUs)
 	// For component-level parallelism, this is used as the weight capacity
 	MaxConcurrency int
@@ -88,13 +88,30 @@ type Config struct {
 	Turbo float64
 }
 
+// ActionVerb returns the present-continuous verb for display (e.g., "Building").
+// Derived from the ActionType descriptor.
+func (c *Config) ActionVerb() string {
+	if d, ok := core.GetActionDescriptor(c.ActionType); ok {
+		return d.Verb
+	}
+	return string(c.ActionType)
+}
+
+// LogFileName returns the log file name for this action (e.g., "build.log").
+// Derived from the ActionType descriptor.
+func (c *Config) LogFileName() string {
+	if d, ok := core.GetActionDescriptor(c.ActionType); ok {
+		return d.LogFile
+	}
+	return string(c.ActionType) + ".log"
+}
+
 // ConfigUpdate holds configuration fields that can be updated after creation.
 // Only non-zero/non-nil fields are applied. This enables creating an
 // orchestrator with minimal config and updating it once full config is loaded.
 type ConfigUpdate struct {
 	WorkspaceRoot         string
 	OutputBaseDir         string
-	LogFileName           string
 	MaxConcurrency        int
 	Turbo                 float64
 	ComponentTypesDisplay map[string]string

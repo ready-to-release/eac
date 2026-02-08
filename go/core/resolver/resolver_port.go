@@ -5,15 +5,15 @@ package resolver
 import (
 	"sync"
 
-	interfaces "github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
 
 // Compile-time interface check.
-var _ interfaces.UnitResolverPort = (*ResolverPort)(nil)
+var _ core.UnitResolverPort = (*ResolverPort)(nil)
 
-// ResolverPort adapts ComponentResolver to implement interfaces.UnitResolverPort.
+// ResolverPort adapts ComponentResolver to implement core.UnitResolverPort.
 // This is the port interface for dependency injection and clean architecture.
 type ResolverPort struct {
 	resolver *ComponentResolver
@@ -32,8 +32,8 @@ func NewResolverPortWithResolver(r *ComponentResolver) *ResolverPort {
 }
 
 // ResolveForBuild returns work units for buildable components in a module.
-// Implements interfaces.UnitResolverPort.
-func (p *ResolverPort) ResolveForBuild(module interfaces.ModuleContractPort, cached map[string]bool) []interfaces.UnitSpecPort {
+// Implements core.UnitResolverPort.
+func (p *ResolverPort) ResolveForBuild(module core.ModuleContractPort, cached map[string]bool) []core.UnitSpecPort {
 	// Convert interface to concrete type
 	concrete, ok := unwrapModuleContract(module)
 	if !ok {
@@ -48,8 +48,8 @@ func (p *ResolverPort) ResolveForBuild(module interfaces.ModuleContractPort, cac
 }
 
 // ResolveForLint returns work units for lintable components in a module.
-// Implements interfaces.UnitResolverPort.
-func (p *ResolverPort) ResolveForLint(module interfaces.ModuleContractPort, cached map[string]bool) []interfaces.UnitSpecPort {
+// Implements core.UnitResolverPort.
+func (p *ResolverPort) ResolveForLint(module core.ModuleContractPort, cached map[string]bool) []core.UnitSpecPort {
 	// Convert interface to concrete type
 	concrete, ok := unwrapModuleContract(module)
 	if !ok {
@@ -64,8 +64,8 @@ func (p *ResolverPort) ResolveForLint(module interfaces.ModuleContractPort, cach
 }
 
 // ResolveForScan returns work units for scannable components in a module.
-// Implements interfaces.UnitResolverPort.
-func (p *ResolverPort) ResolveForScan(module interfaces.ModuleContractPort, categories []string, cached map[string]bool) []interfaces.UnitSpecPort {
+// Implements core.UnitResolverPort.
+func (p *ResolverPort) ResolveForScan(module core.ModuleContractPort, categories []string, cached map[string]bool) []core.UnitSpecPort {
 	// Convert interface to concrete type
 	concrete, ok := unwrapModuleContract(module)
 	if !ok {
@@ -87,7 +87,7 @@ func (p *ResolverPort) ResolveForScan(module interfaces.ModuleContractPort, cate
 
 // unwrapModuleContract extracts the concrete *modules.ModuleContract from an interface.
 // Returns nil, false if the module cannot be unwrapped.
-func unwrapModuleContract(module interfaces.ModuleContractPort) (*modules.ModuleContract, bool) {
+func unwrapModuleContract(module core.ModuleContractPort) (*modules.ModuleContract, bool) {
 	if module == nil {
 		return nil, false
 	}
@@ -115,11 +115,12 @@ func unwrapModuleContract(module interfaces.ModuleContractPort) (*modules.Module
 var (
 	globalResolverPort     *ResolverPort
 	globalResolverPortOnce sync.Once
+	globalResolverPortMu   sync.Mutex
 )
 
 // GlobalUnitResolver returns the global unit resolver port instance.
 // This is the recommended entry point for dependency injection.
-func GlobalUnitResolver() interfaces.UnitResolverPort {
+func GlobalUnitResolver() core.UnitResolverPort {
 	globalResolverPortOnce.Do(func() {
 		globalResolverPort = NewResolverPort()
 	})
@@ -128,6 +129,8 @@ func GlobalUnitResolver() interfaces.UnitResolverPort {
 
 // ResetGlobalUnitResolver resets the global resolver (for testing only).
 func ResetGlobalUnitResolver() {
+	globalResolverPortMu.Lock()
+	defer globalResolverPortMu.Unlock()
 	globalResolverPort = nil
 	globalResolverPortOnce = sync.Once{}
 }

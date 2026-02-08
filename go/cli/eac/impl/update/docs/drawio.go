@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/caching"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -27,13 +28,13 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 	fmt.Fprintln(logWriter, "Updating drawio image cache...")
 
 	// Create asset cache (nil = use cache normally)
-	cache := books.NewAssetCache(repoRoot, nil)
+	cache := caching.NewAssetCache(repoRoot, nil, nil)
 
 	// Scan docs/ for drawio images
 	docsDir := paths.DocsSourcePath(repoRoot)
 
 	// Find all drawio.png images in docs/
-	drawioImages, err := books.FindDrawioImages(docsDir)
+	drawioImages, err := diagrams.FindDrawioImages(docsDir)
 	if err != nil {
 		return result, fmt.Errorf("scanning for drawio images: %w", err)
 	}
@@ -55,7 +56,7 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 
 	// Local cache status type (was books.DrawioCacheStatus, removed during builder migration)
 	type drawioCacheStatus struct {
-		Image     books.DrawioImage
+		Image     diagrams.DrawioImage
 		Cached    bool
 		CachePath string
 	}
@@ -64,10 +65,10 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 	drawioStatuses := []drawioCacheStatus{}
 
 	for _, img := range drawioImages {
-		cachePath, hit := cache.GetDrawio(books.DrawioCacheKey{
+		cachePath, hit := cache.GetDrawio(caching.DrawioCacheKey{
 			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
-			MaxWidth:   books.MaxImageWidthPDF,
+			MaxWidth:   diagrams.MaxImageWidthPDF,
 		})
 
 		// In force mode, treat everything as a cache miss
@@ -130,10 +131,10 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 		}
 
 		// Store in persistent cache
-		if err := cache.PutDrawio(status.CachePath, books.DrawioCacheKey{
+		if err := cache.PutDrawio(status.CachePath, caching.DrawioCacheKey{
 			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
-			MaxWidth:   books.MaxImageWidthPDF,
+			MaxWidth:   diagrams.MaxImageWidthPDF,
 		}); err != nil {
 			log.Warnf("  Failed to cache %s: %v", img.RelPath, err)
 			// Non-fatal - continue

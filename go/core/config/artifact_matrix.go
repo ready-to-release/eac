@@ -1,8 +1,6 @@
 package config
 
-import (
-	"gopkg.in/yaml.v3"
-)
+import "gopkg.in/yaml.v3"
 
 // ArtifactMatrixEntry represents a single entry in an artifact matrix.
 type ArtifactMatrixEntry struct {
@@ -46,20 +44,6 @@ func (am *ArtifactMatrix) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// ArtifactMatricesConfig holds all artifact matrices loaded from module-templates.yml.
-type ArtifactMatricesConfig struct {
-	ArtifactMatrices map[string]*ArtifactMatrix `yaml:"artifact-matrices"`
-}
-
-// LoadArtifactMatrices parses artifact matrices from YAML data.
-func LoadArtifactMatrices(data []byte) (*ArtifactMatricesConfig, error) {
-	var cfg ArtifactMatricesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
-}
-
 // ExpandArtifactMatrix expands a matrix reference into concrete ModuleArtifact entries.
 // Returns nil if the matrix name is not found.
 // Parameters:
@@ -67,7 +51,7 @@ func LoadArtifactMatrices(data []byte) (*ArtifactMatricesConfig, error) {
 //   - params: parameter substitution map (e.g., {"moniker": "myapp", "ext": ".exe"})
 //
 // Returns expanded artifacts with all parameters substituted.
-func (cfg *ArtifactMatricesConfig) ExpandArtifactMatrix(matrixName string, params map[string]string) []ModuleArtifact {
+func (cfg *BlueprintsConfig) ExpandArtifactMatrix(matrixName string, params map[string]string) []ModuleArtifact {
 	if cfg == nil || cfg.ArtifactMatrices == nil {
 		return nil
 	}
@@ -78,7 +62,7 @@ func (cfg *ArtifactMatricesConfig) ExpandArtifactMatrix(matrixName string, param
 }
 
 // expandMatrixWithVisited expands a matrix while tracking visited matrices for cycle detection.
-func (cfg *ArtifactMatricesConfig) expandMatrixWithVisited(matrixName string, params map[string]string, visited map[string]bool) []ModuleArtifact {
+func (cfg *BlueprintsConfig) expandMatrixWithVisited(matrixName string, params map[string]string, visited map[string]bool) []ModuleArtifact {
 	// Check for circular reference
 	if visited[matrixName] {
 		return nil // Circular reference detected
@@ -131,7 +115,7 @@ func (cfg *ArtifactMatricesConfig) expandMatrixWithVisited(matrixName string, pa
 // 1. Module has ArtifactMatrixRef set
 // 2. Module has a Go component
 // 3. Go component doesn't already have explicit artifacts
-func expandArtifactMatrixForModule(mod *Module, matrices *ArtifactMatricesConfig) {
+func expandArtifactMatrixForModule(mod *Module, matrices *BlueprintsConfig) {
 	if mod.ArtifactMatrixRef == "" || matrices == nil {
 		return
 	}
@@ -146,8 +130,13 @@ func expandArtifactMatrixForModule(mod *Module, matrices *ArtifactMatricesConfig
 		return
 	}
 
-	// Expand the matrix with the module's moniker
+	// Expand the matrix with the module's moniker and binary name from component
 	params := map[string]string{"moniker": mod.Moniker}
+	if goComp.Build != nil && goComp.Build.BinaryName != "" {
+		params["binary_name"] = goComp.Build.BinaryName
+	} else {
+		params["binary_name"] = mod.Moniker
+	}
 	artifacts := matrices.ExpandArtifactMatrix(mod.ArtifactMatrixRef, params)
 	if len(artifacts) == 0 {
 		return

@@ -102,11 +102,6 @@ func TestCachePathHelpers(t *testing.T) {
 			expected: filepath.Join(repoRoot, ".cache", "eac"),
 		},
 		{
-			name:     "CachePath_deprecated",
-			fn:       func() string { return CachePath(repoRoot) },
-			expected: filepath.Join(repoRoot, ".cache", "eac"),
-		},
-		{
 			name:     "BuildCachePath",
 			fn:       func() string { return BuildCachePath(repoRoot) },
 			expected: filepath.Join(repoRoot, ".cache", "eac", "build"),
@@ -140,6 +135,31 @@ func TestCachePathHelpers(t *testing.T) {
 			name:     "BuildStateCachePath",
 			fn:       func() string { return BuildStateCachePath(repoRoot) },
 			expected: filepath.Join(repoRoot, ".cache", "eac", "build", "state"),
+		},
+		{
+			name:     "IncrementalCachePath",
+			fn:       func() string { return IncrementalCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "incremental"),
+		},
+		{
+			name:     "SemaphoreCachePath",
+			fn:       func() string { return SemaphoreCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "semaphores"),
+		},
+		{
+			name:     "PreprocessCachePath",
+			fn:       func() string { return PreprocessCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "preprocess"),
+		},
+		{
+			name:     "NpmWorkCachePath",
+			fn:       func() string { return NpmWorkCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "npm", "work"),
+		},
+		{
+			name:     "NpmDownloadCachePath",
+			fn:       func() string { return NpmDownloadCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "npm", "cache"),
 		},
 	}
 

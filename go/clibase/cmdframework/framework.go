@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/adapters/tui"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -21,18 +21,17 @@ var log = logging.C()
 // Usage:
 //
 //	return cmdframework.Run(&cmdframework.CommandConfig{
-//	    Type:       cmdframework.CommandTypeBuild,
-//	    ActionVerb: "Building",
-//	    OutputDir:  "out/build",
+//	    Type:      core.ActionBuild,
+//	    OutputDir: "out/build",
 //	    // ... other config
 //	}, myWorkerFunc, nil)
-func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
+func Run(cfg *CommandConfig, worker CommandWorkerFunc, hooks *Hooks) int {
 	// ISOLATION CHECK: Fail-fast if running build/test/scan/lint within test scope
 	// Tests should not actively run these commands - it's bad isolation.
 	// Use --dry-run for planning/validation within tests.
 	if os.Getenv(environments.EnvR2RTestScope) != "" && !cfg.DryRun {
 		switch cfg.Type {
-		case CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint:
+		case core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint:
 			log.Errorf("ISOLATION VIOLATION: %s command cannot run within test scope without --dry-run", cfg.Type)
 			log.Errorf("Tests should not actively execute %s - use --dry-run for validation", cfg.Type)
 			return 1
@@ -61,7 +60,7 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 		if cfg.UseTUI && ctx.Orchestrator != nil {
 			// TUI is already running - show error and exit cleanly
 			ctx.Orchestrator.SendInitLine("ERROR: " + err.Error())
-			ctx.Orchestrator.SendSummary(&tui.SummaryData{
+			ctx.Orchestrator.SendSummary(&display.SummaryData{
 				Success:   false,
 				TotalTime: time.Since(ctx.StartTime),
 				Details:   []string{"Initialization failed: " + err.Error()},
@@ -113,7 +112,17 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 			// Check for informational exit (user-facing output already written)
 			var infoErr ErrInformationalExit
 			if errors.As(err, &infoErr) {
-				// Graceful exit - no additional error logging needed
+				// Graceful exit - output was already written via WriteInit.
+				// If TUI is running, show summary and stop cleanly so messages are visible.
+				if cfg.UseTUI && ctx.Orchestrator != nil {
+					ctx.Orchestrator.SendSummary(&display.SummaryData{
+						Success:   false,
+						TotalTime: time.Since(ctx.StartTime),
+						Details:   []string{infoErr.Reason},
+					})
+					ctx.Orchestrator.WaitTUI()
+					ctx.Orchestrator.StopTUI()
+				}
 				return 1
 			}
 			log.Errorf("AfterResolve hook failed: %v", err)
@@ -157,7 +166,7 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 
 	// Check if artifact validation failed (missing required build artifacts)
 	// This only applies to test/scan commands - build command creates artifacts, it doesn't require them
-	if cfg.Type != CommandTypeBuild && ctx.InitSummary != nil && ctx.InitSummary.ArtifactValidation != nil {
+	if cfg.Type != core.ActionBuild && ctx.InitSummary != nil && ctx.InitSummary.ArtifactValidation != nil {
 		av := ctx.InitSummary.ArtifactValidation
 		if !av.AllPresent && len(av.MissingFrom) > 0 {
 			ctx.WriteInit("")
@@ -189,6 +198,7 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 	// Hook: AfterExecute - runs post-build tasks like manifest generation
 	// In TUI mode: runs in background while TUI is displayed (TUI has its own exit hold)
 	// In non-TUI mode: must complete before process exits
+	// After completion (or if no hook), SignalAllWorkDone unblocks the TUI exit.
 	type afterExecResult struct {
 		err error
 	}
@@ -205,7 +215,12 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 			log.Debugf("AfterExecute: completed in %v", time.Since(afterExecStart))
 			afterExecDone <- afterExecResult{err: err}
 			close(afterExecDone)
+			// Signal TUI that all work is done (including AfterExecute)
+			ctx.Orchestrator.SignalAllWorkDone()
 		}()
+	} else {
+		// No AfterExecute hook - signal immediately
+		ctx.Orchestrator.SignalAllWorkDone()
 	}
 
 	// Phase 5: Summary - handles TUI exit (user timer if active, else immediate)
@@ -228,7 +243,7 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 }
 
 // RunSimple is a convenience wrapper for commands that don't need hooks.
-func RunSimple(cfg *CommandConfig, worker WorkerFunc) int {
+func RunSimple(cfg *CommandConfig, worker CommandWorkerFunc) int {
 	return Run(cfg, worker, nil)
 }
 
@@ -246,9 +261,9 @@ func formatTiming(d time.Duration) string {
 
 // buildUoWData creates UoW data from the execution context for TUI visualization.
 // Uses the same approach as buildExecutionTreeFromUnits to get proper unit IDs.
-func buildUoWData(ctx *ExecutionContext) interfaces.UoWData {
+func buildUoWData(ctx *ExecutionContext) core.UoWData {
 	if ctx.InitSummary == nil {
-		return interfaces.UoWData{}
+		return core.UoWData{}
 	}
 
 	// Try to get UoWs from UnitProvider for proper ID generation
@@ -261,7 +276,7 @@ func buildUoWData(ctx *ExecutionContext) interfaces.UoWData {
 	}
 
 	// Fallback: empty data
-	return interfaces.UoWData{}
+	return core.UoWData{}
 }
 
 // sendConfigReady sends early configuration metadata to the TUI.
@@ -286,15 +301,15 @@ func sendConfigReady(ctx *ExecutionContext) {
 }
 
 // buildUoWDataFromUnitSpecs builds UoW data using UnitSpec data for proper IDs.
-func buildUoWDataFromUnitSpecs(units []workunit.UnitSpec) interfaces.UoWData {
+func buildUoWDataFromUnitSpecs(units []workunit.UnitSpec) core.UoWData {
 	// Build a map of module -> UoWUnits from unit specs
-	moduleUoWs := make(map[string][]interfaces.UoWUnit)
+	moduleUoWs := make(map[string][]core.UoWUnit)
 	moduleOrder := []string{}
 	seenModules := make(map[string]bool)
 
 	for _, spec := range units {
 		module := spec.ID.Module
-		entry := interfaces.UoWUnit{
+		entry := core.UoWUnit{
 			ID:          spec.ID.Longname(),
 			DisplayName: spec.ID.DisplayName(),
 			Weight:      spec.Weight,
@@ -308,15 +323,15 @@ func buildUoWDataFromUnitSpecs(units []workunit.UnitSpec) interfaces.UoWData {
 	}
 
 	// Build flat module list
-	modules := make([]interfaces.UoWModule, len(moduleOrder))
+	modules := make([]core.UoWModule, len(moduleOrder))
 	for i, moduleName := range moduleOrder {
-		modules[i] = interfaces.UoWModule{
+		modules[i] = core.UoWModule{
 			Name:  moduleName,
 			Units: moduleUoWs[moduleName],
 		}
 	}
 
-	return interfaces.UoWData{
+	return core.UoWData{
 		Modules: modules,
 	}
 }

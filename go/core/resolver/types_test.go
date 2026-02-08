@@ -72,29 +72,16 @@ func TestScanPhaseConfig_GetDefaultCategories(t *testing.T) {
 	}
 }
 
-func TestComponentTools_GetBuildTool(t *testing.T) {
+func TestComponentTools_BuildField(t *testing.T) {
 	tests := []struct {
 		name     string
 		ct       *ComponentTools
 		expected string
 	}{
 		{
-			name:     "nil config",
-			ct:       nil,
-			expected: "",
-		},
-		{
-			name: "new build field",
+			name: "build field set",
 			ct: &ComponentTools{
-				Build:   "go",
-				Builder: "old-go",
-			},
-			expected: "go",
-		},
-		{
-			name: "legacy builder field",
-			ct: &ComponentTools{
-				Builder: "go",
+				Build: "go",
 			},
 			expected: "go",
 		},
@@ -107,44 +94,34 @@ func TestComponentTools_GetBuildTool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.ct.GetBuildTool()
-			assert.Equal(t, tt.expected, result)
+			assert.Equal(t, tt.expected, tt.ct.Build)
 		})
 	}
 }
 
-func TestComponentTools_GetLintTool(t *testing.T) {
+func TestComponentTools_LintField(t *testing.T) {
 	tests := []struct {
 		name     string
 		ct       *ComponentTools
 		expected string
 	}{
 		{
-			name:     "nil config",
-			ct:       nil,
+			name: "lint field set",
+			ct: &ComponentTools{
+				Lint: "golangci-lint",
+			},
+			expected: "golangci-lint",
+		},
+		{
+			name:     "no lint tool",
+			ct:       &ComponentTools{},
 			expected: "",
-		},
-		{
-			name: "new lint field",
-			ct: &ComponentTools{
-				Lint:   "golangci-lint",
-				Linter: "old-lint",
-			},
-			expected: "golangci-lint",
-		},
-		{
-			name: "legacy linter field",
-			ct: &ComponentTools{
-				Linter: "golangci-lint",
-			},
-			expected: "golangci-lint",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.ct.GetLintTool()
-			assert.Equal(t, tt.expected, result)
+			assert.Equal(t, tt.expected, tt.ct.Lint)
 		})
 	}
 }

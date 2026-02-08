@@ -31,7 +31,7 @@ func ResolveScanUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 	// Get cached modules map from scan context (set during incremental detection)
 	var cachedModules map[string]bool
-	if sctx, ok := ctx.Config.Extra["scanContext"].(*scanContext); ok && sctx != nil {
+	if sctx, ok := ctx.Config.ScanCmdContext.(*scanContext); ok && sctx != nil {
 		cachedModules = sctx.cachedModules
 	}
 

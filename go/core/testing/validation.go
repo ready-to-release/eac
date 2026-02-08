@@ -3,6 +3,7 @@ package testing
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
@@ -12,23 +13,20 @@ import (
 // NOTE: ValidTags map has been removed - validation now uses tag contract
 // See LoadTagContract() and IsValidTag() for contract-based validation
 
-// ValidTestTypes defines the valid test types.
-// Unit tests: gotest (Go), mocha (npm)
-// Spec tests: godog (Go), tscucumber (npm).
-var ValidTestTypes = []string{"gotest", "godog", "mocha", "tscucumber"}
+// ValidTestTypes returns the valid test types, queried from registered adapters.
+// Falls back to hardcoded defaults if no adapters are registered.
+func ValidTestTypes() []string {
+	return getSupportedTypes()
+}
 
-// validTestTypesMap provides O(1) lookup for test type validation.
-var validTestTypesMap = func() map[string]bool {
-	m := make(map[string]bool, len(ValidTestTypes))
-	for _, t := range ValidTestTypes {
-		m[t] = true
-	}
-	return m
-}()
-
-// IsValidTestType checks if a string is a valid test type (O(1) lookup).
+// IsValidTestType checks if a string is a valid test type.
 func IsValidTestType(s string) bool {
-	return validTestTypesMap[s]
+	for _, t := range getSupportedTypes() {
+		if t == s {
+			return true
+		}
+	}
+	return false
 }
 
 // GetLevelTags returns taxonomy level tags from config.
@@ -89,7 +87,7 @@ func ValidateTags(tags []string) []string {
 	levelCount := 0
 	levelTags := GetLevelTagsFromConfig(cfg)
 	for _, tag := range tags {
-		if contains(levelTags, tag) {
+		if slices.Contains(levelTags, tag) {
 			levelCount++
 		}
 	}
@@ -101,7 +99,7 @@ func ValidateTags(tags []string) []string {
 	verificationCount := 0
 	verificationTags := GetVerificationTagsFromConfig(cfg)
 	for _, tag := range tags {
-		if contains(verificationTags, tag) {
+		if slices.Contains(verificationTags, tag) {
 			verificationCount++
 		}
 	}
@@ -148,7 +146,7 @@ func ValidatePostInference(test TestReference, cfg *config.EACConfig) []string {
 	foundLevelTags := []string{}
 	allLevelTags := GetLevelTagsFromConfig(cfg)
 	for _, tag := range test.Tags {
-		if contains(allLevelTags, tag) {
+		if slices.Contains(allLevelTags, tag) {
 			foundLevelTags = append(foundLevelTags, tag)
 		}
 	}
@@ -166,7 +164,7 @@ func ValidatePostInference(test TestReference, cfg *config.EACConfig) []string {
 	foundVerificationTags := []string{}
 	allVerificationTags := GetVerificationTagsFromConfig(cfg)
 	for _, tag := range test.Tags {
-		if contains(allVerificationTags, tag) {
+		if slices.Contains(allVerificationTags, tag) {
 			foundVerificationTags = append(foundVerificationTags, tag)
 		}
 	}
@@ -176,9 +174,9 @@ func ValidatePostInference(test TestReference, cfg *config.EACConfig) []string {
 	}
 
 	// Consistency: @piv or @ppv MUST have @L4
-	hasPIV := contains(test.Tags, "@piv")
-	hasPPV := contains(test.Tags, "@ppv")
-	hasL4 := contains(test.Tags, "@L4")
+	hasPIV := slices.Contains(test.Tags, "@piv")
+	hasPPV := slices.Contains(test.Tags, "@ppv")
+	hasL4 := slices.Contains(test.Tags, "@L4")
 
 	if (hasPIV || hasPPV) && !hasL4 {
 		errors = append(errors, fmt.Sprintf("test '%s' has production verification (@piv/@ppv) but is not @L4", test.TestName))
@@ -186,9 +184,9 @@ func ValidatePostInference(test TestReference, cfg *config.EACConfig) []string {
 
 	// Consistency: @iv or @pv MUST have @L3
 	// Installation and Performance verification are PLTE-level tests (L3)
-	hasIV := contains(test.Tags, "@iv")
-	hasPV := contains(test.Tags, "@pv")
-	hasL3 := contains(test.Tags, "@L3")
+	hasIV := slices.Contains(test.Tags, "@iv")
+	hasPV := slices.Contains(test.Tags, "@pv")
+	hasL3 := slices.Contains(test.Tags, "@L3")
 
 	if (hasIV || hasPV) && !hasL3 {
 		errors = append(errors, fmt.Sprintf("test '%s' has PLTE verification (@iv/@pv) but is not @L3", test.TestName))
@@ -196,7 +194,7 @@ func ValidatePostInference(test TestReference, cfg *config.EACConfig) []string {
 
 	// Validate: @L0 should not have external runtime dependencies
 	// Note: @deps:go is allowed since it's the build-time toolchain, not a runtime dependency
-	hasL0 := contains(test.Tags, "@L0")
+	hasL0 := slices.Contains(test.Tags, "@L0")
 	if hasL0 {
 		for _, tag := range test.Tags {
 			if strings.HasPrefix(tag, "@deps:") && tag != "@deps:go" {
@@ -271,8 +269,9 @@ func ValidateTestReference(test TestReference) []string {
 	errors := []string{}
 
 	// Validate test type
-	if !contains(ValidTestTypes, test.Type) {
-		errors = append(errors, fmt.Sprintf("invalid test type: %s (valid types: %v)", test.Type, ValidTestTypes))
+	validTypes := ValidTestTypes()
+	if !slices.Contains(validTypes, test.Type) {
+		errors = append(errors, fmt.Sprintf("invalid test type: %s (valid types: %v)", test.Type, validTypes))
 	}
 
 	// Validate tags

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/environments"
 	"gopkg.in/yaml.v3"
 )
 
@@ -154,68 +153,10 @@ func applyServeDefaults(tool *ToolDefinition) {
 	// This is a conservative approach - tools that don't want auto-open can set it to false
 }
 
-// loadToolConfigDefaults loads default tool configuration from domain.
-func loadToolConfigDefaults(repoRoot string) (*ToolConfig, error) {
-	root := defaultsRoot(repoRoot)
-	if root == "" {
-		return nil, ErrNoToolConfig
-	}
-
-	// Look for tool-config.yml in contracts/core/<version>/defaults/
-	contractsPath := filepath.Join(root, "contracts", "core")
-
-	// Find the highest version
-	entries, err := os.ReadDir(contractsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNoToolConfig
-		}
-		return nil, fmt.Errorf("reading contracts directory: %w", err)
-	}
-
-	var version string
-	for _, e := range entries {
-		if e.IsDir() {
-			version = e.Name() // Will get the last (highest) version due to alphabetical ordering
-		}
-	}
-
-	if version == "" {
-		return nil, ErrNoToolConfig
-	}
-
-	configPath := filepath.Join(contractsPath, version, "defaults", ToolConfigFileName)
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNoToolConfig
-		}
-		return nil, fmt.Errorf("reading tool-config defaults: %w", err)
-	}
-
-	var config ToolConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("parsing tool-config defaults: %w", err)
-	}
-
-	// Backfill IDs from map keys
-	for id, tool := range config.SystemTools {
-		if tool.ID == "" {
-			tool.ID = id
-		}
-	}
-	for id, tool := range config.ContainerTools {
-		if tool.ID == "" {
-			tool.ID = id
-		}
-	}
-
-	// Validate configuration before returning
-	if errs := validateToolConfigWithDuplicates(data, configPath, &config); len(errs) > 0 {
-		return nil, errs
-	}
-
-	return &config, nil
+// loadToolConfigDefaults loads default tool configuration from the embedded contract FS.
+// Uses factory singleton for parse-once caching; returns a deep clone each call.
+func loadToolConfigDefaults(_ string) (*ToolConfig, error) {
+	return cloneFactoryToolConfigDefaults()
 }
 
 // validateToolConfigWithDuplicates performs comprehensive validation.
@@ -340,15 +281,6 @@ func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationEr
 	return errs
 }
 
-
-// defaultsRoot returns the root directory for loading contract defaults.
-// Container-aware: uses R2R_CONTAINER_ROOT when running in container.
-func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
-}
 
 // mergeToolConfig merges override into base config.
 // Tools and assignments from override take precedence.

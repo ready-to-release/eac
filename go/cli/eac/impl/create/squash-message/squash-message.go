@@ -56,35 +56,17 @@ func logDebugArtifact(label, content string) {
 	log.Debugf("=== %s END ===", label)
 }
 
-// gitRepo holds the git repository instance for testing.
-var (
-	gitRepo git.GitRepository
-	gitMgr  *git.RepositoryManager
-)
-
-// initGitManager initializes the git repository manager if needed.
-func initGitManager() {
-	if gitMgr == nil {
-		gitMgr = git.NewManager(logging.C().Zap())
-	}
-}
+// gitRepoProvider provides lazy-initialized git repository with test injection support.
+var gitRepoProvider = &git.LazyRepo{}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	if gitRepo != nil {
-		return gitRepo, nil
-	}
-	initGitManager()
-	repo, err := gitMgr.Open(workspaceRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %w", err)
-	}
-	return repo, nil
+	return gitRepoProvider.Get(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
 func SetGitRepo(repo git.GitRepository) {
-	gitRepo = repo
+	gitRepoProvider.Set(repo)
 }
 
 // CreateSquashMessage is the main entry point for the create squash-message command.
@@ -394,7 +376,7 @@ func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error
 	// Create JSON schema validator for Phase 1 JSON validation
 	// Phase 1 generates JSON output that matches squash-message.schema.json
 	// The formatter then converts JSON → plaintext squash message (no AI involved)
-	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), "squash-message.schema.json")
+	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), paths.SchemasDir, "squash-message.schema.json")
 	validator, err := domain.NewJSONSchemaValidator(schemaPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)

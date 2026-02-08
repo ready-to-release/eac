@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
@@ -53,7 +54,7 @@ func buildModuleTestInfo(
 		// Get BuildID from UoW manifests (links tests to specific build)
 		// This ensures `build --skip-cache` triggers retesting
 		reader := coreoutput.NewReader(workspaceRoot)
-		info.BuildID = reader.GetBuildID(workunit.ContextBuild, moniker)
+		info.BuildID = reader.GetBuildID(core.ActionBuild, moniker)
 
 		// Get source files from module definition
 		sourcePatterns := module.GetGlobPatterns()
@@ -97,7 +98,7 @@ func buildModuleTestInfo(
 	// Create a loader for dependency BuildIDs
 	depBuildIDLoader := func(moniker string) string {
 		reader := coreoutput.NewReader(workspaceRoot)
-		return reader.GetBuildID(workunit.ContextBuild, moniker)
+		return reader.GetBuildID(core.ActionBuild, moniker)
 	}
 
 	return moduleInfo, depBuildIDLoader

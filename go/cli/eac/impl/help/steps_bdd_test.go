@@ -6,7 +6,7 @@ package help
 import (
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/clibase/registry"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.
@@ -47,7 +47,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	sc.Step(`^I see the description for "([^"]*)"$`, func(cmd string) error {
 		return eacgodog.OutputContains(ctx, cmd)
 	})
-	// Note: `stderr contains "X" or "Y"` is registered in common steps (go/godog/steps.go)
+	// Note: `stderr contains "X" or "Y"` is registered in common steps (go/adapters/godog/steps.go)
 	sc.Step(`^I see available subcommands under "([^"]*)"$`, func(parent string) error {
 		return eacgodog.OutputContains(ctx, parent)
 	})

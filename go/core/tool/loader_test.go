@@ -4,7 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	tools "github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces"
+	tools "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/core/config"
 )
 
 func TestNewToolLoader(t *testing.T) {
@@ -94,7 +95,7 @@ func TestToolLoader_EnsureNamespaceForComponent(t *testing.T) {
 	}{
 		{"go", tools.NSGo},
 		{"go-feature", tools.NSGo},
-		{"gherkin-steps", tools.NSGo},
+		{"godog", tools.NSGo},
 		{"typescript", tools.NSNode},
 		{"javascript", tools.NSNode},
 		{"book", tools.NSDocs},
@@ -228,13 +229,13 @@ func TestComponentToNamespace(t *testing.T) {
 	}{
 		{"go", tools.NSGo},
 		{"go-feature", tools.NSGo},
-		{"gherkin-steps", tools.NSGo},
+		{"godog", tools.NSGo},
 		{"node", tools.NSNode},
 		{"typescript", tools.NSNode},
 		{"javascript", tools.NSNode},
 		{"book", tools.NSDocs},
 		{"base-site", tools.NSDocs},
-		{"pdf-render", tools.NSDocs},
+		{config.ComponentTypePdfRender, tools.NSDocs},
 		{"structurizr", tools.NSDocs},
 		{"design", tools.NSDocs},
 		{"unknown", tools.NSBootstrap},

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
-	"github.com/ready-to-release/eac/go/adapters/tui"
-	"github.com/ready-to-release/eac/go/adapters/tui/parallel"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -66,20 +66,21 @@ func phaseInitEarly(ctx *ExecutionContext) error {
 	// The TUI console captures os.Stdout at creation time to write directly to terminal.
 	// The output buffer then redirects os.Stdout to capture any leaked output from
 	// subprocesses, but the TUI still writes to the real terminal.
-	var tuiConsole tui.Console
+	var tuiConsole display.Console
 	useRegistryTUI := ctx.Config.CommandPath != "" && ctx.Config.UseTUI
-	if useRegistryTUI {
-		tuiConfig := tui.Config{
+	bootstrap := display.GetTUIBootstrap()
+	if useRegistryTUI && bootstrap != nil && bootstrap.NewForCommand != nil {
+		tuiConfig := display.Config{
 			Height:       getTUIHeight(ctx.Config),
 			BufferSize:   1000,
-			RunPhaseName: ctx.Config.ActionVerb,
+			RunPhaseName: ctx.Config.ActionVerb(),
 			ASCIIMode:    ctx.Config.TUIASCIIMode,
 			TUI3Demo:     ctx.Config.TUI3Demo,
 			SkipTUIDelay: ctx.Config.SkipTUIDelay,
 			CommandName:  ctx.Config.CommandPath,
-			CommandType:  string(ctx.Config.Type),
+			ActionType:   ctx.Config.Type,
 		}
-		tuiConsole = tui.NewForCommand(ctx.Config.CommandPath, tuiConfig)
+		tuiConsole = bootstrap.NewForCommand(ctx.Config.CommandPath, tuiConfig)
 	}
 
 	// Start output buffer AFTER TUI console is created - capture any stdout/stderr leaks
@@ -88,10 +89,10 @@ func phaseInitEarly(ctx *ExecutionContext) error {
 	ctx.AddCleanup(func() { ctx.stopOutputBuffer() })
 
 	// Create orchestrator with minimal config.
-	// WorkspaceRoot, OutputBaseDir, LogFileName, MaxConcurrency, Turbo etc.
+	// WorkspaceRoot, OutputBaseDir, MaxConcurrency, Turbo etc.
 	// are populated later by phaseInitDeferred via UpdateConfig.
 	orchConfig := orchestrator.Config{
-		ActionVerb:           ctx.Config.ActionVerb,
+		ActionType:           ctx.Config.Type,
 		StatusUpdateInterval: 500, // 500ms for responsive feedback
 		TUI:                  ctx.Config.UseTUI,
 		TUIHeight:            ctx.Config.TUIHeight,
@@ -105,17 +106,31 @@ func phaseInitEarly(ctx *ExecutionContext) error {
 	ctx.AddCleanup(func() { orch.Close() })
 
 	// Wire up TUI console -> orchestrator -> observers
-	if tuiConsole != nil {
-		if pc, ok := tuiConsole.(*parallel.Console); ok {
-			orch.SetConsole(pc.Inner())
+	if tuiConsole != nil && bootstrap != nil {
+		// Unwrap the console if needed (e.g., parallel.Console -> ParallelConsole)
+		innerConsole := tuiConsole
+		if bootstrap.UnwrapConsole != nil {
+			innerConsole = bootstrap.UnwrapConsole(tuiConsole)
+		}
 
-			// Create TUI observer to receive execution events
-			tuiObserver := tui.NewTUIObserver(pc.Inner())
-			orch.AddObserver(tuiObserver)
-			orch.SetWriterFactory(tuiObserver)
+		orch.SetConsole(innerConsole)
 
-			// Create TUI hooks for controlled interaction
-			ctx.TUIHooks = tui.NewTUIHooks(pc.Inner())
+		// Create TUI observer to receive execution events
+		if bootstrap.NewObserver != nil {
+			observer, writerFactory := bootstrap.NewObserver(innerConsole)
+			if obs, ok := observer.(core.ExecutionObserver); ok {
+				orch.AddObserver(obs)
+			}
+			if wf, ok := writerFactory.(core.WriterFactory); ok {
+				orch.SetWriterFactory(wf)
+			}
+		}
+
+		// Create TUI hooks for controlled interaction
+		if bootstrap.NewHooks != nil {
+			if hooks, ok := bootstrap.NewHooks(innerConsole).(core.TUIHooks); ok {
+				ctx.TUIHooks = hooks
+			}
 		}
 	} else if !ctx.Config.UseTUI {
 		// No TUI - use console observer for plain text output
@@ -196,7 +211,6 @@ func phaseInitDeferred(ctx *ExecutionContext) error {
 	ctx.Orchestrator.UpdateConfig(orchestrator.ConfigUpdate{
 		WorkspaceRoot:         workspaceRoot,
 		OutputBaseDir:         ctx.Config.OutputDir,
-		LogFileName:           ctx.Config.LogFileName,
 		MaxConcurrency:        maxConcurrency,
 		Turbo:                 turboMultiplier,
 		ComponentTypesDisplay: ctx.ComponentTypesDisplay,
@@ -217,7 +231,7 @@ func phaseInitDeferred(ctx *ExecutionContext) error {
 	ctx.asyncDepsResult = startAsyncDepsCheck(ctx)
 
 	log.Debugf("%s logging configured: debugMode=%v, useTUI=%v",
-		ctx.Config.ActionVerb, ctx.Config.DebugMode, ctx.Config.UseTUI)
+		ctx.Config.ActionVerb(), ctx.Config.DebugMode, ctx.Config.UseTUI)
 	log.Debugf("Deferred init time: %v", time.Since(deferredStart))
 
 	return nil
@@ -228,5 +242,5 @@ func getTUIHeight(cfg *CommandConfig) int {
 	if cfg.TUIHeight > 0 {
 		return cfg.TUIHeight
 	}
-	return tui.DefaultHeight
+	return display.DefaultHeight
 }

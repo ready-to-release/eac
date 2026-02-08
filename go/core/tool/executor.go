@@ -12,7 +12,8 @@ import (
 	"sync"
 	"time"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // DinD environment variable constants.
@@ -24,10 +25,6 @@ const (
 	// EnvContainerRepoRoot is the environment variable that contains the container's
 	// view of the repository root (typically /var/task).
 	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
-
-	// DefaultContainerRoot is the default path where the repository is mounted
-	// inside the r2r CLI container.
-	DefaultContainerRoot = "/var/task"
 )
 
 // Global executor instance for use throughout the codebase.
@@ -669,7 +666,7 @@ func (e *DefaultExecutor) populateDinDContext(execCtx *ExecutionContext) {
 	execCtx.HostWorkspaceRoot = hostRoot
 	execCtx.ContainerRepoRoot = os.Getenv(EnvContainerRepoRoot)
 	if execCtx.ContainerRepoRoot == "" {
-		execCtx.ContainerRepoRoot = DefaultContainerRoot
+		execCtx.ContainerRepoRoot = paths.ContainerRepoRoot
 	}
 }
 

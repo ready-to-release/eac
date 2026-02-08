@@ -53,12 +53,13 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -72,7 +73,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tool"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 var log = logging.C()
@@ -262,9 +262,9 @@ func Build() int {
 	}
 
 	// Handle artifacts mode: default based on environment (all for CI, reduced for local)
-	artifactsMode := env.DefaultArtifactsMode()
+	artifactsMode := environments.DefaultArtifactsMode()
 	if buildFlags.Artifacts != "" {
-		mode, err := environment.ParseArtifactsMode(buildFlags.Artifacts)
+		mode, err := environments.ParseArtifactsMode(buildFlags.Artifacts)
 		if err != nil {
 			log.Errorf("Error: %v", err)
 			return 1
@@ -316,11 +316,9 @@ func Build() int {
 	// Create command config for framework.
 	// Monikers may be empty — the framework's phaseResolve expands empty to all modules.
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeBuild,
+		Type:           core.ActionBuild,
 		CommandPath:    "build",
-		ActionVerb:     "Building",
 		OutputDir:      paths.OutBuildRelPath,
-		LogFileName:    "build.log",
 		Monikers:       monikers,
 		IncludeDepm:    !skipDepm,
 		SkipDeps:       skipDeps,
@@ -371,7 +369,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 		}
 
 		// Get all handlers for module's buildable components
-		compHandlers := builders.GetHandlersForModule(module)
+		compHandlers := tool.GlobalBuildBridge().GetHandlersForModule(module)
 		if len(compHandlers) == 0 {
 			// No buildable components for this module
 			continue
@@ -400,9 +398,9 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 // runModuleBuild runs build for a single module.
 // Executes all handlers for the module's buildable components in sequence.
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, artifactsMode environment.ArtifactsMode, reproducible bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, artifactsMode environments.ArtifactsMode, reproducible bool) int {
 	// Get all handlers for module's buildable components
-	compHandlers := builders.GetHandlersForModule(module)
+	compHandlers := tool.GlobalBuildBridge().GetHandlersForModule(module)
 	if len(compHandlers) == 0 {
 		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module.Moniker)
 		return 0 // Not an error - module just doesn't have buildable components
@@ -411,7 +409,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	// Determine which artifacts to build
 	requestedArtifacts := determineRequestedArtifactsForBuild(module, artifactsMode, workspaceRoot)
 
-	opts := builders.BuildOptions{
+	opts := tool.BuildOptions{
 		TidyFirst:          tidyFirst,
 		Version:            version,
 		DryRun:             dryRun,
@@ -616,7 +614,7 @@ func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool) bool {
 	// First, verify input hash matches using UoW manifests
 	// This ensures cached artifacts are from the same source code
 	reader := coreoutput.NewReader(workspaceRoot)
-	if manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker); err == nil && len(manifests) > 0 {
+	if manifests, err := reader.ListUoWs(core.ActionBuild, moniker); err == nil && len(manifests) > 0 {
 		// Get input hash from first UoW (they should all have the same source hash)
 		var cachedHash string
 		for _, m := range manifests {
@@ -669,7 +667,7 @@ func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool) bool {
 }
 
 // determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module.
-func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, mode environment.ArtifactsMode, workspaceRoot string) []string {
+func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, mode environments.ArtifactsMode, workspaceRoot string) []string {
 	// When --artifacts all is specified, return "*" to signal builders to include all artifacts
 	// This handles cases where module type has no artifacts defined (like container type)
 	// but module has books that should all be built

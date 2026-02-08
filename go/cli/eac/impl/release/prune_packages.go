@@ -277,7 +277,7 @@ func prunePackage(
 	// First pass: identify released digests for cross-digest protection
 	for _, v := range versions {
 		for _, tag := range v.Tags {
-			for _, pattern := range policy.PreservePatterns {
+			for _, pattern := range policy.GetPreservePatterns() {
 				if matched, _ := pathMatch(pattern, tag); matched {
 					checker.AddReleasedDigest(v.Digest)
 					break

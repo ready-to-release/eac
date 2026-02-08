@@ -14,7 +14,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	tuicontract "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	tuicontract "github.com/ready-to-release/eac/contracts/tui/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui/console"
 	"github.com/ready-to-release/eac/go/adapters/tui/demo"
 	"github.com/ready-to-release/eac/go/adapters/tui/demo/cells"
@@ -272,17 +272,10 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 	go func() {
 		select {
 		case <-sigChan:
-			// On Ctrl-C, quit the TUI immediately
-			if c.program != nil {
-				c.program.Quit()
-			}
+			c.program.Quit()
 		case <-ctx.Done():
-			// On context cancellation, quit the TUI
-			if c.program != nil {
-				c.program.Quit()
-			}
+			c.program.Quit()
 		case <-sigDone:
-			// Start() returned normally, clean exit
 			return
 		}
 	}()
@@ -453,12 +446,8 @@ func (c *ParallelConsole) closeModelDoneOnce() {
 // Safe to call from both Start() defer and Stop() without double-close panic.
 func (c *ParallelConsole) closeMsgChannelsOnce() {
 	c.msgCloseOnce.Do(func() {
-		if c.criticalChan != nil {
-			close(c.criticalChan)
-		}
-		if c.msgChan != nil {
-			close(c.msgChan)
-		}
+		close(c.criticalChan)
+		close(c.msgChan)
 	})
 }
 
@@ -962,6 +951,50 @@ func (c *ParallelConsole) SetInitSummary(summary *InitSummary) {
 			PlannedTools:        plannedTools,
 		},
 	})
+}
+
+// SendPlannedWork delivers predicted work items for grey skeleton tabs.
+func (c *ParallelConsole) SendPlannedWork(items []PlannedWorkItem) {
+	consoleItems := make([]console.PlannedWorkItem, len(items))
+	for i, item := range items {
+		consoleItems[i] = console.PlannedWorkItem{
+			ID:            item.ID,
+			DisplayName:   item.DisplayName,
+			Weight:        item.Weight,
+			Module:        item.Module,
+			Component:     item.Component,
+			ComponentType: item.ComponentType,
+		}
+	}
+	c.sendCritical(console.PlannedWorkMsg{Items: consoleItems})
+}
+
+// EnrichUoW delivers incremental enrichment data for an existing planned tab.
+func (c *ParallelConsole) EnrichUoW(enrichment UoWEnrichment) {
+	c.sendCritical(console.UoWEnrichMsg{
+		ID:          enrichment.ID,
+		Tool:        enrichment.Tool,
+		Container:   enrichment.Container,
+		Weight:      enrichment.Weight,
+		CacheStatus: console.CacheHit(enrichment.CacheStatus),
+		CacheTime:   enrichment.CacheTime,
+		DependsOn:   enrichment.DependsOn,
+	})
+}
+
+// SignalAllWorkDone signals that all work including AfterExecute hooks is complete.
+// Uses blocking program.Send (same pattern as SendSummary) to guarantee delivery.
+func (c *ParallelConsole) SignalAllWorkDone() {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.AllWorkDoneMsg{})
 }
 
 // printSummary prints a plain-text summary after the TUI exits.

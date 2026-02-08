@@ -1,17 +1,12 @@
 package tool
 
 import (
-	"sync"
 	"testing"
 )
 
 func TestGetTestTypeComponentType(t *testing.T) {
-	// Save and restore global state
-	origConfig := globalToolConfig
-	defer func() {
-		globalToolConfig = origConfig
-		globalToolConfigOnce = sync.Once{}
-	}()
+	// Save and restore global state using mutex-protected reset
+	defer ResetGlobalToolConfigForTesting()
 
 	tests := []struct {
 		name     string

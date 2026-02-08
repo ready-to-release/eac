@@ -586,7 +586,7 @@ func TestComponentType_ToolChainExamples(t *testing.T) {
 
 	t.Run("docs-site has tool chain", func(t *testing.T) {
 		ct := &ComponentType{
-			Builders: []string{"mkdocs-preprocess", "site-render-oci"},
+			Builders: []string{"mkdocs-preprocess", "mkdocs-render-oci"},
 		}
 		if !ct.HasToolChain() {
 			t.Error("docs-site should have tool chain")

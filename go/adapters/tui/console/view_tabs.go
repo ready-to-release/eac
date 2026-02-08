@@ -12,7 +12,7 @@ func (m Model) renderTabGridPanel(tabs []*UoWState, width, height int) string {
 
 	// Header: ┌ ●●●●●○○○○○○○ ──────────────────────┐
 	snap := m.buildWidgetSnapshot()
-	progressLamps := m.catalog.RenderWidget("res-progress", snap)
+	progressLamps := m.Resources.Catalog.RenderWidget("res-progress", snap)
 	headerLeft := "┌ " + progressLamps + " "
 	headerRight := "─┐"
 	headerBorderLen := width - lipgloss.Width(headerLeft) - lipgloss.Width(headerRight)
@@ -28,11 +28,11 @@ func (m Model) renderTabGridPanel(tabs []*UoWState, width, height int) string {
 	}
 
 	// Render all tab content (for scrolling)
-	tabContent := m.renderTabGridContent(tabs, width-2, contentHeight+m.tabsScrollOffset+50)
+	tabContent := m.renderTabGridContent(tabs, width-2, contentHeight+m.Interaction.TabsScrollOffset+50)
 	tabLines := strings.Split(tabContent, "\n")
 
 	// Apply scroll offset
-	scrollOffset := m.tabsScrollOffset
+	scrollOffset := m.Interaction.TabsScrollOffset
 	if scrollOffset > len(tabLines)-contentHeight {
 		scrollOffset = len(tabLines) - contentHeight
 		if scrollOffset < 0 {
@@ -69,15 +69,15 @@ func (m Model) renderTabGridPanel(tabs []*UoWState, width, height int) string {
 // Uses the catalog tab widget with dynamic sizing based on panel width.
 func (m Model) renderTabGridContent(tabs []*UoWState, width, height int) string {
 	if len(tabs) == 0 {
-		if m.initSummary == nil {
+		if m.Execution.InitSummary == nil {
 			return Styles.Dim.Render("  waiting for components...")
 		}
 		return Styles.Dim.Render("No components")
 	}
 
 	// Dynamic tab sizing based on tab width and available panel width
-	sizing := ComputeTabSizing(width+2, m.tabWidth, m.hoveredTabScroll, m.asciiMode)
-	sizing.ViewMode = m.tabViewMode
+	sizing := ComputeTabSizing(width+2, m.Interaction.TabWidth, m.Interaction.HoveredTabScroll, m.Display.AsciiMode)
+	sizing.ViewMode = m.Interaction.TabViewMode
 	tabsPerRow := sizing.TabColumns
 
 	effectiveActiveTab := m.getEffectiveActiveTab()
@@ -90,7 +90,7 @@ func (m Model) renderTabGridContent(tabs []*UoWState, width, height int) string 
 			Status:        state.Status,
 			Weight:        state.Weight,
 			IsActive:      state.Moniker == effectiveActiveTab,
-			IsHovered:     state.Moniker == m.hoveredTab && state.Moniker != effectiveActiveTab,
+			IsHovered:     state.Moniker == m.Interaction.HoveredTab && state.Moniker != effectiveActiveTab,
 			Module:        state.Module,
 			Component:     state.Component,
 			Tool:          state.Tool,
@@ -100,7 +100,7 @@ func (m Model) renderTabGridContent(tabs []*UoWState, width, height int) string 
 			EndTime:       state.EndTime,
 			ExitCode:      state.ExitCode,
 		}
-		return m.catalog.RenderTab(instance, sizing)
+		return m.Resources.Catalog.RenderTab(instance, sizing)
 	}
 
 	var rows []string

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
 
@@ -17,11 +18,16 @@ import (
 // It provides environment-aware image resolution:
 //   - Local containers (LocalPath set): Build in devbox, pull from GHCR in CI.
 //   - External containers: Try GHCR cache first, fallback to upstream.
+//
+// When a ContainerPort is injected, all Docker operations go through the port
+// interface. Otherwise, falls back to direct Docker CLI calls for backward
+// compatibility.
 type ImageManager struct {
 	workspaceRoot string
 	isCI          bool
 	ghcrOrg       string
 	logWriter     io.Writer
+	container     container.ContainerPort // optional: injected container runtime
 }
 
 // NewImageManager creates a new image manager.
@@ -35,6 +41,22 @@ func NewImageManager(workspaceRoot string, isCI bool, ghcrOrg string, logWriter 
 		ghcrOrg:       ghcrOrg,
 		logWriter:     logWriter,
 	}
+}
+
+// NewImageManagerWithContainer creates an image manager with an injected container runtime.
+// When a ContainerPort is provided, Docker operations (availability check, image exists,
+// build, pull) go through the port instead of shelling out to the Docker CLI.
+func NewImageManagerWithContainer(workspaceRoot string, isCI bool, ghcrOrg string, logWriter io.Writer, cp container.ContainerPort) *ImageManager {
+	mgr := NewImageManager(workspaceRoot, isCI, ghcrOrg, logWriter)
+	mgr.container = cp
+	return mgr
+}
+
+// SetContainer injects a container runtime into an existing ImageManager.
+// This is useful when the ImageManager is created before the container runtime
+// is available (e.g., lazy initialization).
+func (m *ImageManager) SetContainer(cp container.ContainerPort) {
+	m.container = cp
 }
 
 // ImageOptions controls image resolution behavior.
@@ -96,8 +118,17 @@ func (m *ImageManager) EnsureImageWithOptions(ctx context.Context, tool *ToolDef
 }
 
 // verifyDockerAvailable checks if Docker daemon is accessible.
+// Uses ContainerPort.IsAvailable() when a port is injected, otherwise
+// falls back to running "docker info" directly.
 func (m *ImageManager) verifyDockerAvailable() error {
-	cmd := exec.Command("docker", "info")
+	if m.container != nil {
+		if !m.container.IsAvailable() {
+			return fmt.Errorf("container runtime not accessible (is Docker running?)")
+		}
+		return nil
+	}
+	// Fallback: direct CLI check
+	cmd := exec.Command("docker", "info") //nolint:gosec // G204: legacy fallback, to be removed when all callers inject ContainerPort
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
@@ -255,8 +286,14 @@ func (m *ImageManager) ghcrCacheRef(upstreamRef string) string {
 }
 
 // ImageExists checks if a Docker image exists locally.
+// Uses ContainerPort.ImageExists() when a port is injected, otherwise
+// falls back to "docker images -q".
 func (m *ImageManager) ImageExists(imageRef string) bool {
-	cmd := exec.Command("docker", "images", "-q", imageRef)
+	if m.container != nil {
+		return m.container.ImageExists(context.Background(), imageRef)
+	}
+	// Fallback: direct CLI check
+	cmd := exec.Command("docker", "images", "-q", imageRef) //nolint:gosec // G204: legacy fallback
 	output, err := cmd.Output()
 	return err == nil && strings.TrimSpace(string(output)) != ""
 }
@@ -277,17 +314,18 @@ func (m *ImageManager) IsImageStale(imageRef, contextPath string) bool {
 }
 
 func (m *ImageManager) getImageCreatedTime(imageRef string) (time.Time, error) {
-	cmd := exec.Command("docker", "inspect", "--format", "{{.Created}}", imageRef)
+	if m.container != nil {
+		return m.container.ImageCreatedTime(context.Background(), imageRef)
+	}
+	cmd := exec.Command("docker", "inspect", "--format", "{{.Created}}", imageRef) //nolint:gosec // G204: legacy fallback, see Step 3D
 	output, err := cmd.Output()
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	timeStr := strings.TrimSpace(string(output))
-	// Try RFC3339Nano first (Docker's default format)
 	t, err := time.Parse(time.RFC3339Nano, timeStr)
 	if err != nil {
-		// Fallback to RFC3339
 		t, err = time.Parse(time.RFC3339, timeStr)
 	}
 	return t, err
@@ -308,17 +346,34 @@ func (m *ImageManager) getNewestFileTime(dir string) (time.Time, error) {
 }
 
 // dockerBuild builds a Docker image from a Dockerfile.
+// Uses ContainerPort.Build() when a port is injected, otherwise
+// falls back to running "docker build" directly.
 func (m *ImageManager) dockerBuild(ctx context.Context, tag, contextPath string) error {
+	if m.container != nil {
+		return m.container.Build(ctx, &container.BuildConfig{
+			ContextPath: contextPath,
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ImageTag:    tag,
+			LogWriter:   m.logWriter,
+		})
+	}
+	// Fallback: direct CLI call
 	dockerfile := filepath.Join(contextPath, "Dockerfile")
-	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dockerfile, contextPath)
+	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dockerfile, contextPath) //nolint:gosec // G204: legacy fallback
 	cmd.Stdout = m.logWriter
 	cmd.Stderr = m.logWriter
 	return cmd.Run()
 }
 
 // dockerPull pulls a Docker image from a registry.
+// Uses ContainerPort.Pull() when a port is injected, otherwise
+// falls back to running "docker pull" directly.
 func (m *ImageManager) dockerPull(ctx context.Context, imageRef string) error {
-	cmd := exec.CommandContext(ctx, "docker", "pull", imageRef)
+	if m.container != nil {
+		return m.container.Pull(ctx, imageRef)
+	}
+	// Fallback: direct CLI call
+	cmd := exec.CommandContext(ctx, "docker", "pull", imageRef) //nolint:gosec // G204: legacy fallback
 	cmd.Stdout = m.logWriter
 	cmd.Stderr = m.logWriter
 	return cmd.Run()

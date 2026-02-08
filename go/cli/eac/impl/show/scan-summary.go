@@ -20,12 +20,12 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -72,7 +72,7 @@ func ShowScanSummary() int {
 
 	// Load scan UoW manifests
 	reader := coreoutput.NewReader(workspaceRoot)
-	manifests, err := reader.ListUoWs(workunit.ContextScan, module)
+	manifests, err := reader.ListUoWs(core.ActionScan, module)
 	if err != nil || len(manifests) == 0 {
 		log.Errorf("No scan manifests found for module %s (run scan first)", module)
 		return 1

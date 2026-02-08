@@ -10,7 +10,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 
-	tui "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	tui "github.com/ready-to-release/eac/contracts/tui/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui/console/render"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
@@ -25,6 +25,7 @@ const (
 	BootChrome  BootState = iota // Frame only, no data
 	BootMetrics                  // System metrics available (CPU, memory)
 	BootConfig                   // Command config available (name, workers, mode)
+	BootPlanned                  // Skeleton tabs from module discovery (grey, before tool resolution)
 	BootTabs                     // Tabs registered, ready for execution
 	BootRunning                  // Execution underway
 )
@@ -40,118 +41,138 @@ type ConfigMeta struct {
 	OutputDir        string // "out/build", "out/test"
 }
 
+// ModelBootState tracks boot-related fields for progressive layout readiness.
+type ModelBootState struct {
+	State  BootState   // Progressive layout readiness
+	Config *ConfigMeta // Early config data (nil until ConfigReadyMsg)
+}
+
+// DisplayConfig holds display configuration values.
+type DisplayConfig struct {
+	Height               int           // Total height (default: tui.DefaultHeight)
+	Width                int           // Terminal width
+	RunPhaseName         string        // Custom name for Run phase (e.g., "building", "testing")
+	AsciiMode            bool          // Use ASCII-only characters (--ascii flag)
+	MetricsUpdateInterval time.Duration // How often to refresh CPU/memory metrics
+	MinDisplayTime       time.Duration // Minimum time to show completion state
+	AutoScrollResume     time.Duration // Auto-scroll resume delay
+	BufferSizeUoW        int           // Buffer size per UoW
+}
+
+// ExecutionState tracks execution progress, pane state, capacity, and channels.
+type ExecutionState struct {
+	// 3-pane state
+	Panes       [3]*Pane     // Init, Run, Summary panes
+	ActivePhase Phase        // Currently active phase
+	SummaryData *SummaryData // Structured data for Summary pane
+	InitSummary *InitSummary // Structured data for Init pane
+
+	// Results buffer for post-execution output
+	ResultsBuffer *RingBuffer // Output that appears after Run phase completes
+
+	// Run phase state (orchestrator status)
+	Running   []string // Currently running module monikers
+	Completed int      // Completed count
+	Total     int      // Total modules
+
+	// Capacity tracking (three-value model) - Host scheduler
+	Roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
+	PressureTarget int // Dynamic optimal capacity (may be < roof under memory pressure)
+
+	// Docker scheduler capacity tracking
+	DockerRunning        int // Currently running container weight
+	DockerPressureTarget int // Docker scheduler pressure target
+	DockerRoof           int // Docker scheduler max capacity
+	DockerWaiting        int // Jobs waiting for docker scheduler
+
+	StartTime time.Time // Execution start
+	LastError *Line     // Most recent error (sticky display)
+
+	// Lock tracking info (from locktracker.Registry)
+	Locks []LockStatus // Individual lock states
+
+	// Per-module tab tracking for Run phase
+	UoWStates  map[string]*UoWState // Per-module state (running, completed, failed)
+	UoWOrder   []string             // Order in which modules started (for tab ordering)
+	NextUoWIdx int                  // Counter for assigning unique indices to modules
+
+	// Note: UoW counters (uowTotal, uowDone, uowCached, uowFailed) were removed.
+	// Use DeriveCounts() to compute statistics from UoWStates.
+
+	// Channels for async updates
+	LineChan   <-chan Line     // Incoming output lines
+	StatusChan <-chan Status   // Status updates
+	DoneChan   <-chan struct{} // Termination signal - closes to unblock listeners
+
+	// Done state
+	LinesDone    bool
+	StatusDone   bool
+	AllWorkDone  bool // True after AfterExecute hooks complete (AllWorkDoneMsg received)
+}
+
+// InteractionState tracks user interaction, exit/freeze state, and display preferences.
+type InteractionState struct {
+	// Display preferences
+	Paused           bool        // Pause scrolling (for review)
+	ErrorMode        bool        // Show only errors
+	MouseMode        bool        // Mouse mode: true=scrolling enabled, false=text selection enabled
+	ViewMode         ViewMode    // Components view mode: TabGrid or Tree
+	TabViewMode      TabViewMode // Which label text to show in UoW tabs (Name/Module/Type/Tool/Mode/State)
+	TabsScrollOffset int         // Scroll offset for tabs/tree panel
+	TabWidth         int         // User-controlled individual tab width (Up/Down, min/max limits)
+	PaneWidthCols    int         // Logical pane width in column units (Left/Right adjusts)
+
+	// Tab hover/selection
+	ActiveTab        string // Currently selected tab ("" = aggregate view)
+	HoveredTab       string // Tab currently under mouse cursor
+	HoveredTabScroll int    // Marquee scroll offset for hovered tab name
+	HoveredZone      string // Currently hovered zone ID (empty = none, "tab:moniker" for tabs, "res-*" for resources)
+	MaxTabs          int    // Maximum visible tabs before scrolling/hiding
+
+	// User interaction tracking (for delayed exit)
+	LastUserInteraction time.Time // Reset on scroll or tab click
+	UserHasInteracted   bool      // True if user ever interacted with mouse
+	ForceExit           bool      // User pressed ESC to force immediate exit
+	ExitCountdownSecs   int       // Seconds remaining until user timer expires (10, 9, 8...)
+	FreezeTimeoutSecs   int       // Timeout duration in seconds (10 default, 120 when Freeze clicked)
+	SkipTUIDelay        bool      // Skip all user interaction tracking, exit immediately when done
+	AllRunnersCompleted time.Time // When all runners finished
+
+	// Exit/finalization state
+	ExitRequested      bool         // True when we want to exit (waiting for summary if needed)
+	PendingSummaryData *SummaryData // Summary data received from builder
+
+	// Quitting state - triggers plain-text final render
+	Quitting bool
+}
+
+// ResourceState holds cached system metrics, layout metrics, and widget catalog.
+type ResourceState struct {
+	// Cached system metrics (updated periodically, not on every render)
+	CachedCPUPercent       []float64 // Per-core CPU usage percentages
+	CachedMemPercent       float64   // Memory usage percentage
+	CachedDockerMemPercent float64   // Docker memory pool usage percentage
+	DockerAvailable        bool      // Whether Docker is available
+	LastMetricsUpdate      time.Time // When metrics were last updated
+
+	// Cached layout metrics (recomputed on tick/resize, not every View/mouse event)
+	CachedLayoutMetrics *render.LayoutMetrics
+
+	// Widget catalog (initialized in NewModel)
+	Catalog *WidgetCatalog
+
+	// Text selection state (mouse drag to copy)
+	Selection SelectionState
+}
+
 // Model is the Bubbletea model for the console window.
 // Displays build/test output in a 3-pane view (Init/Run/Summary).
 type Model struct {
-	// Progressive boot state
-	bootState  BootState   // Progressive layout readiness
-	configMeta *ConfigMeta // Early config data (nil until ConfigReadyMsg)
-
-	// Configuration
-	height       int    // Total height (default: tui.DefaultHeight)
-	width        int    // Terminal width
-	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
-	asciiMode    bool   // Use ASCII-only characters (--ascii flag)
-
-	// Config-driven values (from TUIConfig)
-	metricsUpdateInterval time.Duration // How often to refresh CPU/memory metrics
-	minDisplayTime        time.Duration // Minimum time to show completion state
-	autoScrollResume      time.Duration // Auto-scroll resume delay
-	bufferSizeUoW         int           // Buffer size per UoW
-
-	// 3-pane state
-	panes       [3]*Pane     // Init, Run, Summary panes
-	activePhase Phase        // Currently active phase
-	summaryData *SummaryData // Structured data for Summary pane
-	initSummary *InitSummary // Structured data for Init pane
-
-	// Results buffer for post-execution output
-	resultsBuffer *RingBuffer // Output that appears after Run phase completes
-
-	// Run phase state (orchestrator status)
-	running   []string // Currently running module monikers
-	completed int      // Completed count
-	total     int      // Total modules
-
-	// Capacity tracking (three-value model) - Host scheduler
-	roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
-	pressureTarget int // Dynamic optimal capacity (may be < roof under memory pressure)
-
-	// Docker scheduler capacity tracking
-	dockerRunning        int // Currently running container weight
-	dockerPressureTarget int // Docker scheduler pressure target
-	dockerRoof           int // Docker scheduler max capacity
-	dockerWaiting        int // Jobs waiting for docker scheduler
-
-	startTime time.Time // Execution start
-	lastError *Line     // Most recent error (sticky display)
-
-	// Lock tracking info (from locktracker.Registry)
-	locks []LockStatus // Individual lock states
-
-	// Per-module tab tracking for Run phase
-	uowStates    map[string]*UoWState // Per-module state (running, completed, failed)
-	uowOrder     []string                // Order in which modules started (for tab ordering)
-	nextUoWIdx   int                     // Counter for assigning unique indices to modules
-	activeTab       string                  // Currently selected tab ("" = aggregate view)
-	hoveredTab      string                  // Tab currently under mouse cursor
-	hoveredTabScroll int                    // Marquee scroll offset for hovered tab name
-	hoveredZone     string                  // Currently hovered zone ID (empty = none, "tab:moniker" for tabs, "res-*" for resources)
-	maxTabs         int                     // Maximum visible tabs before scrolling/hiding
-
-	// Note: UoW counters (uowTotal, uowDone, uowCached, uowFailed) were removed.
-	// Use DeriveCounts() to compute statistics from uowStates.
-
-	// Channels for async updates
-	lineChan   <-chan Line      // Incoming output lines
-	statusChan <-chan Status    // Status updates
-	doneChan   <-chan struct{}  // Termination signal - closes to unblock listeners
-
-	// Display preferences
-	paused    bool     // Pause scrolling (for review)
-	errorMode bool     // Show only errors
-	mouseMode bool     // Mouse mode: true=scrolling enabled, false=text selection enabled
-	viewMode         ViewMode    // Components view mode: TabGrid or Tree
-	tabViewMode      TabViewMode // Which label text to show in UoW tabs (Name/Module/Type/Tool/Mode/State)
-	tabsScrollOffset int         // Scroll offset for tabs/tree panel
-	tabWidth         int         // User-controlled individual tab width (Up/Down, min/max limits)
-	paneWidthCols    int         // Logical pane width in column units (Left/Right adjusts)
-
-	// Done state
-	linesDone  bool
-	statusDone bool
-
-	// User interaction tracking (for delayed exit)
-	lastUserInteraction time.Time // Reset on scroll or tab click
-	userHasInteracted   bool      // True if user ever interacted with mouse
-	forceExit           bool      // User pressed ESC to force immediate exit
-	exitCountdownSecs   int       // Seconds remaining until user timer expires (10, 9, 8...)
-	freezeTimeoutSecs   int       // Timeout duration in seconds (10 default, 120 when Freeze clicked)
-	skipTUIDelay            bool      // Skip all user interaction tracking, exit immediately when done
-	allRunnersCompleted time.Time // When all runners finished
-
-	// Exit/finalization state
-	exitRequested      bool         // True when we want to exit (waiting for summary if needed)
-	pendingSummaryData *SummaryData // Summary data received from builder
-
-	// Quitting state - triggers plain-text final render
-	quitting bool
-
-	// Cached system metrics (updated periodically, not on every render)
-	cachedCPUPercent       []float64 // Per-core CPU usage percentages
-	cachedMemPercent       float64   // Memory usage percentage
-	cachedDockerMemPercent float64   // Docker memory pool usage percentage
-	dockerAvailable        bool      // Whether Docker is available
-	lastMetricsUpdate      time.Time // When metrics were last updated
-
-	// Cached layout metrics (recomputed on tick/resize, not every View/mouse event)
-	cachedLayoutMetrics *render.LayoutMetrics
-
-	// Widget catalog (initialized in NewModel)
-	catalog *WidgetCatalog
-
-	// Text selection state (mouse drag to copy)
-	selection SelectionState
+	Boot        ModelBootState
+	Display     DisplayConfig
+	Execution   ExecutionState
+	Interaction InteractionState
+	Resources   ResourceState
 }
 
 // SelectionState tracks mouse text selection in the logs pane.
@@ -383,34 +404,42 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 	RegisterAllWidgets(catalog)
 
 	return Model{
-		catalog:           catalog,
-		bootState:         BootChrome, // Start with structural chrome only
-		height:            height,
-		width:             80, // Default, will be updated on WindowSizeMsg
-		runPhaseName:      runPhaseName,
-		asciiMode:         asciiMode,
-		skipTUIDelay:      skipTUIDelay,
-		freezeTimeoutSecs: freezeTimeoutSecs,
-		resultsBuffer:     NewRingBuffer(resultsBufferSize),
-		panes:             panes,
-		activePhase:       PhaseInit, // Start with Init phase
-		lineChan:          lineChan,
-		statusChan:        statusChan,
-		doneChan:          doneChan,
-		startTime:         time.Now(),
-		mouseMode:         true,                      // Start with mouse ON (scrolling enabled)
-		uowStates:         make(map[string]*UoWState), // Per-module state tracking
-		uowOrder:          make([]string, 0),          // Tab ordering
-		activeTab:         "",                         // Start with aggregate view
-		maxTabs:           maxTabs,
-		tabWidth:          tabWidthDefault,
-		paneWidthCols:     paneWidthCols,
-
-		// Config-driven values
-		metricsUpdateInterval: metricsInterval,
-		minDisplayTime:        minDisplayTime,
-		autoScrollResume:      autoScrollResume,
-		bufferSizeUoW:         bufferSizeUoW,
+		Boot: ModelBootState{
+			State: BootChrome, // Start with structural chrome only
+		},
+		Display: DisplayConfig{
+			Height:                height,
+			Width:                 80, // Default, will be updated on WindowSizeMsg
+			RunPhaseName:          runPhaseName,
+			AsciiMode:             asciiMode,
+			MetricsUpdateInterval: metricsInterval,
+			MinDisplayTime:        minDisplayTime,
+			AutoScrollResume:      autoScrollResume,
+			BufferSizeUoW:         bufferSizeUoW,
+		},
+		Execution: ExecutionState{
+			Panes:         panes,
+			ActivePhase:   PhaseInit, // Start with Init phase
+			ResultsBuffer: NewRingBuffer(resultsBufferSize),
+			LineChan:      lineChan,
+			StatusChan:    statusChan,
+			DoneChan:      doneChan,
+			StartTime:     time.Now(),
+			UoWStates:     make(map[string]*UoWState), // Per-module state tracking
+			UoWOrder:      make([]string, 0),           // Tab ordering
+		},
+		Interaction: InteractionState{
+			MouseMode:         true, // Start with mouse ON (scrolling enabled)
+			ActiveTab:         "",   // Start with aggregate view
+			MaxTabs:           maxTabs,
+			TabWidth:          tabWidthDefault,
+			PaneWidthCols:     paneWidthCols,
+			SkipTUIDelay:      skipTUIDelay,
+			FreezeTimeoutSecs: freezeTimeoutSecs,
+		},
+		Resources: ResourceState{
+			Catalog: catalog,
+		},
 	}
 }
 
@@ -428,12 +457,12 @@ func (m Model) Init() tea.Cmd {
 // Returns linesDoneMsg when lineChan is closed or doneChan is closed.
 func (m Model) listenForLines() tea.Cmd {
 	return func() tea.Msg {
-		if m.lineChan == nil {
+		if m.Execution.LineChan == nil {
 			return linesDoneMsg{}
 		}
 		// Block until at least one line is available
 		select {
-		case line, ok := <-m.lineChan:
+		case line, ok := <-m.Execution.LineChan:
 			if !ok {
 				return linesDoneMsg{}
 			}
@@ -442,7 +471,7 @@ func (m Model) listenForLines() tea.Cmd {
 			// Drain up to 49 more lines non-blocking
 			for i := 0; i < 49; i++ {
 				select {
-				case line, ok := <-m.lineChan:
+				case line, ok := <-m.Execution.LineChan:
 					if !ok {
 						return batchLineMsg(batch)
 					}
@@ -452,7 +481,7 @@ func (m Model) listenForLines() tea.Cmd {
 				}
 			}
 			return batchLineMsg(batch)
-		case <-m.doneChan:
+		case <-m.Execution.DoneChan:
 			// Drain any remaining buffered lines before signaling done.
 			// Go's select randomly picks between ready cases, so doneChan
 			// may fire while lineChan still has buffered lines. Without
@@ -461,7 +490,7 @@ func (m Model) listenForLines() tea.Cmd {
 		drain:
 			for {
 				select {
-				case line, ok := <-m.lineChan:
+				case line, ok := <-m.Execution.LineChan:
 					if !ok {
 						break drain
 					}
@@ -482,16 +511,16 @@ func (m Model) listenForLines() tea.Cmd {
 // Returns statusDoneMsg when statusChan is closed or doneChan is closed.
 func (m Model) listenForStatus() tea.Cmd {
 	return func() tea.Msg {
-		if m.statusChan == nil {
+		if m.Execution.StatusChan == nil {
 			return statusDoneMsg{}
 		}
 		select {
-		case status, ok := <-m.statusChan:
+		case status, ok := <-m.Execution.StatusChan:
 			if !ok {
 				return statusDoneMsg{}
 			}
 			return statusMsg(status)
-		case <-m.doneChan:
+		case <-m.Execution.DoneChan:
 			return statusDoneMsg{}
 		}
 	}
@@ -506,52 +535,52 @@ func (m Model) tickCmd() tea.Cmd {
 
 // SetTotal sets the total number of modules.
 func (m *Model) SetTotal(total int) {
-	m.total = total
+	m.Execution.Total = total
 }
 
 // SetActivePhase switches to a new phase.
 func (m *Model) SetActivePhase(phase Phase) {
 	// Mark previous phase as complete if it was active
-	if m.panes[m.activePhase].Status == PhaseActive {
-		m.panes[m.activePhase].Status = PhaseComplete
-		m.panes[m.activePhase].EndTime = time.Now()
+	if m.Execution.Panes[m.Execution.ActivePhase].Status == PhaseActive {
+		m.Execution.Panes[m.Execution.ActivePhase].Status = PhaseComplete
+		m.Execution.Panes[m.Execution.ActivePhase].EndTime = time.Now()
 	}
 
 	// Activate new phase
-	m.activePhase = phase
-	m.panes[phase].Status = PhaseActive
-	m.panes[phase].StartTime = time.Now()
+	m.Execution.ActivePhase = phase
+	m.Execution.Panes[phase].Status = PhaseActive
+	m.Execution.Panes[phase].StartTime = time.Now()
 }
 
 // GetActivePane returns the currently active pane.
 func (m *Model) GetActivePane() *Pane {
-	return m.panes[m.activePhase]
+	return m.Execution.Panes[m.Execution.ActivePhase]
 }
 
 // WriteToPhase writes a line to a specific phase's buffer.
 func (m *Model) WriteToPhase(phase Phase, line Line) {
-	if m.panes[phase] != nil {
-		m.panes[phase].Buffer.Push(line)
+	if m.Execution.Panes[phase] != nil {
+		m.Execution.Panes[phase].Buffer.Push(line)
 	}
 }
 
 // SetPhaseSummary sets the summary text for a phase (shown when collapsed).
 func (m *Model) SetPhaseSummary(phase Phase, summary string) {
-	if m.panes[phase] != nil {
-		m.panes[phase].Summary = summary
+	if m.Execution.Panes[phase] != nil {
+		m.Execution.Panes[phase].Summary = summary
 	}
 }
 
 // CompletePhase marks a phase as complete with success/failure status.
 func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
-	if m.panes[phase] != nil {
+	if m.Execution.Panes[phase] != nil {
 		if success {
-			m.panes[phase].Status = PhaseComplete
+			m.Execution.Panes[phase].Status = PhaseComplete
 		} else {
-			m.panes[phase].Status = PhaseFailed
+			m.Execution.Panes[phase].Status = PhaseFailed
 		}
-		m.panes[phase].Summary = summary
-		m.panes[phase].EndTime = time.Now()
+		m.Execution.Panes[phase].Summary = summary
+		m.Execution.Panes[phase].EndTime = time.Now()
 	}
 }
 
@@ -570,49 +599,49 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 	chromeLines := 7
 
 	// Add Summary chrome only if it will be rendered
-	if m.summaryData != nil {
+	if m.Execution.SummaryData != nil {
 		chromeLines += 2 // Summary header (1) + footer (1)
 	}
 
 	// Account for structured Init pane (8 lines total when initSummary is available)
 	// instead of buffer-based init (2 chrome + 6 content)
 	structuredInitHeight := 0
-	if m.initSummary != nil {
+	if m.Execution.InitSummary != nil {
 		structuredInitHeight = 8 // header + 4 rows + 2 separators + footer
 	}
 
 	// Account for Execution Tree pane (variable height based on modules)
 	execTreeHeight := 0
-	if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+	if m.Execution.InitSummary != nil && len(m.Execution.InitSummary.ExecutionTree) > 0 {
 		// header (1) + modules + footer (1)
 		execTreeHeight = 2 // header + footer
-		for _, module := range m.initSummary.ExecutionTree {
+		for _, module := range m.Execution.InitSummary.ExecutionTree {
 			execTreeHeight += 1 + len(module.UoWs) // module header + UoWs
 		}
 	}
 
-	// Use actual terminal height (m.height is updated by WindowSizeMsg in alt-screen mode)
-	terminalHeight := m.height
+	// Use actual terminal height (m.Display.Height is updated by WindowSizeMsg in alt-screen mode)
+	terminalHeight := m.Display.Height
 	if terminalHeight < 20 {
 		terminalHeight = 20 // Minimum usable height
 	}
 
 	// Allocate heights
-	if m.initSummary != nil {
+	if m.Execution.InitSummary != nil {
 		// Using structured init - don't count initH in content, it's fully rendered
 		initH = 0 // Not used for structured rendering
 	} else {
 		initH = initHeight
 	}
 
-	if m.summaryData != nil {
+	if m.Execution.SummaryData != nil {
 		summaryH = summaryHeight
 	} else {
 		summaryH = 0 // Don't reserve space for Summary if not showing
 	}
 
 	// Calculate Run pane height
-	if m.initSummary != nil {
+	if m.Execution.InitSummary != nil {
 		// Structured mode: subtract fixed pane heights
 		runH = terminalHeight - chromeLines - structuredInitHeight - execTreeHeight - summaryH
 	} else {
@@ -630,7 +659,7 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 
 // WriteResult writes a line to the results buffer.
 func (m *Model) WriteResult(line Line) {
-	m.resultsBuffer.Push(line)
+	m.Execution.ResultsBuffer.Push(line)
 }
 
 // SummaryData holds structured information for the Summary pane.
@@ -645,7 +674,7 @@ type SummaryData struct {
 
 // SetSummaryData updates the summary data for the Summary pane.
 func (m *Model) SetSummaryData(data *SummaryData) {
-	m.summaryData = data
+	m.Execution.SummaryData = data
 }
 
 // InitSummary holds structured init summary data for the Init pane.
@@ -750,7 +779,7 @@ type InitSummaryFlags struct {
 // For ad-hoc creation (e.g., from progress events with only a moniker), use
 // GetOrCreateUoWStateByID.
 func (m *Model) GetOrCreateUoWState(entry UoWEntry) *UoWState {
-	if state, exists := m.uowStates[entry.ID]; exists {
+	if state, exists := m.Execution.UoWStates[entry.ID]; exists {
 		// Update weight if provided (in case it changed)
 		if entry.Weight > 0 {
 			state.Weight = entry.Weight
@@ -774,7 +803,7 @@ func (m *Model) GetOrCreateUoWState(entry UoWEntry) *UoWState {
 	log.Debugf("[TUI-CACHE] GetOrCreateUoWState: registering module=%s displayName=%s weight=%d", entry.ID, entry.DisplayName, entry.Weight)
 
 	// Increment counter first to get unique index
-	m.nextUoWIdx++
+	m.Execution.NextUoWIdx++
 
 	// Default weight to 1 if not provided
 	weight := entry.Weight
@@ -785,14 +814,14 @@ func (m *Model) GetOrCreateUoWState(entry UoWEntry) *UoWState {
 	// Create new module state with its own buffer
 	// StartTime is left zero - will be set when MarkUoWRunning is called
 	// Use config-driven buffer size
-	uowBufferSize := m.bufferSizeUoW
+	uowBufferSize := m.Display.BufferSizeUoW
 	if uowBufferSize <= 0 {
 		uowBufferSize = 200 // Fallback
 	}
 	state := &UoWState{
 		Moniker:       entry.ID,
 		DisplayName:   entry.DisplayName,
-		Index:         m.nextUoWIdx, // Unique 1-based index from counter
+		Index:         m.Execution.NextUoWIdx, // Unique 1-based index from counter
 		Weight:        weight,
 		Buffer:        NewRingBuffer(uowBufferSize),
 		Status:        UoWPending, // Start as pending until slot acquired
@@ -802,8 +831,8 @@ func (m *Model) GetOrCreateUoWState(entry UoWEntry) *UoWState {
 		ComponentType: entry.ComponentType,
 		Container:     entry.Container,
 	}
-	m.uowStates[entry.ID] = state
-	m.uowOrder = append(m.uowOrder, entry.ID)
+	m.Execution.UoWStates[entry.ID] = state
+	m.Execution.UoWOrder = append(m.Execution.UoWOrder, entry.ID)
 
 	return state
 }
@@ -823,7 +852,7 @@ func (m *Model) GetOrCreateUoWStateByID(moniker, displayName string, weight int)
 // If the module is already in a terminal state (complete/skipped/failed), this is a no-op
 // to prevent overwriting early cache detection results.
 func (m *Model) MarkUoWRunning(moniker string) {
-	state, exists := m.uowStates[moniker]
+	state, exists := m.Execution.UoWStates[moniker]
 	if !exists {
 		return
 	}
@@ -843,7 +872,7 @@ func (m *Model) MarkUoWRunning(moniker string) {
 // Exit codes: 0=success(green), <0=skipped/cached(blue), >0=failed(red)
 // If the tab is currently selected, it stays visible until user switches away.
 func (m *Model) MarkUoWComplete(moniker string, exitCode int) {
-	state, exists := m.uowStates[moniker]
+	state, exists := m.Execution.UoWStates[moniker]
 	if !exists {
 		// Module not registered - create it now so we can set the correct status
 		// This handles race conditions where complete arrives before start
@@ -869,15 +898,15 @@ func (m *Model) MarkUoWComplete(moniker string, exitCode int) {
 func (m *Model) removeUoWFromTabs(moniker string) {
 	// Remove from order
 	var newOrder []string
-	for _, name := range m.uowOrder {
+	for _, name := range m.Execution.UoWOrder {
 		if name != moniker {
 			newOrder = append(newOrder, name)
 		}
 	}
-	m.uowOrder = newOrder
+	m.Execution.UoWOrder = newOrder
 
 	// Remove from states
-	delete(m.uowStates, moniker)
+	delete(m.Execution.UoWStates, moniker)
 }
 
 // GetVisibleTabs returns the tabs that should be displayed.
@@ -886,8 +915,8 @@ func (m *Model) removeUoWFromTabs(moniker string) {
 func (m *Model) GetVisibleTabs() []*UoWState {
 	var tabs []*UoWState
 
-	for _, moniker := range m.uowOrder {
-		state := m.uowStates[moniker]
+	for _, moniker := range m.Execution.UoWOrder {
+		state := m.Execution.UoWStates[moniker]
 		if state == nil {
 			continue
 		}
@@ -903,16 +932,16 @@ func (m *Model) GetVisibleTabs() []*UoWState {
 func (m *Model) SetActiveTab(moniker string) {
 	// Empty moniker = aggregate view (always valid)
 	if moniker == "" {
-		m.activeTab = ""
+		m.Interaction.ActiveTab = ""
 		return
 	}
 
 	// Validate moniker exists in visible tabs
-	_, exists := m.uowStates[moniker]
+	_, exists := m.Execution.UoWStates[moniker]
 	if !exists {
 		return
 	}
-	m.activeTab = moniker
+	m.Interaction.ActiveTab = moniker
 }
 
 // GetActiveUoWBuffer returns the buffer for the active tab.
@@ -922,7 +951,7 @@ func (m *Model) GetActiveUoWBuffer() *RingBuffer {
 	if activeMoniker == "" {
 		return nil // No tabs yet
 	}
-	if state, exists := m.uowStates[activeMoniker]; exists {
+	if state, exists := m.Execution.UoWStates[activeMoniker]; exists {
 		return state.Buffer
 	}
 	return nil
@@ -930,12 +959,12 @@ func (m *Model) GetActiveUoWBuffer() *RingBuffer {
 
 // getEffectiveActiveTab returns the active tab, defaulting to first tab if none selected.
 func (m *Model) getEffectiveActiveTab() string {
-	if m.activeTab != "" {
-		return m.activeTab
+	if m.Interaction.ActiveTab != "" {
+		return m.Interaction.ActiveTab
 	}
 	// Default to first tab
-	if len(m.uowOrder) > 0 {
-		return m.uowOrder[0]
+	if len(m.Execution.UoWOrder) > 0 {
+		return m.Execution.UoWOrder[0]
 	}
 	return ""
 }
@@ -959,13 +988,13 @@ func (m Model) formatLockInfo() string {
 // getLockParts returns individual formatted lock strings.
 // File locks are excluded as they're redundant with the module tabs.
 func (m Model) getLockParts() []string {
-	if len(m.locks) == 0 {
+	if len(m.Execution.Locks) == 0 {
 		return nil
 	}
 
 	var parts []string
 
-	for _, lock := range m.locks {
+	for _, lock := range m.Execution.Locks {
 		switch lock.Type {
 		case "semaphore", "weighted":
 			// Show capacity usage: "name:used/cap"
@@ -997,26 +1026,26 @@ func (m Model) getLockParts() []string {
 // The update interval is configured via TUIConfig.MetricsInterval.
 func (m *Model) UpdateCachedMetrics() {
 	// Only skip when actually quitting - keep metrics live while TUI is visible
-	if m.quitting {
+	if m.Interaction.Quitting {
 		return
 	}
 
 	// Skip if updated recently (use config-driven interval)
-	if time.Since(m.lastMetricsUpdate) < m.metricsUpdateInterval {
+	if time.Since(m.Resources.LastMetricsUpdate) < m.Display.MetricsUpdateInterval {
 		return
 	}
 
 	// Update CPU metrics (this is the slow call)
 	if perCore, err := cpu.Percent(0, true); err == nil {
-		m.cachedCPUPercent = perCore
+		m.Resources.CachedCPUPercent = perCore
 	}
 
 	// Update memory metrics
 	if memInfo, err := mem.VirtualMemory(); err == nil {
-		m.cachedMemPercent = memInfo.UsedPercent
+		m.Resources.CachedMemPercent = memInfo.UsedPercent
 	}
 
-	m.lastMetricsUpdate = time.Now()
+	m.Resources.LastMetricsUpdate = time.Now()
 }
 
 // calculateOptimalPaneCols determines the minimum number of columns (1-10)
@@ -1026,8 +1055,8 @@ func (m *Model) calculateOptimalPaneCols() int {
 	// Use UoWCount from initSummary - this is the actual count of scheduled work items
 	// (number of scheduled work items, not just components)
 	totalUoWs := 0
-	if m.initSummary != nil {
-		totalUoWs = m.initSummary.UoWCount
+	if m.Execution.InitSummary != nil {
+		totalUoWs = m.Execution.InitSummary.UoWCount
 	}
 
 	// Get visible rows from layout metrics
@@ -1059,8 +1088,8 @@ func (m *Model) calculateOptimalPaneCols() int {
 func (m Model) maxPaneWidth() int {
 	const minLogsWidth = 40
 	// Two constraints — take the tighter one
-	byLogs := m.width - minLogsWidth
-	byPercent := m.width * 60 / 100
+	byLogs := m.Display.Width - minLogsWidth
+	byPercent := m.Display.Width * 60 / 100
 	max := byLogs
 	if byPercent < max {
 		max = byPercent
@@ -1076,18 +1105,18 @@ func (m Model) maxPaneWidth() int {
 // When the max-width constraint reduces available space, the column count
 // is recomputed so the panel is sized to exactly fit — no empty gap.
 func (m Model) ComponentsWidth() int {
-	cols := m.paneWidthCols
+	cols := m.Interaction.PaneWidthCols
 	if cols < 1 {
 		cols = 1
 	}
-	width := cols*m.tabWidth + (cols-1)*tabGap + tabBorder
+	width := cols*m.Interaction.TabWidth + (cols-1)*tabGap + tabBorder
 	if max := m.maxPaneWidth(); width > max {
 		// Recompute how many columns actually fit, then size to match exactly
-		cols = (max - tabBorder + tabGap) / (m.tabWidth + tabGap)
+		cols = (max - tabBorder + tabGap) / (m.Interaction.TabWidth + tabGap)
 		if cols < 1 {
 			cols = 1
 		}
-		width = cols*m.tabWidth + (cols-1)*tabGap + tabBorder
+		width = cols*m.Interaction.TabWidth + (cols-1)*tabGap + tabBorder
 	}
 	if width < 20 {
 		width = 20
@@ -1099,10 +1128,10 @@ func (m Model) ComponentsWidth() int {
 // Capped by panel max width (consistent with ComponentsWidth) and UoW count.
 func (m Model) maxPaneWidthCols() int {
 	maxWidth := m.maxPaneWidth()
-	if maxWidth < m.tabWidth+tabBorder {
+	if maxWidth < m.Interaction.TabWidth+tabBorder {
 		return 1
 	}
-	maxCols := (maxWidth - tabBorder + tabGap) / (m.tabWidth + tabGap)
+	maxCols := (maxWidth - tabBorder + tabGap) / (m.Interaction.TabWidth + tabGap)
 	if maxCols < 1 {
 		maxCols = 1
 	}
@@ -1110,7 +1139,7 @@ func (m Model) maxPaneWidthCols() int {
 		maxCols = 10
 	}
 	// Never more columns than UoWs — extra columns would just be empty space
-	uowCount := len(m.uowOrder)
+	uowCount := len(m.Execution.UoWOrder)
 	if uowCount > 0 && maxCols > uowCount {
 		maxCols = uowCount
 	}
@@ -1124,7 +1153,7 @@ func (m Model) GetCapacityInfo() CapacityInfo {
 	counts := m.DeriveCounts()
 	return CapacityInfo{
 		Running:        counts.Running,
-		Roof:           m.roof,
-		PressureTarget: m.pressureTarget,
+		Roof:           m.Execution.Roof,
+		PressureTarget: m.Execution.PressureTarget,
 	}
 }

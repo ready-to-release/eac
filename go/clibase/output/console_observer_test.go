@@ -6,21 +6,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestConsoleObserverImplementsExecutionObserver(t *testing.T) {
 	obs := NewConsoleObserver()
 
 	// Verify it implements ExecutionObserver
-	var _ interfaces.ExecutionObserver = obs
+	var _ core.ExecutionObserver = obs
 }
 
 func TestConsoleObserverImplementsWriterFactory(t *testing.T) {
 	obs := NewConsoleObserver()
 
 	// Verify it implements WriterFactory
-	var _ interfaces.WriterFactory = obs
+	var _ core.WriterFactory = obs
 }
 
 func TestConsoleObserverPhaseStarted(t *testing.T) {
@@ -28,8 +28,8 @@ func TestConsoleObserverPhaseStarted(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.PhaseStartedEvent{
-		Phase:     interfaces.PhaseRun,
+	obs.OnEvent(core.PhaseStartedEvent{
+		Phase:     core.PhaseRun,
 		Time:      now,
 		TotalWork: 10,
 	})
@@ -45,8 +45,8 @@ func TestConsoleObserverPhaseCompleted(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.PhaseCompletedEvent{
-		Phase:    interfaces.PhaseRun,
+	obs.OnEvent(core.PhaseCompletedEvent{
+		Phase:    core.PhaseRun,
 		Time:     now,
 		Success:  true,
 		Summary:  "All passed",
@@ -67,8 +67,8 @@ func TestConsoleObserverPhaseCompletedFailed(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.PhaseCompletedEvent{
-		Phase:    interfaces.PhaseRun,
+	obs.OnEvent(core.PhaseCompletedEvent{
+		Phase:    core.PhaseRun,
 		Time:     now,
 		Success:  false,
 		Summary:  "Tests failed",
@@ -86,7 +86,7 @@ func TestConsoleObserverUnitStarted(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.UnitStartedEvent{
+	obs.OnEvent(core.UnitStartedEvent{
 		Time: now,
 		ID:   "build:core:go:go",
 	})
@@ -105,7 +105,7 @@ func TestConsoleObserverUnitCompletedSuccess(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.UnitCompletedEvent{
+	obs.OnEvent(core.UnitCompletedEvent{
 		Time:     now,
 		ID:       "build:core:go:go",
 		ExitCode: 0,
@@ -123,7 +123,7 @@ func TestConsoleObserverUnitCompletedFailed(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.UnitCompletedEvent{
+	obs.OnEvent(core.UnitCompletedEvent{
 		Time:     now,
 		ID:       "build:core:go:go",
 		ExitCode: 1,
@@ -141,7 +141,7 @@ func TestConsoleObserverUnitCompletedCached(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.UnitCompletedEvent{
+	obs.OnEvent(core.UnitCompletedEvent{
 		Time:     now,
 		ID:       "build:core:go:go",
 		ExitCode: -1,
@@ -159,7 +159,7 @@ func TestConsoleObserverSummaryReady(t *testing.T) {
 	obs := NewConsoleObserverWithWriter(&buf)
 
 	now := time.Now()
-	obs.OnEvent(interfaces.SummaryReadyEvent{
+	obs.OnEvent(core.SummaryReadyEvent{
 		Time:      now,
 		Success:   true,
 		TotalTime: 30 * time.Second,
@@ -214,7 +214,7 @@ func TestConsoleObserverTracksProgress(t *testing.T) {
 	now := time.Now()
 
 	// Queue a unit
-	obs.OnEvent(interfaces.UnitQueuedEvent{
+	obs.OnEvent(core.UnitQueuedEvent{
 		Time:        now,
 		ID:          "build:core:go:go",
 		DisplayName: "core:go",
@@ -222,13 +222,13 @@ func TestConsoleObserverTracksProgress(t *testing.T) {
 	})
 
 	// Start it
-	obs.OnEvent(interfaces.UnitStartedEvent{
+	obs.OnEvent(core.UnitStartedEvent{
 		Time: now,
 		ID:   "build:core:go:go",
 	})
 
 	// Complete it
-	obs.OnEvent(interfaces.UnitCompletedEvent{
+	obs.OnEvent(core.UnitCompletedEvent{
 		Time:     now,
 		ID:       "build:core:go:go",
 		ExitCode: 0,

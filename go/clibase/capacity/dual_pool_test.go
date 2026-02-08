@@ -193,8 +193,8 @@ func TestDualPoolSemaphore_SeparateStateFiles(t *testing.T) {
 	dps.Acquire(context.Background(), resource.PoolAllocation{HostWeight: 2, DockerWeight: 2})
 
 	// Verify separate state files exist
-	hostStateFile := filepath.Join(dir, "out", ".global-capacity.json")
-	dockerStateFile := filepath.Join(dir, "out", ".global-docker-capacity.json")
+	hostStateFile := filepath.Join(dir, stateDir, ".global-capacity.json")
+	dockerStateFile := filepath.Join(dir, stateDir, ".global-docker-capacity.json")
 
 	if _, err := os.Stat(hostStateFile); os.IsNotExist(err) {
 		t.Error("host state file should exist")

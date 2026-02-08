@@ -3,6 +3,7 @@ package resolver
 import (
 	"math"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/resource"
@@ -146,7 +147,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 
 				spec := workunit.UnitSpec{
 					ID: workunit.UnitID{
-						Context:   workunit.ContextBuild,
+						Action:    core.ActionBuild,
 						Module:    module.Moniker,
 						Component: compName,
 						Tool:      tcSpec.Tool,
@@ -174,7 +175,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 			var dependsOn []workunit.UnitID
 			for _, dep := range externalDeps {
 				dependsOn = append(dependsOn, workunit.UnitID{
-					Context:   workunit.ContextBuild,
+					Action:    core.ActionBuild,
 					Module:    dep.Module,
 					Component: dep.Component,
 					Tool:      dep.Tool,
@@ -182,7 +183,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 			}
 
 			isContainer := handler.IsContainer()
-			weight := r.getWeight(module.Moniker, compName, compType, tool.OperationBuild)
+			weight := r.getWeight(module.Moniker, compName, compType, core.ActionBuild)
 
 			// Set PoolAllocation explicitly based on tool type
 			var poolAlloc resource.PoolAllocation
@@ -194,7 +195,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextBuild,
+					Action:    core.ActionBuild,
 					Module:    module.Moniker,
 					Component: compName,
 					Tool:      actualToolName,
@@ -236,7 +237,7 @@ func (r *ComponentResolver) ResolveForLint(module *modules.ModuleContract, cache
 		for _, toolName := range toolNames {
 			handler := r.buildBridge.GetHandler(toolName)
 			isContainer := handler != nil && handler.IsContainer()
-			weight := r.getWeight(module.Moniker, compName, compType, tool.OperationLint)
+			weight := r.getWeight(module.Moniker, compName, compType, core.ActionLint)
 
 			// Set PoolAllocation explicitly based on tool type
 			var poolAlloc resource.PoolAllocation
@@ -248,7 +249,7 @@ func (r *ComponentResolver) ResolveForLint(module *modules.ModuleContract, cache
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextLint,
+					Action:    core.ActionLint,
 					Module:    module.Moniker,
 					Component: compName,
 					Tool:      toolName,
@@ -305,7 +306,7 @@ func (r *ComponentResolver) ResolveForScan(module *modules.ModuleContract, scanC
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextScan,
+					Action:    core.ActionScan,
 					Module:    module.Moniker,
 					Component: compName,
 					Tool:      toolName,
@@ -452,14 +453,14 @@ func (r *ComponentResolver) resolveScannerTool(compType string, category ScanCat
 func (r *ComponentResolver) getToolWeight(moniker, compName, compType string) int {
 	// Use component type's weight (from resources.cpus in component-types.yml)
 	// Tool chains share the component type's weight - they run as a single UOW
-	return r.getWeight(moniker, compName, compType, tool.OperationBuild)
+	return r.getWeight(moniker, compName, compType, core.ActionBuild)
 }
 
 // getWeight calculates scheduling weight for a component.
 // Weight is determined by: tool.Resources.CPUs * componentType.Amp * module.amp
 // The base weight comes from the tool definition, with amplifiers applied from
 // component type configuration and module-level overrides.
-func (r *ComponentResolver) getWeight(moniker, compName, compType string, op tool.OperationType) int {
+func (r *ComponentResolver) getWeight(moniker, compName, compType string, op core.ActionType) int {
 	// Get base weight from tool resources (default 1)
 	baseWeight := 1
 	if toolDef := r.buildBridge.GetToolForComponent(compType); toolDef != nil {

@@ -3,7 +3,7 @@
 // "Which modules have changed since the last recorded state?"
 //
 // This package provides the core detection algorithm. State persistence is handled
-// by workunit.StateManager which stores per-module state in out/<context>/<module>/state.json.
+// by workunit.StateManager which stores per-module state in .cache/eac/incremental/<context>/<module>/state.json.
 package changedetect
 
 import (

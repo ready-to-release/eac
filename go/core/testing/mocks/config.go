@@ -1,16 +1,16 @@
 package mocks
 
-import "github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+import core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 
-// MockConfig implements interfaces.ConfigPort for testing.
+// MockConfig implements core.ConfigPort for testing.
 type MockConfig struct {
 	repoRoot       string
 	configRoot     string
-	repository     interfaces.RepositoryConfigPort
-	environments   interfaces.EnvironmentsConfigPort
-	testingTags    interfaces.TestingTagsConfigPort
-	testSuites     interfaces.TestSuitesConfigPort
-	componentTypes interfaces.ComponentTypesConfigPort
+	repository     core.RepositoryConfigPort
+	environments   core.EnvironmentsConfigPort
+	testingTags    core.TestingTagsConfigPort
+	testSuites     core.TestSuitesConfigPort
+	componentTypes core.ComponentTypesConfigPort
 }
 
 // NewMockConfig creates a new MockConfig with sensible defaults.
@@ -34,79 +34,79 @@ func (m *MockConfig) WithConfigRoot(root string) *MockConfig {
 }
 
 // WithRepository sets the repository configuration.
-func (m *MockConfig) WithRepository(repo interfaces.RepositoryConfigPort) *MockConfig {
+func (m *MockConfig) WithRepository(repo core.RepositoryConfigPort) *MockConfig {
 	m.repository = repo
 	return m
 }
 
 // WithEnvironments sets the environments configuration.
-func (m *MockConfig) WithEnvironments(envs interfaces.EnvironmentsConfigPort) *MockConfig {
+func (m *MockConfig) WithEnvironments(envs core.EnvironmentsConfigPort) *MockConfig {
 	m.environments = envs
 	return m
 }
 
 // WithTestingTags sets the testing tags configuration.
-func (m *MockConfig) WithTestingTags(tags interfaces.TestingTagsConfigPort) *MockConfig {
+func (m *MockConfig) WithTestingTags(tags core.TestingTagsConfigPort) *MockConfig {
 	m.testingTags = tags
 	return m
 }
 
 // WithTestSuites sets the test suites configuration.
-func (m *MockConfig) WithTestSuites(suites interfaces.TestSuitesConfigPort) *MockConfig {
+func (m *MockConfig) WithTestSuites(suites core.TestSuitesConfigPort) *MockConfig {
 	m.testSuites = suites
 	return m
 }
 
 // WithComponentTypes sets the component types configuration.
-func (m *MockConfig) WithComponentTypes(types interfaces.ComponentTypesConfigPort) *MockConfig {
+func (m *MockConfig) WithComponentTypes(types core.ComponentTypesConfigPort) *MockConfig {
 	m.componentTypes = types
 	return m
 }
 
-// GetRepoRoot implements interfaces.ConfigPort.
+// GetRepoRoot implements core.ConfigPort.
 func (m *MockConfig) GetRepoRoot() string {
 	return m.repoRoot
 }
 
-// GetConfigRoot implements interfaces.ConfigPort.
+// GetConfigRoot implements core.ConfigPort.
 func (m *MockConfig) GetConfigRoot() string {
 	return m.configRoot
 }
 
-// GetRepository implements interfaces.ConfigPort.
-func (m *MockConfig) GetRepository() interfaces.RepositoryConfigPort {
+// GetRepository implements core.ConfigPort.
+func (m *MockConfig) GetRepository() core.RepositoryConfigPort {
 	if m.repository != nil {
 		return m.repository
 	}
 	return NewMockRepositoryConfig()
 }
 
-// GetEnvironments implements interfaces.ConfigPort.
-func (m *MockConfig) GetEnvironments() interfaces.EnvironmentsConfigPort {
+// GetEnvironments implements core.ConfigPort.
+func (m *MockConfig) GetEnvironments() core.EnvironmentsConfigPort {
 	return m.environments
 }
 
-// GetTestingTags implements interfaces.ConfigPort.
-func (m *MockConfig) GetTestingTags() interfaces.TestingTagsConfigPort {
+// GetTestingTags implements core.ConfigPort.
+func (m *MockConfig) GetTestingTags() core.TestingTagsConfigPort {
 	return m.testingTags
 }
 
-// GetTestSuites implements interfaces.ConfigPort.
-func (m *MockConfig) GetTestSuites() interfaces.TestSuitesConfigPort {
+// GetTestSuites implements core.ConfigPort.
+func (m *MockConfig) GetTestSuites() core.TestSuitesConfigPort {
 	return m.testSuites
 }
 
-// GetComponentTypes implements interfaces.ConfigPort.
-func (m *MockConfig) GetComponentTypes() interfaces.ComponentTypesConfigPort {
+// GetComponentTypes implements core.ConfigPort.
+func (m *MockConfig) GetComponentTypes() core.ComponentTypesConfigPort {
 	return m.componentTypes
 }
 
 // Interface compliance check
-var _ interfaces.ConfigPort = (*MockConfig)(nil)
+var _ core.ConfigPort = (*MockConfig)(nil)
 
-// MockRepositoryConfig implements interfaces.RepositoryConfigPort for testing.
+// MockRepositoryConfig implements core.RepositoryConfigPort for testing.
 type MockRepositoryConfig struct {
-	modules      map[string]interfaces.ModuleContractPort
+	modules      map[string]core.ModuleContractPort
 	monikers     []string
 	testOutputDir string
 }
@@ -114,73 +114,73 @@ type MockRepositoryConfig struct {
 // NewMockRepositoryConfig creates a new MockRepositoryConfig.
 func NewMockRepositoryConfig() *MockRepositoryConfig {
 	return &MockRepositoryConfig{
-		modules:       make(map[string]interfaces.ModuleContractPort),
+		modules:       make(map[string]core.ModuleContractPort),
 		testOutputDir: "out/test",
 	}
 }
 
 // WithModule adds a module to the repository config.
-func (m *MockRepositoryConfig) WithModule(module interfaces.ModuleContractPort) *MockRepositoryConfig {
+func (m *MockRepositoryConfig) WithModule(module core.ModuleContractPort) *MockRepositoryConfig {
 	m.modules[module.GetMoniker()] = module
 	m.monikers = append(m.monikers, module.GetMoniker())
 	return m
 }
 
-// AllMonikers implements interfaces.RepositoryConfigPort.
+// AllMonikers implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) AllMonikers() []string {
 	return m.monikers
 }
 
-// GetModule implements interfaces.RepositoryConfigPort.
-func (m *MockRepositoryConfig) GetModule(moniker string) (interfaces.ModuleContractPort, bool) {
+// GetModule implements core.RepositoryConfigPort.
+func (m *MockRepositoryConfig) GetModule(moniker string) (core.ModuleContractPort, bool) {
 	mod, ok := m.modules[moniker]
 	return mod, ok
 }
 
-// GetBuildOutputPath implements interfaces.RepositoryConfigPort.
+// GetBuildOutputPath implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) GetBuildOutputPath(workspaceRoot, moniker string) string {
 	return workspaceRoot + "/out/build/" + moniker
 }
 
-// GetTestOutputPath implements interfaces.RepositoryConfigPort.
+// GetTestOutputPath implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) GetTestOutputPath(workspaceRoot, moniker string) string {
 	return workspaceRoot + "/out/test/" + moniker
 }
 
-// GetScanOutputPath implements interfaces.RepositoryConfigPort.
+// GetScanOutputPath implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) GetScanOutputPath(workspaceRoot, moniker string) string {
 	return workspaceRoot + "/out/scan/" + moniker
 }
 
-// GetLintOutputPath implements interfaces.RepositoryConfigPort.
+// GetLintOutputPath implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) GetLintOutputPath(workspaceRoot, moniker string) string {
 	return workspaceRoot + "/out/lint/" + moniker
 }
 
-// TestOutputDir implements interfaces.RepositoryConfigPort.
+// TestOutputDir implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) TestOutputDir() string {
 	return m.testOutputDir
 }
 
-// GetBuildArtifacts implements interfaces.RepositoryConfigPort.
-func (m *MockRepositoryConfig) GetBuildArtifacts(moniker string, includeAll bool) []interfaces.ArtifactPort {
+// GetBuildArtifacts implements core.RepositoryConfigPort.
+func (m *MockRepositoryConfig) GetBuildArtifacts(moniker string, includeAll bool) []core.ArtifactPort {
 	return nil
 }
 
-// GetBuildArtifactIDs implements interfaces.RepositoryConfigPort.
+// GetBuildArtifactIDs implements core.RepositoryConfigPort.
 func (m *MockRepositoryConfig) GetBuildArtifactIDs(moniker string, buildAll bool) []string {
 	return nil
 }
 
-// GetBooksByModule implements interfaces.RepositoryConfigPort.
-func (m *MockRepositoryConfig) GetBooksByModule(moniker string) []interfaces.BookConfigPort {
+// GetBooksByModule implements core.RepositoryConfigPort.
+func (m *MockRepositoryConfig) GetBooksByModule(moniker string) []core.BookConfigPort {
 	return nil
 }
 
-// GetDefaultBooksByModule implements interfaces.RepositoryConfigPort.
-func (m *MockRepositoryConfig) GetDefaultBooksByModule(moniker string) []interfaces.BookConfigPort {
+// GetDefaultBooksByModule implements core.RepositoryConfigPort.
+func (m *MockRepositoryConfig) GetDefaultBooksByModule(moniker string) []core.BookConfigPort {
 	return nil
 }
 
 // Interface compliance check
-var _ interfaces.RepositoryConfigPort = (*MockRepositoryConfig)(nil)
+var _ core.RepositoryConfigPort = (*MockRepositoryConfig)(nil)

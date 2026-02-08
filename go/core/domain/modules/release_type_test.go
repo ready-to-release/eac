@@ -107,7 +107,7 @@ func TestLoadedModules_ReleaseTypeConsistency(t *testing.T) {
 			changelog:      "go/cli/eac/CHANGELOG.md",
 			releaseType:    "internal",
 		},
-		"mcp-server": {
+		"eac-mcp-server": {
 			withVersioning: true,
 			changelog:      "go/eac/mcp/commands/CHANGELOG.md",
 			releaseType:    "internal",
@@ -214,7 +214,7 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 		"r2r-eac-bundle": "bundle",
 		// Internal
 		"eac-cli":      "internal",
-		"mcp-server":  "internal",
+		"eac-mcp-server":  "internal",
 		"r2r-installer":     "internal",
 		"vscode-commit": "internal",
 		// None
@@ -237,7 +237,7 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 			switch moniker {
 			case "eac-cli":
 				config.changelog = "go/cli/eac/CHANGELOG.md"
-			case "mcp-server":
+			case "eac-mcp-server":
 				config.changelog = "go/eac/mcp/commands/CHANGELOG.md"
 			case "r2r-installer":
 				config.changelog = "scripts/CHANGELOG.md"

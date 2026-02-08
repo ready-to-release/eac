@@ -89,7 +89,7 @@ func ScanUsage(docsDir, assetsDir string) (map[string][]string, error) {
 				usage[assetPath] = []string{}
 			}
 			// Avoid duplicates
-			if !contains(usage[assetPath], mdRelPath) {
+			if !slices.Contains(usage[assetPath], mdRelPath) {
 				usage[assetPath] = append(usage[assetPath], mdRelPath)
 			}
 		}
@@ -152,7 +152,3 @@ func cleanImageRef(ref string) string {
 	return strings.TrimSpace(ref)
 }
 
-// contains checks if a string slice contains a value.
-func contains(slice []string, val string) bool {
-	return slices.Contains(slice, val)
-}

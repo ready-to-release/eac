@@ -151,9 +151,6 @@ func (s *ExecutionFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 			Behavior:    "parallel",
 			EnableFlag:  "--parallel",
 			DisableFlag: "--sequential",
-			LegacyFlags: []LegacyFlagMapping{
-				{LegacyFlag: "--roof", MapsTo: "disable"}, // --roof 1 implies sequential
-			},
 			DefaultOn:   true,
 			EnvAware:    false,
 			Description: "Parallel execution of work units",

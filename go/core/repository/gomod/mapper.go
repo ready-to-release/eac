@@ -43,7 +43,7 @@ func (m *Mapper) buildMappings() {
 		m.pathToMoniker[modulePath] = module.Moniker
 		m.monikerToPath[module.Moniker] = modulePath
 
-		// Also index additional go-type components (e.g., containerruntime under docker-adapter)
+		// Also index additional go-type components within a module
 		for _, entry := range module.Components.GetComponentsByType("go") {
 			if entry == nil || entry.Root == "" || entry.Root == goRoot {
 				continue
@@ -181,7 +181,7 @@ func (m *Mapper) GetAllMappings() map[string]string {
 
 // allGoRoots returns all root paths for go-type components in a module.
 // This includes both the primary "go" component and any additional components
-// with type "go" (e.g., containerruntime under docker-adapter).
+// with type "go".
 func allGoRoots(module *modules.ModuleContract) []string {
 	goComps := module.Components.GetComponentsByType("go")
 	roots := make([]string, 0, len(goComps))

@@ -39,6 +39,11 @@ func (m *MockDockerClient) ImagePull(ctx context.Context, refStr string, options
 	return nil, args.Error(1)
 }
 
+func (m *MockDockerClient) ImageInspectWithRaw(ctx context.Context, imageID string) (image.InspectResponse, []byte, error) {
+	args := m.Called(ctx, imageID)
+	return args.Get(0).(image.InspectResponse), args.Get(1).([]byte), args.Error(2)
+}
+
 func (m *MockDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error) {
 	args := m.Called(ctx, config, hostConfig, networkingConfig, platform, containerName)
 	return args.Get(0).(container.CreateResponse), args.Error(1)

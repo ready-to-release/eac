@@ -27,6 +27,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -118,10 +119,10 @@ func ShowComponents() int {
 		return 0
 	}
 
-	// Calculate execution order for layer grouping
-	execPlan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to calculate execution order: %v\n", err)
+	// Load config for DisplayOrder
+	cfg, cfgErr := config.Load(config.DefaultLoadOptions())
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", cfgErr)
 		return 1
 	}
 
@@ -135,8 +136,8 @@ func ShowComponents() int {
 	// Components by type
 	printComponentsByType(filtered)
 
-	// Components by module (grouped by layer)
-	printComponentsByModule(filtered, execPlan)
+	// Components by module (using DisplayOrder)
+	printComponentsByModule(filtered, cfg.Repository.DisplayOrder)
 
 	// Dependency graph
 	printDependencyGraph(filtered)
@@ -242,8 +243,8 @@ func printComponentsByType(components []*reports.ComponentInfo) {
 	fmt.Println("")
 }
 
-// printComponentsByModule prints components grouped by module in execution order.
-func printComponentsByModule(components []*reports.ComponentInfo, execPlan *repository.ExecutionPlan) {
+// printComponentsByModule prints components grouped by module in display order.
+func printComponentsByModule(components []*reports.ComponentInfo, displayOrder *config.DisplayOrder) {
 	fmt.Println("## Components by Module")
 	fmt.Println("")
 
@@ -253,8 +254,8 @@ func printComponentsByModule(components []*reports.ComponentInfo, execPlan *repo
 		byModule[comp.Moniker] = append(byModule[comp.Moniker], comp)
 	}
 
-	// Iterate in execution order
-	for _, module := range execPlan.ExecutionOrder {
+	// Iterate in display order
+	for _, module := range displayOrder.Modules {
 		comps, ok := byModule[module]
 		if !ok || len(comps) == 0 {
 			continue

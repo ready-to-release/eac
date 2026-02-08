@@ -221,9 +221,9 @@ func FormatCapacityDisplay(info CapacityInfo, asciiMode bool) string {
 // This replaces the counter fields (uowTotal, uowDone, uowCached, uowFailed).
 func (m Model) DeriveCounts() DerivedCounts {
 	var c DerivedCounts
-	c.Total = len(m.uowStates)
+	c.Total = len(m.Execution.UoWStates)
 
-	for _, state := range m.uowStates {
+	for _, state := range m.Execution.UoWStates {
 		switch state.Status {
 		case UoWPending:
 			c.Pending++

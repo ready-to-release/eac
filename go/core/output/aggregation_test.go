@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,26 +42,26 @@ func TestAggregateUoWChanges_AllCached_ModuleCached(t *testing.T) {
 	reader := NewReader(f.workspaceRoot)
 
 	// Create manifests for two UoWs in same module
-	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash"
 	m1.ExecutedAt = time.Now().Add(-1 * time.Hour)
 	f.saveManifest(m1)
 
-	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2 := f.createUoWManifest(core.ActionBuild, "core", "docker", "docker")
 	m2.InputHash = "sha256:hash"
 	m2.ExecutedAt = time.Now().Add(-2 * time.Hour)
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	// Module should be cached since all UoWs are cached
@@ -78,24 +79,24 @@ func TestAggregateUoWChanges_PartialCached_ModuleChanged(t *testing.T) {
 	reader := NewReader(f.workspaceRoot)
 
 	// Create manifests - only one UoW cached
-	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash"
 	f.saveManifest(m1)
 
-	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2 := f.createUoWManifest(core.ActionBuild, "core", "docker", "docker")
 	m2.InputHash = "sha256:old-hash" // Different hash
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil // Docker will differ
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	// Module should be changed because docker UoW changed
@@ -113,20 +114,20 @@ func TestAggregateUoWChanges_MultipleModules(t *testing.T) {
 	reader := NewReader(f.workspaceRoot)
 
 	// core module: all cached
-	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash-core"
 	f.saveManifest(m1)
 
 	// cli module: not cached (no manifest)
 	// api module: cached
-	m2 := f.createUoWManifest(workunit.ContextBuild, "api", "go", "go")
+	m2 := f.createUoWManifest(core.ActionBuild, "api", "go", "go")
 	m2.InputHash = "sha256:hash-api"
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "cli", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "api", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "cli", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "api", Component: "go", Tool: "go"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -139,7 +140,7 @@ func TestAggregateUoWChanges_MultipleModules(t *testing.T) {
 		return "sha256:hash-cli", nil
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	// core and api should be cached, cli should be changed
@@ -157,14 +158,14 @@ func TestAggregateUoWChanges_FreshRun(t *testing.T) {
 
 	// No manifests - fresh run
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	assert.True(t, result.UoWResult.FreshRun)
@@ -177,7 +178,7 @@ func TestAggregateUoWChanges_EmptyInput(t *testing.T) {
 	f := newTestFixture(t)
 	reader := NewReader(f.workspaceRoot)
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, []workunit.UnitID{}, nil)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, []workunit.UnitID{}, nil)
 	require.NoError(t, err)
 
 	assert.Empty(t, result.CachedModules)
@@ -194,26 +195,26 @@ func TestAggregateUoWChanges_RecordsCacheTimes(t *testing.T) {
 	time1 := time.Now().Add(-2 * time.Hour).Truncate(time.Second)
 	time2 := time.Now().Add(-1 * time.Hour).Truncate(time.Second)
 
-	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash"
 	m1.ExecutedAt = time1
 	f.saveManifest(m1)
 
-	m2 := f.createUoWManifest(workunit.ContextBuild, "core", "docker", "docker")
+	m2 := f.createUoWManifest(core.ActionBuild, "core", "docker", "docker")
 	m2.InputHash = "sha256:hash"
 	m2.ExecutedAt = time2
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	// UoW cache times should be recorded
@@ -228,20 +229,20 @@ func TestAggregateUoWChanges_PreservesUoWResult(t *testing.T) {
 	f := newTestFixture(t)
 	reader := NewReader(f.workspaceRoot)
 
-	m1 := f.createUoWManifest(workunit.ContextBuild, "core", "go", "go")
+	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash"
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Context: workunit.ContextBuild, Module: "core", Component: "go", Tool: "go"},
-		{Context: workunit.ContextBuild, Module: "core", Component: "docker", Tool: "docker"}, // No manifest
+		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"}, // No manifest
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
 		return "sha256:hash", nil
 	}
 
-	result, err := AggregateUoWChanges(reader, workunit.ContextBuild, expectedUoWs, getInputHash)
+	result, err := AggregateUoWChanges(reader, core.ActionBuild, expectedUoWs, getInputHash)
 	require.NoError(t, err)
 
 	// UoWResult should have the underlying detection result

@@ -90,17 +90,16 @@ func (c *ModuleContractCache) EnsurePopulated(workspaceRoot string) error {
 }
 
 // GetReport returns the cached module contract report.
-// MUST call EnsurePopulated first, otherwise panics.
-// This is a programmer error - all callers must ensure population.
-func (c *ModuleContractCache) GetReport() *ModuleContractReport {
+// Returns an error if the cache has not been populated via EnsurePopulated().
+func (c *ModuleContractCache) GetReport() (*ModuleContractReport, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if !c.populated {
-		panic("ModuleContractCache not populated - call EnsurePopulated() first")
+		return nil, fmt.Errorf("ModuleContractCache not populated - call EnsurePopulated() first")
 	}
 
-	return c.report
+	return c.report, nil
 }
 
 // ModuleContractReport contains information about loaded module domain.
@@ -144,7 +143,7 @@ func GetModuleContracts(workspaceRoot string) (*ModuleContractReport, error) {
 	}
 
 	// Return cached validated report
-	return globalModuleContractCache.GetReport(), nil
+	return globalModuleContractCache.GetReport()
 }
 
 // buildModuleContractReport builds a report from a validated registry.

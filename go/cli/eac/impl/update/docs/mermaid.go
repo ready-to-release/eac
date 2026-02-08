@@ -10,7 +10,8 @@ import (
 	"strings"
 
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/caching"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -34,14 +35,14 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	fmt.Fprintln(logWriter, "Updating mermaid cache...")
 
 	// Create asset cache (nil = use cache normally)
-	cache := books.NewAssetCache(repoRoot, nil)
+	cache := caching.NewAssetCache(repoRoot, nil, nil)
 
 	// Scan docs/ for markdown files
 	docsDir := paths.DocsSourcePath(repoRoot)
 
 	// Collect all mermaid blocks
-	allBlocks := []books.MermaidBlock{}
-	blocksByFile := make(map[string][]books.MermaidBlock)
+	allBlocks := []diagrams.MermaidBlock{}
+	blocksByFile := make(map[string][]diagrams.MermaidBlock)
 
 	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -58,7 +59,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 			return err
 		}
 
-		blocks := books.ExtractMermaidBlocks(string(content), path, docsDir)
+		blocks := diagrams.ExtractMermaidBlocks(string(content), path, docsDir)
 		if len(blocks) > 0 {
 			blocksByFile[path] = blocks
 			allBlocks = append(allBlocks, blocks...)
@@ -99,11 +100,11 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	}
 
 	// Check cache and identify what needs rendering
-	statuses := []books.CacheStatus{}
+	statuses := []diagrams.CacheStatus{}
 
 	for _, block := range allBlocks {
-		cleanContent := books.StripSizeDirective(block.Content)
-		cachePath, hit := cache.GetMermaid(books.MermaidCacheKey{
+		cleanContent := diagrams.StripSizeDirective(block.Content)
+		cachePath, hit := cache.GetMermaid(caching.MermaidCacheKey{
 			SourceFile: block.SourceFile,
 			BlockIndex: block.BlockIndex,
 			Code:       cleanContent,
@@ -120,7 +121,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 			result.CacheMisses++
 		}
 
-		statuses = append(statuses, books.CacheStatus{
+		statuses = append(statuses, diagrams.CacheStatus{
 			Block:     block,
 			Cached:    hit,
 			CachePath: cachePath,
@@ -182,9 +183,9 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 
 // renderMermaidBatch renders diagrams using the mermaid-render tool.
 // Uses shared types from books package to avoid duplication.
-func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *books.AssetCache, logWriter io.Writer) (int, int, error) {
+func renderMermaidBatch(repoRoot string, statuses []diagrams.CacheStatus, cache *caching.AssetCache, logWriter io.Writer) (int, int, error) {
 	// Filter for cache misses
-	toRender := []books.CacheStatus{}
+	toRender := []diagrams.CacheStatus{}
 	for i := range statuses {
 		status := &statuses[i]
 		if !status.Cached {
@@ -217,7 +218,7 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 	}
 
 	// Create diagram specs
-	diagrams := make([]mermaidDiagramSpec, 0, len(toRender))
+	diagramSpecs := make([]mermaidDiagramSpec, 0, len(toRender))
 	for i, status := range toRender {
 		block := status.Block
 
@@ -237,7 +238,7 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 		}
 		containerOutput := "/staging/" + strings.ReplaceAll(relOutput, "\\", "/")
 
-		diagrams = append(diagrams, mermaidDiagramSpec{
+		diagramSpecs = append(diagramSpecs, mermaidDiagramSpec{
 			Input:  containerInput,
 			Output: containerOutput,
 			Config: "/etc/mermaid/mermaid-config.json",
@@ -246,7 +247,7 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 
 	// Create manifest
 	manifest := mermaidManifest{
-		Diagrams:    diagrams,
+		Diagrams:    diagramSpecs,
 		Concurrency: 4,
 		Theme:       "dark",
 	}
@@ -286,8 +287,8 @@ func renderMermaidBatch(repoRoot string, statuses []books.CacheStatus, cache *bo
 
 			// Store in persistent cache
 			block := status.Block
-			cleanContent := books.StripSizeDirective(block.Content)
-			if err := cache.PutMermaid(status.CachePath, books.MermaidCacheKey{
+			cleanContent := diagrams.StripSizeDirective(block.Content)
+			if err := cache.PutMermaid(status.CachePath, caching.MermaidCacheKey{
 				SourceFile: block.SourceFile,
 				BlockIndex: block.BlockIndex,
 				Code:       cleanContent,

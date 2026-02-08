@@ -77,8 +77,7 @@ const (
 	// Mock and test configuration.
 	EnvR2RMockAIDir              = "R2R_MOCK_AI_DIR"
 	EnvR2RMockSecurity           = "R2R_MOCK_SECURITY"
-	EnvR2RMockStructurizr        = "R2R_MOCK_STRUCTURIZR" // Legacy: use EnvR2RMockDocker instead
-	EnvR2RMockDocker             = "R2R_MOCK_DOCKER"      // Preferred for all Docker mocking
+	EnvR2RMockDocker             = "R2R_MOCK_DOCKER"
 	EnvR2RMockGitHubCLI          = "R2R_MOCK_GITHUB_CLI"
 	EnvR2RMockNoWorkflows        = "R2R_MOCK_NO_WORKFLOWS"
 	EnvR2RMockAI                 = "R2R_MOCK_AI"

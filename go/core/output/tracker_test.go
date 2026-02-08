@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,9 +37,9 @@ type UoWTracker interface {
 // =============================================================================
 
 // createTestUnitID creates a UnitID for testing purposes.
-func createTestUnitID(ctx workunit.Context, module, component, tool string) workunit.UnitID {
+func createTestUnitID(ctx core.ActionType, module, component, tool string) workunit.UnitID {
 	return workunit.UnitID{
-		Context:   ctx,
+		Action:    ctx,
 		Module:    module,
 		Component: component,
 		Tool:      tool,
@@ -46,9 +47,9 @@ func createTestUnitID(ctx workunit.Context, module, component, tool string) work
 }
 
 // createTestManifest creates a UoWManifest for testing purposes.
-func createTestManifest(ctx workunit.Context, module, component, tool string) *UoWManifest {
+func createTestManifest(ctx core.ActionType, module, component, tool string) *UoWManifest {
 	return &UoWManifest{
-		Context:    ctx,
+		Action:     ctx,
 		Module:     module,
 		Component:  component,
 		Tool:       tool,
@@ -65,8 +66,8 @@ func createTestManifest(ctx workunit.Context, module, component, tool string) *U
 // createManifestOnDisk creates a manifest file at the expected location.
 func createManifestOnDisk(t *testing.T, workspaceRoot string, manifest *UoWManifest) string {
 	t.Helper()
-	dirName := manifest.Component + "_" + manifest.Tool
-	manifestDir := filepath.Join(workspaceRoot, "out", string(manifest.Context), manifest.Module, dirName)
+	dirName := manifest.DirName()
+	manifestDir := filepath.Join(workspaceRoot, "out", string(manifest.Action), manifest.Module, dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
 
@@ -100,37 +101,42 @@ func createArtifactOnDisk(t *testing.T, basePath, relativePath string, content [
 
 func TestUoWTracker_RecordStart_CreatesOutputDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	err := tracker.RecordStart(id)
+	require.NoError(t, err)
 
 	// Expected directory path: out/build/test-module/go-go/
 	expectedDir := filepath.Join(tmpDir, "out", "build", "test-module", "go-go")
-
-	// Verify directory does not exist before RecordStart
-	_, err := os.Stat(expectedDir)
-	assert.True(t, os.IsNotExist(err), "Directory should not exist before RecordStart")
-
-	// TODO: After implementation, call tracker.RecordStart(id) and verify directory is created
-	// For now, this test documents the expected behavior
-	_ = id
-	_ = expectedDir
+	info, err := os.Stat(expectedDir)
+	require.NoError(t, err)
+	assert.True(t, info.IsDir(), "RecordStart should create the output directory")
 }
 
 func TestUoWTracker_RecordStart_IdempotentForSameUoW(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
 	// Calling RecordStart multiple times for the same UoW should not error
-	// TODO: After implementation, verify multiple RecordStart calls succeed
-	_ = tmpDir
-	_ = id
+	err := tracker.RecordStart(id)
+	require.NoError(t, err)
+
+	err = tracker.RecordStart(id)
+	require.NoError(t, err)
+
+	err = tracker.RecordStart(id)
+	require.NoError(t, err)
 }
 
 func TestUoWTracker_RecordStart_AllContexts(t *testing.T) {
-	contexts := []workunit.Context{
-		workunit.ContextBuild,
-		workunit.ContextTest,
-		workunit.ContextLint,
-		workunit.ContextScan,
+	contexts := []core.ActionType{
+		core.ActionBuild,
+		core.ActionTest,
+		core.ActionLint,
+		core.ActionScan,
 	}
 
 	for _, ctx := range contexts {
@@ -138,24 +144,41 @@ func TestUoWTracker_RecordStart_AllContexts(t *testing.T) {
 			tmpDir := t.TempDir()
 			id := createTestUnitID(ctx, "module", "component", "tool")
 
+			tracker := NewTracker(tmpDir, ctx)
+			err := tracker.RecordStart(id)
+			require.NoError(t, err)
+
 			// Expected directory path: out/{context}/module/component-tool/
 			expectedDir := filepath.Join(tmpDir, "out", string(ctx), "module", "component-tool")
-
-			// TODO: After implementation, verify directory is created for each context
-			_ = expectedDir
-			_ = id
+			info, err := os.Stat(expectedDir)
+			require.NoError(t, err)
+			assert.True(t, info.IsDir(), "RecordStart should create directory for context %s", ctx)
 		})
 	}
 }
 
 func TestUoWTracker_RecordStart_RecordsStartTime(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
-	// RecordStart should record the start time for duration calculation
-	// TODO: After implementation, verify start time is recorded
-	_ = tmpDir
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+
+	before := time.Now()
+	err := tracker.RecordStart(id)
+	require.NoError(t, err)
+
+	// Verify start time is recorded by completing with Duration=0 and checking it gets set
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
+	manifest.Duration = 0
+
+	time.Sleep(10 * time.Millisecond)
+	err = tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	// Duration should be non-zero since RecordStart recorded a start time
+	assert.True(t, manifest.Duration > 0, "Duration should be set from start time")
+	assert.True(t, manifest.Duration >= 10*time.Millisecond, "Duration should be at least 10ms")
+	_ = before
 }
 
 // =============================================================================
@@ -164,57 +187,69 @@ func TestUoWTracker_RecordStart_RecordsStartTime(t *testing.T) {
 
 func TestUoWTracker_RecordComplete_WritesManifestToDisk(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
 
 	// Expected manifest path: out/build/test-module/go-go/uow.manifest.json
 	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
+	_, err = os.Stat(expectedPath)
+	require.NoError(t, err, "Manifest file should exist at expected path")
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordComplete(id, manifest)
-	// 2. Verify file exists at expectedPath
-	// 3. Load and verify manifest content matches
-	_ = id
-	_ = manifest
-	_ = expectedPath
+	// Load and verify content matches
+	loaded, err := Load(expectedPath)
+	require.NoError(t, err)
+	assert.Equal(t, manifest.Module, loaded.Module)
+	assert.Equal(t, manifest.Component, loaded.Component)
+	assert.Equal(t, manifest.Tool, loaded.Tool)
+	assert.Equal(t, manifest.InputHash, loaded.InputHash)
 }
 
 func TestUoWTracker_RecordComplete_SetsDurationFromStartTime(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Duration = 0 // Duration should be set by RecordComplete
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordStart(id)
-	// 2. time.Sleep(100ms) or similar
-	// 3. Call tracker.RecordComplete(id, manifest)
-	// 4. Verify manifest.Duration is approximately 100ms
-	_ = tmpDir
-	_ = id
-	_ = manifest
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	err := tracker.RecordStart(id)
+	require.NoError(t, err)
+
+	time.Sleep(50 * time.Millisecond)
+
+	err = tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	assert.True(t, manifest.Duration >= 50*time.Millisecond, "Duration should be at least 50ms, got %v", manifest.Duration)
 }
 
 func TestUoWTracker_RecordComplete_WithoutRecordStart_StillWorks(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Duration = 30 * time.Second // Pre-set duration since no start time
 
-	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
 	// RecordComplete should work even without RecordStart
-	// Duration will use the pre-set value since no start time exists
-	// TODO: After implementation, verify this behavior
-	_ = id
-	_ = manifest
-	_ = expectedPath
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	expectedPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
+	_, err = os.Stat(expectedPath)
+	require.NoError(t, err, "Manifest should be written even without RecordStart")
+
+	// Duration should be preserved since no start time exists
+	assert.Equal(t, 30*time.Second, manifest.Duration)
 }
 
 func TestUoWTracker_RecordComplete_CreatesDirectoryIfMissing(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "new-module", "go", "go")
-	manifest := createTestManifest(workunit.ContextBuild, "new-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "new-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "new-module", "go", "go")
 
 	expectedDir := filepath.Join(tmpDir, "out", "build", "new-module", "go-go")
 
@@ -222,42 +257,51 @@ func TestUoWTracker_RecordComplete_CreatesDirectoryIfMissing(t *testing.T) {
 	_, err := os.Stat(expectedDir)
 	assert.True(t, os.IsNotExist(err))
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordComplete(id, manifest) without RecordStart
-	// 2. Verify directory is created
-	// 3. Verify manifest file exists
-	_ = id
-	_ = manifest
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	err = tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	// Verify directory is created
+	info, err := os.Stat(expectedDir)
+	require.NoError(t, err)
+	assert.True(t, info.IsDir())
+
+	// Verify manifest file exists
+	_, err = os.Stat(filepath.Join(expectedDir, "uow.manifest.json"))
+	require.NoError(t, err)
 }
 
 func TestUoWTracker_RecordComplete_OverwritesExistingManifest(t *testing.T) {
-	_ = t.TempDir() // Will be used after implementation
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	tmpDir := t.TempDir()
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
 	// Create first manifest
-	manifest1 := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest1 := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest1.InputHash = "sha256:first-hash"
+	err := tracker.RecordComplete(id, manifest1)
+	require.NoError(t, err)
 
 	// Create second manifest
-	manifest2 := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest2 := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest2.InputHash = "sha256:second-hash"
+	err = tracker.RecordComplete(id, manifest2)
+	require.NoError(t, err)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordComplete(id, manifest1)
-	// 2. Call tracker.RecordComplete(id, manifest2)
-	// 3. Load manifest from disk
-	// 4. Verify it contains "sha256:second-hash"
-	_ = id
-	_ = manifest1
-	_ = manifest2
+	// Load manifest from disk and verify it contains "sha256:second-hash"
+	manifestPath := filepath.Join(tmpDir, "out", "build", "test-module", "go-go", "uow.manifest.json")
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:second-hash", loaded.InputHash)
 }
 
 func TestUoWTracker_RecordComplete_WritesAllFields(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextTest, "core", "go", "gotest")
+	id := createTestUnitID(core.ActionTest, "core", "go", "gotest")
 
 	manifest := &UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:     core.ActionTest,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "gotest",
@@ -273,49 +317,59 @@ func TestUoWTracker_RecordComplete_WritesAllFields(t *testing.T) {
 		Version:    "2.0.0",
 	}
 
-	expectedPath := filepath.Join(tmpDir, "out", "test", "core", "go-gotest", "uow.manifest.json")
+	tracker := NewTracker(tmpDir, core.ActionTest)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordComplete(id, manifest)
-	// 2. Load manifest from disk
-	// 3. Verify all fields match
-	_ = id
-	_ = manifest
-	_ = expectedPath
+	expectedPath := filepath.Join(tmpDir, "out", "test", "core", "go-gotest", "uow.manifest.json")
+	loaded, err := Load(expectedPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, core.ActionTest, loaded.Action)
+	assert.Equal(t, "core", loaded.Module)
+	assert.Equal(t, "go", loaded.Component)
+	assert.Equal(t, "gotest", loaded.Tool)
+	assert.Equal(t, 1, loaded.ExitCode)
+	assert.Equal(t, "sha256:specific-input-hash", loaded.InputHash)
+	assert.Equal(t, time.Date(2024, 6, 15, 14, 30, 0, 0, time.UTC), loaded.ExecutedAt)
+	assert.Equal(t, 123*time.Second, loaded.Duration)
+	assert.Len(t, loaded.Artifacts, 2)
+	assert.Equal(t, "sha256:specific-output-hash", loaded.OutputHash)
+	assert.Equal(t, "2.0.0", loaded.Version)
 }
 
 func TestUoWTracker_RecordComplete_AllContexts(t *testing.T) {
 	tests := []struct {
 		name      string
-		context   workunit.Context
+		context   core.ActionType
 		module    string
 		component string
 		tool      string
 	}{
 		{
 			name:      "build context",
-			context:   workunit.ContextBuild,
+			context:   core.ActionBuild,
 			module:    "eac-cli",
 			component: "go",
 			tool:      "go",
 		},
 		{
 			name:      "test context",
-			context:   workunit.ContextTest,
+			context:   core.ActionTest,
 			module:    "core",
 			component: "go",
 			tool:      "gotest",
 		},
 		{
 			name:      "lint context",
-			context:   workunit.ContextLint,
+			context:   core.ActionLint,
 			module:    "web-app",
 			component: "typescript",
 			tool:      "eslint",
 		},
 		{
 			name:      "scan context",
-			context:   workunit.ContextScan,
+			context:   core.ActionScan,
 			module:    "eac-cli",
 			component: "docker",
 			tool:      "trivy-vuln",
@@ -328,29 +382,38 @@ func TestUoWTracker_RecordComplete_AllContexts(t *testing.T) {
 			id := createTestUnitID(tt.context, tt.module, tt.component, tt.tool)
 			manifest := createTestManifest(tt.context, tt.module, tt.component, tt.tool)
 
+			tracker := NewTracker(tmpDir, tt.context)
+			err := tracker.RecordComplete(id, manifest)
+			require.NoError(t, err)
+
 			dirName := tt.component + "-" + tt.tool
 			expectedPath := filepath.Join(tmpDir, "out", string(tt.context), tt.module, dirName, "uow.manifest.json")
-
-			// TODO: After implementation, verify each context works correctly
-			_ = id
-			_ = manifest
-			_ = expectedPath
+			loaded, err := Load(expectedPath)
+			require.NoError(t, err)
+			assert.Equal(t, tt.context, loaded.Action)
+			assert.Equal(t, tt.module, loaded.Module)
+			assert.Equal(t, tt.component, loaded.Component)
+			assert.Equal(t, tt.tool, loaded.Tool)
 		})
 	}
 }
 
 func TestUoWTracker_RecordComplete_WithFailedExecution(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextTest, "failing-module", "go", "gotest")
+	id := createTestUnitID(core.ActionTest, "failing-module", "go", "gotest")
 
-	manifest := createTestManifest(workunit.ContextTest, "failing-module", "go", "gotest")
+	manifest := createTestManifest(core.ActionTest, "failing-module", "go", "gotest")
 	manifest.ExitCode = 1 // Non-zero exit code
 
+	tracker := NewTracker(tmpDir, core.ActionTest)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
 	// RecordComplete should save manifests for failed executions too
-	// TODO: After implementation, verify failed manifests are saved
-	_ = tmpDir
-	_ = id
-	_ = manifest
+	manifestPath := filepath.Join(tmpDir, "out", "test", "failing-module", "go-gotest", "uow.manifest.json")
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	assert.Equal(t, 1, loaded.ExitCode)
 }
 
 // =============================================================================
@@ -359,53 +422,53 @@ func TestUoWTracker_RecordComplete_WithFailedExecution(t *testing.T) {
 
 func TestUoWTracker_RecordCacheHit_ReturnsExistingManifest(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create manifest on disk
-	originalManifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	originalManifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	originalManifest.InputHash = "sha256:cache-test-input"
 	createManifestOnDisk(t, tmpDir, originalManifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify returned manifest matches originalManifest
-	_ = id
-	_ = originalManifest
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	loaded, err := tracker.RecordCacheHit(id)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:cache-test-input", loaded.InputHash)
+	assert.Equal(t, originalManifest.Module, loaded.Module)
+	assert.Equal(t, originalManifest.Component, loaded.Component)
+	assert.Equal(t, originalManifest.Tool, loaded.Tool)
 }
 
 func TestUoWTracker_RecordCacheHit_ReturnsErrorWhenManifestMissing(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "nonexistent-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "nonexistent-module", "go", "go")
 
-	// No manifest exists on disk
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned
-	// 3. Verify returned manifest is nil
-	_ = tmpDir
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	manifest, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err)
+	assert.Nil(t, manifest)
 }
 
 func TestUoWTracker_RecordCacheHit_ReturnsErrorWhenArtifactsMissing(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create manifest that references non-existent artifacts
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "binary", Path: "eac-linux-amd64", SHA256: "sha256:nonexistent", Size: 1000, Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned (cache invalid - artifacts missing)
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Should return error for missing artifacts")
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "missing")
 }
 
 func TestUoWTracker_RecordCacheHit_ReturnsErrorWhenArtifactsCorrupt(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create manifest and artifact, but with mismatched hash
 	dirName := "go-go"
@@ -420,21 +483,22 @@ func TestUoWTracker_RecordCacheHit_ReturnsErrorWhenArtifactsCorrupt(t *testing.T
 	require.NoError(t, err)
 
 	// Create manifest with wrong hash
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "binary", Path: "eac-linux-amd64", SHA256: "sha256:wrong-hash", Size: int64(len(artifactContent)), Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned (cache invalid - hash mismatch)
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Should return error for corrupt artifacts")
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "corrupt")
 }
 
 func TestUoWTracker_RecordCacheHit_SucceedsWhenArtifactsValid(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create UoW directory
 	dirName := "go-go"
@@ -448,22 +512,22 @@ func TestUoWTracker_RecordCacheHit_SucceedsWhenArtifactsValid(t *testing.T) {
 	hash, size := createArtifactOnDisk(t, uowDir, artifactRelPath, artifactContent)
 
 	// Create manifest with correct hash
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "binary", Path: artifactRelPath, SHA256: hash, Size: size, Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify no error is returned
-	// 3. Verify returned manifest is valid
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	loaded, err := tracker.RecordCacheHit(id)
+	require.NoError(t, err)
+	assert.NotNil(t, loaded)
+	assert.Equal(t, manifest.Module, loaded.Module)
 }
 
 func TestUoWTracker_RecordCacheHit_ValidatesMultipleArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create UoW directory
 	dirName := "go-go"
@@ -487,20 +551,20 @@ func TestUoWTracker_RecordCacheHit_ValidatesMultipleArtifacts(t *testing.T) {
 	artifacts = append(artifacts, Artifact{ID: "windows", Path: "eac-windows-amd64.exe", SHA256: hash3, Size: size3, Type: "binary"})
 
 	// Create manifest with all artifacts
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = artifacts
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify no error is returned
-	// 3. Verify returned manifest has all 3 artifacts
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	loaded, err := tracker.RecordCacheHit(id)
+	require.NoError(t, err)
+	assert.NotNil(t, loaded)
+	assert.Len(t, loaded.Artifacts, 3)
 }
 
 func TestUoWTracker_RecordCacheHit_FailsIfAnyArtifactMissing(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create UoW directory
 	dirName := "go-go"
@@ -513,25 +577,25 @@ func TestUoWTracker_RecordCacheHit_FailsIfAnyArtifactMissing(t *testing.T) {
 	hash1, size1 := createArtifactOnDisk(t, uowDir, "eac-linux-amd64", artifact1Content)
 
 	// Create manifest referencing existing and missing artifacts
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "linux", Path: "eac-linux-amd64", SHA256: hash1, Size: size1, Type: "binary"},
 		{ID: "darwin", Path: "eac-darwin-amd64", SHA256: "sha256:missing", Size: 1000, Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned (one artifact missing)
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Should fail when any artifact is missing")
+	assert.Nil(t, result)
 }
 
 func TestUoWTracker_RecordCacheHit_AllContexts(t *testing.T) {
-	contexts := []workunit.Context{
-		workunit.ContextBuild,
-		workunit.ContextTest,
-		workunit.ContextLint,
-		workunit.ContextScan,
+	contexts := []core.ActionType{
+		core.ActionBuild,
+		core.ActionTest,
+		core.ActionLint,
+		core.ActionScan,
 	}
 
 	for _, ctx := range contexts {
@@ -543,8 +607,11 @@ func TestUoWTracker_RecordCacheHit_AllContexts(t *testing.T) {
 			manifest := createTestManifest(ctx, "module", "component", "tool")
 			createManifestOnDisk(t, tmpDir, manifest)
 
-			// TODO: After implementation, verify RecordCacheHit works for all contexts
-			_ = id
+			tracker := NewTracker(tmpDir, ctx)
+			loaded, err := tracker.RecordCacheHit(id)
+			require.NoError(t, err)
+			assert.NotNil(t, loaded)
+			assert.Equal(t, ctx, loaded.Action)
 		})
 	}
 }
@@ -558,29 +625,29 @@ func TestUoWTracker_ConcurrentRecordStart(t *testing.T) {
 
 	// Create multiple UnitIDs for different UoWs
 	ids := []workunit.UnitID{
-		createTestUnitID(workunit.ContextBuild, "module1", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module2", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module3", "go", "go"),
-		createTestUnitID(workunit.ContextTest, "module1", "go", "gotest"),
-		createTestUnitID(workunit.ContextLint, "module1", "go", "golangci-lint"),
+		createTestUnitID(core.ActionBuild, "module1", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module2", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module3", "go", "go"),
+		createTestUnitID(core.ActionTest, "module1", "go", "gotest"),
+		createTestUnitID(core.ActionLint, "module1", "go", "golangci-lint"),
 	}
 
-	// TODO: After implementation:
-	// 1. Create tracker with tmpDir
-	// 2. Call RecordStart concurrently for all IDs
-	// 3. Verify all succeed without race conditions
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+
 	var wg sync.WaitGroup
-	for _, id := range ids {
+	errors := make([]error, len(ids))
+	for i, id := range ids {
 		wg.Add(1)
-		go func(id workunit.UnitID) {
+		go func(idx int, id workunit.UnitID) {
 			defer wg.Done()
-			// TODO: Call tracker.RecordStart(id)
-			_ = id
-		}(id)
+			errors[idx] = tracker.RecordStart(id)
+		}(i, id)
 	}
 	wg.Wait()
 
-	_ = tmpDir
+	for i, err := range errors {
+		assert.NoError(t, err, "RecordStart failed for id %d", i)
+	}
 }
 
 func TestUoWTracker_ConcurrentRecordComplete(t *testing.T) {
@@ -588,27 +655,36 @@ func TestUoWTracker_ConcurrentRecordComplete(t *testing.T) {
 
 	// Create multiple UnitIDs for different UoWs
 	ids := []workunit.UnitID{
-		createTestUnitID(workunit.ContextBuild, "module1", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module2", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module3", "go", "go"),
-		createTestUnitID(workunit.ContextTest, "module1", "go", "gotest"),
-		createTestUnitID(workunit.ContextLint, "module1", "go", "golangci-lint"),
+		createTestUnitID(core.ActionBuild, "module1", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module2", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module3", "go", "go"),
+		createTestUnitID(core.ActionTest, "module1", "go", "gotest"),
+		createTestUnitID(core.ActionLint, "module1", "go", "golangci-lint"),
 	}
 
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+
 	var wg sync.WaitGroup
-	for _, id := range ids {
+	errors := make([]error, len(ids))
+	for i, id := range ids {
 		wg.Add(1)
-		go func(id workunit.UnitID) {
+		go func(idx int, id workunit.UnitID) {
 			defer wg.Done()
-			manifest := createTestManifest(id.Context, id.Module, id.Component, id.Tool)
-			// TODO: Call tracker.RecordComplete(id, manifest)
-			_ = manifest
-		}(id)
+			manifest := createTestManifest(id.Action, id.Module, id.Component, id.Tool)
+			errors[idx] = tracker.RecordComplete(id, manifest)
+		}(i, id)
 	}
 	wg.Wait()
 
-	// TODO: Verify all manifests were written correctly
-	_ = tmpDir
+	// Verify all manifests were written correctly
+	for i, err := range errors {
+		assert.NoError(t, err, "RecordComplete failed for id %d", i)
+	}
+	for _, id := range ids {
+		manifestPath := filepath.Join(tmpDir, "out", string(id.Action), id.Module, id.DirName(), "uow.manifest.json")
+		_, err := os.Stat(manifestPath)
+		assert.NoError(t, err, "Manifest should exist for %s", id.Longname())
+	}
 }
 
 func TestUoWTracker_ConcurrentRecordCacheHit(t *testing.T) {
@@ -616,70 +692,78 @@ func TestUoWTracker_ConcurrentRecordCacheHit(t *testing.T) {
 
 	// Create multiple UnitIDs and their manifests on disk
 	ids := []workunit.UnitID{
-		createTestUnitID(workunit.ContextBuild, "module1", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module2", "go", "go"),
-		createTestUnitID(workunit.ContextBuild, "module3", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module1", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module2", "go", "go"),
+		createTestUnitID(core.ActionBuild, "module3", "go", "go"),
 	}
 
 	// Create manifests on disk for all IDs
 	for _, id := range ids {
-		manifest := createTestManifest(id.Context, id.Module, id.Component, id.Tool)
+		manifest := createTestManifest(id.Action, id.Module, id.Component, id.Tool)
 		createManifestOnDisk(t, tmpDir, manifest)
 	}
 
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+
 	var wg sync.WaitGroup
-	for _, id := range ids {
+	errors := make([]error, len(ids))
+	for i, id := range ids {
 		wg.Add(1)
-		go func(id workunit.UnitID) {
+		go func(idx int, id workunit.UnitID) {
 			defer wg.Done()
-			// TODO: Call tracker.RecordCacheHit(id)
-			// Verify no errors and manifest is returned
-		}(id)
+			_, errors[idx] = tracker.RecordCacheHit(id)
+		}(i, id)
 	}
 	wg.Wait()
+
+	for i, err := range errors {
+		assert.NoError(t, err, "RecordCacheHit failed for id %d", i)
+	}
 }
 
 func TestUoWTracker_ConcurrentMixedOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create some manifests on disk for cache hits
-	cachedID := createTestUnitID(workunit.ContextBuild, "cached-module", "go", "go")
-	cachedManifest := createTestManifest(workunit.ContextBuild, "cached-module", "go", "go")
+	cachedID := createTestUnitID(core.ActionBuild, "cached-module", "go", "go")
+	cachedManifest := createTestManifest(core.ActionBuild, "cached-module", "go", "go")
 	createManifestOnDisk(t, tmpDir, cachedManifest)
 
 	// IDs for new work
-	newID1 := createTestUnitID(workunit.ContextBuild, "new-module1", "go", "go")
-	newID2 := createTestUnitID(workunit.ContextBuild, "new-module2", "go", "go")
+	newID1 := createTestUnitID(core.ActionBuild, "new-module1", "go", "go")
+	newID2 := createTestUnitID(core.ActionBuild, "new-module2", "go", "go")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
 	var wg sync.WaitGroup
+	var startErr, completeErr, cacheErr error
 
 	// RecordStart for new work
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// TODO: tracker.RecordStart(newID1)
-		_ = newID1
+		startErr = tracker.RecordStart(newID1)
 	}()
 
 	// RecordComplete for new work
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// TODO: tracker.RecordComplete(newID2, createTestManifest(...))
-		_ = newID2
+		completeErr = tracker.RecordComplete(newID2, createTestManifest(core.ActionBuild, "new-module2", "go", "go"))
 	}()
 
 	// RecordCacheHit for cached work
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// TODO: tracker.RecordCacheHit(cachedID)
-		_ = cachedID
+		_, cacheErr = tracker.RecordCacheHit(cachedID)
 	}()
 
 	wg.Wait()
 
-	_ = tmpDir
+	assert.NoError(t, startErr, "RecordStart should succeed")
+	assert.NoError(t, completeErr, "RecordComplete should succeed")
+	assert.NoError(t, cacheErr, "RecordCacheHit should succeed")
 }
 
 // =============================================================================
@@ -688,33 +772,42 @@ func TestUoWTracker_ConcurrentMixedOperations(t *testing.T) {
 
 func TestUoWTracker_RecordComplete_WithEmptyArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	id := createTestUnitID(core.ActionLint, "test-module", "go", "golangci-lint")
 
-	manifest := createTestManifest(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	manifest := createTestManifest(core.ActionLint, "test-module", "go", "golangci-lint")
 	manifest.Artifacts = []Artifact{} // No artifacts for lint
 
-	// TODO: After implementation, verify empty artifacts list is saved correctly
-	_ = tmpDir
-	_ = id
-	_ = manifest
+	tracker := NewTracker(tmpDir, core.ActionLint)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	// Verify manifest was saved with empty artifacts
+	manifestPath := filepath.Join(tmpDir, "out", "lint", "test-module", "go-golangci-lint", "uow.manifest.json")
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	assert.Empty(t, loaded.Artifacts)
 }
 
 func TestUoWTracker_RecordComplete_WithNilArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	id := createTestUnitID(core.ActionLint, "test-module", "go", "golangci-lint")
 
-	manifest := createTestManifest(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	manifest := createTestManifest(core.ActionLint, "test-module", "go", "golangci-lint")
 	manifest.Artifacts = nil // Nil artifacts
 
-	// TODO: After implementation, verify nil artifacts is handled correctly
-	_ = tmpDir
-	_ = id
-	_ = manifest
+	tracker := NewTracker(tmpDir, core.ActionLint)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	// Verify manifest was saved (nil artifacts handled gracefully)
+	manifestPath := filepath.Join(tmpDir, "out", "lint", "test-module", "go-golangci-lint", "uow.manifest.json")
+	_, err = os.Stat(manifestPath)
+	require.NoError(t, err)
 }
 
 func TestUoWTracker_RecordCacheHit_ManifestExistsButInvalid(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create manifest directory and write invalid JSON
 	dirName := "go-go"
@@ -726,15 +819,15 @@ func TestUoWTracker_RecordCacheHit_ManifestExistsButInvalid(t *testing.T) {
 	err = os.WriteFile(manifestPath, []byte("invalid json {{{"), 0644)
 	require.NoError(t, err)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned (invalid manifest)
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Should return error for invalid manifest JSON")
+	assert.Nil(t, result)
 }
 
 func TestUoWTracker_RecordCacheHit_ManifestExistsButEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
 	// Create manifest directory and write empty file
 	dirName := "go-go"
@@ -746,42 +839,44 @@ func TestUoWTracker_RecordCacheHit_ManifestExistsButEmpty(t *testing.T) {
 	err = os.WriteFile(manifestPath, []byte(""), 0644)
 	require.NoError(t, err)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify error is returned (empty manifest)
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Should return error for empty manifest")
+	assert.Nil(t, result)
 }
 
 func TestUoWTracker_WorksWithSpecialCharactersInNames(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Module and component names with hyphens (common pattern)
-	id := createTestUnitID(workunit.ContextBuild, "my-complex-module", "go-component", "my-tool")
-	manifest := createTestManifest(workunit.ContextBuild, "my-complex-module", "go-component", "my-tool")
+	id := createTestUnitID(core.ActionBuild, "my-complex-module", "go-component", "my-tool")
+	manifest := createTestManifest(core.ActionBuild, "my-complex-module", "go-component", "my-tool")
+
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	err := tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
 
 	// Expected path: out/build/my-complex-module/go-component-my-tool/uow.manifest.json
 	expectedDir := filepath.Join(tmpDir, "out", "build", "my-complex-module", "go-component-my-tool")
-
-	// TODO: After implementation, verify special characters in names work correctly
-	_ = id
-	_ = manifest
-	_ = expectedDir
+	info, err := os.Stat(expectedDir)
+	require.NoError(t, err)
+	assert.True(t, info.IsDir())
 }
 
 func TestUoWTracker_RecordCacheHit_WithEmptyArtifactsList(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	id := createTestUnitID(core.ActionLint, "test-module", "go", "golangci-lint")
 
 	// Create manifest with empty artifacts (valid for lint operations)
-	manifest := createTestManifest(workunit.ContextLint, "test-module", "go", "golangci-lint")
+	manifest := createTestManifest(core.ActionLint, "test-module", "go", "golangci-lint")
 	manifest.Artifacts = []Artifact{}
 	createManifestOnDisk(t, tmpDir, manifest)
 
-	// TODO: After implementation:
-	// 1. Call tracker.RecordCacheHit(id)
-	// 2. Verify no error (empty artifacts is valid)
-	// 3. Verify manifest is returned correctly
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionLint)
+	loaded, err := tracker.RecordCacheHit(id)
+	require.NoError(t, err, "Empty artifacts list should be valid")
+	assert.NotNil(t, loaded)
+	assert.Empty(t, loaded.Artifacts)
 }
 
 // =============================================================================
@@ -790,40 +885,46 @@ func TestUoWTracker_RecordCacheHit_WithEmptyArtifactsList(t *testing.T) {
 
 func TestUoWTracker_FullWorkflow_Success(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
-	// TODO: After implementation:
-	// 1. RecordStart(id)
-	// 2. Simulate work (create artifacts)
-	// 3. RecordComplete(id, manifest) with artifacts
-	// 4. Verify manifest on disk
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
-	// Create UoW directory and artifacts
+	// 1. RecordStart
+	err := tracker.RecordStart(id)
+	require.NoError(t, err)
+
+	// 2. Create UoW directory and artifacts
 	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
-	err := os.MkdirAll(uowDir, 0755)
-	require.NoError(t, err)
 
 	// Create artifact
 	artifactContent := []byte("built binary content")
 	hash, size := createArtifactOnDisk(t, uowDir, "eac-linux-amd64", artifactContent)
 
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
+	manifest.Duration = 0 // Let tracker compute from start time
 	manifest.Artifacts = []Artifact{
 		{ID: "linux", Path: "eac-linux-amd64", SHA256: hash, Size: size, Type: "binary"},
 	}
 
-	_ = id
-	_ = manifest
+	// 3. RecordComplete
+	err = tracker.RecordComplete(id, manifest)
+	require.NoError(t, err)
+
+	// 4. Verify manifest on disk
+	manifestPath := filepath.Join(uowDir, "uow.manifest.json")
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	assert.Equal(t, "test-module", loaded.Module)
+	assert.Len(t, loaded.Artifacts, 1)
+	assert.True(t, loaded.Duration > 0, "Duration should be set from start time")
 }
 
 func TestUoWTracker_FullWorkflow_CacheHit(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
-	// TODO: After implementation:
-	// 1. First run: RecordStart, create artifacts, RecordComplete
-	// 2. Second run: RecordCacheHit should succeed
+	tracker := NewTracker(tmpDir, core.ActionBuild)
 
 	// Simulate existing build with valid artifacts
 	dirName := "go-go"
@@ -834,39 +935,40 @@ func TestUoWTracker_FullWorkflow_CacheHit(t *testing.T) {
 	artifactContent := []byte("cached binary content")
 	hash, size := createArtifactOnDisk(t, uowDir, "eac-linux-amd64", artifactContent)
 
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "linux", Path: "eac-linux-amd64", SHA256: hash, Size: size, Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
 	// Now RecordCacheHit should succeed
-	_ = id
+	loaded, err := tracker.RecordCacheHit(id)
+	require.NoError(t, err)
+	assert.NotNil(t, loaded)
+	assert.Equal(t, "test-module", loaded.Module)
 }
 
 func TestUoWTracker_FullWorkflow_CacheMiss(t *testing.T) {
 	tmpDir := t.TempDir()
-	id := createTestUnitID(workunit.ContextBuild, "test-module", "go", "go")
+	id := createTestUnitID(core.ActionBuild, "test-module", "go", "go")
 
-	// TODO: After implementation:
-	// 1. Create manifest but delete an artifact
-	// 2. RecordCacheHit should return error (cache miss)
-	// 3. Caller should then RecordStart and rebuild
-
-	// Create manifest with artifact reference
+	// Create manifest with artifact reference but no actual artifact file
 	dirName := "go-go"
 	uowDir := filepath.Join(tmpDir, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
 
-	manifest := createTestManifest(workunit.ContextBuild, "test-module", "go", "go")
+	manifest := createTestManifest(core.ActionBuild, "test-module", "go", "go")
 	manifest.Artifacts = []Artifact{
 		{ID: "linux", Path: "eac-linux-amd64", SHA256: "sha256:deleted-artifact", Size: 1000, Type: "binary"},
 	}
 	createManifestOnDisk(t, tmpDir, manifest)
 
 	// Artifact does not exist - cache should be invalid
-	_ = id
+	tracker := NewTracker(tmpDir, core.ActionBuild)
+	result, err := tracker.RecordCacheHit(id)
+	assert.Error(t, err, "Cache should be invalid when artifacts are missing")
+	assert.Nil(t, result)
 }
 
 // =============================================================================
@@ -876,7 +978,7 @@ func TestUoWTracker_FullWorkflow_CacheMiss(t *testing.T) {
 func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 	tests := []struct {
 		name      string
-		context   workunit.Context
+		context   core.ActionType
 		module    string
 		component string
 		tool      string
@@ -885,7 +987,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 	}{
 		{
 			name:      "successful build with artifacts",
-			context:   workunit.ContextBuild,
+			context:   core.ActionBuild,
 			module:    "eac-cli",
 			component: "go",
 			tool:      "go",
@@ -896,7 +998,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 		},
 		{
 			name:      "failed test with report",
-			context:   workunit.ContextTest,
+			context:   core.ActionTest,
 			module:    "core",
 			component: "go",
 			tool:      "gotest",
@@ -907,7 +1009,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 		},
 		{
 			name:      "lint with no artifacts",
-			context:   workunit.ContextLint,
+			context:   core.ActionLint,
 			module:    "web-app",
 			component: "typescript",
 			tool:      "eslint",
@@ -916,7 +1018,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 		},
 		{
 			name:      "scan with multiple artifacts",
-			context:   workunit.ContextScan,
+			context:   core.ActionScan,
 			module:    "eac-cli",
 			component: "docker",
 			tool:      "trivy-vuln",
@@ -934,7 +1036,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 			id := createTestUnitID(tt.context, tt.module, tt.component, tt.tool)
 
 			manifest := &UoWManifest{
-				Context:    tt.context,
+				Action:     tt.context,
 				Module:     tt.module,
 				Component:  tt.component,
 				Tool:       tt.tool,
@@ -947,32 +1049,41 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 				Version:    "1.0.0",
 			}
 
+			tracker := NewTracker(tmpDir, tt.context)
+			err := tracker.RecordComplete(id, manifest)
+			require.NoError(t, err)
+
 			dirName := tt.component + "-" + tt.tool
 			expectedPath := filepath.Join(tmpDir, "out", string(tt.context), tt.module, dirName, "uow.manifest.json")
 
-			// TODO: After implementation:
-			// 1. Call tracker.RecordComplete(id, manifest)
-			// 2. Verify file exists at expectedPath
-			// 3. Load and verify content
-			_ = id
-			_ = manifest
-			_ = expectedPath
+			// Verify file exists at expectedPath
+			_, err = os.Stat(expectedPath)
+			require.NoError(t, err, "Manifest should exist at %s", expectedPath)
+
+			// Load and verify content
+			loaded, err := Load(expectedPath)
+			require.NoError(t, err)
+			assert.Equal(t, tt.exitCode, loaded.ExitCode)
+			assert.Equal(t, tt.module, loaded.Module)
+			assert.Equal(t, tt.component, loaded.Component)
+			assert.Equal(t, tt.tool, loaded.Tool)
+			assert.Len(t, loaded.Artifacts, len(tt.artifacts))
 		})
 	}
 }
 
 func TestUoWTracker_RecordCacheHit_TableDriven(t *testing.T) {
 	tests := []struct {
-		name            string
-		setupManifest   *UoWManifest
-		setupArtifacts  bool
-		expectError     bool
-		errorContains   string
+		name           string
+		setupManifest  *UoWManifest
+		setupArtifacts bool
+		expectError    bool
+		errorContains  string
 	}{
 		{
 			name: "valid manifest with valid artifacts",
 			setupManifest: &UoWManifest{
-				Context:   workunit.ContextBuild,
+				Action:    core.ActionBuild,
 				Module:    "test-module",
 				Component: "go",
 				Tool:      "go",
@@ -992,7 +1103,7 @@ func TestUoWTracker_RecordCacheHit_TableDriven(t *testing.T) {
 		{
 			name: "manifest with missing artifacts",
 			setupManifest: &UoWManifest{
-				Context:   workunit.ContextBuild,
+				Action:    core.ActionBuild,
 				Module:    "test-module",
 				Component: "go",
 				Tool:      "go",
@@ -1007,7 +1118,7 @@ func TestUoWTracker_RecordCacheHit_TableDriven(t *testing.T) {
 		{
 			name: "manifest with no artifacts (valid for lint)",
 			setupManifest: &UoWManifest{
-				Context:   workunit.ContextLint,
+				Action:    core.ActionLint,
 				Module:    "test-module",
 				Component: "go",
 				Tool:      "golangci-lint",
@@ -1024,11 +1135,11 @@ func TestUoWTracker_RecordCacheHit_TableDriven(t *testing.T) {
 
 			var id workunit.UnitID
 			if tt.setupManifest != nil {
-				id = createTestUnitID(tt.setupManifest.Context, tt.setupManifest.Module, tt.setupManifest.Component, tt.setupManifest.Tool)
+				id = createTestUnitID(tt.setupManifest.Action, tt.setupManifest.Module, tt.setupManifest.Component, tt.setupManifest.Tool)
 
 				// Set up UoW directory
-				dirName := tt.setupManifest.Component + "_" + tt.setupManifest.Tool
-				uowDir := filepath.Join(tmpDir, "out", string(tt.setupManifest.Context), tt.setupManifest.Module, dirName)
+				dirName := id.DirName()
+				uowDir := filepath.Join(tmpDir, "out", string(tt.setupManifest.Action), tt.setupManifest.Module, dirName)
 				err := os.MkdirAll(uowDir, 0755)
 				require.NoError(t, err)
 
@@ -1045,14 +1156,22 @@ func TestUoWTracker_RecordCacheHit_TableDriven(t *testing.T) {
 				// Create manifest on disk
 				createManifestOnDisk(t, tmpDir, tt.setupManifest)
 			} else {
-				id = createTestUnitID(workunit.ContextBuild, "nonexistent", "go", "go")
+				id = createTestUnitID(core.ActionBuild, "nonexistent", "go", "go")
 			}
 
-			// TODO: After implementation:
-			// 1. Call tracker.RecordCacheHit(id)
-			// 2. Check error based on tt.expectError
-			// 3. If error expected, check it contains tt.errorContains
-			_ = id
+			tracker := NewTracker(tmpDir, id.Action)
+			result, err := tracker.RecordCacheHit(id)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				if tt.errorContains != "" {
+					assert.Contains(t, err.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
 		})
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/go/core/workunit"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ import (
 
 func TestUoWManifest_ManifestPath_BuildContext(t *testing.T) {
 	manifest := UoWManifest{
-		Context:   workunit.ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "core",
 		Component: "go",
 		Tool:      "go",
@@ -33,7 +33,7 @@ func TestUoWManifest_ManifestPath_BuildContext(t *testing.T) {
 
 func TestUoWManifest_ManifestPath_TestContext(t *testing.T) {
 	manifest := UoWManifest{
-		Context:   workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:    "core",
 		Component: "go",
 		Tool:      "gotest",
@@ -48,7 +48,7 @@ func TestUoWManifest_ManifestPath_TestContext(t *testing.T) {
 
 func TestUoWManifest_ManifestPath_LintContext(t *testing.T) {
 	manifest := UoWManifest{
-		Context:   workunit.ContextLint,
+		Action:    core.ActionLint,
 		Module:    "web-app",
 		Component: "typescript",
 		Tool:      "eslint",
@@ -63,7 +63,7 @@ func TestUoWManifest_ManifestPath_LintContext(t *testing.T) {
 
 func TestUoWManifest_ManifestPath_ScanContext(t *testing.T) {
 	manifest := UoWManifest{
-		Context:   workunit.ContextScan,
+		Action:    core.ActionScan,
 		Module:    "eac-cli",
 		Component: "docker",
 		Tool:      "trivy-vuln",
@@ -79,7 +79,7 @@ func TestUoWManifest_ManifestPath_ScanContext(t *testing.T) {
 func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 	tests := []struct {
 		name          string
-		context       workunit.Context
+		context       core.ActionType
 		module        string
 		component     string
 		tool          string
@@ -88,7 +88,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 	}{
 		{
 			name:          "build go module",
-			context:       workunit.ContextBuild,
+			context:       core.ActionBuild,
 			module:        "core",
 			component:     "go",
 			tool:          "go",
@@ -97,7 +97,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		},
 		{
 			name:          "test gherkin with godog",
-			context:       workunit.ContextTest,
+			context:       core.ActionTest,
 			module:        "eac-cli",
 			component:     "gherkin",
 			tool:          "godog",
@@ -105,17 +105,17 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 			expectedPath:  filepath.Join("/project", "out", "test", "eac-cli", "gherkin-godog", "uow.manifest.json"),
 		},
 		{
-			name:          "lint yaml files",
-			context:       workunit.ContextLint,
+			name:          "lint assets files",
+			context:       core.ActionLint,
 			module:        "configs",
-			component:     "yaml",
+			component:     "assets",
 			tool:          "yamllint",
 			workspaceRoot: "/workspace/repo",
-			expectedPath:  filepath.Join("/workspace/repo", "out", "lint", "configs", "yaml-yamllint", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/workspace/repo", "out", "lint", "configs", "assets-yamllint", "uow.manifest.json"),
 		},
 		{
 			name:          "scan for secrets",
-			context:       workunit.ContextScan,
+			context:       core.ActionScan,
 			module:        "eac-web",
 			component:     "source",
 			tool:          "trivy-secret",
@@ -124,7 +124,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		},
 		{
 			name:          "module with hyphens",
-			context:       workunit.ContextBuild,
+			context:       core.ActionBuild,
 			module:        "my-complex-module",
 			component:     "go",
 			tool:          "go",
@@ -133,7 +133,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		},
 		{
 			name:          "tool with hyphens",
-			context:       workunit.ContextLint,
+			context:       core.ActionLint,
 			module:        "core",
 			component:     "go",
 			tool:          "golangci-lint",
@@ -142,7 +142,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		},
 		{
 			name:          "empty workspace root",
-			context:       workunit.ContextBuild,
+			context:       core.ActionBuild,
 			module:        "mod",
 			component:     "comp",
 			tool:          "tool",
@@ -151,7 +151,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		},
 		{
 			name:          "relative workspace root",
-			context:       workunit.ContextBuild,
+			context:       core.ActionBuild,
 			module:        "mod",
 			component:     "comp",
 			tool:          "tool",
@@ -163,7 +163,7 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manifest := UoWManifest{
-				Context:   tt.context,
+				Action:    tt.context,
 				Module:    tt.module,
 				Component: tt.component,
 				Tool:      tt.tool,
@@ -176,17 +176,17 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 }
 
 func TestUoWManifest_ManifestPath_EndsWithManifestJSON(t *testing.T) {
-	contexts := []workunit.Context{
-		workunit.ContextBuild,
-		workunit.ContextTest,
-		workunit.ContextLint,
-		workunit.ContextScan,
+	contexts := []core.ActionType{
+		core.ActionBuild,
+		core.ActionTest,
+		core.ActionLint,
+		core.ActionScan,
 	}
 
 	for _, ctx := range contexts {
 		t.Run(string(ctx), func(t *testing.T) {
 			manifest := UoWManifest{
-				Context:   ctx,
+				Action:    ctx,
 				Module:    "module",
 				Component: "component",
 				Tool:      "tool",
@@ -207,7 +207,7 @@ func TestUoWManifest_Save_CreatesDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "test-module",
 		Component:  "go",
 		Tool:       "go",
@@ -235,7 +235,7 @@ func TestUoWManifest_Save_WritesValidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:     core.ActionTest,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "gotest",
@@ -267,7 +267,7 @@ func TestUoWManifest_Save_ContainsAllFields(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "my-module",
 		Component:  "my-component",
 		Tool:       "my-tool",
@@ -305,7 +305,7 @@ func TestUoWManifest_Save_OverwritesExisting(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest1 := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "mod",
 		Component:  "comp",
 		Tool:       "tool",
@@ -322,7 +322,7 @@ func TestUoWManifest_Save_OverwritesExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	manifest2 := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "mod",
 		Component:  "comp",
 		Tool:       "tool",
@@ -356,7 +356,7 @@ func TestUoWManifest_Save_WithEmptyArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextLint,
+		Action:     core.ActionLint,
 		Module:     "mod",
 		Component:  "go",
 		Tool:       "golangci-lint",
@@ -381,7 +381,7 @@ func TestUoWManifest_Save_WithNilArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextLint,
+		Action:     core.ActionLint,
 		Module:     "mod",
 		Component:  "go",
 		Tool:       "golangci-lint",
@@ -406,7 +406,7 @@ func TestUoWManifest_Save_MultipleArtifacts(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "eac-cli",
 		Component:  "go",
 		Tool:       "go",
@@ -442,7 +442,7 @@ func TestUoWManifest_Save_FailedExecution(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:     core.ActionTest,
 		Module:     "failing-module",
 		Component:  "go",
 		Tool:       "gotest",
@@ -507,7 +507,7 @@ func TestLoad_ReadsValidManifest(t *testing.T) {
 	loaded, err := Load(manifestPath)
 	require.NoError(t, err)
 
-	assert.Equal(t, workunit.ContextBuild, loaded.Context)
+	assert.Equal(t, core.ActionBuild, loaded.Action)
 	assert.Equal(t, "core", loaded.Module)
 	assert.Equal(t, "go", loaded.Component)
 	assert.Equal(t, "go", loaded.Tool)
@@ -583,7 +583,7 @@ func TestLoad_HandlesPartialJSON(t *testing.T) {
 	loaded, err := Load(manifestPath)
 	require.NoError(t, err, "Load should succeed with partial JSON")
 
-	assert.Equal(t, workunit.ContextBuild, loaded.Context)
+	assert.Equal(t, core.ActionBuild, loaded.Action)
 	assert.Equal(t, "partial", loaded.Module)
 	assert.Zero(t, loaded.ExitCode, "Missing fields should have zero value")
 	assert.Empty(t, loaded.InputHash)
@@ -598,7 +598,7 @@ func TestUoWManifest_SaveLoadRoundTrip_PreservesAllFields(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	original := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "roundtrip-module",
 		Component:  "go",
 		Tool:       "go",
@@ -624,7 +624,7 @@ func TestUoWManifest_SaveLoadRoundTrip_PreservesAllFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify all fields
-	assert.Equal(t, original.Context, loaded.Context)
+	assert.Equal(t, original.Action, loaded.Action)
 	assert.Equal(t, original.Module, loaded.Module)
 	assert.Equal(t, original.Component, loaded.Component)
 	assert.Equal(t, original.Tool, loaded.Tool)
@@ -638,11 +638,11 @@ func TestUoWManifest_SaveLoadRoundTrip_PreservesAllFields(t *testing.T) {
 }
 
 func TestUoWManifest_SaveLoadRoundTrip_AllContexts(t *testing.T) {
-	contexts := []workunit.Context{
-		workunit.ContextBuild,
-		workunit.ContextTest,
-		workunit.ContextLint,
-		workunit.ContextScan,
+	contexts := []core.ActionType{
+		core.ActionBuild,
+		core.ActionTest,
+		core.ActionLint,
+		core.ActionScan,
 	}
 
 	for _, ctx := range contexts {
@@ -650,7 +650,7 @@ func TestUoWManifest_SaveLoadRoundTrip_AllContexts(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			original := UoWManifest{
-				Context:    ctx,
+				Action:     ctx,
 				Module:     "ctx-test-module",
 				Component:  "go",
 				Tool:       "tool",
@@ -670,7 +670,7 @@ func TestUoWManifest_SaveLoadRoundTrip_AllContexts(t *testing.T) {
 			loaded, err := Load(manifestPath)
 			require.NoError(t, err)
 
-			assert.Equal(t, ctx, loaded.Context)
+			assert.Equal(t, ctx, loaded.Action)
 		})
 	}
 }
@@ -691,7 +691,7 @@ func TestUoWManifest_SaveLoadRoundTrip_LargeArtifactList(t *testing.T) {
 	}
 
 	original := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "large-module",
 		Component:  "go",
 		Tool:       "go",
@@ -718,9 +718,9 @@ func TestUoWManifest_SaveLoadRoundTrip_ZeroDuration(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	original := UoWManifest{
-		Context:    workunit.ContextLint,
+		Action:     core.ActionLint,
 		Module:     "fast-module",
-		Component:  "yaml",
+		Component:  "assets",
 		Tool:       "yamllint",
 		ExitCode:   0,
 		InputHash:  "sha256:fast-input",
@@ -745,7 +745,7 @@ func TestUoWManifest_SaveLoadRoundTrip_SpecialCharacters(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	original := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "module-with-dashes",
 		Component:  "go",
 		Tool:       "go",
@@ -785,7 +785,7 @@ func TestUoWManifest_SaveLoadRoundTrip_SpecialCharacters(t *testing.T) {
 
 func TestUoWManifest_ManifestPath_WithDots(t *testing.T) {
 	manifest := UoWManifest{
-		Context:   workunit.ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "v1.2.3",
 		Component: "go",
 		Tool:      "go",
@@ -799,7 +799,7 @@ func TestUoWManifest_Save_CreatesNestedDirectories(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest := UoWManifest{
-		Context:    workunit.ContextScan,
+		Action:     core.ActionScan,
 		Module:     "deeply-nested",
 		Component:  "docker",
 		Tool:       "trivy-vuln",
@@ -827,7 +827,7 @@ func TestUoWManifest_IsolatesBetweenTools(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	manifest1 := UoWManifest{
-		Context:    workunit.ContextScan,
+		Action:     core.ActionScan,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "trivy-vuln",
@@ -841,7 +841,7 @@ func TestUoWManifest_IsolatesBetweenTools(t *testing.T) {
 	}
 
 	manifest2 := UoWManifest{
-		Context:    workunit.ContextScan,
+		Action:     core.ActionScan,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "trivy-secret",

@@ -4,18 +4,18 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Compile-time interface checks.
 var (
-	_ interfaces.UnitIDPort     = (*MockUnitID)(nil)
-	_ interfaces.UnitSpecPort   = (*MockUnitSpec)(nil)
-	_ interfaces.UnitResultPort = (*MockUnitResult)(nil)
-	_ interfaces.UnitRegistryPort = (*MockUnitRegistry)(nil)
+	_ core.UnitIDPort     = (*MockUnitID)(nil)
+	_ core.UnitSpecPort   = (*MockUnitSpec)(nil)
+	_ core.UnitResultPort = (*MockUnitResult)(nil)
+	_ core.UnitRegistryPort = (*MockUnitRegistry)(nil)
 )
 
-// MockUnitID implements interfaces.UnitIDPort for testing.
+// MockUnitID implements core.UnitIDPort for testing.
 type MockUnitID struct {
 	ContextVal   string
 	ModuleVal    string
@@ -25,7 +25,7 @@ type MockUnitID struct {
 	ExtraVal     map[string]string
 }
 
-func (m *MockUnitID) GetContext() string          { return m.ContextVal }
+func (m *MockUnitID) GetAction() string            { return m.ContextVal }
 func (m *MockUnitID) GetModule() string           { return m.ModuleVal }
 func (m *MockUnitID) GetComponent() string        { return m.ComponentVal }
 func (m *MockUnitID) GetTool() string             { return m.ToolVal }
@@ -128,32 +128,32 @@ func (m *MockUnitID) WithExtra(extra map[string]string) *MockUnitID {
 	return m
 }
 
-// MockUnitSpec implements interfaces.UnitSpecPort for testing.
+// MockUnitSpec implements core.UnitSpecPort for testing.
 type MockUnitSpec struct {
-	IDVal            interfaces.UnitIDPort
+	IDVal            core.UnitIDPort
 	ComponentTypeVal string
 	WeightVal        int
 	ContainerVal     bool
 	CachedVal        bool
-	DependsOnVal     []interfaces.UnitIDPort
+	DependsOnVal     []core.UnitIDPort
 	HostWeightVal    int
 	DockerWeightVal  int
 }
 
-func (m *MockUnitSpec) GetID() interfaces.UnitIDPort         { return m.IDVal }
+func (m *MockUnitSpec) GetID() core.UnitIDPort         { return m.IDVal }
 func (m *MockUnitSpec) GetComponentType() string        { return m.ComponentTypeVal }
 func (m *MockUnitSpec) GetWeight() int                  { return m.WeightVal }
 func (m *MockUnitSpec) IsContainer() bool               { return m.ContainerVal }
 func (m *MockUnitSpec) IsCached() bool                  { return m.CachedVal }
-func (m *MockUnitSpec) GetDependsOn() []interfaces.UnitIDPort { return m.DependsOnVal }
-func (m *MockUnitSpec) GetPoolAllocation() interfaces.PoolAllocationPort {
+func (m *MockUnitSpec) GetDependsOn() []core.UnitIDPort { return m.DependsOnVal }
+func (m *MockUnitSpec) GetPoolAllocation() core.PoolAllocationPort {
 	return &MockPoolAllocation{
 		hostWeight:   m.HostWeightVal,
 		dockerWeight: m.DockerWeightVal,
 	}
 }
 
-// MockPoolAllocation implements interfaces.PoolAllocationPort for testing.
+// MockPoolAllocation implements core.PoolAllocationPort for testing.
 type MockPoolAllocation struct {
 	hostWeight   int
 	dockerWeight int
@@ -175,11 +175,11 @@ func NewMockUnitSpec(module, component string) *MockUnitSpec {
 		IDVal: NewMockUnitID().WithModule(module).WithComponent(component),
 		ComponentTypeVal: component,
 		WeightVal:        1,
-		DependsOnVal:     []interfaces.UnitIDPort{},
+		DependsOnVal:     []core.UnitIDPort{},
 	}
 }
 
-func (m *MockUnitSpec) WithID(id interfaces.UnitIDPort) *MockUnitSpec {
+func (m *MockUnitSpec) WithID(id core.UnitIDPort) *MockUnitSpec {
 	m.IDVal = id
 	return m
 }
@@ -204,7 +204,7 @@ func (m *MockUnitSpec) WithCached(c bool) *MockUnitSpec {
 	return m
 }
 
-func (m *MockUnitSpec) WithDependsOn(deps ...interfaces.UnitIDPort) *MockUnitSpec {
+func (m *MockUnitSpec) WithDependsOn(deps ...core.UnitIDPort) *MockUnitSpec {
 	m.DependsOnVal = deps
 	return m
 }
@@ -219,15 +219,15 @@ func (m *MockUnitSpec) WithDockerWeight(w int) *MockUnitSpec {
 	return m
 }
 
-// MockUnitResult implements interfaces.UnitResultPort for testing.
+// MockUnitResult implements core.UnitResultPort for testing.
 type MockUnitResult struct {
-	IDVal       interfaces.UnitIDPort
+	IDVal       core.UnitIDPort
 	ExitCodeVal int
 	DurationVal time.Duration
 	LogPathVal  string
 }
 
-func (m *MockUnitResult) GetID() interfaces.UnitIDPort      { return m.IDVal }
+func (m *MockUnitResult) GetID() core.UnitIDPort      { return m.IDVal }
 func (m *MockUnitResult) GetExitCode() int             { return m.ExitCodeVal }
 func (m *MockUnitResult) GetDuration() time.Duration   { return m.DurationVal }
 func (m *MockUnitResult) GetLogPath() string           { return m.LogPathVal }
@@ -244,7 +244,7 @@ func NewMockUnitResult(module, component string) *MockUnitResult {
 	}
 }
 
-func (m *MockUnitResult) WithID(id interfaces.UnitIDPort) *MockUnitResult {
+func (m *MockUnitResult) WithID(id core.UnitIDPort) *MockUnitResult {
 	m.IDVal = id
 	return m
 }
@@ -264,28 +264,28 @@ func (m *MockUnitResult) WithLogPath(path string) *MockUnitResult {
 	return m
 }
 
-// MockUnitRegistry implements interfaces.UnitRegistryPort for testing.
+// MockUnitRegistry implements core.UnitRegistryPort for testing.
 type MockUnitRegistry struct {
-	units []interfaces.UnitSpecPort
+	units []core.UnitSpecPort
 }
 
 func NewMockUnitRegistry() *MockUnitRegistry {
 	return &MockUnitRegistry{
-		units: []interfaces.UnitSpecPort{},
+		units: []core.UnitSpecPort{},
 	}
 }
 
-func (m *MockUnitRegistry) Add(units ...interfaces.UnitSpecPort) *MockUnitRegistry {
+func (m *MockUnitRegistry) Add(units ...core.UnitSpecPort) *MockUnitRegistry {
 	m.units = append(m.units, units...)
 	return m
 }
 
-func (m *MockUnitRegistry) All() []interfaces.UnitSpecPort {
+func (m *MockUnitRegistry) All() []core.UnitSpecPort {
 	return m.units
 }
 
-func (m *MockUnitRegistry) ByModule(module string) []interfaces.UnitSpecPort {
-	var result []interfaces.UnitSpecPort
+func (m *MockUnitRegistry) ByModule(module string) []core.UnitSpecPort {
+	var result []core.UnitSpecPort
 	for _, u := range m.units {
 		if u.GetID().GetModule() == module {
 			result = append(result, u)
@@ -294,8 +294,8 @@ func (m *MockUnitRegistry) ByModule(module string) []interfaces.UnitSpecPort {
 	return result
 }
 
-func (m *MockUnitRegistry) ByComponent(module, component string) []interfaces.UnitSpecPort {
-	var result []interfaces.UnitSpecPort
+func (m *MockUnitRegistry) ByComponent(module, component string) []core.UnitSpecPort {
+	var result []core.UnitSpecPort
 	for _, u := range m.units {
 		id := u.GetID()
 		if id.GetModule() == module && id.GetComponent() == component {
@@ -305,7 +305,7 @@ func (m *MockUnitRegistry) ByComponent(module, component string) []interfaces.Un
 	return result
 }
 
-func (m *MockUnitRegistry) ByID(id string) interfaces.UnitSpecPort {
+func (m *MockUnitRegistry) ByID(id string) core.UnitSpecPort {
 	for _, u := range m.units {
 		if u.GetID().Longname() == id {
 			return u

@@ -189,7 +189,11 @@ func buildContainerCommand(ctx context.Context, td *ToolDefinition, execCtx *Exe
 	args = append(args, td.Command...)
 	args = append(args, execCtx.ArgsOverrides...)
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	// NOTE: buildContainerCommand intentionally uses exec.Command("docker", ...) directly
+	// rather than ContainerPort. This is the streaming execution path where callers need
+	// StdoutPipe/StderrPipe access for real-time output processing. The primary execution
+	// path in executor.go routes through ContainerPort.Execute() for one-shot tasks.
+	cmd := exec.CommandContext(ctx, "docker", args...) //nolint:gosec // G204: intentional streaming escape hatch
 	SetProcessGroup(cmd)
 
 	// Set environment for docker command itself (inherits from host)

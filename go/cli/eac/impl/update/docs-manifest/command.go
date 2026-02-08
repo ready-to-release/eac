@@ -26,10 +26,8 @@
 // Long:   update docs-manifest              # Update manifest files
 // Long:   update docs-manifest --check      # Validate manifest is up-to-date (CI)
 // Long:   update docs-manifest --dry-run    # Show what would change
-// Long:   update docs-manifest --migrate    # Migrate from legacy manifest.json
 // Flag.check: type=bool, default=false, usage=Validate manifest is up-to-date (exits non-zero if stale)
 // Flag.dry-run: type=bool, default=false, usage=Show what would change without writing
-// Flag.migrate: type=bool, default=false, usage=Migrate from legacy manifest.json format
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress
 package docsmanifest
 
@@ -37,6 +35,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -63,7 +62,6 @@ func UpdateDocsManifest() int {
 	// Parse flags
 	checkMode := false
 	dryRun := false
-	migrate := false
 	verbose := false
 
 	for _, arg := range args {
@@ -72,8 +70,6 @@ func UpdateDocsManifest() int {
 			checkMode = true
 		case "--dry-run":
 			dryRun = true
-		case "--migrate":
-			migrate = true
 		case "-v", "--verbose":
 			verbose = true
 		}
@@ -91,7 +87,6 @@ func UpdateDocsManifest() int {
 	assetsDir := filepath.Join(docsDir, "assets")
 	descriptionsPath := filepath.Join(assetsDir, DescriptionsFileName)
 	cachePath := filepath.Join(assetsDir, CacheFileName)
-	legacyManifestPath := filepath.Join(assetsDir, LegacyManifestFileName)
 
 	// Check if assets directory exists
 	if _, err := os.Stat(assetsDir); os.IsNotExist(err) {
@@ -107,90 +102,8 @@ func UpdateDocsManifest() int {
 		fmt.Println()
 	}
 
-	// Handle migration mode
-	if migrate {
-		return runMigration(legacyManifestPath, descriptionsPath, cachePath, docsDir, assetsDir, dryRun, verbose)
-	}
-
 	// Normal operation
 	return runUpdate(descriptionsPath, cachePath, docsDir, assetsDir, checkMode, dryRun, verbose)
-}
-
-// runMigration handles the one-time migration from legacy manifest.json
-func runMigration(legacyPath, descriptionsPath, cachePath, docsDir, assetsDir string, dryRun, verbose bool) int {
-	fmt.Println("Migration mode: converting from legacy manifest.json")
-
-	// Check if legacy manifest exists
-	legacy, err := LoadLegacyManifest(legacyPath)
-	if err != nil {
-		log.Errorf("Error loading legacy manifest: %v", err)
-		return 1
-	}
-	if legacy == nil {
-		fmt.Println("No legacy manifest.json found. Nothing to migrate.")
-		return 0
-	}
-
-	fmt.Printf("  Found legacy manifest with %d assets\n", len(legacy.Assets))
-
-	// Extract descriptions from legacy format
-	descriptions := ExtractDescriptionsFromLegacy(legacy)
-	fmt.Printf("  Extracted %d descriptions\n", len(descriptions))
-
-	// Scan current assets and usage
-	fmt.Println("\nScanning assets...")
-	discovered, err := ScanAssets(assetsDir)
-	if err != nil {
-		log.Errorf("Error scanning assets: %v", err)
-		return 1
-	}
-	fmt.Printf("  Found %d assets\n", len(discovered))
-
-	fmt.Println("\nScanning markdown files...")
-	usage, err := ScanUsage(docsDir, assetsDir)
-	if err != nil {
-		log.Errorf("Error scanning usage: %v", err)
-		return 1
-	}
-
-	// Merge to create cache
-	mergeResult := MergeManifest(descriptions, nil, discovered, usage)
-
-	// Handle dry-run mode
-	if dryRun {
-		fmt.Println("\n[DRY RUN] Would perform the following:")
-		fmt.Printf("  - Write descriptions.yml with %d entries\n", len(mergeResult.Descriptions))
-		fmt.Printf("  - Write .manifest-cache.json with %d entries\n", len(mergeResult.Cache.Assets))
-		fmt.Printf("  - Delete legacy manifest.json\n")
-		return 0
-	}
-
-	// Write new files
-	fmt.Println("\nWriting new files...")
-
-	if err := SaveDescriptions(descriptionsPath, mergeResult.Descriptions); err != nil {
-		log.Errorf("Error writing descriptions.yml: %v", err)
-		return 1
-	}
-	fmt.Printf("  Written: %s\n", descriptionsPath)
-
-	if err := SaveCache(mergeResult.Cache, cachePath); err != nil {
-		log.Errorf("Error writing cache: %v", err)
-		return 1
-	}
-	fmt.Printf("  Written: %s\n", cachePath)
-
-	// Remove legacy manifest
-	if err := os.Remove(legacyPath); err != nil {
-		log.Errorf("Error removing legacy manifest: %v", err)
-		return 1
-	}
-	fmt.Printf("  Removed: %s\n", legacyPath)
-
-	fmt.Println("\n✓ Migration complete!")
-	fmt.Println("  - descriptions.yml is git-tracked (contains descriptions)")
-	fmt.Println("  - .manifest-cache.json is git-ignored (auto-generated)")
-	return 0
 }
 
 // runUpdate handles normal update operation
@@ -310,7 +223,7 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 			shown := 0
 			for _, path := range needsDescription {
 				// In non-verbose mode, only show newly added assets
-				if !verbose && !contains(result.Added, path) {
+				if !verbose && !slices.Contains(result.Added, path) {
 					continue
 				}
 				fmt.Printf("  - %s\n", path)

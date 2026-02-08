@@ -7,8 +7,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/resource"
 	"gopkg.in/yaml.v3"
+)
+
+// Component type name constants for well-known component types.
+// These correspond to keys in the component-types.yml configuration.
+const (
+	ComponentTypeSiteRender = "site-render"
+	ComponentTypeDocsSite   = "docs-site"
+	ComponentTypePdfRender  = "pdf-render"
+	ComponentTypeDocsPdf    = "docs-pdf"
 )
 
 // ComponentTypesConfig represents the component-types.yml configuration.
@@ -269,6 +279,25 @@ func (c *ComponentType) GetPoolAllocation() resource.PoolAllocation {
 	}
 }
 
+// ToolIDsForAction returns the tool IDs for a given action type.
+func (c *ComponentType) ToolIDsForAction(action core.ActionType) []string {
+	if c == nil {
+		return nil
+	}
+	switch action {
+	case core.ActionBuild:
+		return c.Builders
+	case core.ActionLint:
+		return c.Linters
+	case core.ActionTest:
+		return c.Testers
+	case core.ActionScan:
+		return c.Scanners
+	default:
+		return nil
+	}
+}
+
 // Get returns a component type definition by name.
 func (c *ComponentTypesConfig) Get(name string) *ComponentType {
 	if c == nil || c.ComponentTypes == nil {
@@ -311,17 +340,25 @@ func (c *ComponentTypesConfig) GetComponentTypeNameByExtension(ext string) strin
 
 // LoadComponentTypes loads the component-types.yml configuration.
 // It merges the contract defaults with any project-level overrides.
+// If component-kinds were already loaded from blueprints.yml, those are used as the base
+// and component-types.yml entries override them (for backward compatibility).
 func (c *EACConfig) LoadComponentTypes(validate bool) error {
-	// Load defaults first
-	ctConfig, err := LoadComponentTypesDefaults(c.RepoRoot)
-	if err != nil && !errors.Is(err, ErrNoDefaults) {
-		return err
-	}
-
-	// Ensure we have a valid config even if no defaults
+	// Start with component-kinds already loaded from blueprints (if any)
+	ctConfig := c.ComponentTypes
 	if ctConfig == nil {
 		ctConfig = &ComponentTypesConfig{
 			ComponentTypes: make(map[string]*ComponentType),
+		}
+	}
+
+	// Load contract defaults from component-types.yml (legacy, being phased out)
+	defaults, err := LoadComponentTypesDefaults(c.RepoRoot)
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
+		return err
+	}
+	if defaults != nil {
+		for name, ct := range defaults.ComponentTypes {
+			ctConfig.ComponentTypes[name] = ct
 		}
 	}
 
@@ -345,7 +382,7 @@ func (c *EACConfig) LoadComponentTypes(validate bool) error {
 // ResolvedComponent is a component with its actual files computed at runtime.
 // This represents the files within a module that belong to a specific component type.
 type ResolvedComponent struct {
-	// Type is the component type name (e.g., "go", "markdown")
+	// Type is the component type name (e.g., "go", "assets")
 	Type string `json:"type"`
 
 	// Files is the list of file paths belonging to this component (relative to workspace root)

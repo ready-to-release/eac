@@ -154,7 +154,7 @@ func ExtensionMeta() int {
 			},
 		},
 		ExpectedHostImages: []string{
-			"site-render-oci:local",
+			"mkdocs-render-oci:local",
 			tool.GetToolImageWithDefault("structurizr-lite", "structurizr/lite:latest"),
 		},
 		Env: []EnvVar{

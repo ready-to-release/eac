@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 // HandlerToolBridge adapts tool definitions for handler execution.

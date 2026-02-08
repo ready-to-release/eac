@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // ResolvedArtifact represents an artifact with metadata overrides applied and existence checked.
@@ -215,7 +215,7 @@ func isBookModule(moduleType string) bool {
 func isContainerModule(module *config.Module) bool {
 	// Check if module has docker_build with push enabled
 	dockerConfig := module.GetDockerBuildConfig()
-	return dockerConfig != nil && dockerConfig.Push
+	return dockerConfig != nil && dockerConfig.ShouldPush()
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
@@ -312,7 +312,7 @@ func ValidateArtifactsTargetOnly(
 	// The validation logic handles empty requestedArtifacts as "validate all"
 	var requestedArtifacts []string
 	reader := coreoutput.NewReader(workspaceRoot)
-	if moduleView, err := reader.GetModule(workunit.ContextBuild, targetModule); err == nil && moduleView != nil {
+	if moduleView, err := reader.GetModule(core.ActionBuild, targetModule); err == nil && moduleView != nil {
 		requestedArtifacts = extractRequestedArtifactsFromModuleView(moduleView)
 	}
 
@@ -357,7 +357,7 @@ func ValidateArtifactsWithDependencies(
 	reader := coreoutput.NewReader(workspaceRoot)
 	moduleViews := make(map[string]*coreoutput.ModuleView)
 	for moniker := range allModules {
-		if moduleView, err := reader.GetModule(workunit.ContextBuild, moniker); err == nil && moduleView != nil {
+		if moduleView, err := reader.GetModule(core.ActionBuild, moniker); err == nil && moduleView != nil {
 			moduleViews[moniker] = moduleView
 		}
 	}
@@ -480,7 +480,7 @@ func validateSingleModule(
 	// Check if this module has docker_build with push=true
 	// If so, image artifacts are pushed to registry and may not exist locally
 	dockerConfig := module.GetDockerBuildConfig()
-	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
+	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.ShouldPush()
 
 	// Filter artifacts to only requested ones if requestedArtifacts is specified
 	if len(requestedArtifacts) > 0 {

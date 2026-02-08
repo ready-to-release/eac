@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/github"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // PipelineTestHelper provides utilities for pipeline testing.

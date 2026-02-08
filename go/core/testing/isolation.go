@@ -91,7 +91,7 @@ func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
 }
 
 // WithCopyMkdocsConfig enables copying MkDocs container templates to the isolated dir.
-// This copies containers/site-render-oci/ and containers/pdf-oci/ which contain the
+// This copies containers/mkdocs-render-oci/ and containers/pdf-oci/ which contain the
 // mkdocs.yml templates used by the build system.
 func (t *TestIsolation) WithCopyMkdocsConfig(copy bool) *TestIsolation {
 	t.copyMkdocsConfig = copy
@@ -171,13 +171,13 @@ func (t *TestIsolation) Setup() error {
 	// Copy MkDocs container templates if requested
 	// These are used by the build system to generate mkdocs.yml dynamically
 	if t.copyMkdocsConfig && t.originalRepoRoot != "" {
-		// Copy site-render-oci container (for HTML builds and serve docs)
-		srcSite := filepath.Join(t.originalRepoRoot, "containers", "site-render-oci")
+		// Copy mkdocs-render-oci container (for HTML builds and serve docs)
+		srcSite := filepath.Join(t.originalRepoRoot, "containers", "mkdocs-render-oci")
 		if _, err := os.Stat(srcSite); err == nil {
-			dstSite := filepath.Join(t.isolatedDir, "containers", "site-render-oci")
+			dstSite := filepath.Join(t.isolatedDir, "containers", "mkdocs-render-oci")
 			if err := copyDir(srcSite, dstSite); err != nil {
 				t.Cleanup()
-				return fmt.Errorf("failed to copy site-render-oci container: %w", err)
+				return fmt.Errorf("failed to copy mkdocs-render-oci container: %w", err)
 			}
 		}
 		// Copy pdf-oci container (for PDF builds)

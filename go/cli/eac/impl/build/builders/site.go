@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -19,11 +20,7 @@ import (
 )
 
 func init() {
-	h := &SiteHandler{}
-	// Register in builders registry (legacy code paths)
-	RegisterHandler(h)
-	// Register in tool bridge (for component resolver)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&SiteHandler{})
 }
 
 // SiteHandler is a unified handler for docs-site component type.
@@ -44,7 +41,7 @@ func (h *SiteHandler) IsContainer() bool { return true }
 func (h *SiteHandler) IsHostInstalled() bool { return false }
 
 // ValidateModule checks if a module has valid book configuration for site generation.
-func (h *SiteHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *SiteHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	// Check Docker availability
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
@@ -84,12 +81,12 @@ func (h *SiteHandler) ValidateModule(module interfaces.ModuleContractPort, works
 }
 
 // ListArtifacts returns artifact paths that would be produced.
-func (h *SiteHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *SiteHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/"}
 }
 
 // Build executes the unified site build: preprocessing + container rendering.
-func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *SiteHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	startTime := time.Now()
 
 	concrete := adapters.UnwrapModule(module)
@@ -149,9 +146,10 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 		return 1
 	}
 
-	// Run preprocessing pipeline (pdfMode=false for site builds)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, false)
-	if err := preprocessor.Preprocess(); err != nil {
+	// Run preprocessing pipeline (site mode)
+	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, docprep.SiteMode{})
+	pctx.Moniker = concrete.Moniker
+	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return 1
 	}
@@ -162,19 +160,19 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 	// ━━━ Step 2: Generate mkdocs.yml config ━━━
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:     bookName,
 		DocsDir:      "/staging", // Container mount path
 		OutputFormat: "site",
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
 	Logln(logWriter, "   Config: %s", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
@@ -191,7 +189,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 		return 1
 	}
 
-	// ━━━ Step 3: Invoke site-render-oci container ━━━
+	// ━━━ Step 3: Invoke mkdocs-render-oci container ━━━
 	Logln(logWriter, "📦 Invoking site render container...")
 
 	bridge := tool.GlobalHandlerToolBridge()
@@ -211,7 +209,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 		Weight:        weight,
 	}
 
-	exitCode, execErr := bridge.ExecuteTool(context.Background(), "site-render-oci", tc)
+	exitCode, execErr := bridge.ExecuteTool(context.Background(), "mkdocs-render-oci", tc)
 	if execErr != nil {
 		Logln(logWriter, "❌ Tool execution failed: %v", execErr)
 		return 1
@@ -235,7 +233,7 @@ func (h *SiteHandler) Build(module interfaces.ModuleContractPort, workspaceRoot,
 // 2. Strip "-site" suffix if present (e.g., "docs-site" -> "docs")
 // 3. Use component name as book name
 // 4. Default to "site" if component name is empty
-func resolveBookNameForSite(module interfaces.ModuleContractPort, componentName string) string {
+func resolveBookNameForSite(module core.ModuleContractPort, componentName string) string {
 	if componentName == "" {
 		return "site"
 	}

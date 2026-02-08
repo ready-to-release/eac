@@ -56,7 +56,7 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 			// contracts/core/0.1.0/defaults/ai-config.yml
 			// Use workspaceRoot (in container, this is /app; in dev, this is repo root)
 			contractsRoot := l.workspaceRoot
-			contractsPath := filepath.Join(contractsRoot, "contracts", "core", "0.1.0", "defaults", paths.AIConfigFilename)
+			contractsPath := filepath.Join(contractsRoot, "contracts", "core", "0.1.0", "schemas", "defaults", paths.AIConfigFilename)
 			data, err = os.ReadFile(contractsPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read AI config from user repo (%s), system defaults (%s), or contracts defaults (%s): %w",

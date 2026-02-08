@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts"
+	r2rcli "github.com/ready-to-release/eac/contracts/r2r-cli/0.1.0"
 )
 
 // embeddedEBNFSchema is loaded from the contracts module at init time
 var embeddedEBNFSchema string
 
 func init() {
-	data, err := contracts.FS.ReadFile(contracts.R2RCLIPath("command.ebnf"))
+	data, err := r2rcli.FS.ReadFile("command.ebnf")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load embedded EBNF schema from contracts: %v", err))
 	}

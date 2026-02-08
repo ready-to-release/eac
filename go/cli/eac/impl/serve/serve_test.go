@@ -12,7 +12,7 @@ func TestGetServableItems_SiteRender(t *testing.T) {
 		Moniker: "docs",
 		Components: config.ModuleComponents{
 			"site": &config.ComponentEntry{
-				Type: "site-render",
+				Type: config.ComponentTypeSiteRender,
 			},
 		},
 	}
@@ -42,7 +42,7 @@ func TestGetServableItems_PDFRender(t *testing.T) {
 		Moniker: "books",
 		Components: config.ModuleComponents{
 			"handbook": &config.ComponentEntry{
-				Type: "pdf-render",
+				Type: config.ComponentTypePdfRender,
 			},
 		},
 	}
@@ -72,10 +72,10 @@ func TestGetServableItems_Mixed(t *testing.T) {
 		Moniker: "docs",
 		Components: config.ModuleComponents{
 			"site": &config.ComponentEntry{
-				Type: "site-render",
+				Type: config.ComponentTypeSiteRender,
 			},
 			"manual": &config.ComponentEntry{
-				Type: "pdf-render",
+				Type: config.ComponentTypePdfRender,
 			},
 		},
 	}
@@ -164,7 +164,7 @@ func TestGetServableItems_DocsSite(t *testing.T) {
 		Moniker: "docs",
 		Components: config.ModuleComponents{
 			"site": &config.ComponentEntry{
-				Type: "docs-site",
+				Type: config.ComponentTypeDocsSite,
 			},
 		},
 	}
@@ -194,7 +194,7 @@ func TestGetServableItems_DocsPDF(t *testing.T) {
 		Moniker: "docs",
 		Components: config.ModuleComponents{
 			"tutorials": &config.ComponentEntry{
-				Type: "docs-pdf",
+				Type: config.ComponentTypeDocsPdf,
 			},
 		},
 	}

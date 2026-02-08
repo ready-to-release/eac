@@ -73,24 +73,3 @@ type UpdateResult struct {
 	CachePath            string   // Path to cache file
 }
 
-// Legacy types for migration support
-
-// Manifest represents the legacy manifest format (for migration).
-type Manifest struct {
-	Schema    string           `json:"$schema"`
-	Generated string           `json:"generated"`
-	Generator string           `json:"generator"`
-	Stats     *ManifestStats   `json:"stats,omitempty"`
-	Assets    map[string]Asset `json:"assets"`
-}
-
-// Asset represents the legacy asset format in manifest.json (for migration).
-type Asset struct {
-	Description  string   `json:"description"`
-	UsedIn       []string `json:"usedIn"`
-	Type         string   `json:"type,omitempty"`
-	Category     string   `json:"category,omitempty"`
-	LastModified string   `json:"lastModified,omitempty"`
-	Size         int64    `json:"size,omitempty"`
-	Hash         string   `json:"hash,omitempty"`
-}

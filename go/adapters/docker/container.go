@@ -16,7 +16,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/stdcopy"
 
-	containerport "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	containerport "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker/util"
 )
 
@@ -425,6 +425,32 @@ func (a *ContainerAdapter) ImageExists(ctx context.Context, imageRef string) boo
 	return false
 }
 
+// ManifestExists checks if an image manifest exists in a remote registry.
+// Uses the Docker CLI since the Docker SDK does not provide a direct manifest inspect API.
+func (a *ContainerAdapter) ManifestExists(ctx context.Context, imageRef string) (bool, error) {
+	cmd := exec.CommandContext(ctx, "docker", "manifest", "inspect", imageRef) //nolint:gosec // G204: image ref from trusted config
+	if err := cmd.Run(); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+// ImageCreatedTime returns the creation timestamp of a local image.
+func (a *ContainerAdapter) ImageCreatedTime(ctx context.Context, imageRef string) (time.Time, error) {
+	resp, _, err := a.client.ImageInspectWithRaw(ctx, imageRef)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to inspect image %s: %w", imageRef, err)
+	}
+	t, err := time.Parse(time.RFC3339Nano, resp.Created)
+	if err != nil {
+		t, err = time.Parse(time.RFC3339, resp.Created)
+	}
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse image created time %q: %w", resp.Created, err)
+	}
+	return t, nil
+}
+
 // IsAvailable checks if the container runtime is available.
 func (a *ContainerAdapter) IsAvailable() bool {
 	return IsDockerAvailable()
@@ -512,6 +538,14 @@ func (a *unavailableAdapter) Pull(_ context.Context, _ string) error {
 
 func (a *unavailableAdapter) ImageExists(_ context.Context, _ string) bool {
 	return false
+}
+
+func (a *unavailableAdapter) ManifestExists(_ context.Context, _ string) (bool, error) {
+	return false, fmt.Errorf("container runtime not available: %w", a.err)
+}
+
+func (a *unavailableAdapter) ImageCreatedTime(_ context.Context, _ string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("container runtime not available: %w", a.err)
 }
 
 func (a *unavailableAdapter) IsAvailable() bool {

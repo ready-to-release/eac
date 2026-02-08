@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/execution"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -64,7 +65,7 @@ func (v *UoWBuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSp
 	// Verify UoW artifact integrity
 	reader := coreoutput.NewReader(v.workspaceRoot)
 	uowID := workunit.UnitID{
-		Context:   workunit.ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    unit.ID.Module,
 		Component: unit.ID.Component,
 		Tool:      unit.ID.Tool,

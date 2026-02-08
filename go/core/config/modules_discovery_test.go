@@ -52,7 +52,7 @@ func TestDiscoverContainerModules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			modules := DiscoverContainerModules(tmpDir, tt.explicitMonikers)
+			modules := DiscoverContainerModules(tmpDir, tt.explicitMonikers, "containers")
 
 			if len(modules) != tt.wantCount {
 				t.Errorf("got %d modules, want %d", len(modules), tt.wantCount)
@@ -64,8 +64,8 @@ func TestDiscoverContainerModules(t *testing.T) {
 				}
 
 				// Verify template is set
-				if m.Template != "container-template" {
-					t.Errorf("module[%d].Template = %q, want %q", i, m.Template, "container-template")
+				if m.Template != "container" {
+					t.Errorf("module[%d].Template = %q, want %q", i, m.Template, "container")
 				}
 
 				// Verify name is derived
@@ -81,7 +81,7 @@ func TestDiscoverContainerModules_NoContainersDir(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Don't create containers directory
 
-	modules := DiscoverContainerModules(tmpDir, map[string]bool{})
+	modules := DiscoverContainerModules(tmpDir, map[string]bool{}, "containers")
 	if len(modules) != 0 {
 		t.Errorf("expected 0 modules when containers dir doesn't exist, got %d", len(modules))
 	}

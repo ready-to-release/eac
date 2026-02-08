@@ -2,6 +2,7 @@
 package reports
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 
@@ -127,7 +128,7 @@ func GetComponents(workspaceRoot string) (*ComponentReport, error) {
 		return nil, err
 	}
 
-	return globalComponentCache.GetReport(), nil
+	return globalComponentCache.GetReport()
 }
 
 // EnsurePopulated ensures the cache is populated.
@@ -163,15 +164,16 @@ func (c *ComponentCache) EnsurePopulated(workspaceRoot string) error {
 }
 
 // GetReport returns the cached report.
-func (c *ComponentCache) GetReport() *ComponentReport {
+// Returns an error if the cache has not been populated via EnsurePopulated().
+func (c *ComponentCache) GetReport() (*ComponentReport, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if !c.populated {
-		panic("ComponentCache not populated - call EnsurePopulated() first")
+		return nil, fmt.Errorf("ComponentCache not populated - call EnsurePopulated() first")
 	}
 
-	return c.report
+	return c.report, nil
 }
 
 // buildComponentReport builds the component report from module contracts.

@@ -3,6 +3,8 @@ package tool
 import (
 	"os"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // TestExecutionContext_IsDinD tests the IsDinD method.
@@ -324,7 +326,7 @@ func TestPopulateDinDContext(t *testing.T) {
 			envHostRepoRoot:       "/home/user/project",
 			envContainerRepoRoot:  "",
 			wantHostWorkspaceRoot: "/home/user/project",
-			wantContainerRepoRoot: DefaultContainerRoot,
+			wantContainerRepoRoot: paths.ContainerRepoRoot,
 		},
 		{
 			name:                  "both env vars set",
@@ -448,8 +450,8 @@ func TestDinDConstants(t *testing.T) {
 	if EnvContainerRepoRoot != "R2R_CONTAINER_REPOROOT" {
 		t.Errorf("EnvContainerRepoRoot = %q, want %q", EnvContainerRepoRoot, "R2R_CONTAINER_REPOROOT")
 	}
-	if DefaultContainerRoot != "/var/task" {
-		t.Errorf("DefaultContainerRoot = %q, want %q", DefaultContainerRoot, "/var/task")
+	if paths.ContainerRepoRoot != "/var/task" {
+		t.Errorf("paths.ContainerRepoRoot = %q, want %q", paths.ContainerRepoRoot, "/var/task")
 	}
 }
 

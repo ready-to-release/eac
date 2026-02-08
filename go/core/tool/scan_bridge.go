@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -123,7 +124,7 @@ func (b *ScanBridge) GetScannersForComponentType(componentType string) []*ToolDe
 	}
 
 	// Get scanner tools from resolver
-	tools, err := b.resolver.ResolveMultiple(componentType, OperationScan)
+	tools, err := b.resolver.ResolveMultiple(componentType, core.ActionScan)
 	if err != nil || len(tools) == 0 {
 		return nil
 	}
@@ -274,7 +275,7 @@ func (b *ScanBridge) createExecutionContext(workspaceRoot, moduleRoot, outputDir
 		ModuleRoot:    moduleRoot,
 		OutputDir:     outputDir,
 		LogWriter:     logWriter,
-		Operation:     OperationScan,
+		Operation:     core.ActionScan,
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
 			"{module}":    filepath.Join(workspaceRoot, moduleRoot),
@@ -285,7 +286,7 @@ func (b *ScanBridge) createExecutionContext(workspaceRoot, moduleRoot, outputDir
 
 // ResolveTool returns the tool definition for a component type and operation.
 // Returns nil if no tool is configured or resolver is not available.
-func (b *ScanBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+func (b *ScanBridge) ResolveTool(componentType string, operation core.ActionType) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

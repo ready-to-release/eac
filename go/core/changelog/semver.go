@@ -157,13 +157,6 @@ func CalculateBump(entries []Entry) BumpType {
 	return maxBump
 }
 
-// CalculateNextVersion determines the next version based on current and entries.
-func CalculateNextVersion(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string) (string, error) {
-	// Legacy function - assumes file changes if entries exist
-	hasFileChanges := len(entries) > 0
-	return CalculateNextVersionConstrained(current, versionType, entries, now, existingVersions, BumpMajor, hasFileChanges)
-}
-
 // CalculateNextVersionConstrained determines the next version with a maximum bump constraint
 // maxBump limits the highest bump type allowed (e.g., BumpPatch means only patch bumps are allowed)
 // hasFileChanges indicates if module files changed (determined by file ownership, not commit message).

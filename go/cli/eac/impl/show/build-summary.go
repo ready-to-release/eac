@@ -17,12 +17,12 @@ import (
 	"path/filepath"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -321,7 +321,7 @@ func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 
 	// Use coreoutput.Reader to get module view directly
 	reader := coreoutput.NewReader(workspaceRoot)
-	moduleView, err := reader.GetModule(workunit.ContextBuild, moduleName)
+	moduleView, err := reader.GetModule(core.ActionBuild, moduleName)
 	if err != nil || moduleView == nil {
 		// No manifest = failure
 		return "failure"

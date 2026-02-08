@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 func TestRepositoryFeatures(t *testing.T) {

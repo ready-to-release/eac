@@ -1,0 +1,837 @@
+# Tool Configuration - Namespace-based Lazy Loading
+# yaml-language-server: $schema=../tool-config.schema.json
+#
+# Structure:
+#   namespaces: Tool groupings for lazy loading
+#   system-tools: Host-installed tools
+#   container-tools: Docker-based tools
+#   tool-bindings: Override auto resolution (auto/system/container)
+#   component-tools: Map component types to tools
+#   environments: Environment-specific overrides
+#   caches: Cache configurations
+
+#---------------------------------------------------------------------------
+# Namespaces - Control what loads when
+# Only 'bootstrap' is loaded at startup; others load on-demand
+#---------------------------------------------------------------------------
+namespaces:
+  bootstrap: [go, docker, git]
+  go: [golangci-lint, gcc, go-build, go-test-race]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, plantuml, markdownlint, mermaid-render]
+  node: [npm, tsc, npm-build, npm-test, eslint]
+  security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
+
+#---------------------------------------------------------------------------
+# Executor Mode - Global tool type resolution default
+#---------------------------------------------------------------------------
+# Controls how tools are resolved when no explicit per-tool binding exists.
+# Per-tool bindings (in the 'bindings' section) always override this setting.
+#
+# Values:
+#   auto      - Try system tool first, fall back to container (default)
+#   container - Always use container tools (reproducible, no host deps)
+#   system    - Always use system tools (faster, requires local installs)
+#
+# Override per-project in .eac/tool-config.yml:
+#   executor-mode: container
+executor-mode: auto
+
+#---------------------------------------------------------------------------
+# Credentials - Host env vars forwarded to all container tools
+#---------------------------------------------------------------------------
+# Only explicitly listed variable names are forwarded (allowlist, not passthrough).
+# Per-tool host-env in container-tools is additive to these globals.
+# Override per-project in .eac/tool-config.yml (additive merge).
+credentials:
+  host-env:
+    - GITHUB_TOKEN
+    - GITHUB_USERNAME
+    - GOPRIVATE
+    - GONOSUMCHECK
+    - GOPROXY
+    - NPM_TOKEN
+    - SEMGREP_APP_TOKEN
+  ci-env:
+    - CI
+    - GITHUB_ACTIONS
+    - GITHUB_SHA
+    - GITHUB_REF
+    - GITHUB_REPOSITORY
+    - GITHUB_RUN_ID
+
+#---------------------------------------------------------------------------
+# System Tools (host-installed)
+#---------------------------------------------------------------------------
+system-tools:
+  go:
+    description: "Go compiler and toolchain"
+    binary: go
+    verify:
+      command: "go version"
+      pattern: "go version go(\\d+\\.\\d+)"
+    version: ">=1.21"
+
+  docker:
+    description: "Container runtime"
+    binary: docker
+    verify:
+      command: "docker info"
+      pattern: "Server Version: (\\d+\\.\\d+)"
+    version: ">=20.10"
+
+  podman:
+    description: "Podman container runtime"
+    binary: podman
+    verify:
+      command: "podman info"
+      pattern: "version: (\\d+\\.\\d+)"
+    version: ">=4.0"
+
+  containerd:
+    description: "containerd container runtime"
+    binary: nerdctl
+    verify:
+      command: "nerdctl info"
+      pattern: "Server Version: (\\d+\\.\\d+)"
+    version: ">=1.0"
+
+  git:
+    description: "Version control"
+    binary: git
+    verify:
+      command: "git --version"
+      pattern: "git version (\\d+\\.\\d+)"
+    version: ">=2.0"
+
+  gcc:
+    description: "C compiler for CGO support"
+    binary: gcc
+    verify:
+      command: "gcc --version"
+      pattern: "gcc.*?(\\d+\\.\\d+)"
+    version: ">=8.0"
+    platforms: [windows, linux, darwin]
+
+  buildx:
+    description: "Docker buildx for multi-platform builds"
+    binary: docker
+    args: ["buildx", "build"]
+    verify:
+      command: "docker buildx version"
+      pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
+    version: ">=0.10"
+    resources:
+      cpus: 1       # Lightweight: container builds are I/O-bound, not CPU-bound
+    requirements: [docker]
+
+  npm:
+    description: "Node.js package manager"
+    binary: npm
+    verify:
+      command: "node --version"
+      pattern: "v(\\d+\\.\\d+)"
+    version: ">=18.0"
+
+  tsc:
+    description: "TypeScript compiler"
+    binary: tsc
+    verify:
+      command: "tsc --version"
+      pattern: "Version (\\d+\\.\\d+)"
+    version: ">=5.0"
+    requirements: [npm]
+
+  npm-build:
+    description: "NPM build (runs 'npm run build')"
+    binary: npm
+    args: ["run", "build"]
+    verify:
+      command: "node --version"
+      pattern: "v(\\d+\\.\\d+)"
+    version: ">=18.0"
+    requirements: [npm, tsc]
+
+  gh:
+    description: "GitHub CLI"
+    binary: gh
+    verify:
+      command: "gh --version"
+      pattern: "gh version (\\d+\\.\\d+)"
+    version: ">=2.0"
+
+  python:
+    description: "Python interpreter"
+    binary: python
+    verify:
+      command: "python --version"
+      pattern: "Python (\\d+\\.\\d+)"
+    version: ">=3.8"
+
+  cargo:
+    description: "Rust package manager"
+    binary: cargo
+    verify:
+      command: "cargo --version"
+      pattern: "cargo (\\d+\\.\\d+)"
+    version: ">=1.70"
+
+  dotnet:
+    description: ".NET SDK"
+    binary: dotnet
+    verify:
+      command: "dotnet --version"
+      pattern: "(\\d+\\.\\d+)"
+    version: ">=8.0"
+
+  bash:
+    description: "Bash shell"
+    binary: bash
+    verify:
+      command: "bash --version"
+      pattern: "version (\\d+\\.\\d+)"
+    version: ">=4.0"
+
+  pwsh:
+    description: "PowerShell"
+    binary: pwsh
+    platforms: [windows, linux, darwin]
+    verify:
+      command: "pwsh --version"
+      pattern: "PowerShell (\\d+\\.\\d+)"
+    version: ">=7.0"
+
+  curl:
+    description: "HTTP client"
+    binary: curl
+    verify:
+      command: "curl --version"
+      pattern: "curl (\\d+\\.\\d+)"
+    version: ">=7.0"
+
+  mkdocs:
+    description: "Documentation generator"
+    binary: mkdocs
+    verify:
+      command: "mkdocs --version"
+      pattern: "mkdocs, version (\\d+\\.\\d+)"
+    version: ">=1.5"
+
+  mkdocs-preprocess:
+    description: "MkDocs preprocessing (native handler)"
+    binary: eac
+
+  #-------------------------------------------------------------------------
+  # AI Analysis Tools (internal AI executor)
+  #-------------------------------------------------------------------------
+  ai-dsl-analyzer:
+    description: "AI-powered Structurizr DSL analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=dsl"]
+    resources:
+      cpus: 3
+
+  ai-specs-analyzer:
+    description: "AI-powered Gherkin specs analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=specs"]
+    resources:
+      cpus: 3
+
+  ai-source-analyzer:
+    description: "AI-powered source code analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=source"]
+    resources:
+      cpus: 4
+
+  ai-docs-analyzer:
+    description: "AI-powered documentation analysis"
+    binary: eac
+    args: ["ai", "analyze", "--type=docs"]
+    resources:
+      cpus: 3
+
+#---------------------------------------------------------------------------
+# Container Tools (Docker-based)
+#---------------------------------------------------------------------------
+container-tools:
+  # Go
+  go-build:
+    description: "Go build with CGO and race detection support"
+    localPath: containers/cgo-oci
+    command: ["go", "build", "./..."]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/go"
+        target: /go/pkg
+      - source: "{workspace}/.cache/go-build"
+        target: /root/.cache/go-build
+    workdir: /app
+    environment:
+      CGO_ENABLED: "1"
+    resources:
+      cpus: 4
+    requirements: [docker]
+
+  go-test-race:
+    description: "Go test with race detector"
+    localPath: containers/cgo-oci
+    command: ["go", "test", "-race", "./..."]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/go"
+        target: /go/pkg
+      - source: "{workspace}/.cache/go-build"
+        target: /root/.cache/go-build
+    workdir: /app
+    environment:
+      CGO_ENABLED: "1"
+    resources:
+      cpus: 4
+    requirements: [docker]
+
+  # Node.js / TypeScript
+  npm-build:
+    description: "NPM build in container"
+    image: node
+    tag: "22-alpine"
+    command: ["sh", "-c", "npm install && npm run build && if [ -d out ]; then cp -r out/* /output/; fi"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{output}"
+        target: /output
+    workdir: /app
+    requirements: [docker]
+
+  npm-test:
+    description: "NPM test in container"
+    image: node
+    tag: "22-alpine"
+    command: ["sh", "-c", "npm install && npm test"]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  # Linters
+  golangci-lint:
+    description: "Go linter aggregator"
+    image: golangci/golangci-lint
+    tag: "v1.62.2"
+    command: ["golangci-lint", "run", "--out-format=json"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/golangci-lint"
+        target: /root/.cache/golangci-lint
+    workdir: /app
+    resources:
+      cpus: 2
+    requirements: [docker]
+
+  eslint:
+    description: "JavaScript/TypeScript linter"
+    image: node
+    tag: "22-alpine"
+    entrypoint: ["npx"]
+    command: ["eslint", "--format=json", "."]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    resources:
+      cpus: 2
+    requirements: [docker]
+
+  ruff:
+    description: "Python linter"
+    image: ghcr.io/astral-sh/ruff
+    tag: "0.8.6"
+    command: ["check", "."]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  clippy:
+    description: "Rust linter"
+    image: rust
+    tag: "1.84.0"
+    command: ["cargo", "clippy", "--", "-D", "warnings"]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  markdownlint:
+    description: "Markdown linter"
+    image: davidanson/markdownlint-cli2
+    tag: "v0.17.2"
+    mounts:
+      - source: "{module}"
+        target: /workdir
+    workdir: /workdir
+    requirements: [docker]
+
+  # Test runners
+  pytest:
+    description: "Python test runner"
+    image: python
+    tag: "3.12-slim"
+    command: ["python", "-m", "pytest"]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  pester:
+    description: "PowerShell test runner"
+    image: mcr.microsoft.com/powershell
+    tag: "7.4-alpine-3.20"
+    command:
+      ["pwsh", "-NoLogo", "-NoProfile", "-Command", "Invoke-Pester -EnableExit"]
+    mounts:
+      - source: "{module}"
+        target: /scripts
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /scripts
+    resources:
+      cpus: 1
+      memory: "2g"
+    requirements: [docker]
+
+  # Documentation
+  mkdocs-build:
+    description: "MkDocs build"
+    localPath: containers/mkdocs-render-oci
+    resources:
+      cpus: 4       # Site building with plugins can be CPU-intensive
+      memory: "1g"
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdocs build --strict --site-dir /output/site 2>&1 | tee /tmp/mkdocs.log; if grep -q 'Aborted' /tmp/mkdocs.log; then exit 1; fi",
+      ]
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+      - source: "{output}"
+        target: /output
+    workdir: /docs
+    requirements: [docker]
+
+  mkdocs-live:
+    description: "MkDocs live server"
+    image: squidfunk/mkdocs-material
+    tag: "9.5.49"
+    command: ["serve", "--dev-addr=0.0.0.0:8000"]
+    mounts:
+      - source: "{module}"
+        target: /docs
+    workdir: /docs
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+      watch_enabled: true
+      watch_paths: ["docs/", "mkdocs.yml"]
+
+  mkdocs-render-oci:
+    description: "MkDocs site rendering from preprocessed content"
+    localPath: containers/mkdocs-render-oci
+    command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{staging}"
+        target: /staging
+        readonly: true
+      - source: "{output}"
+        target: /output
+    workdir: /docs
+    requirements: [docker]
+    resources:
+      cpus: 4       # Site rendering with plugins can be CPU-intensive
+      memory: "1g"
+
+  pdf-oci:
+    description: "MkDocs PDF generation with Playwright"
+    localPath: containers/pdf-oci
+    command: ["mkdocs", "build", "-f", "/output/mkdocs.yml", "--site-dir", "/output/site", "--clean"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{staging}"
+        target: /staging
+        readonly: true
+      - source: "{output}"
+        target: /output
+    workdir: /docs
+    environment:
+      ENABLE_PDF_EXPORT: "true"
+    requirements: [docker]
+    resources:
+      cpus: 4       # Per-instance limit
+      memory: "4g"  # Per-instance (fits in 6GB Docker limit with shm)
+      shm_size: "1g" # Ramdisk for Chromium rendering
+
+  # Diagram tools
+  drawio:
+    description: "DrawIO CLI - renders .drawio.png to optimized PNG"
+    localPath: containers/drawio-oci
+    command: ["python", "/app/drawio_cli.py", "render", "-i", "{input_path}", "-o", "{output_path}", "--max-width", "{max_width}"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{output}"
+        target: /output
+    workdir: /docs
+    resources:
+      cpus: 4
+      memory: "4g"
+    requirements: [docker]
+
+  mermaid-render:
+    description: "Mermaid diagram batch rendering"
+    localPath: containers/mermaid-oci
+    command: ["node", "/app/batch-render.js", "--manifest", "/work/manifest.json"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{staging}"
+        target: /staging
+      - source: "{staging}/.mermaid-work"
+        target: /work
+    workdir: /docs
+    requirements: [docker]
+    resources:
+      cpus: 4
+      memory: "4g"
+      shm_size: "2g"  # Chromium needs shared memory
+
+  plantuml:
+    description: "PlantUML renderer"
+    image: plantuml/plantuml
+    tag: "1.2024.8"
+    command: ["-tsvg", "/data"]
+    mounts:
+      - source: "{output}"
+        target: /data
+    requirements: [docker]
+
+  # Architecture tools
+  structurizr-cli:
+    description: "Structurizr CLI for export/validation"
+    image: structurizr/cli
+    tag: "2025.11.09"
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /workspace
+    requirements: [docker]
+
+  structurizr-export:
+    description: "Structurizr CLI export to PlantUML format"
+    image: structurizr/cli
+    tag: "2025.11.09"
+    command: ["export", "-workspace", "{workspace_path}", "-format", "plantuml/c4plantuml", "-output", "/output"]
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+        readOnly: true
+      - source: "{output}"
+        target: /output
+    workdir: /workspace
+    requirements: [docker]
+
+  structurizr-lite:
+    description: "Structurizr diagram server"
+    image: structurizr/lite
+    tag: "2025.11.09"
+    mounts:
+      - source: "{content}"
+        target: /usr/local/structurizr
+    requirements: [docker]
+    serve:
+      container_port: 8080
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  # Servers
+  static-site:
+    description: "Static site server (nginx)"
+    localPath: containers/nginx-oci
+    mounts:
+      - source: "{content}"
+        target: /usr/share/nginx/html
+        readonly: true
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  mkdocs-dev-oci:
+    description: "MkDocs development server with polling-based file watching"
+    localPath: containers/mkdocs-dev-oci
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  # Security scanners
+  trivy-sbom:
+    description: "SBOM generator"
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command:
+      [
+        "fs",
+        "--scanners",
+        "vuln",
+        "--format",
+        "cyclonedx",
+        "--list-all-pkgs",
+        "--quiet",
+        "/scan",
+      ]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-vuln:
+    description: "Vulnerability scanner"
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command:
+      ["fs", "--scanners", "vuln", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-secrets:
+    description: "Secrets scanner"
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command:
+      ["fs", "--scanners", "secret", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-iac:
+    description: "IaC scanner"
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command:
+      ["fs", "--scanners", "misconfig", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-compliance:
+    description: "Compliance scanner"
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command:
+      ["fs", "--compliance", "all", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  semgrep:
+    description: "SAST scanner"
+    image: semgrep/semgrep
+    tag: "1.145.1"
+    command: ["semgrep", "scan", "--config", "auto", "--json", "/src"]
+    mounts:
+      - source: "{module}"
+        target: /src
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  zap:
+    description: "DAST scanner"
+    image: zaproxy/zap-stable
+    tag: "2.14.0"
+    command: ["zap-baseline.py", "-t", "{target_url}", "-J", "report.json"]
+    mounts:
+      - source: "{output}"
+        target: /zap/wrk
+    output_format: json
+    requirements: [docker]
+
+#---------------------------------------------------------------------------
+# Tool Bindings (override auto resolution)
+# Default is "auto" - tries system first, falls back to container
+#---------------------------------------------------------------------------
+tool-bindings:
+  # Explicitly use system for bootstrap tools
+  go: system
+  docker: system
+  git: system
+
+#---------------------------------------------------------------------------
+# Component-to-Tool Assignments
+#---------------------------------------------------------------------------
+component-tools:
+  go:
+    builder: go
+    linter: golangci-lint
+    tester: go
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
+
+  typescript:
+    builder: npm-build
+    linter: eslint
+    tester: npm-test
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets]
+
+  javascript:
+    builder: npm-build
+    linter: eslint
+    tester: npm-test
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets]
+
+  python:
+    builder: python
+    linter: ruff
+    tester: pytest
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
+
+  rust:
+    builder: cargo
+    linter: clippy
+    tester: cargo
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
+
+  dotnet:
+    builder: dotnet
+    linter: dotnet
+    tester: dotnet
+    scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
+
+  dockerfile:
+    builder: buildx
+    scanners: [trivy-sbom, trivy-vuln, trivy-iac]
+
+  book:
+    builder: mkdocs-build
+    server: static-site
+    servers: [static-site, mkdocs-live]
+
+  # docs-pdf and docs-site use tool chains defined in component-types.yml
+  # No single builder binding needed - the tools list handles execution order
+
+  design:
+    server: structurizr-lite
+
+  markdown:
+    linter: markdownlint
+
+  structurizr:
+    linter: structurizr-cli
+
+  pwsh:
+    tester: pester
+
+  # AI Analysis Components
+  ai-dsl:
+    builder: ai-dsl-analyzer
+
+  ai-specs:
+    builder: ai-specs-analyzer
+
+  ai-source:
+    builder: ai-source-analyzer
+
+  ai-docs:
+    builder: ai-docs-analyzer
+
+#---------------------------------------------------------------------------
+# Test Type to Component Type Mapping
+#---------------------------------------------------------------------------
+# Maps test discovery types (gotest, godog, etc.) to component types for UoW naming.
+# This determines the "component" field in test UnitIDs: test:module:component:tool:testname
+#
+# Format: test_type: component_type
+# - test_type: The type returned by test discovery (e.g., "gotest", "godog", "mocha")
+# - component_type: The component type used in UnitID (e.g., "go", "gherkin", "typescript")
+#
+# Override in .eac/repository.yml to customize for your project.
+test-type-mapping:
+  gotest: go
+  godog: gherkin
+  mocha: typescript
+  tscucumber: gherkin
+  pester: pwsh
+  pytest: python
+  cargo: rust
+  dotnet: dotnet
+
+#---------------------------------------------------------------------------
+# Environment Overrides
+#---------------------------------------------------------------------------
+environments:
+  ci:
+    description: "CI - containers for reproducibility"
+    component-tools:
+      book:
+        builder: mkdocs-build
+
+  local:
+    description: "Local - system tools preferred"
+
+#---------------------------------------------------------------------------
+# Caches
+#---------------------------------------------------------------------------
+caches:
+  go:
+    path: ".cache/go"
+    description: "Go module cache"
+
+  go-build:
+    path: ".cache/go-build"
+    description: "Go build cache"
+
+  npm:
+    path: ".cache/npm"
+    description: "NPM download cache and isolated work directories (work/{moniker})"
+
+  lint:
+    path: ".cache/lint"
+    description: "Linter caches"

@@ -154,5 +154,20 @@ func (c *Console) SetInitSummary(summary *tui.InitSummary) {
 	c.inner.SetInitSummary(summary)
 }
 
+// SendPlannedWork delivers predicted work items for grey skeleton tabs.
+func (c *Console) SendPlannedWork(items []tui.PlannedWorkItem) {
+	c.inner.SendPlannedWork(items)
+}
+
+// EnrichUoW delivers incremental enrichment data for an existing planned tab.
+func (c *Console) EnrichUoW(enrichment tui.UoWEnrichment) {
+	c.inner.EnrichUoW(enrichment)
+}
+
+// SignalAllWorkDone signals that all work including AfterExecute hooks is complete.
+func (c *Console) SignalAllWorkDone() {
+	c.inner.SignalAllWorkDone()
+}
+
 // Compile-time check that Console implements tui.Console.
 var _ tui.Console = (*Console)(nil)

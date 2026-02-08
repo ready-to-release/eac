@@ -7,25 +7,25 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 )
 
-// SecurityConfig implements security.SecurityConfigPort.
+// SecurityConfig implements scanner.SecurityConfigPort.
 // It loads scanner definitions and policies from the eac-security contract.
 type SecurityConfig struct {
-	scanners map[string]*security.ScannerDefinition
-	policies *security.PoliciesConfig
+	scanners map[string]*scanner.ScannerDefinition
+	policies *scanner.PoliciesConfig
 	risk     *RiskConfig
 }
 
 // Verify SecurityConfig implements SecurityConfigPort.
-var _ security.SecurityConfigPort = (*SecurityConfig)(nil)
+var _ scanner.SecurityConfigPort = (*SecurityConfig)(nil)
 
 // LoadSecurityConfig loads the security configuration from the eac-security contract.
 // It loads scanners.yml, policies.yml, and risk-config.yml, merging defaults with user overrides.
 func LoadSecurityConfig(repoRoot, configRoot string) (*SecurityConfig, error) {
 	cfg := &SecurityConfig{
-		scanners: make(map[string]*security.ScannerDefinition),
+		scanners: make(map[string]*scanner.ScannerDefinition),
 	}
 
 	// Load scanners
@@ -58,7 +58,7 @@ func (c *SecurityConfig) loadRisk(repoRoot, configRoot string) error {
 
 // Risk returns the risk configuration.
 // Returns nil if risk config was not loaded.
-func (c *SecurityConfig) Risk() security.RiskConfigPort {
+func (c *SecurityConfig) Risk() scanner.RiskConfigPort {
 	if c.risk == nil {
 		return nil
 	}
@@ -68,7 +68,7 @@ func (c *SecurityConfig) Risk() security.RiskConfigPort {
 // loadScanners loads scanner definitions from scanners.yml.
 func (c *SecurityConfig) loadScanners(repoRoot, configRoot string) error {
 	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "security", paths.DefaultsVersion, "defaults", "scanners.yml")
+	defaultPath := filepath.Join(repoRoot, "contracts", "scanner", paths.DefaultsVersion, "schemas", "defaults", "scanners.yml")
 	defaults, err := loadScannersFile(defaultPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -83,15 +83,15 @@ func (c *SecurityConfig) loadScanners(repoRoot, configRoot string) error {
 
 	// Merge: start with defaults, override with user
 	if defaults != nil {
-		for id, scanner := range defaults.Scanners {
-			scanner.IDValue = id // Set ID from map key
-			c.scanners[id] = scanner
+		for id, scannerDef := range defaults.Scanners {
+			scannerDef.IDValue = id // Set ID from map key
+			c.scanners[id] = scannerDef
 		}
 	}
 	if user != nil {
-		for id, scanner := range user.Scanners {
-			scanner.IDValue = id
-			c.scanners[id] = scanner
+		for id, scannerDef := range user.Scanners {
+			scannerDef.IDValue = id
+			c.scanners[id] = scannerDef
 		}
 	}
 
@@ -101,7 +101,7 @@ func (c *SecurityConfig) loadScanners(repoRoot, configRoot string) error {
 // loadPolicies loads scanner policies from policies.yml.
 func (c *SecurityConfig) loadPolicies(repoRoot, configRoot string) error {
 	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "security", paths.DefaultsVersion, "defaults", "policies.yml")
+	defaultPath := filepath.Join(repoRoot, "contracts", "scanner", paths.DefaultsVersion, "schemas", "defaults", "policies.yml")
 	defaults, err := loadPoliciesFile(defaultPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -118,7 +118,7 @@ func (c *SecurityConfig) loadPolicies(repoRoot, configRoot string) error {
 	c.policies = mergePolicies(defaults, user)
 	if c.policies == nil {
 		// Fallback to empty policies
-		c.policies = &security.PoliciesConfig{
+		c.policies = &scanner.PoliciesConfig{
 			ComponentScanners: make(map[string][]string),
 			Default:           []string{"trivy-sbom", "trivy-vuln"},
 		}
@@ -128,7 +128,7 @@ func (c *SecurityConfig) loadPolicies(repoRoot, configRoot string) error {
 }
 
 // GetScanner returns a scanner definition by ID.
-func (c *SecurityConfig) GetScanner(id string) (security.ScannerPort, bool) {
+func (c *SecurityConfig) GetScanner(id string) (scanner.ScannerPort, bool) {
 	scanner, ok := c.scanners[id]
 	if !ok {
 		return nil, false
@@ -179,13 +179,13 @@ func (c *SecurityConfig) ShouldSkipModule(moniker string) bool {
 
 // Helper functions
 
-func loadScannersFile(path string) (*security.ScannersConfig, error) {
+func loadScannersFile(path string) (*scanner.ScannersConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg security.ScannersConfig
+	var cfg scanner.ScannersConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
@@ -193,13 +193,13 @@ func loadScannersFile(path string) (*security.ScannersConfig, error) {
 	return &cfg, nil
 }
 
-func loadPoliciesFile(path string) (*security.PoliciesConfig, error) {
+func loadPoliciesFile(path string) (*scanner.PoliciesConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg security.PoliciesConfig
+	var cfg scanner.PoliciesConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func loadPoliciesFile(path string) (*security.PoliciesConfig, error) {
 	return &cfg, nil
 }
 
-func mergePolicies(defaults, user *security.PoliciesConfig) *security.PoliciesConfig {
+func mergePolicies(defaults, user *scanner.PoliciesConfig) *scanner.PoliciesConfig {
 	if defaults == nil {
 		return user
 	}
@@ -215,7 +215,7 @@ func mergePolicies(defaults, user *security.PoliciesConfig) *security.PoliciesCo
 		return defaults
 	}
 
-	result := &security.PoliciesConfig{
+	result := &scanner.PoliciesConfig{
 		ComponentScanners: make(map[string][]string),
 		SkipModules:       defaults.SkipModules,
 		Default:           defaults.Default,

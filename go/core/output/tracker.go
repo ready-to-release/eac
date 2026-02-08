@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -14,14 +15,14 @@ import (
 // It tracks start times in memory and persists manifests to disk on completion.
 type InMemoryTracker struct {
 	workspaceRoot string
-	ctx           workunit.Context
+	ctx           core.ActionType
 
 	mu      sync.Mutex
 	started map[string]time.Time // id.Longname() -> start time
 }
 
 // NewTracker creates a new UoW tracker for the given workspace and context.
-func NewTracker(workspaceRoot string, ctx workunit.Context) *InMemoryTracker {
+func NewTracker(workspaceRoot string, ctx core.ActionType) *InMemoryTracker {
 	return &InMemoryTracker{
 		workspaceRoot: workspaceRoot,
 		ctx:           ctx,
@@ -33,7 +34,7 @@ func NewTracker(workspaceRoot string, ctx workunit.Context) *InMemoryTracker {
 // Format: out/{context}/{module}/{dirname}/
 // where dirname = component[-extra1][-extra2]... for uniqueness.
 func (t *InMemoryTracker) uowDir(id workunit.UnitID) string {
-	return filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, id.DirName())
+	return filepath.Join(t.workspaceRoot, "out", string(id.Action), id.Module, id.DirName())
 }
 
 // RecordStart marks a UoW as started and creates its output directory.
@@ -68,7 +69,7 @@ func (t *InMemoryTracker) RecordComplete(id workunit.UnitID, manifest *UoWManife
 	}
 
 	// Ensure UoW identity fields match the ID
-	manifest.Context = id.Context
+	manifest.Action = id.Action
 	manifest.Module = id.Module
 	manifest.Component = id.Component
 	manifest.Tool = id.Tool
@@ -82,7 +83,7 @@ func (t *InMemoryTracker) RecordComplete(id workunit.UnitID, manifest *UoWManife
 // Returns an error if the manifest is missing, invalid, or artifacts are missing/corrupt.
 func (t *InMemoryTracker) RecordCacheHit(id workunit.UnitID) (*UoWManifest, error) {
 	// Compute manifest path using DirName for consistency
-	manifestPath := filepath.Join(t.workspaceRoot, "out", string(id.Context), id.Module, id.DirName(), "uow.manifest.json")
+	manifestPath := filepath.Join(t.workspaceRoot, "out", string(id.Action), id.Module, id.DirName(), "uow.manifest.json")
 
 	// Load manifest
 	manifest, err := Load(manifestPath)

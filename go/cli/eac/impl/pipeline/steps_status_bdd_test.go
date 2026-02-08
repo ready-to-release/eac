@@ -10,7 +10,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/core/environments"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // registerStatusSteps registers step definitions for pipeline status command features.

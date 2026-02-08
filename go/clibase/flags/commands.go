@@ -94,7 +94,7 @@ type SharedFlags struct {
 	// Declarative state tracking
 	// These fields indicate whether the user explicitly set the flags
 	CacheExplicit    bool // True if --with-cache or --no-cache was used
-	DepsExplicit     bool // True if --with-deps or --skip-deps was used
+	DepsExplicit     bool // True if --with-deps or --no-deps was used
 	ParallelExplicit bool // True if --parallel or --sequential was used
 	TUIExplicit      bool // True if --with-tui or --no-tui was used
 }

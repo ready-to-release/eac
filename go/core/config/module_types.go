@@ -52,7 +52,7 @@ type DockerBuildConfig struct {
 	Platforms  []string           `yaml:"platforms,omitempty"`  // Target platforms (e.g., linux/amd64, linux/arm64)
 	Tags       []string           `yaml:"tags"`                 // Image tags
 	Load       bool               `yaml:"load,omitempty"`       // Load image to local Docker daemon
-	Push       bool               `yaml:"push,omitempty"`       // Push image to registry
+	Push       *bool              `yaml:"push,omitempty"`       // Push image to registry
 	Registry   string             `yaml:"registry,omitempty"`   // Registry to push to (if push=true)
 	Cache      *DockerCacheConfig `yaml:"cache,omitempty"`      // Cache configuration
 	SBOM       bool               `yaml:"sbom,omitempty"`       // Generate SBOM
@@ -68,6 +68,16 @@ type DockerCacheConfig struct {
 	Mode  string `yaml:"mode,omitempty"`  // Cache mode: "min" or "max"
 }
 
+// ShouldPush returns true if Push is explicitly set to true.
+func (d *DockerBuildConfig) ShouldPush() bool {
+	return d != nil && d.Push != nil && *d.Push
+}
+
+// BoolPtr returns a pointer to a bool value. Useful for setting Push.
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
 // Clone creates a deep copy of DockerBuildConfig.
 func (d *DockerBuildConfig) Clone() *DockerBuildConfig {
 	if d == nil {
@@ -78,10 +88,13 @@ func (d *DockerBuildConfig) Clone() *DockerBuildConfig {
 		Context:    d.Context,
 		Dockerfile: d.Dockerfile,
 		Load:       d.Load,
-		Push:       d.Push,
 		Registry:   d.Registry,
 		SBOM:       d.SBOM,
 		Provenance: d.Provenance,
+	}
+	if d.Push != nil {
+		v := *d.Push
+		clone.Push = &v
 	}
 	if d.Platforms != nil {
 		clone.Platforms = make([]string, len(d.Platforms))
@@ -128,8 +141,8 @@ func DockerBuildConfigToMap(d *DockerBuildConfig) map[string]interface{} {
 	if d.Load {
 		result["load"] = d.Load
 	}
-	if d.Push {
-		result["push"] = d.Push
+	if d.ShouldPush() {
+		result["push"] = true
 	}
 	if d.Registry != "" {
 		result["registry"] = d.Registry

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -27,44 +28,44 @@ func TestUnitRegistry_RegisterAndRetrieve(t *testing.T) {
 	}
 
 	// Register for build command type
-	reg.RegisterProvider(CommandTypeBuild, mockProvider)
-	reg.RegisterWorker(CommandTypeBuild, mockWorker)
+	reg.RegisterProvider(core.ActionBuild, mockProvider)
+	reg.RegisterWorker(core.ActionBuild, mockWorker)
 
 	// Retrieve and verify
-	provider := reg.GetProvider(CommandTypeBuild)
+	provider := reg.GetProvider(core.ActionBuild)
 	if provider == nil {
 		t.Error("Expected provider to be registered, got nil")
 	}
 
-	worker := reg.GetWorker(CommandTypeBuild)
+	worker := reg.GetWorker(core.ActionBuild)
 	if worker == nil {
 		t.Error("Expected worker to be registered, got nil")
 	}
 
 	// Verify HasComponents returns true
-	if !reg.HasComponents(CommandTypeBuild) {
-		t.Error("Expected HasComponents to return true for registered command type")
+	if !reg.HasComponents(core.ActionBuild) {
+		t.Error("Expected HasComponents to return true for registered action type")
 	}
 }
 
-// TestUnitRegistry_UnregisteredCommandType tests behavior for unregistered types.
-func TestUnitRegistry_UnregisteredCommandType(t *testing.T) {
+// TestUnitRegistry_UnregisteredActionType tests behavior for unregistered types.
+func TestUnitRegistry_UnregisteredActionType(t *testing.T) {
 	reg := NewUnitRegistry()
 
-	// Should return nil for unregistered command type
-	provider := reg.GetProvider(CommandTypeBuild)
+	// Should return nil for unregistered action type
+	provider := reg.GetProvider(core.ActionBuild)
 	if provider != nil {
-		t.Error("Expected nil provider for unregistered command type")
+		t.Error("Expected nil provider for unregistered action type")
 	}
 
-	worker := reg.GetWorker(CommandTypeBuild)
+	worker := reg.GetWorker(core.ActionBuild)
 	if worker != nil {
-		t.Error("Expected nil worker for unregistered command type")
+		t.Error("Expected nil worker for unregistered action type")
 	}
 
 	// HasComponents should return false
-	if reg.HasComponents(CommandTypeBuild) {
-		t.Error("Expected HasComponents to return false for unregistered command type")
+	if reg.HasComponents(core.ActionBuild) {
+		t.Error("Expected HasComponents to return false for unregistered action type")
 	}
 }
 
@@ -76,10 +77,10 @@ func TestUnitRegistry_PartialRegistration(t *testing.T) {
 	mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		return nil
 	}
-	reg.RegisterProvider(CommandTypeTest, mockProvider)
+	reg.RegisterProvider(core.ActionTest, mockProvider)
 
 	// HasComponents should return false (worker not registered)
-	if reg.HasComponents(CommandTypeTest) {
+	if reg.HasComponents(core.ActionTest) {
 		t.Error("Expected HasComponents to return false when only provider is registered")
 	}
 
@@ -87,10 +88,10 @@ func TestUnitRegistry_PartialRegistration(t *testing.T) {
 	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 0
 	}
-	reg.RegisterWorker(CommandTypeTest, mockWorker)
+	reg.RegisterWorker(core.ActionTest, mockWorker)
 
 	// Now HasComponents should return true
-	if !reg.HasComponents(CommandTypeTest) {
+	if !reg.HasComponents(core.ActionTest) {
 		t.Error("Expected HasComponents to return true after both registered")
 	}
 }
@@ -110,13 +111,13 @@ func TestUnitRegistry_ReplaceRegistration(t *testing.T) {
 	}
 
 	// Register first provider
-	reg.RegisterProvider(CommandTypeScan, provider1)
+	reg.RegisterProvider(core.ActionScan, provider1)
 
 	// Replace with second provider
-	reg.RegisterProvider(CommandTypeScan, provider2)
+	reg.RegisterProvider(core.ActionScan, provider2)
 
 	// Call the provider and verify it's the second one
-	retrieved := reg.GetProvider(CommandTypeScan)
+	retrieved := reg.GetProvider(core.ActionScan)
 	if retrieved == nil {
 		t.Fatal("Expected provider to be registered")
 	}
@@ -126,11 +127,11 @@ func TestUnitRegistry_ReplaceRegistration(t *testing.T) {
 	}
 }
 
-// TestUnitRegistry_AllCommandTypes tests registration for all command types.
-func TestUnitRegistry_AllCommandTypes(t *testing.T) {
+// TestUnitRegistry_AllActionTypes tests registration for all action types.
+func TestUnitRegistry_AllActionTypes(t *testing.T) {
 	reg := NewUnitRegistry()
 
-	commandTypes := []CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}
+	commandTypes := []core.ActionType{core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint}
 
 	for _, cmdType := range commandTypes {
 		mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
@@ -161,7 +162,7 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			cmdType := CommandType([]CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}[idx%4])
+			cmdType := []core.ActionType{core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint}[idx%4]
 			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) []workunit.UnitSpec {
 				return nil
 			})
@@ -176,7 +177,7 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			cmdType := CommandType([]CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}[idx%4])
+			cmdType := []core.ActionType{core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint}[idx%4]
 			_ = reg.GetProvider(cmdType)
 			_ = reg.GetWorker(cmdType)
 			_ = reg.HasComponents(cmdType)
@@ -202,10 +203,10 @@ func TestInjectModuleDependencies_Basic(t *testing.T) {
 	}, "/test")))
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "gherkin", Tool: "godog"}, Index: 1},
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 2},
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "docs", Tool: "mkdocs"}, Index: 3},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "gherkin", Tool: "godog"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 2},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "docs", Tool: "mkdocs"}, Index: 3},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -236,7 +237,7 @@ func TestInjectModuleDependencies_DepNotInBatch(t *testing.T) {
 	// Note: moduleB is registered but has no UoWs in the work slice
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -258,8 +259,8 @@ func TestInjectModuleDependencies_NoDeps(t *testing.T) {
 	}, "/test")))
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go"}, Index: 0},
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go"}, Index: 1},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -295,14 +296,14 @@ func TestInjectModuleDependencies_PreservesExistingDeps(t *testing.T) {
 		DependsOn: []string{},
 	}, "/test")))
 
-	existingDep := workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "static", Tool: "copy"}
+	existingDep := workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "static", Tool: "copy"}
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleA", Component: "go", Tool: "go-build"},
+			ID:        workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"},
 			Index:     0,
 			DependsOn: []workunit.UnitID{existingDep},
 		},
-		{ID: workunit.UnitID{Context: workunit.ContextBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 1},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -321,14 +322,14 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 
 	// Test RegisterUnitProvider and GetUnitProvider
 	buildCalled := false
-	RegisterUnitProvider(CommandTypeBuild, func(ctx *ExecutionContext) []workunit.UnitSpec {
+	RegisterUnitProvider(core.ActionBuild, func(ctx *ExecutionContext) []workunit.UnitSpec {
 		buildCalled = true
 		return nil
 	})
 
-	provider := GetUnitProvider(CommandTypeBuild)
+	provider := GetUnitProvider(core.ActionBuild)
 	if provider == nil {
-		t.Fatal("RegisterUnitProvider should register for CommandTypeBuild")
+		t.Fatal("RegisterUnitProvider should register for core.ActionBuild")
 	}
 	provider(nil)
 	if !buildCalled {
@@ -336,20 +337,20 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	}
 
 	// Test RegisterUnitWorker and GetUnitWorker
-	RegisterUnitWorker(CommandTypeBuild, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	RegisterUnitWorker(core.ActionBuild, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 42
 	})
 
-	worker := GetUnitWorker(CommandTypeBuild)
+	worker := GetUnitWorker(core.ActionBuild)
 	if worker == nil {
-		t.Fatal("RegisterUnitWorker should register for CommandTypeBuild")
+		t.Fatal("RegisterUnitWorker should register for core.ActionBuild")
 	}
 	if result := worker(context.Background(), nil, "", "", nil); result != 42 {
 		t.Errorf("Expected worker to return 42, got %d", result)
 	}
 
 	// Test HasUnitExecution
-	if !HasUnitExecution(CommandTypeBuild) {
+	if !HasUnitExecution(core.ActionBuild) {
 		t.Error("HasUnitExecution should return true after registering both provider and worker")
 	}
 }

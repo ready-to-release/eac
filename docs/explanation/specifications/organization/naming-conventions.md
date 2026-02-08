@@ -24,7 +24,7 @@ Feature names use kebab-case: `[module-name_feature-name]`
 Feature: cli_init-project
 Feature: eac-commands_design-command
 Feature: vscode-extension_status-bar
-Feature: mcp-server_tools-registration
+Feature: eac-mcp-server_tools-registration
 ```
 
 ---
@@ -105,7 +105,7 @@ specs/vscode-extension/status-bar/specification.feature
 - `cli`
 - `eac-commands`
 - `vscode-extension`
-- `mcp-server`
+- `eac-mcp-server`
 
 ### Feature Name
 
@@ -168,7 +168,7 @@ Feature: cli_init-project
 @cli
 @eac-commands
 @vscode-extension
-@mcp-server
+@eac-mcp-server
 ```
 
 **Usage**: Applied at Feature level to identify which module owns the feature.

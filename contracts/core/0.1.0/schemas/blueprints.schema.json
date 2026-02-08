@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/blueprints/0.1.0",
+  "title": "Blueprints Configuration Schema",
+  "description": "Schema for blueprints configuration. Defines component blueprints, module templates, and artifact matrices as reusable building blocks for module definitions.",
+  "type": "object",
+  "properties": {
+    "component-blueprints": {
+      "type": "object",
+      "description": "Map of blueprint name to component blueprint definition. Blueprints define WHERE components live and WHAT files they contain.",
+      "additionalProperties": {
+        "$ref": "#/$defs/component_blueprint"
+      }
+    },
+    "module-templates": {
+      "type": "object",
+      "description": "Map of template name to module template definition. Templates define common module patterns that can be instantiated with the 'template' field in module definitions.",
+      "additionalProperties": {
+        "$ref": "#/$defs/module_template"
+      }
+    },
+    "artifact-matrices": {
+      "type": "object",
+      "description": "Map of matrix name to artifact matrix definition. Reusable artifact configurations that can be referenced by modules.",
+      "additionalProperties": {
+        "$ref": "#/$defs/artifact_matrix"
+      }
+    },
+    "conventions": {
+      "type": "object",
+      "description": "Discovery conventions documentation. Informational only - discovery rules come from repository.yml.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "component_blueprint": {
+      "type": "object",
+      "description": "A reusable component specification combining a component type reference with root path patterns and optional discovery rules.",
+      "required": ["component"],
+      "properties": {
+        "component": {
+          "type": "string",
+          "description": "Target component name in the module's Components map."
+        },
+        "type": {
+          "type": "string",
+          "description": "Component type (from component-types.yml). If empty, component name is used as the type."
+        },
+        "root": {
+          "type": "string",
+          "description": "Default root path pattern with {placeholder} support."
+        },
+        "patterns": {
+          "$ref": "#/$defs/component_patterns",
+          "description": "File pattern overrides for the component type defaults."
+        },
+        "discovery": {
+          "$ref": "#/$defs/blueprint_discovery",
+          "description": "Optional filesystem-based auto-discovery. When present, the component is only created if the check passes."
+        }
+      }
+    },
+    "component_patterns": {
+      "type": "object",
+      "description": "File patterns for source, test, and config files.",
+      "properties": {
+        "source": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Source file patterns."
+        },
+        "tests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Test file patterns."
+        },
+        "config": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Configuration file patterns."
+        }
+      }
+    },
+    "blueprint_discovery": {
+      "type": "object",
+      "description": "Filesystem-based component discovery configuration.",
+      "properties": {
+        "check": {
+          "type": "string",
+          "enum": ["dir_exists", "required_file", "has_files_in_subdirs", "has_matching_files"],
+          "description": "Filesystem check type."
+        },
+        "required_file": {
+          "type": "string",
+          "description": "Required file name for check: required_file."
+        },
+        "check_pattern": {
+          "type": "string",
+          "description": "Pattern for check: has_files_in_subdirs."
+        },
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File patterns for check: has_matching_files."
+        },
+        "set_patterns": {
+          "type": "boolean",
+          "description": "When true, copies discovery patterns into the component's Patterns.Source.",
+          "default": false
+        },
+        "derive_from": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Component names to derive the path from."
+        },
+        "derive_subdirs": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Maps source component name to subdirectory suffix."
+        },
+        "fallback_path": {
+          "type": "string",
+          "description": "Fallback path when no derive source matches."
+        }
+      }
+    },
+    "module_template": {
+      "type": "object",
+      "description": "A reusable module structure with placeholders. Referenced by modules via the 'template' field.",
+      "properties": {
+        "versioning": {
+          "$ref": "#/$defs/versioning_config",
+          "description": "Default versioning configuration."
+        },
+        "components": {
+          "type": "object",
+          "description": "Default component definitions with placeholders.",
+          "additionalProperties": true
+        },
+        "blueprints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Component blueprint names to include. Resolved from the component-blueprints section."
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Default module dependencies."
+        }
+      }
+    },
+    "versioning_config": {
+      "type": "object",
+      "description": "Module versioning configuration.",
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "description": "Versioning scheme (e.g., SemVer, CalVer, Implicit)."
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Path to changelog file with {placeholder} support."
+        },
+        "release_type": {
+          "type": "string",
+          "description": "Release type (e.g., published, internal, none)."
+        }
+      }
+    },
+    "artifact_matrix": {
+      "description": "Artifact matrix definition. Can be a simple array of entries or an object with extends/additional.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact_entry" },
+          "description": "Simple matrix: array of artifact entries."
+        },
+        {
+          "type": "object",
+          "description": "Extended matrix: inherits from another matrix and adds entries.",
+          "properties": {
+            "extends": {
+              "type": "string",
+              "description": "Name of parent matrix to inherit entries from."
+            },
+            "additional": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/artifact_entry" },
+              "description": "Additional entries to add on top of parent."
+            }
+          }
+        }
+      ]
+    },
+    "artifact_entry": {
+      "type": "object",
+      "description": "A single artifact entry in a matrix.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Artifact identifier. Supports {placeholder} substitution."
+        },
+        "type": {
+          "type": "string",
+          "description": "Artifact type (e.g., executable, file, directory)."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Output file pattern. Supports {placeholder} substitution."
+        },
+        "compression": {
+          "type": "string",
+          "description": "Compression method (e.g., upx)."
+        },
+        "derive_from": {
+          "type": "string",
+          "description": "Source artifact to derive from. Supports {placeholder} substitution."
+        }
+      }
+    }
+  }
+}

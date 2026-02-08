@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/google/uuid"
@@ -32,6 +33,10 @@ type DualPoolSemaphore struct {
 
 	mu     sync.Mutex
 	closed bool
+
+	// Waiting counters for TUI display
+	hostWaiting   atomic.Int32
+	dockerWaiting atomic.Int32
 
 	// Signal handling (shared between both pools)
 	sigChan  chan os.Signal
@@ -138,11 +143,15 @@ func (dps *DualPoolSemaphore) Acquire(ctx context.Context, alloc resource.PoolAl
 	if hostWeight < 1 {
 		hostWeight = 1
 	}
+	dps.hostWaiting.Add(1)
 	dps.hostSem.Acquire(hostWeight)
+	dps.hostWaiting.Add(-1)
 
 	// If container work, also acquire docker capacity
 	if alloc.DockerWeight > 0 && dps.dockerSem != nil {
+		dps.dockerWaiting.Add(1)
 		dps.dockerSem.Acquire(alloc.DockerWeight)
+		dps.dockerWaiting.Add(-1)
 	}
 
 	return true
@@ -169,7 +178,7 @@ func (dps *DualPoolSemaphore) HostCapacity() resource.PoolCapacity {
 		Pool:    resource.PoolHost,
 		Total:   dps.hostSem.Capacity(),
 		Used:    dps.hostSem.Used(),
-		Waiting: 0, // TODO: track waiting
+		Waiting: int(dps.hostWaiting.Load()),
 	}
 }
 
@@ -182,7 +191,7 @@ func (dps *DualPoolSemaphore) DockerCapacity() resource.PoolCapacity {
 		Pool:    resource.PoolDocker,
 		Total:   dps.dockerSem.Capacity(),
 		Used:    dps.dockerSem.Used(),
-		Waiting: 0,
+		Waiting: int(dps.dockerWaiting.Load()),
 	}
 }
 

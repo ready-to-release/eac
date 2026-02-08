@@ -39,9 +39,9 @@ func TestLoadSecurityConfig(t *testing.T) {
 		assert.NotEmpty(t, goScanners, "go should have default scanners")
 		assert.Contains(t, goScanners, "trivy-sbom")
 
-		// Markdown should have empty or minimal scanners
-		mdScanners := cfg.GetDefaultScanners("markdown")
-		assert.Empty(t, mdScanners, "markdown should have no scanners")
+		// Assets should have secrets scanner only
+		assetsScanners := cfg.GetDefaultScanners("assets")
+		assert.Contains(t, assetsScanners, "trivy-secret", "assets should have secrets scanner")
 	})
 
 	t.Run("skip modules", func(t *testing.T) {

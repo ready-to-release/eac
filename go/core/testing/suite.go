@@ -2,10 +2,11 @@ package testing
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
-	testingInterfaces "github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
@@ -94,7 +95,7 @@ func ListSuites() []string {
 }
 
 // convertSuitePort converts a SuitePort interface to a runtime TestSuite.
-func convertSuitePort(suite testingInterfaces.SuitePort) *TestSuite {
+func convertSuitePort(suite core.SuitePort) *TestSuite {
 	selectors := make([]TagSelector, len(suite.Selectors()))
 	for i, sel := range suite.Selectors() {
 		selectors[i] = TagSelector{
@@ -113,95 +114,31 @@ func convertSuitePort(suite testingInterfaces.SuitePort) *TestSuite {
 	}
 }
 
-// BuildGodogTagFilter generates a godog-compatible tag expression for the suite.
-//
-// # CRITICAL: Godog Tag Expression Syntax
-//
-// Godog's tag parser has specific syntax requirements. Using incorrect syntax
-// (like parentheses or "||") causes godog to SILENTLY return zero scenarios
-// without any error, which can cause CI to falsely pass.
-//
-// Correct syntax:
-//   - @tag1,@tag2    → OR  (comma, no space)
-//   - @tag1 && @tag2 → AND (double ampersand with spaces)
-//   - ~@tag          → NOT (tilde prefix)
-//
-// WRONG syntax (causes silent failure):
-//   - (@tag1 || @tag2)  ← parentheses break the parser
-//   - @tag1 || @tag2    ← "||" is not recognized
-//   - @tag1 or @tag2    ← "or" keyword not supported
-//
-// # Examples
-//
-// Commit suite (L0-L1 tests):
-//
-//	AnyOfTags:   ["@L0", "@L1"]
-//	ExcludeTags: ["@L2", "@L3", "@L4"]
-//	Output:      "@L0,@L1 && ~@L2 && ~@L3 && ~@L4"
-//
-// Acceptance suite (verification tests, excluding L0-L1):
-//
-//	AnyOfTags:   ["@iv", "@ov", "@pv"]
-//	ExcludeTags: ["@L0", "@L1"]
-//	Output:      "@iv,@ov,@pv && ~@L0 && ~@L1"
-//
-// BuildGodogTagFilterWithSkipTags builds a godog tag filter that includes skip tag exclusions.
-// This is the primary method that should be used instead of BuildGodogTagFilter.
-func (suite *TestSuite) BuildGodogTagFilterWithSkipTags(skipTags []string) string {
-	// Add skip tags to each selector's ExcludeTags
-	for i := range suite.Selectors {
-		suite.Selectors[i].ExcludeTags = append(suite.Selectors[i].ExcludeTags, skipTags...)
+// ToTagFilter converts this suite's selectors into a technology-agnostic TagFilter.
+// Adapters translate the returned TagFilter to their technology-specific syntax
+// (godog, cucumber-js, etc.) using a TagFilterTranslator.
+func (suite *TestSuite) ToTagFilter() core.TagFilter {
+	selectors := make([]core.TagFilterSelector, len(suite.Selectors))
+	for i, sel := range suite.Selectors {
+		selectors[i] = core.TagFilterSelector{
+			RequireTags: sel.RequireTags,
+			AnyOfTags:   sel.AnyOfTags,
+			ExcludeTags: sel.ExcludeTags,
+		}
 	}
-
-	filter := suite.BuildGodogTagFilter()
-
-	// Remove skip tags from selectors to avoid mutation
-	for i := range suite.Selectors {
-		suite.Selectors[i].ExcludeTags = suite.Selectors[i].ExcludeTags[:len(suite.Selectors[i].ExcludeTags)-len(skipTags)]
-	}
-
-	return filter
+	return core.TagFilter{Selectors: selectors}
 }
 
-func (suite *TestSuite) BuildGodogTagFilter() string {
-	var parts []string
-
-	for _, selector := range suite.Selectors {
-		var selectorParts []string
-
-		// RequireTags: each tag becomes an AND condition
-		// Example: ["@smoke", "@critical"] → added as separate "&& @smoke && @critical"
-		// NOTE: RequireTags are added FIRST to ensure they come before AnyOfTags
-		selectorParts = append(selectorParts, selector.RequireTags...)
-
-		// ExcludeTags: each tag becomes a NOT condition with tilde prefix
-		// Example: ["@L0", "@L1"] → "&& ~@L0 && ~@L1"
-		for _, tag := range selector.ExcludeTags {
-			selectorParts = append(selectorParts, "~"+tag)
-		}
-
-		// AnyOfTags: join with comma (no space) for OR semantics
-		// Example: ["@L0", "@L1", "@L2"] → "@L0,@L1,@L2"
-		// NOTE: AnyOfTags is added LAST to avoid operator precedence issues
-		if len(selector.AnyOfTags) > 0 {
-			orExpr := strings.Join(selector.AnyOfTags, ",")
-			selectorParts = append(selectorParts, orExpr)
-		}
-
-		// Combine all parts with AND (&&)
-		if len(selectorParts) > 0 {
-			parts = append(parts, strings.Join(selectorParts, " && "))
-		}
+// ToTagFilterWithSkipTags converts this suite's selectors into a TagFilter
+// with additional skip tag exclusions appended to every selector.
+func (suite *TestSuite) ToTagFilterWithSkipTags(skipTags []string) core.TagFilter {
+	filter := suite.ToTagFilter()
+	for i := range filter.Selectors {
+		filter.Selectors[i].ExcludeTags = append(
+			filter.Selectors[i].ExcludeTags, skipTags...,
+		)
 	}
-
-	// Multiple selectors are OR'd together using comma
-	// This handles suites with multiple TagSelector entries
-	if len(parts) > 1 {
-		return strings.Join(parts, ",")
-	} else if len(parts) == 1 {
-		return parts[0]
-	}
-	return ""
+	return filter
 }
 
 // SelectionStats contains statistics about test selection.
@@ -264,7 +201,7 @@ func (suite *TestSuite) Matches(test TestReference) bool {
 func matchesSelector(tags []string, selector TagSelector) bool {
 	// Check required tags (AND)
 	for _, required := range selector.RequireTags {
-		if !contains(tags, required) {
+		if !slices.Contains(tags, required) {
 			return false
 		}
 	}
@@ -273,7 +210,7 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 	if len(selector.AnyOfTags) > 0 {
 		hasAny := false
 		for _, anyTag := range selector.AnyOfTags {
-			if contains(tags, anyTag) {
+			if slices.Contains(tags, anyTag) {
 				hasAny = true
 				break
 			}
@@ -285,7 +222,7 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 
 	// Check excluded tags (NOT)
 	for _, excluded := range selector.ExcludeTags {
-		if contains(tags, excluded) {
+		if slices.Contains(tags, excluded) {
 			return false
 		}
 	}

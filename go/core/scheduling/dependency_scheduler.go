@@ -19,11 +19,34 @@ type DependencyScheduler struct {
 	total    int // Original count for stats
 }
 
+// SchedulerOption configures optional behavior for NewDependencyScheduler.
+type SchedulerOption func(*schedulerConfig)
+
+type schedulerConfig struct {
+	skipValidation bool
+}
+
+// WithSkipValidation skips cycle detection during scheduler construction.
+// Use when the caller has already validated that the dependency graph is acyclic
+// (e.g., via a prior module-level topological sort).
+func WithSkipValidation() SchedulerOption {
+	return func(c *schedulerConfig) {
+		c.skipValidation = true
+	}
+}
+
 // NewDependencyScheduler creates a scheduler for the given work units.
-// Returns error if circular dependencies are detected.
-func NewDependencyScheduler(units []workunit.UnitSpec) (*DependencyScheduler, error) {
-	if err := validateNoCycles(units); err != nil {
-		return nil, err
+// Returns error if circular dependencies are detected (unless WithSkipValidation is used).
+func NewDependencyScheduler(units []workunit.UnitSpec, opts ...SchedulerOption) (*DependencyScheduler, error) {
+	var cfg schedulerConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	if !cfg.skipValidation {
+		if err := validateNoCycles(units); err != nil {
+			return nil, err
+		}
 	}
 
 	ds := &DependencyScheduler{
@@ -162,6 +185,13 @@ func (ds *DependencyScheduler) HasFailedDependency(id workunit.UnitID) bool {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	return ds.tracker.HasFailedDependency(id)
+}
+
+// FailedDependencyModules returns the unique module names of failed dependencies.
+func (ds *DependencyScheduler) FailedDependencyModules(id workunit.UnitID) []string {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	return ds.tracker.FailedDependencyModules(id)
 }
 
 // Stats returns current statistics.

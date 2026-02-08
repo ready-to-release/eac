@@ -40,8 +40,7 @@ import (
 	"os"
 	"strings"
 
-	// Import linters package to trigger handler registration via init().
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/lint/linters"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
@@ -106,11 +105,9 @@ func Lint() int {
 
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeLint,
+		Type:           core.ActionLint,
 		CommandPath:    "lint",
-		ActionVerb:     "Linting",
 		OutputDir:      paths.OutLintRelPath,
-		LogFileName:    "lint.log",
 		Monikers:       shared.Monikers,
 		SkipDeps:       shared.SkipDeps,
 		Sequential:     sequential,

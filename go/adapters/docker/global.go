@@ -3,7 +3,7 @@ package docker
 import (
 	"sync"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 var (

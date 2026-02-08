@@ -196,15 +196,37 @@ func Initialize(cfg Config) error {
 }
 
 // Get returns the global logger.
-// Panics if Initialize has not been called.
+// If Initialize has not been called, auto-initializes with a default
+// stderr/console logger to avoid panics.
 func Get() *Logger {
 	globalMu.RLock()
-	defer globalMu.RUnlock()
-
-	if globalLogger == nil {
-		panic("logging: Get called before Initialize")
+	if globalLogger != nil {
+		defer globalMu.RUnlock()
+		return globalLogger
 	}
-	return globalLogger
+	globalMu.RUnlock()
+
+	// Auto-initialize with a default console-only logger
+	cfg := DefaultConfig("eac", ".")
+	logger, err := New(cfg)
+	if err != nil {
+		// Last resort: create a no-op logger from zap
+		nop := zap.NewNop()
+		logger = &Logger{
+			Logger: nop,
+			config: cfg,
+		}
+	}
+
+	globalMu.Lock()
+	// Double-check: another goroutine may have initialized while we waited
+	if globalLogger == nil {
+		globalLogger = logger
+	}
+	result := globalLogger
+	globalMu.Unlock()
+
+	return result
 }
 
 // L is a shorthand for Get().

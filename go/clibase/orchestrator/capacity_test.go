@@ -305,42 +305,56 @@ func TestCalculateCapacity_RoofOverridesAll(t *testing.T) {
 	}
 }
 
-// TestDetectAvailableCapacity_UsesNewDetection validates that detectAvailableCapacity
-// now calls the new GetEffectiveCPUs() and GetEffectiveMemoryBytes() functions.
-// This test FAILS before the fix because the old code uses runtime.NumCPU() directly.
-//
-// NOTE: This test is challenging because GetEffectiveCPUs/GetEffectiveMemoryBytes
-// have external dependencies (Docker, WSL). For now, we document the expected behavior.
-// A complete fix would require refactoring detectAvailableCapacity to accept
-// injected functions for testing.
-func TestDetectAvailableCapacity_UsesNewDetection(t *testing.T) {
-	t.Skip("TODO: This test requires refactoring detectAvailableCapacity to accept injected functions")
+// TestDetectAvailableCapacity_UsesInjectedDetector validates that detectAvailableCapacityWith
+// uses the injected CapacityDetector for CPU and memory detection.
+func TestDetectAvailableCapacity_UsesInjectedDetector(t *testing.T) {
+	detector := &mockCapacityDetector{cpus: 8, memGB: 16}
 
-	// After fix, detectAvailableCapacity should call:
-	// - GetEffectiveCPUs() instead of runtime.NumCPU()
-	// - GetEffectiveMemoryBytes() instead of mem.VirtualMemory()
-	//
-	// Expected behavior after fix:
-	// func detectAvailableCapacity(configMax int, turbo float64) int {
-	//     cpuCount := GetEffectiveCPUs()
-	//     if cpuCount < 1 {
-	//         cpuCount = 4 // Fallback
-	//     }
-	//
-	//     var ramGB int
-	//     effectiveMem := GetEffectiveMemoryBytes()
-	//     if effectiveMem > 0 {
-	//         ramGB = int(effectiveMem / (1024 * 1024 * 1024))
-	//     } else {
-	//         // Fallback: use host available RAM (not total)
-	//         memInfo, err := mem.VirtualMemory()
-	//         if err == nil {
-	//             ramGB = int(memInfo.Available / (1024 * 1024 * 1024))
-	//         } else {
-	//             ramGB = 8
-	//         }
-	//     }
-	//
-	//     return calculateCapacity(cpuCount, ramGB, configMax, turbo)
-	// }
+	// Auto-detect mode (configMax = 0)
+	capacity := detectAvailableCapacityWith(detector, 0, 1.0)
+	// min(8 CPU, 16/2=8 RAM) * 1.0 = 8
+	if capacity != 8 {
+		t.Errorf("expected capacity 8 (CPU-limited), got %d", capacity)
+	}
+
+	// RAM-limited scenario
+	detector.cpus = 16
+	detector.memGB = 8
+	capacity = detectAvailableCapacityWith(detector, 0, 1.0)
+	// min(16 CPU, 8/2=4 RAM) * 1.0 = 4
+	if capacity != 4 {
+		t.Errorf("expected capacity 4 (RAM-limited), got %d", capacity)
+	}
+
+	// With --roof override
+	capacity = detectAvailableCapacityWith(detector, 10, 1.0)
+	if capacity != 10 {
+		t.Errorf("expected capacity 10 (roof override), got %d", capacity)
+	}
+
+	// With turbo
+	detector.cpus = 4
+	detector.memGB = 32
+	capacity = detectAvailableCapacityWith(detector, 0, 1.5)
+	// min(4 CPU, 32/2=16 RAM) * 1.5 = 6, capped at 8 (2x CPU with turbo)
+	if capacity != 6 {
+		t.Errorf("expected capacity 6 (turbo), got %d", capacity)
+	}
+
+	// Fallback: 0 CPUs should use fallback of 4
+	detector.cpus = 0
+	detector.memGB = 16
+	capacity = detectAvailableCapacityWith(detector, 0, 1.0)
+	// min(4 fallback CPU, 16/2=8 RAM) * 1.0 = 4
+	if capacity != 4 {
+		t.Errorf("expected capacity 4 (CPU fallback), got %d", capacity)
+	}
 }
+
+type mockCapacityDetector struct {
+	cpus  int
+	memGB int
+}
+
+func (m *mockCapacityDetector) EffectiveCPUs() int    { return m.cpus }
+func (m *mockCapacityDetector) EffectiveMemoryGB() int { return m.memGB }

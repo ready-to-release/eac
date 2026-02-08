@@ -161,48 +161,9 @@ type ComponentTools struct {
 	// Scan maps scanner categories to tools
 	Scan *ScanToolMapping `yaml:"scan,omitempty" json:"scan,omitempty"`
 
-	// Legacy fields (for backward compatibility)
-	Builder  string   `yaml:"builder,omitempty" json:"builder,omitempty"`
-	Linter   string   `yaml:"linter,omitempty" json:"linter,omitempty"`
-	Tester   string   `yaml:"tester,omitempty" json:"tester,omitempty"`
-	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
-
 	// Phase-specific argument overrides
 	BuildArgs []string `yaml:"build_args,omitempty" json:"build_args,omitempty"`
 	LintArgs  []string `yaml:"lint_args,omitempty" json:"lint_args,omitempty"`
-}
-
-// GetBuildTool returns the build tool, preferring new field over legacy.
-func (c *ComponentTools) GetBuildTool() string {
-	if c == nil {
-		return ""
-	}
-	if c.Build != "" {
-		return c.Build
-	}
-	return c.Builder
-}
-
-// GetLintTool returns the lint tool, preferring new field over legacy.
-func (c *ComponentTools) GetLintTool() string {
-	if c == nil {
-		return ""
-	}
-	if c.Lint != "" {
-		return c.Lint
-	}
-	return c.Linter
-}
-
-// GetTestTool returns the test tool, preferring new field over legacy.
-func (c *ComponentTools) GetTestTool() string {
-	if c == nil {
-		return ""
-	}
-	if c.Test != "" {
-		return c.Test
-	}
-	return c.Tester
 }
 
 // ScanToolMapping maps scanner categories to specific tool names.

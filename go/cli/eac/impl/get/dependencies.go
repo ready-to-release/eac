@@ -6,21 +6,18 @@
 //	--as-toml: Output as TOML
 //	--as-plantuml: Output as PlantUML diagram
 //	--as-mermaid: Output as Mermaid diagram
-//	--as-execution-order: Output execution order only
 //
 // Long:
 // Long: Expected Output:
 // Long: YAML dependency graph showing module relationships, including:
 // Long:   - List of all module monikers
 // Long:   - Dependency edges (module -> list of dependencies)
-// Long:   - Execution order (topologically sorted modules)
-// Long: Alternative formats available: PlantUML diagram, Mermaid diagram, or execution order only.
+// Long: Alternative formats available: PlantUML diagram, Mermaid diagram.
 package get
 
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -55,8 +52,6 @@ func GetDependencies() int {
 			return outputPlantUML(workspaceRoot)
 		case "--as-mermaid":
 			return outputMermaid(workspaceRoot)
-		case "--as-execution-order":
-			return outputExecutionOrder(workspaceRoot)
 		}
 	}
 
@@ -96,47 +91,5 @@ func outputMermaid(workspaceRoot string) int {
 	return 0
 }
 
-// outputExecutionOrder generates execution order only.
-func outputExecutionOrder(workspaceRoot string) int {
-	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
 
-	// Check for nested format flags
-	hasYAML := false
-	hasJSON := false
-	for _, arg := range os.Args {
-		switch arg {
-		case "--as-yaml":
-			hasYAML = true
-		case "--as-json":
-			hasJSON = true
-		}
-	}
 
-	if hasJSON {
-		// Output as JSON (handled by get command helper)
-		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
-			return plan, nil
-		})
-	} else if hasYAML || !hasJSON {
-		// Default: output as YAML
-		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
-			return plan, nil
-		})
-	}
-
-	return 0
-}
-
-// Helper to check if a string slice contains a value.
-func contains(slice []string, val string) bool {
-	for _, item := range slice {
-		if item == val || strings.Contains(item, val) {
-			return true
-		}
-	}
-	return false
-}

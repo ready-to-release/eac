@@ -34,26 +34,18 @@ type SpecsReport struct {
 	TotalScenarios int        `json:"total_scenarios" yaml:"total_scenarios" toml:"total_scenarios"`
 }
 
-// gitRepo holds the git repository instance for testing (allows mock injection).
-var gitRepo git.GitRepository
+// gitRepoProvider provides lazy-initialized git repository with test injection support.
+var gitRepoProvider = &git.LazyRepo{}
 
 // getGitRepo returns the git repository, initializing it if needed.
-// This pattern matches other commands (create/squash-message, create/spec, etc.)
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	if gitRepo != nil {
-		return gitRepo, nil
-	}
-	repo, err := git.NewManager(nil).Open(workspaceRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %w", err)
-	}
-	return repo, nil
+	return gitRepoProvider.Get(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
 // This enables proper unit testing without requiring a real git repository.
 func SetGitRepo(repo git.GitRepository) {
-	gitRepo = repo
+	gitRepoProvider.Set(repo)
 }
 
 // GetSpecs loads specifications for a module and version

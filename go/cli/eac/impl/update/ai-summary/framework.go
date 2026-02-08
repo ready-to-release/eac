@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/ai/toolhandler"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/output"
@@ -17,8 +19,8 @@ import (
 
 func init() {
 	// Register component-level execution support
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeAISummary, ResolveUnitSpecs)
-	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeAISummary, aiSummaryUnitWorker)
+	cmdframework.RegisterUnitProvider(core.ActionAISummary, ResolveUnitSpecs)
+	cmdframework.RegisterUnitWorker(core.ActionAISummary, aiSummaryUnitWorker)
 }
 
 // RunAISummaryWithFramework executes the ai-summary command using the cmdframework.
@@ -55,12 +57,7 @@ func aiSummaryAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // ResolveUnitSpecs generates UnitSpecs for AI analysis components.
 func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	// Get analysis type filter from config
-	analysisType := ""
-	if ctx.Config.Extra != nil {
-		if at, ok := ctx.Config.Extra["analysisType"].(string); ok {
-			analysisType = at
-		}
-	}
+	analysisType := ctx.Config.AnalysisType
 
 	// Determine which analysis types to run
 	analysisTypes := []string{"dsl", "specs", "docs"}
@@ -77,7 +74,7 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextAISummary,
+					Action:    core.ActionAISummary,
 					Module:    moniker,
 					Component: "ai-" + aType,
 					Tool:      toolID,
@@ -98,7 +95,7 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 		if analysisType == "" || analysisType == "source" {
 			sourceSpec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextAISummary,
+					Action:    core.ActionAISummary,
 					Module:    moniker,
 					Component: "ai-source",
 					Tool:      "ai-source-analyzer",
@@ -108,8 +105,8 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 				Container:     false,
 				HostInstalled: true,
 				DependsOn: []workunit.UnitID{
-					{Context: workunit.ContextAISummary, Module: moniker, Component: "ai-dsl", Tool: "ai-dsl-analyzer"},
-					{Context: workunit.ContextAISummary, Module: moniker, Component: "ai-specs", Tool: "ai-specs-analyzer"},
+					{Action: core.ActionAISummary, Module: moniker, Component: "ai-dsl", Tool: "ai-dsl-analyzer"},
+					{Action: core.ActionAISummary, Module: moniker, Component: "ai-specs", Tool: "ai-specs-analyzer"},
 				},
 				Cached:   false,
 				Metadata: make(map[string]any),
@@ -165,7 +162,7 @@ func aiSummaryUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionConte
 				CPUs: 1, // AI tasks use weight 1 (API-bound, not CPU-bound)
 			},
 		}
-		handler = tool.NewAIToolHandler(toolDef)
+		handler = toolhandler.NewAIToolHandler(toolDef)
 	}
 
 	if handler == nil {

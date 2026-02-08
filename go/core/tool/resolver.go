@@ -5,23 +5,25 @@ import (
 	"os"
 	"runtime"
 	"sync"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Resolver resolves tool assignments for component types and operations.
 // It implements layered configuration: CLI > Environment > Project > Defaults.
 type Resolver interface {
 	// Resolve returns the tool for a component type and operation.
-	Resolve(componentType string, operation OperationType) (*ToolDefinition, error)
+	Resolve(componentType string, operation core.ActionType) (*ToolDefinition, error)
 
 	// ResolveAll returns all tools for a component type.
-	ResolveAll(componentType string) map[OperationType]*ToolDefinition
+	ResolveAll(componentType string) map[core.ActionType]*ToolDefinition
 
 	// ResolveMultiple returns all tools for operations that support multiple tools.
 	// For example, a component might have multiple linters or scanners.
-	ResolveMultiple(componentType string, operation OperationType) ([]*ToolDefinition, error)
+	ResolveMultiple(componentType string, operation core.ActionType) ([]*ToolDefinition, error)
 
 	// SetOverride sets a CLI-level override for an operation.
-	SetOverride(componentType string, operation OperationType, toolID string)
+	SetOverride(componentType string, operation core.ActionType, toolID string)
 
 	// ClearOverrides removes all CLI-level overrides.
 	ClearOverrides()
@@ -42,7 +44,7 @@ type DefaultResolver struct {
 	defaults      map[string]*ToolAssignment // Built-in defaults
 	projectConfig map[string]*ToolAssignment // From project's tool-config.yml
 	envConfigs    map[string]map[string]*ToolAssignment // Environment-specific configs
-	cliOverrides  map[string]map[OperationType]string   // CLI flag overrides
+	cliOverrides  map[string]map[core.ActionType]string   // CLI flag overrides
 
 	// Current environment (e.g., "ci", "local")
 	currentEnv string
@@ -55,7 +57,7 @@ func NewResolver(registry Registry) *DefaultResolver {
 		defaults:      make(map[string]*ToolAssignment),
 		projectConfig: make(map[string]*ToolAssignment),
 		envConfigs:    make(map[string]map[string]*ToolAssignment),
-		cliOverrides:  make(map[string]map[OperationType]string),
+		cliOverrides:  make(map[string]map[core.ActionType]string),
 	}
 }
 
@@ -159,12 +161,12 @@ func (r *DefaultResolver) DetectEnvironment() string {
 }
 
 // SetOverride sets a CLI-level override for a specific component type and operation.
-func (r *DefaultResolver) SetOverride(componentType string, operation OperationType, toolID string) {
+func (r *DefaultResolver) SetOverride(componentType string, operation core.ActionType, toolID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.cliOverrides[componentType] == nil {
-		r.cliOverrides[componentType] = make(map[OperationType]string)
+		r.cliOverrides[componentType] = make(map[core.ActionType]string)
 	}
 	r.cliOverrides[componentType][operation] = toolID
 }
@@ -173,12 +175,12 @@ func (r *DefaultResolver) SetOverride(componentType string, operation OperationT
 func (r *DefaultResolver) ClearOverrides() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.cliOverrides = make(map[string]map[OperationType]string)
+	r.cliOverrides = make(map[string]map[core.ActionType]string)
 }
 
 // Resolve returns the tool for a component type and operation.
 // Resolution order: CLI > Environment > Project > Defaults.
-func (r *DefaultResolver) Resolve(componentType string, operation OperationType) (*ToolDefinition, error) {
+func (r *DefaultResolver) Resolve(componentType string, operation core.ActionType) (*ToolDefinition, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -205,7 +207,7 @@ func (r *DefaultResolver) Resolve(componentType string, operation OperationType)
 
 // resolveToolID resolves the tool ID through the configuration layers.
 // Must be called with read lock held.
-func (r *DefaultResolver) resolveToolID(componentType string, operation OperationType) string {
+func (r *DefaultResolver) resolveToolID(componentType string, operation core.ActionType) string {
 	// 1. Check CLI overrides (highest priority)
 	if overrides, ok := r.cliOverrides[componentType]; ok {
 		if toolID, ok := overrides[operation]; ok && toolID != "" {
@@ -240,8 +242,8 @@ func (r *DefaultResolver) resolveToolID(componentType string, operation Operatio
 }
 
 // ResolveAll returns all tools for a component type across all operations.
-func (r *DefaultResolver) ResolveAll(componentType string) map[OperationType]*ToolDefinition {
-	result := make(map[OperationType]*ToolDefinition)
+func (r *DefaultResolver) ResolveAll(componentType string) map[core.ActionType]*ToolDefinition {
+	result := make(map[core.ActionType]*ToolDefinition)
 
 	for _, op := range AllOperations() {
 		tool, err := r.Resolve(componentType, op)
@@ -254,7 +256,7 @@ func (r *DefaultResolver) ResolveAll(componentType string) map[OperationType]*To
 }
 
 // ResolveMultiple returns all tools for operations that support multiple tools.
-func (r *DefaultResolver) ResolveMultiple(componentType string, operation OperationType) ([]*ToolDefinition, error) {
+func (r *DefaultResolver) ResolveMultiple(componentType string, operation core.ActionType) ([]*ToolDefinition, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -285,7 +287,7 @@ func (r *DefaultResolver) ResolveMultiple(componentType string, operation Operat
 
 // resolveToolIDs resolves all tool IDs for operations that support multiple tools.
 // Must be called with read lock held.
-func (r *DefaultResolver) resolveToolIDs(componentType string, operation OperationType) []string {
+func (r *DefaultResolver) resolveToolIDs(componentType string, operation core.ActionType) []string {
 	// For multi-tool operations, check each layer for multiple tools
 	// Single CLI override replaces all
 	if overrides, ok := r.cliOverrides[componentType]; ok {
@@ -321,7 +323,7 @@ func (r *DefaultResolver) resolveToolIDs(componentType string, operation Operati
 }
 
 // HasTool checks if there's a tool configured for the given component type and operation.
-func (r *DefaultResolver) HasTool(componentType string, operation OperationType) bool {
+func (r *DefaultResolver) HasTool(componentType string, operation core.ActionType) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.resolveToolID(componentType, operation) != ""
@@ -330,7 +332,7 @@ func (r *DefaultResolver) HasTool(componentType string, operation OperationType)
 // ResolveToolID returns the tool ID for a component type and operation without
 // requiring the tool to exist in the registry. This is useful for checking if
 // the tool ID matches a native handler before falling back to registry lookup.
-func (r *DefaultResolver) ResolveToolID(componentType string, operation OperationType) string {
+func (r *DefaultResolver) ResolveToolID(componentType string, operation core.ActionType) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.resolveToolID(componentType, operation)

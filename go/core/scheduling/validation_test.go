@@ -3,6 +3,7 @@ package scheduling
 import (
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ func TestValidateNoCycles_EmptyWork(t *testing.T) {
 
 func TestValidateNoCycles_SingleUnitNoCycle(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 	}
 	err := validateNoCycles(work)
 	assert.NoError(t, err)
@@ -24,10 +25,10 @@ func TestValidateNoCycles_SingleUnitNoCycle(t *testing.T) {
 func TestValidateNoCycles_LinearDependencyNoCycle(t *testing.T) {
 	// A -> B (B depends on A) - no cycle
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 		},
 	}
 	err := validateNoCycles(work)
@@ -38,12 +39,12 @@ func TestValidateNoCycles_SimpleCycle_ReportsUnits(t *testing.T) {
 	// A -> B -> A (cycle)
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 		},
 	}
 	err := validateNoCycles(work)
@@ -62,16 +63,16 @@ func TestValidateNoCycles_TripleCycle_ReportsAllMembers(t *testing.T) {
 	// A -> B -> C -> A (all three should be reported)
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}},
 		},
 	}
 	err := validateNoCycles(work)
@@ -86,8 +87,8 @@ func TestValidateNoCycles_ExternalDependencyIgnored(t *testing.T) {
 	// Unit depends on something not in work set - should be processed fine
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "external", Component: "x", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "external", Component: "x", Tool: "t", Action: core.ActionBuild}},
 		},
 	}
 	err := validateNoCycles(work)
@@ -98,18 +99,18 @@ func TestValidateNoCycles_MixedCycleAndNonCycle(t *testing.T) {
 	// D has no deps (should process fine)
 	// A -> B -> C -> A (cycle - these 3 should be reported)
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "d", Tool: "t", Context: workunit.ContextBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "d", Tool: "t", Action: core.ActionBuild}},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild},
-			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}},
+			ID:        workunit.UnitID{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild},
+			DependsOn: []workunit.UnitID{{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}},
 		},
 	}
 	err := validateNoCycles(work)
@@ -153,8 +154,8 @@ func TestValidateNoCycles_DuplicateUnitIDs_NoCycle(t *testing.T) {
 	// If work slice contains duplicates, should not falsely report a cycle
 	// This tests the fix for comparing against unitSet length instead of work length
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // duplicate
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // duplicate
 	}
 	err := validateNoCycles(work)
 	// Should NOT report an error - duplicates don't create a cycle
@@ -190,9 +191,9 @@ func TestValidateNoDuplicates_EmptySlice(t *testing.T) {
 
 func TestValidateNoDuplicates_UniqueWorkUnits(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
-		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}},
-		{ID: workunit.UnitID{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild}},
 	}
 	err := validateNoDuplicates(work)
 	assert.NoError(t, err, "unique work units should return nil")
@@ -201,8 +202,8 @@ func TestValidateNoDuplicates_UniqueWorkUnits(t *testing.T) {
 func TestValidateNoDuplicates_AdjacentDuplicates(t *testing.T) {
 	// Two units with same Longname at indices 0 and 1
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}},
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // duplicate
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}},
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // duplicate
 	}
 	err := validateNoDuplicates(work)
 	require.Error(t, err, "should detect duplicate")
@@ -219,9 +220,9 @@ func TestValidateNoDuplicates_FindsFirstDuplicatePair(t *testing.T) {
 	// Three units: A, A, B (indices 0, 1, 2)
 	// Should report indices 0 and 1 (the first duplicate pair)
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // index 0
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // index 1 (dup of 0)
-		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}}, // index 2
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // index 0
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // index 1 (dup of 0)
+		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}}, // index 2
 	}
 	err := validateNoDuplicates(work)
 	require.Error(t, err, "should detect duplicate")
@@ -238,10 +239,10 @@ func TestValidateNoDuplicates_NonAdjacentDuplicates(t *testing.T) {
 	// Four units: A, B, C, A (indices 0, 1, 2, 3)
 	// Should report indices 0 and 3
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // index 0
-		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Context: workunit.ContextBuild}}, // index 1
-		{ID: workunit.UnitID{Module: "m", Component: "c", Tool: "t", Context: workunit.ContextBuild}}, // index 2
-		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Context: workunit.ContextBuild}}, // index 3 (dup of 0)
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // index 0
+		{ID: workunit.UnitID{Module: "m", Component: "b", Tool: "t", Action: core.ActionBuild}}, // index 1
+		{ID: workunit.UnitID{Module: "m", Component: "c", Tool: "t", Action: core.ActionBuild}}, // index 2
+		{ID: workunit.UnitID{Module: "m", Component: "a", Tool: "t", Action: core.ActionBuild}}, // index 3 (dup of 0)
 	}
 	err := validateNoDuplicates(work)
 	require.Error(t, err, "should detect non-adjacent duplicate")

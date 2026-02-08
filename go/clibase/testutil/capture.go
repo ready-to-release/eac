@@ -152,18 +152,18 @@ func (c CaptureOutput) AssertValidYAML(t *testing.T) {
 	}
 }
 
-// UnmarshalJSON unmarshals stdout as JSON into the provided value.
-func (c CaptureOutput) UnmarshalJSON(t *testing.T, v interface{}) {
+// DecodeJSON decodes stdout as JSON into the provided value.
+func (c CaptureOutput) DecodeJSON(t *testing.T, v interface{}) {
 	t.Helper()
 	if err := json.Unmarshal([]byte(c.Stdout), v); err != nil {
-		t.Fatalf("failed to unmarshal JSON: %v\nOutput:\n%s", err, c.Stdout)
+		t.Fatalf("failed to decode JSON: %v\nOutput:\n%s", err, c.Stdout)
 	}
 }
 
-// UnmarshalYAML unmarshals stdout as YAML into the provided value.
-func (c CaptureOutput) UnmarshalYAML(t *testing.T, v interface{}) {
+// DecodeYAML decodes stdout as YAML into the provided value.
+func (c CaptureOutput) DecodeYAML(t *testing.T, v interface{}) {
 	t.Helper()
 	if err := yaml.Unmarshal([]byte(c.Stdout), v); err != nil {
-		t.Fatalf("failed to unmarshal YAML: %v\nOutput:\n%s", err, c.Stdout)
+		t.Fatalf("failed to decode YAML: %v\nOutput:\n%s", err, c.Stdout)
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // mockBuildHandler implements BuildHandler for testing.
@@ -19,11 +19,11 @@ type mockBuildHandler struct {
 
 func (m *mockBuildHandler) Name() string { return m.name }
 
-func (m *mockBuildHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (m *mockBuildHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	return m.buildResult
 }
 
-func (m *mockBuildHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (m *mockBuildHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return m.artifacts
 }
 
@@ -31,7 +31,7 @@ func (m *mockBuildHandler) Requirements() []string {
 	return m.requirements
 }
 
-func (m *mockBuildHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (m *mockBuildHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	return nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 )
 
 // ProfileWrapper wraps an OSCAL profile to implement ProfilePort.
@@ -17,7 +17,7 @@ type ProfileWrapper struct {
 }
 
 // Verify ProfileWrapper implements ProfilePort.
-var _ security.ProfilePort = (*ProfileWrapper)(nil)
+var _ scanner.ProfilePort = (*ProfileWrapper)(nil)
 
 // LoadProfileWrapper loads an OSCAL profile from a JSON file.
 // Returns an error if the file doesn't exist or doesn't contain a profile.

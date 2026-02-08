@@ -463,12 +463,12 @@ func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 		expected       string
 	}{
 		{
-			name:         "gherkin-steps component defined",
+			name:         "godog component defined",
 			gherkinSteps: "go/eac/specs/repository",
 			expected:     "go/eac/specs/repository",
 		},
 		{
-			name:         "no gherkin-steps returns empty",
+			name:         "no godog returns empty",
 			gherkinSteps: "",
 			expected:     "",
 		},
@@ -486,7 +486,7 @@ func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 			}
 			module := NewModuleContract(base, "/workspace")
 			if tt.gherkinSteps != "" {
-				module.Components["gherkin-steps"] = &config.ComponentEntry{Root: tt.gherkinSteps}
+				module.Components["godog"] = &config.ComponentEntry{Root: tt.gherkinSteps}
 			}
 
 			got := module.GetTestImplementationPath()

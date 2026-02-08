@@ -18,8 +18,8 @@ func getPressureColor(running, capacity int) lipgloss.Style {
 
 // calculateLayoutMetrics returns cached layout dimensions, recomputing only when invalidated.
 func (m Model) calculateLayoutMetrics() render.LayoutMetrics {
-	if m.cachedLayoutMetrics != nil {
-		return *m.cachedLayoutMetrics
+	if m.Resources.CachedLayoutMetrics != nil {
+		return *m.Resources.CachedLayoutMetrics
 	}
 	return m.computeLayoutMetrics()
 }
@@ -27,11 +27,17 @@ func (m Model) calculateLayoutMetrics() render.LayoutMetrics {
 // computeLayoutMetrics computes layout dimensions based on current model state.
 func (m Model) computeLayoutMetrics() render.LayoutMetrics {
 	metrics := render.LayoutMetrics{}
-	metrics.SummaryLines = 5                          // header + data + help + lamps + footer
-	metrics.ComponentsStart = 1                       // panel header only (no resources pane)
-	metrics.RemainingHeight = m.height - metrics.SummaryLines
+	metrics.SummaryLines = 5    // header + data + help + lamps + footer
+	metrics.ComponentsStart = 1 // panel header only (no resources pane)
+	metrics.RemainingHeight = m.Display.Height - metrics.SummaryLines
 	if metrics.RemainingHeight < 5 {
 		metrics.RemainingHeight = 5
+	}
+	// Show detail pane when run phase is active and terminal has enough space.
+	// Requires: detailPaneHeight (6) + minimum 5 log lines = 11 lines.
+	if m.Execution.Panes[PhaseRun] != nil && m.Execution.Panes[PhaseRun].Status != PhasePending &&
+		metrics.RemainingHeight >= detailPaneHeight+5 {
+		metrics.DetailPaneHeight = detailPaneHeight
 	}
 	return metrics
 }
@@ -39,14 +45,14 @@ func (m Model) computeLayoutMetrics() render.LayoutMetrics {
 // invalidateLayoutMetrics forces recomputation on next calculateLayoutMetrics() call.
 func (m *Model) invalidateLayoutMetrics() {
 	metrics := m.computeLayoutMetrics()
-	m.cachedLayoutMetrics = &metrics
+	m.Resources.CachedLayoutMetrics = &metrics
 }
 
 // View renders the console window.
 func (m Model) View() string {
 	// When quitting in alt screen mode, return empty (screen will be restored)
 	// Plain-text summary is printed after program.Run() completes
-	if m.quitting {
+	if m.Interaction.Quitting {
 		return ""
 	}
 	// Wrap with zone.Scan to enable mouse click detection on marked zones
@@ -59,9 +65,9 @@ func (m Model) ViewFinal() string {
 	var b strings.Builder
 
 	// Render summary data if available
-	if m.summaryData != nil {
+	if m.Execution.SummaryData != nil {
 		// Details (includes module table from summary.go)
-		for _, line := range m.summaryData.Details {
+		for _, line := range m.Execution.SummaryData.Details {
 			cleanLine := stripMarkdownPipes(line)
 			b.WriteString(fmt.Sprintf("%s\n", cleanLine))
 		}
@@ -69,15 +75,15 @@ func (m Model) ViewFinal() string {
 		// Summary status
 		icon := "✓"
 		statusText := "PASSED"
-		if !m.summaryData.Success {
+		if !m.Execution.SummaryData.Success {
 			icon = "✗"
 			statusText = "FAILED"
 		}
-		b.WriteString(fmt.Sprintf("\n%s %s (%s)\n", icon, statusText, formatElapsed(m.summaryData.TotalTime)))
+		b.WriteString(fmt.Sprintf("\n%s %s (%s)\n", icon, statusText, formatElapsed(m.Execution.SummaryData.TotalTime)))
 
 		// Run phase summary
-		if m.summaryData.RunSummary != "" {
-			b.WriteString(fmt.Sprintf("  %s\n", m.summaryData.RunSummary))
+		if m.Execution.SummaryData.RunSummary != "" {
+			b.WriteString(fmt.Sprintf("  %s\n", m.Execution.SummaryData.RunSummary))
 		}
 	}
 
@@ -96,7 +102,7 @@ func (m Model) viewPanes() string {
 
 	// === Top (dynamic): Side-by-side fills RemainingHeight ===
 	tabs := m.GetVisibleTabs()
-	sideBySide := m.renderSideBySideLayout(tabs, metrics.RemainingHeight)
+	sideBySide := m.renderSideBySideLayout(tabs, metrics)
 	b.WriteString(sideBySide)
 	b.WriteString("\n")
 
@@ -107,10 +113,12 @@ func (m Model) viewPanes() string {
 }
 
 // renderSideBySideLayout renders Components (left) and Logs (right) side by side.
-// Logs header shows Selected content (UoW details) when a tab is hovered, otherwise phase header.
-func (m Model) renderSideBySideLayout(tabs []*UoWState, height int) string {
+// When DetailPaneHeight > 0, the right panel is split: detail pane on top, headless logs below.
+// Otherwise falls back to single logs panel with header.
+func (m Model) renderSideBySideLayout(tabs []*UoWState, metrics render.LayoutMetrics) string {
+	height := metrics.RemainingHeight
 	componentsWidth := m.ComponentsWidth()
-	rightWidth := m.width - componentsWidth
+	rightWidth := m.Display.Width - componentsWidth
 	if rightWidth < 40 {
 		rightWidth = 40
 	}
@@ -118,8 +126,19 @@ func (m Model) renderSideBySideLayout(tabs []*UoWState, height int) string {
 	// Left: tab grid (full height)
 	leftPanel := m.renderTabGridPanel(tabs, componentsWidth, height)
 
-	// Right: logs (full height, header shows Selected content)
-	rightPanel := m.renderLogsPanel(rightWidth, height)
+	// Right: detail pane + headless logs, or single logs panel
+	var rightPanel string
+	if metrics.DetailPaneHeight > 0 {
+		detailPanel := m.renderDetailPane(rightWidth)
+		logsHeight := height - metrics.DetailPaneHeight
+		if logsHeight < 2 {
+			logsHeight = 2
+		}
+		logsPanel := m.renderLogsPaneHeadless(rightWidth, logsHeight)
+		rightPanel = detailPanel + "\n" + logsPanel
+	} else {
+		rightPanel = m.renderLogsPanel(rightWidth, height)
+	}
 
 	// Join horizontally
 	leftLines := strings.Split(leftPanel, "\n")
@@ -156,18 +175,16 @@ func (m Model) renderSideBySideLayout(tabs []*UoWState, height int) string {
 // --- Thin delegations to render package ---
 
 func (m Model) statusIcon(status UoWStatus) string {
-	return render.UoWStatusIcon(int(status), m.asciiMode)
+	return render.UoWStatusIcon(int(status), m.Display.AsciiMode)
 }
 
 func weightDigit(weight int) string       { return render.WeightDigit(weight) }
 func getModuleName(moniker string) string { return render.GetModuleName(moniker) }
 
 func (m Model) lineIcons() (fail, warn, info string) {
-	return render.LineIcons(m.asciiMode)
+	return render.LineIcons(m.Display.AsciiMode)
 }
 
 func (m Model) phaseIcon(status PhaseStatus) string {
-	return render.PhaseIcon(int(status), m.asciiMode)
+	return render.PhaseIcon(int(status), m.Display.AsciiMode)
 }
-
-

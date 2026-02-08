@@ -201,9 +201,6 @@ func UpdateStructurizr() int {
 			fmt.Printf("  Exporting %s...\n", status.Name)
 		}
 
-		// Remove old cached SVGs for this module before exporting
-		removeOldCachedSVGs(cacheDir, status.Name, status.DSLHash)
-
 		// Export module
 		result, err := exporter.ExportModule(status.Name)
 		if err != nil {
@@ -271,24 +268,3 @@ func findCachedSVGs(cacheDir, moduleName, dslHash string) []string {
 	return matches
 }
 
-// removeOldCachedSVGs removes cached SVGs for a module that have a different hash.
-func removeOldCachedSVGs(cacheDir, moduleName, currentHash string) {
-	entries, err := os.ReadDir(cacheDir)
-	if err != nil {
-		return
-	}
-
-	prefix := moduleName + "_"
-	currentSuffix := "_" + currentHash + ".svg"
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
-		// Match module prefix but different hash
-		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".svg") && !strings.HasSuffix(name, currentSuffix) {
-			os.Remove(filepath.Join(cacheDir, name))
-		}
-	}
-}

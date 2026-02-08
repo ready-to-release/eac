@@ -24,16 +24,15 @@ import (
 // ClearMode Enum Tests
 // =============================================================================
 // ClearMode determines how a directory should be cleared:
-// - ClearStateFiles: Only delete state.json files (recursive)
 // - ClearContents: Delete all contents in the directory
 
 func TestClearMode_Constants(t *testing.T) {
 	// Verify that ClearMode constants are defined and distinct
-	assert.NotEqual(t, ClearStateFiles, ClearContents, "ClearMode constants should be distinct")
+	assert.NotEqual(t, ClearContents, ClearDocker, "ClearMode constants should be distinct")
 
-	// Verify expected values (these will fail until implemented)
-	assert.Equal(t, ClearMode(0), ClearStateFiles, "ClearStateFiles should be the zero value")
-	assert.Equal(t, ClearMode(1), ClearContents, "ClearContents should be 1")
+	// Verify expected values
+	assert.Equal(t, ClearMode(0), ClearContents, "ClearContents should be the zero value")
+	assert.Equal(t, ClearMode(1), ClearDocker, "ClearDocker should be 1")
 }
 
 func TestClearMode_String(t *testing.T) {
@@ -41,8 +40,9 @@ func TestClearMode_String(t *testing.T) {
 		mode     ClearMode
 		expected string
 	}{
-		{ClearStateFiles, "state-files"},
 		{ClearContents, "contents"},
+		{ClearDocker, "docker"},
+		{ClearSemaphore, "semaphore"},
 	}
 
 	for _, tt := range tests {
@@ -62,14 +62,14 @@ func TestClearDir_Fields(t *testing.T) {
 	dir := ClearDir{
 		RelPath:     "out/build",
 		Description: "build state",
-		Mode:        ClearStateFiles,
+		Mode:        ClearContents,
 		Level:       cache.LevelLocal,
 		Type:        cache.TypeState,
 	}
 
 	assert.Equal(t, "out/build", dir.RelPath)
 	assert.Equal(t, "build state", dir.Description)
-	assert.Equal(t, ClearStateFiles, dir.Mode)
+	assert.Equal(t, ClearContents, dir.Mode)
 	assert.Equal(t, cache.LevelLocal, dir.Level)
 	assert.Equal(t, cache.TypeState, dir.Type)
 }
@@ -110,11 +110,13 @@ func TestClearDir_StateDirectories(t *testing.T) {
 
 	// Expected state directories from current implementation
 	expectedPaths := []string{
+		".cache/eac/incremental",
+		".cache/eac/build",
 		"out/build",
-		"out/lint",
 		"out/test",
-		"out/cache/build-state",
-		"out/cache/preprocess-state",
+		"out/lint",
+		"out/scan",
+		".cache/eac/semaphores",
 	}
 
 	paths := make([]string, len(stateDirs))
@@ -183,7 +185,7 @@ func TestCacheTarget_Fields(t *testing.T) {
 	dir := ClearDir{
 		RelPath:     "out/build",
 		Description: "build state",
-		Mode:        ClearStateFiles,
+		Mode:        ClearContents,
 		Level:       cache.LevelLocal,
 		Type:        cache.TypeState,
 	}
@@ -585,44 +587,46 @@ func TestClearResult_HasErrors(t *testing.T) {
 // =============================================================================
 // ClearTargets performs the actual clearing operation on targets
 
-func TestClearTargets_StateFiles_DryRun(t *testing.T) {
+func TestClearTargets_Contents_DryRun_WithStateFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create state.json files
-	buildDir := filepath.Join(tmpDir, "out", "build", "module1")
-	require.NoError(t, os.MkdirAll(buildDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
+	// Create files in directory
+	buildDir := filepath.Join(tmpDir, "out", "build")
+	module1Dir := filepath.Join(buildDir, "module1")
+	require.NoError(t, os.MkdirAll(module1Dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(module1Dir, "state.json"), []byte("{}"), 0o644))
 
 	targets := []CacheTarget{
 		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles, Type: cache.TypeState},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
+			Dir:      ClearDir{RelPath: "out/build", Mode: ClearContents, Type: cache.TypeState},
+			FullPath: buildDir,
 		},
 	}
 
 	result := ClearTargets(targets, true, false) // dryRun=true, verbose=false
 
 	assert.True(t, result.DryRun)
-	assert.Equal(t, 1, result.DeletedCount, "should count state.json in dry run")
+	assert.Equal(t, 1, result.DeletedCount, "should count entries in dry run")
 
 	// File should still exist
-	_, err := os.Stat(filepath.Join(buildDir, "state.json"))
+	_, err := os.Stat(filepath.Join(module1Dir, "state.json"))
 	assert.NoError(t, err, "file should still exist in dry run mode")
 }
 
-func TestClearTargets_StateFiles_Delete(t *testing.T) {
+func TestClearTargets_Contents_Delete_WithStateFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create state.json files
-	buildDir := filepath.Join(tmpDir, "out", "build", "module1")
-	require.NoError(t, os.MkdirAll(buildDir, 0o755))
-	stateFile := filepath.Join(buildDir, "state.json")
+	// Create files in directory
+	buildDir := filepath.Join(tmpDir, "out", "build")
+	module1Dir := filepath.Join(buildDir, "module1")
+	require.NoError(t, os.MkdirAll(module1Dir, 0o755))
+	stateFile := filepath.Join(module1Dir, "state.json")
 	require.NoError(t, os.WriteFile(stateFile, []byte("{}"), 0o644))
 
 	targets := []CacheTarget{
 		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles, Type: cache.TypeState},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
+			Dir:      ClearDir{RelPath: "out/build", Mode: ClearContents, Type: cache.TypeState},
+			FullPath: buildDir,
 		},
 	}
 
@@ -631,9 +635,9 @@ func TestClearTargets_StateFiles_Delete(t *testing.T) {
 	assert.False(t, result.DryRun)
 	assert.Equal(t, 1, result.DeletedCount)
 
-	// File should be deleted
-	_, err := os.Stat(stateFile)
-	assert.True(t, os.IsNotExist(err), "state.json should be deleted")
+	// Directory should be deleted (ClearContents deletes all entries)
+	_, err := os.Stat(module1Dir)
+	assert.True(t, os.IsNotExist(err), "module1 directory should be deleted")
 }
 
 func TestClearTargets_Contents_DryRun(t *testing.T) {
@@ -708,11 +712,11 @@ func TestClearTargets_NonExistentDirectory(t *testing.T) {
 func TestClearTargets_MixedModes(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create state file
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod")
-	require.NoError(t, os.MkdirAll(buildDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "other.txt"), []byte("keep"), 0o644))
+	// Create state directory with contents
+	buildDir := filepath.Join(tmpDir, "out", "build")
+	modDir := filepath.Join(buildDir, "mod")
+	require.NoError(t, os.MkdirAll(modDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(modDir, "state.json"), []byte("{}"), 0o644))
 
 	// Create asset files
 	assetDir := filepath.Join(tmpDir, "assets", "cache")
@@ -721,8 +725,8 @@ func TestClearTargets_MixedModes(t *testing.T) {
 
 	targets := []CacheTarget{
 		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles, Type: cache.TypeState},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
+			Dir:      ClearDir{RelPath: "out/build", Mode: ClearContents, Type: cache.TypeState},
+			FullPath: buildDir,
 		},
 		{
 			Dir:      ClearDir{RelPath: "assets/cache", Mode: ClearContents, Type: cache.TypeAsset},
@@ -732,16 +736,12 @@ func TestClearTargets_MixedModes(t *testing.T) {
 
 	result := ClearTargets(targets, false, false)
 
-	// state.json deleted, other.txt kept, file1.svg deleted
+	// mod dir deleted (ClearContents), file1.svg deleted
 	assert.Equal(t, 2, result.DeletedCount)
 
-	// other.txt should still exist
-	_, err := os.Stat(filepath.Join(buildDir, "other.txt"))
-	assert.NoError(t, err, "non-state files should be preserved in ClearStateFiles mode")
-
-	// state.json should be deleted
-	_, err = os.Stat(filepath.Join(buildDir, "state.json"))
-	assert.True(t, os.IsNotExist(err), "state.json should be deleted")
+	// mod directory should be deleted (ClearContents deletes all entries)
+	_, err := os.Stat(modDir)
+	assert.True(t, os.IsNotExist(err), "mod directory should be deleted")
 
 	// asset file should be deleted
 	_, err = os.Stat(filepath.Join(assetDir, "file1.svg"))
@@ -776,9 +776,9 @@ func TestBuildTargets(t *testing.T) {
 func TestClearCache_TypeState(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create state files
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod1")
-	testDir := filepath.Join(tmpDir, "out", "test", "mod1")
+	// Create state files under .cache/eac/incremental/ (new location)
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
+	testDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "test", "mod1", "go-gotest-unit")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.MkdirAll(testDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
@@ -801,7 +801,7 @@ func TestClearCache_TypeState(t *testing.T) {
 	// Clear only state targets
 	result := ClearTargets(filtered, false, false)
 
-	// State files should be deleted
+	// State files should be deleted (incremental dir is cleared with ClearContents)
 	_, err = os.Stat(filepath.Join(buildDir, "state.json"))
 	assert.True(t, os.IsNotExist(err), "build state.json should be deleted")
 
@@ -812,14 +812,14 @@ func TestClearCache_TypeState(t *testing.T) {
 	_, err = os.Stat(filepath.Join(assetDir, "diagram.svg"))
 	assert.NoError(t, err, "asset file should NOT be deleted with --type=state")
 
-	assert.GreaterOrEqual(t, result.DeletedCount, 2, "should delete at least 2 state files")
+	assert.GreaterOrEqual(t, result.DeletedCount, 1, "should delete at least 1 incremental entry")
 }
 
 func TestClearCache_TypeAsset(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create state files (should NOT be deleted with --type=asset)
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod1")
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
 
@@ -856,12 +856,12 @@ func TestClearCache_TypeWork(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create state files (should NOT be deleted with --type=work)
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod1")
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
 
 	// Create work files
-	npmWorkDir := filepath.Join(tmpDir, ".cache", "npm", "work")
+	npmWorkDir := filepath.Join(tmpDir, ".cache", "eac", "npm", "work")
 	require.NoError(t, os.MkdirAll(npmWorkDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(npmWorkDir, "temp-file.txt"), []byte("temp"), 0o644))
 
@@ -934,67 +934,38 @@ func TestClearTargets_EmptyDirectory(t *testing.T) {
 	assert.False(t, result.HasErrors())
 }
 
-func TestClearTargets_NestedStateFiles(t *testing.T) {
+func TestClearTargets_NestedDirectories(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create nested state.json files
-	paths := []string{
-		filepath.Join(tmpDir, "out", "build", "mod1", "state.json"),
-		filepath.Join(tmpDir, "out", "build", "mod2", "state.json"),
-		filepath.Join(tmpDir, "out", "build", "pkg", "subpkg", "state.json"),
+	// Create nested directories with files
+	buildDir := filepath.Join(tmpDir, "out", "build")
+	dirs := []string{
+		filepath.Join(buildDir, "mod1"),
+		filepath.Join(buildDir, "mod2"),
+		filepath.Join(buildDir, "pkg"),
 	}
 
-	for _, p := range paths {
-		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
-		require.NoError(t, os.WriteFile(p, []byte("{}"), 0o644))
+	for _, d := range dirs {
+		require.NoError(t, os.MkdirAll(d, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(d, "state.json"), []byte("{}"), 0o644))
 	}
 
 	targets := []CacheTarget{
 		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
+			Dir:      ClearDir{RelPath: "out/build", Mode: ClearContents},
+			FullPath: buildDir,
 		},
 	}
 
 	result := ClearTargets(targets, false, false)
 
-	assert.Equal(t, 3, result.DeletedCount, "should find and delete all nested state.json files")
+	assert.Equal(t, 3, result.DeletedCount, "should delete all top-level entries")
 
-	// Verify all deleted
-	for _, p := range paths {
-		_, err := os.Stat(p)
-		assert.True(t, os.IsNotExist(err), "state.json should be deleted: %s", p)
+	// Verify all directories deleted
+	for _, d := range dirs {
+		_, err := os.Stat(d)
+		assert.True(t, os.IsNotExist(err), "directory should be deleted: %s", d)
 	}
-}
-
-func TestClearTargets_PreservesNonStateFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create mixed files in build directory
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod1")
-	require.NoError(t, os.MkdirAll(buildDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "build-output.log"), []byte("log"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "results.json"), []byte("{}"), 0o644))
-
-	targets := []CacheTarget{
-		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
-		},
-	}
-
-	result := ClearTargets(targets, false, false)
-
-	// Only state.json should be deleted
-	assert.Equal(t, 1, result.DeletedCount)
-
-	// Other files should exist
-	_, err := os.Stat(filepath.Join(buildDir, "build-output.log"))
-	assert.NoError(t, err, "build-output.log should be preserved")
-
-	_, err = os.Stat(filepath.Join(buildDir, "results.json"))
-	assert.NoError(t, err, "results.json should be preserved")
 }
 
 func TestClearTargets_BytesCalculation(t *testing.T) {
@@ -1055,49 +1026,3 @@ func TestTypeFlagValues_Documented(t *testing.T) {
 // Regression Tests
 // =============================================================================
 
-func TestClearStateFiles_OnlyDeletesStateJson(t *testing.T) {
-	// Regression: ensure we only delete files named exactly "state.json"
-	tmpDir := t.TempDir()
-
-	buildDir := filepath.Join(tmpDir, "out", "build", "mod")
-	require.NoError(t, os.MkdirAll(buildDir, 0o755))
-
-	// Files that should be deleted
-	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
-
-	// Files that should NOT be deleted (similar names)
-	shouldKeep := []string{
-		"state.json.bak",
-		"state.json.old",
-		"my-state.json",
-		"state-copy.json",
-		"STATE.JSON", // case-sensitive filesystems
-	}
-
-	for _, name := range shouldKeep {
-		require.NoError(t, os.WriteFile(filepath.Join(buildDir, name), []byte("{}"), 0o644))
-	}
-
-	targets := []CacheTarget{
-		{
-			Dir:      ClearDir{RelPath: "out/build", Mode: ClearStateFiles},
-			FullPath: filepath.Join(tmpDir, "out", "build"),
-		},
-	}
-
-	ClearTargets(targets, false, false)
-
-	// Only exact "state.json" should be deleted
-	_, err := os.Stat(filepath.Join(buildDir, "state.json"))
-	assert.True(t, os.IsNotExist(err), "state.json should be deleted")
-
-	// All similar-named files should still exist
-	for _, name := range shouldKeep {
-		_, err := os.Stat(filepath.Join(buildDir, name))
-		// Note: on case-insensitive filesystems (Windows, macOS default), STATE.JSON might match
-		// This is filesystem-dependent behavior
-		if name != "STATE.JSON" {
-			assert.NoError(t, err, "%s should NOT be deleted", name)
-		}
-	}
-}

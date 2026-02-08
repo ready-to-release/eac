@@ -1,18 +1,17 @@
 // Package main implements an MCP (Model Context Protocol) server that exposes
 // EAC commands as tools for AI assistants. It discovers available commands
-// dynamically and executes them via either direct binary or Docker-based r2r.
+// dynamically and executes them via the EAC adapter abstraction.
 package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/paths"
+	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -134,7 +133,7 @@ func handleToolsList(encoder *json.Encoder, req *MCPRequest) {
 func initializeResponse() map[string]interface{} {
 	return map[string]interface{}{
 		"protocolVersion": "2024-11-05",
-		"serverInfo":      map[string]string{"name": "mcp-server-commands", "version": "0.1.0"},
+		"serverInfo":      map[string]string{"name": "eac-mcp-server", "version": "0.1.0"},
 		"capabilities":    map[string]interface{}{"tools": map[string]bool{}},
 	}
 }
@@ -198,12 +197,19 @@ func getCommands() CommandTree {
 	if repoRoot == "" {
 		return emptyCommandTree()
 	}
-	output, err := buildCommand(repoRoot, []string{"get", "commands"}).Output()
+	port := eac.New(repoRoot)
+	result, err := port.Execute(context.Background(), []string{"get", "commands"}, &eac.ExecConfig{
+		WorkspaceRoot: repoRoot,
+	})
 	if err != nil {
 		logError("getting commands", err)
 		return emptyCommandTree()
 	}
-	return parseCommandTree(output)
+	if !result.Success() {
+		logError("getting commands", fmt.Errorf("exit code %d: %s", result.ExitCode, string(result.Stderr)))
+		return emptyCommandTree()
+	}
+	return parseCommandTree(result.Stdout)
 }
 
 // emptyCommandTree returns an empty command tree.
@@ -247,16 +253,23 @@ func execCommand(commandName, additionalArgs string) string {
 		return "Error: Could not find repository root"
 	}
 	cmdParts := buildCmdParts(commandName, additionalArgs)
-	output, err := buildCommand(repoRoot, cmdParts).CombinedOutput()
-	return formatCommandOutput(commandName, output, err)
+	port := eac.New(repoRoot)
+	result, err := port.Execute(context.Background(), cmdParts, &eac.ExecConfig{
+		WorkspaceRoot: repoRoot,
+	})
+	return formatCommandOutput(commandName, result, err)
 }
 
 // formatCommandOutput formats command output or error for the tool result.
-func formatCommandOutput(commandName string, output []byte, err error) string {
+func formatCommandOutput(commandName string, result *eac.Result, err error) string {
 	if err != nil {
-		return fmt.Sprintf("Error executing command '%s': %v\n\nOutput:\n%s", commandName, err, string(output))
+		return fmt.Sprintf("Error executing command '%s': %v", commandName, err)
 	}
-	return strings.TrimSpace(string(output))
+	if !result.Success() {
+		combined := string(result.Stdout) + string(result.Stderr)
+		return fmt.Sprintf("Error executing command '%s': exit code %d\n\nOutput:\n%s", commandName, result.ExitCode, combined)
+	}
+	return strings.TrimSpace(string(result.Stdout))
 }
 
 // buildCmdParts builds command arguments from command name and additional args.
@@ -266,19 +279,6 @@ func buildCmdParts(commandName, additionalArgs string) []string {
 		cmdParts = append(cmdParts, strings.Fields(additionalArgs)...)
 	}
 	return cmdParts
-}
-
-// buildCommand creates an exec.Cmd for running EAC commands.
-// Uses direct binary if EAC_USE_DIRECT_BINARY=true, otherwise uses r2r eac (Docker).
-func buildCommand(repoRoot string, cmdParts []string) *exec.Cmd {
-	var cmd *exec.Cmd
-	if os.Getenv(environments.EnvEACUseDirectBinary) == "true" {
-		cmd = exec.Command(paths.CommandsBinaryPath(repoRoot), cmdParts...) //nolint:gosec // MCP server executes EAC commands by design
-	} else {
-		cmd = exec.Command("r2r", append([]string{"eac"}, cmdParts...)...) //nolint:gosec // MCP server executes EAC commands by design
-	}
-	cmd.Dir = repoRoot
-	return cmd
 }
 
 // findRepoRoot walks up directory tree to find repository root.

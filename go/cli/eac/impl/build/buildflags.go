@@ -9,7 +9,7 @@ import (
 // BuildSpecificFlags holds flags that are specific to the build command.
 // These are not shared with other commands (test, lint, scan).
 type BuildSpecificFlags struct {
-	TidyFirst       bool   // --tidy-first, --with-tidy: Run go mod tidy before building
+	TidyFirst       bool   // --with-tidy: Run go mod tidy before building
 	NoTidy          bool   // --no-tidy: Skip go mod tidy
 	UseExistingDepm bool   // --use-existing-depm: Skip building deps if artifacts exist
 	Version         string // --version: Version string for binary
@@ -19,7 +19,7 @@ type BuildSpecificFlags struct {
 	Artifacts       string // --artifacts: Artifact scope mode (all, reduced). --all is alias for --artifacts all
 
 	// Declarative tracking field
-	TidyExplicit bool // True if --with-tidy, --tidy-first, or --no-tidy was used
+	TidyExplicit bool // True if --with-tidy or --no-tidy was used
 }
 
 // ParseBuildSpecificFlags parses build-specific flags from remaining args.
@@ -50,12 +50,6 @@ func parseBuildFlag(arg string, args []string, i int, flags *BuildSpecificFlags)
 	switch arg {
 	// Declarative tidy flag
 	case "--with-tidy":
-		flags.TidyFirst = true
-		flags.TidyExplicit = true
-		return true, 0, nil
-
-	// Legacy tidy flag (backward compat)
-	case "--tidy-first":
 		flags.TidyFirst = true
 		flags.TidyExplicit = true
 		return true, 0, nil

@@ -35,11 +35,11 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/fileutil"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -166,7 +166,7 @@ func MergeResults() int {
 	}
 
 	uowManifest := &coreoutput.UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:     moduleFlag,
 		Component:  "manual",
 		Tool:       "manual",

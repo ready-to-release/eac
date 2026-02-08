@@ -109,23 +109,10 @@ func LoadLoggingConfig(workspaceRoot string) LoggingConfig {
 	return mergeLoggingConfig(defaults, userCfg)
 }
 
-// loadLoggingDefaults loads logging defaults from contracts/core/0.1.0/defaults/logging.yml.
-func loadLoggingDefaults(workspaceRoot string) LoggingConfig {
-	defaultsPath := paths.LoggingDefaultsPath(workspaceRoot)
-	data, err := os.ReadFile(defaultsPath)
-	if err != nil {
-		// Contract defaults don't exist, use built-in defaults
-		return DefaultLoggingConfig()
-	}
-
-	var cfg LoggingConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		// Invalid defaults YAML, use built-in defaults
-		return DefaultLoggingConfig()
-	}
-
-	// Apply built-in defaults for any missing fields
-	return applyDefaults(cfg)
+// loadLoggingDefaults loads logging defaults from the embedded contract filesystem.
+// Uses factory singleton for parse-once caching; returns a deep copy each call.
+func loadLoggingDefaults(_ string) LoggingConfig {
+	return getFactoryLoggingDefaults()
 }
 
 // mergeLoggingConfig merges user config on top of defaults.

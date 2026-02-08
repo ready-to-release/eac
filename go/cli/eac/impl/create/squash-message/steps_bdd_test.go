@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // createSquashMessageTestState holds state for create squash-message tests.

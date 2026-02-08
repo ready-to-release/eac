@@ -7,7 +7,9 @@ import (
 	"sort"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/cache"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // StateManager handles persistence of unit states.
@@ -38,9 +40,9 @@ func (m *StateManager) Load(id UnitID) (*UnitState, error) {
 }
 
 // Save writes the state for a unit to disk.
-// Creates the output directory if it doesn't exist.
+// Creates the state cache directory if it doesn't exist.
 func (m *StateManager) Save(state *UnitState) error {
-	dir := filepath.Join(m.workspaceRoot, state.ID.OutDir())
+	dir := filepath.Join(m.workspaceRoot, state.ID.StateCacheDir())
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -236,9 +238,9 @@ func (m *StateManager) Delete(id UnitID) error {
 	return err
 }
 
-// ClearContext removes all state files for a given context (build, test, lint, scan).
-func (m *StateManager) ClearContext(ctx Context) error {
-	dir := filepath.Join(m.workspaceRoot, "out", string(ctx))
+// ClearContext removes all state files for a given action type (build, test, lint, scan).
+func (m *StateManager) ClearContext(ctx core.ActionType) error {
+	dir := filepath.Join(paths.IncrementalCachePath(m.workspaceRoot), string(ctx))
 	return os.RemoveAll(dir)
 }
 
@@ -264,7 +266,7 @@ type ModuleHashProvider func(module string) (string, error)
 // This is a convenience method that wraps per-unit state checks into module-level results.
 // For each module, it creates a representative unit ID and checks its state.
 // If cacheConfig is provided and state cache is skipped, all modules are marked as changed.
-func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule InvalidationRule, hashProvider ModuleHashProvider, cacheConfig *cache.Config) (*ModuleChangeResult, error) {
+func (m *StateManager) DetectModuleChanges(ctx core.ActionType, modules []string, rule InvalidationRule, hashProvider ModuleHashProvider, cacheConfig *cache.Config) (*ModuleChangeResult, error) {
 	start := time.Now()
 	result := &ModuleChangeResult{
 		ChangeReasons: make(map[string]string),
@@ -290,7 +292,7 @@ func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule I
 	for _, module := range modules {
 		// Use a representative unit ID for the module (context:module:_module:_)
 		unitID := UnitID{
-			Context:   ctx,
+			Action:    ctx,
 			Module:    module,
 			Component: "_module", // Representative component for module-level state
 			Tool:      "_",
@@ -315,7 +317,7 @@ func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule I
 	// Check each module
 	for _, module := range modules {
 		unitID := UnitID{
-			Context:   ctx,
+			Action:    ctx,
 			Module:    module,
 			Component: "_module",
 			Tool:      "_",
@@ -352,9 +354,9 @@ func (m *StateManager) DetectModuleChanges(ctx Context, modules []string, rule I
 
 // SaveModuleResult saves state for a module-level execution.
 // Uses a representative unit ID for the module.
-func (m *StateManager) SaveModuleResult(ctx Context, module string, passed bool, sourceHash string) error {
+func (m *StateManager) SaveModuleResult(ctx core.ActionType, module string, passed bool, sourceHash string) error {
 	unitID := UnitID{
-		Context:   ctx,
+		Action:    ctx,
 		Module:    module,
 		Component: "_module",
 		Tool:      "_",
@@ -440,7 +442,7 @@ func (m *StateManager) DetectTestModuleChanges(
 	hasAnyState := false
 	for moniker := range moduleInfo {
 		unitID := UnitID{
-			Context:   ContextTest,
+			Action:    core.ActionTest,
 			Module:    moniker,
 			Component: "_module",
 			Tool:      "_",
@@ -468,7 +470,7 @@ func (m *StateManager) DetectTestModuleChanges(
 	directlyChanged := make(map[string]bool)
 	for moniker, info := range moduleInfo {
 		unitID := UnitID{
-			Context:   ContextTest,
+			Action:    core.ActionTest,
 			Module:    moniker,
 			Component: "_module",
 			Tool:      "_",
@@ -556,7 +558,7 @@ func (m *StateManager) DetectTestModuleChanges(
 					currentBuildID := loadDepBuildID(dep)
 					// Load dep's state to compare BuildID
 					depUnitID := UnitID{
-						Context:   ContextTest,
+						Action:    core.ActionTest,
 						Module:    dep,
 						Component: "_module",
 						Tool:      "_",
@@ -612,7 +614,7 @@ func (m *StateManager) SaveTestModuleResult(
 	dependencyHash string,
 ) error {
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    module,
 		Component: "_module",
 		Tool:      "_",

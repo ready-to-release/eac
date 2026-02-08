@@ -8,11 +8,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // createTestModule creates a ModuleContractPort for testing.
-func createTestModule(moniker string) interfaces.ModuleContractPort {
+func createTestModule(moniker string) core.ModuleContractPort {
 	m := modules.NewModuleContract(domain.BaseContract{
 		Moniker: moniker,
 	}, "/workspace")

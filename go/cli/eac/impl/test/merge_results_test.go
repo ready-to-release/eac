@@ -117,7 +117,7 @@ func TestMergeResultsCommand_HappyPath(t *testing.T) {
 			var manifest coreoutput.UoWManifest
 			require.NoError(t, json.Unmarshal(manifestData, &manifest))
 
-			assert.Equal(t, "test", string(manifest.Context))
+			assert.Equal(t, "test", string(manifest.Action))
 			assert.Equal(t, tt.module, manifest.Module)
 			assert.Equal(t, "manual", manifest.Component)
 			assert.Equal(t, "manual", manifest.Tool)

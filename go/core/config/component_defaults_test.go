@@ -33,7 +33,7 @@ func TestApplyComponentDefaults(t *testing.T) {
 	m := &Module{
 		Moniker: "books",
 		Components: ModuleComponents{
-			"tutorials-pdf": &ComponentEntry{Type: "docs-pdf"},
+			"tutorials-pdf": &ComponentEntry{Type: ComponentTypeDocsPdf},
 		},
 	}
 
@@ -267,7 +267,7 @@ func TestDeriveChangelogPath(t *testing.T) {
 					ReleaseType: "internal",
 				},
 				Components: ModuleComponents{
-					"markdown": &ComponentEntry{Root: "docs"},
+					"assets": &ComponentEntry{Root: "docs"},
 				},
 			},
 			want: "",

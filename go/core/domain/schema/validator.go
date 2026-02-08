@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )
@@ -28,6 +25,7 @@ const (
 	SchemaBooks          SchemaType = "books"
 	SchemaCommands       SchemaType = "commands"
 	SchemaToolConfig     SchemaType = "tool-config"
+	SchemaBlueprints     SchemaType = "blueprints"
 )
 
 // schemaFileNames maps schema types to their file names (without path).
@@ -41,6 +39,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaBooks:          "books.schema.json",
 	SchemaCommands:       "commands.schema.json",
 	SchemaToolConfig:     "tool-config.schema.json",
+	SchemaBlueprints:     "blueprints.schema.json",
 }
 
 // ContractVersion is the schema contract version.
@@ -68,58 +67,21 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("schema validation failed for %s at %s: %s", e.SchemaType, e.Path, e.Message)
 }
 
-// NewValidator creates a new schema validator with all schemas loaded from the repository
-// workspaceRoot should be the repository root directory.
+// NewValidator creates a new schema validator with schemas loaded from the embedded contract FS.
+// workspaceRoot is retained for backward compatibility (used by GetSchemaPath) but schemas
+// are compiled once per process via FactoryValidator and shared across all instances.
 func NewValidator(workspaceRoot string) (*Validator, error) {
-	c := jsonschema.NewCompiler()
-
-	v := &Validator{
-		compiler:      c,
-		schemas:       make(map[SchemaType]*jsonschema.Schema),
+	v, err := FactoryValidator()
+	if err != nil {
+		return nil, err
+	}
+	// Return a thin wrapper that adds workspaceRoot for GetSchemaPath()
+	// while sharing the compiled schemas from the factory singleton.
+	return &Validator{
+		compiler:      v.compiler,
+		schemas:       v.schemas,
 		workspaceRoot: workspaceRoot,
-	}
-
-	// Build the schema directory path: contracts/core/<version>/
-	// Use distribution root (schemas are part of tool distribution, not user workspace)
-	// Note: Can't import repository package here to avoid cycles, so inline the check
-	// See repository.GetDistRoot() for the canonical implementation
-	schemaRoot := workspaceRoot
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
-		schemaRoot = containerRoot
-	}
-	schemaDir := paths.ContractsVersionPath(schemaRoot, "core", ContractVersion)
-
-	// Load and compile all schemas from the repository
-	for schemaType, fileName := range schemaFileNames {
-		filePath := filepath.Join(schemaDir, fileName)
-
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read schema %s: %w", filePath, err)
-		}
-
-		// Parse the schema JSON
-		var schemaDoc any
-		if err := json.Unmarshal(data, &schemaDoc); err != nil {
-			return nil, fmt.Errorf("failed to parse schema %s: %w", filePath, err)
-		}
-
-		// Add schema to compiler
-		schemaURL := fmt.Sprintf("file:///%s", fileName)
-		if err := c.AddResource(schemaURL, schemaDoc); err != nil {
-			return nil, fmt.Errorf("failed to add schema resource %s: %w", filePath, err)
-		}
-
-		// Compile the schema
-		schema, err := c.Compile(schemaURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile schema %s: %w", filePath, err)
-		}
-
-		v.schemas[schemaType] = schema
-	}
-
-	return v, nil
+	}, nil
 }
 
 // ValidateYAML validates YAML data against the specified schema.
@@ -231,7 +193,9 @@ func GetSchemaTypes() []SchemaType {
 		SchemaRepository,
 		SchemaEACConfig,
 		SchemaBooks,
+		SchemaCommands,
 		SchemaToolConfig,
+		SchemaBlueprints,
 	}
 }
 

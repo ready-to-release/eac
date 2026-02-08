@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -24,12 +25,12 @@ func NewReader(workspaceRoot string) *DiskOutputReader {
 
 // uowManifestPath returns the expected path for a UoW manifest using UnitID.
 func (r *DiskOutputReader) uowManifestPath(id workunit.UnitID) string {
-	return filepath.Join(r.workspaceRoot, "out", string(id.Context), id.Module, id.DirName(), "uow.manifest.json")
+	return filepath.Join(r.workspaceRoot, "out", string(id.Action), id.Module, id.DirName(), "uow.manifest.json")
 }
 
 // uowDir returns the directory for a UoW using UnitID.
 func (r *DiskOutputReader) uowDir(id workunit.UnitID) string {
-	return filepath.Join(r.workspaceRoot, "out", string(id.Context), id.Module, id.DirName())
+	return filepath.Join(r.workspaceRoot, "out", string(id.Action), id.Module, id.DirName())
 }
 
 // GetUoW loads a single UoW manifest from disk using a UnitID.
@@ -39,7 +40,7 @@ func (r *DiskOutputReader) GetUoW(id workunit.UnitID) (*UoWManifest, error) {
 }
 
 // GetComponent computes a component view by aggregating its UoWs.
-func (r *DiskOutputReader) GetComponent(ctx workunit.Context, module, component string) (*ComponentView, error) {
+func (r *DiskOutputReader) GetComponent(ctx core.ActionType, module, component string) (*ComponentView, error) {
 	view := &ComponentView{
 		Module:    module,
 		Component: component,
@@ -93,7 +94,7 @@ func (r *DiskOutputReader) GetComponent(ctx workunit.Context, module, component 
 }
 
 // GetModule computes a module view by aggregating all components.
-func (r *DiskOutputReader) GetModule(ctx workunit.Context, module string) (*ModuleView, error) {
+func (r *DiskOutputReader) GetModule(ctx core.ActionType, module string) (*ModuleView, error) {
 	view := &ModuleView{
 		Module:     module,
 		Status:     StatusPending,
@@ -154,7 +155,7 @@ func (r *DiskOutputReader) GetModule(ctx workunit.Context, module string) (*Modu
 }
 
 // ListUoWs returns all UoW manifests for a module.
-func (r *DiskOutputReader) ListUoWs(ctx workunit.Context, module string) ([]*UoWManifest, error) {
+func (r *DiskOutputReader) ListUoWs(ctx core.ActionType, module string) ([]*UoWManifest, error) {
 	var manifests []*UoWManifest
 
 	// Find all UoW directories in this module
@@ -226,7 +227,7 @@ func (r *DiskOutputReader) ValidateUoW(id workunit.UnitID) ValidationResult {
 }
 
 // ValidateModule checks if all expected UoWs for a module are valid.
-func (r *DiskOutputReader) ValidateModule(ctx workunit.Context, module string, expectedUoWs []workunit.UnitID) ValidationResult {
+func (r *DiskOutputReader) ValidateModule(ctx core.ActionType, module string, expectedUoWs []workunit.UnitID) ValidationResult {
 	result := ValidationResult{
 		Valid:            true,
 		ManifestExists:   true,
@@ -270,7 +271,7 @@ func (r *DiskOutputReader) ValidateModule(ctx workunit.Context, module string, e
 }
 
 // HasManifests returns true if any UoW manifests exist for the module.
-func (r *DiskOutputReader) HasManifests(ctx workunit.Context, module string) bool {
+func (r *DiskOutputReader) HasManifests(ctx core.ActionType, module string) bool {
 	manifests, err := r.ListUoWs(ctx, module)
 	return err == nil && len(manifests) > 0
 }
@@ -279,7 +280,7 @@ func (r *DiskOutputReader) HasManifests(ctx workunit.Context, module string) boo
 // Returns nil if all artifacts pass hash verification.
 // Returns error describing first failed artifact otherwise.
 // This replaces legacy ModuleManifest.VerifyArtifactsIntegrity().
-func (r *DiskOutputReader) VerifyModuleIntegrity(ctx workunit.Context, module string) error {
+func (r *DiskOutputReader) VerifyModuleIntegrity(ctx core.ActionType, module string) error {
 	manifests, err := r.ListUoWs(ctx, module)
 	if err != nil {
 		return err
@@ -321,7 +322,7 @@ func (r *DiskOutputReader) VerifyModuleIntegrity(ctx workunit.Context, module st
 // GetBuildID returns a stable identifier linking tests to builds.
 // This is computed from the concatenation of all UoW input hashes for the module.
 // Returns empty string if no manifests exist.
-func (r *DiskOutputReader) GetBuildID(ctx workunit.Context, module string) string {
+func (r *DiskOutputReader) GetBuildID(ctx core.ActionType, module string) string {
 	manifests, err := r.ListUoWs(ctx, module)
 	if err != nil || len(manifests) == 0 {
 		return ""

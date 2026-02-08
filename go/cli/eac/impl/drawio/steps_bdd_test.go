@@ -1,7 +1,7 @@
 // Package drawio contains godog step implementations for eac-cli.
 //
 // This file contains DrawIO diagram command step definitions.
-// These specs require Docker for the drawio-tool container.
+// These specs require Docker for the drawio-oci container.
 package drawio
 
 import (
@@ -14,7 +14,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/core/paths"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // drawioContext holds state for drawio tests.
@@ -28,7 +28,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	dCtx := &drawioContext{}
 
 	// Background steps
-	sc.Step(`^the drawio-tool Docker image is available$`, func() error {
+	sc.Step(`^the drawio-oci Docker image is available$`, func() error {
 		return drawioEnsureImage(ctx, dCtx)
 	})
 
@@ -70,7 +70,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 }
 
-// drawioEnsureImage builds the drawio-tool Docker image if needed.
+// drawioEnsureImage builds the drawio-oci Docker image if needed.
 func drawioEnsureImage(ctx *eacgodog.TestContext, dCtx *drawioContext) error {
 	// Check if Docker is available
 	cmd := exec.Command("docker", "info")
@@ -79,18 +79,18 @@ func drawioEnsureImage(ctx *eacgodog.TestContext, dCtx *drawioContext) error {
 	}
 
 	// Check if image exists
-	cmd = exec.Command("docker", "image", "inspect", "cli-drawio-tool:latest")
+	cmd = exec.Command("docker", "image", "inspect", "cli-drawio-oci:latest")
 	if err := cmd.Run(); err != nil {
 		// Image doesn't exist, build it using ORIGINAL repo root (not isolated dir)
 		repoRoot := ctx.OriginalRepoRoot
-		dockerfilePath := filepath.Join(repoRoot, "containers", "drawio-tool", "Dockerfile")
-		contextPath := filepath.Join(repoRoot, "containers", "drawio-tool")
+		dockerfilePath := filepath.Join(repoRoot, "containers", "drawio-oci", "Dockerfile")
+		contextPath := filepath.Join(repoRoot, "containers", "drawio-oci")
 
-		cmd = exec.Command("docker", "build", "-t", "cli-drawio-tool:latest", "-f", dockerfilePath, contextPath)
+		cmd = exec.Command("docker", "build", "-t", "cli-drawio-oci:latest", "-f", dockerfilePath, contextPath)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to build drawio-tool image: %w: %s", err, stderr.String())
+			return fmt.Errorf("failed to build drawio-oci image: %w: %s", err, stderr.String())
 		}
 	}
 

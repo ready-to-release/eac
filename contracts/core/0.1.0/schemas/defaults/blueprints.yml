@@ -1,0 +1,647 @@
+# yaml-language-server: $schema=../blueprints.schema.json
+#
+# Blueprints - Unified configuration for modules and components
+#
+# Sections:
+#   1. component-kinds: Tool bindings, default patterns, resources per component type
+#   2. component-blueprints: Reusable component specifications (discovery rules)
+#   3. module-templates: Module type definitions (versioning + discovery)
+#   4. artifact-matrices: Reusable artifact build configurations
+#   5. conventions: Discovery rules documentation (informational)
+#
+# Component kinds define the building blocks: what tools (build/lint/test/scan)
+# are attached to each component type, and what file patterns they own by default.
+# A component declaring `type: go` inherits all defaults from the `go` kind.
+#
+# Templates define common module patterns that can be instantiated with
+# the "template" field in module definitions.
+#
+# Usage in .eac/repository.yml:
+#   - moniker: my-service
+#     template: go-cli
+#     components:
+#       go:
+#         root: go/my-service
+#         build:
+#           binary_name: my-service
+
+# =============================================================================
+# Component Kinds
+# =============================================================================
+# The building blocks. Each kind defines:
+#   - extensions: file extensions owned
+#   - builders/testers/linters/scanners: tool bindings (0-4 tool types)
+#   - files: default source/tests/config patterns
+#   - pool: host or docker
+#   - resources: cpu/memory hints
+#   - build_after: intra-module ordering
+#
+# A component in repository.yml with `type: go` inherits ALL defaults
+# from the `go` kind. Only declare what you need to override.
+
+component-kinds:
+  go:
+    extensions: [".go"]
+    builders: [go]
+    testers: [go]
+    linters: [golangci-lint]
+    scanners: [sbom, vuln, secrets, sast]
+    defaults:
+      artifact_pattern: "{moniker}{ext}"
+    files:
+      source: ["**/*.go", "**/*.go.txt"]
+      tests: ["**/*_test.go"]
+      config: ["go.mod", "go.sum"]
+
+  typescript:
+    extensions: [".ts", ".tsx"]
+    builders: [npm]
+    testers: [npm]
+    linters: [eslint]
+    scanners: [sbom, vuln, secrets, sast]
+    pool: docker
+    files:
+      source: ["src/**/*.ts", "features/**/*.ts"]
+      tests: ["**/*.test.ts"]
+      config: ["package.json", "tsconfig.json", "*.config.js"]
+
+  javascript:
+    extensions: [".js", ".jsx", ".mjs", ".cjs"]
+    builders: [npm]
+    testers: [npm]
+    linters: [eslint]
+    scanners: [sbom, vuln, secrets, sast]
+    pool: docker
+
+  dockerfile:
+    extensions: []
+    builders: [buildx]
+    linters: [hadolint]
+    scanners: [sbom, vuln, secrets, iac]
+    build_after: [go]
+    pool: docker
+    files:
+      source: ["Dockerfile"]
+
+  assets:
+    extensions: [".md", ".markdown", ".yml", ".yaml", ".json", ".ebnf", ".txt", ".go.txt", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
+    scanners: [secrets]
+    files:
+      source: ["**/*"]
+
+  gherkin:
+    extensions: [".feature"]
+    testers: [godog]
+    linters: [gherkin-lint]
+    scanners: [secrets]
+    files:
+      source: ["**/*.feature"]
+
+  structurizr:
+    extensions: [".dsl"]
+    builders: [structurizr-render]
+    linters: [structurizr-lint]
+    scanners: [secrets]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 2
+    files:
+      source: ["workspace.dsl", "**/*.dsl"]
+
+  godog:
+    extensions: [".go"]
+    default_root: specs
+    files:
+      source: ["godog_test.go", "steps_*_test.go"]
+      tests: ["*_test.go"]
+      config: []
+
+  cucumberjs:
+    extensions: [".ts", ".js"]
+    default_root: features
+    files:
+      source: ["**/*.steps.ts", "**/*.steps.js", "cucumber.config.*"]
+      tests: ["**/*.steps.ts"]
+      config: ["cucumber.config.ts", "cucumber.config.js"]
+
+  workflows:
+    extensions: []
+    linters: [actionlint]
+    scanners: [secrets]
+    default_root: .github/workflows
+    files:
+      source: ["**/*.yml", "**/*.yaml"]
+      config: []
+
+  docs-markdown-commands:
+    extensions: []
+    builders: [markdown-commands]
+    pool: host
+    resources:
+      cpus: 1
+
+  book:
+    extensions: []
+    builders: [mkdocs]
+    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    pool: docker
+    resources:
+      cpus: 4
+
+  docs-pdf:
+    extensions: []
+    builders: [pdf]
+    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    pool: docker
+    resources:
+      cpus: 4
+      memory: 4g
+    defaults:
+      theme: dark
+    cache:
+      key_sources: [sources.hash, config.hash, theme, container.hash]
+      artifacts_cacheable: true
+
+  docs-site:
+    extensions: []
+    builders: [site]
+    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    pool: docker
+    resources:
+      cpus: 4
+      memory: 1g
+    cache:
+      key_sources: [sources.hash, config.hash, container.hash]
+      artifacts_cacheable: true
+
+  docs-drawio:
+    extensions: []
+    builders: [drawio-render]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 1
+    files:
+      source: ["**/*.drawio.png"]
+
+  docs-mermaid:
+    extensions: []
+    builders: [mermaid-render]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 2
+    files:
+      source: ["**/*.md"]
+
+  docs-plantuml:
+    extensions: []
+    builders: [plantuml-render]
+    pool: docker
+    requirements: [docker]
+    resources:
+      cpus: 2
+    files:
+      source: ["**/*.md"]
+
+  repository:
+    extensions: []
+    files:
+      config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
+
+  templates:
+    extensions: []
+    builders: [templates-install]
+    scanners: [secrets]
+    files:
+      source:
+        - "**/*.md"
+        - "**/*.yml"
+        - "**/*.yaml"
+        - "**/*.json"
+        - "**/*.feature"
+        - "**/*.template"
+        - "**/*.dsl"
+        - "test-repositories/**/*"
+
+  pwsh:
+    extensions: [".ps1", ".psm1", ".psd1"]
+    builders: [scripts]
+    testers: [pester]
+    linters: [psscriptanalyzer]
+    scanners: [secrets]
+    pool: docker
+    files:
+      source: ["**/*.ps1", "**/*.psm1"]
+      tests: ["**/*.Tests.ps1"]
+      config: ["**/*.psd1"]
+
+  bash:
+    extensions: [".sh", ".bash"]
+    builders: [scripts]
+    testers: [bats]
+    linters: [shellcheck]
+    scanners: [secrets]
+    pool: docker
+    files:
+      source: ["**/*.sh", "**/*.bash"]
+
+  python:
+    extensions: [".py"]
+    builders: [python]
+    testers: [pytest]
+    linters: [ruff]
+    scanners: [sbom, vuln, secrets, sast]
+    files:
+      source: ["**/*.py"]
+      tests: ["tests/**/*.py", "**/*_test.py"]
+      config: ["pyproject.toml", "setup.py", "requirements.txt"]
+
+  rust:
+    extensions: [".rs"]
+    builders: [cargo]
+    testers: [cargo]
+    linters: [clippy]
+    scanners: [sbom, vuln, secrets, sast]
+    files:
+      source: ["src/**/*.rs", "**/*.rs"]
+      tests: ["tests/**/*.rs"]
+      config: ["Cargo.toml", "Cargo.lock"]
+
+  dotnet:
+    extensions: [".cs", ".fs", ".vb"]
+    builders: [dotnet]
+    testers: [dotnet]
+    linters: [dotnet-format]
+    scanners: [sbom, vuln, secrets, sast]
+    files:
+      source: ["**/*.cs", "**/*.fs"]
+      tests: ["**/*Tests.cs", "**/*.Tests/**/*.cs"]
+      config: ["*.csproj", "*.sln", "Directory.Build.props"]
+
+  ai-dsl:
+    extensions: [".dsl"]
+    builders: [ai-dsl-analyzer]
+    defaults:
+      output_format: markdown
+    files:
+      source: ["**/*.dsl"]
+
+  ai-specs:
+    extensions: [".feature"]
+    builders: [ai-specs-analyzer]
+    defaults:
+      output_format: markdown
+    files:
+      source: ["**/*.feature"]
+
+  ai-source:
+    extensions: []
+    builders: [ai-source-analyzer]
+    build_after: [ai-dsl, ai-specs]
+    defaults:
+      output_format: markdown
+
+  ai-docs:
+    extensions: [".md"]
+    builders: [ai-docs-analyzer]
+    defaults:
+      output_format: markdown
+    files:
+      source: ["**/*.md"]
+
+# =============================================================================
+# Discovery Rules - Named rules for auto-discovering auxiliary components
+# =============================================================================
+# Discovery rules define HOW to find auxiliary components (assets,
+# gherkin, godog, etc.) based on filesystem conventions.
+# Templates reference these by name via the "discover" field.
+#
+# Each rule auto-discovers a component if its filesystem check passes.
+# The primary components (go, typescript, dockerfile) are declared by the
+# user in their repository.yml — discovery rules find the auxiliaries.
+
+discovery-rules:
+  # --- Assets auto-discovery ---
+
+  # Assets (derived from first Go/TS/Dockerfile-typed component root)
+  # Collects all loose asset files: markdown, yaml, json, ebnf, testdata, images, etc.
+  assets-from-go:
+    component: assets
+    derive_from_type: [go, typescript, dockerfile]
+    check: dir_exists
+
+  # Assets from container root
+  assets-from-container:
+    component: assets
+    path: "{containers_root}/{moniker}"
+    check: dir_exists
+
+  # --- Specification Components ---
+
+  # Gherkin feature specs in specs/{moniker}/
+  gherkin-specs:
+    component: gherkin
+    path: "{specs_root}/{moniker}"
+    check: has_files_in_subdirs
+    check_pattern: "{specification}"
+
+  # Structurizr architecture design in specs/{moniker}/.design/
+  structurizr-design:
+    component: structurizr
+    path: "{specs_root}/{moniker}/{design_dir}"
+    check: required_file
+    required_file: "{workspace_dsl}"
+
+  # Godog BDD test runner (derived from first Go-typed component)
+  godog-from-go:
+    component: godog
+    derive_from_type: [go]
+    derive_subdir: specs
+    fallback_path: "go/eac/specs/{moniker}"
+    check: required_file
+    required_file: "{godog_test}"
+
+  # CucumberJS test runner (derived from first TypeScript-typed component)
+  cucumberjs-from-ts:
+    component: cucumberjs
+    derive_from_type: [typescript]
+    derive_subdir: features
+    check: dir_exists
+
+# =============================================================================
+# Module Templates
+# =============================================================================
+# Templates provide versioning defaults and a discover list.
+# Primary components (go, typescript, dockerfile) come from repository.yml.
+# Auxiliary components (assets, gherkin, etc.) are auto-discovered.
+
+module-templates:
+  # ==========================================================================
+  # GO MODULE TEMPLATES
+  # ==========================================================================
+
+  # Base Go library module (internal/supporting)
+  # Use for: shared libraries, core modules, internal utilities
+  go-library:
+    versioning:
+      scheme: Implicit
+      release_type: none
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Go CLI tool (published)
+  # Use for: command-line tools with releases
+  go-cli:
+    versioning:
+      scheme: SemVer
+      changelog: "release/{moniker}/CHANGELOG.md"
+      release_type: published
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Go internal CLI (not externally released)
+  # Use for: internal tools, development utilities
+  go-internal:
+    versioning:
+      scheme: SemVer
+      changelog: "{go_root}/CHANGELOG.md"
+      release_type: internal
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Go MCP server module
+  # Use for: MCP (Model Context Protocol) servers
+  go-mcp-server:
+    versioning:
+      scheme: SemVer
+      changelog: "{go_root}/CHANGELOG.md"
+      release_type: internal
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Go executable module (published CLI tool)
+  # Use for: CLI tools with releases, cross-platform builds
+  go-exe:
+    versioning:
+      scheme: SemVer
+      changelog: "release/{moniker}/CHANGELOG.md"
+      release_type: published
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Go contracts module (embedded contract files)
+  # Use for: modules providing schemas, EBNF grammars, YAML defaults via go:embed
+  go-contracts:
+    versioning:
+      scheme: Implicit
+      release_type: none
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+
+  # ==========================================================================
+  # CONTAINER TEMPLATES
+  # ==========================================================================
+
+  # Standard container (pushed to GHCR)
+  # Use for: tool containers, build containers
+  # Primary dockerfile component declared in repository.yml
+  # Provides docker_build defaults using {moniker}/{owner}/{short_sha} placeholders.
+  # Modules override push: false for local-only containers.
+  container:
+    components:
+      dockerfile:
+        docker_build:
+          container: "{moniker}"
+          context: "containers/{moniker}"
+          dockerfile: "containers/{moniker}/Dockerfile"
+          platforms: [linux/amd64]
+          tags:
+            - "ghcr.io/{owner}/{moniker}:latest"
+            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+    discover:
+      - assets-from-container
+
+  # Container with multi-arch support
+  # Use for: containers that need to run on both amd64 and arm64
+  container-multiarch:
+    components:
+      dockerfile:
+        docker_build:
+          container: "{moniker}"
+          context: "containers/{moniker}"
+          dockerfile: "containers/{moniker}/Dockerfile"
+          platforms: [linux/amd64, linux/arm64]
+          tags:
+            - "ghcr.io/{owner}/{moniker}:latest"
+            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+    discover:
+      - assets-from-container
+      - structurizr-design
+
+  # ==========================================================================
+  # DOCUMENTATION TEMPLATES
+  # ==========================================================================
+
+  # Documentation site module (MkDocs-based)
+  # Use for: main documentation sites
+  # Primary components (site, assets) declared in repository.yml
+  docs-site:
+    versioning:
+      scheme: CalVer
+      release_type: published
+    discover:
+      - structurizr-design
+
+  # ==========================================================================
+  # EXTENSION TEMPLATES
+  # ==========================================================================
+
+  # VSCode extension module
+  # Use for: Visual Studio Code extensions
+  # Primary components (typescript, assets) declared in repository.yml
+  vscode-extension:
+    versioning:
+      scheme: Implicit
+      release_type: internal
+    discover:
+      - gherkin-specs
+      - structurizr-design
+      - cucumberjs-from-ts
+
+  # Go library bundle (multiple go.mod files under one module)
+  # Use for: domain bundles containing multiple Go packages that share a lifecycle
+  go-library-bundle:
+    versioning:
+      scheme: Implicit
+      release_type: none
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # ==========================================================================
+  # SCRIPT TEMPLATES
+  # ==========================================================================
+
+  # Installer scripts (pwsh + bash + godog)
+  # Use for: installer modules with PowerShell and Bash scripts
+  # Primary components (go, pwsh, bash) declared in repository.yml
+  script-installer:
+    versioning:
+      scheme: Implicit
+      release_type: internal
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+  # Script bundles with invokers
+  # Use for: script modules with PowerShell and Bash invoker scripts
+  scripts-bundle:
+    versioning:
+      scheme: Implicit
+      release_type: internal
+    discover:
+      - assets-from-go
+      - gherkin-specs
+      - structurizr-design
+      - godog-from-go
+
+# =============================================================================
+# Artifact Matrices
+# =============================================================================
+# Reusable artifact configurations that can be referenced by modules.
+# Use artifact_matrix parameter to reference these in module definitions.
+
+artifact-matrices:
+  # Standard cross-platform CLI build matrix
+  # Produces binaries for Linux (amd64/arm64), macOS (amd64/arm64), Windows (amd64)
+  cross-platform:
+    - {id: linux-amd64, type: executable, pattern: "{binary_name}-linux-amd64"}
+    - {id: linux-arm64, type: executable, pattern: "{binary_name}-linux-arm64"}
+    - {id: darwin-amd64, type: executable, pattern: "{binary_name}-darwin-amd64"}
+    - {id: darwin-arm64, type: executable, pattern: "{binary_name}-darwin-arm64"}
+    - {id: windows-amd64, type: executable, pattern: "{binary_name}-windows-amd64.exe"}
+
+  # Cross-platform with UPX-compressed variants
+  # Extends cross-platform with compressed binaries for reduced size
+  cross-platform-upx:
+    extends: cross-platform
+    additional:
+      - {id: linux-amd64-upx, type: executable, pattern: "{binary_name}-linux-amd64-upx", compression: upx, derive_from: "{binary_name}-linux-amd64"}
+      - {id: windows-amd64-upx, type: executable, pattern: "{binary_name}-windows-amd64-upx.exe", compression: upx, derive_from: "{binary_name}-windows-amd64.exe"}
+
+  # Single platform binary (for internal tools)
+  # Uses {ext} placeholder for platform-appropriate extension
+  single-platform:
+    - {id: "{moniker}", type: executable, pattern: "{moniker}{ext}"}
+
+# =============================================================================
+# Discovery Conventions
+# =============================================================================
+# Rules for auto-discovering components based on filesystem patterns
+
+conventions:
+  component_discovery:
+    # Assets: derive from primary component (go, typescript, dockerfile)
+    # or from container root. Collects all loose asset files.
+    assets:
+      derive_from:
+        - go
+        - typescript
+        - dockerfile
+      container_path: "{containers_root}/{moniker}"
+
+    # Gherkin specs: look in specs/{moniker}/
+    gherkin:
+      path_pattern: "specs/{moniker}"
+      required_file: "specification.feature"
+
+    # Structurizr designs: look in specs/{moniker}/.design/
+    structurizr:
+      path_pattern: "specs/{moniker}/.design"
+      required_file: "workspace.dsl"
+
+    # Godog: infer from Go component location
+    # - go component at X -> steps at X/specs (godog runner)
+    # - no code component -> steps at go/eac/specs/{moniker}
+    godog:
+      derive_from_components:
+        go: "specs"
+      fallback_pattern: "go/eac/specs/{moniker}"
+      required_file: "godog_test.go"
+
+    # CucumberJS: infer from TypeScript component location
+    # - typescript component at X -> steps at X/features (cucumber-js runner)
+    cucumberjs:
+      derive_from_components:
+        typescript: "features"

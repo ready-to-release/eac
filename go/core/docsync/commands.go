@@ -2,16 +2,13 @@
 package docsync
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
-	"gopkg.in/yaml.v3"
 )
 
 // CommandInfo represents a command from get valid-commands.
@@ -35,14 +32,18 @@ type CommandDocSyncResult struct {
 	OrphanedDocs    []string           // Doc files for non-existent commands (relative paths)
 }
 
+// CommandSource is a function that returns valid commands.
+// Callers should provide an implementation that invokes the EAC CLI.
+type CommandSource func() ([]CommandInfo, error)
+
 // ScanCommandDocs compares valid CLI commands against existing documentation.
 // It uses CommandsConfig.GetDocPath() for path mapping.
-// cmdBinary is the path to the commands binary to run `get valid-commands`.
+// getCommands provides the list of valid commands (typically from EAC CLI).
 // repoRoot is the repository root for resolving paths.
 // cmdConfig provides path mapping rules.
 // Returns the scan result or error.
-func ScanCommandDocs(cmdBinary, repoRoot string, cmdConfig *config.CommandsConfig) (*CommandDocSyncResult, error) {
-	commands, err := getValidCommands(cmdBinary, repoRoot)
+func ScanCommandDocs(getCommands CommandSource, repoRoot string, cmdConfig *config.CommandsConfig) (*CommandDocSyncResult, error) {
+	commands, err := getCommands()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get valid commands: %w", err)
 	}
@@ -127,28 +128,6 @@ func GenerateDocStub(command string) string {
 <!-- book:cmd %s -->
 
 `, title, command)
-}
-
-// getValidCommands runs the CLI binary to get the list of valid commands.
-func getValidCommands(cmdBinary, repoRoot string) ([]CommandInfo, error) {
-	cmd := exec.Command(cmdBinary, "get", "valid-commands")
-	cmd.Dir = repoRoot
-	cmd.Env = append(os.Environ(), "NO_COLOR=1")
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run get valid-commands: %s", stderr.String())
-	}
-
-	var commands []CommandInfo
-	if err := yaml.Unmarshal(stdout.Bytes(), &commands); err != nil {
-		return nil, fmt.Errorf("failed to parse valid-commands output: %w", err)
-	}
-
-	return commands, nil
 }
 
 // fileExists checks if a file exists and is not a directory.

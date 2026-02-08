@@ -4,13 +4,13 @@ Provides implicit CLI configuration for the devbox environment.
 
 ## System Context
 
-<!-- structurizr:implicit-cli:SystemContext -->
+<!-- structurizr:eac-cli:SystemContext -->
 
 ## Container Architecture
 
-<!-- structurizr:implicit-cli:Containers -->
+<!-- structurizr:eac-cli:Containers -->
 
 ## Design File
 
-- **Location**: `specs/implicit-cli/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module implicit-cli`
+- **Location**: `specs/eac-cli/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module eac-cli`

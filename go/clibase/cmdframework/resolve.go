@@ -2,10 +2,14 @@ package cmdframework
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/display"
+	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
-	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 // phaseResolve handles the module resolution phase:
@@ -35,7 +39,7 @@ func phaseResolve(ctx *ExecutionContext) error {
 		log.Debugf("No modules specified, using all %d modules", len(monikers))
 	}
 
-	// Apply skip filter (available to all commands via Extra["skipMonikers"])
+	// Apply skip filter (available to all commands via SkipMonikers)
 	monikers = applySkipFilter(monikers, ctx)
 	ctx.Config.Monikers = monikers
 
@@ -46,21 +50,17 @@ func phaseResolve(ctx *ExecutionContext) error {
 		}
 	}
 
-	// Calculate execution order
+	// Expand scope to include transitive dependencies
 	orderStart := time.Now()
-	executionPlan, err := repository.CalculateExecutionOrder(
-		monikers,
-		ctx.WorkspaceRoot,
-		ctx.Config.IncludeDepm, // Include module dependencies
-	)
+	scopeMonikers, err := expandScope(monikers, ctx.ModuleRegistry, ctx.Config.IncludeDepm)
 	if err != nil {
-		return fmt.Errorf("failed to calculate execution order: %w", err)
+		return fmt.Errorf("failed to expand module scope: %w", err)
 	}
-	ctx.ExecutionPlan = executionPlan
+	ctx.ScopeMonikers = scopeMonikers
 	ctx.initTimings.ExecutionOrder = time.Since(orderStart)
 
-	// Build module component types lookup for all modules in execution plan
-	for _, moniker := range executionPlan.ExecutionOrder {
+	// Build module component types lookup for all modules in scope
+	for _, moniker := range scopeMonikers {
 		if module, exists := moduleReport.Registry.Get(moniker); exists {
 			ctx.ComponentTypesDisplay[moniker] = module.GetComponentTypesDisplay()
 		}
@@ -69,10 +69,75 @@ func phaseResolve(ctx *ExecutionContext) error {
 	// Update orchestrator with module component types
 	ctx.Orchestrator.SetComponentTypesDisplay(ctx.ComponentTypesDisplay)
 
-	log.Debugf("Resolved %d modules, execution order: %v",
-		len(executionPlan.ExecutionOrder), executionPlan.ExecutionOrder)
+	// Send planned work to TUI for early skeleton tabs (before tool resolution)
+	if ctx.Config.UseTUI {
+		sendPlannedWork(ctx)
+	}
+
+	log.Debugf("Resolved %d modules in scope: %v", len(scopeMonikers), scopeMonikers)
 
 	return nil
+}
+
+// sendPlannedWork sends predicted work items to the TUI based on module discovery.
+// This enables grey skeleton tabs to appear before tool resolution completes.
+// Uses DisplayOrder filtered to scope for consistent tab ordering.
+func sendPlannedWork(ctx *ExecutionContext) {
+	if len(ctx.ScopeMonikers) == 0 || ctx.EACConfig == nil || ctx.Orchestrator == nil {
+		return
+	}
+
+	// Use DisplayOrder filtered to scope for consistent TUI tab ordering.
+	orderedScope := displayOrderedScope(ctx.ScopeMonikers, ctx.EACConfig.Repository.DisplayOrder)
+
+	ctxName := string(ctx.Config.Type) // "build", "test", "lint", "scan"
+	var items []display.PlannedWorkItem
+
+	for _, moniker := range orderedScope {
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		for _, compType := range module.GetEnabledComponents() {
+			toolIDs := getToolIDsForComponentType(ctx.EACConfig.ComponentTypes, compType, ctx.Config.Type)
+			if len(toolIDs) == 0 {
+				continue
+			}
+
+			for _, toolID := range toolIDs {
+				// Predicted Longname: context:module:component:toolID
+				id := fmt.Sprintf("%s:%s:%s:%s", ctxName, moniker, compType, toolID)
+				displayName := moniker + ":" + compType
+
+				items = append(items, display.PlannedWorkItem{
+					ID:            id,
+					DisplayName:   displayName,
+					Weight:        1, // Approximate; enriched later
+					Module:        moniker,
+					Component:     compType,
+					ComponentType: compType,
+				})
+			}
+		}
+	}
+
+	if len(items) > 0 {
+		ctx.Orchestrator.SendPlannedWork(items)
+	}
+}
+
+// getToolIDsForComponentType returns the tool IDs for a component type and action type.
+func getToolIDsForComponentType(types *config.ComponentTypesConfig, compType string, cmdType core.ActionType) []string {
+	if types == nil || types.ComponentTypes == nil {
+		return nil
+	}
+	ct, exists := types.ComponentTypes[compType]
+	if !exists || ct == nil {
+		return nil
+	}
+
+	return ct.ToolIDsForAction(cmdType)
 }
 
 // GetRequestedMonikers returns just the originally requested monikers (not deps).
@@ -82,15 +147,15 @@ func (ctx *ExecutionContext) GetRequestedMonikers() []string {
 
 // GetExecutionMonikers returns all monikers to be executed (including deps).
 func (ctx *ExecutionContext) GetExecutionMonikers() []string {
-	if ctx.ExecutionPlan != nil {
-		return ctx.ExecutionPlan.ExecutionOrder
+	if len(ctx.ScopeMonikers) > 0 {
+		return ctx.ScopeMonikers
 	}
 	return ctx.Config.Monikers
 }
 
 // GetAddedDependencies returns monikers added as dependencies (not originally requested).
 func (ctx *ExecutionContext) GetAddedDependencies() []string {
-	if ctx.ExecutionPlan == nil {
+	if len(ctx.ScopeMonikers) == 0 {
 		return nil
 	}
 
@@ -100,7 +165,7 @@ func (ctx *ExecutionContext) GetAddedDependencies() []string {
 	}
 
 	var added []string
-	for _, m := range ctx.ExecutionPlan.ExecutionOrder {
+	for _, m := range ctx.ScopeMonikers {
 		if !requestedSet[m] {
 			added = append(added, m)
 		}
@@ -112,12 +177,8 @@ func (ctx *ExecutionContext) GetAddedDependencies() []string {
 // applySkipFilter removes modules from the list based on skip configuration.
 func applySkipFilter(monikers []string, ctx *ExecutionContext) []string {
 	// Check if command provided a skip list
-	if ctx.Config.Extra == nil {
-		return monikers
-	}
-
-	skipList, ok := ctx.Config.Extra["skipMonikers"].([]string)
-	if !ok || len(skipList) == 0 {
+	skipList := ctx.Config.SkipMonikers
+	if len(skipList) == 0 {
 		return monikers
 	}
 
@@ -125,11 +186,6 @@ func applySkipFilter(monikers []string, ctx *ExecutionContext) []string {
 	skipSet := make(map[string]bool)
 	for _, skip := range skipList {
 		skipSet[skip] = true
-	}
-
-	// If no skip filters configured, return original list
-	if len(skipSet) == 0 {
-		return monikers
 	}
 
 	// Filter out skipped modules
@@ -149,4 +205,84 @@ func applySkipFilter(monikers []string, ctx *ExecutionContext) []string {
 	}
 
 	return filtered
+}
+
+// expandScope expands the requested monikers to include transitive dependencies.
+// This does NOT perform topological sorting —
+// scheduling order comes from UnitSpec.DependsOn constraints, and display order
+// from DisplayOrder. The returned slice is sorted alphabetically for stable logging.
+func expandScope(monikers []string, reg *modules.Registry, includeDeps bool) ([]string, error) {
+	scope := make(map[string]bool, len(monikers))
+	for _, m := range monikers {
+		scope[m] = true
+	}
+
+	if includeDeps {
+		for _, m := range monikers {
+			if err := addTransitiveDeps(m, reg, scope); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	result := make([]string, 0, len(scope))
+	for m := range scope {
+		result = append(result, m)
+	}
+	sort.Strings(result)
+	return result, nil
+}
+
+// addTransitiveDeps recursively adds all dependencies of a module to the scope set.
+func addTransitiveDeps(moniker string, reg *modules.Registry, scope map[string]bool) error {
+	mod, exists := reg.Get(moniker)
+	if !exists {
+		return fmt.Errorf("module '%s' not found in registry", moniker)
+	}
+
+	for _, dep := range mod.GetDependencies() {
+		if _, exists := reg.Get(dep); !exists {
+			return fmt.Errorf("missing dependency contract: %s -> %s", moniker, dep)
+		}
+		if !scope[dep] {
+			scope[dep] = true
+			if err := addTransitiveDeps(dep, reg, scope); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// displayOrderedScope returns scope monikers in DisplayOrder sequence.
+// Modules not in DisplayOrder are appended alphabetically at the end.
+func displayOrderedScope(scope []string, displayOrder *config.DisplayOrder) []string {
+	if displayOrder == nil || len(displayOrder.Modules) == 0 {
+		return scope
+	}
+
+	scopeSet := make(map[string]bool, len(scope))
+	for _, m := range scope {
+		scopeSet[m] = true
+	}
+
+	var ordered []string
+	for _, m := range displayOrder.Modules {
+		if scopeSet[m] {
+			ordered = append(ordered, m)
+			delete(scopeSet, m)
+		}
+	}
+
+	// Append any remaining (shouldn't happen, but defensive)
+	if len(scopeSet) > 0 {
+		var remaining []string
+		for m := range scopeSet {
+			remaining = append(remaining, m)
+		}
+		sort.Strings(remaining)
+		ordered = append(ordered, remaining...)
+	}
+
+	return ordered
 }

@@ -2,6 +2,7 @@ package modules
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -55,6 +56,9 @@ func (m *ModuleContract) GetGlobPatterns() []string {
 				patterns = append(patterns, joinPattern(root, pattern))
 			}
 			for _, pattern := range comp.Patterns.Config {
+				patterns = append(patterns, joinPattern(root, pattern))
+			}
+			for _, pattern := range comp.Patterns.Data {
 				patterns = append(patterns, joinPattern(root, pattern))
 			}
 		}
@@ -125,6 +129,7 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 				comp.Patterns.Source...),
 				comp.Patterns.Tests...)
 			allPatterns = append(allPatterns, comp.Patterns.Config...)
+			allPatterns = append(allPatterns, comp.Patterns.Data...)
 
 			for _, pattern := range allPatterns {
 				fullPattern := joinPattern(root, pattern)
@@ -134,7 +139,7 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 			}
 		} else if root != "" && root != "/" {
 			// No patterns defined - static/catch-all components own files based on component type
-			// Components like "markdown", "yaml", "json" without patterns match by extension
+			// Components like "assets" without patterns match by extension
 			// Components like "static" with root but no patterns own all files under root
 			if compName == "static" || compName == "book" {
 				return true
@@ -183,11 +188,14 @@ func (m *ModuleContract) GetReleaseNotesPath() string {
 	return filepath.Join("release", m.Moniker, "RELEASE-NOTES.md")
 }
 
-// GetTestImplementationPath returns the gherkin-steps directory path.
-// Returns empty string if no gherkin-steps component is defined.
+// GetTestImplementationPath returns the BDD test runner directory path.
+// Checks for known BDD runner components (godog, cucumberjs).
+// Returns empty string if no BDD runner component is defined.
 func (m *ModuleContract) GetTestImplementationPath() string {
-	if comp, ok := m.Components["gherkin-steps"]; ok && comp != nil && comp.Root != "" {
-		return comp.Root
+	for _, name := range []string{"godog", "cucumberjs"} {
+		if comp, ok := m.Components[name]; ok && comp != nil && comp.Root != "" {
+			return comp.Root
+		}
 	}
 	return ""
 }
@@ -321,13 +329,49 @@ func (m *ModuleContract) GetEnabledComponents() []string {
 }
 
 // GetComponentTypesDisplay returns a comma-separated list of enabled component types.
-// This is useful for logging and display purposes.
+// Uses ComponentOrder for YAML declaration order when available, otherwise sorted alphabetically.
 func (m *ModuleContract) GetComponentTypesDisplay() string {
-	comps := m.GetEnabledComponents()
+	comps := m.GetOrderedComponentNames()
 	if len(comps) == 0 {
 		return "(no components)"
 	}
 	return strings.Join(comps, ", ")
+}
+
+// GetOrderedComponentNames returns component names in YAML declaration order.
+// Falls back to sorted alphabetical order if ComponentOrder is not set.
+func (m *ModuleContract) GetOrderedComponentNames() []string {
+	if m.Components == nil {
+		return nil
+	}
+
+	// Use declared order if available
+	if len(m.ComponentOrder) > 0 {
+		// Return ordered names, including any that were added after initial parse
+		// (e.g., by discovery rules) appended at the end
+		seen := make(map[string]bool, len(m.ComponentOrder))
+		var result []string
+		for _, name := range m.ComponentOrder {
+			if m.Components.HasComponent(name) {
+				result = append(result, name)
+				seen[name] = true
+			}
+		}
+		// Append any components not in the original order (discovered later)
+		extras := m.Components.GetEnabled()
+		sort.Strings(extras)
+		for _, name := range extras {
+			if !seen[name] {
+				result = append(result, name)
+			}
+		}
+		return result
+	}
+
+	// Fallback: sorted alphabetically
+	comps := m.Components.GetEnabled()
+	sort.Strings(comps)
+	return comps
 }
 
 // GetContentHash returns a SHA256 hash of the module's owned files.

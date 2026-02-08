@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +104,7 @@ func TestUnitID_Lock_CreatesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -124,7 +126,7 @@ func TestUnitID_Lock_CreatesLockFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Acquire lock
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err, "Lock() should succeed")
 
 	// Verify lock file exists
@@ -132,14 +134,14 @@ func TestUnitID_Lock_CreatesLockFile(t *testing.T) {
 	assert.NoError(t, err, "Lock file should exist after Lock()")
 
 	// Cleanup: release the lock
-	_ = unitID.Unlock()
+	_ = Unlock(unitID)
 }
 
 func TestUnitID_Lock_FailsIfAlreadyLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -158,22 +160,22 @@ func TestUnitID_Lock_FailsIfAlreadyLocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// First lock should succeed
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err, "First Lock() should succeed")
 
 	// Second lock should fail
-	err = unitID.Lock()
+	err = Lock(unitID)
 	assert.Error(t, err, "Second Lock() should fail when already locked")
 
 	// Cleanup
-	_ = unitID.Unlock()
+	_ = Unlock(unitID)
 }
 
 func TestUnitID_Lock_ContainsValidLockInfo(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextLint,
+		Action:    core.ActionLint,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "golangci-lint",
@@ -192,7 +194,7 @@ func TestUnitID_Lock_ContainsValidLockInfo(t *testing.T) {
 
 	beforeLock := time.Now()
 
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err)
 
 	afterLock := time.Now()
@@ -217,7 +219,7 @@ func TestUnitID_Lock_ContainsValidLockInfo(t *testing.T) {
 	assert.Equal(t, unitID.Longname(), info.UnitID, "Lock should contain the unit ID")
 
 	// Cleanup
-	_ = unitID.Unlock()
+	_ = Unlock(unitID)
 }
 
 // =============================================================================
@@ -228,7 +230,7 @@ func TestUnitID_Unlock_RemovesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextScan,
+		Action:    core.ActionScan,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "trivy-vuln",
@@ -246,10 +248,10 @@ func TestUnitID_Unlock_RemovesLockFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Acquire and then release lock
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err)
 
-	err = unitID.Unlock()
+	err = Unlock(unitID)
 	require.NoError(t, err, "Unlock() should succeed")
 
 	// Verify lock file is removed
@@ -261,7 +263,7 @@ func TestUnitID_Unlock_IsIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -279,11 +281,11 @@ func TestUnitID_Unlock_IsIdempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Unlock without ever locking should succeed (idempotent)
-	err = unitID.Unlock()
+	err = Unlock(unitID)
 	assert.NoError(t, err, "Unlock() should succeed even when no lock exists (idempotent)")
 
 	// Multiple unlocks should all succeed
-	err = unitID.Unlock()
+	err = Unlock(unitID)
 	assert.NoError(t, err, "Second Unlock() should also succeed (idempotent)")
 }
 
@@ -291,7 +293,7 @@ func TestUnitID_Unlock_SucceedsAfterMultipleLockUnlockCycles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "cycle-test",
 		Component: "go",
 		Tool:      "gotest",
@@ -311,10 +313,10 @@ func TestUnitID_Unlock_SucceedsAfterMultipleLockUnlockCycles(t *testing.T) {
 
 	// Multiple lock/unlock cycles should work
 	for i := 0; i < 3; i++ {
-		err = unitID.Lock()
+		err = Lock(unitID)
 		require.NoError(t, err, "Lock() should succeed in cycle %d", i)
 
-		err = unitID.Unlock()
+		err = Unlock(unitID)
 		require.NoError(t, err, "Unlock() should succeed in cycle %d", i)
 	}
 }
@@ -327,21 +329,21 @@ func TestUnitID_MultipleUnitsCanBeLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unit1 := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "module-a",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	unit2 := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "module-b",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	unit3 := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "module-a",
 		Component: "go",
 		Tool:      "gotest",
@@ -362,13 +364,13 @@ func TestUnitID_MultipleUnitsCanBeLocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// All three units should be lockable simultaneously
-	err = unit1.Lock()
+	err = Lock(unit1)
 	require.NoError(t, err, "unit1.Lock() should succeed")
 
-	err = unit2.Lock()
+	err = Lock(unit2)
 	require.NoError(t, err, "unit2.Lock() should succeed while unit1 is locked")
 
-	err = unit3.Lock()
+	err = Lock(unit3)
 	require.NoError(t, err, "unit3.Lock() should succeed while unit1 and unit2 are locked")
 
 	// Verify all lock files exist
@@ -382,23 +384,23 @@ func TestUnitID_MultipleUnitsCanBeLocked(t *testing.T) {
 	assert.NoError(t, err, "unit3 lock file should exist")
 
 	// Cleanup
-	_ = unit1.Unlock()
-	_ = unit2.Unlock()
-	_ = unit3.Unlock()
+	_ = Unlock(unit1)
+	_ = Unlock(unit2)
+	_ = Unlock(unit3)
 }
 
 func TestUnitID_SameModuleDifferentContextsCanBeLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	buildUnit := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "shared-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	testUnit := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "shared-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -406,7 +408,7 @@ func TestUnitID_SameModuleDifferentContextsCanBeLocked(t *testing.T) {
 	}
 
 	lintUnit := UnitID{
-		Context:   ContextLint,
+		Action:    core.ActionLint,
 		Module:    "shared-module",
 		Component: "go",
 		Tool:      "golangci-lint",
@@ -426,19 +428,19 @@ func TestUnitID_SameModuleDifferentContextsCanBeLocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// Different contexts for same module should have independent locks
-	err = buildUnit.Lock()
+	err = Lock(buildUnit)
 	require.NoError(t, err)
 
-	err = testUnit.Lock()
+	err = Lock(testUnit)
 	require.NoError(t, err, "Test unit should be lockable while build is locked")
 
-	err = lintUnit.Lock()
+	err = Lock(lintUnit)
 	require.NoError(t, err, "Lint unit should be lockable while build and test are locked")
 
 	// Cleanup
-	_ = buildUnit.Unlock()
-	_ = testUnit.Unlock()
-	_ = lintUnit.Unlock()
+	_ = Unlock(buildUnit)
+	_ = Unlock(testUnit)
+	_ = Unlock(lintUnit)
 }
 
 // =============================================================================
@@ -449,7 +451,7 @@ func TestUnitID_Lock_CreatesDirectoriesIfNeeded(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "deep-nested",
 		Component: "gherkin",
 		Tool:      "godog",
@@ -468,7 +470,7 @@ func TestUnitID_Lock_CreatesDirectoriesIfNeeded(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "Directory should not exist before Lock()")
 
 	// Lock should create directory and lock file
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err, "Lock() should create directories and succeed")
 
 	// Verify lock file exists
@@ -476,7 +478,7 @@ func TestUnitID_Lock_CreatesDirectoriesIfNeeded(t *testing.T) {
 	assert.NoError(t, err, "Lock file should exist after Lock()")
 
 	// Cleanup
-	_ = unitID.Unlock()
+	_ = Unlock(unitID)
 }
 
 // =============================================================================
@@ -518,7 +520,7 @@ func TestUnitID_Lock_ReturnsErrLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -531,12 +533,12 @@ func TestUnitID_Lock_ReturnsErrLocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// First lock should succeed
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err)
-	defer unitID.Unlock()
+	defer Unlock(unitID)
 
 	// Second lock should return ErrLocked
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.Error(t, err)
 
 	var lockErr *ErrLocked
@@ -554,14 +556,14 @@ func TestUnitID_LockWithRoot_CreatesLockFileInRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// Acquire lock with explicit root
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
 
 	// Verify lock file exists under the root
@@ -570,24 +572,24 @@ func TestUnitID_LockWithRoot_CreatesLockFileInRoot(t *testing.T) {
 	assert.NoError(t, err, "Lock file should exist under root")
 
 	// Cleanup
-	_ = unitID.UnlockWithRoot(tmpDir)
+	_ = UnlockWithRoot(unitID, tmpDir)
 }
 
 func TestUnitID_UnlockWithRoot_RemovesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// Acquire and release lock with root
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
 
-	err = unitID.UnlockWithRoot(tmpDir)
+	err = UnlockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
 
 	// Verify lock file is removed
@@ -600,19 +602,19 @@ func TestUnitID_LockWithRoot_FailsIfAlreadyLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:    core.ActionTest,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "gotest",
 	}
 
 	// First lock
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
-	defer unitID.UnlockWithRoot(tmpDir)
+	defer UnlockWithRoot(unitID, tmpDir)
 
 	// Second lock should fail with ErrLocked
-	err = unitID.LockWithRoot(tmpDir)
+	err = LockWithRoot(unitID, tmpDir)
 	require.Error(t, err)
 
 	var lockErr *ErrLocked
@@ -627,7 +629,7 @@ func TestUnitID_IsLocked_ReturnsTrueWhenLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -640,48 +642,48 @@ func TestUnitID_IsLocked_ReturnsTrueWhenLocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// Not locked initially
-	assert.False(t, unitID.IsLocked())
+	assert.False(t, IsLocked(unitID))
 
 	// Lock
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err)
 
 	// Should be locked now
-	assert.True(t, unitID.IsLocked())
+	assert.True(t, IsLocked(unitID))
 
 	// Unlock
-	_ = unitID.Unlock()
+	_ = Unlock(unitID)
 
 	// Should be unlocked again
-	assert.False(t, unitID.IsLocked())
+	assert.False(t, IsLocked(unitID))
 }
 
 func TestUnitID_IsLockedWithRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// Not locked initially
-	assert.False(t, unitID.IsLockedWithRoot(tmpDir))
+	assert.False(t, IsLockedWithRoot(unitID, tmpDir))
 
 	// Lock with root
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
 
 	// Should be locked now
-	assert.True(t, unitID.IsLockedWithRoot(tmpDir))
+	assert.True(t, IsLockedWithRoot(unitID, tmpDir))
 
 	// Different root should not be locked
 	otherDir := t.TempDir()
-	assert.False(t, unitID.IsLockedWithRoot(otherDir))
+	assert.False(t, IsLockedWithRoot(unitID, otherDir))
 
 	// Cleanup
-	_ = unitID.UnlockWithRoot(tmpDir)
+	_ = UnlockWithRoot(unitID, tmpDir)
 }
 
 // =============================================================================
@@ -692,7 +694,7 @@ func TestUnitID_ReadLockInfo_ReturnsNilWhenNotLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -704,7 +706,7 @@ func TestUnitID_ReadLockInfo_ReturnsNilWhenNotLocked(t *testing.T) {
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
-	info := unitID.ReadLockInfo()
+	info := ReadLockInfo(unitID)
 	assert.Nil(t, info)
 }
 
@@ -712,7 +714,7 @@ func TestUnitID_ReadLockInfo_ReturnsInfoWhenLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -726,11 +728,11 @@ func TestUnitID_ReadLockInfo_ReturnsInfoWhenLocked(t *testing.T) {
 
 	// Lock
 	beforeLock := time.Now()
-	err = unitID.Lock()
+	err = Lock(unitID)
 	require.NoError(t, err)
-	defer unitID.Unlock()
+	defer Unlock(unitID)
 
-	info := unitID.ReadLockInfo()
+	info := ReadLockInfo(unitID)
 	require.NotNil(t, info)
 	assert.Equal(t, os.Getpid(), info.PID)
 	assert.Equal(t, unitID.Longname(), info.UnitID)
@@ -741,25 +743,25 @@ func TestUnitID_ReadLockInfoWithRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// Lock with root
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
-	defer unitID.UnlockWithRoot(tmpDir)
+	defer UnlockWithRoot(unitID, tmpDir)
 
-	info := unitID.ReadLockInfoWithRoot(tmpDir)
+	info := ReadLockInfoWithRoot(unitID, tmpDir)
 	require.NotNil(t, info)
 	assert.Equal(t, os.Getpid(), info.PID)
 	assert.Equal(t, unitID.Longname(), info.UnitID)
 
 	// Different root should return nil
 	otherDir := t.TempDir()
-	otherInfo := unitID.ReadLockInfoWithRoot(otherDir)
+	otherInfo := ReadLockInfoWithRoot(unitID, otherDir)
 	assert.Nil(t, otherInfo)
 }
 
@@ -782,7 +784,7 @@ func TestUnitID_LockWithWait_ImmediateSuccess(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -795,14 +797,14 @@ func TestUnitID_LockWithWait_ImmediateSuccess(t *testing.T) {
 
 	// Lock should succeed immediately when not already locked
 	start := time.Now()
-	err := unitID.LockWithWait(ctx, tmpDir, cfg)
+	err := LockWithWait(unitID, ctx, tmpDir, cfg)
 	elapsed := time.Since(start)
 
 	require.NoError(t, err)
 	assert.Less(t, elapsed, 100*time.Millisecond, "Should succeed immediately")
 
 	// Cleanup
-	_ = unitID.UnlockWithRoot(tmpDir)
+	_ = UnlockWithRoot(unitID, tmpDir)
 }
 
 func TestUnitID_LockWithWait_WaitsAndAcquires(t *testing.T) {
@@ -810,14 +812,14 @@ func TestUnitID_LockWithWait_WaitsAndAcquires(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// First, acquire the lock
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
 
 	cfg := LockWaitConfig{
@@ -828,12 +830,12 @@ func TestUnitID_LockWithWait_WaitsAndAcquires(t *testing.T) {
 	// Release the lock after a short delay
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		_ = unitID.UnlockWithRoot(tmpDir)
+		_ = UnlockWithRoot(unitID, tmpDir)
 	}()
 
 	// LockWithWait should wait and then succeed
 	start := time.Now()
-	err = unitID.LockWithWait(ctx, tmpDir, cfg)
+	err = LockWithWait(unitID, ctx, tmpDir, cfg)
 	elapsed := time.Since(start)
 
 	require.NoError(t, err)
@@ -841,7 +843,7 @@ func TestUnitID_LockWithWait_WaitsAndAcquires(t *testing.T) {
 	assert.Less(t, elapsed, 1*time.Second, "Should not timeout")
 
 	// Cleanup
-	_ = unitID.UnlockWithRoot(tmpDir)
+	_ = UnlockWithRoot(unitID, tmpDir)
 }
 
 func TestUnitID_LockWithWait_TimeoutReturnsErrLocked(t *testing.T) {
@@ -849,16 +851,16 @@ func TestUnitID_LockWithWait_TimeoutReturnsErrLocked(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// First, acquire the lock and don't release it
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
-	defer unitID.UnlockWithRoot(tmpDir)
+	defer UnlockWithRoot(unitID, tmpDir)
 
 	cfg := LockWaitConfig{
 		Timeout:      200 * time.Millisecond,
@@ -867,7 +869,7 @@ func TestUnitID_LockWithWait_TimeoutReturnsErrLocked(t *testing.T) {
 
 	// LockWithWait should timeout
 	start := time.Now()
-	err = unitID.LockWithWait(ctx, tmpDir, cfg)
+	err = LockWithWait(unitID, ctx, tmpDir, cfg)
 	elapsed := time.Since(start)
 
 	require.Error(t, err)
@@ -882,16 +884,16 @@ func TestUnitID_LockWithWait_ContextCancellation(t *testing.T) {
 	ctx, cancel = contextWithCancel(ctx)
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// First, acquire the lock and don't release it
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
-	defer unitID.UnlockWithRoot(tmpDir)
+	defer UnlockWithRoot(unitID, tmpDir)
 
 	cfg := LockWaitConfig{
 		Timeout:      5 * time.Second,
@@ -906,7 +908,7 @@ func TestUnitID_LockWithWait_ContextCancellation(t *testing.T) {
 
 	// LockWithWait should be cancelled
 	start := time.Now()
-	err = unitID.LockWithWait(ctx, tmpDir, cfg)
+	err = LockWithWait(unitID, ctx, tmpDir, cfg)
 	elapsed := time.Since(start)
 
 	require.Error(t, err)
@@ -924,7 +926,7 @@ func TestUnitID_LockWithWait_UsesDefaultConfig(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -934,11 +936,11 @@ func TestUnitID_LockWithWait_UsesDefaultConfig(t *testing.T) {
 	cfg := LockWaitConfig{}
 
 	// Should succeed immediately with defaults
-	err := unitID.LockWithWait(ctx, tmpDir, cfg)
+	err := LockWithWait(unitID, ctx, tmpDir, cfg)
 	require.NoError(t, err)
 
 	// Cleanup
-	_ = unitID.UnlockWithRoot(tmpDir)
+	_ = UnlockWithRoot(unitID, tmpDir)
 }
 
 // =============================================================================
@@ -949,14 +951,14 @@ func TestUnitID_TryBreakStaleLock_ReturnsFalseWhenNotLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// No lock exists
-	broken := unitID.TryBreakStaleLock(tmpDir)
+	broken := TryBreakStaleLock(unitID, tmpDir)
 	assert.False(t, broken, "Should return false when no lock exists")
 }
 
@@ -971,21 +973,21 @@ func TestUnitID_TryBreakStaleLock_ReturnsFalseForLiveProcess(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	// Create a lock held by current process (which is alive)
-	err := unitID.LockWithRoot(tmpDir)
+	err := LockWithRoot(unitID, tmpDir)
 	require.NoError(t, err)
-	defer unitID.UnlockWithRoot(tmpDir)
+	defer UnlockWithRoot(unitID, tmpDir)
 
 	// Should not break lock for live process
-	broken := unitID.TryBreakStaleLock(tmpDir)
+	broken := TryBreakStaleLock(unitID, tmpDir)
 	assert.False(t, broken, "Should not break lock held by live process")
 
 	// Lock should still exist
-	assert.True(t, unitID.IsLockedWithRoot(tmpDir))
+	assert.True(t, IsLockedWithRoot(unitID, tmpDir))
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
@@ -100,8 +101,7 @@ func TestBackgroundCacheDetection_DoesNotIncrementCounter(t *testing.T) {
 	config := &Config{
 		WorkspaceRoot:  tmpDir,
 		OutputBaseDir:  "out/test",
-		LogFileName:    "test.log",
-		ActionVerb:     "building",
+		ActionType:     core.ActionBuild,
 		MaxConcurrency: 2,
 	}
 
@@ -167,8 +167,7 @@ func TestRunComponents_CounterMatchesTotal(t *testing.T) {
 	config := &Config{
 		WorkspaceRoot:  tmpDir,
 		OutputBaseDir:  "out/test",
-		LogFileName:    "test.log",
-		ActionVerb:     "building",
+		ActionType:     core.ActionBuild,
 		MaxConcurrency: 2,
 	}
 

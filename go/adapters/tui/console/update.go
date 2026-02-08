@@ -19,15 +19,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMouse(msg)
 
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.Display.Width = msg.Width
+		m.Display.Height = msg.Height
 		m.invalidateLayoutMetrics()
 		// Clamp pane columns to fit new terminal width
-		if maxCols := m.maxPaneWidthCols(); m.paneWidthCols > maxCols {
-			m.paneWidthCols = maxCols
+		if maxCols := m.maxPaneWidthCols(); m.Interaction.PaneWidthCols > maxCols {
+			m.Interaction.PaneWidthCols = maxCols
 		}
 		// Reset scroll offsets when window size changes
-		for _, pane := range m.panes {
+		for _, pane := range m.Execution.Panes {
 			if pane != nil && !pane.autoScroll {
 				// If user was scrolled up, try to maintain position, but cap at new max
 				initH, runH, summaryH := m.calculatePaneHeights()
@@ -48,7 +48,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.processLinesBatch(lines)
 
 		// Continue listening for more lines
-		if !m.linesDone {
+		if !m.Execution.LinesDone {
 			return m, m.listenForLines()
 		}
 		return m, nil
@@ -58,21 +58,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.processLinesBatch([]Line{Line(msg)})
 
 		// Continue listening for more lines
-		if !m.linesDone {
+		if !m.Execution.LinesDone {
 			return m, m.listenForLines()
 		}
 		return m, nil
 
 	case PhaseLineMsg:
 		// Write to specific phase's buffer
-		if m.panes[msg.Phase] != nil {
-			pane := m.panes[msg.Phase]
+		if m.Execution.Panes[msg.Phase] != nil {
+			pane := m.Execution.Panes[msg.Phase]
 			pane.Buffer.Push(msg.Line)
 			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
 			// Only increment if viewing the aggregate buffer (PhaseLineMsg goes to pane.Buffer, not module buffers)
 			if !pane.autoScroll && pane.scrollOffset > 0 {
 				// For Run pane, only increment if viewing aggregate (not a specific module tab)
-				if msg.Phase != PhaseRun || m.activeTab == "" {
+				if msg.Phase != PhaseRun || m.Interaction.ActiveTab == "" {
 					pane.scrollOffset++
 				}
 			}
@@ -81,11 +81,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ResultLineMsg:
 		// Write to results buffer
-		m.resultsBuffer.Push(msg.Line)
+		m.Execution.ResultsBuffer.Push(msg.Line)
 		return m, nil
 
 	case ConfigReadyMsg:
-		m.configMeta = &ConfigMeta{
+		m.Boot.Config = &ConfigMeta{
 			CommandName:      msg.CommandName,
 			ExecutionContext: msg.ExecutionContext,
 			ParallelismMode:  msg.ParallelismMode,
@@ -93,108 +93,172 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			WeightedCapacity: msg.WeightedCapacity,
 			OutputDir:        msg.OutputDir,
 		}
-		if m.bootState < BootConfig {
-			m.bootState = BootConfig
+		if m.Boot.State < BootConfig {
+			m.Boot.State = BootConfig
 		}
 		// Pre-set capacity values for status bar rendering
 		if msg.WeightedCapacity > 0 {
-			m.roof = msg.WeightedCapacity
-			m.pressureTarget = msg.WeightedCapacity
+			m.Execution.Roof = msg.WeightedCapacity
+			m.Execution.PressureTarget = msg.WeightedCapacity
 		}
 		return m, nil
 
 	case InitSummaryMsg:
 		// Store init summary for structured rendering
-		m.initSummary = msg.Summary
+		m.Execution.InitSummary = msg.Summary
 
-		// Pre-register all tabs from ExecutionTree
-		// This ensures tabs are constant after init - only state changes, no additions
+		// Build set of resolved IDs for reconciliation with planned tabs
+		resolvedIDs := make(map[string]bool)
 		if msg.Summary != nil && len(msg.Summary.ExecutionTree) > 0 {
 			for _, module := range msg.Summary.ExecutionTree {
 				for _, uow := range module.UoWs {
+					resolvedIDs[uow.ID] = true
 					// Use full ID (Longname) for matching, DisplayName for tab labels
 					m.GetOrCreateUoWState(uow)
 				}
 			}
 
+			// Remove stale planned tabs that are not in the resolved set
+			// (only remove tabs still in Pending state - running/complete tabs are authoritative)
+			if len(resolvedIDs) > 0 {
+				for id, state := range m.Execution.UoWStates {
+					if !resolvedIDs[id] && state.Status == UoWPending {
+						m.removeUoWFromTabs(id)
+					}
+				}
+			}
+
 			// Calculate initial tab columns to fit all UoWs without scrolling
-			m.paneWidthCols = m.calculateOptimalPaneCols()
+			m.Interaction.PaneWidthCols = m.calculateOptimalPaneCols()
 		}
 
 		// Initialize capacity tracking from WeightedCapacity
 		// This ensures roof/pressureTarget have sensible defaults before first progress event
 		// Fixes race condition where first render happens before ProgressUpdateEvent on slow machines
 		if msg.Summary != nil && msg.Summary.WeightedCapacity > 0 {
-			m.roof = msg.Summary.WeightedCapacity
-			m.pressureTarget = msg.Summary.WeightedCapacity
+			m.Execution.Roof = msg.Summary.WeightedCapacity
+			m.Execution.PressureTarget = msg.Summary.WeightedCapacity
 		}
 		// Advance boot state
-		if m.bootState < BootTabs {
-			m.bootState = BootTabs
+		if m.Boot.State < BootTabs {
+			m.Boot.State = BootTabs
 		}
 		return m, nil
 
 	case SummaryDataMsg:
 		// Summary renderer has finished - store the data
-		m.pendingSummaryData = msg.Data
+		m.Interaction.PendingSummaryData = msg.Data
 
 		// Receiving summary means all runners are done - mark complete if not already
-		if m.allRunnersCompleted.IsZero() {
-			m.allRunnersCompleted = time.Now()
+		if m.Interaction.AllRunnersCompleted.IsZero() {
+			m.Interaction.AllRunnersCompleted = time.Now()
+		}
+
+		// Gate exit on AllWorkDone - AfterExecute hooks must complete first.
+		// If AllWorkDone hasn't been signaled yet, defer exit to tick handler.
+		if !m.Execution.AllWorkDone {
+			m.Interaction.ExitRequested = true
+			return m, nil
 		}
 
 		// If skipTUIDelay is set, exit immediately without user interaction tracking
-		if m.skipTUIDelay {
+		if m.Interaction.SkipTUIDelay {
 			m.activateSummary()
-			m.quitting = true
+			m.Interaction.Quitting = true
 			return m, tea.Quit
 		}
 
 		// Ensure TUI is visible for minimum display time before auto-exit
 		// This prevents the TUI from flashing and disappearing on fast builds
-		elapsed := time.Since(m.startTime)
-		if elapsed < m.minDisplayTime && !m.userHasInteracted {
+		elapsed := time.Since(m.Execution.StartTime)
+		if elapsed < m.Display.MinDisplayTime && !m.Interaction.UserHasInteracted {
 			// Not enough time has passed - delay exit until tick handler
-			m.exitRequested = true
+			m.Interaction.ExitRequested = true
 			return m, nil
 		}
 
 		// If user hasn't interacted and minimum time has passed, exit
-		if !m.userHasInteracted {
-			m.exitRequested = true
+		if !m.Interaction.UserHasInteracted {
+			m.Interaction.ExitRequested = true
 			m.activateSummary()
-			m.quitting = true
+			m.Interaction.Quitting = true
 			return m, tea.Quit
 		}
 
 		// User has interacted - start the countdown timer
 		// Set exitRequested so tick handler knows to proceed with countdown
-		m.exitRequested = true
+		m.Interaction.ExitRequested = true
+		return m, nil
+
+	case PlannedWorkMsg:
+		// Create grey skeleton tabs from module discovery (before tool resolution)
+		for _, item := range msg.Items {
+			m.GetOrCreateUoWState(UoWEntry{
+				ID:            item.ID,
+				DisplayName:   item.DisplayName,
+				Weight:        item.Weight,
+				Module:        item.Module,
+				Component:     item.Component,
+				ComponentType: item.ComponentType,
+			})
+		}
+		// Recalculate pane columns to fit all planned tabs
+		if len(msg.Items) > 0 {
+			m.Interaction.PaneWidthCols = m.calculateOptimalPaneCols()
+		}
+		// Advance boot state to BootPlanned
+		if m.Boot.State < BootPlanned {
+			m.Boot.State = BootPlanned
+		}
+		return m, nil
+
+	case UoWEnrichMsg:
+		// Enrich an existing planned tab with tool resolution data
+		if state, exists := m.Execution.UoWStates[msg.ID]; exists {
+			if msg.Tool != "" {
+				state.Tool = msg.Tool
+				state.Container = msg.Container
+			}
+			if msg.Weight > 0 {
+				state.Weight = msg.Weight
+			}
+		}
+		return m, nil
+
+	case AllWorkDoneMsg:
+		// All work including AfterExecute hooks is complete
+		m.Execution.AllWorkDone = true
+		// If exit was already requested and summary is ready, quit now
+		if m.Interaction.ExitRequested && m.Interaction.PendingSummaryData != nil {
+			m.activateSummary()
+			m.Interaction.Quitting = true
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case PhaseUpdateMsg:
-		if msg.Phase < Phase(len(m.panes)) && m.panes[msg.Phase] != nil {
+		if msg.Phase < Phase(len(m.Execution.Panes)) && m.Execution.Panes[msg.Phase] != nil {
 			// Only update status if it's set (non-zero)
 			if msg.Status != 0 {
-				m.panes[msg.Phase].Status = msg.Status
+				m.Execution.Panes[msg.Phase].Status = msg.Status
 			}
 			// Update summary if provided
 			if msg.Summary != "" {
-				m.panes[msg.Phase].Summary = msg.Summary
+				m.Execution.Panes[msg.Phase].Summary = msg.Summary
 			}
 
 			// Track timing and active phase
 			switch msg.Status {
 			case PhaseActive:
 				// Mark previous phase as complete if it was active
-				if m.activePhase != msg.Phase && m.activePhase < Phase(len(m.panes)) && m.panes[m.activePhase].Status == PhaseActive {
-					m.panes[m.activePhase].Status = PhaseComplete
-					m.panes[m.activePhase].EndTime = time.Now()
+				if m.Execution.ActivePhase != msg.Phase && m.Execution.ActivePhase < Phase(len(m.Execution.Panes)) && m.Execution.Panes[m.Execution.ActivePhase].Status == PhaseActive {
+					m.Execution.Panes[m.Execution.ActivePhase].Status = PhaseComplete
+					m.Execution.Panes[m.Execution.ActivePhase].EndTime = time.Now()
 				}
-				m.panes[msg.Phase].StartTime = time.Now()
-				m.activePhase = msg.Phase
+				m.Execution.Panes[msg.Phase].StartTime = time.Now()
+				m.Execution.ActivePhase = msg.Phase
 			case PhaseComplete, PhaseFailed:
-				m.panes[msg.Phase].EndTime = time.Now()
+				m.Execution.Panes[msg.Phase].EndTime = time.Now()
 			}
 		}
 		return m, nil
@@ -204,7 +268,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Build sets for comparison
 		oldRunningSet := make(map[string]bool)
-		for _, moniker := range m.running {
+		for _, moniker := range m.Execution.Running {
 			oldRunningSet[moniker] = true
 		}
 		newRunningSet := make(map[string]bool)
@@ -225,10 +289,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Track EndTime for modules that were running but now gone
 		// DON'T set status here - only UoWCompleteMsg sets terminal status
 		// (it has the exit code to determine Complete vs Skipped vs Failed)
-		for _, moniker := range m.running {
+		for _, moniker := range m.Execution.Running {
 			if !newRunningSet[moniker] {
 				// This module was running and is now gone
-				if state, exists := m.uowStates[moniker]; exists {
+				if state, exists := m.Execution.UoWStates[moniker]; exists {
 					if state.EndTime.IsZero() {
 						state.EndTime = time.Now()
 					}
@@ -236,36 +300,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		m.running = status.Running
-		m.completed = status.Completed
-		m.total = status.Total
+		m.Execution.Running = status.Running
+		m.Execution.Completed = status.Completed
+		m.Execution.Total = status.Total
 
 		// Update capacity tracking (three-value model)
 		// Only update if non-zero to preserve values across partial status updates
 		if status.Roof > 0 {
-			m.roof = status.Roof
+			m.Execution.Roof = status.Roof
 		}
 		if status.PressureTarget > 0 {
-			m.pressureTarget = status.PressureTarget
+			m.Execution.PressureTarget = status.PressureTarget
 		}
 
 		// Track when all runners completed
-		if m.total > 0 && m.completed >= m.total && m.allRunnersCompleted.IsZero() {
-			m.allRunnersCompleted = time.Now()
+		if m.Execution.Total > 0 && m.Execution.Completed >= m.Execution.Total && m.Interaction.AllRunnersCompleted.IsZero() {
+			m.Interaction.AllRunnersCompleted = time.Now()
 		}
 
 		// Update lock tracking info (preserve existing if new is empty for visual stability)
 		if len(status.Locks) > 0 {
-			m.locks = status.Locks
+			m.Execution.Locks = status.Locks
 
 			// Extract docker-scheduler stats for visibility
 			for _, lock := range status.Locks {
 				if lock.Name == "docker-scheduler" {
-					m.dockerRunning = lock.Used
-					m.dockerRoof = lock.Capacity
-					m.dockerWaiting = lock.Waiting
+					m.Execution.DockerRunning = lock.Used
+					m.Execution.DockerRoof = lock.Capacity
+					m.Execution.DockerWaiting = lock.Waiting
 					// Docker scheduler uses capacity as pressure target (no separate pressure tracking)
-					m.dockerPressureTarget = lock.Capacity
+					m.Execution.DockerPressureTarget = lock.Capacity
 					break
 				}
 			}
@@ -275,11 +339,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// dockerAvailable is "sticky" - once Docker becomes available, it stays available
 		// This handles slow machines where Docker pool may initialize after first status events
 		if status.DockerAvailable {
-			m.cachedDockerMemPercent = status.DockerMemPercent
-			m.dockerAvailable = true // sticky - never reset to false
+			m.Resources.CachedDockerMemPercent = status.DockerMemPercent
+			m.Resources.DockerAvailable = true // sticky - never reset to false
 		}
 
-		if !m.statusDone {
+		if !m.Execution.StatusDone {
 			return m, m.listenForStatus()
 		}
 		return m, nil
@@ -287,8 +351,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MarqueeTickMsg:
 		// Animate hovered tab name scrolling (marquee effect)
 		// Fast ticks (100ms) but only advance scroll every 4th tick for smooth slow movement
-		if m.hoveredTab != "" {
-			m.hoveredTabScroll++
+		if m.Interaction.HoveredTab != "" {
+			m.Interaction.HoveredTabScroll++
 			// Continue ticking while hovering
 			return m, tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 				return MarqueeTickMsg{}
@@ -302,8 +366,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.UpdateCachedMetrics()
 
 		// Advance boot state when CPU metrics become available
-		if m.bootState == BootChrome && len(m.cachedCPUPercent) > 0 {
-			m.bootState = BootMetrics
+		if m.Boot.State == BootChrome && len(m.Resources.CachedCPUPercent) > 0 {
+			m.Boot.State = BootMetrics
 		}
 
 		// Recompute layout metrics (cached for View and mouse handlers until next tick)
@@ -313,8 +377,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.CleanupDecayedTabs()
 
 		// Check if auto-scroll should resume after timeout
-		if m.panes[PhaseRun] != nil {
-			m.panes[PhaseRun].CheckAutoScrollResume(m.autoScrollResume)
+		if m.Execution.Panes[PhaseRun] != nil {
+			m.Execution.Panes[PhaseRun].CheckAutoScrollResume(m.Display.AutoScrollResume)
 		}
 
 		// === THREE-THREAD MODEL ===
@@ -328,13 +392,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// 1. User timer: track countdown from last mouse interaction
 		userTimerExpired := false
-		if m.userHasInteracted {
-			elapsed := time.Since(m.lastUserInteraction)
-			remaining := m.freezeTimeoutSecs - int(elapsed.Seconds())
+		if m.Interaction.UserHasInteracted {
+			elapsed := time.Since(m.Interaction.LastUserInteraction)
+			remaining := m.Interaction.FreezeTimeoutSecs - int(elapsed.Seconds())
 			if remaining < 0 {
 				remaining = 0
 			}
-			m.exitCountdownSecs = remaining
+			m.Interaction.ExitCountdownSecs = remaining
 			userTimerExpired = remaining == 0
 		}
 
@@ -343,52 +407,52 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// 3. Exit decision: should we start the exit sequence?
 		// Conditions: all runners completed AND (user never interacted OR user timer expired)
-		allRunnersDone := !m.allRunnersCompleted.IsZero()
-		shouldExit := allRunnersDone && (!m.userHasInteracted || userTimerExpired)
+		allRunnersDone := !m.Interaction.AllRunnersCompleted.IsZero()
+		shouldExit := allRunnersDone && (!m.Interaction.UserHasInteracted || userTimerExpired)
 
-		if shouldExit && !m.exitRequested {
-			m.exitRequested = true
+		if shouldExit && !m.Interaction.ExitRequested {
+			m.Interaction.ExitRequested = true
 		}
 
-		// 4. Finalization: if exit requested, either quit (if summary ready) or show "rendering summary"
-		if m.exitRequested {
+		// 4. Finalization: if exit requested, either quit (if summary ready AND all work done) or show "rendering summary"
+		if m.Interaction.ExitRequested {
 			// Ensure TUI is visible for minimum time before auto-exit (unless user interacted)
-			elapsed := time.Since(m.startTime)
-			if elapsed < m.minDisplayTime && !m.userHasInteracted {
+			elapsed := time.Since(m.Execution.StartTime)
+			if elapsed < m.Display.MinDisplayTime && !m.Interaction.UserHasInteracted {
 				// Not enough time - keep ticking
 				return m, m.tickCmd()
 			}
 
-			if m.pendingSummaryData != nil {
-				// Summary is ready - activate and quit
+			if m.Interaction.PendingSummaryData != nil && m.Execution.AllWorkDone {
+				// Summary is ready and AfterExecute hooks are complete - activate and quit
 				m.activateSummary()
-				m.quitting = true
+				m.Interaction.Quitting = true
 				return m, tea.Quit
 			}
-			// Summary not ready yet - keep ticking (view will show "rendering summary")
+			// Summary not ready yet or AfterExecute still running - keep ticking
 		}
 
 		return m, m.tickCmd()
 
 	case linesDoneMsg:
-		m.linesDone = true
+		m.Execution.LinesDone = true
 		return m, nil
 
 	case statusDoneMsg:
-		m.statusDone = true
+		m.Execution.StatusDone = true
 		return m, nil
 
 	case completedMsg:
 		// A module completed - update display
-		m.completed++
+		m.Execution.Completed++
 		// Remove from running list
 		var newRunning []string
-		for _, r := range m.running {
+		for _, r := range m.Execution.Running {
 			if r != msg.Moniker {
 				newRunning = append(newRunning, r)
 			}
 		}
-		m.running = newRunning
+		m.Execution.Running = newRunning
 
 		// Mark module as complete in tab tracking
 		exitCode := msg.ExitCode
@@ -403,8 +467,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case UoWRunningMsg:
 		// Mark module as running (slot acquired)
 		m.MarkUoWRunning(msg.Moniker)
-		if m.bootState < BootRunning {
-			m.bootState = BootRunning
+		if m.Boot.State < BootRunning {
+			m.Boot.State = BootRunning
 		}
 		return m, nil
 
@@ -413,7 +477,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.MarkUoWComplete(msg.Moniker, msg.ExitCode)
 
 		// Store cache info for skipped (cached) modules
-		if state, exists := m.uowStates[msg.Moniker]; exists {
+		if state, exists := m.Execution.UoWStates[msg.Moniker]; exists {
 			if !msg.CacheTime.IsZero() {
 				state.CacheTime = msg.CacheTime
 			}
@@ -429,16 +493,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Failed jobs (ExitCode > 0) keep their tab focused so the user can see the error output.
 		// ExitCode <= 0 covers success (0) and dep-skipped/cached (<0).
 		effectiveTab := m.getEffectiveActiveTab()
-		if msg.ExitCode <= 0 && msg.Moniker == effectiveTab && !m.userHasInteracted {
+		if msg.ExitCode <= 0 && msg.Moniker == effectiveTab && !m.Interaction.UserHasInteracted {
 			// Find next running module to select
-			for _, moniker := range m.uowOrder {
-				if state, exists := m.uowStates[moniker]; exists {
+			for _, moniker := range m.Execution.UoWOrder {
+				if state, exists := m.Execution.UoWStates[moniker]; exists {
 					if state.Status == UoWRunning {
-						m.activeTab = moniker
+						m.Interaction.ActiveTab = moniker
 						// Reset scroll for new tab
-						if m.panes[PhaseRun] != nil {
-							m.panes[PhaseRun].scrollOffset = 0
-							m.panes[PhaseRun].autoScroll = true
+						if m.Execution.Panes[PhaseRun] != nil {
+							m.Execution.Panes[PhaseRun].scrollOffset = 0
+							m.Execution.Panes[PhaseRun].autoScroll = true
 						}
 						break
 					}
@@ -451,9 +515,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Switch to selected tab
 		m.SetActiveTab(msg.Moniker)
 		// Reset scroll to bottom when switching tabs
-		if m.panes[PhaseRun] != nil {
-			m.panes[PhaseRun].scrollOffset = 0
-			m.panes[PhaseRun].autoScroll = true
+		if m.Execution.Panes[PhaseRun] != nil {
+			m.Execution.Panes[PhaseRun].scrollOffset = 0
+			m.Execution.Panes[PhaseRun].autoScroll = true
 		}
 		return m, nil
 
@@ -469,7 +533,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // processLinesBatch routes a batch of lines to their appropriate buffers.
 // This is called for both batchLineMsg and single lineMsg.
 func (m *Model) processLinesBatch(lines []Line) {
-	pane := m.panes[m.activePhase]
+	pane := m.Execution.Panes[m.Execution.ActivePhase]
 	effectiveTab := m.getEffectiveActiveTab()
 	scrollIncrement := 0
 
@@ -477,8 +541,8 @@ func (m *Model) processLinesBatch(lines []Line) {
 		line := &lines[i]
 
 		// Route to per-UoW buffer only - no aggregate stream
-		if line.Source != "" && line.Source != "system" && m.activePhase == PhaseRun {
-			if state, exists := m.uowStates[line.Source]; exists {
+		if line.Source != "" && line.Source != "system" && m.Execution.ActivePhase == PhaseRun {
+			if state, exists := m.Execution.UoWStates[line.Source]; exists {
 				state.Buffer.Push(*line)
 			} else {
 				state := m.GetOrCreateUoWStateByID(line.Source, "", 0)
@@ -498,7 +562,7 @@ func (m *Model) processLinesBatch(lines []Line) {
 		// Track errors for sticky display
 		if line.Level == LevelError {
 			lineCopy := *line
-			m.lastError = &lineCopy
+			m.Execution.LastError = &lineCopy
 		}
 	}
 
@@ -511,27 +575,27 @@ func (m *Model) processLinesBatch(lines []Line) {
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
-		m.quitting = true
+		m.Interaction.Quitting = true
 		return m, tea.Quit
 	case "esc":
 		// Force immediate exit (bypass user interaction delay)
-		m.forceExit = true
-		m.quitting = true
+		m.Interaction.ForceExit = true
+		m.Interaction.Quitting = true
 		return m, tea.Quit
 	case "enter":
 		// Enter skips the freeze countdown (sets timer to 0, normal exit behavior continues)
-		if m.userHasInteracted && m.exitCountdownSecs > 0 {
-			m.exitCountdownSecs = 0
+		if m.Interaction.UserHasInteracted && m.Interaction.ExitCountdownSecs > 0 {
+			m.Interaction.ExitCountdownSecs = 0
 		}
 	case " ", "p":
 		// Toggle pause
-		m.paused = !m.paused
+		m.Interaction.Paused = !m.Interaction.Paused
 	case "e":
 		// Toggle error-only mode
-		m.errorMode = !m.errorMode
+		m.Interaction.ErrorMode = !m.Interaction.ErrorMode
 	case "c":
 		// Clear last error
-		m.lastError = nil
+		m.Execution.LastError = nil
 
 	// Tab navigation shortcuts
 	case "tab":
@@ -548,47 +612,47 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		tabs := m.GetVisibleTabs()
 		if idx < len(tabs) {
 			m.SetActiveTab(tabs[idx].Moniker)
-			if m.panes[PhaseRun] != nil {
-				m.panes[PhaseRun].scrollOffset = 0
-				m.panes[PhaseRun].autoScroll = true
+			if m.Execution.Panes[PhaseRun] != nil {
+				m.Execution.Panes[PhaseRun].scrollOffset = 0
+				m.Execution.Panes[PhaseRun].autoScroll = true
 			}
 		}
 	case "0":
 		// Reserved - no aggregate view
 	case "t":
 		// Cycle tab view mode: Name → Module → Type → Tool → Mode → State → Name
-		m.tabViewMode = (m.tabViewMode + 1) % tabViewModeCount
+		m.Interaction.TabViewMode = (m.Interaction.TabViewMode + 1) % tabViewModeCount
 	case "m":
 		// Toggle mouse mode: ON = scrolling/clicking, OFF = text selection
-		m.mouseMode = !m.mouseMode
-		if m.mouseMode {
+		m.Interaction.MouseMode = !m.Interaction.MouseMode
+		if m.Interaction.MouseMode {
 			return m, tea.EnableMouseAllMotion
 		}
 		return m, tea.DisableMouse
 	case "up":
 		// Narrow each tab by 1 char
-		if m.tabWidth > tabWidthMin {
-			m.tabWidth--
-			m.tabsScrollOffset = 0
+		if m.Interaction.TabWidth > tabWidthMin {
+			m.Interaction.TabWidth--
+			m.Interaction.TabsScrollOffset = 0
 		}
 	case "down":
 		// Widen each tab by 1 char
-		if m.tabWidth < tabWidthMax {
-			m.tabWidth++
-			m.tabsScrollOffset = 0
+		if m.Interaction.TabWidth < tabWidthMax {
+			m.Interaction.TabWidth++
+			m.Interaction.TabsScrollOffset = 0
 		}
 	case "left":
 		// Remove one column
-		if m.paneWidthCols > 1 {
-			m.paneWidthCols--
-			m.tabsScrollOffset = 0
+		if m.Interaction.PaneWidthCols > 1 {
+			m.Interaction.PaneWidthCols--
+			m.Interaction.TabsScrollOffset = 0
 		}
 	case "right":
 		// Add one column
 		maxCols := m.maxPaneWidthCols()
-		if m.paneWidthCols < maxCols {
-			m.paneWidthCols++
-			m.tabsScrollOffset = 0
+		if m.Interaction.PaneWidthCols < maxCols {
+			m.Interaction.PaneWidthCols++
+			m.Interaction.TabsScrollOffset = 0
 		}
 	}
 	return m, nil
@@ -596,12 +660,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // activateSummary transitions from pending summary to active summary display.
 func (m *Model) activateSummary() {
-	if m.pendingSummaryData == nil {
+	if m.Interaction.PendingSummaryData == nil {
 		return
 	}
 
-	m.summaryData = m.pendingSummaryData
-	m.pendingSummaryData = nil
+	m.Execution.SummaryData = m.Interaction.PendingSummaryData
+	m.Interaction.PendingSummaryData = nil
 
 	// Finalize any tabs still in non-terminal states before exiting.
 	// By the time summary arrives, all workers have completed - any remaining
@@ -610,29 +674,29 @@ func (m *Model) activateSummary() {
 	m.finalizeAllTabs()
 
 	// Activate Summary pane
-	if m.activePhase != PhaseSummary {
+	if m.Execution.ActivePhase != PhaseSummary {
 		// Mark current phase as complete or failed based on success
-		if m.panes[m.activePhase].Status == PhaseActive {
-			if m.summaryData != nil && !m.summaryData.Success {
-				m.panes[m.activePhase].Status = PhaseFailed
+		if m.Execution.Panes[m.Execution.ActivePhase].Status == PhaseActive {
+			if m.Execution.SummaryData != nil && !m.Execution.SummaryData.Success {
+				m.Execution.Panes[m.Execution.ActivePhase].Status = PhaseFailed
 			} else {
-				m.panes[m.activePhase].Status = PhaseComplete
+				m.Execution.Panes[m.Execution.ActivePhase].Status = PhaseComplete
 			}
-			m.panes[m.activePhase].EndTime = time.Now()
+			m.Execution.Panes[m.Execution.ActivePhase].EndTime = time.Now()
 		}
 		// Activate Summary pane
-		m.activePhase = PhaseSummary
-		m.panes[PhaseSummary].Status = PhaseActive
-		m.panes[PhaseSummary].StartTime = time.Now()
+		m.Execution.ActivePhase = PhaseSummary
+		m.Execution.Panes[PhaseSummary].Status = PhaseActive
+		m.Execution.Panes[PhaseSummary].StartTime = time.Now()
 	}
 
 	// Mark summary pane as complete/failed
-	if m.summaryData != nil && !m.summaryData.Success {
-		m.panes[PhaseSummary].Status = PhaseFailed
+	if m.Execution.SummaryData != nil && !m.Execution.SummaryData.Success {
+		m.Execution.Panes[PhaseSummary].Status = PhaseFailed
 	} else {
-		m.panes[PhaseSummary].Status = PhaseComplete
+		m.Execution.Panes[PhaseSummary].Status = PhaseComplete
 	}
-	m.panes[PhaseSummary].EndTime = time.Now()
+	m.Execution.Panes[PhaseSummary].EndTime = time.Now()
 }
 
 // finalizeAllTabs ensures all module tabs are in terminal states before exit.
@@ -640,7 +704,7 @@ func (m *Model) activateSummary() {
 // This handles message queue timing where completion messages haven't been
 // processed yet when the summary arrives.
 func (m *Model) finalizeAllTabs() {
-	for _, state := range m.uowStates {
+	for _, state := range m.Execution.UoWStates {
 		if state.Status == UoWRunning || state.Status == UoWPending {
 			// Mark as skipped (blue) - the safest default since by the time
 			// summary arrives, all work is complete. Running/pending state
@@ -683,9 +747,9 @@ func (m *Model) cycleTab(direction int) {
 	m.SetActiveTab(allTabs[newIdx])
 
 	// Reset scroll
-	if m.panes[PhaseRun] != nil {
-		m.panes[PhaseRun].scrollOffset = 0
-		m.panes[PhaseRun].autoScroll = true
+	if m.Execution.Panes[PhaseRun] != nil {
+		m.Execution.Panes[PhaseRun].scrollOffset = 0
+		m.Execution.Panes[PhaseRun].autoScroll = true
 	}
 }
 
@@ -694,12 +758,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Track ANY mouse interaction (scroll or click) - this delays auto-exit
 	// so user can investigate output without losing context
 	if msg.Button != tea.MouseButtonNone && msg.Action != tea.MouseActionMotion {
-		m.userHasInteracted = true
-		m.lastUserInteraction = time.Now()
+		m.Interaction.UserHasInteracted = true
+		m.Interaction.LastUserInteraction = time.Now()
 		// Only reset exit sequence if summary hasn't been received yet
 		// Once summary is received, we're in countdown mode - don't reset
-		if m.pendingSummaryData == nil {
-			m.exitRequested = false
+		if m.Interaction.PendingSummaryData == nil {
+			m.Interaction.ExitRequested = false
 		}
 	}
 
@@ -727,7 +791,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// IMPORTANT: Uses calculateLayoutMetrics() as single source of truth for Y offset.
 	// This ensures click detection aligns with rendered output regardless of layout changes.
 	detectTabAt := func(x, y int) string {
-		if m.panes[PhaseRun].Status == PhasePending {
+		if m.Execution.Panes[PhaseRun].Status == PhasePending {
 			return ""
 		}
 		tabs := m.GetVisibleTabs()
@@ -748,8 +812,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		metrics := m.calculateLayoutMetrics()
 
 		// Content starts at ComponentsStart (0-indexed Y coordinate)
-		// Subtract 1 because mouse Y coordinates are 0-indexed in terminal
-		contentStartY := metrics.ComponentsStart - 1
+		contentStartY := metrics.ComponentsStart
 
 		// Check if Y is within content area
 		row := y - contentStartY
@@ -758,15 +821,15 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 
 		// Clamp scroll offset if it's become invalid (content may have changed)
-		if m.tabsScrollOffset < 0 {
-			m.tabsScrollOffset = 0
+		if m.Interaction.TabsScrollOffset < 0 {
+			m.Interaction.TabsScrollOffset = 0
 		}
 
 		// Account for scroll offset - add it to get the actual content row
-		row += m.tabsScrollOffset
+		row += m.Interaction.TabsScrollOffset
 
 		// Tab grid mode - use same sizing as rendering
-		sizing := ComputeTabSizing(componentsWidth, m.tabWidth, 0, m.asciiMode)
+		sizing := ComputeTabSizing(componentsWidth, m.Interaction.TabWidth, 0, m.Display.AsciiMode)
 		tabsPerRow := sizing.TabColumns
 
 		// Calculate column from X (accounting for left border and tab width + gap)
@@ -801,7 +864,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// Calculate max scroll based on content
 			tabs := m.GetVisibleTabs()
 			// Tab grid: count lines (1 line per row of compact tabs)
-			scrollSizing := ComputeTabSizing(componentsWidth, m.tabWidth, 0, m.asciiMode)
+			scrollSizing := ComputeTabSizing(componentsWidth, m.Interaction.TabWidth, 0, m.Display.AsciiMode)
 			rows := (len(tabs) + scrollSizing.TabColumns - 1) / scrollSizing.TabColumns
 			maxScroll := rows
 			// Leave some visible content (at least 5 lines)
@@ -812,27 +875,27 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
-				m.tabsScrollOffset -= scrollAmount
-				if m.tabsScrollOffset < 0 {
-					m.tabsScrollOffset = 0
+				m.Interaction.TabsScrollOffset -= scrollAmount
+				if m.Interaction.TabsScrollOffset < 0 {
+					m.Interaction.TabsScrollOffset = 0
 				}
 			case tea.MouseButtonWheelDown:
-				m.tabsScrollOffset += scrollAmount
-				if m.tabsScrollOffset > maxScroll {
-					m.tabsScrollOffset = maxScroll
+				m.Interaction.TabsScrollOffset += scrollAmount
+				if m.Interaction.TabsScrollOffset > maxScroll {
+					m.Interaction.TabsScrollOffset = maxScroll
 				}
 			}
 			// Update hover state after scroll - the tab under the cursor may have changed
 			// (detectTabAt accounts for scroll offset, so it will find the correct tab)
 			hoveredTab := detectTabAt(msg.X, msg.Y)
-			if hoveredTab != m.hoveredTab {
-				m.hoveredTab = hoveredTab
-				m.hoveredTabScroll = 0 // Reset marquee scroll on hover change
+			if hoveredTab != m.Interaction.HoveredTab {
+				m.Interaction.HoveredTab = hoveredTab
+				m.Interaction.HoveredTabScroll = 0 // Reset marquee scroll on hover change
 				// Update hoveredZone for tab
 				if hoveredTab != "" {
-					m.hoveredZone = "tab:" + hoveredTab
+					m.Interaction.HoveredZone = "tab:" + hoveredTab
 				} else {
-					m.hoveredZone = ""
+					m.Interaction.HoveredZone = ""
 				}
 				if hoveredTab != "" {
 					return m, tea.Tick(200*time.Millisecond, func(t time.Time) tea.Msg {
@@ -845,21 +908,26 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		// Scrolling over logs pane (right side) - directly use Run pane
 		// In side-by-side layout, right side is always the Run pane logs
-		pane := m.panes[PhaseRun]
+		pane := m.Execution.Panes[PhaseRun]
 		if pane == nil {
 			return m, nil
 		}
 
 		// Use shared layout metrics - single source of truth for height calculation
 		metrics := m.calculateLayoutMetrics()
-		paneHeight := metrics.RemainingHeight - 2 // -2 for panel header/footer
+		var paneHeight int
+		if metrics.DetailPaneHeight > 0 {
+			paneHeight = metrics.RemainingHeight - metrics.DetailPaneHeight // borderless headless pane
+		} else {
+			paneHeight = metrics.RemainingHeight - 2 // -2 for panel header/footer
+		}
 		if paneHeight < 5 {
 			paneHeight = 5
 		}
 
 		// Determine which buffer is being displayed (for Run pane with active tab)
 		buffer := pane.Buffer
-		if m.activeTab != "" {
+		if m.Interaction.ActiveTab != "" {
 			if moduleBuffer := m.GetActiveUoWBuffer(); moduleBuffer != nil {
 				buffer = moduleBuffer
 			}
@@ -883,41 +951,51 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	componentsWidth := m.ComponentsWidth()
 	metrics := m.calculateLayoutMetrics()
 	logsStartX := componentsWidth + 1
-	logsStartY := metrics.ComponentsStart
-	logsHeight := metrics.RemainingHeight - 2 // -2 for header/footer
+
+	// When detail pane is active, logs start after it (borderless: no header/footer).
+	// Without detail pane, logs start after ComponentsStart + header line.
+	// logsStartY is set so that (msg.Y - logsStartY) gives the content line index directly.
+	var logsStartY, logsHeight int
+	if metrics.DetailPaneHeight > 0 {
+		logsStartY = metrics.ComponentsStart + metrics.DetailPaneHeight
+		logsHeight = metrics.RemainingHeight - metrics.DetailPaneHeight // borderless headless pane
+	} else {
+		logsStartY = metrics.ComponentsStart + 1 // +1 to skip header line
+		logsHeight = metrics.RemainingHeight - 2 // -2 for header/footer
+	}
 
 	// Mouse press in logs pane - start selection
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
 		if msg.X >= logsStartX && msg.Y > logsStartY && msg.Y <= logsStartY+logsHeight {
-			m.selection = SelectionState{
+			m.Resources.Selection = SelectionState{
 				Active:    true,
 				StartX:    msg.X,
 				StartY:    msg.Y,
 				EndX:      msg.X,
 				EndY:      msg.Y,
-				StartLine: msg.Y - logsStartY - 1, // Convert to content line index
-				EndLine:   msg.Y - logsStartY - 1,
+				StartLine: msg.Y - logsStartY,
+				EndLine:   msg.Y - logsStartY,
 			}
 			return m, nil
 		}
 	}
 
 	// Mouse motion while selecting - update end position
-	if msg.Action == tea.MouseActionMotion && m.selection.Active {
-		m.selection.EndX = msg.X
-		m.selection.EndY = msg.Y
-		m.selection.EndLine = msg.Y - logsStartY - 1
+	if msg.Action == tea.MouseActionMotion && m.Resources.Selection.Active {
+		m.Resources.Selection.EndX = msg.X
+		m.Resources.Selection.EndY = msg.Y
+		m.Resources.Selection.EndLine = msg.Y - logsStartY
 		return m, nil
 	}
 
 	// Mouse release - copy selection to clipboard
-	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease && m.selection.Active {
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease && m.Resources.Selection.Active {
 		// Extract selected text from buffer
-		selectedText := m.extractSelectedText(logsStartX, logsHeight)
+		selectedText := m.extractSelectedText(logsHeight)
 		if selectedText != "" {
 			_ = clipboard.WriteAll(selectedText)
 		}
-		m.selection = SelectionState{} // Clear selection
+		m.Resources.Selection = SelectionState{} // Clear selection
 		return m, nil
 	}
 
@@ -926,24 +1004,24 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Check status bar zones first (help text display)
 		resourceZone := detectResourceZoneAt()
 		if resourceZone != "" {
-			if m.hoveredZone != resourceZone {
-				m.hoveredZone = resourceZone
-				m.hoveredTab = ""           // Clear tab hover when over resource zone
-				m.hoveredTabScroll = 0      // Reset marquee
+			if m.Interaction.HoveredZone != resourceZone {
+				m.Interaction.HoveredZone = resourceZone
+				m.Interaction.HoveredTab = ""      // Clear tab hover when over resource zone
+				m.Interaction.HoveredTabScroll = 0 // Reset marquee
 			}
 			return m, nil
 		}
 
 		// If not over a resource zone, check for tab hover
 		hoveredTab := detectTabAt(msg.X, msg.Y)
-		if hoveredTab != m.hoveredTab {
-			m.hoveredTab = hoveredTab
-			m.hoveredTabScroll = 0 // Reset marquee scroll on hover change
+		if hoveredTab != m.Interaction.HoveredTab {
+			m.Interaction.HoveredTab = hoveredTab
+			m.Interaction.HoveredTabScroll = 0 // Reset marquee scroll on hover change
 			// Update hoveredZone for tab
 			if hoveredTab != "" {
-				m.hoveredZone = "tab:" + hoveredTab
+				m.Interaction.HoveredZone = "tab:" + hoveredTab
 			} else {
-				m.hoveredZone = ""
+				m.Interaction.HoveredZone = ""
 			}
 			// Start marquee ticker if hovering a tab
 			if hoveredTab != "" {
@@ -951,9 +1029,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 					return MarqueeTickMsg{}
 				})
 			}
-		} else if hoveredTab == "" && m.hoveredZone != "" {
+		} else if hoveredTab == "" && m.Interaction.HoveredZone != "" {
 			// Clear hoveredZone if not over any resource zone or tab
-			m.hoveredZone = ""
+			m.Interaction.HoveredZone = ""
 		}
 		return m, nil
 	}
@@ -963,24 +1041,24 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Check for Freeze button click first
 		if zone.Get("freeze-button").InBounds(msg) {
 			// Activate freeze: set 2-minute timeout and reset timer
-			m.freezeTimeoutSecs = 120
-			m.userHasInteracted = true
-			m.lastUserInteraction = time.Now()
-			m.exitRequested = false // Cancel any pending exit
+			m.Interaction.FreezeTimeoutSecs = 120
+			m.Interaction.UserHasInteracted = true
+			m.Interaction.LastUserInteraction = time.Now()
+			m.Interaction.ExitRequested = false // Cancel any pending exit
 			return m, nil
 		}
 
 		// Then check for tab clicks
 		if tab := detectTabAt(msg.X, msg.Y); tab != "" {
-			if tab != m.activeTab {
+			if tab != m.Interaction.ActiveTab {
 				m.SetActiveTab(tab)
-				if m.panes[PhaseRun] != nil {
-					m.panes[PhaseRun].scrollOffset = 0
-					m.panes[PhaseRun].autoScroll = true
+				if m.Execution.Panes[PhaseRun] != nil {
+					m.Execution.Panes[PhaseRun].scrollOffset = 0
+					m.Execution.Panes[PhaseRun].autoScroll = true
 				}
 			}
 			// Reset tabs scroll to ensure continued click detection works
-			m.tabsScrollOffset = 0
+			m.Interaction.TabsScrollOffset = 0
 			return m, nil
 		}
 	}
@@ -989,19 +1067,19 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 }
 
 // extractSelectedText extracts text from the logs buffer based on selection state.
-func (m Model) extractSelectedText(logsStartX, logsHeight int) string {
-	if !m.selection.Active {
+func (m Model) extractSelectedText(logsHeight int) string {
+	if !m.Resources.Selection.Active {
 		return ""
 	}
 
 	// Get the active buffer
-	pane := m.panes[PhaseRun]
+	pane := m.Execution.Panes[PhaseRun]
 	if pane == nil {
 		return ""
 	}
 
 	var buffer *RingBuffer
-	if m.activeTab != "" {
+	if m.Interaction.ActiveTab != "" {
 		if moduleBuffer := m.GetActiveUoWBuffer(); moduleBuffer != nil {
 			buffer = moduleBuffer
 		} else {
@@ -1024,13 +1102,9 @@ func (m Model) extractSelectedText(logsStartX, logsHeight int) string {
 	}
 
 	// Normalize selection (start <= end)
-	startLine, endLine := m.selection.StartLine, m.selection.EndLine
+	startLine, endLine := m.Resources.Selection.StartLine, m.Resources.Selection.EndLine
 	if startLine > endLine {
 		startLine, endLine = endLine, startLine
-	}
-	startX, endX := m.selection.StartX, m.selection.EndX
-	if m.selection.StartY > m.selection.EndY || (m.selection.StartY == m.selection.EndY && m.selection.StartX > m.selection.EndX) {
-		startX, endX = endX, startX
 	}
 
 	// Clamp to valid range
@@ -1044,100 +1118,21 @@ func (m Model) extractSelectedText(logsStartX, logsHeight int) string {
 		return ""
 	}
 
-	// Extract text from selected lines
+	// Extract full line text for all selected lines.
+	// Lines can overflow past terminal width (open-right mode), so X-based
+	// partial selection is unreliable — always copy the complete line text.
 	var result strings.Builder
 	for i := startLine; i <= endLine; i++ {
-		if i >= len(lines) {
-			break
+		if i > startLine {
+			result.WriteString("\n")
 		}
-		text := lines[i].Text
-
-		// For single-line selection, extract substring
-		if startLine == endLine {
-			// Adjust X coordinates relative to text start (after prefix)
-			textStartX := logsStartX + 3 // "│X " prefix
-			charStart := startX - textStartX
-			charEnd := endX - textStartX
-
-			if charStart < 0 {
-				charStart = 0
-			}
-			if charEnd > len(text) {
-				charEnd = len(text)
-			}
-			if charStart < charEnd && charStart < len(text) {
-				result.WriteString(text[charStart:charEnd])
-			}
-		} else {
-			// Multi-line: full lines for middle, partial for first/last
-			if i == startLine {
-				textStartX := logsStartX + 3
-				charStart := startX - textStartX
-				if charStart < 0 {
-					charStart = 0
-				}
-				if charStart < len(text) {
-					result.WriteString(text[charStart:])
-				}
-				result.WriteString("\n")
-			} else if i == endLine {
-				textStartX := logsStartX + 3
-				charEnd := endX - textStartX
-				if charEnd > len(text) {
-					charEnd = len(text)
-				}
-				if charEnd > 0 {
-					result.WriteString(text[:charEnd])
-				}
-			} else {
-				result.WriteString(text)
-				result.WriteString("\n")
-			}
-		}
+		result.WriteString(lines[i].Text)
 	}
 
 	return result.String()
 }
 
-// getPaneAtPosition determines which pane (0, 1, or 2) is at the given Y coordinate.
-// Returns -1 if not over any pane content area.
-// All panes are always visible with dynamic heights based on terminal size.
-func (m Model) getPaneAtPosition(y int) int {
-	// Calculate pane boundaries dynamically based on terminal height
-	initH, runH, summaryH := m.calculatePaneHeights()
-
-	// Pane layout (each pane has header + content + footer):
-	// Init pane
-	currentLine := 1
-	initContentStart := currentLine
-	initContentEnd := currentLine + initH - 1
-	currentLine += initH + 1 // +1 for footer
-
-	// Run pane (dynamic height, fills available space)
-	currentLine++ // header
-	runContentStart := currentLine
-	runContentEnd := currentLine + runH - 1
-	currentLine += runH + 1 // +1 for footer
-
-	// Summary pane
-	currentLine++ // header
-	summaryContentStart := currentLine
-	summaryContentEnd := currentLine + summaryH - 1
-
-	// Check which pane content area the Y-coordinate falls into
-	// Add tolerance of ±1 to handle edge cases with terminal scrolling
-	if y >= initContentStart-1 && y <= initContentEnd+1 {
-		return 0 // Init pane content
-	} else if y >= runContentStart-1 && y <= runContentEnd+1 {
-		return 1 // Run pane content
-	} else if y >= summaryContentStart-1 && y <= summaryContentEnd+1 {
-		return 2 // Summary pane content
-	}
-
-	return -1 // Header/footer or outside panes
-}
-
 // IsDone returns true if both line and status channels are done.
 func (m Model) IsDone() bool {
-	return m.linesDone && m.statusDone
+	return m.Execution.LinesDone && m.Execution.StatusDone
 }

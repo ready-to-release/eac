@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
@@ -21,9 +21,7 @@ import (
 )
 
 func init() {
-	h := &GoHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&GoHandler{})
 }
 
 // GoHandler builds Go modules (libraries, CLIs, tests).
@@ -78,7 +76,7 @@ func (h *GoHandler) executeTool(ctx context.Context, toolName, moduleRoot, works
 		WorkspaceRoot: workspaceRoot,
 		ModuleRoot:    moduleRoot,
 		LogWriter:     logWriter,
-		Operation:     tool.OperationBuild,
+		Operation:     core.ActionBuild,
 		ArgsOverrides: args,
 		EnvOverrides:  envOverrides,
 		Placeholders:  placeholders,
@@ -95,9 +93,49 @@ func (h *GoHandler) executeTool(ctx context.Context, toolName, moduleRoot, works
 
 // executeGoTool is a package-level helper that executes go commands via the tool system.
 // It uses the default "go" system tool unless specific scenarios (CGO, race) require "go-oci".
+// When the module is not listed in go.work, GOWORK=off is set automatically so that
+// ./... pattern resolution works within the standalone module.
 func executeGoTool(moduleRoot, workspaceRoot string, logWriter io.Writer, args []string, envOverrides map[string]string) int {
+	if !isModuleInGoWork(moduleRoot, workspaceRoot) {
+		if envOverrides == nil {
+			envOverrides = map[string]string{}
+		}
+		if _, ok := envOverrides["GOWORK"]; !ok {
+			envOverrides["GOWORK"] = "off"
+		}
+	}
 	h := &GoHandler{}
 	return h.executeTool(context.Background(), "go", moduleRoot, workspaceRoot, logWriter, args, envOverrides)
+}
+
+// isModuleInGoWork checks whether moduleRoot is listed in the workspace go.work file.
+func isModuleInGoWork(moduleRoot, workspaceRoot string) bool {
+	goWorkPath := filepath.Join(workspaceRoot, "go.work")
+	data, err := os.ReadFile(goWorkPath)
+	if err != nil {
+		return false // No go.work = standalone mode, no issue
+	}
+
+	// Normalize moduleRoot for comparison
+	absModule, err := filepath.Abs(moduleRoot)
+	if err != nil {
+		return false
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "./") || strings.HasPrefix(line, ".\\") {
+			usePath := filepath.Join(workspaceRoot, filepath.FromSlash(line))
+			absUse, err := filepath.Abs(usePath)
+			if err != nil {
+				continue
+			}
+			if strings.EqualFold(absModule, absUse) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // executeGoToolWithEnv is like executeGoTool but for cross-compilation with GOOS/GOARCH.
@@ -116,7 +154,7 @@ func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cros
 
 func (h *GoHandler) Requirements() []string { return []string{"go"} }
 
-func (h *GoHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *GoHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
 	// Walk up from component root to find go.mod (may be in parent directory)
 	goMod := findGoMod(componentRoot, workspaceRoot)
@@ -147,7 +185,7 @@ func findGoMod(dir, workspaceRoot string) string {
 	}
 }
 
-func (h *GoHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *GoHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		return nil
@@ -155,7 +193,7 @@ func (h *GoHandler) ListArtifacts(module interfaces.ModuleContractPort, workspac
 	return listGoModuleArtifacts(concrete, workspaceRoot)
 }
 
-func (h *GoHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *GoHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -225,12 +263,18 @@ func listModuleArtifacts(module *modules.ModuleContract) []string {
 //   - Multiple executables: cross-compiled binaries
 //   - Test artifacts: runs tests and captures results
 func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("go"))
+	// Use the actual component name from build options (supports bundle sub-components like "ai", "docker")
+	// Falls back to "go" for standard single-component modules
+	componentName := opts.Component
+	if componentName == "" {
+		componentName = "go"
+	}
+	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(componentName))
 
 	Logln(logWriter, "\n=== Building go: %s ===", module.Moniker)
 
-	// Check if module has go package type
-	hasGoModule := module.HasComponent("go")
+	// Check if module has this go component
+	hasGoModule := module.HasComponent(componentName)
 
 	// Skip if not a go module - this is expected for script-only modules (pwsh, bash)
 	// that have test-impl components triggering Go builds
@@ -329,7 +373,7 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot, workspaceRoot, 
 		LogWriter:     logWriter,
 		StdoutWriter:  resultsFile,
 		StderrWriter:  logWriter,
-		Operation:     tool.OperationBuild,
+		Operation:     core.ActionBuild,
 		ArgsOverrides: []string{"test", "./...", "-json"},
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
@@ -518,8 +562,8 @@ func getGoModulePath(moduleRoot string) string {
 // Checks both module root and release/{moniker}/ directories.
 func getVersionFromChangelog(moduleRoot, workspaceRoot, moniker string) string {
 	// Try multiple locations for changelog
-	// TODO(path-migration): Add cfg.Repository.ReleasePathAbs() method to config
-	// For now using hardcoded "release" until release paths are added to repository.schema.json
+	// NOTE: config.RepositoryConfig.ReleaseModulePathAbs() is now available but this
+	// function doesn't have access to config. Uses the same conventional "release/" path.
 	paths := []string{
 		filepath.Join(moduleRoot, "CHANGELOG.md"),
 		filepath.Join(workspaceRoot, "release", moniker, "CHANGELOG.md"),

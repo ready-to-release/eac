@@ -4,7 +4,7 @@
 // Long:
 // Long: If no modules specified, scans all modules in the repository.
 // Long: If no --scanner specified, uses default scanners for each module type
-// Long: (configured in contracts/security/0.1.0/defaults/).
+// Long: (configured in contracts/scanner/0.1.0/schemas/defaults/).
 // Long:
 // Long: Supported scanners:
 // Long:   - sbom: Software Bill of Materials (Trivy, CycloneDX format)
@@ -42,16 +42,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/scan/internal"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/core/evidence"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
-
-	// Import scanners package to trigger init() registration of native scanners
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/scan/scanners"
 )
 
 var log = logging.C()
@@ -113,11 +112,9 @@ func Scan() int {
 
 	// Create command config
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeScan,
+		Type:           core.ActionScan,
 		CommandPath:    "scan",
-		ActionVerb:     "Scanning",
-		OutputDir:      "out/scan",
-		LogFileName:    "scan.log",
+		OutputDir:      paths.OutSecurityRelPath,
 		Monikers:       shared.Monikers,
 		Sequential:     sequential,
 		Turbo:          shared.Turbo,
@@ -148,8 +145,8 @@ func Scan() int {
 }
 
 // parseScannerList parses a comma-separated list of scanner types.
-func parseScannerList(input string) ([]internal.ScannerType, error) {
-	var scanners []internal.ScannerType
+func parseScannerList(input string) ([]evidence.ScannerType, error) {
+	var scanners []evidence.ScannerType
 	for _, s := range strings.Split(input, ",") {
 		s = strings.TrimSpace(strings.ToLower(s))
 		if s == "" {
@@ -159,7 +156,7 @@ func parseScannerList(input string) ([]internal.ScannerType, error) {
 		if toolID == "" {
 			return nil, fmt.Errorf("invalid scanner type: %s (valid: %s)", s, strings.Join(ValidScannerTypes, ", "))
 		}
-		scanners = append(scanners, internal.ScannerType(toolID))
+		scanners = append(scanners, evidence.ScannerType(toolID))
 	}
 	if len(scanners) == 0 {
 		return nil, fmt.Errorf("no valid scanner types specified")
@@ -168,14 +165,14 @@ func parseScannerList(input string) ([]internal.ScannerType, error) {
 }
 
 // parseSeverityList parses a comma-separated list of severity levels.
-func parseSeverityList(input string) ([]internal.Severity, error) {
-	var severities []internal.Severity
+func parseSeverityList(input string) ([]evidence.Severity, error) {
+	var severities []evidence.Severity
 	for _, s := range strings.Split(input, ",") {
 		s = strings.TrimSpace(strings.ToUpper(s))
 		if s == "" {
 			continue
 		}
-		severity, valid := internal.ParseSeverity(s)
+		severity, valid := evidence.ParseSeverity(s)
 		if !valid {
 			return nil, fmt.Errorf("invalid severity: %s (valid: LOW, MEDIUM, HIGH, CRITICAL)", s)
 		}

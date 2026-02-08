@@ -38,9 +38,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -50,12 +51,18 @@ func init() {
 	registry.Register(ClearCache)
 }
 
-// CategoryResult tracks clearing results per cache type.
-type CategoryResult struct {
-	Type         cache.Type
+// CacheSetResult tracks clearing results for a single cacheset (ClearDir).
+type CacheSetResult struct {
+	Description  string
 	DeletedCount int
 	DeletedBytes int64
 	Items        []string // paths of deleted items
+}
+
+// CategoryResult tracks clearing results per cache type.
+type CategoryResult struct {
+	Type      cache.Type
+	CacheSets []CacheSetResult
 }
 
 // ClearCache removes cache files based on the --type flag.
@@ -142,7 +149,7 @@ func formatSpecs(specs []cache.Spec) string {
 	return strings.Join(parts, ",")
 }
 
-// clearTargetsWithCategories clears targets and groups results by category.
+// clearTargetsWithCategories clears targets and groups results by type and cacheset.
 func clearTargetsWithCategories(targets []CacheTarget, repoRoot string, dryRun, verbose bool) []CategoryResult {
 	// Group targets by type
 	byType := make(map[cache.Type][]CacheTarget)
@@ -163,31 +170,30 @@ func clearTargetsWithCategories(targets []CacheTarget, repoRoot string, dryRun, 
 		result := CategoryResult{Type: cacheType}
 
 		for _, target := range typeTargets {
+			var count int
+			var bytes int64
+			var items []string
+
 			switch target.Dir.Mode {
-			case ClearStateFiles:
-				count, bytes, items := clearStateFilesWithDetails(target.FullPath, repoRoot, dryRun, verbose)
-				result.DeletedCount += count
-				result.DeletedBytes += bytes
-				result.Items = append(result.Items, items...)
 			case ClearContents:
-				count, bytes, items := clearDirectoryContentsWithDetails(target.FullPath, target.Dir.RelPath, dryRun, verbose)
-				result.DeletedCount += count
-				result.DeletedBytes += bytes
-				result.Items = append(result.Items, items...)
+				count, bytes, items = clearDirectoryContentsWithDetails(target.FullPath, target.Dir.RelPath, dryRun, verbose)
 			case ClearDocker:
-				count, bytes, items := clearDockerCache(target.Dir.Type, dryRun, verbose)
-				result.DeletedCount += count
-				result.DeletedBytes += bytes
-				result.Items = append(result.Items, items...)
+				count, bytes, items = clearDockerCache(target.Dir.Type, dryRun, verbose)
 			case ClearSemaphore:
-				count, bytes, items := clearSemaphoreFiles(target.FullPath, repoRoot, dryRun, verbose)
-				result.DeletedCount += count
-				result.DeletedBytes += bytes
-				result.Items = append(result.Items, items...)
+				count, bytes, items = clearSemaphoreFiles(target.FullPath, repoRoot, dryRun, verbose)
+			}
+
+			if count > 0 || len(items) > 0 {
+				result.CacheSets = append(result.CacheSets, CacheSetResult{
+					Description:  target.Dir.Description,
+					DeletedCount: count,
+					DeletedBytes: bytes,
+					Items:        items,
+				})
 			}
 		}
 
-		if result.DeletedCount > 0 || len(result.Items) > 0 {
+		if len(result.CacheSets) > 0 {
 			results = append(results, result)
 		}
 	}
@@ -200,18 +206,29 @@ func printCategorySummary(results []CategoryResult, dryRun bool) {
 	var totalCount int
 	var totalBytes int64
 
+	const maxDisplayItems = 5
+
 	for _, r := range results {
-		if r.DeletedCount == 0 && len(r.Items) == 0 {
+		if len(r.CacheSets) == 0 {
 			continue
 		}
 		fmt.Printf("\n  %s:\n", r.Type)
-		for _, item := range r.Items {
-			fmt.Printf("    %s\n", item)
+		for _, cs := range r.CacheSets {
+			fmt.Printf("    %s:\n", cs.Description)
+			displayed := len(cs.Items)
+			if displayed > maxDisplayItems {
+				displayed = maxDisplayItems
+			}
+			for _, item := range cs.Items[:displayed] {
+				fmt.Printf("      %s\n", item)
+			}
+			if remaining := len(cs.Items) - displayed; remaining > 0 {
+				fmt.Printf("      ... and %d more\n", remaining)
+			}
+			totalCount += cs.DeletedCount
+			totalBytes += cs.DeletedBytes
 		}
-		fmt.Printf("  → %d %s, %s\n", r.DeletedCount,
-			pluralize("item", r.DeletedCount), formatBytes(r.DeletedBytes))
-		totalCount += r.DeletedCount
-		totalBytes += r.DeletedBytes
+		fmt.Printf("  → %d %s, %s\n", categoryCount(r), pluralize("item", categoryCount(r)), formatBytes(categoryBytes(r)))
 	}
 
 	verb := "deleted"
@@ -221,42 +238,20 @@ func printCategorySummary(results []CategoryResult, dryRun bool) {
 	fmt.Printf("\nSummary: %d items %s, %s freed\n", totalCount, verb, formatBytes(totalBytes))
 }
 
-// clearStateFilesWithDetails recursively finds and deletes all state.json files, returning details.
-func clearStateFilesWithDetails(rootPath, repoRoot string, dryRun, verbose bool) (int, int64, []string) {
-	var deleted int
-	var bytes int64
-	var items []string
+func categoryCount(r CategoryResult) int {
+	n := 0
+	for _, cs := range r.CacheSets {
+		n += cs.DeletedCount
+	}
+	return n
+}
 
-	_ = filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if info.Name() == "state.json" {
-			relPath, _ := filepath.Rel(repoRoot, path)
-			if relPath == "" {
-				relPath = path
-			}
-			bytes += info.Size()
-			items = append(items, fmt.Sprintf("%s (%s)", relPath, formatBytes(info.Size())))
-
-			if !dryRun {
-				if err := os.Remove(path); err != nil {
-					log.Errorf("Failed to delete %s: %v", relPath, err)
-					return nil
-				}
-			}
-			deleted++
-		}
-
-		return nil
-	})
-
-	return deleted, bytes, items
+func categoryBytes(r CategoryResult) int64 {
+	var b int64
+	for _, cs := range r.CacheSets {
+		b += cs.DeletedBytes
+	}
+	return b
 }
 
 // clearDirectoryContentsWithDetails deletes all entries in a directory, returning details.
@@ -320,14 +315,17 @@ var semaphoreFiles = []string{
 // clearSemaphoreFiles deletes capacity semaphore state files.
 // These files coordinate resource allocation across concurrent processes.
 // Stale semaphore state can cause test hangs and should be cleared when debugging timeouts.
-func clearSemaphoreFiles(outDir, repoRoot string, dryRun, verbose bool) (int, int64, []string) {
+func clearSemaphoreFiles(semaphoreDir, repoRoot string, dryRun, verbose bool) (int, int64, []string) {
 	var deleted int
 	var bytes int64
 	var items []string
 
 	for _, filename := range semaphoreFiles {
-		fullPath := filepath.Join(outDir, filename)
-		relPath := filepath.Join("out", filename)
+		fullPath := filepath.Join(semaphoreDir, filename)
+		relPath, _ := filepath.Rel(repoRoot, fullPath)
+		if relPath == "" {
+			relPath = filepath.Join(paths.EACCacheRoot, "semaphores", filename)
+		}
 
 		info, err := os.Stat(fullPath)
 		if os.IsNotExist(err) {

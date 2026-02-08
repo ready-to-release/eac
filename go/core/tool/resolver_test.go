@@ -3,6 +3,8 @@ package tool
 import (
 	"os"
 	"testing"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestNewResolver(t *testing.T) {
@@ -41,7 +43,7 @@ func TestDefaultResolver_LayeredResolution(t *testing.T) {
 			"go": {Builder: "default-tool"},
 		})
 
-		tool, err := r.Resolve("go", OperationBuild)
+		tool, err := r.Resolve("go", core.ActionBuild)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -60,7 +62,7 @@ func TestDefaultResolver_LayeredResolution(t *testing.T) {
 			"go": {Builder: "project-tool"},
 		})
 
-		tool, err := r.Resolve("go", OperationBuild)
+		tool, err := r.Resolve("go", core.ActionBuild)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -71,7 +73,7 @@ func TestDefaultResolver_LayeredResolution(t *testing.T) {
 
 	t.Run("environment overrides project", func(t *testing.T) {
 		resolver.SetEnvironment("ci")
-		tool, err := resolver.Resolve("go", OperationBuild)
+		tool, err := resolver.Resolve("go", core.ActionBuild)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -82,9 +84,9 @@ func TestDefaultResolver_LayeredResolution(t *testing.T) {
 
 	t.Run("CLI overrides all", func(t *testing.T) {
 		resolver.SetEnvironment("ci")
-		resolver.SetOverride("go", OperationBuild, "cli-tool")
+		resolver.SetOverride("go", core.ActionBuild, "cli-tool")
 
-		tool, err := resolver.Resolve("go", OperationBuild)
+		tool, err := resolver.Resolve("go", core.ActionBuild)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -94,11 +96,11 @@ func TestDefaultResolver_LayeredResolution(t *testing.T) {
 	})
 
 	t.Run("ClearOverrides", func(t *testing.T) {
-		resolver.SetOverride("go", OperationBuild, "cli-tool")
+		resolver.SetOverride("go", core.ActionBuild, "cli-tool")
 		resolver.ClearOverrides()
 
 		resolver.SetEnvironment("ci")
-		tool, err := resolver.Resolve("go", OperationBuild)
+		tool, err := resolver.Resolve("go", core.ActionBuild)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -112,7 +114,7 @@ func TestDefaultResolver_NoToolConfigured(t *testing.T) {
 	registry := NewRegistry()
 	resolver := NewResolver(registry)
 
-	_, err := resolver.Resolve("nonexistent", OperationBuild)
+	_, err := resolver.Resolve("nonexistent", core.ActionBuild)
 	if err == nil {
 		t.Error("expected error for unconfigured component type")
 	}
@@ -125,7 +127,7 @@ func TestDefaultResolver_ToolNotInRegistry(t *testing.T) {
 		"go": {Builder: "nonexistent-tool"},
 	})
 
-	_, err := resolver.Resolve("go", OperationBuild)
+	_, err := resolver.Resolve("go", core.ActionBuild)
 	if err == nil {
 		t.Error("expected error for tool not in registry")
 	}
@@ -151,13 +153,13 @@ func TestDefaultResolver_ResolveAll(t *testing.T) {
 		t.Errorf("expected 3 tools, got %d", len(tools))
 	}
 
-	if tools[OperationBuild] == nil || tools[OperationBuild].ID != "builder" {
+	if tools[core.ActionBuild] == nil || tools[core.ActionBuild].ID != "builder" {
 		t.Error("builder not resolved correctly")
 	}
-	if tools[OperationLint] == nil || tools[OperationLint].ID != "linter" {
+	if tools[core.ActionLint] == nil || tools[core.ActionLint].ID != "linter" {
 		t.Error("linter not resolved correctly")
 	}
-	if tools[OperationTest] == nil || tools[OperationTest].ID != "tester" {
+	if tools[core.ActionTest] == nil || tools[core.ActionTest].ID != "tester" {
 		t.Error("tester not resolved correctly")
 	}
 }
@@ -175,7 +177,7 @@ func TestDefaultResolver_ResolveMultiple(t *testing.T) {
 		},
 	})
 
-	tools, err := resolver.ResolveMultiple("go", OperationLint)
+	tools, err := resolver.ResolveMultiple("go", core.ActionLint)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -213,13 +215,13 @@ func TestDefaultResolver_HasTool(t *testing.T) {
 		"go": {Builder: "builder"},
 	})
 
-	if !resolver.HasTool("go", OperationBuild) {
+	if !resolver.HasTool("go", core.ActionBuild) {
 		t.Error("HasTool should return true for configured tool")
 	}
-	if resolver.HasTool("go", OperationLint) {
+	if resolver.HasTool("go", core.ActionLint) {
 		t.Error("HasTool should return false for unconfigured operation")
 	}
-	if resolver.HasTool("nonexistent", OperationBuild) {
+	if resolver.HasTool("nonexistent", core.ActionBuild) {
 		t.Error("HasTool should return false for unconfigured component type")
 	}
 }
@@ -279,7 +281,7 @@ func TestDefaultResolver_LoadFromConfig(t *testing.T) {
 	resolver.LoadFromConfig(config, false) // Load as project config
 
 	// Without environment set, should get project config
-	tool, err := resolver.Resolve("go", OperationBuild)
+	tool, err := resolver.Resolve("go", core.ActionBuild)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -289,7 +291,7 @@ func TestDefaultResolver_LoadFromConfig(t *testing.T) {
 
 	// With ci environment, should get ci-tool
 	resolver.SetEnvironment("ci")
-	tool, err = resolver.Resolve("go", OperationBuild)
+	tool, err = resolver.Resolve("go", core.ActionBuild)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -320,7 +322,7 @@ func TestDefaultResolver_PartialAssignments(t *testing.T) {
 
 	// Builder should come from defaults (project didn't specify)
 	// Linter should come from project
-	buildTool, err := resolver.Resolve("go", OperationBuild)
+	buildTool, err := resolver.Resolve("go", core.ActionBuild)
 	if err != nil {
 		t.Fatalf("unexpected error resolving builder: %v", err)
 	}
@@ -328,7 +330,7 @@ func TestDefaultResolver_PartialAssignments(t *testing.T) {
 		t.Errorf("builder should be from defaults, got %s", buildTool.ID)
 	}
 
-	lintTool, err := resolver.Resolve("go", OperationLint)
+	lintTool, err := resolver.Resolve("go", core.ActionLint)
 	if err != nil {
 		t.Fatalf("unexpected error resolving linter: %v", err)
 	}

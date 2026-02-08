@@ -111,7 +111,7 @@ func loadAIProviderDefaults(repoRoot string) (*Config, error) {
 		return nil, fmt.Errorf("no root available for loading defaults")
 	}
 
-	fsPath := filepath.Join(root, "contracts", "core", paths.DefaultsVersion, "defaults", "ai-provider.yml")
+	fsPath := filepath.Join(root, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "ai-provider.yml")
 	data, err := os.ReadFile(fsPath)
 	if err != nil {
 		if os.IsNotExist(err) {

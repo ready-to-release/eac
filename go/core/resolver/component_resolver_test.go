@@ -33,9 +33,9 @@ func (m *mockExecutor) Close() error {
 // This tests the fix for a deadlock bug where build_after dependencies on
 // non-buildable component types would cause the scheduler to wait forever.
 //
-// Root cause: The book component type has build_after: [markdown], but markdown
-// has no builder configured. The old code would create a dependency on markdown,
-// but markdown units are never scheduled, causing a deadlock.
+// Root cause: The book component type has build_after: [assets], but assets
+// has no builder configured. The old code would create a dependency on assets,
+// but assets units are never scheduled, causing a deadlock.
 //
 // Fix: When building the scheduledComponents set in ResolveForBuild, only
 // components with valid builders/handlers are included. Dependencies are then
@@ -50,8 +50,8 @@ func TestScheduledComponentsFilter_OnlyBuildableTypesAreScheduled(t *testing.T) 
 
 	// Simulated scenario:
 	// - "go" component type has builder "go"
-	// - "markdown" component type has NO builder
-	// - "book" component type has builder "mkdocs" and build_after: [markdown, go]
+	// - "assets" component type has NO builder
+	// - "book" component type has builder "mkdocs" and build_after: [assets, go]
 
 	type componentInfo struct {
 		compType  string
@@ -61,8 +61,8 @@ func TestScheduledComponentsFilter_OnlyBuildableTypesAreScheduled(t *testing.T) 
 
 	enabledComponents := map[string]componentInfo{
 		"main": {compType: "go", builder: "go", buildAfter: nil},
-		"docs": {compType: "markdown", builder: "", buildAfter: nil}, // No builder!
-		"site": {compType: "book", builder: "mkdocs", buildAfter: []string{"markdown", "go"}},
+		"docs": {compType: "assets", builder: "", buildAfter: nil}, // No builder!
+		"site": {compType: "book", builder: "mkdocs", buildAfter: []string{"assets", "go"}},
 	}
 
 	// Step 1: Build scheduledComponents set (only those with builders)
@@ -76,7 +76,7 @@ func TestScheduledComponentsFilter_OnlyBuildableTypesAreScheduled(t *testing.T) 
 	// Verify: Only "main" and "site" are scheduled, NOT "docs"
 	assert.True(t, scheduledComponents["main"], "main (go) should be scheduled")
 	assert.True(t, scheduledComponents["site"], "site (book) should be scheduled")
-	assert.False(t, scheduledComponents["docs"], "docs (markdown) should NOT be scheduled - no builder")
+	assert.False(t, scheduledComponents["docs"], "docs (assets) should NOT be scheduled - no builder")
 
 	// Step 2: For "site", build dependencies filtering out non-scheduled components
 	siteInfo := enabledComponents["site"]
@@ -99,7 +99,7 @@ func TestScheduledComponentsFilter_OnlyBuildableTypesAreScheduled(t *testing.T) 
 
 	// Verify: site depends on "main" (go, buildable) but NOT "docs" (markdown, not buildable)
 	assert.Contains(t, siteDeps, "main", "site should depend on buildable 'main'")
-	assert.NotContains(t, siteDeps, "docs", "site should NOT depend on non-buildable 'docs'")
+	assert.NotContains(t, siteDeps, "docs", "site should NOT depend on non-buildable 'docs' (assets)")
 }
 
 // TestScheduledComponentsFilter_AllDepsAreBuildable validates that when all
@@ -249,7 +249,7 @@ func TestExpandToolChain_TwoTools(t *testing.T) {
 	module := "docs"
 	component := "tutorials-pdf"
 
-	specs := expandToolChain(module, component, "docs-pdf", tools, nil)
+	specs := expandToolChain(module, component, config.ComponentTypeDocsPdf, tools, nil)
 
 	assert.Len(t, specs, 2, "two tools should produce two specs")
 
@@ -304,7 +304,7 @@ func TestExpandToolChain_WithExternalDeps(t *testing.T) {
 		{Module: module, Component: "structurizr", Tool: "structurizr-cli"},
 	}
 
-	specs := expandToolChain(module, component, "docs-pdf", tools, externalDeps)
+	specs := expandToolChain(module, component, config.ComponentTypeDocsPdf, tools, externalDeps)
 
 	// First spec should have external deps
 	assert.Len(t, specs[0].DependsOn, 1, "first tool should have external dep")
@@ -571,9 +571,9 @@ func TestPoolAllocation_FromToolType(t *testing.T) {
 				if spec.ID.Component == "test-comp" {
 					foundSpec = true
 					alloc := spec.GetPoolAllocation()
-					assert.Equal(t, tt.wantHostWeight, alloc.HostWeight,
+					assert.Equal(t, tt.wantHostWeight, alloc.GetHostWeight(),
 						"HostWeight should match")
-					assert.Equal(t, tt.wantDockerWeight, alloc.DockerWeight,
+					assert.Equal(t, tt.wantDockerWeight, alloc.GetDockerWeight(),
 						"DockerWeight should match (container uses both pools, system uses host only)")
 					assert.Equal(t, tt.wantIsContainer, alloc.IsContainer(),
 						"IsContainer() should reflect tool type")

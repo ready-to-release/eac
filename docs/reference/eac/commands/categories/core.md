@@ -56,5 +56,4 @@ Provides metadata about the EAC extension for CLI integration and tooling.
 
 - [build](../build/build.md) - Build modules
 - [test](../test/index.md) - Test modules
-- [update lint](../update/lint/index.md) - Update lint configurations
 - [validate](../validate/index.md) - Validate repository structure

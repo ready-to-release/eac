@@ -25,7 +25,7 @@ func Detect() *Env {
 		environments.EnvR2RTestRunID,
 		environments.EnvGodogFormat,
 		environments.EnvR2RMockSecurity,
-		environments.EnvR2RMockStructurizr,
+		environments.EnvR2RMockDocker,
 	)
 }
 

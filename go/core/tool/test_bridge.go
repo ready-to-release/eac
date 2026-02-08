@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // TestFunc is the signature for module test functions.
 // Parameters: module contract port, workspace root, output directory, log writer, report format, suite name
 // Returns: exit code.
-type TestFunc func(interfaces.ModuleContractPort, string, string, io.Writer, string, string) int
+type TestFunc func(core.ModuleContractPort, string, string, io.Writer, string, string) int
 
 // TestBridge provides a unified interface for resolving test handlers.
 // All handlers are resolved from tool-config.yml definitions.
@@ -72,7 +72,7 @@ func (b *TestBridge) GetTestFunc(module *modules.ModuleContract) TestFunc {
 	// Priority 1: Try resolver for each component type (uses component-tools mapping)
 	if b.resolver != nil && b.executor != nil {
 		for _, compType := range componentTypes {
-			if tool, err := b.resolver.Resolve(compType, OperationTest); err == nil && tool != nil {
+			if tool, err := b.resolver.Resolve(compType, core.ActionTest); err == nil && tool != nil {
 				return b.createToolTestFunc(tool)
 			}
 		}
@@ -95,7 +95,7 @@ func (b *TestBridge) GetTestFunc(module *modules.ModuleContract) TestFunc {
 
 // createToolTestFunc wraps a ToolDefinition as a TestFunc.
 func (b *TestBridge) createToolTestFunc(tool *ToolDefinition) TestFunc {
-	return func(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
+	return func(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 		adapter := NewTestHandlerAdapter(tool, b.executor)
 		opts := TestOptions{
 			Verbose: false,
@@ -105,7 +105,7 @@ func (b *TestBridge) createToolTestFunc(tool *ToolDefinition) TestFunc {
 }
 
 // noOpTestFunc is the default no-op test function.
-func noOpTestFunc(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
+func noOpTestFunc(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 	return 0
 }
 
@@ -125,7 +125,7 @@ func (b *TestBridge) HasHandler(name string) bool {
 
 // ResolveTool returns the tool definition for a component type and operation.
 // Returns nil if no tool is configured or resolver is not available.
-func (b *TestBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+func (b *TestBridge) ResolveTool(componentType string, operation core.ActionType) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -143,7 +143,7 @@ func (b *TestBridge) ResolveTool(componentType string, operation OperationType) 
 
 // IsContainer returns true if the test handler for the given component type runs in a container.
 func (b *TestBridge) IsContainer(componentType string) bool {
-	t := b.ResolveTool(componentType, OperationTest)
+	t := b.ResolveTool(componentType, core.ActionTest)
 	if t == nil {
 		return false
 	}

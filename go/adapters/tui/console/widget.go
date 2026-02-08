@@ -132,7 +132,7 @@ func (m Model) buildWidgetSnapshot() WidgetSnapshot {
 
 	// Get capacity info
 	var pressureCap int
-	for _, lock := range m.locks {
+	for _, lock := range m.Execution.Locks {
 		if lock.Name == "component-scheduler" {
 			pressureCap = lock.Capacity
 			break
@@ -148,7 +148,7 @@ func (m Model) buildWidgetSnapshot() WidgetSnapshot {
 
 	// Determine host waiting from locks
 	var hostWaiting int
-	for _, lock := range m.locks {
+	for _, lock := range m.Execution.Locks {
 		if lock.Name == "component-scheduler" {
 			hostWaiting = lock.Waiting
 			break
@@ -156,14 +156,14 @@ func (m Model) buildWidgetSnapshot() WidgetSnapshot {
 	}
 
 	// UoW total from initSummary or fallback
-	uowTotal := len(m.uowOrder)
-	if m.initSummary != nil && m.initSummary.UoWCount > 0 {
-		uowTotal = m.initSummary.UoWCount
+	uowTotal := len(m.Execution.UoWOrder)
+	if m.Execution.InitSummary != nil && m.Execution.InitSummary.UoWCount > 0 {
+		uowTotal = m.Execution.InitSummary.UoWCount
 	}
 
 	// Pre-compute weighted progress
 	var totalWeight, finalizedWeight int
-	for _, state := range m.uowStates {
+	for _, state := range m.Execution.UoWStates {
 		w := state.Weight
 		if w <= 0 {
 			w = 1
@@ -176,28 +176,28 @@ func (m Model) buildWidgetSnapshot() WidgetSnapshot {
 	}
 
 	return WidgetSnapshot{
-		CPUPercent:           m.cachedCPUPercent,
-		MemPercent:           m.cachedMemPercent,
-		DockerMemPercent:     m.cachedDockerMemPercent,
+		CPUPercent:           m.Resources.CachedCPUPercent,
+		MemPercent:           m.Resources.CachedMemPercent,
+		DockerMemPercent:     m.Resources.CachedDockerMemPercent,
 		HostRunning:          counts.Running,
 		HostPressureTarget:   capInfo.PressureTarget,
 		HostRoof:             capInfo.Roof,
 		HostWaiting:          hostWaiting,
-		DockerRunning:        m.dockerRunning,
-		DockerPressureTarget: m.dockerPressureTarget,
-		DockerRoof:           m.dockerRoof,
-		DockerWaiting:        m.dockerWaiting,
+		DockerRunning:        m.Execution.DockerRunning,
+		DockerPressureTarget: m.Execution.DockerPressureTarget,
+		DockerRoof:           m.Execution.DockerRoof,
+		DockerWaiting:        m.Execution.DockerWaiting,
 		Counts:               counts,
 		UoWTotal:             uowTotal,
-		Elapsed:              time.Since(m.startTime),
-		SummaryData:          m.summaryData,
-		RunPhaseActive:       m.panes[PhaseRun].Status == PhaseActive,
-		RunPhaseName:         m.runPhaseName,
-		ExitCountdownSecs:    m.exitCountdownSecs,
-		UserHasInteracted:    m.userHasInteracted,
-		AsciiMode:            m.asciiMode,
-		Width:                m.width,
-		LastMetricsUpdate:    m.lastMetricsUpdate,
+		Elapsed:              time.Since(m.Execution.StartTime),
+		SummaryData:          m.Execution.SummaryData,
+		RunPhaseActive:       m.Execution.Panes[PhaseRun].Status == PhaseActive,
+		RunPhaseName:         m.Display.RunPhaseName,
+		ExitCountdownSecs:    m.Interaction.ExitCountdownSecs,
+		UserHasInteracted:    m.Interaction.UserHasInteracted,
+		AsciiMode:            m.Display.AsciiMode,
+		Width:                m.Display.Width,
+		LastMetricsUpdate:    m.Resources.LastMetricsUpdate,
 		FinalizedWeight:      finalizedWeight,
 		TotalWeight:          totalWeight,
 	}

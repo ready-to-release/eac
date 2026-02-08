@@ -5,7 +5,6 @@
 package specs
 
 import (
-	"github.com/ready-to-release/eac/go/core/environments"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,11 +19,12 @@ import (
 	"github.com/cucumber/godog"
 	"gopkg.in/yaml.v3"
 
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // cacheContext holds test state for cache invalidation scenarios.
@@ -391,7 +391,7 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 		// Create UoW manifest in the expected location
 		// Format: out/build/<module>/<component>-<tool>/uow.manifest.json
 		manifest := &output.UoWManifest{
-			Context:    workunit.ContextBuild,
+			Action:     core.ActionBuild,
 			Module:     contract.Moniker,
 			Component:  "go",  // Default component for Go modules
 			Tool:       "go",  // Default tool
@@ -713,6 +713,7 @@ func outputIndicatesSkipped(ctx *eacgodog.TestContext, module string) error {
 		fmt.Sprintf("%s.*skip", module),
 		fmt.Sprintf("skipping.*%s", module),
 		fmt.Sprintf("%s.*cached", module),
+		fmt.Sprintf("cached.*%s", module),
 	}
 
 	for _, pattern := range patterns {
@@ -840,7 +841,7 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 
 	// Create UoW manifest for successful lint
 	manifest := &output.UoWManifest{
-		Context:    workunit.ContextLint,
+		Action:     core.ActionLint,
 		Module:     module,
 		Component:  "go",
 		Tool:       "golangci-lint",
@@ -905,7 +906,7 @@ func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 
 	// Create UoW manifest for failed lint (exit_code: 1)
 	manifest := &output.UoWManifest{
-		Context:    workunit.ContextLint,
+		Action:     core.ActionLint,
 		Module:     module,
 		Component:  "go",
 		Tool:       "golangci-lint",
@@ -979,7 +980,7 @@ func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 
 		// Create UoW manifest for successful build
 		manifest := &output.UoWManifest{
-			Context:    workunit.ContextBuild,
+			Action:     core.ActionBuild,
 			Module:     moniker,
 			Component:  "go",
 			Tool:       "go",

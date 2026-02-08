@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 // mockContainerPort implements container.ContainerPort for testing.
@@ -55,6 +55,14 @@ func (m *mockContainerPort) Pull(ctx context.Context, imageRef string) error {
 
 func (m *mockContainerPort) ImageExists(ctx context.Context, imageRef string) bool {
 	return m.images[imageRef]
+}
+
+func (m *mockContainerPort) ManifestExists(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockContainerPort) ImageCreatedTime(_ context.Context, _ string) (time.Time, error) {
+	return time.Now().Add(-1 * time.Hour), nil
 }
 
 func (m *mockContainerPort) IsAvailable() bool {

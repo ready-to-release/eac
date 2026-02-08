@@ -90,6 +90,23 @@ func (m *SimpleMockDockerClient) ImagePull(ctx context.Context, refStr string, o
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
+// ImageInspectWithRaw returns image information for mock images.
+func (m *SimpleMockDockerClient) ImageInspectWithRaw(_ context.Context, imageID string) (image.InspectResponse, []byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.ensureInitialized()
+
+	if !m.images[imageID] {
+		return image.InspectResponse{}, nil, fmt.Errorf("image not found: %s", imageID)
+	}
+	resp := image.InspectResponse{
+		ID:       "sha256:mock-" + imageID,
+		RepoTags: []string{imageID},
+		Created:  time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano),
+	}
+	return resp, nil, nil
+}
+
 // ContainerCreate simulates container creation with unique ID.
 func (m *SimpleMockDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error) {
 	m.mu.Lock()

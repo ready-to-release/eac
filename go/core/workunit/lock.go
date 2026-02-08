@@ -33,13 +33,13 @@ func (e *ErrLocked) Error() string {
 // Lock acquires exclusive access to this unit.
 // Creates the lock file with information about the current process.
 // Returns ErrLocked if the lock is already held.
-func (u UnitID) Lock() error {
-	return u.LockWithRoot("")
+func Lock(u UnitID) error {
+	return LockWithRoot(u, "")
 }
 
 // LockWithRoot acquires exclusive access using a workspace root prefix.
 // If root is empty, uses relative paths.
-func (u UnitID) LockWithRoot(root string) error {
+func LockWithRoot(u UnitID, root string) error {
 	outDir := u.OutDir()
 	lockFile := u.LockFile()
 	if root != "" {
@@ -55,7 +55,7 @@ func (u UnitID) LockWithRoot(root string) error {
 	if err != nil {
 		if os.IsExist(err) {
 			// Try to read existing lock info
-			info := u.ReadLockInfoWithRoot(root)
+			info := ReadLockInfoWithRoot(u, root)
 			return &ErrLocked{
 				UnitID:   u.Longname(),
 				HeldBy:   info,
@@ -77,12 +77,12 @@ func (u UnitID) LockWithRoot(root string) error {
 
 // Unlock releases the lock.
 // This operation is idempotent - it succeeds even if the lock doesn't exist.
-func (u UnitID) Unlock() error {
-	return u.UnlockWithRoot("")
+func Unlock(u UnitID) error {
+	return UnlockWithRoot(u, "")
 }
 
 // UnlockWithRoot releases the lock using a workspace root prefix.
-func (u UnitID) UnlockWithRoot(root string) error {
+func UnlockWithRoot(u UnitID, root string) error {
 	lockFile := u.LockFile()
 	if root != "" {
 		lockFile = root + "/" + lockFile
@@ -96,12 +96,12 @@ func (u UnitID) UnlockWithRoot(root string) error {
 }
 
 // IsLocked returns true if this unit is currently locked.
-func (u UnitID) IsLocked() bool {
-	return u.IsLockedWithRoot("")
+func IsLocked(u UnitID) bool {
+	return IsLockedWithRoot(u, "")
 }
 
 // IsLockedWithRoot returns true if this unit is currently locked.
-func (u UnitID) IsLockedWithRoot(root string) bool {
+func IsLockedWithRoot(u UnitID, root string) bool {
 	lockFile := u.LockFile()
 	if root != "" {
 		lockFile = root + "/" + lockFile
@@ -112,12 +112,12 @@ func (u UnitID) IsLockedWithRoot(root string) bool {
 
 // ReadLockInfo reads the lock information if the unit is locked.
 // Returns nil if not locked or if the lock file can't be read.
-func (u UnitID) ReadLockInfo() *LockInfo {
-	return u.ReadLockInfoWithRoot("")
+func ReadLockInfo(u UnitID) *LockInfo {
+	return ReadLockInfoWithRoot(u, "")
 }
 
 // ReadLockInfoWithRoot reads the lock information with a workspace root prefix.
-func (u UnitID) ReadLockInfoWithRoot(root string) *LockInfo {
+func ReadLockInfoWithRoot(u UnitID, root string) *LockInfo {
 	lockFile := u.LockFile()
 	if root != "" {
 		lockFile = root + "/" + lockFile
@@ -152,7 +152,7 @@ func DefaultLockWaitConfig() LockWaitConfig {
 
 // LockWithWait attempts to acquire the lock, waiting if blocked.
 // Returns when the lock is acquired or the context is cancelled/timeout reached.
-func (u UnitID) LockWithWait(ctx context.Context, root string, cfg LockWaitConfig) error {
+func LockWithWait(u UnitID, ctx context.Context, root string, cfg LockWaitConfig) error {
 	// Use defaults if not specified
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 5 * time.Minute
@@ -162,7 +162,7 @@ func (u UnitID) LockWithWait(ctx context.Context, root string, cfg LockWaitConfi
 	}
 
 	// Try immediately first
-	err := u.LockWithRoot(root)
+	err := LockWithRoot(u, root)
 	if err == nil {
 		return nil
 	}
@@ -186,21 +186,25 @@ func (u UnitID) LockWithWait(ctx context.Context, root string, cfg LockWaitConfi
 				return fmt.Errorf("lock acquisition cancelled for %s", u.Longname())
 			}
 			// Return the last lock error with holder info
-			info := u.ReadLockInfoWithRoot(root)
+			info := ReadLockInfoWithRoot(u, root)
 			return &ErrLocked{
 				UnitID: u.Longname(),
 				HeldBy: info,
 			}
 
 		case <-ticker.C:
-			err := u.LockWithRoot(root)
+			err := LockWithRoot(u, root)
 			if err == nil {
 				return nil
 			}
 			if _, ok := err.(*ErrLocked); !ok {
-				return err
+				// On Windows, access-denied during lock creation is transient
+				// (file handle not fully released after os.Remove)
+				if !isWindowsAccessDenied(err) {
+					return err
+				}
 			}
-			// Still locked, continue waiting
+			// Still locked or transient Windows error, continue waiting
 		}
 	}
 }
@@ -208,8 +212,8 @@ func (u UnitID) LockWithWait(ctx context.Context, root string, cfg LockWaitConfi
 // TryBreakStaleLock attempts to break a lock if the holding process is dead.
 // Returns true if the lock was broken, false if it's still held by a live process.
 // This is a best-effort operation and may have race conditions.
-func (u UnitID) TryBreakStaleLock(root string) bool {
-	info := u.ReadLockInfoWithRoot(root)
+func TryBreakStaleLock(u UnitID, root string) bool {
+	info := ReadLockInfoWithRoot(u, root)
 	if info == nil {
 		return false // No lock or can't read it
 	}
@@ -220,6 +224,6 @@ func (u UnitID) TryBreakStaleLock(root string) bool {
 	}
 
 	// Process is dead, break the lock
-	_ = u.UnlockWithRoot(root)
+	_ = UnlockWithRoot(u, root)
 	return true
 }

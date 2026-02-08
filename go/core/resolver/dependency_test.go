@@ -19,8 +19,8 @@ func TestNewDependencyGraph(t *testing.T) {
 			name:   "no dependencies",
 			module: "test-module",
 			enabledComponents: map[string]string{
-				"go":       "go",
-				"markdown": "markdown",
+				"go":     "go",
+				"assets": "assets",
 			},
 			buildAfter:   map[string][]string{},
 			expectedDeps: map[string][]string{},
@@ -40,18 +40,18 @@ func TestNewDependencyGraph(t *testing.T) {
 			},
 		},
 		{
-			name:   "book depends on structurizr and markdown",
+			name:   "book depends on structurizr and assets",
 			module: "test-module",
 			enabledComponents: map[string]string{
 				"structurizr": "structurizr",
-				"markdown":    "markdown",
+				"assets":      "assets",
 				"book":        "book",
 			},
 			buildAfter: map[string][]string{
-				"book": {"structurizr", "markdown"},
+				"book": {"structurizr", "assets"},
 			},
 			expectedDeps: map[string][]string{
-				"book": {"structurizr", "markdown"},
+				"book": {"structurizr", "assets"},
 			},
 		},
 		{
@@ -250,14 +250,14 @@ func TestDependencyGraph_Nodes(t *testing.T) {
 	enabledComponents := map[string]string{
 		"go":         "go",
 		"dockerfile": "dockerfile",
-		"markdown":   "markdown",
+		"assets":     "assets",
 	}
 
 	g := NewDependencyGraph("test", enabledComponents, func(string) []string { return nil })
 
 	nodes := g.Nodes()
 	assert.Len(t, nodes, 3)
-	assert.ElementsMatch(t, []string{"go", "dockerfile", "markdown"}, nodes)
+	assert.ElementsMatch(t, []string{"go", "dockerfile", "assets"}, nodes)
 }
 
 func TestDependencyGraph_NilGraph(t *testing.T) {

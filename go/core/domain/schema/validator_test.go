@@ -47,13 +47,13 @@ func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Load the actual environments.yml from the repository
-	envPath := filepath.Join(repoRoot, ".eac", "environments.yml")
+	// Validate the contract defaults — this is the canonical environments config
+	envPath := filepath.Join(repoRoot, "contracts", "core", schema.ContractVersion, "schemas", "defaults", "environments.yml")
 	data, err := os.ReadFile(envPath)
 	require.NoError(t, err)
 
 	err = v.ValidateYAML(schema.SchemaEnvironments, data)
-	assert.NoError(t, err, "environments.yml should be valid against schema")
+	assert.NoError(t, err, "environments.yml defaults should be valid against schema")
 }
 
 func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
@@ -61,13 +61,13 @@ func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Load the actual testing-tags.yml from the repository
-	tagsPath := filepath.Join(repoRoot, ".eac", "testing-tags.yml")
+	// Validate the contract defaults — this is the canonical testing-tags config
+	tagsPath := filepath.Join(repoRoot, "contracts", "core", schema.ContractVersion, "schemas", "defaults", "testing-tags.yml")
 	data, err := os.ReadFile(tagsPath)
 	require.NoError(t, err)
 
 	err = v.ValidateYAML(schema.SchemaTestingTags, data)
-	assert.NoError(t, err, "testing-tags.yml should be valid against schema")
+	assert.NoError(t, err, "testing-tags.yml defaults should be valid against schema")
 }
 
 func TestValidator_InvalidRepositoryYAML(t *testing.T) {

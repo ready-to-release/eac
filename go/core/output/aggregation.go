@@ -3,6 +3,7 @@ package output
 import (
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -37,7 +38,7 @@ type AggregatedChangeResult struct {
 // 3. Cache time collection for TUI display
 func AggregateUoWChanges(
 	reader *DiskOutputReader,
-	ctx workunit.Context,
+	ctx core.ActionType,
 	expectedUoWs []workunit.UnitID,
 	getInputHash InputHashProvider,
 ) (*AggregatedChangeResult, error) {
@@ -58,7 +59,10 @@ func AggregateUoWChanges(
 	}
 
 	// Perform UoW-level change detection
-	uowResult, err := reader.DetectUoWChanges(ctx, expectedUoWs, getInputHash)
+	// nil depResolver: AggregateUoWChanges is used for test/lint/scan which
+	// already have same-module build invalidation. Cross-module dependency
+	// invalidation is only needed for build UoWs (handled by build command).
+	uowResult, err := reader.DetectUoWChanges(ctx, expectedUoWs, getInputHash, nil)
 	if err != nil {
 		return nil, err
 	}

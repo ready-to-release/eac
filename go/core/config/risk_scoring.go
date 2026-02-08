@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 )
 
 // RiskScoringConfig holds configurable risk scoring mappings.
-// It implements security.RiskScoringPort.
+// It implements scanner.RiskScoringPort.
 type RiskScoringConfig struct {
 	// Impact maps module moniker to default impact rating (1-5)
 	Impact map[string]int `yaml:"impact"`
@@ -29,7 +29,7 @@ type SeverityWeightsConfig struct {
 }
 
 // Verify RiskScoringConfig implements RiskScoringPort.
-var _ security.RiskScoringPort = (*RiskScoringConfig)(nil)
+var _ scanner.RiskScoringPort = (*RiskScoringConfig)(nil)
 
 // DefaultRiskScoringConfig returns the hardcoded default configuration.
 // These values are the canonical defaults for impact and criticality.

@@ -11,7 +11,7 @@ import (
 // Format: {workspaceRoot}/out/{context}/{module}/{dirname}/uow.manifest.json
 // where dirname = component[-extra1][-extra2]... for uniqueness.
 func (m *UoWManifest) ManifestPath(workspaceRoot string) string {
-	return filepath.Join(workspaceRoot, "out", string(m.Context), m.Module, m.DirName(), "uow.manifest.json")
+	return filepath.Join(workspaceRoot, "out", string(m.Action), m.Module, m.DirName(), "uow.manifest.json")
 }
 
 // Save writes the manifest to disk at its expected path.

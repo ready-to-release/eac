@@ -451,7 +451,7 @@ Structure:
 User: "Create a diagram showing trunk → module → pipeline → live"
 
 ```xml
-<mxfile host="drawio-tool" agent="drawio-tool (Claude)" version="1.0">
+<mxfile host="drawio-oci" agent="drawio-oci (Claude)" version="1.0">
   <diagram name="Pipeline" id="pipeline-flow">
     <mxGraphModel dx="1426" dy="758" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" background="#CFCFCF" shadow="1">
       <root>

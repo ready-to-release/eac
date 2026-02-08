@@ -3,10 +3,13 @@ package builders
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -52,6 +55,14 @@ func (m *mockContainerPortForGo) Pull(ctx context.Context, imageRef string) erro
 
 func (m *mockContainerPortForGo) ImageExists(ctx context.Context, imageRef string) bool {
 	return m.images[imageRef]
+}
+
+func (m *mockContainerPortForGo) ManifestExists(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockContainerPortForGo) ImageCreatedTime(_ context.Context, _ string) (time.Time, error) {
+	return time.Now().Add(-1 * time.Hour), nil
 }
 
 func (m *mockContainerPortForGo) IsAvailable() bool {
@@ -155,7 +166,7 @@ func TestGoHandler_ExecuteTool_SystemTool(t *testing.T) {
 		WorkspaceRoot: t.TempDir(),
 		ModuleRoot:    ".",
 		LogWriter:     &logBuf,
-		Operation:     tool.OperationBuild,
+		Operation:     core.ActionBuild,
 		ArgsOverrides: args,
 	}
 
@@ -270,6 +281,46 @@ func TestGoHandler_IsHostInstalled(t *testing.T) {
 	h := &GoHandler{}
 	if !h.IsHostInstalled() {
 		t.Error("GoHandler should report as host-installed")
+	}
+}
+
+func TestIsModuleInGoWork(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goWork := filepath.Join(tmpDir, "go.work")
+	content := "go 1.24.4\n\nuse (\n\t./go/core\n\t./go/clibase\n\t./contracts/tui/0.1.0\n)\n"
+	if err := os.WriteFile(goWork, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		moduleRoot string
+		want       bool
+	}{
+		{"listed module", filepath.Join(tmpDir, "go", "core"), true},
+		{"listed module clibase", filepath.Join(tmpDir, "go", "clibase"), true},
+		{"listed contract", filepath.Join(tmpDir, "contracts", "tui", "0.1.0"), true},
+		{"unlisted module", filepath.Join(tmpDir, "contracts", "core", "0.1.0", "interfaces"), false},
+		{"unlisted module 2", filepath.Join(tmpDir, "go", "adapters", "docker"), false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isModuleInGoWork(tc.moduleRoot, tmpDir)
+			if got != tc.want {
+				t.Errorf("isModuleInGoWork(%s) = %v, want %v", tc.moduleRoot, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsModuleInGoWork_NoGoWork(t *testing.T) {
+	tmpDir := t.TempDir()
+	// No go.work file — should return false (standalone mode)
+	got := isModuleInGoWork(filepath.Join(tmpDir, "some", "module"), tmpDir)
+	if got != false {
+		t.Errorf("expected false when go.work doesn't exist, got true")
 	}
 }
 

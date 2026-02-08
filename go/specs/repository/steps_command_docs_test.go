@@ -9,17 +9,17 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/cucumber/godog"
+	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
-	"github.com/ready-to-release/eac/go/core/environments"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"gopkg.in/yaml.v3"
 )
 
 // commandDocsContext holds state for command docs coverage validation.
@@ -83,14 +83,11 @@ func checkEachCommandForDocumentation() error {
 		return fmt.Errorf("context not initialized")
 	}
 
-	// Find the commands binary
-	cmdBinary := findCommandsBinary(cmdDocsCtx.repoRoot)
-	if cmdBinary == "" {
-		return fmt.Errorf("commands binary not found - run 'go build' or set COMMANDS_PATH")
-	}
+	// Use EAC adapter to get valid commands
+	commandSource := makeCommandSource(cmdDocsCtx.repoRoot)
 
 	// Use docsync to scan command documentation
-	result, err := docsync.ScanCommandDocs(cmdBinary, cmdDocsCtx.repoRoot, cmdDocsCtx.cfg.Commands)
+	result, err := docsync.ScanCommandDocs(commandSource, cmdDocsCtx.repoRoot, cmdDocsCtx.cfg.Commands)
 	if err != nil {
 		return fmt.Errorf("failed to scan command docs: %w", err)
 	}
@@ -134,40 +131,24 @@ func ifMissingShowCommandNames() error {
 	return nil
 }
 
-// findCommandsBinary locates the commands binary.
-// Checks multiple locations in order of preference.
-func findCommandsBinary(repoRoot string) string {
-	// Check environment variable first (set by CI)
-	if envPath := os.Getenv(environments.EnvCommandsPath); envPath != "" {
-		return envPath
-	}
-
-	var candidates []string
-
-	// When running inside a container, prefer the container's built-in binary
-	// R2R_CONTAINER_ROOT is always set by the container image (ENV in Dockerfile)
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
-		candidates = append(candidates, filepath.Join(containerRoot, "out", "tools", "eac"))
-	}
-
-	// Add standard locations from the repo
-	candidates = append(candidates,
-		filepath.Join(repoRoot, "out", "tools", "eac"),
-	)
-
-	// Only add .exe candidates on Windows
-	// On Linux, .exe files from a mounted Windows host cannot be executed
-	if runtime.GOOS == "windows" {
-		candidates = append(candidates,
-			filepath.Join(repoRoot, "out", "tools", "eac.exe"),
-		)
-	}
-
-	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+// makeCommandSource creates a CommandSource that uses the EAC adapter.
+func makeCommandSource(repoRoot string) docsync.CommandSource {
+	return func() ([]docsync.CommandInfo, error) {
+		port := eac.New(repoRoot)
+		result, err := port.Execute(context.Background(), []string{"get", "valid-commands"}, &eac.ExecConfig{
+			WorkspaceRoot: repoRoot,
+			FullEnv:       append(os.Environ(), "NO_COLOR=1"),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to run get valid-commands: %w", err)
 		}
+		if !result.Success() {
+			return nil, fmt.Errorf("failed to run get valid-commands: %s", string(result.Stderr))
+		}
+		var commands []docsync.CommandInfo
+		if err := yaml.Unmarshal(result.Stdout, &commands); err != nil {
+			return nil, fmt.Errorf("failed to parse valid-commands output: %w", err)
+		}
+		return commands, nil
 	}
-
-	return ""
 }

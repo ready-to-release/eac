@@ -57,12 +57,14 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	for _, m := range cfg.Repository.Modules {
 		// Convert to BaseContract for ModuleContract creation
 		base := domain.BaseContract{
-			Moniker:       m.Moniker,
-			Name:          m.Name,
-			Description:   m.Description,
-			DependsOn:     m.DependsOn,
-			Metadata:      m.Metadata,
-			EvidenceBooks: m.EvidenceBooks,
+			Moniker:        m.Moniker,
+			Name:           m.Name,
+			Description:    m.Description,
+			ModuleGroup:    m.ModuleGroup,
+			DependsOn:      m.DependsOn,
+			Metadata:       m.Metadata,
+			EvidenceBooks:  m.EvidenceBooks,
+			ComponentOrder: m.ComponentOrder,
 		}
 
 		// Convert Components config
@@ -82,6 +84,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 							Source: entry.Patterns.Source,
 							Tests:  entry.Patterns.Tests,
 							Config: entry.Patterns.Config,
+							Data:   entry.Patterns.Data,
 						}
 					}
 					// Convert Build config

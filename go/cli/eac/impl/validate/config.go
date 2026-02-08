@@ -175,7 +175,7 @@ func runFileChecks(repoRoot, configRoot string, result *ConfigValidationResult) 
 	}
 
 	for _, cf := range contractFiles {
-		path := filepath.Join(repoRoot, "contracts", cf.contract, paths.DefaultsVersion, "defaults", cf.file)
+		path := filepath.Join(repoRoot, "contracts", cf.contract, paths.DefaultsVersion, "schemas", "defaults", cf.file)
 		info := ConfigFileInfo{
 			Path:  path,
 			Layer: "contract",

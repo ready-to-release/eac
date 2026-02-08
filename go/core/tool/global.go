@@ -4,12 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	coretesting "github.com/ready-to-release/eac/go/core/testing"
 )
 
 var (
 	globalToolConfig     *ToolConfig
 	globalToolConfigOnce sync.Once
 	globalToolConfigErr  error
+	globalToolConfigMu   sync.Mutex
 )
 
 // GlobalToolConfig returns the global ToolConfig singleton.
@@ -46,6 +49,8 @@ func GlobalToolConfigWithError() (*ToolConfig, error) {
 // SetGlobalToolConfigForTesting allows tests to inject a mock config.
 // This resets the singleton - use only in tests.
 func SetGlobalToolConfigForTesting(cfg *ToolConfig) {
+	globalToolConfigMu.Lock()
+	defer globalToolConfigMu.Unlock()
 	globalToolConfig = cfg
 	globalToolConfigErr = nil
 	// Reset Once so it doesn't try to reload
@@ -56,15 +61,27 @@ func SetGlobalToolConfigForTesting(cfg *ToolConfig) {
 // ResetGlobalToolConfigForTesting resets the global tool config singleton.
 // Use only in tests to restore normal behavior.
 func ResetGlobalToolConfigForTesting() {
+	globalToolConfigMu.Lock()
+	defer globalToolConfigMu.Unlock()
 	globalToolConfig = nil
 	globalToolConfigErr = nil
 	globalToolConfigOnce = sync.Once{}
 }
 
+// builtinTestTypeMapping provides fallback mappings when tool config and
+// adapter registry are unavailable (e.g., in unit tests without adapter init).
+var builtinTestTypeMapping = map[string]string{
+	"gotest":     "go",
+	"godog":      "gherkin",
+	"mocha":      "typescript",
+	"tscucumber": "gherkin",
+}
+
 // GetTestTypeComponentType returns the component type for a test type.
-// Uses the global tool config's test-type-mapping.
-// Falls back to hardcoded defaults if config is unavailable.
+// Uses the global tool config's test-type-mapping first, then falls back
+// to the adapter registry, then to built-in defaults.
 func GetTestTypeComponentType(testType string) string {
+	// 1. Try tool config (data-driven from YAML)
 	cfg := GlobalToolConfig()
 	if cfg != nil && cfg.TestTypeMapping != nil {
 		if compType, ok := cfg.TestTypeMapping[testType]; ok {
@@ -72,19 +89,18 @@ func GetTestTypeComponentType(testType string) string {
 		}
 	}
 
-	// Fallback to hardcoded defaults
-	switch testType {
-	case "gotest":
-		return "go"
-	case "godog":
-		return "gherkin"
-	case "mocha":
-		return "typescript"
-	case "tscucumber":
-		return "gherkin"
-	default:
-		return "go" // Default
+	// 2. Try adapter registry via provider
+	if compType := coretesting.GetComponentTypeFromRegistry(testType); compType != "" {
+		return compType
 	}
+
+	// 3. Built-in fallback for well-known types
+	if compType, ok := builtinTestTypeMapping[testType]; ok {
+		return compType
+	}
+
+	// 4. Ultimate fallback
+	return "go"
 }
 
 // findRepoRootForGlobal walks up from cwd looking for .eac directory.

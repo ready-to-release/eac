@@ -34,10 +34,10 @@ func TestFlagDocGenerator_GenerateFlagMatrix(t *testing.T) {
 	flags := []string{
 		"`--turbo`",
 		"`--roof`",
-		"`--tui`",
+		"`--with-tui`",
 		"`--debug`",
 		"`--skip-cache`",
-		"`--skip-deps`",
+		"`--no-deps`",
 		"`--exclude`",
 		"`--skip-depm`",
 		"`--dry-run`",
@@ -52,7 +52,7 @@ func TestFlagDocGenerator_GenerateFlagMatrix(t *testing.T) {
 	commandFlags := []string{
 		"`--tags`",
 		"`--list-only`",
-		"`--tidy-first`",
+		"`--with-tidy`",
 	}
 	for _, flag := range commandFlags {
 		if !strings.Contains(doc, flag) {
@@ -135,7 +135,7 @@ func TestFlagDocGenerator_GenerateCommandUsage(t *testing.T) {
 	}
 
 	// Should have build-specific flags
-	if !strings.Contains(usage, "--tidy-first") {
+	if !strings.Contains(usage, "--with-tidy") {
 		t.Error("Usage should contain build-specific flags")
 	}
 }

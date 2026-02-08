@@ -102,14 +102,8 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 
 	log.Infof("Calculating execution order for: %v", monikers)
 
-	// Calculate execution order
-	plan, err := repository.CalculateExecutionOrder(monikers, r.repoPath)
-	if err != nil {
-		return fmt.Errorf("failed to calculate execution order: %w", err)
-	}
-
 	// Filter to only modules with workflow files
-	filteredOrder := r.filterModulesWithWorkflows(plan.ExecutionOrder)
+	filteredOrder := r.filterModulesWithWorkflows(monikers)
 
 	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")
@@ -129,16 +123,21 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 
 // RunAllPipelines runs all modules in the repository.
 func (r *PipelineRunner) RunAllPipelines(ref string) error {
-	log.Info("Running all modules in dependency order...")
+	log.Info("Running all modules...")
 
-	// Pass nil to calculate order for all modules
-	plan, err := repository.CalculateExecutionOrder(nil, r.repoPath)
+	// Load all modules from registry
+	registry, err := modules.LoadFromWorkspace(r.repoPath)
 	if err != nil {
-		return fmt.Errorf("failed to calculate execution order: %w", err)
+		return fmt.Errorf("failed to load module registry: %w", err)
+	}
+
+	var allMonikers []string
+	for _, mod := range registry.All() {
+		allMonikers = append(allMonikers, mod.Moniker)
 	}
 
 	// Filter to only modules with workflow files
-	filteredOrder := r.filterModulesWithWorkflows(plan.ExecutionOrder)
+	filteredOrder := r.filterModulesWithWorkflows(allMonikers)
 
 	if len(filteredOrder) == 0 {
 		log.Info("No modules with workflows found")

@@ -5,14 +5,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
+
+// parseBlueprintsFromYAML is a test helper that parses artifact matrices YAML into BlueprintsConfig.
+func parseBlueprintsFromYAML(t *testing.T, data string) *BlueprintsConfig {
+	t.Helper()
+	var cfg BlueprintsConfig
+	err := yaml.Unmarshal([]byte(data), &cfg)
+	require.NoError(t, err)
+	return &cfg
+}
 
 // =============================================================================
 // Tests for Artifact Matrix System
 // =============================================================================
 
-// TestLoadArtifactMatrices tests loading artifact matrices from YAML.
-func TestLoadArtifactMatrices(t *testing.T) {
+// TestParseArtifactMatrices tests parsing artifact matrices from YAML into BlueprintsConfig.
+func TestParseArtifactMatrices(t *testing.T) {
 	tests := []struct {
 		name         string
 		yaml         string
@@ -71,7 +81,8 @@ other-key: value
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := LoadArtifactMatrices([]byte(tt.yaml))
+			var cfg BlueprintsConfig
+			err := yaml.Unmarshal([]byte(tt.yaml), &cfg)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -79,7 +90,6 @@ other-key: value
 			}
 
 			require.NoError(t, err)
-			require.NotNil(t, cfg)
 
 			if tt.wantMatrices == nil {
 				assert.Nil(t, cfg.ArtifactMatrices)
@@ -93,8 +103,8 @@ other-key: value
 	}
 }
 
-// TestLoadArtifactMatrices_EntryFields tests that all entry fields are correctly parsed.
-func TestLoadArtifactMatrices_EntryFields(t *testing.T) {
+// TestParseArtifactMatrices_EntryFields tests that all entry fields are correctly parsed.
+func TestParseArtifactMatrices_EntryFields(t *testing.T) {
 	yamlData := `
 artifact-matrices:
   test-matrix:
@@ -105,8 +115,7 @@ artifact-matrices:
       derive_from: "{moniker}-base"
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 	require.NotNil(t, cfg.ArtifactMatrices["test-matrix"])
 
 	matrix := cfg.ArtifactMatrices["test-matrix"]
@@ -132,8 +141,7 @@ artifact-matrices:
     - {id: windows-amd64, type: executable, pattern: "{moniker}-windows-amd64.exe"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	params := map[string]string{
 		"moniker": "myapp",
@@ -178,8 +186,7 @@ artifact-matrices:
       - {id: windows-amd64-upx, type: executable, pattern: "{moniker}-windows-amd64-upx.exe", compression: upx, derive_from: "{moniker}-windows-amd64.exe"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	params := map[string]string{
 		"moniker": "r2r",
@@ -231,8 +238,7 @@ artifact-matrices:
       - {id: level2-entry, type: executable, pattern: "{moniker}-level2"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	params := map[string]string{"moniker": "test"}
 
@@ -335,8 +341,7 @@ artifact-matrices:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := LoadArtifactMatrices([]byte(tt.yaml))
-			require.NoError(t, err)
+			cfg := parseBlueprintsFromYAML(t, tt.yaml)
 
 			artifacts := cfg.ExpandArtifactMatrix("test", tt.params)
 
@@ -377,8 +382,7 @@ artifact-matrices:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := LoadArtifactMatrices([]byte(tt.yaml))
-			require.NoError(t, err)
+			cfg := parseBlueprintsFromYAML(t, tt.yaml)
 
 			artifacts := cfg.ExpandArtifactMatrix(tt.matrixName, map[string]string{"moniker": "test"})
 
@@ -389,7 +393,7 @@ artifact-matrices:
 
 // TestExpandArtifactMatrix_NilConfig tests that nil config handles gracefully.
 func TestExpandArtifactMatrix_NilConfig(t *testing.T) {
-	var cfg *ArtifactMatricesConfig
+	var cfg *BlueprintsConfig
 	artifacts := cfg.ExpandArtifactMatrix("any", map[string]string{"moniker": "test"})
 	assert.Nil(t, artifacts)
 }
@@ -450,8 +454,7 @@ artifact-matrices:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := LoadArtifactMatrices([]byte(tt.yaml))
-			require.NoError(t, err)
+			cfg := parseBlueprintsFromYAML(t, tt.yaml)
 
 			// Should not panic and should return nil or partial results
 			artifacts := cfg.ExpandArtifactMatrix(tt.matrixName, map[string]string{"moniker": "test"})
@@ -473,8 +476,7 @@ artifact-matrices:
       - {id: entry, type: executable, pattern: "test"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	// Should handle gracefully - only return the additional entries
 	artifacts := cfg.ExpandArtifactMatrix("broken", map[string]string{"moniker": "test"})
@@ -495,8 +497,7 @@ artifact-matrices:
     - {id: report, type: test, pattern: "reports/{moniker}.xml"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	artifacts := cfg.ExpandArtifactMatrix("mixed-types", map[string]string{"moniker": "app"})
 
@@ -515,8 +516,7 @@ artifact-matrices:
     - {}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	artifacts := cfg.ExpandArtifactMatrix("empty", map[string]string{"moniker": "test"})
 
@@ -540,8 +540,7 @@ artifact-matrices:
       - {id: "{moniker}-extended", type: executable, pattern: "out/{moniker}-extended{ext}"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	params := map[string]string{
 		"moniker": "myapp",
@@ -570,8 +569,7 @@ artifact-matrices:
     - {id: entry1, type: executable, pattern: "test1"}
     - {id: entry2, type: executable, pattern: "test2"}
 `
-		cfg, err := LoadArtifactMatrices([]byte(yamlData))
-		require.NoError(t, err)
+		cfg := parseBlueprintsFromYAML(t, yamlData)
 
 		matrix := cfg.ArtifactMatrices["simple"]
 		require.NotNil(t, matrix)
@@ -588,8 +586,7 @@ artifact-matrices:
     additional:
       - {id: extra, type: executable, pattern: "extra"}
 `
-		cfg, err := LoadArtifactMatrices([]byte(yamlData))
-		require.NoError(t, err)
+		cfg := parseBlueprintsFromYAML(t, yamlData)
 
 		matrix := cfg.ArtifactMatrices["extended"]
 		require.NotNil(t, matrix)
@@ -681,8 +678,7 @@ artifact-matrices:
     - {id: "{moniker}", type: executable, pattern: "{moniker}{ext}"}
 `
 
-	cfg, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	cfg := parseBlueprintsFromYAML(t, yamlData)
 
 	t.Run("cross-platform for r2r-cli", func(t *testing.T) {
 		artifacts := cfg.ExpandArtifactMatrix("cross-platform", map[string]string{"moniker": "r2r"})
@@ -762,8 +758,7 @@ artifact-matrices:
     additional:
       - {id: linux-amd64-upx, type: executable, pattern: "{moniker}-linux-amd64-upx", compression: upx, derive_from: "{moniker}-linux-amd64"}
 `
-	matrices, err := LoadArtifactMatrices([]byte(yamlData))
-	require.NoError(t, err)
+	matrices := parseBlueprintsFromYAML(t, yamlData)
 
 	t.Run("expands matrix for module with go component", func(t *testing.T) {
 		mod := &Module{
@@ -887,57 +882,148 @@ artifact-matrices:
 	})
 }
 
-// TestTopLevelGoRoot tests that the go_root top-level field is promoted to parameters.
-func TestTopLevelGoRoot(t *testing.T) {
-	t.Run("go_root shorthand is used in buildModuleParams", func(t *testing.T) {
+// TestExpandArtifactMatrixForModule_ParameterPassThrough tests that module parameters
+// are passed through to artifact matrix expansion (e.g., binary_name).
+func TestExpandArtifactMatrixForModule_ParameterPassThrough(t *testing.T) {
+	yamlData := `
+artifact-matrices:
+  cross-platform:
+    - {id: linux-amd64, type: executable, pattern: "{binary_name}-linux-amd64"}
+    - {id: windows-amd64, type: executable, pattern: "{binary_name}-windows-amd64.exe"}
+`
+	matrices := parseBlueprintsFromYAML(t, yamlData)
+
+	t.Run("binary_name from Build overrides default moniker", func(t *testing.T) {
 		mod := &Module{
-			Moniker: "my-lib",
-			GoRoot:  "go/my-lib",
+			Moniker:           "eac-cli",
+			ArtifactMatrixRef: "cross-platform",
+			Components: ModuleComponents{
+				"go": &ComponentEntry{
+					Root:  "go/cli/eac",
+					Build: &ModuleBuild{BinaryName: "eac"},
+				},
+			},
 		}
 
-		params := buildModuleParams(mod, "myorg")
+		expandArtifactMatrixForModule(mod, matrices)
+
+		goComp := mod.Components["go"]
+		require.NotNil(t, goComp.Build)
+		require.Len(t, goComp.Build.Artifacts, 2)
+		assert.Equal(t, "eac-linux-amd64", goComp.Build.Artifacts[0].Pattern)
+		assert.Equal(t, "eac-windows-amd64.exe", goComp.Build.Artifacts[1].Pattern)
+	})
+
+	t.Run("binary_name defaults to moniker when not set", func(t *testing.T) {
+		mod := &Module{
+			Moniker:           "myapp",
+			ArtifactMatrixRef: "cross-platform",
+			Components: ModuleComponents{
+				"go": &ComponentEntry{Root: "go/cli/myapp"},
+			},
+		}
+
+		expandArtifactMatrixForModule(mod, matrices)
+
+		goComp := mod.Components["go"]
+		require.NotNil(t, goComp.Build)
+		require.Len(t, goComp.Build.Artifacts, 2)
+		assert.Equal(t, "myapp-linux-amd64", goComp.Build.Artifacts[0].Pattern)
+		assert.Equal(t, "myapp-windows-amd64.exe", goComp.Build.Artifacts[1].Pattern)
+	})
+
+	t.Run("binary_name from Build is used in matrix expansion", func(t *testing.T) {
+		customYaml := `
+artifact-matrices:
+  custom:
+    - {id: "{moniker}-release", type: executable, pattern: "{binary_name}-release"}
+`
+		customMatrices := parseBlueprintsFromYAML(t, customYaml)
+
+		mod := &Module{
+			Moniker:           "my-tool",
+			ArtifactMatrixRef: "custom",
+			Components: ModuleComponents{
+				"go": &ComponentEntry{
+					Root:  "go/cli/my-tool",
+					Build: &ModuleBuild{BinaryName: "tool"},
+				},
+			},
+		}
+
+		expandArtifactMatrixForModule(mod, customMatrices)
+
+		goComp := mod.Components["go"]
+		require.NotNil(t, goComp.Build)
+		require.Len(t, goComp.Build.Artifacts, 1)
+		assert.Equal(t, "my-tool-release", goComp.Build.Artifacts[0].ID)
+		assert.Equal(t, "tool-release", goComp.Build.Artifacts[0].Pattern)
+	})
+}
+
+// TestGoRootInference tests that go_root is passed through discoveryVars.
+func TestGoRootInference(t *testing.T) {
+	t.Run("go_root from discoveryVars is available in params", func(t *testing.T) {
+		mod := &Module{
+			Moniker: "my-lib",
+			Components: ModuleComponents{
+				"go": &ComponentEntry{Root: "go/my-lib"},
+			},
+		}
+
+		discoveryVars := map[string]string{
+			"owner":   "myorg",
+			"go_root": "go/my-lib",
+		}
+		params := buildModuleParams(mod, discoveryVars)
 
 		assert.Equal(t, "go/my-lib", params["go_root"])
 	})
 
-	t.Run("explicit parameter overrides go_root shorthand", func(t *testing.T) {
+	t.Run("go_root with custom path from discoveryVars", func(t *testing.T) {
 		mod := &Module{
 			Moniker: "my-lib",
-			GoRoot:  "go/my-lib",
-			Parameters: map[string]string{
-				"go_root": "custom/path",
+			Components: ModuleComponents{
+				"go": &ComponentEntry{Root: "custom/path"},
 			},
 		}
 
-		params := buildModuleParams(mod, "myorg")
+		discoveryVars := map[string]string{
+			"owner":   "myorg",
+			"go_root": "custom/path",
+		}
+		params := buildModuleParams(mod, discoveryVars)
 
 		assert.Equal(t, "custom/path", params["go_root"])
 	})
 
-	t.Run("go component root still inferred when no go_root", func(t *testing.T) {
+	t.Run("go_root not present when not in discoveryVars", func(t *testing.T) {
 		mod := &Module{
-			Moniker: "my-lib",
+			Moniker: "my-container",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/inferred"},
+				"dockerfile": &ComponentEntry{Root: "containers/my-container"},
 			},
 		}
 
-		params := buildModuleParams(mod, "myorg")
+		discoveryVars := map[string]string{
+			"owner": "myorg",
+		}
+		params := buildModuleParams(mod, discoveryVars)
 
-		assert.Equal(t, "go/inferred", params["go_root"])
+		_, hasGoRoot := params["go_root"]
+		assert.False(t, hasGoRoot, "go_root should not be set when not in discoveryVars")
 	})
 
-	t.Run("go_root shorthand takes precedence over go component inference", func(t *testing.T) {
+	t.Run("moniker always set from module", func(t *testing.T) {
 		mod := &Module{
 			Moniker: "my-lib",
-			GoRoot:  "go/explicit",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/component-root"},
+				"go": &ComponentEntry{Root: "go/my-lib"},
 			},
 		}
 
-		params := buildModuleParams(mod, "myorg")
+		params := buildModuleParams(mod, nil)
 
-		assert.Equal(t, "go/explicit", params["go_root"])
+		assert.Equal(t, "my-lib", params["moniker"])
 	})
 }

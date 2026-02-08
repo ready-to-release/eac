@@ -10,7 +10,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/clibase/registry"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.

@@ -4,6 +4,7 @@ package evidence
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ func GetControlTestEvidenceFromManifest(tests []TestEntryData, testSuite string)
 	// Build evidence from manifest test entries
 	for _, test := range tests {
 		// Filter by suite if specified
-		if len(allowedSuites) > 0 && !contains(allowedSuites, test.Suite) {
+		if len(allowedSuites) > 0 && !slices.Contains(allowedSuites, test.Suite) {
 			continue
 		}
 
@@ -125,12 +126,3 @@ func parseSuiteFilter(suiteFilter string) []string {
 	return strings.Split(suiteFilter, "+")
 }
 
-// contains checks if a slice contains a specific string.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}

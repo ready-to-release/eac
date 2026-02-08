@@ -7,11 +7,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Ensure outputBuffer implements OutputBufferPort.
-var _ interfaces.OutputBufferPort = (*outputBuffer)(nil)
+var _ core.OutputBufferPort = (*outputBuffer)(nil)
 
 // outputBuffer captures stdout/stderr at the OS level using pipes.
 // When active, all writes to os.Stdout/os.Stderr are buffered until Stop().
@@ -39,7 +39,7 @@ type outputBuffer struct {
 
 // NewBuffer creates a new output buffer for TUI mode.
 // Call Start() to begin capturing stdout/stderr.
-func NewBuffer() interfaces.OutputBufferPort {
+func NewBuffer() core.OutputBufferPort {
 	return &outputBuffer{}
 }
 

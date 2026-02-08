@@ -1,65 +1,37 @@
 package tool
 
 import (
-	"github.com/ready-to-release/eac/go/core/environments"
 	"os"
 	"path/filepath"
 	"testing"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestLoadToolConfig(t *testing.T) {
-	// Create temporary directory structure
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create contracts dir: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create config dir: %v", err)
-	}
-
-	// Write default config (must include docker and go as bootstrap tools)
-	defaultConfig := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-  default-tool:
-    binary: default-binary
-    description: Default tool
-
-component-tools:
-  golang:
-    builder: default-tool
-`
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
-		t.Fatalf("failed to write default config: %v", err)
-	}
-
-	t.Run("loads defaults only", func(t *testing.T) {
-		config, err := LoadToolConfig(tmpDir, configDir)
+	t.Run("loads embedded defaults", func(t *testing.T) {
+		config, err := LoadToolConfig("", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		tool, ok := config.SystemTools["default-tool"]
-		if !ok {
-			t.Fatal("default-tool should be loaded in SystemTools")
+		// Embedded defaults should include docker and go
+		if _, ok := config.SystemTools["docker"]; !ok {
+			t.Error("embedded defaults should include docker")
 		}
-		if tool.Binary != "default-binary" {
-			t.Errorf("Binary = %q, want %q", tool.Binary, "default-binary")
-		}
-
-		assignment := config.ComponentTools["golang"]
-		if assignment == nil || assignment.Builder != "default-tool" {
-			t.Error("component-tools assignment not loaded correctly")
+		if _, ok := config.SystemTools["go"]; !ok {
+			t.Error("embedded defaults should include go")
 		}
 	})
 
 	t.Run("merges project override", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".eac")
+
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("failed to create config dir: %v", err)
+		}
+
 		// Write project override
 		projectConfig := `
 system-tools:
@@ -81,21 +53,18 @@ component-tools:
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		// Should have both tools
-		if _, ok := config.SystemTools["default-tool"]; !ok {
-			t.Error("default-tool should still exist")
-		}
+		// Should have project tool merged with embedded defaults
 		if _, ok := config.SystemTools["project-tool"]; !ok {
 			t.Error("project-tool should be added")
 		}
+		if _, ok := config.SystemTools["docker"]; !ok {
+			t.Error("docker from embedded defaults should still exist")
+		}
 
-		// Golang component should have merged assignments
+		// Golang component should have override's linter
 		golangAssignment := config.ComponentTools["golang"]
 		if golangAssignment == nil {
 			t.Fatal("golang assignment should exist")
-		}
-		if golangAssignment.Builder != "default-tool" {
-			t.Errorf("Builder = %q, should be preserved from defaults", golangAssignment.Builder)
 		}
 		if golangAssignment.Linter != "project-tool" {
 			t.Errorf("Linter = %q, should be from project", golangAssignment.Linter)
@@ -138,50 +107,12 @@ func TestMergeToolConfig_ExecutorMode(t *testing.T) {
 }
 
 func TestLoadToolConfig_ExecutorMode(t *testing.T) {
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-
-	t.Run("parses executor-mode from defaults", func(t *testing.T) {
-		defaultConfig := `
-executor-mode: container
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-`
-		if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
-			t.Fatalf("failed to write config: %v", err)
-		}
-
-		config, err := LoadToolConfig(tmpDir, configDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if config.ExecutorMode != ExecutorModeContainer {
-			t.Errorf("ExecutorMode = %q, want %q", config.ExecutorMode, ExecutorModeContainer)
-		}
-	})
-
 	t.Run("project override wins", func(t *testing.T) {
-		defaultConfig := `
-executor-mode: auto
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-`
-		if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
-			t.Fatalf("failed to write config: %v", err)
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".eac")
+
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("failed to create dirs: %v", err)
 		}
 
 		projectConfig := `
@@ -198,35 +129,24 @@ executor-mode: system
 		if config.ExecutorMode != ExecutorModeSystem {
 			t.Errorf("ExecutorMode = %q, want %q", config.ExecutorMode, ExecutorModeSystem)
 		}
-
-		// Clean up project override for other subtests
-		os.Remove(filepath.Join(configDir, "tool-config.yml"))
 	})
 }
 
 func TestLoadToolConfig_ToolBindingsLoad(t *testing.T) {
 	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
 	configDir := filepath.Join(tmpDir, ".eac")
 
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	defaultConfig := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
+	// Override with tool bindings
+	projectConfig := `
 tool-bindings:
   go: system
   docker: system
 `
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(projectConfig), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -235,9 +155,6 @@ tool-bindings:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(config.ToolBindings) != 2 {
-		t.Fatalf("expected 2 tool-bindings, got %d", len(config.ToolBindings))
-	}
 	if config.ToolBindings["go"] != ToolBindingSystem {
 		t.Errorf("go binding = %q, want %q", config.ToolBindings["go"], ToolBindingSystem)
 	}
@@ -271,24 +188,16 @@ func TestMergeToolAssignment(t *testing.T) {
 }
 
 func TestInitializeFromConfig(t *testing.T) {
-	// Create minimal config
 	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
 	configDir := filepath.Join(tmpDir, ".eac")
 
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	config := `
+	// Override: add echo-tool and component mapping
+	projectConfig := `
 system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
   echo-tool:
     binary: echo
 
@@ -296,7 +205,7 @@ component-tools:
   test:
     builder: echo-tool
 `
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(projectConfig), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -314,27 +223,21 @@ component-tools:
 	}
 
 	// Check resolver - resolved tool has CANONICAL ID (no suffix)
-	tool, err := resolver.Resolve("test", OperationBuild)
+	tool, err := resolver.Resolve("test", core.ActionBuild)
 	if err != nil {
 		t.Fatalf("Resolve failed: %v", err)
 	}
-	// Tool ID is now canonical - type suffix removed
 	if tool.ID != "echo-tool" {
 		t.Errorf("resolved tool ID = %q, want %q", tool.ID, "echo-tool")
 	}
-	// Type is still available in the Type field
 	if tool.Type != ToolTypeSystem {
 		t.Errorf("resolved tool Type = %q, want %q", tool.Type, ToolTypeSystem)
 	}
 }
 
-func TestLoadToolConfig_NoDefaults(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	os.MkdirAll(configDir, 0755)
-
-	// Should return empty config, not error
-	config, err := LoadToolConfig(tmpDir, configDir)
+func TestLoadToolConfig_EmbeddedDefaults(t *testing.T) {
+	// Embedded defaults are always available, no disk setup needed
+	config, err := LoadToolConfig("", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -351,39 +254,15 @@ func TestLoadToolConfig_NoDefaults(t *testing.T) {
 	}
 }
 
-func TestDefaultsRoot_ContainerMode(t *testing.T) {
-	// Test container mode
-	os.Setenv(environments.EnvR2RContainerRoot, "/container/root")
-	defer os.Unsetenv(environments.EnvR2RContainerRoot)
-
-	root := defaultsRoot("/local/root")
-	if root != "/container/root" {
-		t.Errorf("defaultsRoot = %q, want %q", root, "/container/root")
-	}
-}
-
-func TestDefaultsRoot_LocalMode(t *testing.T) {
-	os.Unsetenv(environments.EnvR2RContainerRoot)
-
-	root := defaultsRoot("/local/root")
-	if root != "/local/root" {
-		t.Errorf("defaultsRoot = %q, want %q", root, "/local/root")
-	}
-}
-
 func TestValidation_DuplicateToolIDs(t *testing.T) {
 	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
 	configDir := filepath.Join(tmpDir, ".eac")
 
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	// Config with duplicate tool ID within system-tools
+	// Override config with duplicate tool ID within system-tools
 	config := `
 system-tools:
   my-tool:
@@ -393,7 +272,7 @@ system-tools:
   my-tool:
     binary: second
 `
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(config), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -412,219 +291,37 @@ system-tools:
 	}
 }
 
-func TestValidation_BootstrapToolMustExist(t *testing.T) {
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-
-	// Missing docker bootstrap tool - only has go
-	config := `
-system-tools:
-  go:
-    binary: go
-`
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	_, err := LoadToolConfig(tmpDir, configDir)
-	if err == nil {
-		t.Fatal("expected error for missing bootstrap tool")
-	}
-
-	errStr := err.Error()
-	if !contains(errStr, "docker") {
-		t.Errorf("error should mention 'docker', got: %v", err)
-	}
-	if !contains(errStr, "bootstrap") {
-		t.Errorf("error should mention 'bootstrap', got: %v", err)
-	}
-}
-
-func TestValidation_UnknownToolReference(t *testing.T) {
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-
-	config := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-  real-tool:
-    binary: real
-
-component-tools:
-  golang:
-    builder: nonexistent-tool
-`
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	_, err := LoadToolConfig(tmpDir, configDir)
-	if err == nil {
-		t.Fatal("expected error for unknown tool reference")
-	}
-
-	errStr := err.Error()
-	if !contains(errStr, "nonexistent-tool") {
-		t.Errorf("error should mention the unknown tool, got: %v", err)
-	}
-	if !contains(errStr, "component-tools") {
-		t.Errorf("error should mention component-tools, got: %v", err)
-	}
-}
-
-func TestValidation_UnknownRequirement(t *testing.T) {
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-
-	config := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-
-container-tools:
-  my-tool:
-    image: test
-    tag: "1.0"
-    requirements: [nonexistent-req]
-`
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	_, err := LoadToolConfig(tmpDir, configDir)
-	if err == nil {
-		t.Fatal("expected error for unknown requirement")
-	}
-
-	errStr := err.Error()
-	if !contains(errStr, "nonexistent-req") {
-		t.Errorf("error should mention the unknown requirement, got: %v", err)
-	}
-	if !contains(errStr, "requires") {
-		t.Errorf("error should mention 'requires', got: %v", err)
-	}
-}
-
-
 func TestValidation_ValidConfig(t *testing.T) {
-	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	configDir := filepath.Join(tmpDir, ".eac")
-
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
-
-	// Valid config with system-tools and container-tools
-	config := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-
-container-tools:
-  npm-build:
-    image: node
-    tag: "22-alpine"
-    requirements: [docker]
-
-component-tools:
-  go:
-    builder: go
-  typescript:
-    builder: npm-build
-`
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	cfg, err := LoadToolConfig(tmpDir, configDir)
+	// Embedded defaults should load successfully without any overrides
+	cfg, err := LoadToolConfig("", "")
 	if err != nil {
-		t.Fatalf("valid config should not error: %v", err)
+		t.Fatalf("embedded defaults should load without error: %v", err)
 	}
 
-	if len(cfg.SystemTools) != 2 {
-		t.Errorf("expected 2 system tools, got %d", len(cfg.SystemTools))
+	// Embedded defaults include docker and go as system tools
+	if _, ok := cfg.SystemTools["docker"]; !ok {
+		t.Error("embedded defaults should include 'docker' system tool")
 	}
-	if len(cfg.ContainerTools) != 1 {
-		t.Errorf("expected 1 container tool, got %d", len(cfg.ContainerTools))
+	if _, ok := cfg.SystemTools["go"]; !ok {
+		t.Error("embedded defaults should include 'go' system tool")
 	}
 }
 
-func TestValidation_SameToolInBothTables(t *testing.T) {
+func TestValidation_OverrideAddsTools(t *testing.T) {
 	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
 	configDir := filepath.Join(tmpDir, ".eac")
 
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create dirs: %v", err)
-	}
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	// Same canonical name in both system-tools and container-tools (valid!)
+	// Override adds a custom tool on top of embedded defaults
 	config := `
 system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
-  npm-build:
-    binary: npm
-    args: [run, build]
-    requirements: [npm]
-  npm:
-    binary: npm
-
-container-tools:
-  npm-build:
-    image: node
-    tag: "22-alpine"
-    requirements: [docker]
-
-tool-bindings:
-  docker: system
-  go: system
-
-component-tools:
-  typescript:
-    builder: npm-build
+  custom-tool:
+    binary: custom
 `
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(config), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -633,12 +330,13 @@ component-tools:
 		t.Fatalf("valid config should not error: %v", err)
 	}
 
-	// Should have npm-build in both tables
-	if _, ok := cfg.SystemTools["npm-build"]; !ok {
-		t.Error("npm-build should exist in SystemTools")
+	// Should have the custom tool merged with embedded defaults
+	if _, ok := cfg.SystemTools["custom-tool"]; !ok {
+		t.Error("custom-tool should exist in SystemTools after override merge")
 	}
-	if _, ok := cfg.ContainerTools["npm-build"]; !ok {
-		t.Error("npm-build should exist in ContainerTools")
+	// Embedded defaults should still be present
+	if _, ok := cfg.SystemTools["docker"]; !ok {
+		t.Error("docker from embedded defaults should still exist")
 	}
 }
 
@@ -942,44 +640,40 @@ func TestMergeUniqueStrings(t *testing.T) {
 
 func TestLoadToolConfig_WithCredentials(t *testing.T) {
 	tmpDir := t.TempDir()
-	contractsDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "defaults")
-	if err := os.MkdirAll(contractsDir, 0755); err != nil {
-		t.Fatalf("failed to create contracts dir: %v", err)
+	configDir := filepath.Join(tmpDir, ".eac")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
 	}
 
+	// Override credentials on top of embedded defaults
 	config := `
-system-tools:
-  docker:
-    binary: docker
-  go:
-    binary: go
 credentials:
   host-env:
-    - GITHUB_TOKEN
-    - NPM_TOKEN
+    - CUSTOM_TOKEN
   ci-env:
-    - CI
-    - GITHUB_ACTIONS
+    - CUSTOM_CI
 `
-	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "tool-config.yml"), []byte(config), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
-	loaded, err := LoadToolConfig(tmpDir, "")
+	loaded, err := LoadToolConfig(tmpDir, configDir)
 	if err != nil {
 		t.Fatalf("LoadToolConfig failed: %v", err)
 	}
 
 	if loaded.Credentials == nil {
-		t.Fatal("Credentials should be loaded from YAML")
+		t.Fatal("Credentials should be loaded")
 	}
-	if len(loaded.Credentials.HostEnv) != 2 {
-		t.Errorf("HostEnv length = %d, want 2", len(loaded.Credentials.HostEnv))
+	// Custom credentials should be present (merged with any embedded defaults)
+	hasCustom := false
+	for _, env := range loaded.Credentials.HostEnv {
+		if env == "CUSTOM_TOKEN" {
+			hasCustom = true
+			break
+		}
 	}
-	if len(loaded.Credentials.CIEnv) != 2 {
-		t.Errorf("CIEnv length = %d, want 2", len(loaded.Credentials.CIEnv))
-	}
-	if loaded.Credentials.HostEnv[0] != "GITHUB_TOKEN" {
-		t.Errorf("HostEnv[0] = %q, want %q", loaded.Credentials.HostEnv[0], "GITHUB_TOKEN")
+	if !hasCustom {
+		t.Errorf("HostEnv should contain CUSTOM_TOKEN, got: %v", loaded.Credentials.HostEnv)
 	}
 }

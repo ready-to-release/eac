@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // TestEacCoreFeatures runs all core Gherkin specifications.

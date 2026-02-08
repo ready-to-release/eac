@@ -6,7 +6,7 @@ import (
 
 func TestDerivedCounts_Empty(t *testing.T) {
 	m := Model{
-		uowStates: make(map[string]*UoWState),
+		Execution: ExecutionState{UoWStates: make(map[string]*UoWState)},
 	}
 
 	counts := m.DeriveCounts()
@@ -33,11 +33,11 @@ func TestDerivedCounts_Empty(t *testing.T) {
 
 func TestDerivedCounts_AllPending(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:c1": {Status: UoWPending, Weight: 1},
 			"m1:c2": {Status: UoWPending, Weight: 1},
 			"m2:c1": {Status: UoWPending, Weight: 1},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -55,11 +55,11 @@ func TestDerivedCounts_AllPending(t *testing.T) {
 
 func TestDerivedCounts_WeightAwareRunning(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:c1": {Status: UoWRunning, Weight: 5},
 			"m1:c2": {Status: UoWRunning, Weight: 3},
 			"m2:c1": {Status: UoWComplete, Weight: 2},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -78,10 +78,10 @@ func TestDerivedCounts_WeightAwareRunning(t *testing.T) {
 
 func TestDerivedCounts_ZeroWeightDefaults(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
-			"m1:c1": {Status: UoWRunning, Weight: 0}, // Zero weight should default to 1
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
+			"m1:c1": {Status: UoWRunning, Weight: 0},  // Zero weight should default to 1
 			"m1:c2": {Status: UoWRunning, Weight: -1}, // Negative weight should default to 1
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -94,14 +94,14 @@ func TestDerivedCounts_ZeroWeightDefaults(t *testing.T) {
 
 func TestDerivedCounts_MixedStates(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:go":     {Status: UoWComplete, Weight: 1},
 			"m1:docker": {Status: UoWComplete, Weight: 2},
 			"m2:go":     {Status: UoWRunning, Weight: 3},
 			"m2:docker": {Status: UoWPending, Weight: 1},
 			"m3:go":     {Status: UoWSkipped, Weight: 1},
 			"m3:docker": {Status: UoWFailed, Weight: 1},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -128,11 +128,11 @@ func TestDerivedCounts_MixedStates(t *testing.T) {
 
 func TestDerivedCounts_AllComplete(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:c1": {Status: UoWComplete, Weight: 1},
 			"m1:c2": {Status: UoWComplete, Weight: 1},
 			"m2:c1": {Status: UoWComplete, Weight: 1},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -150,10 +150,10 @@ func TestDerivedCounts_AllComplete(t *testing.T) {
 
 func TestDerivedCounts_AllCached(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:c1": {Status: UoWSkipped, Weight: 1},
 			"m1:c2": {Status: UoWSkipped, Weight: 1},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -168,13 +168,13 @@ func TestDerivedCounts_AllCached(t *testing.T) {
 
 func TestDerivedCounts_Completed(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
+		Execution: ExecutionState{UoWStates: map[string]*UoWState{
 			"m1:c1": {Status: UoWComplete, Weight: 1},
 			"m1:c2": {Status: UoWSkipped, Weight: 1},
 			"m2:c1": {Status: UoWFailed, Weight: 1},
 			"m2:c2": {Status: UoWRunning, Weight: 1},
 			"m3:c1": {Status: UoWPending, Weight: 1},
-		},
+		}},
 	}
 
 	counts := m.DeriveCounts()
@@ -226,7 +226,7 @@ func TestDerivedCounts_ProgressPercent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := Model{uowStates: tt.states}
+			m := Model{Execution: ExecutionState{UoWStates: tt.states}}
 			counts := m.DeriveCounts()
 			got := counts.ProgressPercent()
 

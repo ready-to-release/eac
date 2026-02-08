@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -20,11 +21,7 @@ import (
 )
 
 func init() {
-	h := &PDFHandler{}
-	// Register in builders registry (legacy code paths)
-	RegisterHandler(h)
-	// Register in tool bridge (for component resolver)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&PDFHandler{})
 }
 
 // PDFHandler is a unified handler for docs-pdf component type.
@@ -45,7 +42,7 @@ func (h *PDFHandler) IsContainer() bool { return true }
 func (h *PDFHandler) IsHostInstalled() bool { return false }
 
 // ValidateModule checks if a module has valid book configuration for PDF generation.
-func (h *PDFHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *PDFHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	// Check Docker availability
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
@@ -86,12 +83,12 @@ func (h *PDFHandler) ValidateModule(module interfaces.ModuleContractPort, worksp
 
 // ListArtifacts returns artifact paths that would be produced.
 // PDFs are output to site/pdf/ directory by mkdocs-exporter.
-func (h *PDFHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *PDFHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/pdf/"}
 }
 
 // Build executes the unified PDF build: preprocessing + container rendering.
-func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	startTime := time.Now()
 
 	concrete := adapters.UnwrapModule(module)
@@ -169,9 +166,10 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 		return 1
 	}
 
-	// Run preprocessing pipeline (pdfMode=true for link normalization)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, true)
-	if err := preprocessor.Preprocess(); err != nil {
+	// Run preprocessing pipeline (PDF mode for link normalization)
+	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, docprep.PDFMode{ThemeName: "dark"})
+	pctx.Moniker = concrete.Moniker
+	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return 1
 	}
@@ -184,7 +182,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 
 	pdfConcurrency := environments.GetPDFExportConcurrency()
 	pageLimit := opts.ArtifactsMode.PDFPageLimit()
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
 		BookTitle:       book.Title,
@@ -195,7 +193,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 		PDFConcurrency:  pdfConcurrency,
 		PageLimit:       pageLimit,
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
@@ -296,7 +294,7 @@ func (h *PDFHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, 
 // 2. Strip "-pdf" suffix if present (e.g., "tutorials-pdf" -> "tutorials")
 // 3. Use component name as book name
 // 4. Default to "site" if component name is empty
-func resolveBookNameForPDF(module interfaces.ModuleContractPort, componentName string) string {
+func resolveBookNameForPDF(module core.ModuleContractPort, componentName string) string {
 	if componentName == "" {
 		return "site"
 	}

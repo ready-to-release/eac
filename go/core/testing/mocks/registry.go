@@ -3,19 +3,19 @@ package mocks
 import (
 	"sort"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// MockModuleRegistry implements interfaces.ModuleRegistryPort for testing.
+// MockModuleRegistry implements core.ModuleRegistryPort for testing.
 type MockModuleRegistry struct {
-	modules       map[string]interfaces.ModuleContractPort
+	modules       map[string]core.ModuleContractPort
 	workspaceRoot string
 }
 
 // NewMockModuleRegistry creates a new MockModuleRegistry.
 func NewMockModuleRegistry() *MockModuleRegistry {
 	return &MockModuleRegistry{
-		modules:       make(map[string]interfaces.ModuleContractPort),
+		modules:       make(map[string]core.ModuleContractPort),
 		workspaceRoot: "/mock/workspace",
 	}
 }
@@ -27,38 +27,38 @@ func (m *MockModuleRegistry) WithWorkspaceRoot(root string) *MockModuleRegistry 
 }
 
 // WithModule adds a module to the registry.
-func (m *MockModuleRegistry) WithModule(module interfaces.ModuleContractPort) *MockModuleRegistry {
+func (m *MockModuleRegistry) WithModule(module core.ModuleContractPort) *MockModuleRegistry {
 	m.modules[module.GetMoniker()] = module
 	return m
 }
 
 // AddModule adds a module to the registry (for compatibility with existing tests).
-func (m *MockModuleRegistry) AddModule(module interfaces.ModuleContractPort) {
+func (m *MockModuleRegistry) AddModule(module core.ModuleContractPort) {
 	m.modules[module.GetMoniker()] = module
 }
 
-// Get implements interfaces.ModuleRegistryPort.
-func (m *MockModuleRegistry) Get(moniker string) (interfaces.ModuleContractPort, bool) {
+// Get implements core.ModuleRegistryPort.
+func (m *MockModuleRegistry) Get(moniker string) (core.ModuleContractPort, bool) {
 	mod, ok := m.modules[moniker]
 	return mod, ok
 }
 
-// Has implements interfaces.ModuleRegistryPort.
+// Has implements core.ModuleRegistryPort.
 func (m *MockModuleRegistry) Has(moniker string) bool {
 	_, ok := m.modules[moniker]
 	return ok
 }
 
-// All implements interfaces.ModuleRegistryPort.
-func (m *MockModuleRegistry) All() []interfaces.ModuleContractPort {
-	result := make([]interfaces.ModuleContractPort, 0, len(m.modules))
+// All implements core.ModuleRegistryPort.
+func (m *MockModuleRegistry) All() []core.ModuleContractPort {
+	result := make([]core.ModuleContractPort, 0, len(m.modules))
 	for _, mod := range m.modules {
 		result = append(result, mod)
 	}
 	return result
 }
 
-// AllMonikers implements interfaces.ModuleRegistryPort.
+// AllMonikers implements core.ModuleRegistryPort.
 func (m *MockModuleRegistry) AllMonikers() []string {
 	result := make([]string, 0, len(m.modules))
 	for moniker := range m.modules {
@@ -68,14 +68,14 @@ func (m *MockModuleRegistry) AllMonikers() []string {
 	return result
 }
 
-// Count implements interfaces.ModuleRegistryPort.
+// Count implements core.ModuleRegistryPort.
 func (m *MockModuleRegistry) Count() int {
 	return len(m.modules)
 }
 
-// FilterByComponent implements interfaces.ModuleRegistryPort.
-func (m *MockModuleRegistry) FilterByComponent(componentType string) []interfaces.ModuleContractPort {
-	var result []interfaces.ModuleContractPort
+// FilterByComponent implements core.ModuleRegistryPort.
+func (m *MockModuleRegistry) FilterByComponent(componentType string) []core.ModuleContractPort {
+	var result []core.ModuleContractPort
 	for _, mod := range m.modules {
 		if mod.HasComponent(componentType) {
 			result = append(result, mod)
@@ -84,10 +84,10 @@ func (m *MockModuleRegistry) FilterByComponent(componentType string) []interface
 	return result
 }
 
-// FindModulesForFile implements interfaces.ModuleRegistryPort.
-func (m *MockModuleRegistry) FindModulesForFile(filePath string) []interfaces.ModuleContractPort {
+// FindModulesForFile implements core.ModuleRegistryPort.
+func (m *MockModuleRegistry) FindModulesForFile(filePath string) []core.ModuleContractPort {
 	// Simple implementation: check if file path starts with any component root
-	var result []interfaces.ModuleContractPort
+	var result []core.ModuleContractPort
 	for _, mod := range m.modules {
 		for _, root := range mod.GetComponentRoots() {
 			if len(filePath) >= len(root) && filePath[:len(root)] == root {
@@ -99,17 +99,17 @@ func (m *MockModuleRegistry) FindModulesForFile(filePath string) []interfaces.Mo
 	return result
 }
 
-// WorkspaceRoot implements interfaces.ModuleRegistryPort.
+// WorkspaceRoot implements core.ModuleRegistryPort.
 func (m *MockModuleRegistry) WorkspaceRoot() string {
 	return m.workspaceRoot
 }
 
 // Interface compliance check
-var _ interfaces.ModuleRegistryPort = (*MockModuleRegistry)(nil)
+var _ core.ModuleRegistryPort = (*MockModuleRegistry)(nil)
 
-// MockModuleReport implements interfaces.ModuleReportPort for testing.
+// MockModuleReport implements core.ModuleReportPort for testing.
 type MockModuleReport struct {
-	registry interfaces.ModuleRegistryPort
+	registry core.ModuleRegistryPort
 	errors   []error
 }
 
@@ -121,7 +121,7 @@ func NewMockModuleReport() *MockModuleReport {
 }
 
 // WithRegistry sets the module registry.
-func (m *MockModuleReport) WithRegistry(registry interfaces.ModuleRegistryPort) *MockModuleReport {
+func (m *MockModuleReport) WithRegistry(registry core.ModuleRegistryPort) *MockModuleReport {
 	m.registry = registry
 	return m
 }
@@ -132,15 +132,15 @@ func (m *MockModuleReport) WithErrors(errs ...error) *MockModuleReport {
 	return m
 }
 
-// Registry implements interfaces.ModuleReportPort.
-func (m *MockModuleReport) Registry() interfaces.ModuleRegistryPort {
+// Registry implements core.ModuleReportPort.
+func (m *MockModuleReport) Registry() core.ModuleRegistryPort {
 	return m.registry
 }
 
-// Errors implements interfaces.ModuleReportPort.
+// Errors implements core.ModuleReportPort.
 func (m *MockModuleReport) Errors() []error {
 	return m.errors
 }
 
 // Interface compliance check
-var _ interfaces.ModuleReportPort = (*MockModuleReport)(nil)
+var _ core.ModuleReportPort = (*MockModuleReport)(nil)

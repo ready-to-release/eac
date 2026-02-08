@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProfileWrapper_ImplementsPort(t *testing.T) {
-	var _ security.ProfilePort = (*ProfileWrapper)(nil)
+	var _ scanner.ProfilePort = (*ProfileWrapper)(nil)
 }
 
 func TestNewProfileWrapper(t *testing.T) {

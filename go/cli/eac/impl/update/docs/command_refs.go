@@ -1,16 +1,16 @@
 package docs
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 
+	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
-	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/paths"
+	"gopkg.in/yaml.v3"
 )
 
 // CommandRefsResult holds the result of a command-refs update operation.
@@ -39,14 +39,9 @@ func runCommandRefsUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writ
 		return result, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Find commands binary
-	cmdBinary := findCommandsBinary(repoRoot)
-	if cmdBinary == "" {
-		return result, fmt.Errorf("commands binary not found. Run 'go build ./go/cli/eac' first")
-	}
-
-	// Scan current state
-	scanResult, err := docsync.ScanCommandDocs(cmdBinary, repoRoot, cfg.Commands)
+	// Scan current state using EAC adapter
+	commandSource := makeCommandSource(repoRoot)
+	scanResult, err := docsync.ScanCommandDocs(commandSource, repoRoot, cfg.Commands)
 	if err != nil {
 		return result, fmt.Errorf("scanning command docs: %w", err)
 	}
@@ -130,46 +125,25 @@ func runCommandRefsUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writ
 	return result, nil
 }
 
-// findCommandsBinary locates the commands binary.
-// Checks multiple locations in order of preference.
-func findCommandsBinary(repoRoot string) string {
-	// Check environment variable first
-	if envPath := os.Getenv(environments.EnvCommandsPath); envPath != "" {
-		return envPath
-	}
-
-	// Standard location
-	cmdBinary := paths.CommandsBinaryPath(repoRoot)
-	if _, err := os.Stat(cmdBinary); err == nil {
-		return cmdBinary
-	}
-
-	// Try with .exe extension on Windows
-	if runtime.GOOS == "windows" {
-		cmdBinaryExe := cmdBinary + ".exe"
-		if _, err := os.Stat(cmdBinaryExe); err == nil {
-			return cmdBinaryExe
+// makeCommandSource creates a CommandSource that uses the EAC adapter.
+func makeCommandSource(repoRoot string) docsync.CommandSource {
+	return func() ([]docsync.CommandInfo, error) {
+		port := eac.New(repoRoot)
+		result, err := port.Execute(context.Background(), []string{"get", "valid-commands"}, &eac.ExecConfig{
+			WorkspaceRoot: repoRoot,
+			FullEnv:       append(os.Environ(), "NO_COLOR=1"),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to run get valid-commands: %w", err)
 		}
-	}
-
-	// Fallback locations
-	candidates := []string{
-		filepath.Join(repoRoot, "out", "tools", "eac"),
-	}
-
-	// Add .exe variants on Windows
-	if runtime.GOOS == "windows" {
-		candidates = append(candidates,
-			filepath.Join(repoRoot, "out", "tools", "eac.exe"),
-		)
-	}
-
-	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+		if !result.Success() {
+			return nil, fmt.Errorf("failed to run get valid-commands: %s", string(result.Stderr))
 		}
+		var commands []docsync.CommandInfo
+		if err := yaml.Unmarshal(result.Stdout, &commands); err != nil {
+			return nil, fmt.Errorf("failed to parse valid-commands output: %w", err)
+		}
+		return commands, nil
 	}
-
-	return ""
 }
 

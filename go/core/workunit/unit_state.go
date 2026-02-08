@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // UnitState represents the cached state of a unit of work.
@@ -27,12 +29,12 @@ type InvalidationRule struct {
 	OnFailure          bool // Previous run failed
 }
 
-// DefaultRules maps each context to its default invalidation rule.
-var DefaultRules = map[Context]InvalidationRule{
-	ContextBuild: {OnSourceChange: true, OnFailure: true},
-	ContextTest:  {OnSourceChange: true, OnBuildChange: true, OnFailure: true},
-	ContextLint:  {OnSourceChange: true, OnFailure: true},
-	ContextScan:  {OnSourceChange: true, OnBuildChange: true, OnFailure: true},
+// DefaultRules maps each action type to its default invalidation rule.
+var DefaultRules = map[core.ActionType]InvalidationRule{
+	core.ActionBuild: {OnSourceChange: true, OnFailure: true},
+	core.ActionTest:  {OnSourceChange: true, OnBuildChange: true, OnFailure: true},
+	core.ActionLint:  {OnSourceChange: true, OnFailure: true},
+	core.ActionScan:  {OnSourceChange: true, OnBuildChange: true, OnFailure: true},
 }
 
 // IntegrationTestRule is the invalidation rule for integration tests.
@@ -91,7 +93,7 @@ func GetRuleForTestSet(ts TestSet) InvalidationRule {
 	if ts == TestSetIntegration {
 		return IntegrationTestRule
 	}
-	return DefaultRules[ContextTest]
+	return DefaultRules[core.ActionTest]
 }
 
 // ComputeDependencyBuildHash computes a hash of all transitive dependency BuildIDs.

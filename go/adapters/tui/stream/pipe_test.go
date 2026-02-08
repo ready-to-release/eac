@@ -4,7 +4,7 @@ package stream
 import (
 	"testing"
 
-	tuicontract "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	tuicontract "github.com/ready-to-release/eac/contracts/tui/0.1.0"
 )
 
 func TestClassifyLine(t *testing.T) {

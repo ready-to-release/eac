@@ -13,7 +13,7 @@ type Moniker string
 
 // ParsedMoniker contains the parsed components of a moniker.
 type ParsedMoniker struct {
-	Context   string // e.g., "build", "test", "lint", "scan"
+	Action    string // e.g., "build", "test", "lint", "scan"
 	Module    string // e.g., "core", "eac-cli"
 	Component string // e.g., "go", "docker"
 	Tool      string // e.g., "go", "gotest", "trivy-vuln"
@@ -31,7 +31,7 @@ func (m Moniker) Parse() ParsedMoniker {
 
 	switch len(parts) {
 	case 4:
-		pm.Context = parts[0]
+		pm.Action = parts[0]
 		pm.Module = parts[1]
 		pm.Component = parts[2]
 		pm.Tool = parts[3]

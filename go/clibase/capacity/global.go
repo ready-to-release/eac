@@ -14,11 +14,16 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/google/uuid"
 	"github.com/ready-to-release/eac/go/clibase/locktracker"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
+var log = logging.C()
+
 const (
-	stateDir      = "out"
+	// semaphoreDir is the directory for cross-process coordination files.
+	// Located under .cache/eac/semaphores/ to consolidate all caches.
+	stateDir      = ".cache/eac/semaphores"
 	stateFile     = ".global-capacity.json"
 	stateLockFile = ".global-capacity.lock"
 )
@@ -359,8 +364,14 @@ func (gs *GlobalSemaphore) readState() *State {
 
 func (gs *GlobalSemaphore) writeState(state *State) {
 	path := filepath.Join(gs.workspaceRoot, stateDir, gs.getStateFileName())
-	data, _ := json.Marshal(state)
-	os.WriteFile(path, data, 0o644)
+	data, err := json.Marshal(state)
+	if err != nil {
+		log.Warnf("capacity: failed to marshal state: %v", err)
+		return
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		log.Warnf("capacity: failed to write state: %v", err)
+	}
 }
 
 func (gs *GlobalSemaphore) updateRegistry(used, waitingDelta int64) {

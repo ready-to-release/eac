@@ -2,13 +2,13 @@ package adapters
 
 import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Compile-time interface check.
-var _ interfaces.ModuleContractPort = (*ModuleContractAdapter)(nil)
+var _ core.ModuleContractPort = (*ModuleContractAdapter)(nil)
 
-// ModuleContractAdapter wraps a *modules.ModuleContract to implement interfaces.ModuleContractPort.
+// ModuleContractAdapter wraps a *modules.ModuleContract to implement core.ModuleContractPort.
 type ModuleContractAdapter struct {
 	module *modules.ModuleContract
 }
@@ -122,7 +122,7 @@ func (a *ModuleContractAdapter) GetContentHash() (string, error) {
 }
 
 // AdaptModule is a convenience function to wrap a module contract.
-func AdaptModule(m *modules.ModuleContract) interfaces.ModuleContractPort {
+func AdaptModule(m *modules.ModuleContract) core.ModuleContractPort {
 	if m == nil {
 		return nil
 	}
@@ -130,11 +130,11 @@ func AdaptModule(m *modules.ModuleContract) interfaces.ModuleContractPort {
 }
 
 // AdaptModules wraps a slice of module domain.
-func AdaptModules(modules []*modules.ModuleContract) []interfaces.ModuleContractPort {
+func AdaptModules(modules []*modules.ModuleContract) []core.ModuleContractPort {
 	if modules == nil {
 		return nil
 	}
-	result := make([]interfaces.ModuleContractPort, len(modules))
+	result := make([]core.ModuleContractPort, len(modules))
 	for i, m := range modules {
 		result[i] = AdaptModule(m)
 	}
@@ -144,7 +144,7 @@ func AdaptModules(modules []*modules.ModuleContract) []interfaces.ModuleContract
 // UnwrapModule extracts the concrete ModuleContract from a port interface.
 // Returns nil if the port is nil or not backed by a ModuleContractAdapter.
 // Use this in native handlers that need access to methods not in the port interface.
-func UnwrapModule(port interfaces.ModuleContractPort) *modules.ModuleContract {
+func UnwrapModule(port core.ModuleContractPort) *modules.ModuleContract {
 	if port == nil {
 		return nil
 	}

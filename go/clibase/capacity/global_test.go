@@ -89,6 +89,19 @@ func TestGlobalSemaphore_CloseIdempotent(t *testing.T) {
 	gs.Close()
 }
 
+func TestWriteState_LogsErrorOnBadPath(t *testing.T) {
+	// Point workspaceRoot at a nonexistent directory so WriteFile fails
+	gs := &GlobalSemaphore{
+		workspaceRoot: filepath.Join(t.TempDir(), "nonexistent"),
+		allocations:   make(map[string]int),
+	}
+
+	state := &State{Allocations: make(map[string]*Allocation)}
+
+	// Should not panic - errors are logged, not propagated
+	gs.writeState(state)
+}
+
 func TestGlobalSemaphore_AcquireRelease(t *testing.T) {
 	tmpDir := t.TempDir()
 

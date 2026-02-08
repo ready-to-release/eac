@@ -97,7 +97,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 		{
 			name: "explicit changelog with CalVer module",
 			contract: BaseContract{
-				Moniker: "mcp-server",
+				Moniker: "eac-mcp-server",
 				Versioning: &ModuleVersioning{
 					Scheme:    "CalVer",
 					Changelog: "go/eac/mcp/commands/CHANGELOG.md",
@@ -108,12 +108,12 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 		{
 			name: "SemVer module with special characters in moniker",
 			contract: BaseContract{
-				Moniker: "mcp-server",
+				Moniker: "eac-mcp-server",
 				Versioning: &ModuleVersioning{
 					Scheme: "SemVer",
 				},
 			},
-			want: "release/mcp-server/CHANGELOG.md",
+			want: "release/eac-mcp-server/CHANGELOG.md",
 		},
 	}
 

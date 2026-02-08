@@ -10,16 +10,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
+	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	h := &MermaidRenderHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&MermaidRenderHandler{})
 }
 
 // MermaidRenderHandler renders mermaid diagrams from markdown sources via
@@ -36,7 +35,7 @@ func (h *MermaidRenderHandler) IsContainer() bool { return true }
 
 func (h *MermaidRenderHandler) IsHostInstalled() bool { return false }
 
-func (h *MermaidRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *MermaidRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -46,12 +45,12 @@ func (h *MermaidRenderHandler) ValidateModule(module interfaces.ModuleContractPo
 	return nil
 }
 
-func (h *MermaidRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *MermaidRenderHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"mermaid/"}
 }
 
 func (h *MermaidRenderHandler) Build(
-	module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
+	module core.ModuleContractPort, workspaceRoot, outputDir string,
 	logWriter io.Writer, opts BuildOptions,
 ) int {
 	Logln(logWriter, "=== Rendering mermaid diagrams via container ===")
@@ -75,101 +74,58 @@ func (h *MermaidRenderHandler) Build(
 
 	Logln(logWriter, "Found %d mermaid diagram(s) in %d file(s)", len(allBlocks), len(blocksByFile))
 
-	// 2. Ensure directories exist
-	_ = os.MkdirAll(cacheDir, 0o755)
-	_ = os.MkdirAll(outputMermaidDir, 0o755)
-
-	// 3. Check cache for each block
-	var statuses []mermaidBlockStatus
-	var toRender []mermaidBlockStatus
-	cacheHits := 0
-
+	// 2. Convert to itemcache.Item slice and build lookup map
+	blocksByKey := make(map[string]diagrams.MermaidBlock, len(allBlocks))
+	items := make([]itemcache.Item, 0, len(allBlocks))
 	for _, block := range allBlocks {
-		cleanContent := books.StripSizeDirective(block.Content)
-		hash := books.HashContent(cleanContent)
-
-		// Cache file: .cache/eac/mermaid/{identifier}_{idx}_{hash}.svg
+		cleanContent := diagrams.StripSizeDirective(block.Content)
+		hash := diagrams.HashContent(cleanContent)
 		relPath, _ := filepath.Rel(docsDir, block.SourceFile)
 		identifier := paths.SanitizeForCacheName(relPath)
 		cacheFilename := fmt.Sprintf("%s_%d_%s.svg", identifier, block.BlockIndex, hash)
-		cachePath := filepath.Join(cacheDir, cacheFilename)
+		key := fmt.Sprintf("%s:%d", filepath.ToSlash(relPath), block.BlockIndex)
 
-		// Output path
-		outputPath := filepath.Join(outputMermaidDir, block.Filename)
-
-		bs := mermaidBlockStatus{
-			Block:      block,
-			CachePath:  cachePath,
-			OutputPath: outputPath,
+		item := itemcache.Item{
+			Key:           key,
+			ContentHash:   hash,
+			CacheFilename: cacheFilename,
+			OutputRelPath: block.Filename,
 		}
-
-		if _, statErr := os.Stat(cachePath); statErr == nil && !opts.ForceRebuild {
-			bs.Cached = true
-			cacheHits++
-		} else {
-			toRender = append(toRender, bs)
-		}
-
-		statuses = append(statuses, bs)
+		items = append(items, item)
+		blocksByKey[key] = block
 	}
 
-	// 4. Render cache misses via mermaid-render tool
-	if len(toRender) > 0 {
-		Logln(logWriter, "Rendering %d diagram(s) (%d cached)...", len(toRender), cacheHits)
-
-		rendered, renderErr := renderMermaidBatchForBuilder(toRender, workspaceRoot, cacheDir, logWriter)
-		if renderErr != nil {
-			Logln(logWriter, "Error rendering mermaid diagrams: %v", renderErr)
-			return 1
-		}
-		Logln(logWriter, "Rendered %d diagram(s) successfully", rendered)
-	} else {
-		Logln(logWriter, "All %d diagrams cached", cacheHits)
+	// 3. Build function renders misses via mermaid-render container
+	buildFunc := func(misses []itemcache.Item, dir string) (int, error) {
+		return h.renderMisses(misses, blocksByKey, workspaceRoot, dir, logWriter)
 	}
 
-	// 5. Copy all from cache to output
-	copied := 0
-	for _, s := range statuses {
-		if _, statErr := os.Stat(s.CachePath); statErr != nil {
-			Logln(logWriter, "Error: expected cached SVG not found: %s", s.CachePath)
-			return 1
-		}
-		if cpErr := CopyFile(s.CachePath, s.OutputPath); cpErr != nil {
-			Logln(logWriter, "Error copying mermaid SVG: %v", cpErr)
-			return 1
-		}
-		copied++
+	// 4. Execute with cache
+	cache := itemcache.New(cacheDir)
+	result, err := cache.Execute(items, outputMermaidDir, buildFunc, opts.ForceRebuild)
+	if err != nil {
+		Logln(logWriter, "Error: %v", err)
+		return 1
 	}
 
-	// 6. Write index manifest mapping source file + block index -> SVG filename
+	// 5. Write index manifest
 	manifest := buildMermaidIndex(allBlocks, docsDir)
 	manifestPath := filepath.Join(outputMermaidDir, "mermaid-index.json")
 	manifestData, _ := json.MarshalIndent(manifest, "", "  ")
 	_ = os.WriteFile(manifestPath, manifestData, 0o644)
 
-	hitRate := 0.0
-	if len(allBlocks) > 0 {
-		hitRate = float64(cacheHits) / float64(len(allBlocks)) * 100
-	}
-	Logln(logWriter, "Mermaid: %d cached, %d rendered (%.1f%% hit rate)", cacheHits, len(toRender), hitRate)
-	Logln(logWriter, "Output: %s (%d SVGs, 1 index)", outputMermaidDir, copied)
+	Logln(logWriter, "Mermaid: %d cached, %d rendered (%.1f%% hit rate)",
+		result.CacheHits, result.Built, result.HitRate)
+	Logln(logWriter, "Output: %s (%d SVGs, 1 index)", outputMermaidDir, result.TotalItems)
 
 	return 0
 }
 
-// mermaidBlockStatus tracks cache state for a mermaid block during builder execution.
-type mermaidBlockStatus struct {
-	Block      books.MermaidBlock
-	Cached     bool
-	CachePath  string
-	OutputPath string
-}
-
 // scanDocsForMermaidBlocks scans all markdown files under docsDir for mermaid blocks.
 // Returns all blocks, grouped by file.
-func scanDocsForMermaidBlocks(docsDir string) ([]books.MermaidBlock, map[string][]books.MermaidBlock, error) {
-	var allBlocks []books.MermaidBlock
-	blocksByFile := make(map[string][]books.MermaidBlock)
+func scanDocsForMermaidBlocks(docsDir string) ([]diagrams.MermaidBlock, map[string][]diagrams.MermaidBlock, error) {
+	var allBlocks []diagrams.MermaidBlock
+	blocksByFile := make(map[string][]diagrams.MermaidBlock)
 
 	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -187,7 +143,7 @@ func scanDocsForMermaidBlocks(docsDir string) ([]books.MermaidBlock, map[string]
 			return fmt.Errorf("reading %s: %w", path, readErr)
 		}
 
-		blocks := books.ExtractMermaidBlocks(string(content), path, docsDir)
+		blocks := diagrams.ExtractMermaidBlocks(string(content), path, docsDir)
 		if len(blocks) > 0 {
 			blocksByFile[path] = blocks
 			allBlocks = append(allBlocks, blocks...)
@@ -212,7 +168,7 @@ type MermaidIndexEntry struct {
 }
 
 // buildMermaidIndex creates the index mapping source blocks to SVG files.
-func buildMermaidIndex(blocks []books.MermaidBlock, docsDir string) MermaidIndex {
+func buildMermaidIndex(blocks []diagrams.MermaidBlock, docsDir string) MermaidIndex {
 	entries := make([]MermaidIndexEntry, 0, len(blocks))
 	for _, block := range blocks {
 		relPath, _ := filepath.Rel(docsDir, block.SourceFile)
@@ -228,10 +184,12 @@ func buildMermaidIndex(blocks []books.MermaidBlock, docsDir string) MermaidIndex
 	return MermaidIndex{Entries: entries}
 }
 
-// renderMermaidBatchForBuilder renders cache-missed mermaid diagrams via the
-// mermaid-render tool container. Returns number of successfully rendered diagrams.
-func renderMermaidBatchForBuilder(toRender []mermaidBlockStatus, workspaceRoot, cacheDir string, logWriter io.Writer) (int, error) {
-	if len(toRender) == 0 {
+// renderMisses renders cache-missed mermaid diagrams via the mermaid-render tool container.
+func (h *MermaidRenderHandler) renderMisses(
+	misses []itemcache.Item, blocksByKey map[string]diagrams.MermaidBlock,
+	workspaceRoot, cacheDir string, logWriter io.Writer,
+) (int, error) {
+	if len(misses) == 0 {
 		return 0, nil
 	}
 
@@ -249,9 +207,9 @@ func renderMermaidBatchForBuilder(toRender []mermaidBlockStatus, workspaceRoot, 
 		Config string `json:"config"`
 	}
 
-	diagrams := make([]mermaidSpec, 0, len(toRender))
-	for i, status := range toRender {
-		block := status.Block
+	diagrams := make([]mermaidSpec, 0, len(misses))
+	for i, item := range misses {
+		block := blocksByKey[item.Key]
 
 		// Write diagram content to temp .mmd file
 		mmdFile := filepath.Join(workDir, fmt.Sprintf("diagram_%d.mmd", i))
@@ -261,10 +219,7 @@ func renderMermaidBatchForBuilder(toRender []mermaidBlockStatus, workspaceRoot, 
 
 		// Container paths: workDir -> /work, cacheDir -> /staging
 		containerInput := fmt.Sprintf("/work/diagram_%d.mmd", i)
-
-		// Output to cacheDir as container-relative path
-		relCache, _ := filepath.Rel(cacheDir, status.CachePath)
-		containerOutput := "/staging/" + filepath.ToSlash(relCache)
+		containerOutput := "/staging/" + item.CacheFilename
 
 		diagrams = append(diagrams, mermaidSpec{
 			Input:  containerInput,
@@ -312,8 +267,9 @@ func renderMermaidBatchForBuilder(toRender []mermaidBlockStatus, workspaceRoot, 
 
 	// Verify outputs were created
 	rendered := 0
-	for _, status := range toRender {
-		if _, statErr := os.Stat(status.CachePath); statErr == nil {
+	for _, item := range misses {
+		cachePath := filepath.Join(cacheDir, item.CacheFilename)
+		if _, statErr := os.Stat(cachePath); statErr == nil {
 			rendered++
 		}
 	}

@@ -17,8 +17,7 @@ type Module struct {
 	Name          string                `yaml:"name"`
 	Description   string                `yaml:"description"`
 	Template      string                `yaml:"template,omitempty"`      // Reference to a module template name
-	AutoDiscover  bool                  `yaml:"auto_discover,omitempty"` // Enable automatic component discovery
-	Parameters    map[string]string     `yaml:"parameters,omitempty"`    // Template parameter values
+	ModuleGroup   string                `yaml:"module_group,omitempty"`  // Group name for depends_on expansion
 	DependsOn     []string              `yaml:"depends_on"`
 	DependsOnCI   []string              `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
 	CIDeps        []string              `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
@@ -29,9 +28,68 @@ type Module struct {
 	Components    ModuleComponents      `yaml:"components"`        // Component types for this module (required)
 	Linting       *domain.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
 
-	// Top-level parameter shorthands (promoted to Parameters during expansion)
-	GoRoot        string `yaml:"go_root,omitempty"`        // Shorthand for parameters.go_root
+	// Component discovery
+	DiscoverComponents *DiscoverComponentsConfig `yaml:"discover_components,omitempty"`
+
 	ArtifactMatrixRef string `yaml:"artifact_matrix,omitempty"` // Reference to an artifact matrix name
+
+	// ComponentOrder preserves YAML declaration order for display purposes.
+	// Populated during UnmarshalYAML; components added later (e.g., by discovery) are appended.
+	ComponentOrder []string `yaml:"-"`
+}
+
+// UnmarshalYAML implements custom unmarshaling for Module to capture component key order.
+func (m *Module) UnmarshalYAML(node *yaml.Node) error {
+	// Decode all fields using the default decoder
+	type rawModule Module
+	if err := node.Decode((*rawModule)(m)); err != nil {
+		return err
+	}
+
+	// Extract component key order from the YAML node tree
+	m.ComponentOrder = extractComponentOrder(node)
+	return nil
+}
+
+// extractComponentOrder walks a Module YAML node to find the "components" mapping
+// and returns its keys in declaration order.
+func extractComponentOrder(moduleNode *yaml.Node) []string {
+	if moduleNode.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i < len(moduleNode.Content)-1; i += 2 {
+		keyNode := moduleNode.Content[i]
+		valNode := moduleNode.Content[i+1]
+		if keyNode.Value == "components" && valNode.Kind == yaml.MappingNode {
+			var order []string
+			for j := 0; j < len(valNode.Content)-1; j += 2 {
+				order = append(order, valNode.Content[j].Value)
+			}
+			return order
+		}
+	}
+	return nil
+}
+
+// DiscoverComponentsConfig configures automatic component discovery.
+type DiscoverComponentsConfig struct {
+	Type       string   `yaml:"type"`                  // "containers" triggers container component discovery
+	NameSuffix string   `yaml:"name_suffix,omitempty"` // Filter: only containers whose names end with this suffix
+	LocalOnly  []string `yaml:"local_only,omitempty"`  // Containers that should not be pushed to registry
+}
+
+// UnmarshalYAML allows DiscoverComponentsConfig to be parsed from either
+// a plain string (e.g., "containers") or a full object.
+func (d *DiscoverComponentsConfig) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		d.Type = node.Value
+		return nil
+	}
+	if node.Kind == yaml.MappingNode {
+		type raw DiscoverComponentsConfig
+		return node.Decode((*raw)(d))
+	}
+	return fmt.Errorf("invalid discover_components: expected string or object")
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -64,11 +122,7 @@ func (m *Module) GetComponentTypesDisplay() string {
 	if len(comps) == 0 {
 		return "(no components)"
 	}
-	result := comps[0]
-	for i := 1; i < len(comps); i++ {
-		result += ", " + comps[i]
-	}
-	return result
+	return strings.Join(comps, ", ")
 }
 
 // GetBooks returns the list of book component names (components with type 'book').
@@ -152,10 +206,11 @@ type ModuleVersioning struct {
 
 // ModuleBuild contains per-module build configuration.
 type ModuleBuild struct {
-	Handler   string           `yaml:"handler,omitempty"`    // Explicit build handler override
-	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"`  // Artifacts to produce
-	Options   *BuildOptions    `yaml:"options,omitempty"`    // Build behavior options
-	PostBuild *PostBuildConfig `yaml:"post_build,omitempty"` // Post-build actions
+	Handler    string           `yaml:"handler,omitempty"`     // Explicit build handler override
+	BinaryName string           `yaml:"binary_name,omitempty"` // Output binary name (for artifact matrix expansion)
+	Artifacts  []ModuleArtifact `yaml:"artifacts,omitempty"`   // Artifacts to produce
+	Options    *BuildOptions    `yaml:"options,omitempty"`     // Build behavior options
+	PostBuild  *PostBuildConfig `yaml:"post_build,omitempty"`  // Post-build actions
 }
 
 // PostBuildConfig contains post-build actions for a component.
@@ -200,7 +255,8 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 		return nil
 	}
 	clone := &ModuleBuild{
-		Handler: b.Handler,
+		Handler:    b.Handler,
+		BinaryName: b.BinaryName,
 	}
 	if b.Artifacts != nil {
 		clone.Artifacts = make([]ModuleArtifact, len(b.Artifacts))
@@ -212,6 +268,10 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 	if b.PostBuild != nil {
 		clone.PostBuild = &PostBuildConfig{
 			CopyTo: b.PostBuild.CopyTo,
+		}
+		if len(b.PostBuild.CopyFiles) > 0 {
+			clone.PostBuild.CopyFiles = make([]CopyFileEntry, len(b.PostBuild.CopyFiles))
+			copy(clone.PostBuild.CopyFiles, b.PostBuild.CopyFiles)
 		}
 	}
 	return clone
@@ -336,6 +396,7 @@ type ComponentPatterns struct {
 	Source []string `yaml:"source,omitempty" json:"source,omitempty"`
 	Tests  []string `yaml:"tests,omitempty" json:"tests,omitempty"`
 	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
+	Data   []string `yaml:"data,omitempty" json:"data,omitempty"` // Owned files not processed by tools (e.g., testdata, fixtures)
 }
 
 // UnmarshalYAML implements custom unmarshaling for ComponentEntry.
@@ -387,6 +448,10 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 				if entry.Patterns.Config != nil {
 					clonedEntry.Patterns.Config = make([]string, len(entry.Patterns.Config))
 					copy(clonedEntry.Patterns.Config, entry.Patterns.Config)
+				}
+				if entry.Patterns.Data != nil {
+					clonedEntry.Patterns.Data = make([]string, len(entry.Patterns.Data))
+					copy(clonedEntry.Patterns.Data, entry.Patterns.Data)
 				}
 			}
 			if entry.Build != nil {
@@ -636,46 +701,12 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 
 // ApplyComponentDefaults resolves component roots and patterns from component-types.yml.
 // This should be called after ComponentTypes are loaded.
-// Two-phase process:
-// 1. Resolve roots, patterns, and other defaults
-// 2. Infer Go artifacts when not explicitly defined
 func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentTypesConfig, repoRoot string) {
 	for i := range c.Modules {
 		m := &c.Modules[i]
-		// Phase 1: Resolve roots, patterns, and other defaults
 		m.resolveComponentRoots(compTypes)
 		m.resolveDerivedPaths()
-		// Phase 2: Infer Go artifacts when not explicitly defined
-		m.inferGoArtifacts(compTypes, repoRoot)
 	}
-}
-
-// inferGoArtifacts infers executable artifacts for Go components when not explicitly defined.
-// It detects main.go files and creates artifact entries using the pattern from component-types.
-func (m *Module) inferGoArtifacts(compTypes *ComponentTypesConfig, repoRoot string) {
-	// Check for Go component
-	goComp, ok := m.Components["go"]
-	if !ok || goComp == nil {
-		return
-	}
-
-	// Skip if explicit artifacts are already defined
-	if goComp.Build != nil && len(goComp.Build.Artifacts) > 0 {
-		return
-	}
-
-	// Infer artifacts from main.go detection
-	artifacts := InferGoArtifacts(m.Moniker, goComp.Root, repoRoot, compTypes)
-	if len(artifacts) == 0 {
-		return
-	}
-
-	// Ensure Build struct exists
-	if goComp.Build == nil {
-		goComp.Build = &ModuleBuild{}
-	}
-
-	goComp.Build.Artifacts = artifacts
 }
 
 // resolveComponentRoots resolves default roots and patterns for all components in the module.
@@ -840,18 +871,22 @@ func deriveChangelogPath(m *Module) string {
 	}
 }
 
-// DiscoverContainerModules scans containers/ directory for Dockerfiles and creates
+// DiscoverContainerModules scans the containers root directory for Dockerfiles and creates
 // module definitions for any containers not explicitly defined.
-// This enables convention-over-configuration: containers/{name}/Dockerfile automatically
+// This enables convention-over-configuration: {containersRoot}/{name}/Dockerfile automatically
 // becomes a module with moniker={name} using the "container" template.
 //
 // Parameters:
 //   - repoRoot: repository root directory
 //   - explicitMonikers: set of monikers already defined in repository.yml
+//   - containersRoot: containers root directory name (e.g., "containers")
 //
 // Returns discovered modules (empty slice if none found or on error).
-func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool) []Module {
-	containersDir := filepath.Join(repoRoot, "containers")
+func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool, containersRoot string) []Module {
+	if containersRoot == "" {
+		containersRoot = "containers"
+	}
+	containersDir := filepath.Join(repoRoot, containersRoot)
 
 	// Check if containers directory exists
 	if _, err := os.Stat(containersDir); os.IsNotExist(err) {
@@ -876,7 +911,7 @@ func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool)
 			continue
 		}
 
-		// Skip non-OCI containers (internal tools like cgo-tool, drawio-tool)
+		// Skip non-OCI containers (internal tools like cgo-oci, drawio-oci)
 		// Convention: only auto-discover containers with -oci suffix
 		if !strings.HasSuffix(moniker, "-oci") {
 			continue
@@ -886,8 +921,8 @@ func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool)
 		modules = append(modules, Module{
 			Moniker:     moniker,
 			Name:        deriveContainerName(moniker),
-			Description: fmt.Sprintf("Auto-discovered container from containers/%s", moniker),
-			Template:    "container-template",
+			Description: fmt.Sprintf("Auto-discovered container from %s/%s", containersRoot, moniker),
+			Template:    "container",
 			DependsOn:   []string{},
 		})
 	}

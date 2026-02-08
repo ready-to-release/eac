@@ -29,7 +29,7 @@ func TestCatalogHelpText(t *testing.T) {
 
 // TestRenderSelectedHelp validates the help text rendering.
 func TestRenderSelectedHelp(t *testing.T) {
-	m := Model{width: 120}
+	m := Model{Display: DisplayConfig{Width: 120}}
 
 	tests := []struct {
 		elementName string
@@ -124,64 +124,6 @@ func TestGetModuleName(t *testing.T) {
 	}
 }
 
-func TestExtractToolFromMoniker(t *testing.T) {
-	tests := []struct {
-		name     string
-		moniker  string
-		expected string
-	}{
-		{
-			name:     "build UoW - 4 parts",
-			moniker:  "build:eac-cli:go:go",
-			expected: "go",
-		},
-		{
-			name:     "build UoW - docker handler",
-			moniker:  "build:books:dockerfile:buildx",
-			expected: "buildx",
-		},
-		{
-			name:     "test UoW - with extra (testname)",
-			moniker:  "test:eac-cli:go:gotest:impl-build",
-			expected: "gotest",
-		},
-		{
-			name:     "test UoW - godog with spec",
-			moniker:  "test:eac-cli:gherkin:godog:build-module",
-			expected: "godog",
-		},
-		{
-			name:     "lint UoW",
-			moniker:  "lint:core:go:golangci-lint",
-			expected: "golangci-lint",
-		},
-		{
-			name:     "scan UoW - with category extra",
-			moniker:  "scan:core:go:trivy-sbom:sbom",
-			expected: "trivy-sbom",
-		},
-		{
-			name:     "too few parts",
-			moniker:  "build:module:component",
-			expected: "",
-		},
-		{
-			name:     "empty string",
-			moniker:  "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := extractToolFromMoniker(tt.moniker)
-			if result != tt.expected {
-				t.Errorf("extractToolFromMoniker(%q) = %q, want %q", tt.moniker, result, tt.expected)
-			}
-		})
-	}
-}
-
 // TestLayoutMetricsConsistency validates that calculateLayoutMetrics() produces
 // correct fixed values for the 2-section layout (side-by-side + status bar).
 func TestLayoutMetricsConsistency(t *testing.T) {
@@ -189,9 +131,9 @@ func TestLayoutMetricsConsistency(t *testing.T) {
 	zone.NewGlobal()
 
 	tests := []struct {
-		name       string
-		width      int
-		height     int
+		name   string
+		width  int
+		height int
 	}{
 		{"standard terminal", 120, 40},
 		{"small terminal", 80, 24},
@@ -203,11 +145,17 @@ func TestLayoutMetricsConsistency(t *testing.T) {
 			catalog := NewWidgetCatalog()
 			RegisterAllWidgets(catalog)
 			m := Model{
-				width:     tt.width,
-				height:    tt.height,
-				panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
-				uowStates: make(map[string]*UoWState),
-				catalog:   catalog,
+				Display: DisplayConfig{
+					Width:  tt.width,
+					Height: tt.height,
+				},
+				Execution: ExecutionState{
+					Panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
+					UoWStates: make(map[string]*UoWState),
+				},
+				Resources: ResourceState{
+					Catalog: catalog,
+				},
 			}
 			metrics := m.calculateLayoutMetrics()
 
@@ -417,7 +365,7 @@ func TestComponentsWidth(t *testing.T) {
 		{
 			name:          "minimum width enforced",
 			tabWidth:      10, paneWidthCols: 1, termWidth: 200,
-			expectMin:     20, expectMax: 20, // 1*10 + 0 + 2 = 12 → clamped to 20
+			expectMin:     20, expectMax: 20, // 1*10 + 0 + 2 = 12 -> clamped to 20
 		},
 		{
 			name:          "max clamp snaps to exact columns",
@@ -427,7 +375,15 @@ func TestComponentsWidth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := Model{tabWidth: tt.tabWidth, paneWidthCols: tt.paneWidthCols, width: tt.termWidth}
+			m := Model{
+				Interaction: InteractionState{
+					TabWidth:      tt.tabWidth,
+					PaneWidthCols: tt.paneWidthCols,
+				},
+				Display: DisplayConfig{
+					Width: tt.termWidth,
+				},
+			}
 			got := m.ComponentsWidth()
 			if got < tt.expectMin || got > tt.expectMax {
 				t.Errorf("ComponentsWidth() = %d, want [%d, %d]", got, tt.expectMin, tt.expectMax)
@@ -443,14 +399,21 @@ func TestMaxPaneWidthCols(t *testing.T) {
 		termWidth int
 		expected  int
 	}{
-		{"wide terminal", 15, 200, 7},          // min(160,120)=120, (120-2+1)/(15+1) = 7.4 → 7
-		{"standard terminal", 15, 120, 4},      // min(80,72)=72, (72-2+1)/(15+1) = 4.4 → 4
-		{"narrow terminal", 15, 80, 2},          // min(40,48)=40, (40-2+1)/(15+1) = 2.4 → 2
-		{"very narrow", 15, 50, 1},              // min(10,30)=10, 10 < 15+2, returns 1
+		{"wide terminal", 15, 200, 7},     // min(160,120)=120, (120-2+1)/(15+1) = 7.4 -> 7
+		{"standard terminal", 15, 120, 4}, // min(80,72)=72, (72-2+1)/(15+1) = 4.4 -> 4
+		{"narrow terminal", 15, 80, 2},    // min(40,48)=40, (40-2+1)/(15+1) = 2.4 -> 2
+		{"very narrow", 15, 50, 1},        // min(10,30)=10, 10 < 15+2, returns 1
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := Model{tabWidth: tt.tabWidth, width: tt.termWidth}
+			m := Model{
+				Interaction: InteractionState{
+					TabWidth: tt.tabWidth,
+				},
+				Display: DisplayConfig{
+					Width: tt.termWidth,
+				},
+			}
 			got := m.maxPaneWidthCols()
 			if got != tt.expected {
 				t.Errorf("maxPaneWidthCols() = %d, want %d", got, tt.expected)

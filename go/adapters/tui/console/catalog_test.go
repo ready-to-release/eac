@@ -83,11 +83,15 @@ func TestCatalogTabWidgetDuplicatePanics(t *testing.T) {
 func TestWidgetSnapshotConstruction(t *testing.T) {
 	zone.NewGlobal()
 	m := Model{
-		width:     120,
-		height:    40,
-		panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
-		startTime: time.Now(),
-		uowStates: make(map[string]*UoWState),
+		Display: DisplayConfig{
+			Width:  120,
+			Height: 40,
+		},
+		Execution: ExecutionState{
+			Panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
+			StartTime: time.Now(),
+			UoWStates: make(map[string]*UoWState),
+		},
 	}
 	snap := m.buildWidgetSnapshot()
 
@@ -196,22 +200,22 @@ func TestComputeTabSizing(t *testing.T) {
 		{
 			name:       "standard 15w tab at 66w panel",
 			panelWidth: 66, tabWidth: 15,
-			expectCols: 4, // (66-2+1)/(15+1) = 4.06 → 4
+			expectCols: 4, // (66-2+1)/(15+1) = 4.06 -> 4
 		},
 		{
 			name:       "wide panel 15w tabs at 120w",
 			panelWidth: 120, tabWidth: 15,
-			expectCols: 7, // (120-2+1)/(15+1) = 7.4 → 7
+			expectCols: 7, // (120-2+1)/(15+1) = 7.4 -> 7
 		},
 		{
 			name:       "narrow panel 15w tabs at 40w",
 			panelWidth: 40, tabWidth: 15,
-			expectCols: 2, // (40-2+1)/(15+1) = 2.4 → 2
+			expectCols: 2, // (40-2+1)/(15+1) = 2.4 -> 2
 		},
 		{
 			name:       "minimum tab width enforced",
 			panelWidth: 50, tabWidth: 3,
-			expectCols: 6, // clamped to 7, (50-2+1)/(7+1) = 6.1 → 6
+			expectCols: 6, // clamped to 7, (50-2+1)/(7+1) = 6.1 -> 6
 		},
 	}
 
@@ -323,15 +327,19 @@ func TestAllZoneIDsCount(t *testing.T) {
 func TestWidgetSnapshotWeightedProgress(t *testing.T) {
 	zone.NewGlobal()
 	m := Model{
-		width:     120,
-		height:    40,
-		panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
-		startTime: time.Now(),
-		uowStates: map[string]*UoWState{
-			"a": {Status: UoWComplete, Weight: 4},
-			"b": {Status: UoWRunning, Weight: 2},
-			"c": {Status: UoWPending, Weight: 1},
-			"d": {Status: UoWFailed, Weight: 3},
+		Display: DisplayConfig{
+			Width:  120,
+			Height: 40,
+		},
+		Execution: ExecutionState{
+			Panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
+			StartTime: time.Now(),
+			UoWStates: map[string]*UoWState{
+				"a": {Status: UoWComplete, Weight: 4},
+				"b": {Status: UoWRunning, Weight: 2},
+				"c": {Status: UoWPending, Weight: 1},
+				"d": {Status: UoWFailed, Weight: 3},
+			},
 		},
 	}
 	snap := m.buildWidgetSnapshot()
@@ -410,13 +418,17 @@ func TestCatalogZoneIDsMatchExpected(t *testing.T) {
 func TestWidgetSnapshotZeroWeight(t *testing.T) {
 	zone.NewGlobal()
 	m := Model{
-		width:     120,
-		height:    40,
-		panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
-		startTime: time.Now(),
-		uowStates: map[string]*UoWState{
-			"a": {Status: UoWComplete, Weight: 0}, // Zero weight treated as 1
-			"b": {Status: UoWPending, Weight: 0},
+		Display: DisplayConfig{
+			Width:  120,
+			Height: 40,
+		},
+		Execution: ExecutionState{
+			Panes:     [3]*Pane{{}, {Status: PhaseActive}, {}},
+			StartTime: time.Now(),
+			UoWStates: map[string]*UoWState{
+				"a": {Status: UoWComplete, Weight: 0}, // Zero weight treated as 1
+				"b": {Status: UoWPending, Weight: 0},
+			},
 		},
 	}
 	snap := m.buildWidgetSnapshot()

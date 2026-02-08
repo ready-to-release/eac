@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	container "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 func TestCredentials_GlobalHostEnvForwarding(t *testing.T) {

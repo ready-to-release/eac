@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/evidence"
+	coreConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
 
@@ -173,7 +174,7 @@ func extractFromZAPScan(zapFile string) []VulnerabilityInput {
 // BuildModuleContext builds context about the module for AI analysis.
 func BuildModuleContext(moduleName string, registry *modules.Registry, satisfiedControls []string) ModuleContext {
 	// Determine criticality by module moniker (from risk-config.yml, falls back to _default)
-	criticality := GetRiskScoringConfig().GetCriticality(moduleName)
+	criticality := coreConfig.DefaultRiskScoringConfig().GetCriticality(moduleName)
 
 	if registry == nil {
 		// Return default context if registry not available

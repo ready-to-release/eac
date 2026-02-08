@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // registerSteps registers step definitions for show-workspaces command features.

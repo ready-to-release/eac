@@ -27,7 +27,7 @@ const (
 // ContractSchemaPath returns the relative path to contract schema files.
 // This is a function (not a constant) to use the centralized paths.DefaultsVersion.
 func ContractSchemaPath() string {
-	return filepath.Join(paths.ContractsDir, paths.EACCoreModule, paths.DefaultsVersion)
+	return filepath.Join(paths.ContractsDir, paths.EACCoreModule, paths.DefaultsVersion, paths.SchemasDir)
 }
 
 // Retry prompt constants for consistent formatting.

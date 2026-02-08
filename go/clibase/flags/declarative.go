@@ -17,9 +17,6 @@ type DeclarativeFlagDef struct {
 	// DisableFlag is the flag to explicitly disable (e.g., "--no-cache")
 	DisableFlag string
 
-	// LegacyFlags are older flags that map to this behavior (for backward compat)
-	LegacyFlags []LegacyFlagMapping
-
 	// DefaultOn indicates the default state when neither flag is specified
 	DefaultOn bool
 
@@ -32,15 +29,6 @@ type DeclarativeFlagDef struct {
 
 	// Description is the human-readable description of this behavior
 	Description string
-}
-
-// LegacyFlagMapping maps a legacy flag to its declarative equivalent.
-type LegacyFlagMapping struct {
-	// LegacyFlag is the old flag name (e.g., "--skip-cache")
-	LegacyFlag string
-
-	// MapsTo indicates the effect: "enable" or "disable"
-	MapsTo string
 }
 
 // ResolveDefault returns the default value for this behavior based on environment.

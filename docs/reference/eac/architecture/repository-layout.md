@@ -45,7 +45,7 @@ eac/
 │   └── extensions/             # Custom VSCode extensions
 │
 ├── containers/                 # Docker container definitions
-│   ├── drawio-tool/             # Draw.io diagram CLI
+│   ├── drawio-oci/              # Draw.io diagram CLI
 │   ├── ext-eac/                # R2R CLI extension for EAC
 │   ├── git-filter-repo/        # Git history filtering tool
 │   ├── gource/                 # Repository visualization

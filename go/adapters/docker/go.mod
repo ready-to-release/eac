@@ -6,9 +6,13 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/stretchr/testify v1.11.1
+)
+
+require (
+	github.com/huandu/go-clone v1.7.3 // indirect
+	github.com/huandu/go-clone/generic v1.7.3 // indirect
 )
 
 require (
@@ -32,10 +36,10 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9 // indirect
-	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
@@ -50,23 +54,25 @@ require (
 	go.opentelemetry.io/otel/sdk v1.40.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
-	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.1 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120174246-409b4a993575 // indirect
+	google.golang.org/grpc v1.78.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 )
 
 replace (
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces => ../../../contracts/core/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces => ../../../contracts/docker-adapter/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces => ../../../contracts/security/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces => ../../../contracts/testing/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces => ../../../contracts/tools/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces => ../../../contracts/tui-adapter/0.1.0/interfaces
+	github.com/ready-to-release/eac/go/adapters/godog => ../godog
 	github.com/ready-to-release/eac/go/core => ../../core
-	github.com/ready-to-release/eac/go/godog => ../../godog
 )
+
+replace github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../../contracts/core/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../../../contracts/container-runtime/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0

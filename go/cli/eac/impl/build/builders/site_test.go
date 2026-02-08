@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/core/adapters"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -122,7 +123,7 @@ func TestResolveBookNameForSite_WithConfigOverride(t *testing.T) {
 		Moniker: "test-module",
 		Components: domain.ModuleComponents{
 			"docs-site": &domain.ComponentEntry{
-				Type: "docs-site",
+				Type: config.ComponentTypeDocsSite,
 				Config: map[string]string{
 					"book": "custom-book-name",
 				},

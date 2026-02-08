@@ -4,6 +4,7 @@ package tool
 import (
 	"sync"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
@@ -166,7 +167,7 @@ func (b *LintBridge) HasHandler(name string) bool {
 
 // ResolveTool returns the tool definition for a component type and operation.
 // Returns nil if no tool is configured or resolver is not available.
-func (b *LintBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+func (b *LintBridge) ResolveTool(componentType string, operation core.ActionType) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// MockModule implements interfaces.ModuleContractPort for testing.
+// MockModule implements core.ModuleContractPort for testing.
 type MockModule struct {
 	moniker          string
 	name             string
@@ -116,33 +116,33 @@ func (m *MockModule) WithComponentAmp(componentType, operation string, amp float
 	return m
 }
 
-// GetMoniker implements interfaces.ModuleContractPort.
+// GetMoniker implements core.ModuleContractPort.
 func (m *MockModule) GetMoniker() string {
 	return m.moniker
 }
 
-// GetName implements interfaces.ModuleContractPort.
+// GetName implements core.ModuleContractPort.
 func (m *MockModule) GetName() string {
 	return m.name
 }
 
-// GetDescription implements interfaces.ModuleContractPort.
+// GetDescription implements core.ModuleContractPort.
 func (m *MockModule) GetDescription() string {
 	return m.description
 }
 
-// HasComponent implements interfaces.ModuleContractPort.
+// HasComponent implements core.ModuleContractPort.
 func (m *MockModule) HasComponent(componentType string) bool {
 	_, ok := m.components[componentType]
 	return ok
 }
 
-// GetComponentRoot implements interfaces.ModuleContractPort.
+// GetComponentRoot implements core.ModuleContractPort.
 func (m *MockModule) GetComponentRoot(componentType string) string {
 	return m.components[componentType]
 }
 
-// GetComponentRoots implements interfaces.ModuleContractPort.
+// GetComponentRoots implements core.ModuleContractPort.
 func (m *MockModule) GetComponentRoots() map[string]string {
 	result := make(map[string]string)
 	for k, v := range m.components {
@@ -151,7 +151,7 @@ func (m *MockModule) GetComponentRoots() map[string]string {
 	return result
 }
 
-// GetComponentTypesDisplay implements interfaces.ModuleContractPort.
+// GetComponentTypesDisplay implements core.ModuleContractPort.
 func (m *MockModule) GetComponentTypesDisplay() string {
 	types := make([]string, 0, len(m.components))
 	for t := range m.components {
@@ -160,7 +160,7 @@ func (m *MockModule) GetComponentTypesDisplay() string {
 	return strings.Join(types, ", ")
 }
 
-// GetComponentAmp implements interfaces.ModuleContractPort.
+// GetComponentAmp implements core.ModuleContractPort.
 func (m *MockModule) GetComponentAmp(componentName, operation string) float64 {
 	if m.componentAmps == nil {
 		return 1.0
@@ -173,37 +173,37 @@ func (m *MockModule) GetComponentAmp(componentName, operation string) float64 {
 	return 1.0
 }
 
-// GetDependsOn implements interfaces.ModuleContractPort.
+// GetDependsOn implements core.ModuleContractPort.
 func (m *MockModule) GetDependsOn() []string {
 	return m.dependsOn
 }
 
-// GetVersioningScheme implements interfaces.ModuleContractPort.
+// GetVersioningScheme implements core.ModuleContractPort.
 func (m *MockModule) GetVersioningScheme() string {
 	return m.versioningScheme
 }
 
-// GetReleaseType implements interfaces.ModuleContractPort.
+// GetReleaseType implements core.ModuleContractPort.
 func (m *MockModule) GetReleaseType() string {
 	return m.releaseType
 }
 
-// GetChangelog implements interfaces.ModuleContractPort.
+// GetChangelog implements core.ModuleContractPort.
 func (m *MockModule) GetChangelog() string {
 	return m.changelog
 }
 
-// HasVersioning implements interfaces.ModuleContractPort.
+// HasVersioning implements core.ModuleContractPort.
 func (m *MockModule) HasVersioning() bool {
 	return m.versioningScheme != ""
 }
 
-// GetMetadata implements interfaces.ModuleContractPort.
+// GetMetadata implements core.ModuleContractPort.
 func (m *MockModule) GetMetadata() map[string]interface{} {
 	return m.metadata
 }
 
-// GetContentHash implements interfaces.ModuleContractPort.
+// GetContentHash implements core.ModuleContractPort.
 // Returns a mock hash based on the module moniker for testing.
 func (m *MockModule) GetContentHash() (string, error) {
 	// Simple mock: hash the moniker for deterministic test values
@@ -211,4 +211,4 @@ func (m *MockModule) GetContentHash() (string, error) {
 }
 
 // Interface compliance check
-var _ interfaces.ModuleContractPort = (*MockModule)(nil)
+var _ core.ModuleContractPort = (*MockModule)(nil)

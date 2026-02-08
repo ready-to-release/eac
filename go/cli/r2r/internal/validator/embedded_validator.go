@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts"
+	r2rcli "github.com/ready-to-release/eac/contracts/r2r-cli/0.1.0"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -13,7 +13,7 @@ import (
 var embeddedSchema string
 
 func init() {
-	data, err := contracts.FS.ReadFile(contracts.R2RCLIPath("r2r-cli.schema.json"))
+	data, err := r2rcli.FS.ReadFile("r2r-cli.schema.json")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load embedded schema from contracts: %v", err))
 	}

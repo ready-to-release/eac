@@ -12,7 +12,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/list"          // register show help
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/show"          // register show modules, show books, etc.
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/work"          // register create pr
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 func TestFeatures(t *testing.T) {

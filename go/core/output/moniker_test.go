@@ -14,7 +14,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "full 4-part moniker",
 			input: "build:core:go:go",
 			expected: ParsedMoniker{
-				Context:   "build",
+				Action:    "build",
 				Module:    "core",
 				Component: "go",
 				Tool:      "go",
@@ -25,7 +25,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "3-part moniker (module:component:tool)",
 			input: "core:go:gotest",
 			expected: ParsedMoniker{
-				Context:   "",
+				Action:    "",
 				Module:    "core",
 				Component: "go",
 				Tool:      "gotest",
@@ -36,7 +36,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "2-part moniker (module:component)",
 			input: "eac-cli:docker",
 			expected: ParsedMoniker{
-				Context:   "",
+				Action:    "",
 				Module:    "eac-cli",
 				Component: "docker",
 				Tool:      "",
@@ -47,7 +47,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "1-part moniker (module only)",
 			input: "core",
 			expected: ParsedMoniker{
-				Context:   "",
+				Action:    "",
 				Module:    "core",
 				Component: "",
 				Tool:      "",
@@ -58,7 +58,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "empty moniker",
 			input: "",
 			expected: ParsedMoniker{
-				Context:   "",
+				Action:    "",
 				Module:    "",
 				Component: "",
 				Tool:      "",
@@ -69,7 +69,7 @@ func TestMonikerParse(t *testing.T) {
 			name:  "test context",
 			input: "test:adapters-tui:go:gotest",
 			expected: ParsedMoniker{
-				Context:   "test",
+				Action:    "test",
 				Module:    "adapters-tui",
 				Component: "go",
 				Tool:      "gotest",
@@ -81,8 +81,8 @@ func TestMonikerParse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.input.Parse()
-			if got.Context != tt.expected.Context {
-				t.Errorf("Context: got %q, want %q", got.Context, tt.expected.Context)
+			if got.Action != tt.expected.Action {
+				t.Errorf("Context: got %q, want %q", got.Action, tt.expected.Action)
 			}
 			if got.Module != tt.expected.Module {
 				t.Errorf("Module: got %q, want %q", got.Module, tt.expected.Module)

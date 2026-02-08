@@ -40,7 +40,7 @@ func NewFlagDocGenerator() *FlagDocGenerator {
 				DryRun:            true,
 				SkipDepmSupported: true,
 				SpecificFlags: []FlagDef{
-					{Name: "tidy-first", Type: "bool", Usage: "Run go mod tidy before building"},
+					{Name: "with-tidy", Type: "bool", Usage: "Run go mod tidy before building"},
 					{Name: "layered-build", Type: "bool", Usage: "Enable layered build mode"},
 					{Name: "version", Type: "string", Usage: "Version string for build"},
 					{Name: "reproducible", Type: "bool", Usage: "Enable reproducible builds"},

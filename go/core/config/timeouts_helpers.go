@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	tui "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	tui "github.com/ready-to-release/eac/contracts/tui/0.1.0"
 )
 
 // Global timeout configuration (loaded at startup).

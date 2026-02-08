@@ -4,40 +4,49 @@ import "github.com/ready-to-release/eac/go/core/workunit"
 
 // DependencyTracker provides bidirectional dependency tracking.
 // Uses two maps for efficient scheduling:
-//   - depsOf: "who do I depend on?" (forward) - used for IsReady checks
-//   - blocks: "who depends on me?" (reverse) - used for targeted wake-ups
+//   - depsOf: "who do I depend on?" (forward) - built eagerly for IsReady checks
+//   - blocks: "who depends on me?" (reverse) - built lazily on first CascadeFail/GetBlocks
 //
 // A unit is ready when all its depsOf entries are complete.
 type DependencyTracker struct {
 	completed map[string]bool              // longname -> done (success or failure)
 	failed    map[string]bool              // longname -> failed
 	depsOf    map[string][]workunit.UnitID // longname -> what I depend on (forward)
-	blocks    map[string][]workunit.UnitID // longname -> who depends on me (reverse)
+	blocks    map[string][]workunit.UnitID // longname -> who depends on me (reverse, lazy)
+	work      []workunit.UnitSpec          // retained for lazy reverse map construction
 }
 
-// NewDependencyTracker creates a tracker with bidirectional dependency mapping.
+// NewDependencyTracker creates a tracker with forward dependency mapping.
+// The reverse map (blocks) is built lazily on first use by CascadeFail or GetBlocks.
 func NewDependencyTracker(work []workunit.UnitSpec) *DependencyTracker {
 	dt := &DependencyTracker{
 		completed: make(map[string]bool),
 		failed:    make(map[string]bool),
 		depsOf:    make(map[string][]workunit.UnitID),
-		blocks:    make(map[string][]workunit.UnitID),
+		work:      work,
 	}
 
-	// Build forward dependency map
+	// Build forward dependency map (needed immediately for IsReady)
 	for _, w := range work {
 		dt.depsOf[w.ID.Longname()] = w.DependsOn
 	}
 
-	// Build reverse dependency map (who depends on me?)
-	for _, w := range work {
+	return dt
+}
+
+// ensureBlocks lazily builds the reverse dependency map on first access.
+func (dt *DependencyTracker) ensureBlocks() {
+	if dt.blocks != nil {
+		return
+	}
+	dt.blocks = make(map[string][]workunit.UnitID)
+	for _, w := range dt.work {
 		for _, dep := range w.DependsOn {
 			depKey := dep.Longname()
 			dt.blocks[depKey] = append(dt.blocks[depKey], w.ID)
 		}
 	}
-
-	return dt
+	dt.work = nil // Release reference after building
 }
 
 // IsReady returns true if all dependencies for the unit are complete.
@@ -86,6 +95,7 @@ func (dt *DependencyTracker) CascadeFail(id workunit.UnitID) []workunit.UnitID {
 }
 
 func (dt *DependencyTracker) cascadeFailRecursive(id workunit.UnitID, cascaded *[]workunit.UnitID) {
+	dt.ensureBlocks()
 	for _, dependent := range dt.blocks[id.Longname()] {
 		depKey := dependent.Longname()
 		if dt.failed[depKey] {
@@ -98,6 +108,21 @@ func (dt *DependencyTracker) cascadeFailRecursive(id workunit.UnitID, cascaded *
 	}
 }
 
+// FailedDependencyModules returns the unique module names of failed dependencies for the given unit.
+func (dt *DependencyTracker) FailedDependencyModules(id workunit.UnitID) []string {
+	seen := make(map[string]struct{})
+	var modules []string
+	for _, dep := range dt.depsOf[id.Longname()] {
+		if dt.failed[dep.Longname()] {
+			if _, exists := seen[dep.Module]; !exists {
+				seen[dep.Module] = struct{}{}
+				modules = append(modules, dep.Module)
+			}
+		}
+	}
+	return modules
+}
+
 // GetDependsOn returns the units that this unit depends on (forward deps).
 func (dt *DependencyTracker) GetDependsOn(id workunit.UnitID) []workunit.UnitID {
 	return dt.depsOf[id.Longname()]
@@ -105,7 +130,9 @@ func (dt *DependencyTracker) GetDependsOn(id workunit.UnitID) []workunit.UnitID 
 
 // GetBlocks returns the units that depend on this unit (reverse deps).
 // Useful for targeted wake-ups when a unit completes.
+// Lazily builds the reverse map on first call.
 func (dt *DependencyTracker) GetBlocks(id workunit.UnitID) []workunit.UnitID {
+	dt.ensureBlocks()
 	return dt.blocks[id.Longname()]
 }
 

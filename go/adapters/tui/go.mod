@@ -8,9 +8,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/lrstanley/bubblezone v1.0.0
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0
-	github.com/ready-to-release/eac/go/clibase v0.0.0-20260204134000-6dee1c14abac
+	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	golang.org/x/term v0.39.0
@@ -36,6 +34,8 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
+	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
@@ -54,12 +54,15 @@ require (
 )
 
 replace (
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces => ../../../contracts/core/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces => ../../../contracts/docker-adapter/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces => ../../../contracts/security/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces => ../../../contracts/testing/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces => ../../../contracts/tools/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces => ../../../contracts/tui-adapter/0.1.0/interfaces
+	github.com/ready-to-release/eac/go/adapters/godog => ../godog
+	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/core => ../../core
-	github.com/ready-to-release/eac/go/godog => ../../godog
 )
+
+replace github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../../contracts/core/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../../../contracts/container-runtime/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0

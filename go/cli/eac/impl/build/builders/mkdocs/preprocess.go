@@ -1,6 +1,7 @@
 package mkdocs
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -11,18 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
-	"github.com/ready-to-release/eac/go/clibase/environment"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
-
-func init() {
-	// Register the handler in the parent package's registry
-	// This is done via the RegisterMkDocsHandlers function called from the builders package
-}
 
 // PreprocessHandler handles base-site preprocessing.
 // This is the first stage of the MkDocs build pipeline:
@@ -54,7 +50,7 @@ func (h *PreprocessHandler) Requirements() []string { return nil }
 // 2. Strip "-base" suffix if present (e.g., "tutorials-base" -> "tutorials")
 // 3. Use component name as book name (e.g., "site" -> "site")
 // 4. Default to "site" if component name is empty
-func resolveBookName(module interfaces.ModuleContractPort, componentName string) string {
+func resolveBookName(module core.ModuleContractPort, componentName string) string {
 	if componentName == "" {
 		return "site"
 	}
@@ -79,7 +75,7 @@ func resolveBookName(module interfaces.ModuleContractPort, componentName string)
 }
 
 // ValidateModule checks if a module has valid book configuration.
-func (h *PreprocessHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *PreprocessHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	// Load config to check for book configuration
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
@@ -113,7 +109,7 @@ func (h *PreprocessHandler) ValidateModule(module interfaces.ModuleContractPort,
 }
 
 // ListArtifacts returns artifact paths that would be produced.
-func (h *PreprocessHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *PreprocessHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"staged/", "mkdocs.yml", ".manifest.json"}
 }
 
@@ -150,12 +146,12 @@ type BuildOptions struct {
 
 	// ArtifactsMode controls artifact generation scope (all/reduced).
 	// Used to set page limits for PDF generation.
-	ArtifactsMode environment.ArtifactsMode
+	ArtifactsMode environments.ArtifactsMode
 }
 
 // Build executes preprocessing for a base-site component.
 func (h *PreprocessHandler) Build(
-	module interfaces.ModuleContractPort,
+	module core.ModuleContractPort,
 	workspaceRoot, outputDir string,
 	logWriter io.Writer,
 	opts BuildOptions,
@@ -254,8 +250,15 @@ func (h *PreprocessHandler) Build(
 	}
 
 	// Run preprocessing pipeline
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
-	if err := preprocessor.Preprocess(); err != nil {
+	var mode docprep.OutputMode
+	if pdfMode {
+		mode = docprep.PDFMode{ThemeName: "dark"}
+	} else {
+		mode = docprep.SiteMode{}
+	}
+	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
+	pctx.Moniker = concrete.Moniker
+	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return BuildResult{ExitCode: 1}
 	}
@@ -273,12 +276,12 @@ func (h *PreprocessHandler) Build(
 		outputFormat = "pdf-dark" // default theme for preprocessing
 	}
 
-	configOpts := books.ConfigOptions{
+	configOpts := ConfigOptions{
 		SiteName:     book.Name,
 		DocsDir:      relStagingDir,
 		OutputFormat: outputFormat,
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return BuildResult{ExitCode: 1}
 	}
@@ -424,10 +427,3 @@ func logln(w io.Writer, format string, args ...any) {
 	fmt.Fprintf(w, format+"\n", args...)
 }
 
-// min returns the smaller of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

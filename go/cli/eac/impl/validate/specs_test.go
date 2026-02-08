@@ -489,7 +489,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 				Path:  "specs/test.feature",
 				Valid: false,
 				Errors: []domain.ValidationError{
-					{Code: "MISSING_RULE", Message: "Missing Rule: declaration", Severity: "error", Line: 0},
+					{Message: "Missing Rule: declaration", Line: 0},
 				},
 			},
 			want: []string{"❌", "Validation failed", "MISSING_RULE", "Missing Rule: declaration"},
@@ -500,7 +500,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 				Path:  "specs/test.feature",
 				Valid: true,
 				Errors: []domain.ValidationError{
-					{Code: "WARN_NAMING", Message: "Naming could be improved", Severity: "warning", Line: 5},
+					{Message: "Naming could be improved", Line: 5},
 				},
 			},
 			want: []string{"✅", "Validation passed", "warning", "Line 5"},
@@ -818,7 +818,7 @@ func TestOutputJSON(t *testing.T) {
 					Path:  "specs/test.feature",
 					Valid: false,
 					Errors: []domain.ValidationError{
-						{Code: "MISSING_RULE", Message: "Missing Rule", Severity: "error"},
+						{Message: "Missing Rule"},
 					},
 				},
 			},

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/go/core/workunit"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -243,7 +243,7 @@ func TestArtifact_MarshalUnmarshalRoundTrip(t *testing.T) {
 func TestUoWManifest_FieldsExist(t *testing.T) {
 	now := time.Now()
 	manifest := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "go",
@@ -258,7 +258,7 @@ func TestUoWManifest_FieldsExist(t *testing.T) {
 		Version:    "1.0.0",
 	}
 
-	assert.Equal(t, workunit.ContextBuild, manifest.Context)
+	assert.Equal(t, core.ActionBuild, manifest.Action)
 	assert.Equal(t, "core", manifest.Module)
 	assert.Equal(t, "go", manifest.Component)
 	assert.Equal(t, "go", manifest.Tool)
@@ -274,7 +274,7 @@ func TestUoWManifest_FieldsExist(t *testing.T) {
 func TestUoWManifest_ZeroValueIsValid(t *testing.T) {
 	var manifest UoWManifest
 
-	assert.Empty(t, manifest.Context)
+	assert.Empty(t, manifest.Action)
 	assert.Empty(t, manifest.Module)
 	assert.Empty(t, manifest.Component)
 	assert.Empty(t, manifest.Tool)
@@ -295,7 +295,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 		{
 			name: "build manifest",
 			manifest: UoWManifest{
-				Context:    workunit.ContextBuild,
+				Action:     core.ActionBuild,
 				Module:     "core",
 				Component:  "go",
 				Tool:       "go",
@@ -313,7 +313,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 		{
 			name: "test manifest with testset",
 			manifest: UoWManifest{
-				Context:    workunit.ContextTest,
+				Action:     core.ActionTest,
 				Module:     "core",
 				Component:  "go",
 				Tool:       "gotest",
@@ -332,7 +332,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 		{
 			name: "failed lint manifest",
 			manifest: UoWManifest{
-				Context:    workunit.ContextLint,
+				Action:     core.ActionLint,
 				Module:     "web-app",
 				Component:  "typescript",
 				Tool:       "eslint",
@@ -350,7 +350,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 		{
 			name: "scan manifest with vulnerabilities",
 			manifest: UoWManifest{
-				Context:    workunit.ContextScan,
+				Action:     core.ActionScan,
 				Module:     "eac-cli",
 				Component:  "docker",
 				Tool:       "trivy-vuln",
@@ -369,9 +369,9 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 		{
 			name: "manifest with no artifacts",
 			manifest: UoWManifest{
-				Context:    workunit.ContextLint,
+				Action:     core.ActionLint,
 				Module:     "docs",
-				Component:  "markdown",
+				Component:  "assets",
 				Tool:       "markdownlint",
 				ExitCode:   0,
 				InputHash:  "sha256:docs123",
@@ -387,7 +387,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Verify all fields are accessible
-			_ = tt.manifest.Context
+			_ = tt.manifest.Action
 			_ = tt.manifest.Module
 			_ = tt.manifest.Component
 			_ = tt.manifest.Tool
@@ -404,7 +404,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 
 func TestUoWManifest_MarshalJSON(t *testing.T) {
 	manifest := UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "go",
@@ -463,7 +463,7 @@ func TestUoWManifest_UnmarshalJSON(t *testing.T) {
 	err := json.Unmarshal([]byte(jsonData), &manifest)
 	require.NoError(t, err)
 
-	assert.Equal(t, workunit.ContextBuild, manifest.Context)
+	assert.Equal(t, core.ActionBuild, manifest.Action)
 	assert.Equal(t, "core", manifest.Module)
 	assert.Equal(t, "go", manifest.Component)
 	assert.Equal(t, "go", manifest.Tool)
@@ -477,7 +477,7 @@ func TestUoWManifest_UnmarshalJSON(t *testing.T) {
 
 func TestUoWManifest_MarshalUnmarshalRoundTrip(t *testing.T) {
 	original := UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:     core.ActionTest,
 		Module:     "roundtrip-module",
 		Component:  "gherkin",
 		Tool:       "godog",
@@ -501,7 +501,7 @@ func TestUoWManifest_MarshalUnmarshalRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Compare fields
-	assert.Equal(t, original.Context, restored.Context)
+	assert.Equal(t, original.Action, restored.Action)
 	assert.Equal(t, original.Module, restored.Module)
 	assert.Equal(t, original.Component, restored.Component)
 	assert.Equal(t, original.Tool, restored.Tool)
@@ -794,14 +794,14 @@ func TestComponentView_WithMultipleUoWs(t *testing.T) {
 		Status:    StatusCompleted,
 		UoWs: []UoWManifest{
 			{
-				Context:   workunit.ContextBuild,
+				Action:    core.ActionBuild,
 				Module:    "core",
 				Component: "go",
 				Tool:      "go",
 				ExitCode:  0,
 			},
 			{
-				Context:   workunit.ContextTest,
+				Action:    core.ActionTest,
 				Module:    "core",
 				Component: "go",
 				Tool:      "gotest",
@@ -812,8 +812,8 @@ func TestComponentView_WithMultipleUoWs(t *testing.T) {
 	}
 
 	assert.Len(t, view.UoWs, 2)
-	assert.Equal(t, workunit.ContextBuild, view.UoWs[0].Context)
-	assert.Equal(t, workunit.ContextTest, view.UoWs[1].Context)
+	assert.Equal(t, core.ActionBuild, view.UoWs[0].Action)
+	assert.Equal(t, core.ActionTest, view.UoWs[1].Action)
 }
 
 func TestComponentView_StatusAggregation(t *testing.T) {
@@ -1033,7 +1033,7 @@ func TestTypeRelationships_ModuleContainsComponents(t *testing.T) {
 				Component: "go",
 				Status:    StatusCompleted,
 				UoWs: []UoWManifest{
-					{Context: workunit.ContextBuild, Module: "eac-cli", Component: "go", Tool: "go"},
+					{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
 				},
 			},
 			{
@@ -1041,7 +1041,7 @@ func TestTypeRelationships_ModuleContainsComponents(t *testing.T) {
 				Component: "docker",
 				Status:    StatusCompleted,
 				UoWs: []UoWManifest{
-					{Context: workunit.ContextBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+					{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
 				},
 			},
 		},
@@ -1071,7 +1071,7 @@ func TestTypeRelationships_ArtifactBelongsToUoW(t *testing.T) {
 	}
 
 	uow := UoWManifest{
-		Context:   workunit.ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "core",
 		Component: "go",
 		Tool:      "go",

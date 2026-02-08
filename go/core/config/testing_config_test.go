@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	testing_interfaces "github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,13 +25,13 @@ func loadTestConfig(t *testing.T) *TestingConfig {
 // newEmptyConfig creates an empty TestingConfig for edge case testing.
 func newEmptyConfig() *TestingConfig {
 	return &TestingConfig{
-		suites:           make(map[string]*testing_interfaces.SuiteDefinition),
+		suites:           make(map[string]*core.SuiteDefinition),
 		suiteOrder:       []string{},
-		tags:             make(map[string]*testing_interfaces.TagDefinition),
-		tagTypes:         make(map[string]testing_interfaces.TagType),
-		skipReasons:      []testing_interfaces.SkipReason{},
+		tags:             make(map[string]*core.TagDefinition),
+		tagTypes:         make(map[string]core.TagType),
+		skipReasons:      []core.SkipReason{},
 		compiledPatterns: make(map[string]*regexp.Regexp),
-		tagLookup:        make(map[string]*testing_interfaces.TagDefinition),
+		tagLookup:        make(map[string]*core.TagDefinition),
 	}
 }
 
@@ -596,48 +596,38 @@ func TestTestingConfig_ValidateSkipReason_EmptyConfig(t *testing.T) {
 }
 
 // =============================================================================
-// BuildGodogSkipTagFilter tests
+// GetSkipTags tests
 // =============================================================================
 
-func TestTestingConfig_BuildGodogSkipTagFilter(t *testing.T) {
+func TestTestingConfig_GetSkipTags(t *testing.T) {
 	cfg := loadTestConfig(t)
 
-	filter := cfg.BuildGodogSkipTagFilter()
+	tags := cfg.GetSkipTags()
 
-	// Filter should contain negations for all skip reasons
-	assert.Contains(t, filter, "~@skip:wip", "should exclude wip")
-	assert.Contains(t, filter, "~@skip:broken", "should exclude broken")
-	assert.Contains(t, filter, "~@skip:flaky", "should exclude flaky")
-	assert.Contains(t, filter, "~@skip:deprecated", "should exclude deprecated")
-	assert.Contains(t, filter, "~@skip:blocked", "should exclude blocked")
-
-	// Should use && for AND logic
-	assert.Contains(t, filter, " && ", "should use && for conjunction")
-
-	// Should not have trailing or leading && operators
-	assert.False(t, strings.HasPrefix(filter, " && "), "should not start with &&")
-	assert.False(t, strings.HasSuffix(filter, " && "), "should not end with &&")
+	// Tags should contain all skip reasons
+	assert.Contains(t, tags, "@skip:wip", "should contain wip")
+	assert.Contains(t, tags, "@skip:broken", "should contain broken")
+	assert.Contains(t, tags, "@skip:flaky", "should contain flaky")
+	assert.Contains(t, tags, "@skip:deprecated", "should contain deprecated")
+	assert.Contains(t, tags, "@skip:blocked", "should contain blocked")
 }
 
-func TestTestingConfig_BuildGodogSkipTagFilter_EmptyConfig(t *testing.T) {
+func TestTestingConfig_GetSkipTags_EmptyConfig(t *testing.T) {
 	cfg := newEmptyConfig()
 
-	filter := cfg.BuildGodogSkipTagFilter()
-	assert.Empty(t, filter, "empty config should return empty filter")
+	tags := cfg.GetSkipTags()
+	assert.Empty(t, tags, "empty config should return empty slice")
 }
 
-func TestTestingConfig_BuildGodogSkipTagFilter_Format(t *testing.T) {
+func TestTestingConfig_GetSkipTags_Format(t *testing.T) {
 	cfg := loadTestConfig(t)
 
-	filter := cfg.BuildGodogSkipTagFilter()
+	tags := cfg.GetSkipTags()
+	assert.NotEmpty(t, tags, "should have tags")
 
-	// Split by " && " and verify each part
-	parts := strings.Split(filter, " && ")
-	assert.NotEmpty(t, parts, "filter should have parts")
-
-	for _, part := range parts {
-		assert.True(t, strings.HasPrefix(part, "~@skip:"),
-			"each part should start with ~@skip:, got: %s", part)
+	for _, tag := range tags {
+		assert.True(t, strings.HasPrefix(tag, "@skip:"),
+			"each tag should start with @skip:, got: %s", tag)
 	}
 }
 

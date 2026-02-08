@@ -2,6 +2,12 @@
 package main
 
 import (
+	// Test runner adapters (self-register via init)
+	_ "github.com/ready-to-release/eac/go/adapters/cucumber"
+	_ "github.com/ready-to-release/eac/go/adapters/godog"  // registers godog descriptor
+	_ "github.com/ready-to-release/eac/go/adapters/gotest" // registers GoTestRunner + gotest descriptor
+	_ "github.com/ready-to-release/eac/go/adapters/mocha"
+
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/build"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/create/design"
@@ -44,7 +50,6 @@ import (
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/evidence"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/go-mod-sums"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/go-tidy"
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/lint"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/pdf-screenshots"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/update/structurizr"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/validate"

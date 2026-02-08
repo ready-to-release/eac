@@ -3,18 +3,18 @@ package adapters
 import (
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // Compile-time interface checks.
 var (
-	_ interfaces.UnitIDPort     = (*UnitIDAdapter)(nil)
-	_ interfaces.UnitSpecPort   = (*UnitSpecAdapter)(nil)
-	_ interfaces.UnitResultPort = (*UnitResultAdapter)(nil)
+	_ core.UnitIDPort     = (*UnitIDAdapter)(nil)
+	_ core.UnitSpecPort   = (*UnitSpecAdapter)(nil)
+	_ core.UnitResultPort = (*UnitResultAdapter)(nil)
 )
 
-// UnitIDAdapter wraps a workunit.UnitID to implement interfaces.UnitIDPort.
+// UnitIDAdapter wraps a workunit.UnitID to implement core.UnitIDPort.
 type UnitIDAdapter struct {
 	id workunit.UnitID
 }
@@ -29,7 +29,7 @@ func (a *UnitIDAdapter) Unwrap() workunit.UnitID {
 	return a.id
 }
 
-func (a *UnitIDAdapter) GetContext() string            { return string(a.id.Context) }
+func (a *UnitIDAdapter) GetAction() string             { return string(a.id.Action) }
 func (a *UnitIDAdapter) GetModule() string             { return a.id.Module }
 func (a *UnitIDAdapter) GetComponent() string          { return a.id.Component }
 func (a *UnitIDAdapter) GetTool() string               { return a.id.Tool }
@@ -41,11 +41,11 @@ func (a *UnitIDAdapter) String() string                { return a.id.String() }
 func (a *UnitIDAdapter) OutDir() string                { return a.id.OutDir() }
 
 // AdaptUnitID is a convenience function to wrap a unit ID.
-func AdaptUnitID(id workunit.UnitID) interfaces.UnitIDPort {
+func AdaptUnitID(id workunit.UnitID) core.UnitIDPort {
 	return NewUnitIDAdapter(id)
 }
 
-// UnitSpecAdapter wraps a workunit.UnitSpec to implement interfaces.UnitSpecPort.
+// UnitSpecAdapter wraps a workunit.UnitSpec to implement core.UnitSpecPort.
 type UnitSpecAdapter struct {
 	spec workunit.UnitSpec
 }
@@ -60,7 +60,7 @@ func (a *UnitSpecAdapter) Unwrap() workunit.UnitSpec {
 	return a.spec
 }
 
-func (a *UnitSpecAdapter) GetID() interfaces.UnitIDPort {
+func (a *UnitSpecAdapter) GetID() core.UnitIDPort {
 	return AdaptUnitID(a.spec.ID)
 }
 
@@ -69,23 +69,23 @@ func (a *UnitSpecAdapter) GetWeight() int           { return a.spec.Weight }
 func (a *UnitSpecAdapter) IsContainer() bool        { return a.spec.Container }
 func (a *UnitSpecAdapter) IsCached() bool           { return a.spec.Cached }
 
-func (a *UnitSpecAdapter) GetDependsOn() []interfaces.UnitIDPort {
+func (a *UnitSpecAdapter) GetDependsOn() []core.UnitIDPort {
 	if a.spec.DependsOn == nil {
 		return nil
 	}
-	result := make([]interfaces.UnitIDPort, len(a.spec.DependsOn))
+	result := make([]core.UnitIDPort, len(a.spec.DependsOn))
 	for i, dep := range a.spec.DependsOn {
 		result[i] = AdaptUnitID(dep)
 	}
 	return result
 }
 
-func (a *UnitSpecAdapter) GetPoolAllocation() interfaces.PoolAllocationPort {
+func (a *UnitSpecAdapter) GetPoolAllocation() core.PoolAllocationPort {
 	alloc := a.spec.GetPoolAllocation()
 	return &PoolAllocationAdapter{alloc: alloc}
 }
 
-// PoolAllocationAdapter wraps resource.PoolAllocation to implement interfaces.PoolAllocationPort.
+// PoolAllocationAdapter wraps resource.PoolAllocation to implement core.PoolAllocationPort.
 type PoolAllocationAdapter struct {
 	alloc interface {
 		GetHostWeight() int
@@ -101,23 +101,23 @@ func (a *PoolAllocationAdapter) IsContainer() bool    { return a.alloc.IsContain
 func (a *PoolAllocationAdapter) TotalWeight() int     { return a.alloc.TotalWeight() }
 
 // AdaptUnitSpec is a convenience function to wrap a unit spec.
-func AdaptUnitSpec(spec workunit.UnitSpec) interfaces.UnitSpecPort {
+func AdaptUnitSpec(spec workunit.UnitSpec) core.UnitSpecPort {
 	return NewUnitSpecAdapter(spec)
 }
 
 // AdaptUnitSpecs wraps a slice of unit specs.
-func AdaptUnitSpecs(specs []workunit.UnitSpec) []interfaces.UnitSpecPort {
+func AdaptUnitSpecs(specs []workunit.UnitSpec) []core.UnitSpecPort {
 	if specs == nil {
 		return nil
 	}
-	result := make([]interfaces.UnitSpecPort, len(specs))
+	result := make([]core.UnitSpecPort, len(specs))
 	for i, s := range specs {
 		result[i] = AdaptUnitSpec(s)
 	}
 	return result
 }
 
-// UnitResultAdapter wraps a workunit.UnitResult to implement interfaces.UnitResultPort.
+// UnitResultAdapter wraps a workunit.UnitResult to implement core.UnitResultPort.
 type UnitResultAdapter struct {
 	result workunit.UnitResult
 }
@@ -132,7 +132,7 @@ func (a *UnitResultAdapter) Unwrap() workunit.UnitResult {
 	return a.result
 }
 
-func (a *UnitResultAdapter) GetID() interfaces.UnitIDPort {
+func (a *UnitResultAdapter) GetID() core.UnitIDPort {
 	return AdaptUnitID(a.result.ID)
 }
 
@@ -144,16 +144,16 @@ func (a *UnitResultAdapter) Cached() bool               { return a.result.Cached
 func (a *UnitResultAdapter) Failed() bool               { return a.result.Failed() }
 
 // AdaptUnitResult is a convenience function to wrap a unit result.
-func AdaptUnitResult(result workunit.UnitResult) interfaces.UnitResultPort {
+func AdaptUnitResult(result workunit.UnitResult) core.UnitResultPort {
 	return NewUnitResultAdapter(result)
 }
 
 // AdaptUnitResults wraps a slice of unit results.
-func AdaptUnitResults(results []workunit.UnitResult) []interfaces.UnitResultPort {
+func AdaptUnitResults(results []workunit.UnitResult) []core.UnitResultPort {
 	if results == nil {
 		return nil
 	}
-	result := make([]interfaces.UnitResultPort, len(results))
+	result := make([]core.UnitResultPort, len(results))
 	for i, r := range results {
 		result[i] = AdaptUnitResult(r)
 	}

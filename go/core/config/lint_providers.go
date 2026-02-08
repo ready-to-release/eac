@@ -116,21 +116,14 @@ func (p *LintProvider) AllowsParallel() bool {
 // LoadLintProvidersDefaults loads default lint providers from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadLintProvidersDefaults(repoRoot string) (*LintProvidersConfig, error) {
-	data, err := loadDefaultFile(repoRoot, LintProvidersFileName)
+	cfg, err := cloneLintProvidersDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading lint-providers defaults: %w", err)
 	}
-
-	var cfg LintProvidersConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing lint-providers defaults: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // MergeLintProviders merges user lint providers with defaults.
@@ -187,14 +180,10 @@ func (c *EACConfig) LoadLintProviders(validateSchema bool) error {
 		return err
 	}
 
-	// Schema validation would go here if we had a schema constant
-	// For now, we validate through the JSON schema file
-	if validateSchema {
-		// TODO: Add schema validation when schema.SchemaLintProviders is added
-		// if err := c.validateSchema(schema.SchemaLintProviders, data); err != nil {
-		// 	return err
-		// }
-	}
+	// Lint providers config is validated structurally by YAML unmarshalling below.
+	// JSON schema validation is not applied here because lint-providers.yml is a
+	// simple key-value format without a dedicated schema definition.
+	_ = validateSchema
 
 	var userCfg LintProvidersConfig
 	if err := yaml.Unmarshal(data, &userCfg); err != nil {

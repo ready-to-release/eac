@@ -7,6 +7,8 @@ import (
 	"io"
 	"path/filepath"
 	"sync"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // ServeOptions contains options for serve execution.
@@ -116,7 +118,7 @@ func (b *ServeBridge) GetServerForComponent(componentType string) ServeFunc {
 		return nil
 	}
 
-	tool, err := b.resolver.Resolve(componentType, OperationServe)
+	tool, err := b.resolver.Resolve(componentType, core.ActionServe)
 	if err != nil || tool == nil {
 		return nil
 	}
@@ -138,7 +140,7 @@ func (b *ServeBridge) GetServerTool(componentType string) *ToolDefinition {
 		return nil
 	}
 
-	tool, err := b.resolver.Resolve(componentType, OperationServe)
+	tool, err := b.resolver.Resolve(componentType, core.ActionServe)
 	if err != nil || tool == nil {
 		return nil
 	}
@@ -207,7 +209,7 @@ func (b *ServeBridge) createToolServeFuncWithExecutor(tool *ToolDefinition, exec
 			ModuleRoot:    moduleRoot,
 			OutputDir:     contentPath,
 			LogWriter:     logWriter,
-			Operation:     OperationServe,
+			Operation:     core.ActionServe,
 			Placeholders: map[string]string{
 				"{workspace}": workspaceRoot,
 				"{module}":    filepath.Join(workspaceRoot, moduleRoot),

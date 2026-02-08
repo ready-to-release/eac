@@ -103,6 +103,9 @@ const (
 	// DefaultsDir is the defaults subdirectory under a contract version.
 	DefaultsDir = "defaults"
 
+	// SchemasDir is the standard subdirectory for schemas and defaults in contract packages.
+	SchemasDir = "schemas"
+
 	// AIDir is the AI configuration subdirectory.
 	AIDir = "ai"
 
@@ -116,12 +119,22 @@ const (
 	// This is the canonical mount point for Docker containers running eac commands.
 	ContainerRepoRoot = "/var/task"
 
-	// EACCacheRoot is the root directory for all EAC build caches.
-	// This is separate from out/ to clearly distinguish working cache from build outputs.
+	// EACCacheRoot is the root directory for all EAC caches.
+	// This is separate from out/ to clearly distinguish cache state from build outputs.
+	// Deleting .cache/eac/ is guaranteed safe — all ephemeral caches are here.
+	// Git-tracked assets in docs/assets/cache/ are NOT under this root.
+	//
 	// Structure:
-	//   - .cache/eac/mkdocs/          - MkDocs build state and staging
 	//   - .cache/eac/build/           - Build acceleration caches (hashes, state)
+	//   - .cache/eac/staging/         - Persistent doc staging areas
+	//   - .cache/eac/structurizr/     - Structurizr acceleration cache
+	//   - .cache/eac/drawio/          - DrawIO acceleration cache
+	//   - .cache/eac/mermaid/         - Mermaid acceleration cache
 	//   - .cache/eac/pdf-screenshots/ - Extracted PDF page images
+	//   - .cache/eac/incremental/     - UoW incremental state (build/test/lint/scan)
+	//   - .cache/eac/semaphores/      - Cross-process capacity coordination
+	//   - .cache/eac/npm/             - NPM isolation work dirs and download cache
+	//   - .cache/eac/preprocess/      - Book preprocessing state
 	EACCacheRoot = ".cache/eac"
 )
 
@@ -222,12 +235,6 @@ func StagingPath(repoRoot, name string) string {
 	return filepath.Join(repoRoot, OutDir, StagingDir, name)
 }
 
-// CachePath returns the path to the cache directory.
-// DEPRECATED: Use CacheRootPath for new code. This now returns .cache/eac.
-func CachePath(repoRoot string) string {
-	return CacheRootPath(repoRoot)
-}
-
 // CacheRootPath returns the root EAC cache directory (.cache/eac).
 // All transient build caches should be stored under this directory.
 func CacheRootPath(repoRoot string) string {
@@ -248,11 +255,51 @@ func FileHashCachePath(repoRoot, bookName string) string {
 	return filepath.Join(BuildCachePath(repoRoot), "hashes", bookName+".json")
 }
 
+// InputHashCachePath returns the path to the module input hash cache.
+// Used for caching computed source file hashes with mtime metadata.
+// Path: .cache/eac/build/input-hashes.json
+func InputHashCachePath(repoRoot string) string {
+	return filepath.Join(BuildCachePath(repoRoot), "input-hashes.json")
+}
+
 // BuildStateCachePath returns the path to the build state cache directory.
 // Used for tracking incremental build state (PDF/site content hashes).
 // Path: .cache/eac/build/state/
 func BuildStateCachePath(repoRoot string) string {
 	return filepath.Join(BuildCachePath(repoRoot), "state")
+}
+
+// IncrementalCachePath returns the root path for UoW incremental state.
+// State files (state.json) for build/test/lint/scan units live here,
+// separate from output artifacts (logs, results) which remain in out/.
+// Path: .cache/eac/incremental/
+func IncrementalCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "incremental")
+}
+
+// SemaphoreCachePath returns the path to the semaphore coordination directory.
+// Cross-process capacity semaphore files live here.
+// Path: .cache/eac/semaphores/
+func SemaphoreCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "semaphores")
+}
+
+// PreprocessCachePath returns the path to preprocessing state cache.
+// Path: .cache/eac/preprocess/
+func PreprocessCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "preprocess")
+}
+
+// NpmWorkCachePath returns the path to NPM isolation work directories.
+// Path: .cache/eac/npm/work/
+func NpmWorkCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "npm", "work")
+}
+
+// NpmDownloadCachePath returns the path for NPM_CONFIG_CACHE.
+// Path: .cache/eac/npm/cache/
+func NpmDownloadCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "npm", "cache")
 }
 
 // StagingCachePath returns the path to the staging cache directory.
@@ -409,21 +456,6 @@ func R2RPath(repoRoot string) string {
 // ContractsVersionPath returns the path to a contracts version directory.
 func ContractsVersionPath(repoRoot, module, version string) string {
 	return filepath.Join(repoRoot, ContractsDir, module, version)
-}
-
-// LoggingDefaultsPath returns the path to the logging defaults file
-// Container-aware: uses R2R_CONTAINER_ROOT when running in container.
-func LoggingDefaultsPath(repoRoot string) string {
-	root := defaultsRoot(repoRoot)
-	return filepath.Join(root, ContractsDir, EACCoreModule, DefaultsVersion, DefaultsDir, "logging.yml")
-}
-
-// defaultsRoot returns the root for loading defaults (container-aware).
-func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv(ContainerRootEnv); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
 }
 
 // SecurityOutputPath returns the path to security scan output.
@@ -611,9 +643,9 @@ func MkDocsConfigPath(outputDir string) string {
 	return filepath.Join(outputDir, "mkdocs.yml")
 }
 
-// MkDocsSiteTemplatePath returns the path to the site-render-oci template.
+// MkDocsSiteTemplatePath returns the path to the mkdocs-render-oci template.
 func MkDocsSiteTemplatePath(repoRoot string) string {
-	return filepath.Join(repoRoot, "containers", "site-render-oci", "mkdocs.yml")
+	return filepath.Join(repoRoot, "containers", "mkdocs-render-oci", "mkdocs.yml")
 }
 
 // MkDocsPdfTemplatePath returns the path to the pdf-oci template.
@@ -689,6 +721,13 @@ func StructurizrAccelCachePath(repoRoot string) string {
 	return filepath.Join(CacheRootPath(repoRoot), "structurizr")
 }
 
+// MarkdownCommandsBuildOutputPath returns the markdown-commands fragment output dir.
+// Path: out/build/<module>/markdown-commands-markdown-commands/markdown-commands/
+func MarkdownCommandsBuildOutputPath(repoRoot, moduleName string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moduleName,
+		"markdown-commands-markdown-commands", "markdown-commands")
+}
+
 // DrawioBuildOutputPath returns the path to the drawio build output directory.
 // This is where rendered drawio PNGs are written by the drawio builder.
 // Path: out/build/docs/drawio-drawio-render/drawio/
@@ -715,6 +754,20 @@ func DrawioAccelCachePath(repoRoot string) string {
 // Path: .cache/eac/mermaid/
 func MermaidAccelCachePath(repoRoot string) string {
 	return filepath.Join(CacheRootPath(repoRoot), "mermaid")
+}
+
+// PlantUMLAccelCachePath returns the path to the plantuml acceleration cache.
+// Used for incremental builds to avoid re-rendering unchanged diagrams.
+// Path: .cache/eac/plantuml/
+func PlantUMLAccelCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "plantuml")
+}
+
+// PlantUMLBuildOutputPath returns the path to the plantuml build output directory.
+// This is where rendered plantuml SVGs and the index manifest are written.
+// Path: out/build/docs/plantuml-plantuml-render/plantuml/
+func PlantUMLBuildOutputPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "plantuml-plantuml-render", "plantuml")
 }
 
 // PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory.

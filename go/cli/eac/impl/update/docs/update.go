@@ -166,10 +166,6 @@ func runPruneCache(repoRoot string, verbose, dryRun bool) int {
 	fmt.Printf("  Files: %d, Active: %d, Orphans: %d (%s)\n",
 		result.MermaidCacheFiles, result.MermaidActiveHashes,
 		len(result.MermaidOrphans), formatBytes(result.MermaidBytesRecovered))
-	if len(result.LegacyMermaidFiles) > 0 {
-		fmt.Printf("  Legacy: %d (%s)\n",
-			len(result.LegacyMermaidFiles), formatBytes(result.LegacyMermaidBytes))
-	}
 
 	fmt.Println()
 	fmt.Println("Drawio cache:")
@@ -194,11 +190,6 @@ func runPruneCache(repoRoot string, verbose, dryRun bool) int {
 		fmt.Println("[DRY RUN] Would delete:")
 		if len(result.MermaidOrphans) > 0 {
 			for _, f := range result.MermaidOrphans {
-				fmt.Printf("  - mermaid/%s\n", f)
-			}
-		}
-		if len(result.LegacyMermaidFiles) > 0 {
-			for _, f := range result.LegacyMermaidFiles {
 				fmt.Printf("  - mermaid/%s\n", f)
 			}
 		}

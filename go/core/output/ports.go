@@ -3,15 +3,15 @@ package output
 import (
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // unitIDFromPort converts a UnitIDPort to a concrete workunit.UnitID,
 // including all Extra fields for proper uniqueness handling.
-func unitIDFromPort(p interfaces.UnitIDPort) workunit.UnitID {
+func unitIDFromPort(p core.UnitIDPort) workunit.UnitID {
 	return workunit.UnitID{
-		Context:   workunit.Context(p.GetContext()),
+		Action:    core.ActionType(p.GetAction()),
 		Module:    p.GetModule(),
 		Component: p.GetComponent(),
 		Tool:      p.GetTool(),
@@ -35,12 +35,12 @@ func NewOutputReaderAdapter(reader *DiskOutputReader) *OutputReaderAdapter {
 }
 
 // Ensure OutputReaderAdapter implements OutputReaderPort.
-var _ interfaces.OutputReaderPort = (*OutputReaderAdapter)(nil)
+var _ core.OutputReaderPort = (*OutputReaderAdapter)(nil)
 
 // GetUoW implements OutputReaderPort.GetUoW.
-func (a *OutputReaderAdapter) GetUoW(context, module, component, tool string) (interfaces.UoWManifestPort, error) {
+func (a *OutputReaderAdapter) GetUoW(context, module, component, tool string) (core.UoWManifestPort, error) {
 	id := workunit.UnitID{
-		Context:   workunit.Context(context),
+		Action:    core.ActionType(context),
 		Module:    module,
 		Component: component,
 		Tool:      tool,
@@ -55,7 +55,7 @@ func (a *OutputReaderAdapter) GetUoW(context, module, component, tool string) (i
 }
 
 // GetUoWByID implements OutputReaderPort with full UnitID support including Extra.
-func (a *OutputReaderAdapter) GetUoWByID(unitID interfaces.UnitIDPort) (interfaces.UoWManifestPort, error) {
+func (a *OutputReaderAdapter) GetUoWByID(unitID core.UnitIDPort) (core.UoWManifestPort, error) {
 	id := unitIDFromPort(unitID)
 	manifest, err := a.reader.GetUoW(id)
 	if err != nil {
@@ -65,8 +65,8 @@ func (a *OutputReaderAdapter) GetUoWByID(unitID interfaces.UnitIDPort) (interfac
 }
 
 // GetModule implements OutputReaderPort.GetModule.
-func (a *OutputReaderAdapter) GetModule(context, module string) (interfaces.ModuleViewPort, error) {
-	view, err := a.reader.GetModule(workunit.Context(context), module)
+func (a *OutputReaderAdapter) GetModule(context, module string) (core.ModuleViewPort, error) {
+	view, err := a.reader.GetModule(core.ActionType(context), module)
 	if err != nil {
 		return nil, err
 	}
@@ -74,12 +74,12 @@ func (a *OutputReaderAdapter) GetModule(context, module string) (interfaces.Modu
 }
 
 // ListUoWs implements OutputReaderPort.ListUoWs.
-func (a *OutputReaderAdapter) ListUoWs(context, module string) ([]interfaces.UoWManifestPort, error) {
-	manifests, err := a.reader.ListUoWs(workunit.Context(context), module)
+func (a *OutputReaderAdapter) ListUoWs(context, module string) ([]core.UoWManifestPort, error) {
+	manifests, err := a.reader.ListUoWs(core.ActionType(context), module)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]interfaces.UoWManifestPort, len(manifests))
+	result := make([]core.UoWManifestPort, len(manifests))
 	for i, m := range manifests {
 		result[i] = m
 	}
@@ -87,9 +87,9 @@ func (a *OutputReaderAdapter) ListUoWs(context, module string) ([]interfaces.UoW
 }
 
 // ValidateUoW implements OutputReaderPort.ValidateUoW.
-func (a *OutputReaderAdapter) ValidateUoW(context, module, component, tool string) interfaces.ValidationResultPort {
+func (a *OutputReaderAdapter) ValidateUoW(context, module, component, tool string) core.ValidationResultPort {
 	id := workunit.UnitID{
-		Context:   workunit.Context(context),
+		Action:    core.ActionType(context),
 		Module:    module,
 		Component: component,
 		Tool:      tool,
@@ -101,20 +101,20 @@ func (a *OutputReaderAdapter) ValidateUoW(context, module, component, tool strin
 }
 
 // ValidateUoWByID implements validation with full UnitID support including Extra.
-func (a *OutputReaderAdapter) ValidateUoWByID(unitID interfaces.UnitIDPort) interfaces.ValidationResultPort {
+func (a *OutputReaderAdapter) ValidateUoWByID(unitID core.UnitIDPort) core.ValidationResultPort {
 	id := unitIDFromPort(unitID)
 	result := a.reader.ValidateUoW(id)
 	return &result
 }
 
 // ValidateModule implements OutputReaderPort.ValidateModule.
-func (a *OutputReaderAdapter) ValidateModule(context, module string, expectedUoWs []interfaces.UnitIDPort) interfaces.ValidationResultPort {
+func (a *OutputReaderAdapter) ValidateModule(context, module string, expectedUoWs []core.UnitIDPort) core.ValidationResultPort {
 	// Convert UnitIDPort to workunit.UnitID
 	ids := make([]workunit.UnitID, len(expectedUoWs))
 	for i, id := range expectedUoWs {
 		ids[i] = unitIDFromPort(id)
 	}
-	result := a.reader.ValidateModule(workunit.Context(context), module, ids)
+	result := a.reader.ValidateModule(core.ActionType(context), module, ids)
 	return &result
 }
 
@@ -133,20 +133,20 @@ func NewUoWTrackerAdapter(tracker *InMemoryTracker) *UoWTrackerAdapter {
 }
 
 // Ensure UoWTrackerAdapter implements UoWTrackerPort.
-var _ interfaces.UoWTrackerPort = (*UoWTrackerAdapter)(nil)
+var _ core.UoWTrackerPort = (*UoWTrackerAdapter)(nil)
 
 // RecordStart implements UoWTrackerPort.RecordStart.
-func (a *UoWTrackerAdapter) RecordStart(unitID interfaces.UnitIDPort) error {
+func (a *UoWTrackerAdapter) RecordStart(unitID core.UnitIDPort) error {
 	return a.tracker.RecordStart(unitIDFromPort(unitID))
 }
 
 // RecordComplete implements UoWTrackerPort.RecordComplete.
-func (a *UoWTrackerAdapter) RecordComplete(unitID interfaces.UnitIDPort, manifest interfaces.UoWManifestPort) error {
+func (a *UoWTrackerAdapter) RecordComplete(unitID core.UnitIDPort, manifest core.UoWManifestPort) error {
 	id := unitIDFromPort(unitID)
 
 	// Convert manifest port to concrete type
 	uowManifest := &UoWManifest{
-		Context:    workunit.Context(manifest.GetContext()),
+		Action:     core.ActionType(manifest.GetAction()),
 		Module:     manifest.GetModule(),
 		Component:  manifest.GetComponent(),
 		Tool:       manifest.GetTool(),
@@ -173,7 +173,7 @@ func (a *UoWTrackerAdapter) RecordComplete(unitID interfaces.UnitIDPort, manifes
 }
 
 // RecordCacheHit implements UoWTrackerPort.RecordCacheHit.
-func (a *UoWTrackerAdapter) RecordCacheHit(unitID interfaces.UnitIDPort) (interfaces.UoWManifestPort, error) {
+func (a *UoWTrackerAdapter) RecordCacheHit(unitID core.UnitIDPort) (core.UoWManifestPort, error) {
 	manifest, err := a.tracker.RecordCacheHit(unitIDFromPort(unitID))
 	if err != nil {
 		return nil, err
@@ -186,11 +186,11 @@ func (a *UoWTrackerAdapter) RecordCacheHit(unitID interfaces.UnitIDPort) (interf
 // =============================================================================
 
 // Ensure UoWManifest implements UoWManifestPort.
-var _ interfaces.UoWManifestPort = (*UoWManifest)(nil)
+var _ core.UoWManifestPort = (*UoWManifest)(nil)
 
-// GetContext implements UoWManifestPort.GetContext.
-func (m *UoWManifest) GetContext() string {
-	return string(m.Context)
+// GetAction implements UoWManifestPort.GetAction.
+func (m *UoWManifest) GetAction() string {
+	return string(m.Action)
 }
 
 // GetModule implements UoWManifestPort.GetModule.
@@ -229,8 +229,8 @@ func (m *UoWManifest) GetDuration() time.Duration {
 }
 
 // GetArtifacts implements UoWManifestPort.GetArtifacts.
-func (m *UoWManifest) GetArtifacts() []interfaces.OutputArtifactPort {
-	result := make([]interfaces.OutputArtifactPort, len(m.Artifacts))
+func (m *UoWManifest) GetArtifacts() []core.OutputArtifactPort {
+	result := make([]core.OutputArtifactPort, len(m.Artifacts))
 	for i := range m.Artifacts {
 		result[i] = &m.Artifacts[i]
 	}
@@ -247,7 +247,7 @@ func (m *UoWManifest) GetOutputHash() string {
 // =============================================================================
 
 // Ensure Artifact implements OutputArtifactPort.
-var _ interfaces.OutputArtifactPort = (*Artifact)(nil)
+var _ core.OutputArtifactPort = (*Artifact)(nil)
 
 // GetID implements OutputArtifactPort.GetID.
 func (a *Artifact) GetID() string {
@@ -279,7 +279,7 @@ func (a *Artifact) GetType() string {
 // =============================================================================
 
 // Ensure ModuleView implements ModuleViewPort.
-var _ interfaces.ModuleViewPort = (*ModuleView)(nil)
+var _ core.ModuleViewPort = (*ModuleView)(nil)
 
 // GetModule implements ModuleViewPort.GetModule.
 func (v *ModuleView) GetModule() string {
@@ -292,8 +292,8 @@ func (v *ModuleView) GetStatus() string {
 }
 
 // GetComponents implements ModuleViewPort.GetComponents.
-func (v *ModuleView) GetComponents() []interfaces.ComponentViewPort {
-	result := make([]interfaces.ComponentViewPort, len(v.Components))
+func (v *ModuleView) GetComponents() []core.ComponentViewPort {
+	result := make([]core.ComponentViewPort, len(v.Components))
 	for i := range v.Components {
 		result[i] = &v.Components[i]
 	}
@@ -310,7 +310,7 @@ func (v *ModuleView) GetTotalSize() int64 {
 // =============================================================================
 
 // Ensure ComponentView implements ComponentViewPort.
-var _ interfaces.ComponentViewPort = (*ComponentView)(nil)
+var _ core.ComponentViewPort = (*ComponentView)(nil)
 
 // GetModule implements ComponentViewPort.GetModule.
 func (v *ComponentView) GetModule() string {
@@ -328,8 +328,8 @@ func (v *ComponentView) GetStatus() string {
 }
 
 // GetUoWs implements ComponentViewPort.GetUoWs.
-func (v *ComponentView) GetUoWs() []interfaces.UoWManifestPort {
-	result := make([]interfaces.UoWManifestPort, len(v.UoWs))
+func (v *ComponentView) GetUoWs() []core.UoWManifestPort {
+	result := make([]core.UoWManifestPort, len(v.UoWs))
 	for i := range v.UoWs {
 		result[i] = &v.UoWs[i]
 	}
@@ -346,7 +346,7 @@ func (v *ComponentView) GetTotalSize() int64 {
 // =============================================================================
 
 // Ensure ValidationResult implements ValidationResultPort.
-var _ interfaces.ValidationResultPort = (*ValidationResult)(nil)
+var _ core.ValidationResultPort = (*ValidationResult)(nil)
 
 // IsValid implements ValidationResultPort.IsValid.
 func (r *ValidationResult) IsValid() bool {

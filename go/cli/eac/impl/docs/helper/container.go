@@ -8,24 +8,24 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 const (
 	// defaultContainerNameBase is the fallback base name for mkdocs containers.
-	defaultContainerNameBase = "site-render-oci"
+	defaultContainerNameBase = "mkdocs-render-oci"
 	// defaultImageName is the fallback Docker image name (uses :local tag for local builds).
-	defaultImageName = "site-render-oci:local"
+	defaultImageName = "mkdocs-render-oci:local"
 	// defaultDockerfile is the fallback Dockerfile path.
-	defaultDockerfile = "containers/site-render-oci/Dockerfile"
+	defaultDockerfile = "containers/mkdocs-render-oci/Dockerfile"
 
 	// containerInternalPort is the port MkDocs listens on inside the container.
 	containerInternalPort = 8000
 )
 
-// getDockerImageConfig returns the Docker image configuration for site-render-oci type.
+// getDockerImageConfig returns the Docker image configuration for mkdocs-render-oci type.
 // Uses hardcoded defaults since module types no longer define docker image config.
 func getDockerImageConfig() (containerNameBase, imageName, dockerfile string) {
 	containerNameBase = defaultContainerNameBase
@@ -101,12 +101,12 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 	configPath := paths.MkDocsConfigPath(configDir)
 	// docs_dir is relative to config file location (out/serve/mkdocs.yml)
 	// So we need ../../docs to get back to repo root's docs/ directory
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:     "Documentation",
 		DocsDir:      "../../docs",
 		OutputFormat: "site",
 	}
-	if err := books.WriteMkDocsConfig(repoRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(repoRoot, configPath, configOpts); err != nil {
 		log.Errorf("Failed to generate mkdocs.yml: error=%v", err)
 		return nil, fmt.Errorf("failed to generate mkdocs.yml: %w", err)
 	}
@@ -114,7 +114,7 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 
 	// Copy mkdocs macros script to serve directory as main.py
 	// mkdocs-macros will automatically find main.py in the same directory as mkdocs.yml
-	macrosSource := filepath.Join(repoRoot, "containers", "site-render-oci", "mkdocs_macros.py")
+	macrosSource := filepath.Join(repoRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(configDir, "main.py")
 	macrosData, err := os.ReadFile(macrosSource)
 	if err == nil {

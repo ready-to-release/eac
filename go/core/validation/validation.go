@@ -4,54 +4,29 @@ import "fmt"
 
 // ValidationError represents a validation error with structured metadata.
 type ValidationError struct {
-	Code       *ErrorCode // Structured error code (nil for legacy string codes)
-	LegacyCode string     // Legacy string code (for backward compatibility)
-	Message    string
-	Line       int
-	Severity   string // "error" or "warning" (deprecated, use Code.Severity)
-	Context    string // Additional context for debugging
+	Code    *ErrorCode // Structured error code
+	Message string
+	Line    int
+	Context string // Additional context for debugging
 }
 
 // NewValidationError creates a validation error with structured error code.
 func NewValidationError(code ErrorCode, message string, line int) *ValidationError {
 	return &ValidationError{
-		Code:       &code,
-		LegacyCode: code.Code,
-		Message:    message,
-		Line:       line,
-		Severity:   string(code.Severity),
-		Context:    "",
+		Code:    &code,
+		Message: message,
+		Line:    line,
 	}
 }
 
 // NewValidationErrorWithContext creates a validation error with additional context.
 func NewValidationErrorWithContext(code ErrorCode, message string, line int, context string) *ValidationError {
 	return &ValidationError{
-		Code:       &code,
-		LegacyCode: code.Code,
-		Message:    message,
-		Line:       line,
-		Severity:   string(code.Severity),
-		Context:    context,
+		Code:    &code,
+		Message: message,
+		Line:    line,
+		Context: context,
 	}
-}
-
-// NewLegacyValidationError creates a validation error from legacy string code (backward compatibility).
-func NewLegacyValidationError(code, message string, line int, severity string) *ValidationError {
-	ve := &ValidationError{
-		LegacyCode: code,
-		Message:    message,
-		Line:       line,
-		Severity:   severity,
-	}
-
-	// Try to look up structured error code, override severity if found
-	if ec, ok := GetErrorCode(code); ok {
-		ve.Code = ec
-		ve.Severity = string(ec.Severity)
-	}
-
-	return ve
 }
 
 // GetCode returns the error code string.
@@ -59,7 +34,7 @@ func (e *ValidationError) GetCode() string {
 	if e.Code != nil {
 		return e.Code.Code
 	}
-	return e.LegacyCode
+	return ""
 }
 
 // IsCritical returns true if error is critical (non-retriable)
@@ -68,7 +43,6 @@ func (e *ValidationError) IsCritical() bool {
 	if e.Code != nil {
 		return !e.Code.Retriable
 	}
-	// Legacy behavior: assume retriable unless explicitly non-retriable
 	return false
 }
 
@@ -77,8 +51,7 @@ func (e *ValidationError) IsWarning() bool {
 	if e.Code != nil {
 		return e.Code.Severity == SeverityWarning
 	}
-	// Legacy behavior: check Severity field
-	return e.Severity == "warning"
+	return false
 }
 
 // GetCategory returns the error category.

@@ -123,9 +123,9 @@ func TestBuildContainerConfig(t *testing.T) {
 	bridge := NewHandlerToolBridge()
 
 	tool := &ToolDefinition{
-		ID:        "site-render-oci",
+		ID:        "mkdocs-render-oci",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/site-render-oci",
+		LocalPath: "containers/mkdocs-render-oci",
 		Command:   []string{"mkdocs", "build", "-f", "{config}", "--site-dir", "{output}/site"},
 		WorkDir:   "/docs",
 		Mounts: []MountConfig{
@@ -149,8 +149,8 @@ func TestBuildContainerConfig(t *testing.T) {
 	config := bridge.buildContainerConfig(tool, tc)
 
 	// Verify image
-	if config.Image != "site-render-oci:local" {
-		t.Errorf("Image = %q, want %q", config.Image, "site-render-oci:local")
+	if config.Image != "mkdocs-render-oci:local" {
+		t.Errorf("Image = %q, want %q", config.Image, "mkdocs-render-oci:local")
 	}
 
 	// Verify command substitution

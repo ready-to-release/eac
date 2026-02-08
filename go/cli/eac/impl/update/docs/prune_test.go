@@ -1,6 +1,6 @@
 // Package docs provides cache pruning tests for the update docs command.
 // These tests verify that the cache pruning logic correctly identifies orphaned
-// cache files by computing hashes that exactly match the books.AssetCache implementation.
+// cache files by computing hashes that exactly match the caching.AssetCache implementation.
 package docs
 
 import (
@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // =============================================================================
-// Hash Computation Tests - Verify exact match with books.AssetCache
+// Hash Computation Tests - Verify exact match with caching.AssetCache
 // =============================================================================
 
 // TestComputeMermaidCacheHash_ProducesValidHash verifies that the prune module's
@@ -84,7 +84,7 @@ flowchart TD
     A --> B`
 
 	// Strip the directive (as the prune logic should do)
-	strippedContent := books.StripSizeDirective(contentWithDirective)
+	strippedContent := diagrams.StripSizeDirective(contentWithDirective)
 
 	// Hash the stripped content
 	hashFromDirective := computeMermaidCacheHash(strippedContent)
@@ -108,17 +108,17 @@ func TestComputeDrawioCacheHash_ProducesValidHash(t *testing.T) {
 		{
 			name:       "standard hash and width",
 			sourceHash: "abc123def456789",
-			maxWidth:   books.MaxImageWidthPDF,
+			maxWidth:   diagrams.MaxImageWidthPDF,
 		},
 		{
 			name:       "full 64-char hash",
 			sourceHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-			maxWidth:   books.MaxImageWidthPDF,
+			maxWidth:   diagrams.MaxImageWidthPDF,
 		},
 		{
 			name:       "empty source hash",
 			sourceHash: "",
-			maxWidth:   books.MaxImageWidthPDF,
+			maxWidth:   diagrams.MaxImageWidthPDF,
 		},
 		{
 			name:       "different max width",
@@ -239,13 +239,13 @@ func TestPruneCache_IdentifiesDrawioOrphans(t *testing.T) {
 	}
 
 	// Compute the source file hash
-	sourceHash, err := books.HashFileContent(drawioPath)
+	sourceHash, err := diagrams.HashFileContent(drawioPath)
 	if err != nil {
 		t.Fatalf("Failed to hash drawio source: %v", err)
 	}
 
 	// Compute the valid cache filename (traceable format)
-	cacheHash := computeDrawioCacheHash(sourceHash, books.MaxImageWidthPDF)
+	cacheHash := computeDrawioCacheHash(sourceHash, diagrams.MaxImageWidthPDF)
 	validFilename := filepath.Base(paths.DrawioCachePath(cacheDir, drawioPath, cacheHash))
 
 	// Create cache files: one valid, one orphan
@@ -851,8 +851,8 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 	mermaidCachePath := paths.MermaidCachePath(cacheDir, mdPath, 0, mermaidHash)
 	mermaidCacheFilename := filepath.Base(mermaidCachePath)
 
-	drawioSourceHash, _ := books.HashFileContent(drawioPath)
-	drawioHash := computeDrawioCacheHash(drawioSourceHash, books.MaxImageWidthPDF)
+	drawioSourceHash, _ := diagrams.HashFileContent(drawioPath)
+	drawioHash := computeDrawioCacheHash(drawioSourceHash, diagrams.MaxImageWidthPDF)
 	drawioCachePath := paths.DrawioCachePath(cacheDir, drawioPath, drawioHash)
 	drawioCacheFilename := filepath.Base(drawioCachePath)
 
@@ -901,387 +901,6 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 }
 
 // =============================================================================
-// Legacy Mermaid Cache File Detection Tests
-// =============================================================================
-// Legacy files use a pure 64-character SHA256 hash naming convention.
-// New V2 files use traceable naming: {identifier}_{blockIndex}_{hash8}.svg
-
-// TestIsLegacyMermaidCacheFile verifies detection of legacy 64-char hash filenames.
-func TestIsLegacyMermaidCacheFile(t *testing.T) {
-	tests := []struct {
-		filename string
-		isLegacy bool
-		desc     string
-	}{
-		// Valid legacy files (64-char hex + .svg)
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.svg",
-			isLegacy: true,
-			desc:     "valid 64-char lowercase hex hash",
-		},
-		{
-			filename: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345abcd.svg",
-			isLegacy: true,
-			desc:     "valid 64-char mixed hex hash",
-		},
-		{
-			filename: "f771299b5df84c4cd09275f39eb33052817c5b8015465aed663061ffbe2f39ce.svg",
-			isLegacy: true,
-			desc:     "real legacy file from cache",
-		},
-		{
-			filename: "dbc9d300676e830558b091db1ed357c0b596ee1ecfd95b8613e0ac280d6290d4.svg",
-			isLegacy: true,
-			desc:     "another real legacy file",
-		},
-		// New V2 format files (should NOT be legacy)
-		{
-			filename: "cd-model_variants_1_f771299b.svg",
-			isLegacy: false,
-			desc:     "V2 traceable format with identifier",
-		},
-		{
-			filename: "workflow_branching-strategies_5_37fcc915.svg",
-			isLegacy: false,
-			desc:     "V2 format with hyphens in identifier",
-		},
-		{
-			filename: "architecture_index_0_ad8e0e68.svg",
-			isLegacy: false,
-			desc:     "V2 format simple identifier",
-		},
-		// Edge cases that are NOT legacy
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde.svg",
-			isLegacy: false,
-			desc:     "63-char hash (too short)",
-		},
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeff.svg",
-			isLegacy: false,
-			desc:     "65-char hash (too long)",
-		},
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeG.svg",
-			isLegacy: false,
-			desc:     "invalid hex character G",
-		},
-		{
-			filename: "0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef.svg",
-			isLegacy: false,
-			desc:     "uppercase hex not allowed",
-		},
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.png",
-			isLegacy: false,
-			desc:     "wrong extension (.png)",
-		},
-		{
-			filename: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-			isLegacy: false,
-			desc:     "no extension",
-		},
-		{
-			filename: "readme.svg",
-			isLegacy: false,
-			desc:     "non-hash filename",
-		},
-		{
-			filename: ".svg",
-			isLegacy: false,
-			desc:     "empty basename",
-		},
-		{
-			filename: "",
-			isLegacy: false,
-			desc:     "empty filename",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			result := IsLegacyMermaidCacheFile(tt.filename)
-			if result != tt.isLegacy {
-				t.Errorf("IsLegacyMermaidCacheFile(%q) = %v, want %v", tt.filename, result, tt.isLegacy)
-			}
-		})
-	}
-}
-
-// TestFindLegacyMermaidFiles verifies scanning a cache directory for legacy files.
-func TestFindLegacyMermaidFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-	mermaidCacheDir := filepath.Join(tmpDir, "mermaid")
-
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create mermaid cache dir: %v", err)
-	}
-
-	// Create a mix of legacy and V2 files
-	legacyFile1 := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.svg"
-	legacyFile2 := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345abcd.svg"
-	v2File1 := "cd-model_variants_1_f771299b.svg"
-	v2File2 := "workflow_branching_0_37fcc915.svg"
-	nonSvgFile := "readme.txt"
-
-	// Write files with different sizes
-	if err := os.WriteFile(filepath.Join(mermaidCacheDir, legacyFile1), []byte(strings.Repeat("a", 1000)), 0o644); err != nil {
-		t.Fatalf("Failed to write legacy1: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(mermaidCacheDir, legacyFile2), []byte(strings.Repeat("b", 2000)), 0o644); err != nil {
-		t.Fatalf("Failed to write legacy2: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(mermaidCacheDir, v2File1), []byte(strings.Repeat("c", 500)), 0o644); err != nil {
-		t.Fatalf("Failed to write v2-1: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(mermaidCacheDir, v2File2), []byte(strings.Repeat("d", 500)), 0o644); err != nil {
-		t.Fatalf("Failed to write v2-2: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(mermaidCacheDir, nonSvgFile), []byte("info"), 0o644); err != nil {
-		t.Fatalf("Failed to write non-svg: %v", err)
-	}
-
-	// Find legacy files
-	legacyFiles, legacyBytes := FindLegacyMermaidFiles(mermaidCacheDir)
-
-	// Verify count
-	if len(legacyFiles) != 2 {
-		t.Errorf("Expected 2 legacy files, got %d: %v", len(legacyFiles), legacyFiles)
-	}
-
-	// Verify correct files identified
-	legacySet := make(map[string]bool)
-	for _, f := range legacyFiles {
-		legacySet[f] = true
-	}
-	if !legacySet[legacyFile1] {
-		t.Errorf("Expected %s to be identified as legacy", legacyFile1)
-	}
-	if !legacySet[legacyFile2] {
-		t.Errorf("Expected %s to be identified as legacy", legacyFile2)
-	}
-	if legacySet[v2File1] {
-		t.Errorf("V2 file %s should not be identified as legacy", v2File1)
-	}
-	if legacySet[v2File2] {
-		t.Errorf("V2 file %s should not be identified as legacy", v2File2)
-	}
-
-	// Verify bytes calculation (1000 + 2000 = 3000)
-	expectedBytes := int64(3000)
-	if legacyBytes != expectedBytes {
-		t.Errorf("Expected %d legacy bytes, got %d", expectedBytes, legacyBytes)
-	}
-}
-
-// TestFindLegacyMermaidFiles_EmptyDirectory verifies behavior with empty cache.
-func TestFindLegacyMermaidFiles_EmptyDirectory(t *testing.T) {
-	tmpDir := t.TempDir()
-	mermaidCacheDir := filepath.Join(tmpDir, "mermaid")
-
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create mermaid cache dir: %v", err)
-	}
-
-	legacyFiles, legacyBytes := FindLegacyMermaidFiles(mermaidCacheDir)
-
-	if len(legacyFiles) != 0 {
-		t.Errorf("Expected 0 legacy files in empty dir, got %d", len(legacyFiles))
-	}
-	if legacyBytes != 0 {
-		t.Errorf("Expected 0 bytes in empty dir, got %d", legacyBytes)
-	}
-}
-
-// TestFindLegacyMermaidFiles_NonExistentDirectory verifies graceful handling.
-func TestFindLegacyMermaidFiles_NonExistentDirectory(t *testing.T) {
-	legacyFiles, legacyBytes := FindLegacyMermaidFiles("/nonexistent/path/mermaid")
-
-	if len(legacyFiles) != 0 {
-		t.Errorf("Expected 0 legacy files for nonexistent dir, got %d", len(legacyFiles))
-	}
-	if legacyBytes != 0 {
-		t.Errorf("Expected 0 bytes for nonexistent dir, got %d", legacyBytes)
-	}
-}
-
-// TestFindLegacyMermaidFiles_OnlyV2Files verifies no false positives.
-func TestFindLegacyMermaidFiles_OnlyV2Files(t *testing.T) {
-	tmpDir := t.TempDir()
-	mermaidCacheDir := filepath.Join(tmpDir, "mermaid")
-
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create mermaid cache dir: %v", err)
-	}
-
-	// Create only V2 format files
-	v2Files := []string{
-		"cd-model_variants_1_f771299b.svg",
-		"workflow_branching_0_37fcc915.svg",
-		"architecture_index_0_ad8e0e68.svg",
-		"concepts_bdd-fundamentals_0_5ab46d5e.svg",
-	}
-
-	for _, f := range v2Files {
-		if err := os.WriteFile(filepath.Join(mermaidCacheDir, f), []byte("<svg></svg>"), 0o644); err != nil {
-			t.Fatalf("Failed to write %s: %v", f, err)
-		}
-	}
-
-	legacyFiles, legacyBytes := FindLegacyMermaidFiles(mermaidCacheDir)
-
-	if len(legacyFiles) != 0 {
-		t.Errorf("Expected 0 legacy files when only V2 exist, got %d: %v", len(legacyFiles), legacyFiles)
-	}
-	if legacyBytes != 0 {
-		t.Errorf("Expected 0 bytes when only V2 exist, got %d", legacyBytes)
-	}
-}
-
-// TestPruneCache_IdentifiesLegacyMermaidFiles verifies that PruneCache includes
-// legacy file statistics in the result.
-func TestPruneCache_IdentifiesLegacyMermaidFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-	docsDir := filepath.Join(tmpDir, "docs")
-	cacheDir := filepath.Join(docsDir, "assets", "cache")
-	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
-
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create mermaid cache dir: %v", err)
-	}
-
-	// Create markdown with one mermaid block
-	mdPath := filepath.Join(docsDir, "test.md")
-	mdContent := "# Test\n\n```mermaid\nflowchart TD\n    A --> B\n```\n"
-	if err := os.WriteFile(mdPath, []byte(mdContent), 0o644); err != nil {
-		t.Fatalf("Failed to write markdown: %v", err)
-	}
-
-	// Compute valid V2 filename
-	validHash := computeMermaidCacheHash("flowchart TD\n    A --> B")
-	validFilename := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 0, validHash))
-
-	// Create files: 1 valid V2, 2 legacy, 1 orphan V2-style
-	files := map[string]int{
-		validFilename: 100,
-		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.svg": 1000, // legacy
-		"abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345abcd.svg": 2000, // legacy
-		"orphan_v2_style_abc12345.svg":                                         500,  // orphan but V2 style
-	}
-
-	for filename, size := range files {
-		content := strings.Repeat("x", size)
-		if err := os.WriteFile(filepath.Join(mermaidCacheDir, filename), []byte(content), 0o644); err != nil {
-			t.Fatalf("Failed to write %s: %v", filename, err)
-		}
-	}
-
-	// Run prune
-	result, err := PruneCache(tmpDir, false)
-	if err != nil {
-		t.Fatalf("PruneCache failed: %v", err)
-	}
-
-	// Verify legacy file detection
-	if len(result.LegacyMermaidFiles) != 2 {
-		t.Errorf("Expected 2 legacy mermaid files, got %d: %v", len(result.LegacyMermaidFiles), result.LegacyMermaidFiles)
-	}
-
-	// Verify legacy bytes (1000 + 2000 = 3000)
-	expectedLegacyBytes := int64(3000)
-	if result.LegacyMermaidBytes != expectedLegacyBytes {
-		t.Errorf("Expected %d legacy bytes, got %d", expectedLegacyBytes, result.LegacyMermaidBytes)
-	}
-
-	// Verify orphans still detected correctly (V2-style orphan only)
-	// Legacy files should be in LegacyMermaidFiles, not MermaidOrphans
-	if len(result.MermaidOrphans) != 1 {
-		t.Errorf("Expected 1 mermaid orphan (V2-style), got %d: %v", len(result.MermaidOrphans), result.MermaidOrphans)
-	}
-}
-
-// TestDeleteOrphans_IncludesLegacyFiles verifies that DeleteOrphans removes
-// legacy files when present in the result.
-func TestDeleteOrphans_IncludesLegacyFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-	cacheDir := filepath.Join(tmpDir, "docs", "assets", "cache")
-	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
-
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
-		t.Fatalf("Failed to create mermaid dir: %v", err)
-	}
-
-	// Create files
-	legacyFile := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.svg"
-	orphanFile := "orphan_style.svg"
-
-	legacyPath := filepath.Join(mermaidCacheDir, legacyFile)
-	orphanPath := filepath.Join(mermaidCacheDir, orphanFile)
-
-	if err := os.WriteFile(legacyPath, []byte("<svg>legacy</svg>"), 0o644); err != nil {
-		t.Fatalf("Failed to write legacy: %v", err)
-	}
-	if err := os.WriteFile(orphanPath, []byte("<svg>orphan</svg>"), 0o644); err != nil {
-		t.Fatalf("Failed to write orphan: %v", err)
-	}
-
-	// Create result with both legacy and orphan files
-	result := &PruneResult{
-		MermaidOrphans:     []string{orphanFile},
-		LegacyMermaidFiles: []string{legacyFile},
-		LegacyMermaidBytes: 100,
-	}
-
-	// Delete orphans
-	deleted, err := DeleteOrphans(result, cacheDir)
-	if err != nil {
-		t.Fatalf("DeleteOrphans failed: %v", err)
-	}
-
-	// Should delete both (1 orphan + 1 legacy)
-	if deleted != 2 {
-		t.Errorf("Expected 2 files deleted, got %d", deleted)
-	}
-
-	// Verify both files are gone
-	if _, err := os.Stat(legacyPath); !os.IsNotExist(err) {
-		t.Errorf("Legacy file should have been deleted")
-	}
-	if _, err := os.Stat(orphanPath); !os.IsNotExist(err) {
-		t.Errorf("Orphan file should have been deleted")
-	}
-}
-
-// TestPruneResult_TotalOrphans_IncludesLegacy verifies total calculations include legacy.
-func TestPruneResult_TotalOrphans_IncludesLegacy(t *testing.T) {
-	result := &PruneResult{
-		MermaidOrphans:     []string{"a.svg", "b.svg"},
-		DrawioOrphans:      []string{"c.png"},
-		LegacyMermaidFiles: []string{"d.svg", "e.svg", "f.svg"},
-	}
-
-	// TotalOrphans should include legacy files
-	expected := 6 // 2 mermaid + 1 drawio + 3 legacy
-	if result.TotalOrphans() != expected {
-		t.Errorf("Expected %d total orphans (including legacy), got %d", expected, result.TotalOrphans())
-	}
-}
-
-// TestPruneResult_TotalBytesRecovered_IncludesLegacy verifies byte calculations include legacy.
-func TestPruneResult_TotalBytesRecovered_IncludesLegacy(t *testing.T) {
-	result := &PruneResult{
-		MermaidBytesRecovered: 1000,
-		DrawioBytesRecovered:  2500,
-		LegacyMermaidBytes:    5000,
-	}
-
-	expected := int64(8500) // 1000 + 2500 + 5000
-	if result.TotalBytesRecovered() != expected {
-		t.Errorf("Expected %d total bytes (including legacy), got %d", expected, result.TotalBytesRecovered())
-	}
-}
-
-// =============================================================================
 // Note: Implementation is in prune.go
 // =============================================================================
 // The following functions and types are defined in prune.go:
@@ -1291,5 +910,3 @@ func TestPruneResult_TotalBytesRecovered_IncludesLegacy(t *testing.T) {
 // - computeMermaidCacheHash()
 // - computeDrawioCacheHash()
 // - formatBytes()
-// - IsLegacyMermaidCacheFile()
-// - FindLegacyMermaidFiles()

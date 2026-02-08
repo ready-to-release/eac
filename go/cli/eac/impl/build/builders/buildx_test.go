@@ -20,11 +20,11 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 						"dockerfile": "containers/pdf-oci/Dockerfile",
 					},
 				},
-				"site-render-oci": &domain.ComponentEntry{
+				"mkdocs-render-oci": &domain.ComponentEntry{
 					DockerBuild: map[string]interface{}{
-						"container":  "site-render-oci",
-						"context":    "containers/site-render-oci",
-						"dockerfile": "containers/site-render-oci/Dockerfile",
+						"container":  "mkdocs-render-oci",
+						"context":    "containers/mkdocs-render-oci",
+						"dockerfile": "containers/mkdocs-render-oci/Dockerfile",
 					},
 				},
 			},
@@ -40,13 +40,13 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 		t.Errorf("expected container=pdf-oci, got %s", cfg.Container)
 	}
 
-	// Should find config for named component "site-render-oci"
-	cfg2 := getDockerBuildConfig(module, "site-render-oci", io.Discard)
+	// Should find config for named component "mkdocs-render-oci"
+	cfg2 := getDockerBuildConfig(module, "mkdocs-render-oci", io.Discard)
 	if cfg2 == nil {
-		t.Fatal("expected non-nil config for site-render-oci")
+		t.Fatal("expected non-nil config for mkdocs-render-oci")
 	}
-	if cfg2.Container != "site-render-oci" {
-		t.Errorf("expected container=site-render-oci, got %s", cfg2.Container)
+	if cfg2.Container != "mkdocs-render-oci" {
+		t.Errorf("expected container=mkdocs-render-oci, got %s", cfg2.Container)
 	}
 
 	// Should return nil for non-existent component

@@ -962,7 +962,7 @@ func TestImportManualCommand_SchemaValidation(t *testing.T) {
 			require.NoError(t, err)
 			// Navigate up from go/cli/eac/impl/test to repo root
 			repoRoot := filepath.Join(workspaceRoot, "..", "..", "..", "..", "..")
-			realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "manual-test-results.schema.json")
+			realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "schemas", "manual-test-results.schema.json")
 			schemaContent, err := os.ReadFile(realSchemaPath)
 			require.NoError(t, err, "should read real schema file")
 
@@ -1052,7 +1052,7 @@ modules:
 	workspaceRoot, err := os.Getwd()
 	require.NoError(t, err)
 	repoRoot := filepath.Join(workspaceRoot, "..", "..", "..", "..", "..")
-	realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "manual-test-results.schema.json")
+	realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "schemas", "manual-test-results.schema.json")
 	schemaContent, err := os.ReadFile(realSchemaPath)
 	require.NoError(t, err, "should read real schema file")
 
@@ -1061,7 +1061,7 @@ modules:
 	require.NoError(t, os.WriteFile(schemaFile, schemaContent, 0644))
 
 	// Also copy export schema for validation
-	realExportSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "manual-test-export.schema.json")
+	realExportSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "schemas", "manual-test-export.schema.json")
 	exportSchemaContent, err := os.ReadFile(realExportSchemaPath)
 	require.NoError(t, err, "should read real export schema file")
 	exportSchemaFile := filepath.Join(schemaDir, "manual-test-export.schema.json")

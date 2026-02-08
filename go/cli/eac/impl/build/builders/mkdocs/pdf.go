@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -41,7 +40,7 @@ func (h *PDFRenderHandler) Name() string { return "pdf-oci" }
 func (h *PDFRenderHandler) Requirements() []string { return []string{"docker"} }
 
 // ValidateModule checks if a module has valid base-site dependency.
-func (h *PDFRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *PDFRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	// Resolve the base-site component this pdf-render depends on
 	baseSiteComp := resolveBaseSiteComponent(module, component, h.manifestStore)
 
@@ -58,7 +57,7 @@ func (h *PDFRenderHandler) ValidateModule(module interfaces.ModuleContractPort, 
 
 // ListArtifacts returns artifact paths that would be produced.
 // PDFs are output to site/pdf/ directory by mkdocs-exporter.
-func (h *PDFRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *PDFRenderHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/pdf/"}
 }
 
@@ -70,7 +69,7 @@ func (h *PDFRenderHandler) IsHostInstalled() bool { return false }
 
 // Build executes PDF generation from base-site output.
 func (h *PDFRenderHandler) Build(
-	module interfaces.ModuleContractPort,
+	module core.ModuleContractPort,
 	workspaceRoot, outputDir string,
 	logWriter io.Writer,
 	opts BuildOptions,
@@ -167,7 +166,7 @@ func (h *PDFRenderHandler) Build(
 
 	pdfConcurrency := environments.GetPDFExportConcurrency()
 	pageLimit := opts.ArtifactsMode.PDFPageLimit()
-	configOpts := books.ConfigOptions{
+	configOpts := ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
 		BookTitle:       bookTitle,
@@ -178,7 +177,7 @@ func (h *PDFRenderHandler) Build(
 		PDFConcurrency:  pdfConcurrency,
 		PageLimit:       pageLimit,
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return BuildResult{ExitCode: 1}
 	}

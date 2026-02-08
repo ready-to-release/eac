@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 

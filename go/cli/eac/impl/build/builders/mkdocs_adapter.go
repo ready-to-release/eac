@@ -5,28 +5,15 @@ import (
 	"io"
 	"os"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	// Register all mkdocs handlers in BOTH registries:
-	// 1. builders.handlers - for legacy code paths (GetHandlersForModule)
-	// 2. tool.BuildBridge.nativeHandlers - for component resolver (ResolveForBuild)
-	preprocess := &mkdocsPreprocessAdapter{}
-	site := &mkdocsSiteAdapter{}
-	pdf := &mkdocsPDFAdapter{}
-
-	// Register in builders registry (legacy)
-	RegisterHandler(preprocess)
-	RegisterHandler(site)
-	RegisterHandler(pdf)
-
-	// Register in tool bridge (for component resolver)
-	tool.GlobalBuildBridge().RegisterNativeHandler(preprocess)
-	tool.GlobalBuildBridge().RegisterNativeHandler(site)
-	tool.GlobalBuildBridge().RegisterNativeHandler(pdf)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&mkdocsPreprocessAdapter{})
+	tool.GlobalBuildBridge().RegisterNativeHandler(&mkdocsSiteAdapter{})
+	tool.GlobalBuildBridge().RegisterNativeHandler(&mkdocsPDFAdapter{})
 }
 
 // mkdocsPreprocessAdapter adapts mkdocs.PreprocessHandler to builders.Handler.
@@ -39,12 +26,12 @@ func (a *mkdocsPreprocessAdapter) Name() string { return "mkdocs-preprocess" }
 
 func (a *mkdocsPreprocessAdapter) Requirements() []string { return nil }
 
-func (a *mkdocsPreprocessAdapter) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (a *mkdocsPreprocessAdapter) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ValidateModule(module, workspaceRoot, component)
 }
 
-func (a *mkdocsPreprocessAdapter) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (a *mkdocsPreprocessAdapter) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ListArtifacts(module, workspaceRoot)
 }
@@ -53,7 +40,7 @@ func (a *mkdocsPreprocessAdapter) IsContainer() bool { return false }
 
 func (a *mkdocsPreprocessAdapter) IsHostInstalled() bool { return true }
 
-func (a *mkdocsPreprocessAdapter) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsPreprocessAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	a.ensureHandler(workspaceRoot)
 
 	// Convert BuildOptions to mkdocs.BuildOptions
@@ -88,7 +75,7 @@ func isForceRebuildCLI() bool {
 }
 
 // ============================================================================
-// site-render-oci adapter
+// mkdocs-render-oci adapter
 // ============================================================================
 
 // mkdocsSiteAdapter adapts mkdocs.SiteRenderHandler to builders.Handler.
@@ -96,16 +83,16 @@ type mkdocsSiteAdapter struct {
 	handler *mkdocs.SiteRenderHandler
 }
 
-func (a *mkdocsSiteAdapter) Name() string { return "site-render-oci" }
+func (a *mkdocsSiteAdapter) Name() string { return "mkdocs-render-oci" }
 
 func (a *mkdocsSiteAdapter) Requirements() []string { return []string{"docker"} }
 
-func (a *mkdocsSiteAdapter) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (a *mkdocsSiteAdapter) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ValidateModule(module, workspaceRoot, component)
 }
 
-func (a *mkdocsSiteAdapter) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (a *mkdocsSiteAdapter) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ListArtifacts(module, workspaceRoot)
 }
@@ -114,7 +101,7 @@ func (a *mkdocsSiteAdapter) IsContainer() bool { return true }
 
 func (a *mkdocsSiteAdapter) IsHostInstalled() bool { return false }
 
-func (a *mkdocsSiteAdapter) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsSiteAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	a.ensureHandler(workspaceRoot)
 
 	mkdocsOpts := mkdocs.BuildOptions{
@@ -148,12 +135,12 @@ func (a *mkdocsPDFAdapter) Name() string { return "pdf-oci" }
 
 func (a *mkdocsPDFAdapter) Requirements() []string { return []string{"docker"} }
 
-func (a *mkdocsPDFAdapter) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (a *mkdocsPDFAdapter) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ValidateModule(module, workspaceRoot, component)
 }
 
-func (a *mkdocsPDFAdapter) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (a *mkdocsPDFAdapter) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	a.ensureHandler(workspaceRoot)
 	return a.handler.ListArtifacts(module, workspaceRoot)
 }
@@ -162,7 +149,7 @@ func (a *mkdocsPDFAdapter) IsContainer() bool { return true }
 
 func (a *mkdocsPDFAdapter) IsHostInstalled() bool { return false }
 
-func (a *mkdocsPDFAdapter) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsPDFAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	a.ensureHandler(workspaceRoot)
 
 	// Extract theme from component name if present (e.g., "tutorials-dark" -> theme="dark")

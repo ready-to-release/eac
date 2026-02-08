@@ -3,6 +3,7 @@ package output
 import (
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -25,6 +26,12 @@ type UoWChangeResult struct {
 // This is used to compare against the manifest's stored InputHash.
 type InputHashProvider func(id workunit.UnitID) (string, error)
 
+// DependencyResolver returns the list of module dependencies for a given module.
+// Used to check cross-module build invalidation for modules that consume
+// outputs from other modules (e.g., ext-eac consuming eac-cli's binary).
+// Returns nil if the module has no dependencies or is not found.
+type DependencyResolver func(module string) []string
+
 // DetectUoWChanges checks which UoWs need execution based on their manifests.
 // For each expected UoW, it:
 // 1. Loads the existing manifest (if any)
@@ -39,9 +46,10 @@ type InputHashProvider func(id workunit.UnitID) (string, error)
 // - Artifacts are missing or corrupted
 // - Hash provider returns an error
 func (r *DiskOutputReader) DetectUoWChanges(
-	ctx workunit.Context,
+	ctx core.ActionType,
 	expectedUoWs []workunit.UnitID,
 	getInputHash InputHashProvider,
+	depResolver DependencyResolver,
 ) (*UoWChangeResult, error) {
 	start := time.Now()
 	result := &UoWChangeResult{
@@ -77,7 +85,7 @@ func (r *DiskOutputReader) DetectUoWChanges(
 
 	// Check each UoW individually
 	for _, id := range expectedUoWs {
-		changed, reason := r.checkUoWChanged(ctx, id, getInputHash)
+		changed, reason := r.checkUoWChanged(ctx, id, getInputHash, depResolver)
 		if changed {
 			result.Changed = append(result.Changed, id)
 			result.ChangeReasons[id.Longname()] = reason
@@ -93,9 +101,10 @@ func (r *DiskOutputReader) DetectUoWChanges(
 // checkUoWChanged determines if a single UoW needs execution.
 // Returns (true, reason) if changed, (false, "") if up-to-date.
 func (r *DiskOutputReader) checkUoWChanged(
-	ctx workunit.Context,
+	ctx core.ActionType,
 	id workunit.UnitID,
 	getInputHash InputHashProvider,
+	depResolver DependencyResolver,
 ) (bool, string) {
 	// Load existing manifest
 	manifest, err := r.GetUoW(id)
@@ -139,22 +148,41 @@ func (r *DiskOutputReader) checkUoWChanged(
 		}
 	}
 
-	// For test/lint/scan contexts, check if build was invalidated
-	// If any build manifest for this module was executed AFTER this manifest,
-	// then we need to re-run because the build output changed.
-	if ctx == workunit.ContextTest || ctx == workunit.ContextLint || ctx == workunit.ContextScan {
-		buildManifests, err := r.ListUoWs(workunit.ContextBuild, id.Module)
-		if err == nil && len(buildManifests) > 0 {
-			for _, buildManifest := range buildManifests {
-				if buildManifest.ExecutedAt.After(manifest.ExecutedAt) {
-					return true, "build invalidated"
-				}
+	// For test/lint/scan contexts, check if this module's own build was re-executed.
+	if ctx == core.ActionTest || ctx == core.ActionLint || ctx == core.ActionScan {
+		if r.hasNewerBuildManifest(id.Module, manifest.ExecutedAt) {
+			return true, "build invalidated"
+		}
+	}
+
+	// For build context, check if any dependency module was rebuilt since this
+	// manifest was created. This handles cross-module output consumption
+	// (e.g., ext-eac consuming a pre-built binary from eac-cli).
+	if ctx == core.ActionBuild && depResolver != nil {
+		for _, depModule := range depResolver(id.Module) {
+			if r.hasNewerBuildManifest(depModule, manifest.ExecutedAt) {
+				return true, "dependency build invalidated (" + depModule + ")"
 			}
 		}
 	}
 
 	// All checks passed - UoW is up-to-date
 	return false, ""
+}
+
+// hasNewerBuildManifest checks if any build manifest for the given module
+// was executed after the specified time.
+func (r *DiskOutputReader) hasNewerBuildManifest(module string, after time.Time) bool {
+	manifests, err := r.ListUoWs(core.ActionBuild, module)
+	if err != nil {
+		return false
+	}
+	for _, m := range manifests {
+		if m.ExecutedAt.After(after) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsModuleChanged returns true if any UoW in the module needs execution.
@@ -171,7 +199,7 @@ func (r *DiskOutputReader) checkUoWChanged(
 // - reason: description of why the module changed (empty if not changed)
 // - err: any error encountered during detection
 func (r *DiskOutputReader) IsModuleChanged(
-	ctx workunit.Context,
+	ctx core.ActionType,
 	module string,
 	getInputHash InputHashProvider,
 ) (changed bool, reason string, err error) {
@@ -189,7 +217,7 @@ func (r *DiskOutputReader) IsModuleChanged(
 	// Check each manifest
 	for _, m := range manifests {
 		id := workunit.UnitID{
-			Context:   ctx,
+			Action:    ctx,
 			Module:    module,
 			Component: m.Component,
 			Tool:      m.Tool,

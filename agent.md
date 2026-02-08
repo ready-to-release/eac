@@ -8,8 +8,8 @@
 2. **Verify workspace context**: Check if the current directory path matches the detected branch (may be a mismatch in multi-worktree setups)
 3. **Read this file** (`/agent.md`) to load project context
 4. **Junie-Specific Initialization**: If you are Junie, you MUST:
-   - Read `./junie/README.md` and all files in `./junie/` following the load order defined in `junie/README.md`
-   - Apply `./junie/` instructions as overrides to this file (`agent.md`) where contradictions exist
+   - Read `./.junie/README.md` and all files in `./.junie/` following the load order defined in `.junie/README.md`
+   - Apply `./.junie/` instructions as overrides to this file (`agent.md`) where contradictions exist
 5. **Verify MCP server availability**:
    - Check your available tool list for `mcp__commands__*` tools (Commands Server)
    - Check your available tool list for `mcp__github__*` tools (GitHub Server)

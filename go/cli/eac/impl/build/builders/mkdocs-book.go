@@ -9,7 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -204,8 +205,15 @@ func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
 
 	// Run preprocessing
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
-	if err := preprocessor.Preprocess(); err != nil {
+	var mode docprep.OutputMode
+	if pdfMode {
+		mode = docprep.PDFMode{ThemeName: "dark"}
+	} else {
+		mode = docprep.SiteMode{}
+	}
+	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
+	pctx.Moniker = moniker
+	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", false
 	}
@@ -304,12 +312,12 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 		relStagingDir = filepath.ToSlash(relStagingDir)
 		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:     "Documentation",
 		DocsDir:      relStagingDir,
 		OutputFormat: "site",
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
@@ -322,7 +330,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 	}
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
@@ -449,8 +457,15 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	// Run preprocessing (overwrites existing files incrementally)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
-	if err := preprocessor.Preprocess(); err != nil {
+	var mode docprep.OutputMode
+	if pdfMode {
+		mode = docprep.PDFMode{ThemeName: "dark"}
+	} else {
+		mode = docprep.SiteMode{}
+	}
+	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
+	pctx.Moniker = moniker
+	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", true
 	}

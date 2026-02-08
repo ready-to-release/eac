@@ -11,10 +11,10 @@ import (
 // renderInitAnimatedStatus renders the animated "Initializing..." dots line
 // for the logs panel during the init phase.
 func (m Model) renderInitAnimatedStatus(innerWidth int) string {
-	elapsed := time.Since(m.startTime)
+	elapsed := time.Since(m.Execution.StartTime)
 	dotCount := int(elapsed.Seconds()*2) % 4
 	var dots string
-	if m.asciiMode {
+	if m.Display.AsciiMode {
 		dots = strings.Repeat(".", dotCount+1)
 	} else {
 		dots = strings.Repeat("·", dotCount+1)
@@ -26,7 +26,7 @@ func (m Model) renderInitAnimatedStatus(innerWidth int) string {
 	}
 
 	icon := "▶"
-	if m.asciiMode {
+	if m.Display.AsciiMode {
 		icon = ">"
 	}
 	animLine := Styles.Running.Render(icon) + " " + Styles.Phase.Render(statusText) + Styles.Dim.Render(dots)
@@ -41,7 +41,7 @@ func (m Model) renderInitAnimatedStatus(innerWidth int) string {
 // Returns empty string if no locks are waiting.
 func (m Model) getWaitingForLocksMessage() string {
 	var waitingLocks []string
-	for _, lock := range m.locks {
+	for _, lock := range m.Execution.Locks {
 		if lock.Waiting > 0 {
 			// Extract just the identifier from "type:identifier" format
 			name := lock.Name

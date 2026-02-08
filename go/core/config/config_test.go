@@ -185,13 +185,13 @@ func TestTestingTagsConfig_GetValidSkipReasons(t *testing.T) {
 	assert.Contains(t, reasons, "flaky")
 }
 
-func TestTestingTagsConfig_BuildGodogSkipTagFilter(t *testing.T) {
+func TestTestingTagsConfig_GetSkipTags(t *testing.T) {
 	cfg, err := Load(DefaultLoadOptions())
 	require.NoError(t, err)
 
-	filter := cfg.TestingTags.BuildGodogSkipTagFilter()
-	assert.Contains(t, filter, "~@skip:wip")
-	assert.Contains(t, filter, "&&")
+	tags := cfg.TestingTags.GetSkipTags()
+	assert.Contains(t, tags, "@skip:wip")
+	assert.True(t, len(tags) > 1, "should have multiple skip tags")
 }
 
 func TestValidateAll(t *testing.T) {
@@ -309,7 +309,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "container module - should aggregate",
 			module: Module{
 				Moniker:   "my-container",
-				Template:  "container-template",
+				Template:  "container",
 				DependsOn: []string{"my-lib"},
 			},
 			expected: true,
@@ -318,7 +318,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "container-multiarch module - should aggregate",
 			module: Module{
 				Moniker:   "ext-eac",
-				Template:  "container-multiarch-template",
+				Template:  "container-multiarch",
 				DependsOn: []string{"eac-cli"},
 			},
 			expected: true,

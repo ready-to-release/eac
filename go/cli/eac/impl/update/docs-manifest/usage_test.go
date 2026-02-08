@@ -29,22 +29,6 @@ func TestCleanImageRef(t *testing.T) {
 	}
 }
 
-func TestContains(t *testing.T) {
-	slice := []string{"a", "b", "c"}
-
-	if !contains(slice, "a") {
-		t.Error("Expected contains(slice, 'a') to be true")
-	}
-	if !contains(slice, "b") {
-		t.Error("Expected contains(slice, 'b') to be true")
-	}
-	if contains(slice, "d") {
-		t.Error("Expected contains(slice, 'd') to be false")
-	}
-	if contains([]string{}, "a") {
-		t.Error("Expected contains(empty, 'a') to be false")
-	}
-}
 
 func TestImageRefPattern(t *testing.T) {
 	tests := []struct {

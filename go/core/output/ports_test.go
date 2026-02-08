@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +16,7 @@ import (
 
 func TestOutputReaderAdapter_GetUoW(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
@@ -26,7 +26,7 @@ func TestOutputReaderAdapter_GetUoW(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, manifest)
 
-	assert.Equal(t, "build", manifest.GetContext())
+	assert.Equal(t, "build", manifest.GetAction())
 	assert.Equal(t, "test-module", manifest.GetModule())
 	assert.Equal(t, "go", manifest.GetComponent())
 	assert.Equal(t, "go", manifest.GetTool())
@@ -34,8 +34,8 @@ func TestOutputReaderAdapter_GetUoW(t *testing.T) {
 
 func TestOutputReaderAdapter_GetModule(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "docker", "docker")
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
@@ -50,9 +50,9 @@ func TestOutputReaderAdapter_GetModule(t *testing.T) {
 
 func TestOutputReaderAdapter_ListUoWs(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "docker", "docker")
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "docker", "buildx")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "test-module", "docker", "buildx")
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
@@ -64,7 +64,7 @@ func TestOutputReaderAdapter_ListUoWs(t *testing.T) {
 
 func TestOutputReaderAdapter_ValidateUoW(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
@@ -88,13 +88,13 @@ func TestOutputReaderAdapter_ValidateUoW_Missing(t *testing.T) {
 
 func TestOutputReaderAdapter_ValidateModule(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "docker", "docker")
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
 
-	expectedUoWs := []interfaces.UnitIDPort{
+	expectedUoWs := []core.UnitIDPort{
 		&testUnitID{context: "build", module: "test-module", component: "go", tool: "go"},
 		&testUnitID{context: "build", module: "test-module", component: "docker", tool: "docker"},
 	}
@@ -105,13 +105,13 @@ func TestOutputReaderAdapter_ValidateModule(t *testing.T) {
 
 func TestOutputReaderAdapter_ValidateModule_Missing(t *testing.T) {
 	f := newTestFixture(t)
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 	// docker is missing
 
 	reader := NewReader(f.workspaceRoot)
 	adapter := NewOutputReaderAdapter(reader)
 
-	expectedUoWs := []interfaces.UnitIDPort{
+	expectedUoWs := []core.UnitIDPort{
 		&testUnitID{context: "build", module: "test-module", component: "go", tool: "go"},
 		&testUnitID{context: "build", module: "test-module", component: "docker", tool: "docker"},
 	}
@@ -127,7 +127,7 @@ func TestOutputReaderAdapter_ValidateModule_Missing(t *testing.T) {
 func TestUoWTrackerAdapter_RecordStart(t *testing.T) {
 	f := newTestFixture(t)
 
-	tracker := NewTracker(f.workspaceRoot, workunit.ContextBuild)
+	tracker := NewTracker(f.workspaceRoot, core.ActionBuild)
 	adapter := NewUoWTrackerAdapter(tracker)
 
 	unitID := &testUnitID{context: "build", module: "test-module", component: "go", tool: "go"}
@@ -139,7 +139,7 @@ func TestUoWTrackerAdapter_RecordStart(t *testing.T) {
 func TestUoWTrackerAdapter_RecordComplete(t *testing.T) {
 	f := newTestFixture(t)
 
-	tracker := NewTracker(f.workspaceRoot, workunit.ContextBuild)
+	tracker := NewTracker(f.workspaceRoot, core.ActionBuild)
 	adapter := NewUoWTrackerAdapter(tracker)
 
 	unitID := &testUnitID{context: "build", module: "test-module", component: "go", tool: "go"}
@@ -165,7 +165,7 @@ func TestUoWTrackerAdapter_RecordComplete(t *testing.T) {
 	// Verify manifest was written
 	reader := NewReader(f.workspaceRoot)
 	id := workunit.UnitID{
-		Context:   workunit.ContextBuild,
+		Action:    core.ActionBuild,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "go",
@@ -179,9 +179,9 @@ func TestUoWTrackerAdapter_RecordCacheHit(t *testing.T) {
 	f := newTestFixture(t)
 
 	// First create a manifest
-	f.createUoWManifest(workunit.ContextBuild, "test-module", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 
-	tracker := NewTracker(f.workspaceRoot, workunit.ContextBuild)
+	tracker := NewTracker(f.workspaceRoot, core.ActionBuild)
 	adapter := NewUoWTrackerAdapter(tracker)
 
 	unitID := &testUnitID{context: "build", module: "test-module", component: "go", tool: "go"}
@@ -195,7 +195,7 @@ func TestUoWTrackerAdapter_RecordCacheHit(t *testing.T) {
 func TestUoWTrackerAdapter_RecordCacheHit_Missing(t *testing.T) {
 	f := newTestFixture(t)
 
-	tracker := NewTracker(f.workspaceRoot, workunit.ContextBuild)
+	tracker := NewTracker(f.workspaceRoot, core.ActionBuild)
 	adapter := NewUoWTrackerAdapter(tracker)
 
 	unitID := &testUnitID{context: "build", module: "nonexistent", component: "go", tool: "go"}
@@ -211,7 +211,7 @@ func TestUoWTrackerAdapter_RecordCacheHit_Missing(t *testing.T) {
 
 func TestUoWManifest_PortMethods(t *testing.T) {
 	manifest := &UoWManifest{
-		Context:    workunit.ContextBuild,
+		Action:     core.ActionBuild,
 		Module:     "test-module",
 		Component:  "go",
 		Tool:       "go",
@@ -226,7 +226,7 @@ func TestUoWManifest_PortMethods(t *testing.T) {
 	}
 
 	// Test all port methods
-	assert.Equal(t, "build", manifest.GetContext())
+	assert.Equal(t, "build", manifest.GetAction())
 	assert.Equal(t, "test-module", manifest.GetModule())
 	assert.Equal(t, "go", manifest.GetComponent())
 	assert.Equal(t, "go", manifest.GetTool())
@@ -276,7 +276,7 @@ func TestComponentView_PortMethods(t *testing.T) {
 		Component: "go",
 		Status:    StatusCompleted,
 		UoWs: []UoWManifest{
-			{Context: workunit.ContextBuild, Module: "test-module", Component: "go", Tool: "go"},
+			{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"},
 		},
 		TotalSize: 2000,
 	}
@@ -341,7 +341,7 @@ type testUnitID struct {
 	extra     map[string]string
 }
 
-func (t *testUnitID) GetContext() string          { return t.context }
+func (t *testUnitID) GetAction() string            { return t.context }
 func (t *testUnitID) GetModule() string           { return t.module }
 func (t *testUnitID) GetComponent() string        { return t.component }
 func (t *testUnitID) GetTool() string             { return t.tool }
@@ -365,10 +365,10 @@ type testManifest struct {
 	executedAt time.Time
 	duration   time.Duration
 	outputHash string
-	artifacts  []interfaces.OutputArtifactPort
+	artifacts  []core.OutputArtifactPort
 }
 
-func (m *testManifest) GetContext() string                            { return m.context }
+func (m *testManifest) GetAction() string                             { return m.context }
 func (m *testManifest) GetModule() string                             { return m.module }
 func (m *testManifest) GetComponent() string                          { return m.component }
 func (m *testManifest) GetTool() string                               { return m.tool }
@@ -376,6 +376,6 @@ func (m *testManifest) GetExitCode() int                              { return m
 func (m *testManifest) GetInputHash() string                          { return m.inputHash }
 func (m *testManifest) GetExecutedAt() time.Time                      { return m.executedAt }
 func (m *testManifest) GetDuration() time.Duration                    { return m.duration }
-func (m *testManifest) GetArtifacts() []interfaces.OutputArtifactPort { return m.artifacts }
+func (m *testManifest) GetArtifacts() []core.OutputArtifactPort { return m.artifacts }
 func (m *testManifest) GetOutputHash() string                         { return m.outputHash }
 func (m *testManifest) GetExtra() map[string]string                   { return nil }

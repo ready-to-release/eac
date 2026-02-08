@@ -175,53 +175,11 @@ func TestDeclarativeState_IsEnabled(t *testing.T) {
 	}
 }
 
-func TestLegacyFlagMapping(t *testing.T) {
-	tests := []struct {
-		name       string
-		mapping    LegacyFlagMapping
-		wantFlag   string
-		wantMapsTo string
-	}{
-		{
-			name: "skip-cache maps to disable",
-			mapping: LegacyFlagMapping{
-				LegacyFlag: "--skip-cache",
-				MapsTo:     "disable",
-			},
-			wantFlag:   "--skip-cache",
-			wantMapsTo: "disable",
-		},
-		{
-			name: "tui maps to enable",
-			mapping: LegacyFlagMapping{
-				LegacyFlag: "--tui",
-				MapsTo:     "enable",
-			},
-			wantFlag:   "--tui",
-			wantMapsTo: "enable",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.mapping.LegacyFlag != tt.wantFlag {
-				t.Errorf("LegacyFlag = %v, want %v", tt.mapping.LegacyFlag, tt.wantFlag)
-			}
-			if tt.mapping.MapsTo != tt.wantMapsTo {
-				t.Errorf("MapsTo = %v, want %v", tt.mapping.MapsTo, tt.wantMapsTo)
-			}
-		})
-	}
-}
-
 func TestDeclarativeFlagDef_Fields(t *testing.T) {
 	def := DeclarativeFlagDef{
 		Behavior:    "cache",
 		EnableFlag:  "--with-cache",
 		DisableFlag: "--no-cache",
-		LegacyFlags: []LegacyFlagMapping{
-			{LegacyFlag: "--skip-cache", MapsTo: "disable"},
-		},
 		DefaultOn:   true,
 		EnvAware:    false,
 		EnvDefaults: nil,
@@ -236,12 +194,6 @@ func TestDeclarativeFlagDef_Fields(t *testing.T) {
 	}
 	if def.DisableFlag != "--no-cache" {
 		t.Errorf("DisableFlag = %v, want --no-cache", def.DisableFlag)
-	}
-	if len(def.LegacyFlags) != 1 {
-		t.Errorf("LegacyFlags length = %d, want 1", len(def.LegacyFlags))
-	}
-	if def.LegacyFlags[0].LegacyFlag != "--skip-cache" {
-		t.Errorf("LegacyFlags[0].LegacyFlag = %v, want --skip-cache", def.LegacyFlags[0].LegacyFlag)
 	}
 	if !def.DefaultOn {
 		t.Error("DefaultOn should be true")

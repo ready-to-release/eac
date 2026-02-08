@@ -323,9 +323,11 @@ func TestGetCapacityInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := Model{
-				uowStates:      tt.uowStates,
-				roof:           tt.roof,
-				pressureTarget: tt.pressureTarget,
+				Execution: ExecutionState{
+					UoWStates:      tt.uowStates,
+					Roof:           tt.roof,
+					PressureTarget: tt.pressureTarget,
+				},
 			}
 
 			info := m.GetCapacityInfo()
@@ -419,7 +421,7 @@ func TestUoWCompleteMsg_NoAutoAdvanceOnFailure(t *testing.T) {
 	model.MarkUoWRunning("build:mod2:comp2:go")
 
 	// Set first tab as active (effective default)
-	model.activeTab = "build:mod1:comp1:go"
+	model.Interaction.ActiveTab = "build:mod1:comp1:go"
 
 	// Complete first UoW with FAILURE (exit code 1)
 	completeMsg := UoWCompleteMsg{
@@ -430,9 +432,9 @@ func TestUoWCompleteMsg_NoAutoAdvanceOnFailure(t *testing.T) {
 	m := updatedModel.(Model)
 
 	// Active tab should NOT have changed - failed tab stays focused
-	if m.activeTab != "build:mod1:comp1:go" {
+	if m.Interaction.ActiveTab != "build:mod1:comp1:go" {
 		t.Errorf("expected active tab to stay on failed UoW %q, got %q",
-			"build:mod1:comp1:go", m.activeTab)
+			"build:mod1:comp1:go", m.Interaction.ActiveTab)
 	}
 }
 
@@ -460,7 +462,7 @@ func TestUoWCompleteMsg_AutoAdvanceOnSuccess(t *testing.T) {
 	model.MarkUoWRunning("build:mod2:comp2:go")
 
 	// Set first tab as active
-	model.activeTab = "build:mod1:comp1:go"
+	model.Interaction.ActiveTab = "build:mod1:comp1:go"
 
 	// Complete first UoW with SUCCESS (exit code 0)
 	completeMsg := UoWCompleteMsg{
@@ -471,20 +473,22 @@ func TestUoWCompleteMsg_AutoAdvanceOnSuccess(t *testing.T) {
 	m := updatedModel.(Model)
 
 	// Active tab should have advanced to the next running UoW
-	if m.activeTab != "build:mod2:comp2:go" {
+	if m.Interaction.ActiveTab != "build:mod2:comp2:go" {
 		t.Errorf("expected active tab to advance to %q, got %q",
-			"build:mod2:comp2:go", m.activeTab)
+			"build:mod2:comp2:go", m.Interaction.ActiveTab)
 	}
 }
 
 // TestGetCapacityInfo_UnderPressure verifies the IsUnderPressure detection.
 func TestGetCapacityInfo_UnderPressure(t *testing.T) {
 	m := Model{
-		uowStates: map[string]*UoWState{
-			"m1:c1": {Status: UoWRunning, Weight: 24},
+		Execution: ExecutionState{
+			UoWStates: map[string]*UoWState{
+				"m1:c1": {Status: UoWRunning, Weight: 24},
+			},
+			Roof:           24,
+			PressureTarget: 16,
 		},
-		roof:           24,
-		pressureTarget: 16,
 	}
 
 	info := m.GetCapacityInfo()

@@ -1,8 +1,8 @@
 package mocks
 
-import "github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+import core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 
-// MockWorkspace implements interfaces.WorkspacePort for testing.
+// MockWorkspace implements core.WorkspacePort for testing.
 type MockWorkspace struct {
 	root        string
 	source      string
@@ -43,25 +43,25 @@ func (m *MockWorkspace) WithDistRoot(distRoot string) *MockWorkspace {
 	return m
 }
 
-// Root implements interfaces.WorkspacePort.
+// Root implements core.WorkspacePort.
 func (m *MockWorkspace) Root() string {
 	return m.root
 }
 
-// Source implements interfaces.WorkspacePort.
+// Source implements core.WorkspacePort.
 func (m *MockWorkspace) Source() string {
 	return m.source
 }
 
-// IsContainer implements interfaces.WorkspacePort.
+// IsContainer implements core.WorkspacePort.
 func (m *MockWorkspace) IsContainer() bool {
 	return m.isContainer
 }
 
-// DistRoot implements interfaces.WorkspacePort.
+// DistRoot implements core.WorkspacePort.
 func (m *MockWorkspace) DistRoot() string {
 	return m.distRoot
 }
 
 // Interface compliance check
-var _ interfaces.WorkspacePort = (*MockWorkspace)(nil)
+var _ core.WorkspacePort = (*MockWorkspace)(nil)

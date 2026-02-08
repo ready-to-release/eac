@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // ConsoleObserver implements ExecutionObserver for plain-text console output.
@@ -33,26 +33,26 @@ func NewConsoleObserverWithWriter(out io.Writer) *ConsoleObserver {
 }
 
 // OnEvent handles execution events and prints to console.
-func (o *ConsoleObserver) OnEvent(event interfaces.ExecutionEvent) {
+func (o *ConsoleObserver) OnEvent(event core.ExecutionEvent) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
 	switch e := event.(type) {
-	case interfaces.PhaseStartedEvent:
+	case core.PhaseStartedEvent:
 		fmt.Fprintf(o.out, "\n=== %s ===\n", e.Phase)
-	case interfaces.PhaseCompletedEvent:
+	case core.PhaseCompletedEvent:
 		status := "OK"
 		if !e.Success {
 			status = "FAILED"
 		}
 		fmt.Fprintf(o.out, "=== %s %s (%v) ===\n", e.Phase, status, e.Duration.Round(time.Millisecond))
-	case interfaces.UnitQueuedEvent:
+	case core.UnitQueuedEvent:
 		// Silent - just track for total count
 		o.total++
-	case interfaces.UnitStartedEvent:
+	case core.UnitStartedEvent:
 		o.running = append(o.running, e.ID)
 		fmt.Fprintf(o.out, "  [START] %s\n", e.ID)
-	case interfaces.UnitCompletedEvent:
+	case core.UnitCompletedEvent:
 		// Remove from running
 		for i, id := range o.running {
 			if id == e.ID {
@@ -69,10 +69,10 @@ func (o *ConsoleObserver) OnEvent(event interfaces.ExecutionEvent) {
 			status = "CACHED"
 		}
 		fmt.Fprintf(o.out, "  [%s] %s (%v)\n", status, e.ID, e.Duration.Round(time.Millisecond))
-	case interfaces.ProgressUpdateEvent:
+	case core.ProgressUpdateEvent:
 		o.total = e.Total
 		// Optionally print periodic progress (currently silent)
-	case interfaces.SummaryReadyEvent:
+	case core.SummaryReadyEvent:
 		fmt.Fprintf(o.out, "\n=== Summary ===\n")
 		fmt.Fprintf(o.out, "Total time: %v\n", e.TotalTime.Round(time.Millisecond))
 		fmt.Fprintf(o.out, "Passed: %d, Failed: %d, Cached: %d\n", e.Passed, e.Failed, e.Cached)

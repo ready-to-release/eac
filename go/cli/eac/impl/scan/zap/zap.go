@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/scan/internal"
+	"github.com/ready-to-release/eac/go/core/evidence"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -196,7 +196,7 @@ func ZAP() int {
 		log.Errorf("  ❌ Failed: %v\n", err)
 
 		// Write error evidence
-		outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerDAST, err.Error())
+		outputPath, writeErr := evidence.WriteErrorEvidence(workspaceRoot, moniker, evidence.ScannerDAST, err.Error())
 		if writeErr != nil {
 			log.Debugf("Failed to write error evidence: error=%v", writeErr)
 		} else {
@@ -208,7 +208,7 @@ func ZAP() int {
 	}
 
 	// Write evidence file
-	outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerDAST, findings)
+	outputPath, err := evidence.WriteEvidence(workspaceRoot, moniker, evidence.ScannerDAST, findings)
 	if err != nil {
 		log.Debugf("Failed to write evidence: moniker=%s, error=%v", moniker, err)
 		log.Errorf("  ❌ Failed to write evidence: %v\n", err)

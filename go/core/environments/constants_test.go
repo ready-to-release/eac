@@ -245,11 +245,6 @@ func TestConstantValues(t *testing.T) {
 			expected: "R2R_MOCK_SECURITY",
 		},
 		{
-			name:     "R2R_MOCK_STRUCTURIZR",
-			constant: environments.EnvR2RMockStructurizr,
-			expected: "R2R_MOCK_STRUCTURIZR",
-		},
-		{
 			name:     "R2R_MOCK_DOCKER",
 			constant: environments.EnvR2RMockDocker,
 			expected: "R2R_MOCK_DOCKER",
@@ -350,7 +345,6 @@ func TestConstantUniqueness(t *testing.T) {
 		"EnvGHRepo":                   environments.EnvGHRepo,
 		"EnvR2RMockAIDir":             environments.EnvR2RMockAIDir,
 		"EnvR2RMockSecurity":          environments.EnvR2RMockSecurity,
-		"EnvR2RMockStructurizr":       environments.EnvR2RMockStructurizr,
 		"EnvR2RMockDocker":            environments.EnvR2RMockDocker,
 		"EnvR2RMockGitHubCLI":         environments.EnvR2RMockGitHubCLI,
 		"EnvR2RMockNoWorkflows":       environments.EnvR2RMockNoWorkflows,
@@ -443,7 +437,6 @@ func TestConstantNaming(t *testing.T) {
 		"EnvGHRepo":                   environments.EnvGHRepo,
 		"EnvR2RMockAIDir":             environments.EnvR2RMockAIDir,
 		"EnvR2RMockSecurity":          environments.EnvR2RMockSecurity,
-		"EnvR2RMockStructurizr":       environments.EnvR2RMockStructurizr,
 		"EnvR2RMockDocker":            environments.EnvR2RMockDocker,
 		"EnvR2RMockGitHubCLI":         environments.EnvR2RMockGitHubCLI,
 		"EnvR2RMockNoWorkflows":       environments.EnvR2RMockNoWorkflows,

@@ -18,7 +18,11 @@
 //	1-5:   Low (Green)
 package scoring
 
-import "fmt"
+import (
+	"fmt"
+
+	coreConfig "github.com/ready-to-release/eac/go/core/config"
+)
 
 // RiskBand represents risk level categories.
 type RiskBand string
@@ -169,7 +173,7 @@ func ComputeRiskScore(module string, likelihood, impact int, reasoning string) *
 // Uses configurable mappings from risk-config.yml.
 // Can be overridden by module metadata.
 func GetDefaultImpact(moniker string) int {
-	return GetRiskScoringConfig().GetImpact(moniker)
+	return coreConfig.DefaultRiskScoringConfig().GetImpact(moniker)
 }
 
 // FormatRiskBandColor returns ANSI color code for risk band.

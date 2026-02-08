@@ -8,4 +8,5 @@ type LayoutMetrics struct {
 	ComponentsStart int // Y coordinate where components panel content starts (always 1)
 	SummaryLines    int // Lines reserved for status bar (5: header + data + help + lamps + footer)
 	RemainingHeight int // Height available for side-by-side layout
+	DetailPaneHeight int // Height of the detail pane (9 when active, 0 when collapsed)
 }

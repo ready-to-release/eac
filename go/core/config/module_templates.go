@@ -2,184 +2,169 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
 // ModuleTemplate defines a reusable module structure with placeholders.
 // Templates are defined in defaults and referenced by modules via the "template" field.
+// Templates provide versioning defaults and a discover list of named discovery rules
+// for auto-discovering auxiliary components (markdown, yaml, gherkin, etc.).
 type ModuleTemplate struct {
 	// Versioning provides default versioning configuration
 	Versioning *ModuleVersioning `yaml:"versioning,omitempty"`
-	// Components provides default component definitions with placeholders
-	Components ModuleComponents `yaml:"components,omitempty"`
+	// Discover lists named discovery rules to run for this template.
+	// Rules are resolved from the discovery-rules section of blueprints.yml.
+	// Each rule auto-discovers an auxiliary component if its filesystem check passes.
+	Discover []string `yaml:"discover,omitempty"`
 	// DependsOn provides default dependencies
 	DependsOn []string `yaml:"depends_on,omitempty"`
+	// Components provides default component entries (e.g., docker_build defaults).
+	// Template components are merged into module components as defaults —
+	// module values take precedence over template values.
+	Components map[string]*ComponentEntry `yaml:"components,omitempty"`
 }
 
-// ModuleTemplatesConfig holds all module templates loaded from defaults.
-type ModuleTemplatesConfig struct {
+// BlueprintsConfig holds all blueprints loaded from defaults.
+// This is the unified config: component kinds (tool bindings), module templates,
+// discovery rules, and artifact matrices — all in one file.
+type BlueprintsConfig struct {
+	// ComponentKinds maps component kind name to its definition (tool bindings, default patterns, resources).
+	// This is the unified replacement for the old component-types.yml.
+	ComponentKinds map[string]*ComponentType `yaml:"component-kinds"`
+	// DiscoveryRules maps rule name to its discovery specification.
+	// Templates reference these by name via their "discover" field.
+	DiscoveryRules map[string]ComponentDiscoveryRule `yaml:"discovery-rules"`
+	// Templates maps template name to its specification
 	Templates map[string]ModuleTemplate `yaml:"module-templates"`
+	// ArtifactMatrices maps matrix name to its definition
+	ArtifactMatrices map[string]*ArtifactMatrix `yaml:"artifact-matrices"`
 }
 
-// DiscoveryConventions defines rules for auto-discovering components based on filesystem.
-type DiscoveryConventions struct {
-	Gherkin      *DiscoveryRule    `yaml:"gherkin,omitempty"`
-	Structurizr  *DiscoveryRule    `yaml:"structurizr,omitempty"`
-	GherkinSteps *GherkinStepsRule `yaml:"gherkin_steps,omitempty"`
-	Markdown     *DeriveRule       `yaml:"markdown,omitempty"`
-	YAML         *DeriveRule       `yaml:"yaml,omitempty"`
-}
+// BlueprintsFileName is the config file for blueprints.
+const BlueprintsFileName = "blueprints.yml"
 
-// GherkinStepsRule defines how to infer gherkin-steps component path.
-// The steps path is derived from the module's primary code component.
-// Supports multiple test runners: godog (Go), cucumber-js (TypeScript).
-type GherkinStepsRule struct {
-	// DeriveFromComponents maps component type to subdirectory suffix.
-	// e.g., {"go": "specs", "typescript": "features"}
-	// Path becomes: {component_root}/{subdirectory}
-	DeriveFromComponents map[string]string `yaml:"derive_from_components,omitempty"`
-
-	// FallbackPattern is used when no code component exists.
-	// Uses {moniker} placeholder, e.g., "go/eac/specs/{moniker}"
-	FallbackPattern string `yaml:"fallback_pattern,omitempty"`
-
-	// RequiredFile must exist for the component to be discovered.
-	// e.g., "godog_test.go" for Go executors
-	RequiredFile string `yaml:"required_file"`
-}
-
-// DiscoveryRule defines how to find a component on the filesystem.
-type DiscoveryRule struct {
-	PathPattern  string `yaml:"path_pattern"`  // Pattern with {moniker} placeholder
-	RequiredFile string `yaml:"required_file"` // File that must exist to enable component
-}
-
-// DeriveRule defines how to derive a component's root from another component.
-type DeriveRule struct {
-	DeriveFrom []string `yaml:"derive_from"` // Component names to try (first match wins)
-}
-
-// LoadModuleTemplates loads module templates from defaults.
-// Returns nil, ErrNoDefaults if templates file doesn't exist.
-func LoadModuleTemplates(repoRoot string) (*ModuleTemplatesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "module-templates.yml")
+// LoadBlueprintsDefaults loads blueprints from contract defaults.
+func LoadBlueprintsDefaults(repoRoot string) (*BlueprintsConfig, error) {
+	cfg, err := cloneBlueprintsDefaults()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNoDefaults
-		}
-		return nil, fmt.Errorf("loading module templates: %w", err)
+		return nil, fmt.Errorf("loading blueprints defaults: %w", err)
 	}
-
-	var cfg ModuleTemplatesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing module templates: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
-// LoadDiscoveryConventions loads discovery conventions from defaults.
-// Falls back to built-in defaults if file doesn't exist.
-func LoadDiscoveryConventions(repoRoot string) *DiscoveryConventions {
-	// Try to load from repository defaults
-	data, err := loadDefaultFile(repoRoot, "repository.yml")
-	if err == nil {
-		var wrapper struct {
-			Conventions struct {
-				ComponentDiscovery *DiscoveryConventions `yaml:"component_discovery"`
-			} `yaml:"conventions"`
-		}
-		if yaml.Unmarshal(data, &wrapper) == nil && wrapper.Conventions.ComponentDiscovery != nil {
-			return wrapper.Conventions.ComponentDiscovery
-		}
+// MergeBlueprintsConfig merges override into base. Override keys replace base keys.
+// Either argument may be nil.
+func MergeBlueprintsConfig(base, override *BlueprintsConfig) *BlueprintsConfig {
+	if base == nil && override == nil {
+		return &BlueprintsConfig{}
+	}
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
 	}
 
-	// Return built-in defaults
-	return DefaultDiscoveryConventions()
-}
-
-// DefaultDiscoveryConventions returns the built-in default discovery rules.
-func DefaultDiscoveryConventions() *DiscoveryConventions {
-	return &DiscoveryConventions{
-		Gherkin: &DiscoveryRule{
-			PathPattern:  "specs/{moniker}",
-			RequiredFile: "specification.feature",
-		},
-		Structurizr: &DiscoveryRule{
-			PathPattern:  "specs/{moniker}/.design",
-			RequiredFile: "workspace.dsl",
-		},
-		// GherkinSteps inference rules:
-		// - Module with go component: {go_root}/specs (requires godog_test.go)
-		// - Module with typescript component: {ts_root}/features (requires cucumber runner)
-		// - Module without code: go/eac/specs/{moniker}
-		GherkinSteps: &GherkinStepsRule{
-			DeriveFromComponents: map[string]string{
-				"go":         "specs",
-				"typescript": "features",
-			},
-			FallbackPattern: "go/eac/specs/{moniker}",
-			RequiredFile:    "godog_test.go",
-		},
-		Markdown: &DeriveRule{
-			DeriveFrom: []string{"go", "typescript", "dockerfile"},
-		},
+	result := &BlueprintsConfig{
+		ComponentKinds:   make(map[string]*ComponentType),
+		DiscoveryRules:   make(map[string]ComponentDiscoveryRule),
+		Templates:        make(map[string]ModuleTemplate),
+		ArtifactMatrices: make(map[string]*ArtifactMatrix),
 	}
+
+	// Copy base component kinds, then override
+	for k, v := range base.ComponentKinds {
+		result.ComponentKinds[k] = v
+	}
+	for k, v := range override.ComponentKinds {
+		result.ComponentKinds[k] = v
+	}
+
+	// Copy base discovery rules
+	for k, v := range base.DiscoveryRules {
+		result.DiscoveryRules[k] = v
+	}
+	// Override discovery rules
+	for k, v := range override.DiscoveryRules {
+		result.DiscoveryRules[k] = v
+	}
+
+	// Copy base templates
+	for k, v := range base.Templates {
+		result.Templates[k] = v
+	}
+	// Override templates
+	for k, v := range override.Templates {
+		result.Templates[k] = v
+	}
+
+	// Copy base artifact matrices
+	for k, v := range base.ArtifactMatrices {
+		result.ArtifactMatrices[k] = v
+	}
+	// Override artifact matrices
+	for k, v := range override.ArtifactMatrices {
+		result.ArtifactMatrices[k] = v
+	}
+
+	return result
 }
 
 // ExpandModuleFromTemplate expands a module definition using its referenced template.
-// This merges template defaults into the module, substitutes parameters, and
-// optionally discovers components based on filesystem conventions.
+// Three steps: merge template defaults → substitute params → discover components from rules.
 func ExpandModuleFromTemplate(
 	mod *Module,
 	templates map[string]ModuleTemplate,
-	conventions *DiscoveryConventions,
+	discoveryRules []ComponentDiscoveryRule,
 	repoRoot string,
-	owner string,
+	discoveryVars map[string]string,
+	namedRules map[string]ComponentDiscoveryRule,
 ) error {
-	// 1. If module references a template, merge template as base
+	// 1. If module references a template, merge defaults and run template discovery
 	if mod.Template != "" {
 		tmpl, ok := templates[mod.Template]
 		if !ok {
 			return fmt.Errorf("module %s: unknown template %q", mod.Moniker, mod.Template)
 		}
+
+		// 1a. Merge versioning + depends_on from template (module values win)
 		mergeTemplateIntoModule(mod, &tmpl)
+
+		// 1b. Resolve template's discover list into rules and run them
+		if len(tmpl.Discover) > 0 {
+			templateRules := resolveDiscoverList(tmpl.Discover, namedRules)
+			discoverComponentsFromRules(mod, templateRules, repoRoot, discoveryVars)
+		}
 	}
 
 	// 2. Build parameters and substitute in all fields
-	params := buildModuleParams(mod, owner)
+	// Discovery vars provide {name_root} for every component (e.g., go_root, typescript_root)
+	params := buildModuleParams(mod, discoveryVars)
 	substituteModuleParams(mod, params)
 
-	// 3. Resolve null/empty components using conventions
-	if conventions != nil {
-		resolveConventionalComponents(mod, conventions, repoRoot)
-	}
-
-	// 4. Always discover core BDD components (gherkin, structurizr, gherkin-steps)
-	// These are auto-inferred based on filesystem conventions without requiring explicit config
-	if conventions != nil {
-		discoverCoreComponents(mod, conventions, repoRoot)
-	}
-
-	// 5. If auto_discover is enabled, scan filesystem for ALL additional components
-	if mod.AutoDiscover && conventions != nil {
-		discoverComponents(mod, conventions, repoRoot)
-	}
-
-	// 6. Auto-discover auxiliary components for container modules
-	// This discovers testdata and containercode components based on file patterns
-	discoverContainerAuxiliaryComponents(mod, repoRoot)
+	// 3. Discover components from global YAML-driven rules (with template filtering)
+	discoverComponentsFromRules(mod, discoveryRules, repoRoot, discoveryVars)
 
 	return nil
 }
 
+// resolveDiscoverList resolves a list of discovery rule names into actual rules.
+// Unknown names are silently skipped.
+func resolveDiscoverList(names []string, namedRules map[string]ComponentDiscoveryRule) []ComponentDiscoveryRule {
+	if len(namedRules) == 0 {
+		return nil
+	}
+	var rules []ComponentDiscoveryRule
+	for _, name := range names {
+		if rule, ok := namedRules[name]; ok {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
 // mergeTemplateIntoModule applies template defaults to module.
 // Module values take precedence over template values.
-// Deep merge is performed for components - module can override specific fields.
 func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 	// Versioning: use template if module doesn't have it
 	if mod.Versioning == nil && tmpl.Versioning != nil {
@@ -187,21 +172,6 @@ func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 			Scheme:      tmpl.Versioning.Scheme,
 			Changelog:   tmpl.Versioning.Changelog,
 			ReleaseType: tmpl.Versioning.ReleaseType,
-		}
-	}
-
-	// Components: deep merge - template provides base, module can override specific fields
-	if mod.Components == nil {
-		mod.Components = make(ModuleComponents)
-	}
-	for name, tmplComp := range tmpl.Components {
-		modComp, exists := mod.Components[name]
-		if !exists {
-			// Component doesn't exist in module - copy from template
-			mod.Components[name] = cloneComponentEntry(tmplComp)
-		} else {
-			// Component exists in module - deep merge template as base
-			mod.Components[name] = mergeComponentEntries(tmplComp, modComp)
 		}
 	}
 
@@ -217,188 +187,125 @@ func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 			}
 		}
 	}
+
+	// Components: merge template component defaults into module components.
+	// Only merges into components the module already declares (template
+	// components are defaults, not auto-creation). Root is never overridden
+	// from template (it's always module-specific). DockerBuild fields from
+	// the template are applied as defaults — module fields take precedence.
+	if len(tmpl.Components) > 0 && mod.Components != nil {
+		for name, tmplComp := range tmpl.Components {
+			if tmplComp == nil {
+				continue
+			}
+			modComp, exists := mod.Components[name]
+			if !exists || modComp == nil {
+				continue
+			}
+			if tmplComp.DockerBuild != nil {
+				if modComp.DockerBuild == nil {
+					// Module has no DockerBuild — use template's entirely
+					modComp.DockerBuild = cloneDockerBuildConfig(tmplComp.DockerBuild)
+				} else {
+					// Module has DockerBuild — merge template fields as defaults
+					mergeDockerBuildDefaults(modComp.DockerBuild, tmplComp.DockerBuild)
+				}
+			}
+		}
+	}
 }
 
-// mergeComponentEntries merges two ComponentEntry structs.
-// Module values override template values for non-zero fields.
-func mergeComponentEntries(tmpl, mod *ComponentEntry) *ComponentEntry {
-	if tmpl == nil {
-		return mod
-	}
-	if mod == nil {
-		return cloneComponentEntry(tmpl)
-	}
-
-	// Start with template as base
-	result := cloneComponentEntry(tmpl)
-
-	// Override with module values
-	if mod.Type != "" {
-		result.Type = mod.Type
-	}
-	if mod.Root != "" {
-		result.Root = mod.Root
-	}
-	if mod.Patterns != nil {
-		if result.Patterns == nil {
-			result.Patterns = &ComponentPatterns{}
-		}
-		if mod.Patterns.Source != nil {
-			result.Patterns.Source = make([]string, len(mod.Patterns.Source))
-			copy(result.Patterns.Source, mod.Patterns.Source)
-		}
-		if mod.Patterns.Tests != nil {
-			result.Patterns.Tests = make([]string, len(mod.Patterns.Tests))
-			copy(result.Patterns.Tests, mod.Patterns.Tests)
-		}
-		if mod.Patterns.Config != nil {
-			result.Patterns.Config = make([]string, len(mod.Patterns.Config))
-			copy(result.Patterns.Config, mod.Patterns.Config)
-		}
-	}
-	if mod.Build != nil {
-		result.Build = mod.Build.Clone()
-	}
-	if mod.Amp != nil {
-		result.Amp = &AmpConfig{
-			Build: mod.Amp.Build,
-			Lint:  mod.Amp.Lint,
-			Test:  mod.Amp.Test,
-			Scan:  mod.Amp.Scan,
-		}
-	}
-
-	// Deep merge DockerBuild config
-	if mod.DockerBuild != nil {
-		result.DockerBuild = mergeDockerBuildConfigs(result.DockerBuild, mod.DockerBuild)
-	}
-
-	return result
-}
-
-// mergeDockerBuildConfigs merges DockerBuildConfig with module overrides.
-// Module values override template values for non-zero/non-nil fields.
-func mergeDockerBuildConfigs(tmpl, mod *DockerBuildConfig) *DockerBuildConfig {
-	if tmpl == nil {
-		if mod != nil {
-			return mod.Clone()
-		}
+// cloneDockerBuildConfig creates a deep copy of a DockerBuildConfig.
+func cloneDockerBuildConfig(src *DockerBuildConfig) *DockerBuildConfig {
+	if src == nil {
 		return nil
 	}
-	if mod == nil {
-		return tmpl.Clone()
+	dst := &DockerBuildConfig{
+		Container:  src.Container,
+		Context:    src.Context,
+		Dockerfile: src.Dockerfile,
+		Builder:    src.Builder,
+		Load:       src.Load,
+		Registry:   src.Registry,
+		SBOM:       src.SBOM,
+		Provenance: src.Provenance,
 	}
-
-	// Start with template as base
-	result := tmpl.Clone()
-
-	// Override with module values (only non-zero values)
-	if mod.Container != "" {
-		result.Container = mod.Container
+	if src.Platforms != nil {
+		dst.Platforms = make([]string, len(src.Platforms))
+		copy(dst.Platforms, src.Platforms)
 	}
-	if mod.Context != "" {
-		result.Context = mod.Context
+	if src.Tags != nil {
+		dst.Tags = make([]string, len(src.Tags))
+		copy(dst.Tags, src.Tags)
 	}
-	if mod.Dockerfile != "" {
-		result.Dockerfile = mod.Dockerfile
+	if src.Push != nil {
+		push := *src.Push
+		dst.Push = &push
 	}
-	if len(mod.Platforms) > 0 {
-		result.Platforms = make([]string, len(mod.Platforms))
-		copy(result.Platforms, mod.Platforms)
-	}
-	if len(mod.Tags) > 0 {
-		result.Tags = make([]string, len(mod.Tags))
-		copy(result.Tags, mod.Tags)
-	}
-	// Push: can't differentiate between explicit false and unset, so only override if true
-	if mod.Push {
-		result.Push = mod.Push
-	}
-	if mod.Registry != "" {
-		result.Registry = mod.Registry
-	}
-	if mod.Cache != nil {
-		result.Cache = &DockerCacheConfig{
-			Type: mod.Cache.Type,
-			From: mod.Cache.From,
-			To:   mod.Cache.To,
-			Mode: mod.Cache.Mode,
+	if src.Cache != nil {
+		dst.Cache = &DockerCacheConfig{
+			Type:  src.Cache.Type,
+			Scope: src.Cache.Scope,
+			From:  src.Cache.From,
+			To:    src.Cache.To,
+			Mode:  src.Cache.Mode,
 		}
 	}
-	if mod.SBOM {
-		result.SBOM = mod.SBOM
-	}
-	if mod.Provenance {
-		result.Provenance = mod.Provenance
-	}
-
-	return result
+	return dst
 }
 
-// cloneComponentEntry creates a deep copy of a ComponentEntry.
-func cloneComponentEntry(entry *ComponentEntry) *ComponentEntry {
-	if entry == nil {
-		return nil
+// mergeDockerBuildDefaults applies template DockerBuild fields as defaults
+// into the module's DockerBuild. Module fields take precedence (non-zero values win).
+func mergeDockerBuildDefaults(mod, tmpl *DockerBuildConfig) {
+	if mod.Container == "" {
+		mod.Container = tmpl.Container
 	}
-	clone := &ComponentEntry{
-		Type:     entry.Type,
-		Root:     entry.Root,
-		Resolved: entry.Resolved,
+	if mod.Context == "" {
+		mod.Context = tmpl.Context
 	}
-	if entry.Patterns != nil {
-		clone.Patterns = &ComponentPatterns{}
-		if entry.Patterns.Source != nil {
-			clone.Patterns.Source = make([]string, len(entry.Patterns.Source))
-			copy(clone.Patterns.Source, entry.Patterns.Source)
+	if mod.Dockerfile == "" {
+		mod.Dockerfile = tmpl.Dockerfile
+	}
+	if mod.Builder == "" {
+		mod.Builder = tmpl.Builder
+	}
+	if len(mod.Platforms) == 0 && len(tmpl.Platforms) > 0 {
+		mod.Platforms = make([]string, len(tmpl.Platforms))
+		copy(mod.Platforms, tmpl.Platforms)
+	}
+	if len(mod.Tags) == 0 && len(tmpl.Tags) > 0 {
+		mod.Tags = make([]string, len(tmpl.Tags))
+		copy(mod.Tags, tmpl.Tags)
+	}
+	if mod.Push == nil && tmpl.Push != nil {
+		push := *tmpl.Push
+		mod.Push = &push
+	}
+	if mod.Registry == "" {
+		mod.Registry = tmpl.Registry
+	}
+	if mod.Cache == nil && tmpl.Cache != nil {
+		mod.Cache = &DockerCacheConfig{
+			Type:  tmpl.Cache.Type,
+			Scope: tmpl.Cache.Scope,
+			From:  tmpl.Cache.From,
+			To:    tmpl.Cache.To,
+			Mode:  tmpl.Cache.Mode,
 		}
-		if entry.Patterns.Tests != nil {
-			clone.Patterns.Tests = make([]string, len(entry.Patterns.Tests))
-			copy(clone.Patterns.Tests, entry.Patterns.Tests)
-		}
-		if entry.Patterns.Config != nil {
-			clone.Patterns.Config = make([]string, len(entry.Patterns.Config))
-			copy(clone.Patterns.Config, entry.Patterns.Config)
-		}
 	}
-	if entry.Build != nil {
-		clone.Build = entry.Build.Clone()
-	}
-	if entry.DockerBuild != nil {
-		clone.DockerBuild = entry.DockerBuild.Clone()
-	}
-	if entry.Amp != nil {
-		clone.Amp = &AmpConfig{
-			Build: entry.Amp.Build,
-			Lint:  entry.Amp.Lint,
-			Test:  entry.Amp.Test,
-			Scan:  entry.Amp.Scan,
-		}
-	}
-	return clone
 }
 
 // buildModuleParams creates parameter map for substitution.
-func buildModuleParams(mod *Module, owner string) map[string]string {
+// Discovery vars already contain {name_root} for every component (e.g., go_root, core_root),
+// so no special inference is needed — component roots ARE the parameters.
+func buildModuleParams(mod *Module, discoveryVars map[string]string) map[string]string {
 	params := map[string]string{
 		"moniker": mod.Moniker,
-		"owner":   owner,
 	}
 
-	// Promote top-level parameter shorthands to parameters map
-	if mod.GoRoot != "" {
-		params["go_root"] = mod.GoRoot
-	}
-
-	// Add explicit parameters from module (take precedence over shorthands)
-	for k, v := range mod.Parameters {
+	// Merge discovery vars (provides owner, component roots, conventions)
+	for k, v := range discoveryVars {
 		params[k] = v
-	}
-
-	// Infer go_root from go component if present and not already set
-	if _, hasGoRoot := params["go_root"]; !hasGoRoot {
-		if goComp, ok := mod.Components["go"]; ok && goComp != nil && goComp.Root != "" {
-			params["go_root"] = goComp.Root
-		}
 	}
 
 	return params
@@ -421,6 +328,7 @@ func substituteModuleParams(mod *Module, params map[string]string) {
 			comp.Patterns.Source = substituteParamsSlice(comp.Patterns.Source, params)
 			comp.Patterns.Tests = substituteParamsSlice(comp.Patterns.Tests, params)
 			comp.Patterns.Config = substituteParamsSlice(comp.Patterns.Config, params)
+			comp.Patterns.Data = substituteParamsSlice(comp.Patterns.Data, params)
 		}
 		if comp.DockerBuild != nil {
 			substituteDockerBuildParams(comp.DockerBuild, params)
@@ -466,345 +374,4 @@ func substituteDockerBuildParams(dbc *DockerBuildConfig, params map[string]strin
 		dbc.Cache.From = substituteParams(dbc.Cache.From, params)
 		dbc.Cache.To = substituteParams(dbc.Cache.To, params)
 	}
-}
-
-// resolveConventionalComponents resolves null/marker components using conventions.
-// A component with ConventionMarker=true or nil entry is resolved from conventions.
-func resolveConventionalComponents(mod *Module, conv *DiscoveryConventions, repoRoot string) {
-	for name, comp := range mod.Components {
-		// Skip components that already have a root or are explicitly configured
-		if comp != nil && comp.Root != "" {
-			continue
-		}
-
-		var path string
-
-		// Handle gherkin-steps specially - it derives from code components
-		if name == "gherkin-steps" {
-			path = getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
-		} else {
-			// Check if this is a convention-based component
-			path = getConventionalPath(name, mod.Moniker, conv)
-			if path == "" {
-				// Try deriving from other components
-				path = derivePathFrom(mod.Components, name, conv)
-			}
-		}
-
-		if path == "" {
-			// No convention found, remove the nil marker
-			if comp == nil {
-				delete(mod.Components, name)
-			}
-			continue
-		}
-
-		// Check if path exists (for gherkin-steps, this was already checked)
-		if name != "gherkin-steps" && !pathExists(repoRoot, path) {
-			// Path doesn't exist, remove the nil marker
-			if comp == nil {
-				delete(mod.Components, name)
-			}
-			continue
-		}
-
-		// Path exists, set it
-		if comp == nil {
-			mod.Components[name] = &ComponentEntry{Root: path}
-		} else {
-			comp.Root = path
-		}
-	}
-}
-
-// getConventionalPath returns the conventional path for a component type.
-func getConventionalPath(compName, moniker string, conv *DiscoveryConventions) string {
-	if conv == nil {
-		return ""
-	}
-
-	var rule *DiscoveryRule
-	switch compName {
-	case "gherkin":
-		rule = conv.Gherkin
-	case "structurizr":
-		rule = conv.Structurizr
-	}
-
-	if rule == nil || rule.PathPattern == "" {
-		return ""
-	}
-
-	return strings.ReplaceAll(rule.PathPattern, "{moniker}", moniker)
-}
-
-// getGherkinStepsPath derives the gherkin-steps path based on module components.
-// Inference rules:
-// - Module with go component: {go_root}/specs
-// - Module with typescript component: {ts_root}/features
-// - Module without code: go/eac/specs/{moniker}
-// Returns empty string if path doesn't exist or no rule applies.
-func getGherkinStepsPath(components ModuleComponents, moniker string, conv *DiscoveryConventions, repoRoot string) string {
-	if conv == nil || conv.GherkinSteps == nil {
-		return ""
-	}
-
-	rule := conv.GherkinSteps
-
-	// Try deriving from code components (in priority order: go, then typescript)
-	for _, compType := range []string{"go", "typescript"} {
-		if subdir, ok := rule.DeriveFromComponents[compType]; ok {
-			if entry, exists := components[compType]; exists && entry != nil && entry.Root != "" {
-				path := filepath.ToSlash(filepath.Join(entry.Root, subdir))
-				if pathHasRequiredFile(repoRoot, path, rule.RequiredFile) {
-					return path
-				}
-			}
-		}
-	}
-
-	// Fallback for modules without code components
-	if rule.FallbackPattern != "" {
-		path := strings.ReplaceAll(rule.FallbackPattern, "{moniker}", moniker)
-		if pathHasRequiredFile(repoRoot, path, rule.RequiredFile) {
-			return path
-		}
-	}
-
-	return ""
-}
-
-// derivePathFrom attempts to derive a component's path from another component.
-func derivePathFrom(components ModuleComponents, targetName string, conv *DiscoveryConventions) string {
-	if conv == nil {
-		return ""
-	}
-
-	var rule *DeriveRule
-	switch targetName {
-	case "markdown":
-		rule = conv.Markdown
-	case "yaml":
-		rule = conv.YAML
-	}
-
-	if rule == nil || len(rule.DeriveFrom) == 0 {
-		return ""
-	}
-
-	// Try each source component in order
-	for _, sourceName := range rule.DeriveFrom {
-		if entry, ok := components[sourceName]; ok && entry != nil && entry.Root != "" {
-			return entry.Root
-		}
-	}
-
-	return ""
-}
-
-// discoverCoreComponents auto-discovers gherkin, structurizr, and gherkin-steps components.
-// These core BDD components are ALWAYS inferred based on filesystem conventions,
-// unlike other components which require auto_discover: true.
-func discoverCoreComponents(mod *Module, conv *DiscoveryConventions, repoRoot string) {
-	if conv == nil {
-		return
-	}
-
-	// Ensure Components map exists
-	if mod.Components == nil {
-		mod.Components = make(ModuleComponents)
-	}
-
-	// Discover gherkin specs from specs/{moniker}/
-	// Features are in subdirectories (e.g., specs/core/cache-invalidation/specification.feature)
-	// So we check for directory existence and any .feature files
-	if !mod.Components.HasComponent("gherkin") && conv.Gherkin != nil {
-		path := strings.ReplaceAll(conv.Gherkin.PathPattern, "{moniker}", mod.Moniker)
-		if pathHasFeatureFiles(repoRoot, path) {
-			mod.Components["gherkin"] = &ComponentEntry{Root: path}
-		}
-	}
-
-	// Discover structurizr designs from specs/{moniker}/.design/
-	if !mod.Components.HasComponent("structurizr") && conv.Structurizr != nil {
-		path := strings.ReplaceAll(conv.Structurizr.PathPattern, "{moniker}", mod.Moniker)
-		if pathHasRequiredFile(repoRoot, path, conv.Structurizr.RequiredFile) {
-			mod.Components["structurizr"] = &ComponentEntry{Root: path}
-		}
-	}
-
-	// Discover gherkin-steps based on code component location
-	if !mod.Components.HasComponent("gherkin-steps") && conv.GherkinSteps != nil {
-		path := getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
-		if path != "" {
-			mod.Components["gherkin-steps"] = &ComponentEntry{Root: path}
-		}
-	}
-}
-
-// discoverComponents scans filesystem for conventional components not already defined.
-func discoverComponents(mod *Module, conv *DiscoveryConventions, repoRoot string) {
-	if conv == nil {
-		return
-	}
-
-	// Try to discover gherkin
-	if !mod.Components.HasComponent("gherkin") && conv.Gherkin != nil {
-		path := strings.ReplaceAll(conv.Gherkin.PathPattern, "{moniker}", mod.Moniker)
-		if pathHasRequiredFile(repoRoot, path, conv.Gherkin.RequiredFile) {
-			mod.Components["gherkin"] = &ComponentEntry{Root: path}
-		}
-	}
-
-	// Try to discover structurizr
-	if !mod.Components.HasComponent("structurizr") && conv.Structurizr != nil {
-		path := strings.ReplaceAll(conv.Structurizr.PathPattern, "{moniker}", mod.Moniker)
-		if pathHasRequiredFile(repoRoot, path, conv.Structurizr.RequiredFile) {
-			mod.Components["structurizr"] = &ComponentEntry{Root: path}
-		}
-	}
-
-	// Try to discover gherkin-steps
-	if !mod.Components.HasComponent("gherkin-steps") && conv.GherkinSteps != nil {
-		path := getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
-		if path != "" {
-			mod.Components["gherkin-steps"] = &ComponentEntry{Root: path}
-		}
-	}
-
-	// Try to derive markdown from primary component
-	if !mod.Components.HasComponent("markdown") && conv.Markdown != nil {
-		path := derivePathFrom(mod.Components, "markdown", conv)
-		if path != "" && pathExists(repoRoot, path) {
-			mod.Components["markdown"] = &ComponentEntry{Root: path}
-		}
-	}
-}
-
-// pathExists checks if a path exists in the repo.
-func pathExists(repoRoot, path string) bool {
-	fullPath := filepath.Join(repoRoot, path)
-	_, err := os.Stat(fullPath)
-	return err == nil
-}
-
-// pathHasFeatureFiles checks if a path contains any .feature files (including subdirectories).
-// This is used for gherkin component discovery where features are in subdirectories.
-func pathHasFeatureFiles(repoRoot, path string) bool {
-	fullPath := filepath.Join(repoRoot, path)
-
-	// Check if directory exists
-	info, err := os.Stat(fullPath)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-
-	// Check for .feature files in immediate subdirectories
-	// (features are organized as specs/{moniker}/{feature-name}/specification.feature)
-	entries, err := os.ReadDir(fullPath)
-	if err != nil {
-		return false
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			featurePath := filepath.Join(fullPath, entry.Name(), "specification.feature")
-			if _, err := os.Stat(featurePath); err == nil {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// pathHasRequiredFile checks if a path contains the required file.
-func pathHasRequiredFile(repoRoot, path, requiredFile string) bool {
-	if requiredFile == "" {
-		return pathExists(repoRoot, path)
-	}
-	fullPath := filepath.Join(repoRoot, path, requiredFile)
-	_, err := os.Stat(fullPath)
-	return err == nil
-}
-
-// discoverContainerAuxiliaryComponents auto-discovers auxiliary components for container modules.
-// This discovers:
-//   - testdata: when containers/{moniker}/ contains files matching *.txt, *.conf, *.html, *.sh
-//   - containercode: when containers/{moniker}/ contains files matching *.py, *.js
-//
-// Only applies to modules using a container template (template name contains "container").
-// Does not override existing components if already defined.
-func discoverContainerAuxiliaryComponents(mod *Module, repoRoot string) {
-	// Only apply to container templates
-	if !strings.Contains(mod.Template, "container") {
-		return
-	}
-
-	// Ensure Components map exists
-	if mod.Components == nil {
-		mod.Components = make(ModuleComponents)
-	}
-
-	containerDir := filepath.Join(repoRoot, "containers", mod.Moniker)
-
-	// Check if container directory exists
-	if _, err := os.Stat(containerDir); os.IsNotExist(err) {
-		return
-	}
-
-	// Define file patterns for each component type
-	testdataPatterns := []string{"*.txt", "*.conf", "*.html", "*.sh"}
-	containercodePatterns := []string{"*.py", "*.js"}
-
-	// Discover testdata component
-	if !mod.Components.HasComponent("testdata") {
-		if hasMatchingFiles(containerDir, testdataPatterns) {
-			mod.Components["testdata"] = &ComponentEntry{
-				Root: filepath.ToSlash(filepath.Join("containers", mod.Moniker)),
-				Patterns: &ComponentPatterns{
-					Source: testdataPatterns,
-				},
-			}
-		}
-	}
-
-	// Discover containercode component
-	if !mod.Components.HasComponent("containercode") {
-		if hasMatchingFiles(containerDir, containercodePatterns) {
-			mod.Components["containercode"] = &ComponentEntry{
-				Root: filepath.ToSlash(filepath.Join("containers", mod.Moniker)),
-				Patterns: &ComponentPatterns{
-					Source: containercodePatterns,
-				},
-			}
-		}
-	}
-}
-
-// hasMatchingFiles checks if a directory (or its subdirectories) contains files
-// matching any of the given glob patterns.
-func hasMatchingFiles(dir string, patterns []string) bool {
-	var found bool
-
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || found {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		name := d.Name()
-		for _, pattern := range patterns {
-			matched, err := filepath.Match(pattern, name)
-			if err == nil && matched {
-				found = true
-				return filepath.SkipAll
-			}
-		}
-		return nil
-	})
-
-	return found
 }

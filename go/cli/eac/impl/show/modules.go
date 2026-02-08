@@ -1,14 +1,13 @@
 // Command: show modules
 // Short: Display all module contracts in a human-readable table
 // Long: The show modules command displays all module contracts defined in the repository,
-// Long: including each module's dependency layer, moniker (identifier), and component types.
-// Long: Modules are sorted by layer first, then alphabetically within each layer.
-// Long: Layer 0 contains modules with no dependencies; higher layers depend on lower layers.
+// Long: including each module's moniker (identifier), group, and component types.
+// Long: Modules are sorted by dependency depth, then by group, then by declaration order.
 // Long: This information helps understand the modular structure and build order of the repository.
 // Long: Use --with-artifacts to include artifact statistics (count, missing, overrides) in the output.
 // Long:
 // Long: Expected Output:
-// Long: - Markdown table with columns: Layer, Moniker, Components
+// Long: - Markdown table with columns: Moniker, Group, Components
 // Long: - If --with-artifacts flag is used: additional columns for Artifacts (count), Missing (count), Overrides (count)
 // Long: - Each row represents one module in the repository
 package show
@@ -25,7 +24,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
-	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 func init() {
@@ -43,68 +41,54 @@ func ShowModules() int {
 	args := os.Args[1:]
 	withArtifacts := flags.HasFlag(args, "--with-artifacts", "")
 
-	// Get repository root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
+	// Load config (always needed for DisplayOrder; also used for artifacts)
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		return 1
 	}
 
-	// Generate module contracts report
+	workspaceRoot := cfg.RepoRoot
+
+	// Generate module contracts report for component type display
 	report, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
-	// Calculate execution order to get layer assignments
-	execPlan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to calculate execution order: %v\n", err)
-		return 1
-	}
-
-	// Load configuration if artifacts are requested
-	var cfg *config.EACConfig
-	if withArtifacts {
-		cfg, err = config.Load(config.DefaultLoadOptions())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
-			return 1
-		}
-	}
+	// Use precomputed display order
+	monikers := cfg.Repository.DisplayOrder.Modules
 
 	// Build markdown table
 	tb := render.NewTableBuilder()
 	if withArtifacts {
-		tb.WithHeaders("Moniker", "Components", "Artifacts", "Missing", "Overrides")
+		tb.WithHeaders("Moniker", "Group", "Components", "Artifacts", "Missing", "Overrides")
 	} else {
-		tb.WithHeaders("Moniker", "Components")
+		tb.WithHeaders("Moniker", "Group", "Components")
 	}
 
-	// Iterate in execution order
-	for _, moniker := range execPlan.ExecutionOrder {
-		// Find the module contract
+	for _, moniker := range monikers {
 		mod, ok := report.Registry.Get(moniker)
 		if !ok {
-			continue // Module not in registry, skip
+			continue
 		}
 
-		// Format components list
 		pkgDisplay := mod.GetComponentTypesDisplay()
+		group := mod.ModuleGroup
 
 		if withArtifacts {
-			// Get artifact statistics for this module
 			artifactStats := getArtifactStats(mod, cfg, workspaceRoot)
 			tb.AddRow(
 				mod.Moniker,
+				group,
 				pkgDisplay,
 				fmt.Sprintf("%d", artifactStats.Total),
 				fmt.Sprintf("%d", artifactStats.Missing),
 				fmt.Sprintf("%d", artifactStats.Overrides),
 			)
 		} else {
-			tb.AddRow(mod.Moniker, pkgDisplay)
+			tb.AddRow(mod.Moniker, group, pkgDisplay)
 		}
 	}
 
@@ -148,20 +132,16 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 	// Build directory
 	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, mod.Moniker)
 
-	// Resolve artifacts for current platform
-	targetOS := runtime.GOOS
-	targetArch := runtime.GOARCH
-
 	_, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, buildDir, targetOS, targetArch, cfg,
+		module, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
 	)
 	if err != nil {
-		return stats
+		return artifactStats{}
 	}
 
-	stats.Total = summary.Total
-	stats.Missing = summary.Missing
-	stats.Overrides = summary.Overrides
-
-	return stats
+	return artifactStats{
+		Total:     summary.Total,
+		Missing:   summary.Missing,
+		Overrides: summary.Overrides,
+	}
 }

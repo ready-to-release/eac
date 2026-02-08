@@ -518,7 +518,7 @@ func TestExportManualCommand_SchemaValidation(t *testing.T) {
 			require.NoError(t, err)
 			// Navigate up from go/cli/eac/impl/test to repo root
 			repoRoot := filepath.Join(workspaceRoot, "..", "..", "..", "..", "..")
-			realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "manual-test-export.schema.json")
+			realSchemaPath := filepath.Join(repoRoot, "contracts", "core", "0.1.0", "schemas", "manual-test-export.schema.json")
 			schemaContent, err := os.ReadFile(realSchemaPath)
 			require.NoError(t, err, "should read real schema file")
 

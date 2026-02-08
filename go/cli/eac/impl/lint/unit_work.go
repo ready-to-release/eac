@@ -1,10 +1,10 @@
 package lint
 
 import (
-	"github.com/ready-to-release/eac/go/cli/eac/impl/update/lint/linters"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/resolver"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -21,7 +21,7 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 	// Get cached modules map from lint context (set during incremental detection)
 	var cachedModules map[string]bool
-	if lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext); ok && lctx != nil {
+	if lctx, ok := ctx.Config.LintCmdContext.(*lintContext); ok && lctx != nil {
 		cachedModules = lctx.cachedModules
 	}
 
@@ -61,7 +61,7 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			}
 
 			// Check if handler exists
-			handler := linters.GetHandlerForProvider(providerName)
+			handler := tool.GlobalLintBridge().GetHandlerForProvider(providerName)
 			if handler == nil {
 				continue
 			}

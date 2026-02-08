@@ -3,8 +3,8 @@ package flags
 import (
 	"testing"
 
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/environment"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 )
 
 func TestOutputFlagSet_Parse(t *testing.T) {
@@ -24,14 +24,14 @@ func TestOutputFlagSet_Parse(t *testing.T) {
 			name:          "no flags",
 			args:          []string{"module1"},
 			wantUseTUI:    false,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: []string{"module1"},
 		},
 		{
 			name:          "tui flag",
 			args:          []string{"--tui"},
 			wantUseTUI:    true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: nil,
 		},
 		{
@@ -39,35 +39,35 @@ func TestOutputFlagSet_Parse(t *testing.T) {
 			args:          []string{"--no-tui"},
 			wantUseTUI:    false,
 			wantNoTUI:     true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: nil,
 		},
 		{
 			name:          "debug long form",
 			args:          []string{"--debug", "module1"},
 			wantDebug:     true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: []string{"module1"},
 		},
 		{
 			name:          "debug short form",
 			args:          []string{"-d", "module1"},
 			wantDebug:     true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: []string{"module1"},
 		},
 		{
 			name:          "timings flag",
 			args:          []string{"--timings"},
 			wantTimings:   true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: nil,
 		},
 		{
 			name:          "ascii flag",
 			args:          []string{"--ascii"},
 			wantASCII:     true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: nil,
 		},
 		{
@@ -116,7 +116,7 @@ func TestOutputFlagSet_Parse(t *testing.T) {
 			name:          "other flags pass through",
 			args:          []string{"--debug", "--turbo", "--skip-cache"},
 			wantDebug:     true,
-			wantHeight:    tui.DefaultHeight,
+			wantHeight:    display.DefaultHeight,
 			wantRemaining: []string{"--turbo", "--skip-cache"},
 		},
 	}

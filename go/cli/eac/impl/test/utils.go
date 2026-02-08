@@ -241,29 +241,3 @@ func getPackageTestType(tests []testing.TestReference) string {
 	return firstType
 }
 
-// convertToCucumberTagExpr converts godog tag format to cucumber-js tag expression.
-// Godog: "@L0,@L1 && ~@skip:wip" → Cucumber: "(@L0 or @L1) and not @skip:wip".
-func convertToCucumberTagExpr(godogTags string) string {
-	if godogTags == "" {
-		return ""
-	}
-
-	var parts []string
-	// Split by && for AND conditions
-	andParts := strings.Split(godogTags, " && ")
-	for _, part := range andParts {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, "~") {
-			// Negation: ~@tag → not @tag
-			parts = append(parts, "not "+strings.TrimPrefix(part, "~"))
-		} else if strings.Contains(part, ",") {
-			// OR: @L0,@L1 → (@L0 or @L1)
-			orTags := strings.Split(part, ",")
-			parts = append(parts, "("+strings.Join(orTags, " or ")+")")
-		} else {
-			parts = append(parts, part)
-		}
-	}
-
-	return strings.Join(parts, " and ")
-}

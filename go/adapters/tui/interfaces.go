@@ -2,7 +2,7 @@
 package tui
 
 import (
-	tuicontract "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
+	tuicontract "github.com/ready-to-release/eac/contracts/tui/0.1.0"
 )
 
 // Re-export types from contracts for convenience.
@@ -61,6 +61,15 @@ type SubcommandInfo = tuicontract.SubcommandInfo
 
 // Binding represents a resolved command-to-TUI binding.
 type Binding = tuicontract.Binding
+
+// PlannedWorkItem describes predicted work from module/component discovery.
+type PlannedWorkItem = tuicontract.PlannedWorkItem
+
+// UoWEnrichment carries incremental enrichment data for an existing planned tab.
+type UoWEnrichment = tuicontract.UoWEnrichment
+
+// CacheHit describes the cache status of a work unit.
+type CacheHit = tuicontract.CacheHit
 
 // Level constants for convenience.
 const (

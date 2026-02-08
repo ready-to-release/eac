@@ -9,19 +9,27 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces v0.0.0
-	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces v0.0.0
 	github.com/ready-to-release/eac/go/adapters/ai v0.0.0
+	github.com/ready-to-release/eac/go/adapters/cucumber v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
+	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
+	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
+	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
+	github.com/ready-to-release/eac/go/adapters/mocha v0.0.0
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
-	github.com/ready-to-release/eac/go/godog v0.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
 	golang.org/x/sync v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
+)
+
+require (
+	github.com/huandu/go-clone v1.7.3 // indirect
+	github.com/huandu/go-clone/generic v1.7.3 // indirect
+	github.com/ready-to-release/eac/go/adapters/npm v0.0.0 // indirect
 )
 
 require (
@@ -100,11 +108,10 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9 // indirect
-	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
@@ -150,16 +157,23 @@ require (
 )
 
 replace (
-	github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces => ../../../contracts/core/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces => ../../../contracts/docker-adapter/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces => ../../../contracts/security/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces => ../../../contracts/testing/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tools/0.1.0/interfaces => ../../../contracts/tools/0.1.0/interfaces
-	github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces => ../../../contracts/tui-adapter/0.1.0/interfaces
 	github.com/ready-to-release/eac/go/adapters/ai => ../../adapters/ai
+	github.com/ready-to-release/eac/go/adapters/cucumber => ../../adapters/cucumber
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker
+	github.com/ready-to-release/eac/go/adapters/eac => ../../adapters/eac
+	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
+	github.com/ready-to-release/eac/go/adapters/gotest => ../../adapters/gotest
+	github.com/ready-to-release/eac/go/adapters/mocha => ../../adapters/mocha
+	github.com/ready-to-release/eac/go/adapters/npm => ../../adapters/npm
 	github.com/ready-to-release/eac/go/adapters/tui => ../../adapters/tui
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/core => ../../core
-	github.com/ready-to-release/eac/go/godog => ../../godog
 )
+
+replace github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../../contracts/core/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../../../contracts/container-runtime/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0

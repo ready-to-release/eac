@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -49,8 +50,8 @@ type Artifact struct {
 // This is written to out/{context}/{module}/{dirname}/uow.manifest.json
 // where dirname = component[-extra1][-extra2]... for uniqueness.
 type UoWManifest struct {
-	// Context is the operation type: build, test, lint, or scan.
-	Context workunit.Context `json:"context"`
+	// Action is the operation type: build, test, lint, or scan.
+	Action core.ActionType `json:"context"` // JSON tag kept as "context" for cache compat
 
 	// Module is the module moniker (e.g., "core").
 	Module string `json:"module"`
@@ -214,9 +215,9 @@ func StatusFromExitCode(exitCode int) Status {
 //   - ExitCode: 0 (successful)
 //   - Empty InputHash/OutputHash/Artifacts (expected and valid)
 //   - Metadata["reason"] describing why it's NoOp
-func NewNoOpManifest(ctx workunit.Context, module, component, tool, reason string) *UoWManifest {
+func NewNoOpManifest(ctx core.ActionType, module, component, tool, reason string) *UoWManifest {
 	return &UoWManifest{
-		Context:    ctx,
+		Action:     ctx,
 		Module:     module,
 		Component:  component,
 		Tool:       tool,

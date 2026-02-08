@@ -13,7 +13,7 @@ RUN apk add --no-cache \
     bash \
     && rm -rf /var/cache/apk/*
 
-# Install Python packages (same as site-render-oci + polling support)
+# Install Python packages (same as mkdocs-render-oci + polling support)
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt \

@@ -57,7 +57,7 @@ versioning:
 **Examples**:
 
 - `eac-cli` - Go command implementations
-- `mcp-server` - MCP server command bindings
+- `eac-mcp-server` - MCP server command bindings
 - `r2r-installer` - Installation scripts
 - `vscode-commit` - VS Code commit message extension
 

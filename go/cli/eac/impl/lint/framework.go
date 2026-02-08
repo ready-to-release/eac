@@ -12,7 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/update/lint/linters"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/caching"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/locking"
@@ -30,8 +31,8 @@ import (
 
 func init() {
 	// Register component-level execution support for lint
-	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeLint, ResolveLintUnitSpecs)
-	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeLint, lintUnitWorker)
+	cmdframework.RegisterUnitProvider(core.ActionLint, ResolveLintUnitSpecs)
+	cmdframework.RegisterUnitWorker(core.ActionLint, lintUnitWorker)
 }
 
 // LintConfig holds lint-specific configuration.
@@ -71,11 +72,8 @@ type lintContext struct {
 // RunLintWithFramework executes lint using the cmdframework.
 // This provides parallel execution, TUI support, and consistent output.
 func RunLintWithFramework(cmdCfg *cmdframework.CommandConfig, lintCfg *LintConfig) int {
-	// Store lint config in Extra for access in hooks/worker
-	if cmdCfg.Extra == nil {
-		cmdCfg.Extra = make(map[string]interface{})
-	}
-	cmdCfg.Extra["lintConfig"] = lintCfg
+	// Store lint config in typed fields for access in hooks/worker
+	cmdCfg.LintCmdConfig = lintCfg
 
 	// Create lint context
 	lctx := &lintContext{
@@ -83,7 +81,7 @@ func RunLintWithFramework(cmdCfg *cmdframework.CommandConfig, lintCfg *LintConfi
 		results:     make(map[string]*LintModuleResult),
 		moduleFiles: make(map[string][]string),
 	}
-	cmdCfg.Extra["lintContext"] = lctx
+	cmdCfg.LintCmdContext = lctx
 
 	// Set up hooks
 	hooks := &cmdframework.Hooks{
@@ -104,16 +102,16 @@ func lintAfterInit(ctx *cmdframework.ExecutionContext) error {
 	buildLintInitSummary(ctx)
 
 	// Initialize UoW tracker for manifest generation
-	lctx := ctx.Config.Extra["lintContext"].(*lintContext)
-	lctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, workunit.ContextLint)
+	lctx := ctx.Config.LintCmdContext.(*lintContext)
+	lctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, core.ActionLint)
 
 	return nil
 }
 
 // lintAfterResolve handles incremental lint detection.
 func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	lintCfg := ctx.Config.Extra["lintConfig"].(*LintConfig)
-	lctx := ctx.Config.Extra["lintContext"].(*lintContext)
+	lintCfg := ctx.Config.LintCmdConfig.(*LintConfig)
+	lctx := ctx.Config.LintCmdContext.(*lintContext)
 
 	// Clear lint output if --skip-cache (force relint)
 	if lintCfg.ForceLint {
@@ -142,128 +140,24 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // Instead of checking at module granularity, it checks each component:provider UoW.
 // This enables partial caching - some components can be cached while others relint.
 func detectUoWIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
-	startTime := time.Now()
-	defer func() {
-		ctx.SetChangeDetectionTiming(time.Since(startTime))
-	}()
-
-	// Get all expected UoWs from resolved lint specs
-	units := ResolveLintUnitSpecs(ctx)
-	if len(units) == 0 {
+	specs := ResolveLintUnitSpecs(ctx)
+	result := caching.DetectIncrementalChanges(ctx, core.ActionLint, specs, "LINT")
+	if result == nil {
 		return
 	}
 
-	// Build list of expected UoWs
-	expectedUoWs := make([]workunit.UnitID, len(units))
-	for i, spec := range units {
-		expectedUoWs[i] = spec.ID
-	}
+	// Always store pre-computed hashes for worker reuse
+	lctx.moduleInputHashes = result.ModuleInputHashes
 
-	// Collect module files for hash computation
-	moduleFiles := make(map[string][]string)
-	for _, id := range expectedUoWs {
-		if _, ok := moduleFiles[id.Module]; ok {
-			continue // Already collected
-		}
-		if contract, ok := ctx.ModuleRegistry.Get(id.Module); ok {
-			patterns := contract.GetGlobPatterns()
-			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
-			if err != nil {
-				log.Debugf("Failed to expand patterns for %s: %v", id.Module, err)
-				continue
-			}
-			moduleFiles[id.Module] = files
-		}
-	}
-
-	// Store for later input hash computation
-	lctx.moduleFiles = moduleFiles
-
-	// Pre-compute module input hashes ONCE for consistency.
-	// Workers will reuse these instead of recomputing after lint --fix modifies files.
-	moduleInputHashes := make(map[string]string)
-	for module, files := range moduleFiles {
-		h, err := hash.Files(ctx.WorkspaceRoot, files)
-		if err != nil {
-			log.Debugf("Failed to compute input hash for %s: %v", module, err)
-			continue
-		}
-		moduleInputHashes[module] = h
-	}
-	lctx.moduleInputHashes = moduleInputHashes
-
-	// Use pre-computed hashes for detection (same hashes workers will use)
-	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	getInputHash := coreoutput.InputHashProvider(func(id workunit.UnitID) (string, error) {
-		h, ok := moduleInputHashes[id.Module]
-		if !ok {
-			return "", nil
-		}
-		return h, nil
-	})
-
-	aggResult, err := coreoutput.AggregateUoWChanges(reader, workunit.ContextLint, expectedUoWs, getInputHash)
-	if err != nil {
-		log.Debugf("Failed to detect lint UoW changes: %v", err)
-		return
-	}
-
-	// Log change detection results
-	log.Debugf("[LINT-UOW-CACHE] DetectUoWChanges result: FreshRun=%v Changed=%d UpToDate=%d",
-		aggResult.UoWResult.FreshRun, len(aggResult.UoWResult.Changed), len(aggResult.UoWResult.UpToDate))
-	for longname, reason := range aggResult.UoWResult.ChangeReasons {
-		log.Debugf("[LINT-UOW-CACHE] Changed: %s -> %s", longname, reason)
-	}
-
-	detectionTime := time.Since(startTime)
-
-	if aggResult.UoWResult.FreshRun {
-		log.Debugf("Fresh lint detected (UoW mode), all components will lint")
-		if ctx.InitSummary != nil {
-			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
-				Enabled:       true,
-				DetectionTime: detectionTime,
-				FreshBuild:    true,
-			})
-		}
+	if result.FreshRun {
 		return
 	}
 
 	// Copy aggregated results to lint context
-	lctx.cachedUoWs = aggResult.CachedUoWs
-	lctx.uowCacheTimes = aggResult.UoWCacheTimes
-	lctx.cachedModules = aggResult.CachedModules
-	lctx.cacheTimes = aggResult.ModuleCacheTimes
-
-	// Log module-level aggregation
-	agg := workunit.NewUoWAggregator(expectedUoWs)
-	for _, id := range aggResult.UoWResult.UpToDate {
-		agg.MarkCached(id)
-	}
-	for module := range aggResult.CachedModules {
-		total, cached := agg.Stats(module)
-		log.Debugf("[LINT-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
-			module, cached, total, true)
-	}
-	for _, module := range aggResult.ChangedModules {
-		total, cached := agg.Stats(module)
-		log.Debugf("[LINT-UOW-CACHE] Module %s: %d/%d UoWs cached -> module cached=%v",
-			module, cached, total, false)
-	}
-
-	// Report incremental detection in init summary
-	if ctx.InitSummary != nil {
-		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
-			Enabled:       true,
-			DetectionTime: detectionTime,
-			Changed:       aggResult.ChangedModules,
-			UpToDate:      aggResult.UpToDateModules,
-			FreshBuild:    false,
-		})
-	}
-
-	log.Debugf("Incremental lint (UoW mode): %d modules to lint, %d cached, %d UoWs cached",
-		len(aggResult.ChangedModules), len(aggResult.UpToDateModules), len(lctx.cachedUoWs))
+	lctx.cachedUoWs = result.CachedUoWs
+	lctx.uowCacheTimes = result.UoWCacheTimes
+	lctx.cachedModules = result.CachedModules
+	lctx.cacheTimes = result.ModuleCacheTimes
 }
 
 // lintAfterExecute handles post-lint tasks.
@@ -289,12 +183,12 @@ func assertLintManifestsExist(ctx *cmdframework.ExecutionContext) error {
 // This is called by the UnitScheduler for parallel component execution.
 // The component parameter is in "compName:providerName" format (e.g., "go:go-lint").
 func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
-	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
+	lintCfg, ok := ctx.Config.LintCmdConfig.(*LintConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
 		return 1
 	}
-	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
+	lctx, ok := ctx.Config.LintCmdContext.(*lintContext)
 	if !ok {
 		output.Writeln(logWriter, "Error: lintContext not found or wrong type")
 		return 1
@@ -310,7 +204,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 
 	// Build UnitID for UoW-level cache lookup
 	unitID := workunit.UnitID{
-		Context:   workunit.ContextLint,
+		Action:    core.ActionLint,
 		Module:    module,
 		Component: compName,
 		Tool:      providerName,
@@ -328,7 +222,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 			// Verify UoW manifest artifacts are intact before declaring cache hit
 			reader := coreoutput.NewReader(ctx.WorkspaceRoot)
 			uowID := workunit.UnitID{
-				Context:   workunit.ContextLint,
+				Action:    core.ActionLint,
 				Module:    module,
 				Component: compName,
 				Tool:      providerName,
@@ -378,7 +272,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
-	handler := linters.GetHandlerForProvider(providerName)
+	handler := tool.GlobalLintBridge().GetHandlerForProvider(providerName)
 	if handler == nil {
 		output.Writeln(logWriter, "Error: no handler for provider: %s", providerName)
 		return 1
@@ -429,7 +323,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 
 	lintStart := time.Now()
 
-	opts := linters.LintOptions{
+	opts := tool.LintOptions{
 		Fix:       lintCfg.Fix,
 		Config:    lintCfg.Config,
 		InputMode: provider.GetInputMode(),
@@ -490,7 +384,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 // computeLintInputHash computes a hash of the input sources for a lint operation.
 // Uses pre-computed hashes when available for cache consistency.
 func computeLintInputHash(ctx *cmdframework.ExecutionContext, module string) string {
-	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
+	lctx, ok := ctx.Config.LintCmdContext.(*lintContext)
 	if !ok {
 		return ""
 	}
@@ -559,6 +453,12 @@ func containsString(slice []string, s string) bool {
 // lintDepsVerifier verifies system dependencies for linting.
 func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	status := &initsummary.DepsStatus{Verified: true}
+
+	// ModuleRegistry may not be populated yet (async deps check starts before phaseResolve).
+	// If unavailable, skip provider-based dep detection — return verified with no requirements.
+	if ctx.ModuleRegistry == nil {
+		return status
+	}
 
 	// Collect unique requirements from all lint providers that will be used
 	depsMap := make(map[string]bool)

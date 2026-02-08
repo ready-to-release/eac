@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -23,33 +24,36 @@ var log = logging.C()
 type DiscoveryConfig struct {
 	// SpecsRoot is the root directory for specifications (from repository.yml paths.specs_root)
 	SpecsRoot string
-	// GodogTestFile is the conventional filename for godog test files (from repository.yml conventions.godog_test)
-	GodogTestFile string
 }
 
 // NewDiscoveryConfig creates a DiscoveryConfig from global configuration.
-// Panics if configuration is not loaded - configuration is required, not optional.
-func NewDiscoveryConfig() *DiscoveryConfig {
+// Returns an error if configuration is not loaded.
+func NewDiscoveryConfig() (*DiscoveryConfig, error) {
 	cfg := config.Global()
 	if cfg == nil || cfg.Repository == nil {
-		panic("discovery: repository configuration not loaded - ensure config.LoadGlobal() is called first")
+		return nil, fmt.Errorf("discovery: repository configuration not loaded - ensure config.LoadGlobal() is called first")
 	}
 
 	return &DiscoveryConfig{
-		SpecsRoot:     cfg.Repository.Paths.SpecsRoot,
-		GodogTestFile: cfg.Repository.Conventions.GodogTest,
-	}
+		SpecsRoot: cfg.Repository.Paths.SpecsRoot,
+	}, nil
 }
 
-// IsGodogTestFile checks if the given filename matches the configured godog test file name.
-func (dc *DiscoveryConfig) IsGodogTestFile(filename string) bool {
-	return filename == dc.GodogTestFile
+// IsRunnerFile checks if the given filename is a registered test runner file.
+// Queries the adapter registry for runner file conventions.
+func (dc *DiscoveryConfig) IsRunnerFile(filename string) bool {
+	conventions := getRunnerFileConventions()
+	return conventions[filename]
 }
 
 // DiscoverGoTestTags discovers Go test functions and their build tags.
 // Public API - creates config internally.
 func DiscoverGoTestTags(pkgPath string) ([]TestReference, error) {
-	return discoverGoTestTagsInPath(pkgPath, NewDiscoveryConfig())
+	dc, err := NewDiscoveryConfig()
+	if err != nil {
+		return nil, err
+	}
+	return discoverGoTestTagsInPath(pkgPath, dc)
 }
 
 // discoverGoTestTagsInPath discovers Go test functions using provided config.
@@ -73,7 +77,7 @@ func discoverGoTestTagsInPath(pkgPath string, dc *DiscoveryConfig) ([]TestRefere
 			return nil
 		}
 
-		if dc.IsGodogTestFile(info.Name()) {
+		if dc.IsRunnerFile(info.Name()) {
 			return nil
 		}
 
@@ -164,11 +168,11 @@ func extractBuildTags(file *ast.File) []string {
 				buildExpr := strings.TrimPrefix(text, "// +build ")
 				buildExpr = strings.TrimSpace(buildExpr)
 
-				if strings.Contains(buildExpr, "L0") && !contains(tags, "@L0") {
+				if strings.Contains(buildExpr, "L0") && !slices.Contains(tags, "@L0") {
 					tags = append(tags, "@L0")
-				} else if strings.Contains(buildExpr, "L1") && !contains(tags, "@L1") {
+				} else if strings.Contains(buildExpr, "L1") && !slices.Contains(tags, "@L1") {
 					tags = append(tags, "@L1")
-				} else if strings.Contains(buildExpr, "L2") && !contains(tags, "@L2") {
+				} else if strings.Contains(buildExpr, "L2") && !slices.Contains(tags, "@L2") {
 					tags = append(tags, "@L2")
 				}
 			}
@@ -217,16 +221,6 @@ func copyTags(tags []string) []string {
 	return copied
 }
 
-// contains checks if slice contains string.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 // DiscoveryOptions configures post-discovery processing for DiscoverAndEnrich.
 type DiscoveryOptions struct {
 	// Inferences to apply after discovery (nil = skip inference)
@@ -270,7 +264,10 @@ func DiscoverAndEnrich(repoRoot string, opts DiscoveryOptions) ([]TestReference,
 // discoverAllTests is the internal discovery implementation.
 // Use DiscoverAndEnrich as the public API.
 func discoverAllTests(rootPath string) ([]TestReference, error) {
-	dc := NewDiscoveryConfig()
+	dc, err := NewDiscoveryConfig()
+	if err != nil {
+		return nil, err
+	}
 	refs := []TestReference{}
 
 	// Load module registry
@@ -352,7 +349,7 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 				// Tag tests with module dependency
 				for i := range goRefs {
 					depmTag := "@depm:" + module.Moniker
-					if !contains(goRefs[i].Tags, depmTag) {
+					if !slices.Contains(goRefs[i].Tags, depmTag) {
 						goRefs[i].Tags = append(goRefs[i].Tags, depmTag)
 					}
 					goRefs[i].ModuleDependencies = append(goRefs[i].ModuleDependencies, module.Moniker)
@@ -390,7 +387,7 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 			for i := range featureRefs {
 				featureRefs[i].Type = featureTestType
 				depmTag := "@depm:" + module.Moniker
-				if !contains(featureRefs[i].Tags, depmTag) {
+				if !slices.Contains(featureRefs[i].Tags, depmTag) {
 					featureRefs[i].Tags = append(featureRefs[i].Tags, depmTag)
 				}
 				featureRefs[i].ModuleDependencies = append(featureRefs[i].ModuleDependencies, module.Moniker)
@@ -441,14 +438,14 @@ func discoverTestsInFile(filePath, moniker, packageType string, dc *DiscoveryCon
 		log.Debugf("discoverTestsInFile: %s -> mocha (javascript test)", name)
 		refs, err = parseNodeTestFile(filePath, testFramework)
 	case ext == ".feature":
-		// Gherkin feature file - already handled by DiscoverGodogFeatureTags
+		// Gherkin feature file - already handled by DiscoverFeatureTags
 		// Skip to avoid duplicates
 		log.Debugf("discoverTestsInFile: %s -> skipped (handled by P3)", name)
 		return nil, nil
 	case ext == ".go" && strings.HasSuffix(name, "_test.go"):
 		// Go test file - parse it directly
 		// Skip godog runners as they're not unit tests
-		if dc.IsGodogTestFile(name) {
+		if dc.IsRunnerFile(name) {
 			log.Debugf("discoverTestsInFile: %s -> skipped (godog runner)", name)
 			return nil, nil
 		}
@@ -468,10 +465,10 @@ func discoverTestsInFile(filePath, moniker, packageType string, dc *DiscoveryCon
 	for i := range refs {
 		// Add @depm:<moniker> tag if not already present
 		depmTag := "@depm:" + moniker
-		if !contains(refs[i].Tags, depmTag) {
+		if !slices.Contains(refs[i].Tags, depmTag) {
 			refs[i].Tags = append(refs[i].Tags, depmTag)
 		}
-		if !contains(refs[i].ModuleDependencies, moniker) {
+		if !slices.Contains(refs[i].ModuleDependencies, moniker) {
 			refs[i].ModuleDependencies = append(refs[i].ModuleDependencies, moniker)
 		}
 	}
@@ -479,12 +476,17 @@ func discoverTestsInFile(filePath, moniker, packageType string, dc *DiscoveryCon
 	return refs, nil
 }
 
-// DiscoverGodogFeatureTags discovers Godog feature files and their tags.
-func DiscoverGodogFeatureTags(specsPath string) ([]TestReference, error) {
-	dc := NewDiscoveryConfig()
+// DiscoverFeatureTags discovers Gherkin feature files and their tags.
+// This parses .feature files which is not godog-specific - it's Gherkin-specific
+// and works equally for tscucumber.
+func DiscoverFeatureTags(specsPath string) ([]TestReference, error) {
+	dc, err := NewDiscoveryConfig()
+	if err != nil {
+		return nil, err
+	}
 	refs := []TestReference{}
 
-	err := filepath.Walk(specsPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(specsPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -581,8 +583,8 @@ func parseFeatureFile(filePath string, dc *DiscoveryConfig) ([]TestReference, er
 
 			// Set execution control fields
 			test.IsIgnored, test.SkipReason = extractSkipReason(test.Tags)
-			test.IsManual = contains(test.Tags, "@Manual")
-			test.IsSequential = contains(test.Tags, "@sequential")
+			test.IsManual = slices.Contains(test.Tags, "@Manual")
+			test.IsSequential = slices.Contains(test.Tags, "@sequential")
 
 			// Extract dependencies
 			test.SystemDependencies = extractSystemDependencies(test.Tags)
@@ -592,8 +594,8 @@ func parseFeatureFile(filePath string, dc *DiscoveryConfig) ([]TestReference, er
 			test.RiskControls = extractRiskControlTags(test.Tags)
 
 			// Set GxP regulatory fields
-			test.IsGxP = contains(test.Tags, "@gxp")
-			test.IsCriticalAspect = contains(test.Tags, "@gmp-critical-aspect")
+			test.IsGxP = slices.Contains(test.Tags, "@gxp")
+			test.IsCriticalAspect = slices.Contains(test.Tags, "@gmp-critical-aspect")
 
 			refs = append(refs, test)
 
@@ -667,14 +669,14 @@ func mergeFeatureAndScenarioTags(featureTags, scenarioTags []string) []string {
 
 	// Add all OTHER tags from feature (not level, not verification)
 	for _, tag := range featureTags {
-		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !slices.Contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
 
 	// Add all OTHER tags from scenario (not level, not verification)
 	for _, tag := range scenarioTags {
-		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !slices.Contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
@@ -819,18 +821,13 @@ func getTestFrameworkForPackage(packageType string) string {
 }
 
 // getFeatureTestTypeForModule returns the test type for Gherkin feature files.
-// Infers BDD framework from module's package types:
-// - typescript package → "tscucumber" (TypeScript cucumber-js)
-// - go package (or anything else) → "godog" (Go BDD framework).
+// Queries the adapter registry to determine which BDD test type owns features
+// for this module based on its component types.
 func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
-	// Check if module has typescript package
 	hasTS := module.HasComponent("typescript")
-	log.Debugf("getFeatureTestTypeForModule: %s hasTypescript=%v", module.Moniker, hasTS)
-	if hasTS {
-		return "tscucumber"
-	}
-	// Default to godog for Go and other modules
-	return "godog"
+	hasGo := module.HasComponent("go")
+	log.Debugf("getFeatureTestTypeForModule: %s hasTypescript=%v hasGo=%v", module.Moniker, hasTS, hasGo)
+	return resolveFeatureTestType(hasTS, hasGo)
 }
 
 // parseNodeTestFile extracts describe blocks with tags from TypeScript/JavaScript test file.
@@ -879,8 +876,8 @@ func parseNodeTestFile(filePath, testFramework string) ([]TestReference, error) 
 
 		// Set execution control fields
 		ref.IsIgnored, ref.SkipReason = extractSkipReason(ref.Tags)
-		ref.IsManual = contains(ref.Tags, "@Manual")
-		ref.IsSequential = contains(ref.Tags, "@sequential")
+		ref.IsManual = slices.Contains(ref.Tags, "@Manual")
+		ref.IsSequential = slices.Contains(ref.Tags, "@sequential")
 		ref.SystemDependencies = extractSystemDependencies(ref.Tags)
 		ref.ModuleDependencies = extractModuleDependencies(ref.Tags)
 

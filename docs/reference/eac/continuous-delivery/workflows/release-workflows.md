@@ -73,7 +73,7 @@ permissions:
 | `release-books.yaml`   | books           | published    | PDF documents           | GitHub Releases | CalVer     |
 | `release-bundle.yaml`  | r2r-eac-bundle  | bundle       | Meta-release bundle     | GitHub Releases | SemVer     |
 
-**Note**: Internal modules (eac-cli, mcp-server, r2r-installer, vscode-commit) do not have release workflows because they are not released independently.
+**Note**: Internal modules (eac-cli, eac-mcp-server, r2r-installer, vscode-commit) do not have release workflows because they are not released independently.
 
 ## Example: release-r2r-cli.yaml
 

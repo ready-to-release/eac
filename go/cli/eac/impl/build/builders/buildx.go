@@ -14,14 +14,12 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/tool"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
-	h := &BuildxHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&BuildxHandler{})
 }
 
 // BuildxHandler builds Docker images using docker_build config from module or type.
@@ -34,7 +32,7 @@ func (h *BuildxHandler) Capabilities() []string { return []string{"buildx"} }
 
 func (h *BuildxHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *BuildxHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *BuildxHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -50,11 +48,11 @@ func (h *BuildxHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as buildx uses the local docker CLI.
 func (h *BuildxHandler) IsHostInstalled() bool { return true }
 
-func (h *BuildxHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *BuildxHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -109,7 +107,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 			Platforms:  []string{localPlatform}, // Auto-detect platform
 			Tags:       localTags,               // Use local-friendly tags
 			Load:       true,                    // Load into local Docker instead of push
-			Push:       false,                   // Don't push to registry
+			Push:       config.BoolPtr(false),    // Don't push to registry
 			Cache:      nil,                     // Skip registry cache for local builds
 			SBOM:       false,                   // Skip SBOM for local builds
 			Provenance: false,                   // Skip provenance for local builds
@@ -141,7 +139,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 	Logln(logWriter, "   Tags: %v", tags)
 
 	// Authenticate to registry if push is enabled
-	if dockerBuild.Push && dockerBuild.Registry != "" {
+	if dockerBuild.ShouldPush() && dockerBuild.Registry != "" {
 		if exitCode := authenticateRegistry(dockerBuild.Registry, logWriter); exitCode != 0 {
 			return exitCode
 		}
@@ -159,7 +157,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 
 	Logln(logWriter, "\n✅ Docker image built successfully")
 	Logln(logWriter, "   Tags: %v", tags)
-	if dockerBuild.Push {
+	if dockerBuild.ShouldPush() {
 		Logln(logWriter, "   Pushed to: %s", dockerBuild.Registry)
 	}
 	if dockerBuild.Load {
@@ -213,7 +211,7 @@ func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, buildContext, d
 	if dockerBuild.Load {
 		args = append(args, "--load")
 	}
-	if dockerBuild.Push {
+	if dockerBuild.ShouldPush() {
 		args = append(args, "--push")
 	}
 

@@ -21,8 +21,8 @@ func (m Model) renderSelectedHeader(contentWidth int) string {
 	}
 
 	var line string
-	if strings.HasPrefix(m.hoveredZone, "tab:") || m.hoveredTab != "" {
-		activeComponent := m.hoveredTab
+	if strings.HasPrefix(m.Interaction.HoveredZone, "tab:") || m.Interaction.HoveredTab != "" {
+		activeComponent := m.Interaction.HoveredTab
 		if activeComponent == "" {
 			activeComponent = m.getEffectiveActiveTab()
 		}
@@ -80,7 +80,7 @@ func (m Model) renderSelectedUoW(activeComponent string, contentWidth int) strin
 	// Get status of the active component
 	var statusStr string
 	var statusStyle lipgloss.Style
-	if state, exists := m.uowStates[activeComponent]; exists {
+	if state, exists := m.Execution.UoWStates[activeComponent]; exists {
 		switch state.Status {
 		case UoWPending:
 			statusStr = "pending"
@@ -116,7 +116,7 @@ func (m Model) renderSelectedUoW(activeComponent string, contentWidth int) strin
 
 	// Determine tool label based on operation type
 	toolLabel := "Tool"
-	switch m.runPhaseName {
+	switch m.Display.RunPhaseName {
 	case "building", "Building":
 		toolLabel = "Builder"
 	case "testing", "Testing":

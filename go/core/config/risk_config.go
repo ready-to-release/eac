@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
-// RiskConfig implements security.RiskConfigPort.
+// RiskConfig implements scanner.RiskConfigPort.
 // It loads risk profile references and scoring configuration from YAML files.
 type RiskConfig struct {
 	profile        *ProfileWrapper
@@ -22,7 +22,7 @@ type RiskConfig struct {
 }
 
 // Verify RiskConfig implements RiskConfigPort.
-var _ security.RiskConfigPort = (*RiskConfig)(nil)
+var _ scanner.RiskConfigPort = (*RiskConfig)(nil)
 
 // ProfileConfig holds the profile reference configuration.
 type ProfileConfig struct {
@@ -37,8 +37,8 @@ type RiskConfigYAML struct {
 	ModuleProfiles map[string]ProfileConfig `yaml:"module_profiles,omitempty"`
 }
 
-// LoadRiskConfig loads risk configuration from eac-security contract.
-// It loads defaults from contracts/security/0.1.0/defaults/risk-config.yml
+// LoadRiskConfig loads risk configuration from scanner contract.
+// It loads defaults from contracts/scanner/0.1.0/schemas/defaults/risk-config.yml
 // and merges with user overrides from .eac/risk-config.yml.
 func LoadRiskConfig(repoRoot, configRoot string) (*RiskConfig, error) {
 	cfg := &RiskConfig{
@@ -47,8 +47,8 @@ func LoadRiskConfig(repoRoot, configRoot string) (*RiskConfig, error) {
 	}
 
 	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "security",
-		paths.DefaultsVersion, "defaults", "risk-config.yml")
+	defaultPath := filepath.Join(repoRoot, "contracts", "scanner",
+		paths.DefaultsVersion, "schemas", "defaults", "risk-config.yml")
 	if err := cfg.loadFromFile(defaultPath); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("loading risk-config defaults: %w", err)
 	}
@@ -129,7 +129,7 @@ func (c *RiskConfig) resolvePath(path string) string {
 }
 
 // GetProfile returns the solution-wide profile.
-func (c *RiskConfig) GetProfile() (security.ProfilePort, error) {
+func (c *RiskConfig) GetProfile() (scanner.ProfilePort, error) {
 	if c.profile == nil {
 		return nil, fmt.Errorf("no risk profile configured")
 	}
@@ -138,7 +138,7 @@ func (c *RiskConfig) GetProfile() (security.ProfilePort, error) {
 
 // GetModuleProfile returns the profile for a module.
 // Falls back to solution profile if module has no specific profile.
-func (c *RiskConfig) GetModuleProfile(moniker string) (security.ProfilePort, error) {
+func (c *RiskConfig) GetModuleProfile(moniker string) (scanner.ProfilePort, error) {
 	if mp, ok := c.moduleProfiles[moniker]; ok {
 		return mp, nil
 	}
@@ -151,7 +151,7 @@ func (c *RiskConfig) GetCatalogURL() string {
 }
 
 // GetScoring returns the scoring configuration.
-func (c *RiskConfig) GetScoring() security.RiskScoringPort {
+func (c *RiskConfig) GetScoring() scanner.RiskScoringPort {
 	return c.scoring
 }
 

@@ -7,14 +7,14 @@
 //
 //   - [UnitID]: Uniquely identifies a unit of work
 //   - [UnitSpec]: Complete specification for executing a work unit
-//   - [Context]: Operation type (build, test, lint, scan)
+//   - [core.ActionType]: Operation type (build, test, lint, scan)
 //
 // # Naming Methods
 //
 // UnitID provides multiple naming methods for different use cases:
 //
 //	id := workunit.UnitID{
-//	    Context:   workunit.ContextBuild,
+//	    Action:    core.ActionBuild,
 //	    Module:    "core",
 //	    Component: "go",
 //	    Tool:      "go",
@@ -57,7 +57,7 @@
 // For BDD tests (godog, tscucumber), the Spec field enables special formatting:
 //
 //	id := workunit.UnitID{
-//	    Context: workunit.ContextTest,
+//	    Action:  core.ActionTest,
 //	    Module:  "eac-cli",
 //	    Tool:    "godog",
 //	    Spec:    "build-module",
@@ -75,9 +75,12 @@
 // # State Management
 //
 // The package provides [StateManager] for incremental execution tracking.
-// State files are stored at paths derived from UnitID:
+// State files are stored under .cache/eac/incremental/ (separate from output
+// artifacts in out/) so that deleting .cache/eac/ clears all incremental state:
 //
-//	id.StateFile() // "out/build/core/go/state.json"
+//	id.StateFile()     // ".cache/eac/incremental/build/core/go-go/state.json"
+//	id.StateCacheDir() // ".cache/eac/incremental/build/core/go-go"
+//	id.OutDir()        // "out/build/core/go-go" (logs, results, locks)
 //
 // See [StateManager] for cache detection and state persistence APIs.
 package workunit

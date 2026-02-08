@@ -18,13 +18,13 @@ import (
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -156,7 +156,7 @@ func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
 		}
 
 		moduleName := entry.Name()
-		manifests, err := reader.ListUoWs(workunit.ContextBuild, moduleName)
+		manifests, err := reader.ListUoWs(core.ActionBuild, moduleName)
 		if err != nil || len(manifests) == 0 {
 			continue
 		}

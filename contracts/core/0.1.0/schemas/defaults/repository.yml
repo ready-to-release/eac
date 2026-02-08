@@ -1,0 +1,182 @@
+# yaml-language-server: $schema=../repository.schema.json
+# Base repository defaults
+# Merge order: base defaults → type-specific defaults → user config
+#
+# Type-specific defaults are loaded from repository-{type}.yml:
+#   - repository-mono.yml     (monorepo defaults)
+#   - repository-poly.yml     (polyrepo defaults)
+#   - repository-adjacent.yml (adjacent/supporting repo defaults)
+#
+# User values in .eac/repository.yml always win over all defaults.
+
+# Repository settings
+repository:
+  # Repository type: poly (polyrepo), mono (monorepo), adjacent (supporting repo)
+  type: poly
+
+  # Remote VCS provider configuration is required in local config:
+  #   remote:
+  #     owner: your-org    # Required: GitHub/GitLab org or username
+  #     repo: your-repo    # Optional: auto-detected from git if not set
+  #     type: github       # Optional: defaults to github
+  # URLs (url, pages_url, registry_url) are derived from owner+repo+type
+
+  # Valid versioning schemes for releasable modules.
+  # Implicit scheme is always available (supporting modules) and need not be listed.
+  # Supporting modules (Implicit): no explicit version, released as part of releasable modules.
+  # Releasable modules (SemVer/CalVer): explicit version, own CI/release pipelines.
+  # Note: Versioning is set at module level; components inherit from their owner module.
+  schemes:
+    - SemVer
+    - CalVer
+
+  # Main branch name for trunk-based development
+  trunk_branch: main
+
+  # Trunk-based development: max branch age before warning
+  max_branch_age_days: 2
+
+  # Pull request workflow configuration
+  pr:
+    delete_branch_on_merge: true
+    merge_strategy: squash
+
+  # Versioning constraints and behavior control
+  versioning:
+    # Options: patch-only, unrestricted, calver-only
+    # patch-only: Only allow patch bumps during early development
+    constraint: patch-only
+
+  # Parallelism limits for build and test commands
+  # Set to 0 for auto-detection from CPU and RAM (recommended)
+  # CI uses lower limits to avoid resource contention on shared runners
+  parallelism:
+    ci: 8       # Max parallel workers in CI (GitHub Actions)
+    devbox: 0   # Auto-detect from system resources (CPU and RAM)
+
+  # Ghost tracking configuration for dark launch code discovery
+  # Ghosts are files/directories with a naming prefix used for feature hiding,
+  # monitoring probes, and code that exists in production but is inactive.
+  ghost-tracking:
+    ghost-alias: ghost  # Default prefix for ghost detection (ghost-*, ghost.*, ghost)
+
+# Default paths configuration
+paths:
+  # Specs root directory - where feature specifications live
+  specs_root: specs
+
+  # Containers root directory - where container Dockerfiles live
+  containers_root: containers
+
+  # Templates directory
+  templates: templates
+
+  # AI prompt templates
+  ai_prompts:
+    # System defaults (version controlled, shipped with repo)
+    system: templates/ai
+
+    # Team overrides (version controlled, team customizations)
+    team: .eac/templates/ai
+
+  # Output directory structure
+  out:
+    root: out
+    build: out/build
+    test: out/test
+    logs: out/logs
+    scan: out/scan
+    tools: out/tools
+
+# Filename conventions
+conventions:
+  godog_test: godog_test.go
+  package_json: package.json
+  changelog: CHANGELOG.md
+  build_log: build.log
+  build_timing: build-timing.txt
+  test_timing: test-timing.txt
+  specification: specification.feature
+  risk_catalog: controls.catalog.json
+  risk_controls_dir: .risk-controls
+  risk_reports_category: risk
+  risk_assessment_template: risk-assess.md
+  test_reports_category: tests
+  test_results_template: test-results.md
+  template_specs_dir: specs
+  template_reports_dir: reports
+  template_risk_catalog_dir: risk-catalog
+  design_dir: .design
+  workspace_dsl: workspace.dsl
+  component_discovery:
+    - component: gherkin
+      path: "{specs_root}/{moniker}"
+      check: has_files_in_subdirs
+      check_pattern: "{specification}"
+    - component: structurizr
+      path: "{specs_root}/{moniker}/{design_dir}"
+      check: required_file
+      required_file: "{workspace_dsl}"
+    - component: godog
+      derive_from: [go]
+      derive_subdirs: { go: specs }
+      fallback_path: "go/eac/specs/{moniker}"
+      check: required_file
+      required_file: "{godog_test}"
+    - component: cucumberjs
+      derive_from: [typescript]
+      derive_subdirs: { typescript: features }
+      check: dir_exists
+    - component: markdown
+      derive_from: [go, typescript, dockerfile]
+      check: dir_exists
+    - component: yaml
+      derive_from: [go, typescript, dockerfile]
+      check: dir_exists
+    - component: testdata
+      only_templates: ["*container*"]
+      path: "{containers_root}/{moniker}"
+      check: has_matching_files
+      patterns: ["*.txt", "*.conf", "*.html", "*.sh"]
+      set_patterns: true
+    - component: containercode
+      only_templates: ["*container*"]
+      path: "{containers_root}/{moniker}"
+      check: has_matching_files
+      patterns: ["*.py", "*.js"]
+      set_patterns: true
+    # Note: Go test fixtures and assets are owned via component patterns.data
+    # (not separate components). Container testdata above is kept because
+    # containers use separate component types for different file categories.
+
+# Container Registry Defaults
+# Configure cleanup policies for container images (GHCR, Docker Hub, etc.)
+# Override in .eac/repository.yml by setting registries.{host}.org
+#
+# Note: Registries section is NOT included in defaults because:
+# - org field is required and must be set explicitly by users
+# - We provide sensible defaults for cleanup policy via GetCleanupPolicy()
+#
+# Example user configuration:
+#   registries:
+#     ghcr.io:
+#       org: my-org  # REQUIRED: your GitHub org or username
+#       cleanup:     # OPTIONAL: defaults applied if omitted
+#         enabled: true
+#         keep: 10
+#         min_age_days: 7
+#         image_tags:
+#           preserve: ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
+#           prune: ["sha-*", "dev-*", "pr-*", "ci"]
+#         github_releases:
+#           # Note: Released packages are ALWAYS protected (non-configurable safety feature).
+#           # Images matching GitHub Release tags or referenced by release bundles are never deleted.
+#           tag_format: "{module}/{version}"
+
+# Default module (used when no modules defined in repository.yml)
+modules:
+  - moniker: default
+    name: Default Module
+    description: Auto-generated module for unconfigured repositories
+    components:
+      go: "."

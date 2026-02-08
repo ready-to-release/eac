@@ -22,14 +22,6 @@ func TestParseBuildSpecificFlags_TidyFlags(t *testing.T) {
 			wantRemaining:    []string{"module1"},
 		},
 		{
-			name:             "tidy-first still works (backward compat)",
-			args:             []string{"--tidy-first", "module1"},
-			wantTidyFirst:    true,
-			wantNoTidy:       false,
-			wantTidyExplicit: true,
-			wantRemaining:    []string{"module1"},
-		},
-		{
 			name:             "no-tidy disables tidy",
 			args:             []string{"--no-tidy", "module1"},
 			wantTidyFirst:    false,

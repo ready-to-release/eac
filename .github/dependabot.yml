@@ -113,9 +113,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - site-render-oci container (python base image)
+  # Docker - mkdocs-render-oci container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/site-render-oci"
+    directory: "/containers/mkdocs-render-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -165,9 +165,9 @@ updates:
   # Containers - Python dependencies (pip)
   # ============================================================================
 
-  # Python - site-render-oci container
+  # Python - mkdocs-render-oci container
   - package-ecosystem: "pip"
-    directory: "/containers/site-render-oci"
+    directory: "/containers/mkdocs-render-oci"
     schedule:
       interval: "weekly"
       day: "monday"

@@ -9,7 +9,33 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
+
+// verifyContainerPort holds an optional ContainerPort for Docker availability checks.
+// When set, verifyDockerAvailable uses this instead of shelling out to "docker info".
+var (
+	verifyContainerPort   container.ContainerPort
+	verifyContainerPortMu sync.RWMutex
+)
+
+// SetContainerPortForVerification injects a ContainerPort for tool verification.
+// When set, verifyDockerAvailable() uses ContainerPort.IsAvailable() instead of
+// exec.Command("docker", "info"). Pass nil to revert to the default CLI behavior.
+func SetContainerPortForVerification(cp container.ContainerPort) {
+	verifyContainerPortMu.Lock()
+	defer verifyContainerPortMu.Unlock()
+	verifyContainerPort = cp
+}
+
+// getVerifyContainerPort returns the injected ContainerPort, or nil if not set.
+func getVerifyContainerPort() container.ContainerPort {
+	verifyContainerPortMu.RLock()
+	defer verifyContainerPortMu.RUnlock()
+	return verifyContainerPort
+}
 
 // VerifyToolDefinition checks if a tool is available and meets version requirements.
 // This is the core verification logic used by the registry.
@@ -178,16 +204,27 @@ func verifyBinaryExists(result VerifyResult, tool *ToolDefinition) VerifyResult 
 }
 
 // verifyDockerAvailable checks if Docker is available for container tools.
+// When a ContainerPort has been injected via SetContainerPortForVerification,
+// it uses ContainerPort.IsAvailable() instead of shelling out to "docker info".
 func verifyDockerAvailable(result VerifyResult, tool *ToolDefinition) VerifyResult {
-	// Check if docker command exists
+	// Use injected ContainerPort if available
+	if cp := getVerifyContainerPort(); cp != nil {
+		if !cp.IsAvailable() {
+			result.Error = fmt.Errorf("container runtime not available")
+			return result
+		}
+		result.Available = true
+		return result
+	}
+
+	// Fallback: direct CLI check (no ContainerPort injected)
 	_, err := exec.LookPath("docker")
 	if err != nil {
 		result.Error = fmt.Errorf("docker not found in PATH")
 		return result
 	}
 
-	// Check if Docker daemon is running
-	cmd := exec.Command("docker", "info")
+	cmd := exec.Command("docker", "info") //nolint:gosec // G204: legacy fallback, to be removed when all callers inject ContainerPort
 	if err := cmd.Run(); err != nil {
 		result.Error = fmt.Errorf("docker daemon not running: %w", err)
 		return result

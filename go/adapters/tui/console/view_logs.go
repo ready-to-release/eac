@@ -13,13 +13,13 @@ import (
 // renderLogsPanel renders the logs panel for side-by-side layout.
 func (m Model) renderLogsPanel(width, height int) string {
 	var b strings.Builder
-	pane := m.panes[PhaseRun]
+	pane := m.Execution.Panes[PhaseRun]
 
 	// Check if active module is cached - show special header
 	activeModule := m.getEffectiveActiveTab()
 	var isCachedModule bool
 	if activeModule != "" {
-		if state, exists := m.uowStates[activeModule]; exists && state.Status == UoWSkipped {
+		if state, exists := m.Execution.UoWStates[activeModule]; exists && state.Status == UoWSkipped {
 			isCachedModule = true
 		}
 	}
@@ -29,7 +29,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 		// Special header for cached modules
 		cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("75"))
 		icon := "⏭"
-		if m.asciiMode {
+		if m.Display.AsciiMode {
 			icon = "="
 		}
 		left = cyanStyle.Render(icon) + " " + cyanStyle.Render("Cached") + ": " + cyanStyle.Bold(true).Render(activeModule)
@@ -45,7 +45,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 		} else {
 			// Fallback: phase-based header
 			icon := m.phaseIcon(pane.Status)
-			name := m.runPhaseName
+			name := m.Display.RunPhaseName
 			if name == "" {
 				name = "Run"
 			}
@@ -72,7 +72,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 				var moduleElapsed time.Duration
 				if activeModule != "" {
 					left += ": " + Styles.Phase.Render(activeModule)
-					if state, exists := m.uowStates[activeModule]; exists {
+					if state, exists := m.Execution.UoWStates[activeModule]; exists {
 						if state.Status == UoWRunning {
 							moduleElapsed = time.Since(state.StartTime).Round(time.Millisecond * 100)
 						} else if state.Status == UoWComplete || state.Status == UoWSkipped || state.Status == UoWFailed {
@@ -84,8 +84,8 @@ func (m Model) renderLogsPanel(width, height int) string {
 				left = fmt.Sprintf("%s %s %d/%d",
 					left,
 					Styles.Time.Render(formatElapsed(moduleElapsed)),
-					m.completed,
-					m.total,
+					m.Execution.Completed,
+					m.Execution.Total,
 				)
 			}
 
@@ -114,7 +114,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 			innerWidth = 1
 		}
 
-		initLines := m.panes[PhaseInit].Buffer.Last(contentHeight)
+		initLines := m.Execution.Panes[PhaseInit].Buffer.Last(contentHeight)
 		lineCount := 0
 
 		for _, line := range initLines {
@@ -148,7 +148,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 
 	// Render special content for cached modules
 	if isCachedModule {
-		if state, exists := m.uowStates[activeModule]; exists {
+		if state, exists := m.Execution.UoWStates[activeModule]; exists {
 			m.renderCachedContent(&b, activeModule, state, width, contentHeight)
 
 			// Footer
@@ -184,7 +184,7 @@ func (m Model) renderLogsPanel(width, height int) string {
 
 	for i := 0; i < contentHeight; i++ {
 		if i < len(lines) {
-			lineContent := m.renderLogLine(lines[i], width-4, i)
+			lineContent := m.renderLogLine(lines[i], width-4, i, false)
 			b.WriteString(lineContent + "\n")
 		} else {
 			b.WriteString(Styles.Dim.Render("│") + " " + strings.Repeat(" ", width-4) + Styles.Dim.Render("│") + "\n")
@@ -225,12 +225,14 @@ func (m Model) renderLogsPanel(width, height int) string {
 
 // renderLogLine renders a single log line for the logs panel.
 // lineIndex is the 0-based index within the visible content area (for selection highlighting).
-func (m Model) renderLogLine(line Line, maxWidth int, lineIndex int) string {
+// maxWidth <= 0 means no truncation (open-right mode).
+// borderless removes the left │ border from the prefix.
+func (m Model) renderLogLine(line Line, maxWidth int, lineIndex int, borderless bool) string {
 	text := strings.ReplaceAll(line.Text, "\n", " ")
 	text = strings.ReplaceAll(text, "\r", "")
 
-	if len(text) > maxWidth {
-		if m.asciiMode {
+	if maxWidth > 0 && len(text) > maxWidth {
+		if m.Display.AsciiMode {
 			text = text[:maxWidth-2] + ".."
 		} else {
 			text = text[:maxWidth-1] + "…"
@@ -242,46 +244,119 @@ func (m Model) renderLogLine(line Line, maxWidth int, lineIndex int) string {
 	// Check if this line is within selection range
 	isSelected := m.isLineSelected(lineIndex)
 
-	var prefix, styled string
-	switch line.Level {
-	case LevelError:
-		prefix = Styles.ErrorPrefix.Render("│" + iconFail)
-		if isSelected {
-			styled = lipgloss.NewStyle().Reverse(true).Render(text)
-		} else {
-			styled = Styles.Error.Render(text)
-		}
-	case LevelWarn:
-		prefix = Styles.WarnPrefix.Render("│" + iconWarn)
-		if isSelected {
-			styled = lipgloss.NewStyle().Reverse(true).Render(text)
-		} else {
-			styled = Styles.Warn.Render(text)
-		}
-	default:
-		prefix = Styles.InfoPrefix.Render("│" + iconInfo)
-		if isSelected {
-			styled = lipgloss.NewStyle().Reverse(true).Render(text)
-		} else {
-			styled = Styles.Info.Render(text)
-		}
+	border := "│"
+	if borderless {
+		border = ""
 	}
 
-	return prefix + " " + styled
+	var prefix string
+	var textStyle lipgloss.Style
+	switch line.Level {
+	case LevelError:
+		prefix = Styles.ErrorPrefix.Render(border + iconFail)
+		textStyle = Styles.Error
+	case LevelWarn:
+		prefix = Styles.WarnPrefix.Render(border + iconWarn)
+		textStyle = Styles.Warn
+	default:
+		prefix = Styles.InfoPrefix.Render(border + iconInfo)
+		textStyle = Styles.Info
+	}
+
+	if isSelected {
+		textStyle = lipgloss.NewStyle().Reverse(true)
+	}
+
+	return prefix + " " + textStyle.Render(text)
 }
 
 // isLineSelected returns true if the given content line index is within the selection range.
 func (m Model) isLineSelected(lineIndex int) bool {
-	if !m.selection.Active {
+	if !m.Resources.Selection.Active {
 		return false
 	}
 
-	startLine, endLine := m.selection.StartLine, m.selection.EndLine
+	startLine, endLine := m.Resources.Selection.StartLine, m.Resources.Selection.EndLine
 	if startLine > endLine {
 		startLine, endLine = endLine, startLine
 	}
 
 	return lineIndex >= startLine && lineIndex <= endLine
+}
+
+// renderLogsPaneHeadless renders the logs panel without any borders.
+// Used below the detail pane where the header info is redundant.
+// Logs flow freely in the available space — no header, footer, or side borders.
+func (m Model) renderLogsPaneHeadless(width, height int) string {
+	var b strings.Builder
+	pane := m.Execution.Panes[PhaseRun]
+
+	activeModule := m.getEffectiveActiveTab()
+
+	// Full height for content — no borders to subtract
+	contentHeight := height
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	// Cached module special content
+	if activeModule != "" {
+		if state, exists := m.Execution.UoWStates[activeModule]; exists && state.Status == UoWSkipped {
+			m.renderCachedContent(&b, activeModule, state, width, contentHeight)
+			return b.String()
+		}
+	}
+
+	var buffer *RingBuffer
+	if activeModule != "" {
+		if moduleBuffer := m.GetActiveUoWBuffer(); moduleBuffer != nil {
+			buffer = moduleBuffer
+		} else {
+			buffer = pane.Buffer
+		}
+	} else {
+		buffer = pane.Buffer
+	}
+
+	pane.UpdateMaxScrollForBuffer(buffer, contentHeight)
+
+	var lines []Line
+	if pane.scrollOffset == 0 || pane.autoScroll {
+		lines = buffer.Last(contentHeight)
+		pane.scrollOffset = 0
+	} else {
+		lines = buffer.GetRange(pane.scrollOffset, contentHeight)
+	}
+
+	for i := 0; i < contentHeight; i++ {
+		if i < len(lines) {
+			b.WriteString(m.renderLogLine(lines[i], 0, i, true)) // borderless, no truncation
+		}
+		if i < contentHeight-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	// Scroll indicator (inline, no border chrome)
+	if pane.scrollOffset > 0 {
+		totalLines := buffer.Count()
+		scrollPercent := 0
+		if pane.maxScroll > 0 {
+			scrollPercent = (pane.scrollOffset * 100) / pane.maxScroll
+		}
+		viewStart := totalLines - pane.scrollOffset - contentHeight
+		if viewStart < 0 {
+			viewStart = 0
+		}
+		viewEnd := viewStart + contentHeight
+		if viewEnd > totalLines {
+			viewEnd = totalLines
+		}
+		indicator := fmt.Sprintf(" ↑ %d%% [%d-%d/%d]", scrollPercent, viewStart+1, viewEnd, totalLines)
+		b.WriteString(" " + Styles.Dim.Render(indicator))
+	}
+
+	return b.String()
 }
 
 // renderCachedContent renders special content for cached/skipped modules.
@@ -333,7 +408,7 @@ func (m Model) renderCachedContent(b *strings.Builder, moniker string, state *Uo
 	// Cache icon and status
 	if lineCount < contentHeight {
 		icon := "⏭"
-		if m.asciiMode {
+		if m.Display.AsciiMode {
 			icon = "="
 		}
 		centerLine(icon+"  CACHED", cyanStyle.Bold(true))

@@ -1,11 +1,11 @@
 package output
 
 import (
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Ensure passthroughBuffer implements OutputBufferPort.
-var _ interfaces.OutputBufferPort = (*passthroughBuffer)(nil)
+var _ core.OutputBufferPort = (*passthroughBuffer)(nil)
 
 // passthroughBuffer is a no-op implementation for console mode.
 // It allows writes to pass through to stdout/stderr without buffering.
@@ -13,7 +13,7 @@ type passthroughBuffer struct{}
 
 // NewPassthrough creates a passthrough buffer that does no capturing.
 // Use this for console mode where TUI is disabled.
-func NewPassthrough() interfaces.OutputBufferPort {
+func NewPassthrough() core.OutputBufferPort {
 	return &passthroughBuffer{}
 }
 

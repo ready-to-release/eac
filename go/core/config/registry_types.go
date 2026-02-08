@@ -48,10 +48,6 @@ type RegistryCleanupPolicy struct {
 	// Versions created more recently than this are protected.
 	// Default: 7
 	MinAgeDays int `yaml:"min_age_days" json:"min_age_days"`
-
-	// Legacy fields for backwards compatibility (deprecated, use ImageTags instead)
-	PreservePatterns []string `yaml:"preserve_patterns,omitempty" json:"preserve_patterns,omitempty"`
-	PrunePatterns    []string `yaml:"prune_patterns,omitempty" json:"prune_patterns,omitempty"`
 }
 
 // ImageTagRules defines protection rules based on container image tags.
@@ -150,25 +146,15 @@ func (r *RegistryConfig) GetCleanupPolicy() *RegistryCleanupPolicy {
 		policy.MinAgeDays = 7
 	}
 
-	// Handle new ImageTags structure or fall back to legacy fields
+	// Ensure ImageTags is initialized with defaults if not set
 	if policy.ImageTags == nil {
 		policy.ImageTags = &ImageTagRules{}
 	}
 	if len(policy.ImageTags.Preserve) == 0 {
-		// Use legacy field or default
-		if len(policy.PreservePatterns) > 0 {
-			policy.ImageTags.Preserve = policy.PreservePatterns
-		} else {
-			policy.ImageTags.Preserve = []string{"v*", "latest", "[0-9]*.[0-9]*.[0-9]*"}
-		}
+		policy.ImageTags.Preserve = []string{"v*", "latest", "[0-9]*.[0-9]*.[0-9]*"}
 	}
 	if len(policy.ImageTags.Prune) == 0 {
-		// Use legacy field or default
-		if len(policy.PrunePatterns) > 0 {
-			policy.ImageTags.Prune = policy.PrunePatterns
-		} else {
-			policy.ImageTags.Prune = []string{"sha-*", "dev-*", "pr-*", "ci"}
-		}
+		policy.ImageTags.Prune = []string{"sha-*", "dev-*", "pr-*", "ci"}
 	}
 
 	// Handle GitHubReleases defaults
@@ -182,25 +168,17 @@ func (r *RegistryConfig) GetCleanupPolicy() *RegistryCleanupPolicy {
 }
 
 // GetPreservePatterns returns the image tag patterns to preserve.
-// Uses ImageTags.Preserve if set, falls back to legacy PreservePatterns.
 func (p *RegistryCleanupPolicy) GetPreservePatterns() []string {
 	if p.ImageTags != nil && len(p.ImageTags.Preserve) > 0 {
 		return p.ImageTags.Preserve
-	}
-	if len(p.PreservePatterns) > 0 {
-		return p.PreservePatterns
 	}
 	return []string{"v*", "latest", "[0-9]*.[0-9]*.[0-9]*"}
 }
 
 // GetPrunePatterns returns the image tag patterns eligible for pruning.
-// Uses ImageTags.Prune if set, falls back to legacy PrunePatterns.
 func (p *RegistryCleanupPolicy) GetPrunePatterns() []string {
 	if p.ImageTags != nil && len(p.ImageTags.Prune) > 0 {
 		return p.ImageTags.Prune
-	}
-	if len(p.PrunePatterns) > 0 {
-		return p.PrunePatterns
 	}
 	return []string{"sha-*", "dev-*", "pr-*", "ci"}
 }

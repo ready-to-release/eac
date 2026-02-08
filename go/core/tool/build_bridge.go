@@ -4,6 +4,7 @@ package tool
 import (
 	"sync"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -149,7 +150,7 @@ func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []Com
 
 		// Try ToolResolver (for layered config resolution)
 		if b.resolver != nil {
-			if tool, err := b.resolver.Resolve(compTypeName, OperationBuild); err == nil && tool != nil {
+			if tool, err := b.resolver.Resolve(compTypeName, core.ActionBuild); err == nil && tool != nil {
 				result = append(result, ComponentBuildHandler{
 					Component: compName,
 					Handler:   NewToolHandlerAdapter(tool, b.executor),
@@ -210,7 +211,7 @@ func (b *BuildBridge) GetToolForComponent(componentType string) *ToolDefinition 
 
 	// Try resolver first (for component-tools mappings)
 	if b.resolver != nil {
-		toolID = b.resolver.ResolveToolID(componentType, OperationBuild)
+		toolID = b.resolver.ResolveToolID(componentType, core.ActionBuild)
 	}
 
 	// If resolver didn't find it, try direct registry lookup
@@ -241,7 +242,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 
 	// Try resolver first (for component-tools mappings)
 	if b.resolver != nil {
-		toolID = b.resolver.ResolveToolID(componentType, OperationBuild)
+		toolID = b.resolver.ResolveToolID(componentType, core.ActionBuild)
 	}
 
 	// Fall back to component-types.yml builders field
@@ -259,7 +260,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 	}
 
 	// Check if the tool ID is a native handler first
-	// Native handlers take precedence (e.g., mkdocs-preprocess, site-render-oci, pdf-oci)
+	// Native handlers take precedence (e.g., mkdocs-preprocess, mkdocs-render-oci, pdf-oci)
 	if h, ok := b.nativeHandlers[toolID]; ok {
 		return h
 	}
@@ -277,7 +278,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 
 // ResolveTool returns the tool definition for a component type and operation.
 // Returns nil if no tool is configured or resolver is not available.
-func (b *BuildBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+func (b *BuildBridge) ResolveTool(componentType string, operation core.ActionType) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

@@ -12,11 +12,11 @@ type CacheFlags struct {
 	// CacheConfig controls fine-grained cache skipping via --skip-cache=<spec>
 	CacheConfig *cache.Config
 
-	SkipDeps bool // --skip-deps, --no-deps: Skip system dependency verification
+	SkipDeps bool // --no-deps: Skip system dependency verification
 
 	// Declarative tracking fields
 	CacheExplicit bool // True if --with-cache or --skip-cache was used
-	DepsExplicit  bool // True if --with-deps, --no-deps, or --skip-deps was used
+	DepsExplicit  bool // True if --with-deps or --no-deps was used
 }
 
 // CacheFlagSet implements FlagSet and DeclarativeFlagSet for cache control flags.
@@ -78,12 +78,6 @@ func (s *CacheFlagSet) Flags() []FlagDef {
 			Usage:             "Skip system dependency verification",
 			MutuallyExclusive: []string{"with-deps"},
 		},
-		{
-			Name:    "skip-deps",
-			Type:    "bool",
-			Default: "false",
-			Usage:   "Skip system dependency verification (go, docker, etc.)",
-		},
 	}
 }
 
@@ -129,11 +123,6 @@ func (s *CacheFlagSet) Parse(args []string, env *environment.Env) ([]string, err
 			s.flags.SkipDeps = true
 			s.flags.DepsExplicit = true
 
-		// Legacy deps flag (backward compat)
-		case arg == "--skip-deps":
-			s.flags.SkipDeps = true
-			s.flags.DepsExplicit = true
-
 		default:
 			remaining = append(remaining, arg)
 		}
@@ -162,9 +151,6 @@ func (s *CacheFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 			Behavior:    "cache",
 			EnableFlag:  "--with-cache",
 			DisableFlag: "--no-cache",
-			LegacyFlags: []LegacyFlagMapping{
-				{LegacyFlag: "--skip-cache", MapsTo: "disable"},
-			},
 			DefaultOn:   true,
 			EnvAware:    false,
 			Description: "Incremental caching for faster rebuilds",
@@ -173,9 +159,6 @@ func (s *CacheFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 			Behavior:    "deps",
 			EnableFlag:  "--with-deps",
 			DisableFlag: "--no-deps",
-			LegacyFlags: []LegacyFlagMapping{
-				{LegacyFlag: "--skip-deps", MapsTo: "disable"},
-			},
 			DefaultOn:   true,
 			EnvAware:    false,
 			Description: "System dependency verification (go, docker, etc.)",

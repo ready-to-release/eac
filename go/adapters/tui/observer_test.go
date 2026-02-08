@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // observerMockConsole is a test mock that records all method calls.
@@ -94,13 +94,16 @@ func (m *observerMockConsole) SetInitSummary(summary *InitSummary) {
 func (m *observerMockConsole) SendConfigReady(commandName, executionContext, parallelismMode string,
 	effectiveWorkers, weightedCapacity int, outputDir string) {
 }
+func (m *observerMockConsole) SendPlannedWork(items []PlannedWorkItem) {}
+func (m *observerMockConsole) EnrichUoW(enrichment UoWEnrichment)     {}
+func (m *observerMockConsole) SignalAllWorkDone()                     {}
 
 func TestTUIObserverImplementsExecutionObserver(t *testing.T) {
 	mock := newMockConsole()
 	observer := NewTUIObserver(mock)
 
 	// Verify it implements ExecutionObserver
-	var _ interfaces.ExecutionObserver = observer
+	var _ core.ExecutionObserver = observer
 }
 
 func TestTUIObserverImplementsWriterFactory(t *testing.T) {
@@ -108,7 +111,7 @@ func TestTUIObserverImplementsWriterFactory(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	// Verify it implements WriterFactory
-	var _ interfaces.WriterFactory = observer
+	var _ core.WriterFactory = observer
 }
 
 func TestTUIObserverPhaseStartedEvent(t *testing.T) {
@@ -116,8 +119,8 @@ func TestTUIObserverPhaseStartedEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.PhaseStartedEvent{
-		Phase:     interfaces.PhaseRun,
+	observer.OnEvent(core.PhaseStartedEvent{
+		Phase:     core.PhaseRun,
 		Time:      now,
 		TotalWork: 10,
 	})
@@ -135,8 +138,8 @@ func TestTUIObserverPhaseCompletedEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.PhaseCompletedEvent{
-		Phase:    interfaces.PhaseInit,
+	observer.OnEvent(core.PhaseCompletedEvent{
+		Phase:    core.PhaseInit,
 		Time:     now,
 		Success:  true,
 		Summary:  "Initialization complete",
@@ -163,7 +166,7 @@ func TestTUIObserverUnitQueuedEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.UnitQueuedEvent{
+	observer.OnEvent(core.UnitQueuedEvent{
 		Time:        now,
 		ID:          "build:core:go:go",
 		DisplayName: "core:go",
@@ -190,7 +193,7 @@ func TestTUIObserverUnitStartedEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.UnitStartedEvent{
+	observer.OnEvent(core.UnitStartedEvent{
 		Time: now,
 		ID:   "build:core:go:go",
 	})
@@ -209,7 +212,7 @@ func TestTUIObserverUnitCompletedEvent(t *testing.T) {
 
 	now := time.Now()
 	cacheTime := now.Add(-time.Hour)
-	observer.OnEvent(interfaces.UnitCompletedEvent{
+	observer.OnEvent(core.UnitCompletedEvent{
 		Time:      now,
 		ID:        "build:core:go:go",
 		ExitCode:  -1,
@@ -241,7 +244,7 @@ func TestTUIObserverProgressUpdateEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.ProgressUpdateEvent{
+	observer.OnEvent(core.ProgressUpdateEvent{
 		Time:      now,
 		Running:   []string{"build:core:go:go"},
 		Completed: 5,
@@ -268,9 +271,9 @@ func TestTUIObserverResourceStatusEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.ResourceStatusEvent{
+	observer.OnEvent(core.ResourceStatusEvent{
 		Time: now,
-		Resources: []interfaces.ResourceInfo{
+		Resources: []core.ResourceInfo{
 			{Name: "cpu-scheduler", Type: "weighted", Capacity: 8, Used: 6, Waiting: 2},
 		},
 	})
@@ -296,9 +299,9 @@ func TestTUIObserverResourceStatusEvent_DockerMemory(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.ResourceStatusEvent{
+	observer.OnEvent(core.ResourceStatusEvent{
 		Time: now,
-		Resources: []interfaces.ResourceInfo{
+		Resources: []core.ResourceInfo{
 			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
 			{Name: "docker-scheduler", Type: "weighted", Pool: "docker", Capacity: 6, Used: 3, Waiting: 1},
 		},
@@ -326,9 +329,9 @@ func TestTUIObserverResourceStatusEvent_DockerUnavailable(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.ResourceStatusEvent{
+	observer.OnEvent(core.ResourceStatusEvent{
 		Time: now,
-		Resources: []interfaces.ResourceInfo{
+		Resources: []core.ResourceInfo{
 			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
 			// No docker-scheduler means Docker is not available
 		},
@@ -352,9 +355,9 @@ func TestTUIObserverResourceStatusEvent_DockerZeroCapacity(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.ResourceStatusEvent{
+	observer.OnEvent(core.ResourceStatusEvent{
 		Time: now,
-		Resources: []interfaces.ResourceInfo{
+		Resources: []core.ResourceInfo{
 			{Name: "component-scheduler", Type: "weighted", Pool: "host", Capacity: 8, Used: 4, Waiting: 0},
 			{Name: "docker-scheduler", Type: "weighted", Pool: "docker", Capacity: 0, Used: 0, Waiting: 0},
 		},
@@ -380,11 +383,11 @@ func TestTUIObserverOutputLineEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.OutputLineEvent{
+	observer.OnEvent(core.OutputLineEvent{
 		Time:   now,
 		Source: "build:core:go:go",
 		Text:   "Building...",
-		Level:  interfaces.OutputLevelWarn,
+		Level:  core.OutputLevelWarn,
 	})
 
 	if len(mock.lineCalls) != 1 {
@@ -407,7 +410,7 @@ func TestTUIObserverSummaryReadyEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.SummaryReadyEvent{
+	observer.OnEvent(core.SummaryReadyEvent{
 		Time:      now,
 		Success:   true,
 		TotalTime: 30 * time.Second,
@@ -439,29 +442,29 @@ func TestTUIObserverInitSummaryEvent(t *testing.T) {
 	observer := NewTUIObserver(mock)
 
 	now := time.Now()
-	observer.OnEvent(interfaces.InitSummaryEvent{
+	observer.OnEvent(core.InitSummaryEvent{
 		Time:             now,
 		Command:          "build",
 		ExecutionContext: "local",
 		RequestedModules: 2,
 		ResolvedModules:  5,
 		TotalUnits:       12,
-		Modules: []interfaces.ModuleInfo{
-			{Name: "core", Units: []interfaces.UnitInfo{
+		Modules: []core.ModuleInfo{
+			{Name: "core", Units: []core.UnitInfo{
 				{ID: "build:core:go:go", DisplayName: "core:go", Weight: 4},
 			}},
 		},
-		Parallelism: interfaces.ParallelismInfo{
+		Parallelism: core.ParallelismInfo{
 			Mode:             "devbox",
 			EffectiveWorkers: 8,
 			TurboBoost:       125,
 			WeightedCapacity: 32,
 		},
-		Flags: interfaces.FlagsInfo{
+		Flags: core.FlagsInfo{
 			TidyFirst: true,
 			UseTUI:    true,
 		},
-		PlannedTools: []interfaces.PlannedToolInfo{
+		PlannedTools: []core.PlannedToolInfo{
 			{Name: "go", IsContainer: false},
 			{Name: "mkdocs-build", IsContainer: true},
 		},

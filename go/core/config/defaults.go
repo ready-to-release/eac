@@ -1,5 +1,5 @@
 // Package config provides defaults loading from contract YAML files.
-// Defaults are loaded at runtime from contracts/core/0.1.0/defaults/*.yml
+// Defaults are loaded from the embedded filesystem in contracts/core/0.1.0
 // and merged with user config from .eac/*.yml.
 package config
 
@@ -9,8 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/paths"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,44 +48,26 @@ func peekRepositoryType(configRoot string) (string, error) {
 // Returns ErrNoDefaults if the type-specific defaults file doesn't exist (not an error condition).
 // Type-specific defaults are merged BETWEEN base defaults and user config.
 func LoadRepositoryTypeDefaults(repoRoot, repoType string) (*RepositoryConfig, error) {
-	if repoType == "" {
-		return nil, ErrNoDefaults
-	}
-
-	filename := fmt.Sprintf("repository-%s.yml", repoType)
-	data, err := loadDefaultFile(repoRoot, filename)
+	cfg, err := cloneRepoTypeDefaults(repoType)
 	if err != nil {
-		// Type-specific defaults are optional
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading repository type defaults (%s): %w", repoType, err)
 	}
-
-	var cfg RepositoryConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing repository type defaults (%s): %w", repoType, err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadRepositoryDefaults loads default repository config from contract defaults.
 // This now includes modules (unified config).
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "repository.yml")
+	cfg, err := cloneRepositoryDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading repository defaults: %w", err)
-	}
-
-	var cfg RepositoryConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing repository defaults: %w", err)
 	}
 
 	// Load registries defaults and merge
@@ -98,142 +79,81 @@ func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 	// Apply module defaults
 	cfg.applyModuleDefaults()
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadRegistriesDefaults loads default registries config from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist.
 func LoadRegistriesDefaults(repoRoot string) (RegistriesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "registries.yml")
+	cfg, err := cloneRegistriesDefaults()
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading registries defaults: %w", err)
 	}
-
-	var wrapper struct {
-		Registries RegistriesConfig `yaml:"registries"`
-	}
-	if err := yaml.Unmarshal(data, &wrapper); err != nil {
-		return nil, fmt.Errorf("parsing registries defaults: %w", err)
-	}
-
-	return wrapper.Registries, nil
+	return cfg, nil
 }
 
 // LoadComponentTypesDefaults loads default component types from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadComponentTypesDefaults(repoRoot string) (*ComponentTypesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, ComponentTypesFileName)
+	cfg, err := cloneComponentTypesDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading component-types defaults: %w", err)
 	}
-
-	var cfg ComponentTypesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing component-types defaults: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadEnvironmentsDefaults loads default environments from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadEnvironmentsDefaults(repoRoot string) (*EnvironmentsConfig, error) {
-	data, err := loadDefaultFile(repoRoot, EnvironmentsFileName)
+	cfg, err := cloneEnvironmentsDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading environments defaults: %w", err)
 	}
-
-	var cfg EnvironmentsConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing environments defaults: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadTestingTagsDefaults loads default testing-tags from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadTestingTagsDefaults(repoRoot string) (*TestingTagsConfig, error) {
-	data, err := loadDefaultFile(repoRoot, TestingTagsFileName)
+	cfg, err := cloneTestingTagsDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading testing-tags defaults: %w", err)
 	}
-
-	var cfg TestingTagsConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing testing-tags defaults: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadTimeoutsDefaults loads default timeouts from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadTimeoutsDefaults(repoRoot string) (*TimeoutConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "timeouts.yml")
+	cfg, err := cloneTimeoutsDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading timeouts defaults: %w", err)
 	}
-
-	var cfg TimeoutConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing timeouts defaults: %w", err)
-	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
-// defaultsRoot returns the root directory for loading contract defaults.
-// Uses the distribution root (container root if in container, otherwise repoRoot).
-// Note: Can't import repository package here to avoid cycles, so inline the check.
-// See repository.GetDistRoot() for the canonical implementation.
-func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
-}
-
-// loadDefaultFile loads a default YAML file from the contracts folder.
-// Container-aware: uses R2R_CONTAINER_ROOT/contracts/ when running in container,
-// otherwise uses repoRoot/contracts/.
-// Returns the raw os error (not wrapped) so callers can check os.IsNotExist.
-func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
-	root := defaultsRoot(repoRoot)
-	if root == "" {
-		return nil, fmt.Errorf("no root available for loading defaults (repoRoot empty and not in container)")
-	}
-
-	fsPath := filepath.Join(root, "contracts", "core", paths.DefaultsVersion, "defaults", filename)
-	data, err := os.ReadFile(fsPath)
-	if err != nil {
-		// Return raw error for IsNotExist checks, wrapped for other errors
-		if os.IsNotExist(err) {
-			return nil, err
-		}
-		return nil, fmt.Errorf("reading %s: %w", fsPath, err)
-	}
-
-	return data, nil
+// loadDefaultFile loads a default YAML file from the embedded contract filesystem.
+// The repoRoot parameter is retained for API compatibility but is no longer used;
+// defaults are read from the compiled-in core.FS embedded filesystem.
+// Returns an fs.ErrNotExist-wrapping error when the file doesn't exist,
+// compatible with os.IsNotExist checks.
+func loadDefaultFile(_ string, filename string) ([]byte, error) {
+	return core.FS.ReadFile(core.DefaultPath(filename))
 }
 
 // MergeRepository merges user repository config with defaults at field level.
@@ -352,6 +272,20 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Conventions.TemplateRiskCatalogDir != "" {
 		result.Conventions.TemplateRiskCatalogDir = user.Conventions.TemplateRiskCatalogDir
 	}
+	if user.Conventions.DesignDir != "" {
+		result.Conventions.DesignDir = user.Conventions.DesignDir
+	}
+	if user.Conventions.WorkspaceDSL != "" {
+		result.Conventions.WorkspaceDSL = user.Conventions.WorkspaceDSL
+	}
+	if len(user.Conventions.ComponentDiscovery) > 0 {
+		result.Conventions.ComponentDiscovery = user.Conventions.ComponentDiscovery
+	}
+
+	// Override paths for new fields
+	if user.Paths.ContainersRoot != "" {
+		result.Paths.ContainersRoot = user.Paths.ContainersRoot
+	}
 
 	// Merge remote config if set
 	if user.Repository.Remote.Type != "" {
@@ -405,22 +339,14 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 // LoadTestSuitesDefaults loads default test suites from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadTestSuitesDefaults(repoRoot string) (*TestSuitesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "test-suites.yml")
+	cfg, err := cloneTestSuitesDefaults()
 	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
 			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading test-suites defaults: %w", err)
 	}
-
-	var cfg TestSuitesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing test-suites defaults: %w", err)
-	}
-
-	cfg.buildSuiteMap()
-	return &cfg, nil
+	return cfg, nil
 }
 
 // MergeTestSuites merges user-defined test suites with defaults.

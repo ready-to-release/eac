@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,7 +37,7 @@ func TestLoadModuleTestView_SingleUoW(t *testing.T) {
 	ws := t.TempDir()
 
 	manifest := &coreoutput.UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "gotest",
@@ -83,7 +83,7 @@ func TestLoadModuleTestView_WithCTRFArtifact(t *testing.T) {
 	require.NoError(t, err)
 
 	manifest := &coreoutput.UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "gotest",
@@ -139,7 +139,7 @@ func TestLoadModuleTestView_WithCucumberArtifact(t *testing.T) {
 	require.NoError(t, err)
 
 	manifest := &coreoutput.UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:     "mymod",
 		Component:  "go",
 		Tool:       "godog",
@@ -177,7 +177,7 @@ func TestLoadAllTestViews_MultipleModules(t *testing.T) {
 
 	for _, mod := range []string{"alpha", "beta"} {
 		manifest := &coreoutput.UoWManifest{
-			Context:    workunit.ContextTest,
+			Action:    core.ActionTest,
 			Module:     mod,
 			Component:  "go",
 			Tool:       "gotest",
@@ -208,7 +208,7 @@ func TestLoadModuleTestView_FailedExitCode(t *testing.T) {
 	ws := t.TempDir()
 
 	manifest := &coreoutput.UoWManifest{
-		Context:    workunit.ContextTest,
+		Action:    core.ActionTest,
 		Module:     "core",
 		Component:  "go",
 		Tool:       "gotest",

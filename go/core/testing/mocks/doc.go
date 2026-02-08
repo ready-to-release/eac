@@ -2,7 +2,7 @@
 //
 // These mocks allow tests to be decoupled from concrete implementations,
 // making tests faster and more focused. All mocks implement their
-// corresponding port interfaces from github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces.
+// corresponding port interfaces from github.com/ready-to-release/eac/contracts/core/0.1.0.
 //
 // Usage:
 //

@@ -3,6 +3,8 @@ package tool
 import (
 	"path/filepath"
 	"testing"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestExecutorMode_ToToolBinding(t *testing.T) {
@@ -291,15 +293,15 @@ func TestToolAssignment_GetToolID(t *testing.T) {
 	}
 
 	tests := []struct {
-		op   OperationType
+		op   core.ActionType
 		want string
 	}{
-		{OperationBuild, "go-builder"},
-		{OperationLint, "go-lint"},
-		{OperationScan, "trivy-vuln"},
-		{OperationTest, "go-test"},
-		{OperationServe, "docs-serve"},
-		{OperationType("unknown"), ""},
+		{core.ActionBuild, "go-builder"},
+		{core.ActionLint, "go-lint"},
+		{core.ActionScan, "trivy-vuln"},
+		{core.ActionTest, "go-test"},
+		{core.ActionServe, "docs-serve"},
+		{core.ActionType("unknown"), ""},
 	}
 
 	for _, tt := range tests {
@@ -321,13 +323,13 @@ func TestToolAssignment_GetToolIDs_MultipleTools(t *testing.T) {
 	}
 
 	// Multiple linters should take precedence
-	linters := assignment.GetToolIDs(OperationLint)
+	linters := assignment.GetToolIDs(core.ActionLint)
 	if len(linters) != 3 {
 		t.Errorf("expected 3 linters, got %d", len(linters))
 	}
 
 	// Multiple scanners should take precedence
-	scanners := assignment.GetToolIDs(OperationScan)
+	scanners := assignment.GetToolIDs(core.ActionScan)
 	if len(scanners) != 2 {
 		t.Errorf("expected 2 scanners, got %d", len(scanners))
 	}
@@ -338,7 +340,7 @@ func TestToolAssignment_GetToolIDs_SingleTool(t *testing.T) {
 		Linter: "single-linter",
 	}
 
-	linters := assignment.GetToolIDs(OperationLint)
+	linters := assignment.GetToolIDs(core.ActionLint)
 	if len(linters) != 1 || linters[0] != "single-linter" {
 		t.Errorf("expected single-linter, got %v", linters)
 	}
@@ -445,12 +447,12 @@ func TestExecutionResult_Output(t *testing.T) {
 
 func TestAllOperations(t *testing.T) {
 	ops := AllOperations()
-	expected := []OperationType{
-		OperationBuild,
-		OperationLint,
-		OperationScan,
-		OperationTest,
-		OperationServe,
+	expected := []core.ActionType{
+		core.ActionBuild,
+		core.ActionLint,
+		core.ActionScan,
+		core.ActionTest,
+		core.ActionServe,
 	}
 
 	if len(ops) != len(expected) {
@@ -474,7 +476,7 @@ func TestToolDefinition_IsLocalContainer(t *testing.T) {
 			name: "local container with localPath",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-oci",
+				LocalPath: "containers/mkdocs-render-oci",
 			},
 			want: true,
 		},
@@ -537,10 +539,10 @@ func TestToolDefinition_LocalContextPath(t *testing.T) {
 			name: "local container",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-oci",
+				LocalPath: "containers/mkdocs-render-oci",
 			},
 			workspaceRoot: "/home/user/project",
-			localPath:     "containers/site-render-oci",
+			localPath:     "containers/mkdocs-render-oci",
 			wantEmpty:     false,
 		},
 		{
@@ -582,9 +584,9 @@ func TestToolDefinition_LocalImageTag(t *testing.T) {
 			name: "local container",
 			tool: ToolDefinition{
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-oci",
+				LocalPath: "containers/mkdocs-render-oci",
 			},
-			want: "site-render-oci:local",
+			want: "mkdocs-render-oci:local",
 		},
 		{
 			name: "local container with nested path",
@@ -961,7 +963,7 @@ func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
 			tool: ToolDefinition{
 				ID:        "mkdocs",
 				Type:      ToolTypeContainer,
-				LocalPath: "containers/site-render-oci",
+				LocalPath: "containers/mkdocs-render-oci",
 			},
 			wantErr: false,
 		},

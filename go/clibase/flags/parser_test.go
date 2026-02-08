@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/adapters/tui"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 )
 
@@ -23,10 +23,10 @@ func TestParser_AllSetsSubscribed(t *testing.T) {
 	args := []string{
 		"--turbo",
 		"--roof", "4",
-		"--tui",
+		"--with-tui",
 		"--debug",
 		"--skip-cache",
-		"--skip-deps",
+		"--no-deps",
 		"--exclude", "eac-specs",
 		"--dry-run",
 		"module1", "module2",
@@ -174,15 +174,15 @@ func TestParser_TUIValidationError(t *testing.T) {
 		Command: "build",
 		Output:  true,
 	}
-	// CI environment rejects explicit --tui
+	// CI environment rejects explicit --with-tui
 	env := &environment.Env{IsCI: true}
 	p := NewParserWithEnv(config, env)
 
-	args := []string{"--tui"}
+	args := []string{"--with-tui"}
 
 	_, err := p.Parse(args)
 	if err == nil {
-		t.Error("Parse() expected error for --tui in CI environment")
+		t.Error("Parse() expected error for --with-tui in CI environment")
 	}
 }
 
@@ -219,8 +219,8 @@ func TestParser_AppliesDefaults(t *testing.T) {
 	if !result.Output.UseTUI {
 		t.Error("UseTUI should default to true in local console")
 	}
-	if result.Output.TUIHeight != tui.DefaultHeight {
-		t.Errorf("TUIHeight = %v, want %v", result.Output.TUIHeight, tui.DefaultHeight)
+	if result.Output.TUIHeight != display.DefaultHeight {
+		t.Errorf("TUIHeight = %v, want %v", result.Output.TUIHeight, display.DefaultHeight)
 	}
 }
 
@@ -240,11 +240,11 @@ func TestParser_AllFlags(t *testing.T) {
 	// Count expected flags:
 	// Execution: turbo, roof, parallel, sequential (4)
 	// Output: with-tui, tui, no-tui, tui-height, ascii, skip-tui-delay, debug, timings, demo (9)
-	// Cache: with-cache, no-cache, skip-cache, with-deps, no-deps, skip-deps (6)
+	// Cache: with-cache, no-cache, skip-cache, with-deps, no-deps (5)
 	// Module: exclude, skip-depm (2)
 	// DryRun: dry-run (1)
-	// Total: 22
-	expectedCount := 22
+	// Total: 21
+	expectedCount := 21
 	if len(flags) != expectedCount {
 		t.Errorf("AllFlags() returned %d flags, want %d", len(flags), expectedCount)
 	}
@@ -255,7 +255,7 @@ func TestParser_AllFlags(t *testing.T) {
 		flagNames[f.Name] = true
 	}
 
-	expected := []string{"turbo", "roof", "tui", "debug", "skip-cache", "exclude", "dry-run"}
+	expected := []string{"turbo", "roof", "with-tui", "debug", "skip-cache", "exclude", "dry-run"}
 	for _, name := range expected {
 		if !flagNames[name] {
 			t.Errorf("AllFlags() missing %s flag", name)
@@ -285,8 +285,8 @@ func TestParser_GenerateUsage(t *testing.T) {
 	if !contains(usage, "--turbo") {
 		t.Error("Usage should contain --turbo")
 	}
-	if !contains(usage, "--tui") {
-		t.Error("Usage should contain --tui")
+	if !contains(usage, "--with-tui") {
+		t.Error("Usage should contain --with-tui")
 	}
 	if !contains(usage, "--debug") {
 		t.Error("Usage should contain --debug")

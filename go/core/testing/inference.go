@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
@@ -29,7 +30,7 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 		// Apply each inference rule
 		for _, inference := range inferences {
 			// Skip if inference doesn't apply to this test type
-			if len(inference.TestTypes) > 0 && !contains(inference.TestTypes, test.Type) {
+			if len(inference.TestTypes) > 0 && !slices.Contains(inference.TestTypes, test.Type) {
 				continue
 			}
 
@@ -42,7 +43,7 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 			if matchesConditions(test.Tags, inference.IfTags, inference.ThenAddTags) {
 				// Add inferred tags and track them
 				for _, tag := range inference.ThenAddTags {
-					if !contains(enriched[i].Tags, tag) {
+					if !slices.Contains(enriched[i].Tags, tag) {
 						enriched[i].Tags = append(enriched[i].Tags, tag)
 						enriched[i].InferredTags = append(enriched[i].InferredTags, tag)
 					}
@@ -51,10 +52,10 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 		}
 
 		// Derive @ov if no other verification tag is present
-		hadOV := contains(enriched[i].Tags, "@ov")
+		hadOV := slices.Contains(enriched[i].Tags, "@ov")
 		enriched[i].Tags = DeriveOperationalVerification(enriched[i].Tags)
 		// Track @ov as inferred if it was added
-		if !hadOV && contains(enriched[i].Tags, "@ov") {
+		if !hadOV && slices.Contains(enriched[i].Tags, "@ov") {
 			enriched[i].InferredTags = append(enriched[i].InferredTags, "@ov")
 		}
 	}
@@ -70,7 +71,7 @@ func DeriveOperationalVerification(tags []string) []string {
 	if verificationTags == nil {
 		// Config unavailable - can't determine verification tags
 		// Default to adding @ov as a safe fallback
-		if !contains(tags, "@ov") {
+		if !slices.Contains(tags, "@ov") {
 			return append(tags, "@ov")
 		}
 		return tags
@@ -79,7 +80,7 @@ func DeriveOperationalVerification(tags []string) []string {
 	// Check if any verification tag is already present
 	hasVerificationTag := false
 	for _, tag := range tags {
-		if contains(verificationTags, tag) {
+		if slices.Contains(verificationTags, tag) {
 			hasVerificationTag = true
 			break
 		}
@@ -103,7 +104,7 @@ func hasAnyLevelTag(tags []string) bool {
 		return true
 	}
 	for _, tag := range tags {
-		if contains(levelTags, tag) {
+		if slices.Contains(levelTags, tag) {
 			return true
 		}
 	}
@@ -120,7 +121,7 @@ func isLevelInference(inference Inference) bool {
 		return true
 	}
 	for _, tag := range inference.ThenAddTags {
-		if contains(levelTags, tag) {
+		if slices.Contains(levelTags, tag) {
 			return true
 		}
 	}
@@ -141,7 +142,7 @@ func matchesConditions(tags, conditions, thenAddTags []string) bool {
 
 	// All conditions must be met
 	for _, cond := range conditions {
-		if !contains(tags, cond) {
+		if !slices.Contains(tags, cond) {
 			return false
 		}
 	}
@@ -158,24 +159,28 @@ func isDependencyInference(tags []string) bool {
 	return false
 }
 
-// GetGlobalInferences returns the standard inference rules
-//
-// L-level tags are inferred for gotest (Go unit tests) since Go source files
-// cannot have explicit tag annotations like feature files can.
-// Godog scenarios MUST have explicit L-tags (no inference for godog).
-// Verification tags (@ov) are inferred if no verification tag is present.
+// GetGlobalInferences returns the standard inference rules.
+// Collects inferences from registered adapters. Falls back to hardcoded
+// defaults if no adapters are registered (e.g., in unit tests).
 func GetGlobalInferences() []Inference {
+	adapterInferences := getAdapterInferences()
+	if len(adapterInferences) > 0 {
+		return adapterInferences
+	}
+
+	// Fallback for tests that don't register adapters
+	return defaultInferences()
+}
+
+// defaultInferences returns the legacy hardcoded inferences.
+func defaultInferences() []Inference {
 	return []Inference{
-		// Type-based: Go tests require Go toolchain
 		{
 			TestTypes:   []string{"gotest"},
 			IfTags:      []string{},
 			ThenAddTags: []string{"@deps:go"},
 			Description: "Go tests require Go toolchain",
 		},
-		// Go unit tests default to @L1 (unit test level)
-		// This is necessary because Go source files cannot have explicit tag annotations
-		// Unlike .feature files where you can add @L0/@L1/@L2 tags directly
 		{
 			TestTypes:   []string{"gotest"},
 			IfTags:      []string{},
@@ -220,7 +225,7 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 			// Modules with go package -> @deps:go
 			if module.HasComponent("go") {
 				depTag := "@deps:go"
-				if !contains(enriched[i].Tags, depTag) {
+				if !slices.Contains(enriched[i].Tags, depTag) {
 					enriched[i].Tags = append(enriched[i].Tags, depTag)
 					enriched[i].InferredDeps = append(enriched[i].InferredDeps, depTag)
 				}
@@ -229,7 +234,7 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 			// Modules with typescript/npm packages -> @deps:npm
 			if module.HasComponent("typescript") || module.HasComponent("npm") {
 				depTag := "@deps:npm"
-				if !contains(enriched[i].Tags, depTag) {
+				if !slices.Contains(enriched[i].Tags, depTag) {
 					enriched[i].Tags = append(enriched[i].Tags, depTag)
 					enriched[i].InferredDeps = append(enriched[i].InferredDeps, depTag)
 				}
@@ -328,7 +333,7 @@ func InferSystemDepsFromEnv(tests []TestReference, envConfig *config.Environment
 
 			// Add all system dependencies from the environment
 			for _, sysDep := range env.SystemDeps {
-				if !contains(enriched[i].Tags, sysDep) {
+				if !slices.Contains(enriched[i].Tags, sysDep) {
 					enriched[i].Tags = append(enriched[i].Tags, sysDep)
 				}
 			}

@@ -1,6 +1,7 @@
 package build
 
 import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/resolver"
@@ -19,7 +20,7 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 
 	// Get cached modules map from build context (set during incremental detection)
 	var cachedModules map[string]bool
-	if bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext); ok && bctx != nil {
+	if bctx, ok := ctx.Config.BuildCmdContext.(*buildContext); ok && bctx != nil {
 		cachedModules = bctx.cachedModules
 	}
 
@@ -51,7 +52,7 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 			// Module has no buildable components - create a placeholder
 			specs = append(specs, workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Context:   workunit.ContextBuild,
+					Action:    core.ActionBuild,
 					Module:    moniker,
 					Component: "none",
 					Tool:      "",

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/core/adapters"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -123,7 +124,7 @@ func TestResolveBookNameForPDF_WithConfigOverride(t *testing.T) {
 		Moniker: "test-module",
 		Components: domain.ModuleComponents{
 			"tutorials-pdf": &domain.ComponentEntry{
-				Type: "docs-pdf",
+				Type: config.ComponentTypeDocsPdf,
 				Config: map[string]string{
 					"book": "custom-book-name",
 				},

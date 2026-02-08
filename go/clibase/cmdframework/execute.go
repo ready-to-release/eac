@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -24,48 +25,48 @@ type UnitWorkProvider func(ctx *ExecutionContext) []workunit.UnitSpec
 // It provides thread-safe access to component execution functions.
 type UnitRegistry struct {
 	mu        sync.RWMutex
-	providers map[CommandType]UnitWorkProvider
-	workers   map[CommandType]UnitWorkerFunc
+	providers map[core.ActionType]UnitWorkProvider
+	workers   map[core.ActionType]UnitWorkerFunc
 }
 
 // NewUnitRegistry creates a new component registry.
 func NewUnitRegistry() *UnitRegistry {
 	return &UnitRegistry{
-		providers: make(map[CommandType]UnitWorkProvider),
-		workers:   make(map[CommandType]UnitWorkerFunc),
+		providers: make(map[core.ActionType]UnitWorkProvider),
+		workers:   make(map[core.ActionType]UnitWorkerFunc),
 	}
 }
 
 // RegisterProvider registers a work provider for a command type.
-func (r *UnitRegistry) RegisterProvider(cmdType CommandType, provider UnitWorkProvider) {
+func (r *UnitRegistry) RegisterProvider(cmdType core.ActionType, provider UnitWorkProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.providers[cmdType] = provider
 }
 
 // RegisterWorker registers a worker function for a command type.
-func (r *UnitRegistry) RegisterWorker(cmdType CommandType, worker UnitWorkerFunc) {
+func (r *UnitRegistry) RegisterWorker(cmdType core.ActionType, worker UnitWorkerFunc) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.workers[cmdType] = worker
 }
 
 // GetProvider returns the registered provider for a command type.
-func (r *UnitRegistry) GetProvider(cmdType CommandType) UnitWorkProvider {
+func (r *UnitRegistry) GetProvider(cmdType core.ActionType) UnitWorkProvider {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.providers[cmdType]
 }
 
 // GetWorker returns the registered worker for a command type.
-func (r *UnitRegistry) GetWorker(cmdType CommandType) UnitWorkerFunc {
+func (r *UnitRegistry) GetWorker(cmdType core.ActionType) UnitWorkerFunc {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.workers[cmdType]
 }
 
 // HasComponents returns true if both provider and worker are registered.
-func (r *UnitRegistry) HasComponents(cmdType CommandType) bool {
+func (r *UnitRegistry) HasComponents(cmdType core.ActionType) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.providers[cmdType] != nil && r.workers[cmdType] != nil
@@ -75,27 +76,27 @@ func (r *UnitRegistry) HasComponents(cmdType CommandType) bool {
 var registry = NewUnitRegistry()
 
 // RegisterUnitProvider registers a work provider for a command type.
-func RegisterUnitProvider(cmdType CommandType, provider UnitWorkProvider) {
+func RegisterUnitProvider(cmdType core.ActionType, provider UnitWorkProvider) {
 	registry.RegisterProvider(cmdType, provider)
 }
 
 // RegisterUnitWorker registers a worker function for a command type.
-func RegisterUnitWorker(cmdType CommandType, worker UnitWorkerFunc) {
+func RegisterUnitWorker(cmdType core.ActionType, worker UnitWorkerFunc) {
 	registry.RegisterWorker(cmdType, worker)
 }
 
 // GetUnitProvider returns the registered provider for a command type.
-func GetUnitProvider(cmdType CommandType) UnitWorkProvider {
+func GetUnitProvider(cmdType core.ActionType) UnitWorkProvider {
 	return registry.GetProvider(cmdType)
 }
 
 // GetUnitWorker returns the registered worker for a command type.
-func GetUnitWorker(cmdType CommandType) UnitWorkerFunc {
+func GetUnitWorker(cmdType core.ActionType) UnitWorkerFunc {
 	return registry.GetWorker(cmdType)
 }
 
 // HasUnitExecution returns true if component-level execution is available for a command type.
-func HasUnitExecution(cmdType CommandType) bool {
+func HasUnitExecution(cmdType core.ActionType) bool {
 	return registry.HasComponents(cmdType)
 }
 
@@ -103,7 +104,7 @@ func HasUnitExecution(cmdType CommandType) bool {
 // phaseExecute handles the execution phase using component-level execution.
 // The worker parameter is retained for API compatibility but is not used;
 // component execution uses workers registered via RegisterUnitWorker.
-func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
+func phaseExecute(ctx *ExecutionContext, _ CommandWorkerFunc) error {
 	// Early return if nothing to execute
 	monikers := ctx.GetExecutionMonikers()
 	if len(monikers) == 0 {
@@ -123,7 +124,7 @@ func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 // phaseExecuteComponentsUnified handles component-level execution for all command types.
 // It uses the registered provider and worker for the given command type.
 // Scheduling order is determined by DependsOn constraints in the work units.
-func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) error {
+func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType core.ActionType) error {
 	provider := GetUnitProvider(cmdType)
 	worker := GetUnitWorker(cmdType)
 

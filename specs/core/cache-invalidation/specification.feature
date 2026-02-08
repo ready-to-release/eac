@@ -1,4 +1,4 @@
-@L1 @ov @depm:core @deps:go @env:isolated-test-project
+@L1 @ov @depm:foundation @deps:go @env:isolated-test-project
 Feature: Cache Invalidation System
 
   As a developer using EAC

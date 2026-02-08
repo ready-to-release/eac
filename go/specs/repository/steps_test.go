@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	interfaces "github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -334,7 +334,7 @@ type repositoryContext struct {
 	tagConflicts []string
 
 	// Module hierarchy validation
-	moduleReport         interfaces.ModuleReportPort
+	moduleReport         core.ModuleReportPort
 	dependencyErrors     []string
 	circularDependencies []string
 	missingModules       []string

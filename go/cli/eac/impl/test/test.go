@@ -43,14 +43,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/test/runners"
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -59,8 +59,8 @@ import (
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/testing"
-	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 var log = logging.C()
@@ -100,7 +100,7 @@ type TestExecutionContext struct {
 	testParallelism int
 	testRunDir      string
 	coverage        bool
-	suiteTagFilter  string
+	suiteTagFilter  core.TagFilter
 	workspaceRoot   string
 	moduleMapper    *ModuleMapper // Maps package paths to module monikers
 
@@ -150,11 +150,9 @@ func Test() int {
 
 	// Convert to framework config
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeTest,
+		Type:           core.ActionTest,
 		CommandPath:    "test",
-		ActionVerb:     "Testing",
-		OutputDir:      "out/test",
-		LogFileName:    "test.log",
+		OutputDir:      paths.OutTestRelPath,
 		Monikers:       cfg.Monikers,
 		MaxConcurrency: cfg.Roof, // 0 = auto-detect
 		Sequential:     !cfg.Parallel,
@@ -287,7 +285,7 @@ func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePa
 
 	// Determine test type and get appropriate runner
 	testType := getPackageTestType(tests)
-	testRunner := runners.Get(testType)
+	testRunner := testrunners.Get(testType)
 
 	// Extract module moniker from modulePath (format: "<moniker>/<subpath>" or just "<moniker>")
 	moduleMoniker := modulePath
@@ -299,7 +297,7 @@ func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePa
 	effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
 
 	// Use the module path directly as the output path (orchestrator already uses this)
-	cfg := runners.RunConfig{
+	cfg := testrunners.RunConfig{
 		Ctx:              goCtx,
 		WorkspaceRoot:    ctx.workspaceRoot,
 		TestRunDir:       effectiveTestRunDir,
@@ -330,12 +328,12 @@ func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePa
 func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pkgPath string, tests []testing.TestReference, logWriter io.Writer) PackageResult {
 	// Determine test type and get appropriate runner
 	testType := getPackageTestType(tests)
-	testRunner := runners.Get(testType)
+	testRunner := testrunners.Get(testType)
 
 	// Get effective test run dir (routes to correct suite folder for composite suites)
 	effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
 
-	cfg := runners.RunConfig{
+	cfg := testrunners.RunConfig{
 		Ctx:            goCtx,
 		WorkspaceRoot:  ctx.workspaceRoot,
 		TestRunDir:     effectiveTestRunDir,
@@ -357,167 +355,6 @@ func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pk
 	}
 }
 
-// runTscucumberPackageTests executes TypeScript cucumber-js tests.
-func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, relPkgPath, relFeatureFile string) PackageResult {
-	start := time.Now()
-	result := PackageResult{PackageName: pkgPath}
-
-	// relPkgPath is the module root (e.g., typescript/vscode-commit)
-	moduleRoot := filepath.Join(ctx.workspaceRoot, relPkgPath)
-
-	// Create log file for this package
-	logDir := filepath.Join(ctx.testRunDir, sanitizePathForLog(pkgPath))
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
-	// Check if package.json exists
-	packageJSON := filepath.Join(moduleRoot, "package.json")
-	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(tuiWriter, "❌ No package.json found\n")
-		fmt.Fprintf(logFile, "No package.json found at %s\n", packageJSON)
-		result.PackageFailed = true
-		return result
-	}
-
-	// Build cucumber-js command with feature file path
-	args := []string{"cucumber-js"}
-
-	// Add tag filter if provided
-	if ctx.suiteTagFilter != "" {
-		// Convert godog tag format to cucumber tag expression
-		tagExpr := convertToCucumberTagExpr(ctx.suiteTagFilter)
-		if tagExpr != "" {
-			args = append(args, "--tags", tagExpr)
-		}
-	}
-
-	// Add the specific feature file if provided
-	if relFeatureFile != "" {
-		// Convert to path relative to module root
-		featurePath := filepath.Join(ctx.workspaceRoot, relFeatureFile)
-		relPath, err := filepath.Rel(moduleRoot, featurePath)
-		if err == nil {
-			args = append(args, relPath)
-		}
-	}
-
-	// Log command
-	fmt.Fprintf(logFile, "=== Testing TypeScript cucumber specs ===\n")
-	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
-	fmt.Fprintf(logFile, "Command: npx %s\n\n", strings.Join(args, " "))
-
-	// Execute npx cucumber-js
-	toolDef := tool.GlobalRegistry().GetOrAdhoc("npx")
-	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
-	execCtx := &tool.ExecutionContext{
-		ModuleRoot:    moduleRoot,
-		FullEnv:       fullEnv,
-		ArgsOverrides: args,
-	}
-	execResult, runErr := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
-	output := append(execResult.Stdout, execResult.Stderr...)
-	fmt.Fprintf(logFile, "%s\n", output)
-
-	// Parse results
-	if runErr != nil || execResult.ExitCode != 0 {
-		result.PackageFailed = true
-		result.TestsFailed = len(tests)
-		fmt.Fprintf(tuiWriter, "❌ cucumber-js failed\n")
-	} else {
-		result.TestsPassed = len(tests)
-		fmt.Fprintf(tuiWriter, "✅ cucumber-js passed\n")
-	}
-
-	result.TestsTotal = len(tests)
-	result.Duration = time.Since(start)
-
-	return result
-}
-
-// runMochaPackageTests executes TypeScript mocha unit tests.
-func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, relPkgPath string) PackageResult {
-	start := time.Now()
-	result := PackageResult{PackageName: pkgPath}
-
-	// Find module root (parent of test directory)
-	// relPkgPath is like "typescript/vscode-commit/test", we need "typescript/vscode-commit"
-	moduleRoot := filepath.Dir(filepath.Join(ctx.workspaceRoot, relPkgPath))
-
-	// Create log file for this package
-	logDir := filepath.Join(ctx.testRunDir, sanitizePathForLog(pkgPath))
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
-	// Check if package.json exists
-	packageJSON := filepath.Join(moduleRoot, "package.json")
-	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(tuiWriter, "❌ No package.json found\n")
-		fmt.Fprintf(logFile, "No package.json found at %s\n", packageJSON)
-		result.PackageFailed = true
-		return result
-	}
-
-	// Build npm test command
-	args := []string{"test"}
-
-	// Log command
-	fmt.Fprintf(logFile, "=== Testing TypeScript mocha tests ===\n")
-	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
-	fmt.Fprintf(logFile, "Command: npm %s\n\n", strings.Join(args, " "))
-
-	// Execute npm test
-	toolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
-	fullEnv := append(os.Environ(), "R2R_TEST_LOGGING_ACTIVE=true")
-	execCtx := &tool.ExecutionContext{
-		ModuleRoot:    moduleRoot,
-		FullEnv:       fullEnv,
-		ArgsOverrides: args,
-	}
-	execResult, runErr := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
-	output := append(execResult.Stdout, execResult.Stderr...)
-	fmt.Fprintf(logFile, "%s\n", output)
-
-	// Parse results
-	if runErr != nil || execResult.ExitCode != 0 {
-		result.PackageFailed = true
-		result.TestsFailed = len(tests)
-		fmt.Fprintf(tuiWriter, "❌ mocha tests failed\n")
-	} else {
-		result.TestsPassed = len(tests)
-		fmt.Fprintf(tuiWriter, "✅ mocha tests passed\n")
-	}
-
-	result.TestsTotal = len(tests)
-	result.Duration = time.Since(start)
-
-	return result
-}
 
 // collectResults returns all collected test results.
 func (ctx *TestExecutionContext) collectResults() []PackageResult {

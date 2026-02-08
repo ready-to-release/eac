@@ -238,16 +238,6 @@ func TestModuleDependency_Struct(t *testing.T) {
 	}
 }
 
-func TestExecutionPlan_Struct(t *testing.T) {
-	plan := ExecutionPlan{
-		ExecutionOrder: []string{"mod-c", "mod-d", "mod-b", "mod-a"},
-	}
-
-	if len(plan.ExecutionOrder) != 4 {
-		t.Errorf("len(ExecutionOrder) = %d, want 4", len(plan.ExecutionOrder))
-	}
-}
-
 func TestDependencyGraphStats_Struct(t *testing.T) {
 	stats := DependencyGraphStats{
 		TotalModules:      10,
@@ -277,3 +267,6 @@ func TestDependencyGraphStats_Struct(t *testing.T) {
 		t.Errorf("MaxDependents = %d, want 5", stats.MaxDependents)
 	}
 }
+
+
+

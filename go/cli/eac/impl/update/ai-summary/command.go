@@ -36,6 +36,7 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -105,11 +106,9 @@ func UpdateAISummary() int {
 
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeAISummary,
+		Type:           core.ActionAISummary,
 		CommandPath:    "update ai-summary",
-		ActionVerb:     "Analyzing",
 		OutputDir:      paths.OutAISummaryRelPath,
-		LogFileName:    "ai-summary.log",
 		Monikers:       monikers,
 		SkipDeps:       true, // AI analysis doesn't need system deps
 		SkipDepm:       true, // No module dependencies
@@ -122,11 +121,8 @@ func UpdateAISummary() int {
 		DebugMode:      config.Debug,
 	}
 
-	// Store analysis type filter in Extra
-	if cmdCfg.Extra == nil {
-		cmdCfg.Extra = make(map[string]interface{})
-	}
-	cmdCfg.Extra["analysisType"] = config.AnalysisType
+	// Store analysis type filter
+	cmdCfg.AnalysisType = config.AnalysisType
 
 	return RunAISummaryWithFramework(cmdCfg)
 }

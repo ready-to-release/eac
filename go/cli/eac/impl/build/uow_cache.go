@@ -4,6 +4,7 @@ package build
 import (
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/core/hash"
@@ -42,20 +43,24 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 		return
 	}
 
-	// Collect module files for hash computation
-	moduleFiles := make(map[string][]string)
-	for _, id := range expectedUoWs {
-		if _, ok := moduleFiles[id.Module]; ok {
-			continue // Already collected
-		}
-		if contract, ok := ctx.ModuleRegistry.Get(id.Module); ok {
-			patterns := contract.GetGlobPatterns()
-			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
-			if err != nil {
-				log.Debugf("Failed to expand patterns for %s: %v", id.Module, err)
+	// Reuse pre-expanded module files from hash cache when available.
+	// Falls back to expanding patterns if not pre-computed (e.g., tests).
+	moduleFiles := bctx.moduleExpandedFiles
+	if moduleFiles == nil {
+		moduleFiles = make(map[string][]string)
+		for _, id := range expectedUoWs {
+			if _, ok := moduleFiles[id.Module]; ok {
 				continue
 			}
-			moduleFiles[id.Module] = files
+			if contract, ok := ctx.ModuleRegistry.Get(id.Module); ok {
+				patterns := contract.GetGlobPatterns()
+				files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+				if err != nil {
+					log.Debugf("Failed to expand patterns for %s: %v", id.Module, err)
+					continue
+				}
+				moduleFiles[id.Module] = files
+			}
 		}
 	}
 
@@ -74,9 +79,21 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 		return hash.Files(ctx.WorkspaceRoot, files)
 	}
 
+	// Create dependency resolver from module registry for cross-module
+	// build cache invalidation (e.g., ext-eac depends on eac-cli binary).
+	var depResolver coreoutput.DependencyResolver
+	if ctx.ModuleRegistry != nil {
+		depResolver = func(module string) []string {
+			if contract, ok := ctx.ModuleRegistry.Get(module); ok {
+				return contract.GetDependencies()
+			}
+			return nil
+		}
+	}
+
 	// Use DiskOutputReader for UoW-level change detection
 	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
-	changeResult, err := reader.DetectUoWChanges(workunit.ContextBuild, expectedUoWs, getInputHash)
+	changeResult, err := reader.DetectUoWChanges(core.ActionBuild, expectedUoWs, getInputHash, depResolver)
 	if err != nil {
 		log.Debugf("Failed to detect UoW changes: %v", err)
 		return

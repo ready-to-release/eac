@@ -77,13 +77,15 @@ type BaseContract struct {
 	Moniker       string            `yaml:"moniker"`
 	Name          string            `yaml:"name"`
 	Description   string            `yaml:"description"`
+	ModuleGroup   string            `yaml:"module_group,omitempty"` // Group name for depends_on expansion
 	DependsOn     []string          `yaml:"depends_on"`
 	Versioning    *ModuleVersioning `yaml:"versioning,omitempty"`
 	EvidenceBooks []string          `yaml:"evidence_books,omitempty"` // Evidence book names
 	ReleaseBundle *ReleaseBundle    `yaml:"release_bundle,omitempty"`
 	Metadata      map[string]string `yaml:"metadata,omitempty"`
-	Components    ModuleComponents  `yaml:"components"`        // Component types mapped to their roots
-	Linting       *ModuleLinting    `yaml:"linting,omitempty"` // Linting configuration overrides
+	Components     ModuleComponents  `yaml:"components"`        // Component types mapped to their roots
+	ComponentOrder []string          `yaml:"-"`                 // YAML declaration order of component keys
+	Linting        *ModuleLinting    `yaml:"linting,omitempty"` // Linting configuration overrides
 }
 
 // ModuleLinting configures linting behavior for a module.

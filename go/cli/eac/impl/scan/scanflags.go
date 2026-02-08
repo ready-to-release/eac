@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/scan/internal"
+	"github.com/ready-to-release/eac/go/core/evidence"
 )
 
 // ScanSpecificFlags holds flags that are specific to the scan command.
 // These are not shared with other commands (build, test, lint).
 type ScanSpecificFlags struct {
-	Scanners           []internal.ScannerType // --scanner: Scanner types to run
+	Scanners           []evidence.ScannerType // --scanner: Scanner types to run
 	SBOMFormat         string                 // --format: SBOM format
-	VulnSeverities     []internal.Severity    // --severity: Severity filter
+	VulnSeverities     []evidence.Severity    // --severity: Severity filter
 	SemgrepConfig      string                 // --config: SAST config
 	ComplianceStandard string                 // --compliance: Compliance standard
 }

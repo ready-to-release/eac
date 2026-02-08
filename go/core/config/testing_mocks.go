@@ -157,7 +157,7 @@ func loadFromEnvironment() TestingMocksConfig {
 				Tools:   parseTools(os.Getenv(environments.EnvR2RMockSecurityTools)),
 			},
 			Docker: DockerMockConfig{
-				Enabled: parseBool(os.Getenv(environments.EnvR2RMockDocker)) || parseBool(os.Getenv(environments.EnvR2RMockStructurizr)),
+				Enabled: parseBool(os.Getenv(environments.EnvR2RMockDocker)),
 			},
 			GitHub: GitHubMockConfig{
 				// Support both R2R_MOCK_GITHUB and R2R_MOCK_GITHUB_CLI for backward compatibility
@@ -319,7 +319,7 @@ func findSchemaPath() (string, error) {
 	// Walk up directory tree looking for contracts/core/0.1.0/testing-mocks.schema.json
 	dir := cwd
 	for {
-		schemaPath := filepath.Join(dir, "contracts", "core", "0.1.0", "testing-mocks.schema.json")
+		schemaPath := filepath.Join(dir, "contracts", "core", "0.1.0", "schemas", "testing-mocks.schema.json")
 		if _, err := os.Stat(schemaPath); err == nil {
 			return schemaPath, nil
 		}
@@ -333,7 +333,7 @@ func findSchemaPath() (string, error) {
 		dir = parent
 	}
 
-	return "", fmt.Errorf("testing-mocks.schema.json not found in contracts/core/0.1.0/")
+	return "", fmt.Errorf("testing-mocks.schema.json not found in contracts/core/0.1.0/schemas/")
 }
 
 // ToEnvironmentVariables converts the configuration to environment variables.

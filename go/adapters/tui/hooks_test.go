@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestTUIHooksImpl_SelectCommand_NoOptions_ReturnsOriginal(t *testing.T) {
 	hooks := NewTUIHooks(nil) // Console can be nil for this test
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "test-command",
 		Options:         nil, // No options
 	}
@@ -29,9 +29,9 @@ func TestTUIHooksImpl_SelectCommand_NoOptions_ReturnsOriginal(t *testing.T) {
 func TestTUIHooksImpl_SelectCommand_EmptyOptions_ReturnsOriginal(t *testing.T) {
 	hooks := NewTUIHooks(nil)
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "work",
-		Options:         []interfaces.CommandOption{}, // Empty slice
+		Options:         []core.CommandOption{}, // Empty slice
 	}
 
 	resp := hooks.SelectCommand(context.Background(), req)
@@ -44,11 +44,11 @@ func TestTUIHooksImpl_SelectCommand_EmptyOptions_ReturnsOriginal(t *testing.T) {
 func TestTUIHooksImpl_ReceiveUoWs_StoresData(t *testing.T) {
 	hooks := NewTUIHooks(nil)
 
-	data := interfaces.UoWData{
-		Modules: []interfaces.UoWModule{
+	data := core.UoWData{
+		Modules: []core.UoWModule{
 			{
 				Name: "test-module",
-				Units: []interfaces.UoWUnit{
+				Units: []core.UoWUnit{
 					{ID: "build:test:go:go", DisplayName: "test:go", Weight: 1},
 				},
 			},
@@ -124,8 +124,8 @@ func TestTUIHooksImpl_ConcurrentReceiveUoWs(t *testing.T) {
 	done := make(chan struct{})
 	for i := 0; i < 10; i++ {
 		go func(idx int) {
-			data := interfaces.UoWData{
-				Modules: []interfaces.UoWModule{
+			data := core.UoWData{
+				Modules: []core.UoWModule{
 					{Name: "module-" + string(rune('a'+idx))},
 				},
 			}
@@ -151,7 +151,7 @@ func TestTUIHooksImpl_ImplementsTUIHooks(t *testing.T) {
 	hooks := NewTUIHooks(nil)
 
 	// Should implement TUIHooks interface
-	var _ interfaces.TUIHooks = hooks
+	var _ core.TUIHooks = hooks
 }
 
 func TestTUIHooksImpl_SelectCommand_WithOptionsNoSelector_ReturnsOriginal(t *testing.T) {
@@ -160,9 +160,9 @@ func TestTUIHooksImpl_SelectCommand_WithOptionsNoSelector_ReturnsOriginal(t *tes
 
 	hooks := NewTUIHooks(nil)
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "work",
-		Options: []interfaces.CommandOption{
+		Options: []core.CommandOption{
 			{Name: "create", Description: "Create a new work item"},
 			{Name: "merge", Description: "Merge work items"},
 		},
@@ -191,9 +191,9 @@ func TestTUIHooksImpl_SelectCommand_WithOptionsAndMockSelector(t *testing.T) {
 
 	hooks := NewTUIHooks(nil)
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "work",
-		Options: []interfaces.CommandOption{
+		Options: []core.CommandOption{
 			{Name: "create", Description: "Create a new work item"},
 			{Name: "merge", Description: "Merge work items"},
 		},
@@ -221,9 +221,9 @@ func TestTUIHooksImpl_SelectCommand_MockSelectorCancels(t *testing.T) {
 
 	hooks := NewTUIHooks(nil)
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "work",
-		Options: []interfaces.CommandOption{
+		Options: []core.CommandOption{
 			{Name: "create", Description: "Create"},
 		},
 	}
@@ -249,9 +249,9 @@ func TestTUIHooksImpl_SelectCommand_MockSelectorWithArgs(t *testing.T) {
 
 	hooks := NewTUIHooks(nil)
 
-	req := interfaces.CommandSelectionRequest{
+	req := core.CommandSelectionRequest{
 		OriginalCommand: "work",
-		Options: []interfaces.CommandOption{
+		Options: []core.CommandOption{
 			{Name: "create", Description: "Create"},
 		},
 	}

@@ -2,6 +2,7 @@
 package artifacts
 
 import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/utils"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -78,7 +79,7 @@ func ValidateBuildArtifactsWithExpected(
 	// Validate each module using UoW manifests
 	for _, module := range moduleList {
 		// Check if any UoW manifests exist for this module
-		if !reader.HasManifests(workunit.ContextBuild, module) {
+		if !reader.HasManifests(core.ActionBuild, module) {
 			log.Debugf("Module %s: no UoW manifests found", module)
 			missingFrom = append(missingFrom, module)
 			missingDetails[module] = []string{"no build manifests found"}
@@ -86,7 +87,7 @@ func ValidateBuildArtifactsWithExpected(
 		}
 
 		// Get module view to validate all UoWs
-		moduleView, err := reader.GetModule(workunit.ContextBuild, module)
+		moduleView, err := reader.GetModule(core.ActionBuild, module)
 		if err != nil {
 			log.Debugf("Module %s: failed to read UoW manifests: %v", module, err)
 			missingFrom = append(missingFrom, module)
@@ -99,7 +100,7 @@ func ValidateBuildArtifactsWithExpected(
 		for _, comp := range moduleView.Components {
 			for _, uow := range comp.UoWs {
 				id := workunit.UnitID{
-					Context:   workunit.ContextBuild,
+					Action:    core.ActionBuild,
 					Module:    module,
 					Component: uow.Component,
 					Tool:      uow.Tool,
@@ -156,7 +157,7 @@ func ValidateBuildArtifactsWithExpected(
 			}
 
 			// Get all UoW manifests for this module
-			manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker)
+			manifests, err := reader.ListUoWs(core.ActionBuild, moniker)
 			if err != nil || len(manifests) == 0 {
 				// No manifests = skip (already checked for missing)
 				continue

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // LoadModuleTestView reads all test UoW manifests for a module
@@ -15,7 +15,7 @@ import (
 // and locating test output files via artifact references.
 func LoadModuleTestView(workspaceRoot, module string) (*TestModuleView, error) {
 	reader := coreoutput.NewReader(workspaceRoot)
-	uows, err := reader.ListUoWs(workunit.ContextTest, module)
+	uows, err := reader.ListUoWs(core.ActionTest, module)
 	if err != nil {
 		return nil, err
 	}

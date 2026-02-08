@@ -14,15 +14,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func init() {
-	h := &StructurizrRenderHandler{}
-	RegisterHandler(h)
-	tool.GlobalBuildBridge().RegisterNativeHandler(h)
+	tool.GlobalBuildBridge().RegisterNativeHandler(&StructurizrRenderHandler{})
 }
 
 // StructurizrRenderHandler renders Structurizr architecture diagrams to SVG.
@@ -36,7 +35,7 @@ func (h *StructurizrRenderHandler) Requirements() []string { return []string{"do
 func (h *StructurizrRenderHandler) IsContainer() bool     { return true }
 func (h *StructurizrRenderHandler) IsHostInstalled() bool  { return false }
 
-func (h *StructurizrRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *StructurizrRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -46,7 +45,7 @@ func (h *StructurizrRenderHandler) ValidateModule(module interfaces.ModuleContra
 	return nil
 }
 
-func (h *StructurizrRenderHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *StructurizrRenderHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"structurizr/"}
 }
 
@@ -68,11 +67,10 @@ type structurizrModuleWork struct {
 	ModuleName    string
 	WorkspacePath string // Absolute path to workspace.dsl
 	DSLHash       string
-	CacheHit      bool
 }
 
 func (h *StructurizrRenderHandler) Build(
-	module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
+	module core.ModuleContractPort, workspaceRoot, outputDir string,
 	logWriter io.Writer, opts BuildOptions,
 ) int {
 	moduleName := module.GetMoniker()
@@ -102,52 +100,74 @@ func (h *StructurizrRenderHandler) Build(
 		DSLHash:       dslHash,
 	}
 
-	// Ensure directories exist
-	_ = os.MkdirAll(cacheDir, 0o755)
-	_ = os.MkdirAll(outputStructurizrDir, 0o755)
-
-	// Check cache and render
+	// Discover items: either from existing cache (if DSL hash matches) or via rendering.
+	// Structurizr-cli discovers views during export, so the item list comes from either:
+	//   - Previous cached SVGs (if DSL hash matches AND not force-rebuild)
+	//   - Fresh render output (if DSL hash changed or force-rebuild)
+	var items []itemcache.Item
 	var allEntries []StructurizrIndexEntry
-	cacheHit := false
+	alreadyRendered := false
 
 	cachedSVGs := findCachedSVGs(cacheDir, mod.ModuleName, mod.DSLHash)
 	if len(cachedSVGs) > 0 && !opts.ForceRebuild {
-		// Cache hit - copy to output
+		// Items from cache -- all will be hits in itemcache.Execute
 		for _, svgPath := range cachedSVGs {
 			filename := filepath.Base(svgPath)
-			outputPath := filepath.Join(outputStructurizrDir, filename)
-			if cpErr := CopyFile(svgPath, outputPath); cpErr != nil {
-				Logln(logWriter, "Error copying cached SVG %s: %v", filename, cpErr)
-				return 1
-			}
 			viewKey := extractViewKeyFromCacheFilename(filename, mod.ModuleName)
+			items = append(items, itemcache.Item{
+				Key:           moduleName + ":" + viewKey,
+				ContentHash:   dslHash,
+				CacheFilename: filename,
+				OutputRelPath: filename,
+			})
 			allEntries = append(allEntries, StructurizrIndexEntry{
-				Module:      mod.ModuleName,
+				Module:      moduleName,
 				ViewKey:     viewKey,
-				DSLHash:     mod.DSLHash,
+				DSLHash:     dslHash,
 				SVGFilename: filename,
 			})
 		}
-		cacheHit = true
 	} else {
-		// Cache miss - render via two-step Docker pipeline
+		// Render to discover views, then build items from the output
 		Logln(logWriter, "Rendering %s (hash: %s)...", mod.ModuleName, mod.DSLHash)
 		views, renderErr := renderStructurizrModule(mod, workspaceRoot, specsDir, cacheDir, logWriter)
 		if renderErr != nil {
 			Logln(logWriter, "Error rendering %s: %v", mod.ModuleName, renderErr)
 			return 1
 		}
+		alreadyRendered = true
 
-		// Copy rendered SVGs to output
 		for _, view := range views {
-			outputPath := filepath.Join(outputStructurizrDir, view.SVGFilename)
-			cachePath := filepath.Join(cacheDir, view.SVGFilename)
-			if cpErr := CopyFile(cachePath, outputPath); cpErr != nil {
-				Logln(logWriter, "Error copying rendered SVG %s: %v", view.SVGFilename, cpErr)
-				return 1
-			}
+			items = append(items, itemcache.Item{
+				Key:           moduleName + ":" + view.ViewKey,
+				ContentHash:   dslHash,
+				CacheFilename: view.SVGFilename,
+				OutputRelPath: view.SVGFilename,
+			})
 			allEntries = append(allEntries, view)
 		}
+	}
+
+	// Execute with cache -- handles copy-to-output, manifest update, and pruning.
+	// For structurizr, the buildFunc is a no-op since rendering happened above when needed.
+	buildFunc := func(misses []itemcache.Item, dir string) (int, error) {
+		if alreadyRendered {
+			// Files were already rendered to cacheDir above
+			return len(misses), nil
+		}
+		// Shouldn't reach here (all items came from cache), but render if needed
+		views, renderErr := renderStructurizrModule(mod, workspaceRoot, specsDir, dir, logWriter)
+		if renderErr != nil {
+			return 0, renderErr
+		}
+		return len(views), nil
+	}
+
+	cache := itemcache.New(cacheDir)
+	result, err := cache.Execute(items, outputStructurizrDir, buildFunc, false)
+	if err != nil {
+		Logln(logWriter, "Error: %v", err)
+		return 1
 	}
 
 	// Write index manifest
@@ -156,7 +176,7 @@ func (h *StructurizrRenderHandler) Build(
 	manifestData, _ := json.MarshalIndent(manifest, "", "  ")
 	_ = os.WriteFile(manifestPath, manifestData, 0o644)
 
-	if cacheHit {
+	if result.CacheMisses == 0 {
 		Logln(logWriter, "Structurizr: cached (hash: %s)", mod.DSLHash)
 	} else {
 		Logln(logWriter, "Structurizr: rendered (hash: %s)", mod.DSLHash)
@@ -305,24 +325,5 @@ func renderStructurizrModule(mod structurizrModuleWork, workspaceRoot, specsDir,
 		})
 	}
 
-	// Remove old cached SVGs for this module (different hash)
-	removeOldCachedSVGs(cacheDir, mod.ModuleName, mod.DSLHash)
-
 	return entries, nil
-}
-
-// removeOldCachedSVGs removes cached SVGs for a module that don't match the current hash.
-func removeOldCachedSVGs(cacheDir, moduleName, currentHash string) {
-	pattern := filepath.Join(cacheDir, moduleName+"_*.svg")
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return
-	}
-
-	suffix := "_" + currentHash + ".svg"
-	for _, match := range matches {
-		if !strings.HasSuffix(match, suffix) {
-			os.Remove(match)
-		}
-	}
 }

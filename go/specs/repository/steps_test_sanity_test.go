@@ -13,8 +13,13 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/cucumber/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/core/testing"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+
+	// Register test type descriptors so discovery assigns correct types
+	// (e.g., tscucumber for TypeScript modules, gotest for Go unit tests).
+	_ "github.com/ready-to-release/eac/go/adapters/cucumber"
+	_ "github.com/ready-to-release/eac/go/adapters/gotest"
 )
 
 // Package-level cache for test discovery results.

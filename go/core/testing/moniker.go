@@ -6,20 +6,22 @@ import (
 	"strings"
 )
 
-// GenerateTestMoniker generates a unique moniker for a test based on its type
-// For godog: module_feature-name_scenario-name (kebab-case)
-// For gotest: module_test-file_TestName (kebab-case).
+// GenerateTestMoniker generates a unique moniker for a test based on its type.
+// Uses the adapter registry to determine moniker style:
+// - "feature" style: module_feature-name_scenario-name (for BDD/Gherkin tests)
+// - "file" style: module_test-file_TestName (for unit tests)
 func GenerateTestMoniker(testRef TestReference, module string) string {
-	if testRef.Type == "godog" {
-		return generateGodogMoniker(testRef, module)
+	style := getMonikerStyle(testRef.Type)
+	if style == "feature" {
+		return generateBDDMoniker(testRef, module)
 	}
 	return generateGoTestMoniker(testRef, module)
 }
 
-// generateGodogMoniker creates moniker for Gherkin/Godog tests
+// generateBDDMoniker creates moniker for BDD/Gherkin tests (godog, tscucumber).
 // Format: module_feature-name_scenario-name
 // Example: r2r-cli_cli-invocation_version-flag-displays-version.
-func generateGodogMoniker(testRef TestReference, module string) string {
+func generateBDDMoniker(testRef TestReference, module string) string {
 	// Extract feature name from file path
 	// Path: specs/r2r-cli/cli-invocation/specification.feature
 	// Feature: cli-invocation

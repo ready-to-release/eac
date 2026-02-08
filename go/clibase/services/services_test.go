@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +23,7 @@ func TestNew_Success(t *testing.T) {
 	// This test runs within the EAC repository itself, so workspace detection works.
 	// We use the real workspace root for integration-style testing.
 
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false, // Don't initialize tools for faster tests
 		DebugMode: false,
 	}
@@ -51,7 +51,7 @@ func TestNew_Success(t *testing.T) {
 
 func TestNew_DefaultOptions(t *testing.T) {
 	// Test with zero-value options - should use sensible defaults
-	opts := interfaces.SimpleServicesOptions{}
+	opts := core.SimpleServicesOptions{}
 
 	svc, err := New(opts)
 	require.NoError(t, err, "New() with default options should succeed")
@@ -69,7 +69,7 @@ func TestNew_DefaultOptions(t *testing.T) {
 // ============================================================================
 
 func TestServices_WorkspaceRoot(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -98,7 +98,7 @@ func TestServices_WorkspaceRoot(t *testing.T) {
 // ============================================================================
 
 func TestServices_ConfigRoot(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -127,7 +127,7 @@ func TestServices_ConfigRoot(t *testing.T) {
 // ============================================================================
 
 func TestServices_Config(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -161,7 +161,7 @@ func TestServices_Config(t *testing.T) {
 // ============================================================================
 
 func TestServices_Modules(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -201,7 +201,7 @@ func TestServices_Modules(t *testing.T) {
 // ============================================================================
 
 func TestServices_Tools_NotInitialized(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false, // Explicitly disable tool initialization
 	}
 
@@ -214,7 +214,7 @@ func TestServices_Tools_NotInitialized(t *testing.T) {
 }
 
 func TestServices_Tools_Initialized(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: true, // Enable tool initialization
 		DebugMode: false,
 	}
@@ -264,7 +264,7 @@ func TestServices_Close_CleanupOrder(t *testing.T) {
 	}
 
 	// Create services and add cleanup functions
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -290,7 +290,7 @@ func TestServices_Close_CleanupOrder(t *testing.T) {
 }
 
 func TestServices_Close_MultipleCallsSafe(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -319,7 +319,7 @@ func TestNew_OutsideWorkspace(t *testing.T) {
 	cleanup := workspace.ForTesting(t, tempDir)
 	defer cleanup()
 
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -347,7 +347,7 @@ func TestNew_OutsideWorkspace(t *testing.T) {
 // ============================================================================
 
 func TestServices_ConcurrentAccess(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -382,9 +382,9 @@ func TestServices_ConcurrentAccess(t *testing.T) {
 
 func TestServices_ImplementsSimpleServicesPort(t *testing.T) {
 	// Compile-time check that *Services implements SimpleServicesPort
-	// This is verified by the "var _ interfaces.SimpleServicesPort = (*Services)(nil)"
+	// This is verified by the "var _ core.SimpleServicesPort = (*Services)(nil)"
 	// declaration in services.go
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -393,7 +393,7 @@ func TestServices_ImplementsSimpleServicesPort(t *testing.T) {
 	defer svc.Close()
 
 	// Verify we can use it as the interface
-	var port interfaces.SimpleServicesPort = svc
+	var port core.SimpleServicesPort = svc
 	assert.NotNil(t, port)
 }
 
@@ -402,7 +402,7 @@ func TestServices_ImplementsSimpleServicesPort(t *testing.T) {
 // ============================================================================
 
 func TestNew_WithDebugMode(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 		DebugMode: true, // Enable debug mode
 	}
@@ -422,7 +422,7 @@ func TestNew_WithDebugMode(t *testing.T) {
 // ============================================================================
 
 func TestServices_Modules_FilterByComponent(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -449,7 +449,7 @@ func TestServices_Modules_FilterByComponent(t *testing.T) {
 // ============================================================================
 
 func TestServices_Modules_FindModulesForFile(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -483,7 +483,7 @@ func TestServices_Modules_FindModulesForFile(t *testing.T) {
 // ============================================================================
 
 func TestServices_Config_OptionalConfigs(t *testing.T) {
-	opts := interfaces.SimpleServicesOptions{
+	opts := core.SimpleServicesOptions{
 		InitTools: false,
 	}
 
@@ -523,53 +523,53 @@ func TestServices_Config_OptionalConfigs(t *testing.T) {
 func TestNew_Scenarios(t *testing.T) {
 	tests := []struct {
 		name      string
-		opts      interfaces.SimpleServicesOptions
+		opts      core.SimpleServicesOptions
 		wantErr   bool
-		checkFunc func(t *testing.T, svc interfaces.SimpleServicesPort)
+		checkFunc func(t *testing.T, svc core.SimpleServicesPort)
 	}{
 		{
 			name: "default options",
-			opts: interfaces.SimpleServicesOptions{},
-			checkFunc: func(t *testing.T, svc interfaces.SimpleServicesPort) {
+			opts: core.SimpleServicesOptions{},
+			checkFunc: func(t *testing.T, svc core.SimpleServicesPort) {
 				assert.NotEmpty(t, svc.WorkspaceRoot())
 				assert.Nil(t, svc.Tools(), "Tools should be nil with default options")
 			},
 		},
 		{
 			name: "InitTools=false",
-			opts: interfaces.SimpleServicesOptions{
+			opts: core.SimpleServicesOptions{
 				InitTools: false,
 			},
-			checkFunc: func(t *testing.T, svc interfaces.SimpleServicesPort) {
+			checkFunc: func(t *testing.T, svc core.SimpleServicesPort) {
 				assert.Nil(t, svc.Tools())
 			},
 		},
 		{
 			name: "InitTools=true",
-			opts: interfaces.SimpleServicesOptions{
+			opts: core.SimpleServicesOptions{
 				InitTools: true,
 			},
-			checkFunc: func(t *testing.T, svc interfaces.SimpleServicesPort) {
+			checkFunc: func(t *testing.T, svc core.SimpleServicesPort) {
 				// Tools may or may not be initialized depending on tool-config.yml
 				// Just ensure no panic
 			},
 		},
 		{
 			name: "DebugMode=true",
-			opts: interfaces.SimpleServicesOptions{
+			opts: core.SimpleServicesOptions{
 				DebugMode: true,
 			},
-			checkFunc: func(t *testing.T, svc interfaces.SimpleServicesPort) {
+			checkFunc: func(t *testing.T, svc core.SimpleServicesPort) {
 				assert.NotEmpty(t, svc.WorkspaceRoot())
 			},
 		},
 		{
 			name: "both options enabled",
-			opts: interfaces.SimpleServicesOptions{
+			opts: core.SimpleServicesOptions{
 				InitTools: true,
 				DebugMode: true,
 			},
-			checkFunc: func(t *testing.T, svc interfaces.SimpleServicesPort) {
+			checkFunc: func(t *testing.T, svc core.SimpleServicesPort) {
 				assert.NotEmpty(t, svc.WorkspaceRoot())
 				assert.NotNil(t, svc.Config())
 				assert.NotNil(t, svc.Modules())

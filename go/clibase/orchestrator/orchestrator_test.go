@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -27,8 +28,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 	config := Config{
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
-		LogFileName:          "test.log",
-		ActionVerb:           "processing",
+		ActionType:           core.ActionTest,
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}
@@ -81,8 +81,7 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 	config := Config{
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
-		LogFileName:          "test.log",
-		ActionVerb:           "processing",
+		ActionType:           core.ActionTest,
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}
@@ -328,8 +327,7 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 	config := Config{
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
-		LogFileName:          "test.log",
-		ActionVerb:           "testing",
+		ActionType:           core.ActionTest,
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}

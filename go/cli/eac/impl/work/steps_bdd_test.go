@@ -11,12 +11,12 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // registerSteps registers step definitions for work command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
-	// Output verification steps are registered in common steps (go/godog/steps.go)
+	// Output verification steps are registered in common steps (go/adapters/godog/steps.go)
 	// Do not register `I see "..."` or `I see error "..."` here to avoid ambiguity
 
 	// Workspace setup steps

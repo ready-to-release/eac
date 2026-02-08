@@ -2,7 +2,7 @@
 // Short: Retrieve repository data in structured format
 // IsParent: true
 // Group.Configuration: config
-// Group.Repository Structure: modules, components, units, dependencies, execution-order
+// Group.Repository Structure: modules, components, units, dependencies
 // Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local, ghosts
 // Group.CI/CD: ci-dispatch, ci-workflows
 // Group.Build: build-times, build-deps, artifacts

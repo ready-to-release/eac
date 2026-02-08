@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/workunit"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +15,7 @@ func TestUoWBuildCacheVerifier_NotInCachedSet(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -31,7 +32,7 @@ func TestUoWBuildCacheVerifier_EmptyMaps(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -52,7 +53,7 @@ func TestUoWBuildCacheVerifier_UoWNotCached(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -74,7 +75,7 @@ func TestUoWBuildCacheVerifier_FallbackToModuleCache(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -100,7 +101,7 @@ func TestUoWBuildCacheVerifier_CachedNoManifest(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -119,7 +120,7 @@ func TestUoWBuildCacheVerifier_ContextCancelled(t *testing.T) {
 
 	spec := workunit.UnitSpec{
 		ID: workunit.UnitID{
-			Context:   workunit.ContextBuild,
+			Action:    core.ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",

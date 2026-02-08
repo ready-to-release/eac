@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // mockPackageVersion represents a mock container image version.

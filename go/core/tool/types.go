@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // ToolResources defines resource requirements for a tool.
@@ -54,25 +56,14 @@ const (
 	ToolTypeContainer ToolType = "container"
 )
 
-// OperationType represents the type of operation.
-type OperationType string
-
-const (
-	OperationBuild OperationType = "build"
-	OperationLint  OperationType = "lint"
-	OperationScan  OperationType = "scan"
-	OperationTest  OperationType = "test"
-	OperationServe OperationType = "serve"
-)
-
-// AllOperations returns all valid operation types.
-func AllOperations() []OperationType {
-	return []OperationType{
-		OperationBuild,
-		OperationLint,
-		OperationScan,
-		OperationTest,
-		OperationServe,
+// AllOperations returns all valid action types.
+func AllOperations() []core.ActionType {
+	return []core.ActionType{
+		core.ActionBuild,
+		core.ActionLint,
+		core.ActionScan,
+		core.ActionTest,
+		core.ActionServe,
 	}
 }
 
@@ -137,7 +128,7 @@ type ToolDefinition struct {
 	// Output handling
 	OutputFormat string `yaml:"output_format,omitempty" json:"output_format,omitempty"` // "json", "text", "stream"
 
-	// Serve-specific configuration (only for OperationServe)
+	// Serve-specific configuration (only for core.ActionServe)
 	Serve *ServeConfig `yaml:"serve,omitempty" json:"serve,omitempty"`
 }
 
@@ -573,7 +564,7 @@ func (m *MountConfig) ResolvePlaceholders(placeholders map[string]string) MountC
 }
 
 // ServeConfig extends ToolDefinition for serve operations.
-// These fields only apply when the tool is used for OperationServe.
+// These fields only apply when the tool is used for core.ActionServe.
 type ServeConfig struct {
 	// Port Configuration
 	ContainerPort int    `yaml:"container_port,omitempty" json:"container_port,omitempty"`   // Port inside container
@@ -650,17 +641,17 @@ type ToolAssignment struct {
 // GetToolID returns the tool ID for a given operation.
 // For operations that support multiple tools (linters, scanners, servers),
 // this returns the primary tool.
-func (a *ToolAssignment) GetToolID(op OperationType) string {
+func (a *ToolAssignment) GetToolID(op core.ActionType) string {
 	switch op {
-	case OperationBuild:
+	case core.ActionBuild:
 		return a.Builder
-	case OperationLint:
+	case core.ActionLint:
 		return a.Linter
-	case OperationScan:
+	case core.ActionScan:
 		return a.Scanner
-	case OperationTest:
+	case core.ActionTest:
 		return a.Tester
-	case OperationServe:
+	case core.ActionServe:
 		return a.Server
 	default:
 		return ""
@@ -669,31 +660,31 @@ func (a *ToolAssignment) GetToolID(op OperationType) string {
 
 // GetToolIDs returns all tool IDs for a given operation.
 // For single-tool operations, returns a slice with one element.
-func (a *ToolAssignment) GetToolIDs(op OperationType) []string {
+func (a *ToolAssignment) GetToolIDs(op core.ActionType) []string {
 	switch op {
-	case OperationBuild:
+	case core.ActionBuild:
 		if a.Builder != "" {
 			return []string{a.Builder}
 		}
-	case OperationLint:
+	case core.ActionLint:
 		if len(a.Linters) > 0 {
 			return a.Linters
 		}
 		if a.Linter != "" {
 			return []string{a.Linter}
 		}
-	case OperationScan:
+	case core.ActionScan:
 		if len(a.Scanners) > 0 {
 			return a.Scanners
 		}
 		if a.Scanner != "" {
 			return []string{a.Scanner}
 		}
-	case OperationTest:
+	case core.ActionTest:
 		if a.Tester != "" {
 			return []string{a.Tester}
 		}
-	case OperationServe:
+	case core.ActionServe:
 		if len(a.Servers) > 0 {
 			return a.Servers
 		}
@@ -731,7 +722,7 @@ type ExecutionContext struct {
 
 	// Input context
 	Files     []string      // Specific files (for lint)
-	Operation OperationType // What operation is being performed
+	Operation core.ActionType // What operation is being performed
 
 	// Runtime overrides
 	EnvOverrides  map[string]string // Additional env vars

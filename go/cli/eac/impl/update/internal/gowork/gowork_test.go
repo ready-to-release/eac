@@ -12,8 +12,7 @@ func TestParseModules(t *testing.T) {
 	content := `go 1.24.4
 
 use (
-	./contracts
-	./contracts/core/0.1.0/interfaces
+	./contracts/core/0.1.0
 	./go/cli/eac
 	./go/core
 )
@@ -28,8 +27,7 @@ use (
 	}
 
 	expected := []string{
-		filepath.Join(dir, "contracts"),
-		filepath.Join(dir, "contracts", "core", "0.1.0", "interfaces"),
+		filepath.Join(dir, "contracts", "core", "0.1.0"),
 		filepath.Join(dir, "go", "cli", "eac"),
 		filepath.Join(dir, "go", "core"),
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/cucumber/godog"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/create/spec" // register create spec
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 func TestFeatures(t *testing.T) {

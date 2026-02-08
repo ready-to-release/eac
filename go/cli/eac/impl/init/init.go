@@ -65,41 +65,22 @@ func init() {
 
 var log = logging.C()
 
-// gitRepo holds the git repository instance for git operations.
-// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var (
-	gitRepo git.GitRepository
-	gitMgr  *git.RepositoryManager
-)
-
-// initGitManager initializes the git repository manager if needed.
-func initGitManager() {
-	if gitMgr == nil {
-		gitMgr = git.NewManager(logging.C().Zap())
-	}
-}
+// gitRepoProvider provides lazy-initialized git repository with test injection support.
+var gitRepoProvider = &git.LazyRepo{}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	if gitRepo != nil {
-		return gitRepo, nil
-	}
-	repo, err := gitMgr.Open(workspaceRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %w", err)
-	}
-	return repo, nil
+	return gitRepoProvider.Get(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
 func SetGitRepo(repo git.GitRepository) {
-	gitRepo = repo
+	gitRepoProvider.Set(repo)
 }
 
 // ResetGitRepo clears the repository for test cleanup.
 func ResetGitRepo() {
-	gitRepo = nil
-	gitMgr = nil
+	gitRepoProvider.Reset()
 }
 
 // Init initializes EAC project configuration.

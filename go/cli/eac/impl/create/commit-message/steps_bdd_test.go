@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	eacgodog "github.com/ready-to-release/eac/go/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // createCommitMessageTestState holds state for create commit-message tests.

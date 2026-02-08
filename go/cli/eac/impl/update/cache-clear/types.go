@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/clibase/fileutil"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
@@ -14,17 +15,14 @@ import (
 type ClearMode int
 
 const (
-	ClearStateFiles ClearMode = iota // Only delete state.json files (recursive)
-	ClearContents                    // Delete all contents in the directory
-	ClearDocker                      // Execute docker prune command
-	ClearSemaphore                   // Delete semaphore state files (capacity coordination)
+	ClearContents  ClearMode = iota // Delete all contents in the directory
+	ClearDocker                     // Execute docker prune command
+	ClearSemaphore                  // Delete semaphore state files (capacity coordination)
 )
 
 // String returns a string representation of ClearMode.
 func (m ClearMode) String() string {
 	switch m {
-	case ClearStateFiles:
-		return "state-files"
 	case ClearContents:
 		return "contents"
 	case ClearDocker:
@@ -73,45 +71,72 @@ func (r ClearResult) HasErrors() bool {
 // GetAllClearDirs returns all known cache directories.
 func GetAllClearDirs() []ClearDir {
 	return []ClearDir{
-		// State directories (ClearStateFiles mode - only delete state.json)
+		// State: incremental UoW state (build/lint/test/scan state.json files)
+		// All state.json files live under .cache/eac/incremental/.
 		{
-			RelPath:     filepath.Join(paths.OutDir, paths.BuildDir),
-			Description: "build state",
-			Mode:        ClearStateFiles,
+			RelPath:     filepath.Join(paths.EACCacheRoot, "incremental"),
+			Description: "incremental state (build/lint/test/scan)",
+			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeState,
 		},
+		// State: build acceleration
 		{
-			RelPath:     filepath.Join(paths.OutDir, paths.LintDir),
-			Description: "lint state",
-			Mode:        ClearStateFiles,
+			RelPath:     filepath.Join(paths.EACCacheRoot, "build"),
+			Description: "build acceleration cache",
+			Mode:        ClearContents,
+			Level:       cache.LevelLocal,
+			Type:        cache.TypeState,
+		},
+		// State: UoW manifests in out/ directories (build/test/lint/scan results)
+		// These contain input_hash, executed_at, and artifact records that drive
+		// incremental change detection. Without clearing these, cache-clear has
+		// no effect because the next run still sees valid manifests.
+		{
+			RelPath:     filepath.Join(paths.OutDir, paths.BuildDir),
+			Description: "build output manifests",
+			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeState,
 		},
 		{
 			RelPath:     filepath.Join(paths.OutDir, paths.TestDir),
-			Description: "test state",
-			Mode:        ClearStateFiles,
-			Level:       cache.LevelLocal,
-			Type:        cache.TypeState,
-		},
-		{
-			RelPath:     filepath.Join(paths.OutDir, "cache", "build-state"),
-			Description: "book build cache",
+			Description: "test output manifests",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeState,
 		},
 		{
-			RelPath:     filepath.Join(paths.OutDir, "cache", "preprocess-state"),
-			Description: "preprocessing cache",
+			RelPath:     filepath.Join(paths.OutDir, paths.LintDir),
+			Description: "lint output manifests",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeState,
+		},
+		{
+			RelPath:     filepath.Join(paths.OutDir, paths.SecurityDir),
+			Description: "scan output manifests",
+			Mode:        ClearContents,
+			Level:       cache.LevelLocal,
+			Type:        cache.TypeState,
+		},
+		{
+			RelPath:     filepath.Join(paths.EACCacheRoot, "staging"),
+			Description: "staging cache (preprocessed docs with renders)",
+			Mode:        ClearContents,
+			Level:       cache.LevelLocal,
+			Type:        cache.TypeAsset,
+		},
+		{
+			RelPath:     filepath.Join(paths.EACCacheRoot, "pdf-screenshots"),
+			Description: "PDF screenshot cache",
+			Mode:        ClearContents,
+			Level:       cache.LevelLocal,
+			Type:        cache.TypeAsset,
 		},
 		// Semaphore files (capacity coordination - can cause test hangs if stale)
 		{
-			RelPath:     paths.OutDir, // Directory containing semaphore files
+			RelPath:     filepath.Join(paths.EACCacheRoot, "semaphores"), // Directory containing semaphore files
 			Description: "capacity semaphore state",
 			Mode:        ClearSemaphore,
 			Level:       cache.LevelLocal,
@@ -143,8 +168,8 @@ func GetAllClearDirs() []ClearDir {
 
 		// Work directories (ClearContents mode - delete everything)
 		{
-			RelPath:     filepath.Join(".cache", "npm", "work"),
-			Description: "npm work directories",
+			RelPath:     filepath.Join(paths.EACCacheRoot, "npm"),
+			Description: "npm work directories and download cache",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeWork,
@@ -220,10 +245,6 @@ func ClearTargets(targets []CacheTarget, dryRun, verbose bool) ClearResult {
 
 	for _, target := range targets {
 		switch target.Dir.Mode {
-		case ClearStateFiles:
-			count, bytes := clearStateFilesInDir(target.FullPath, dryRun)
-			result.DeletedCount += count
-			result.DeletedBytes += bytes
 		case ClearContents:
 			count, bytes := clearDirectoryContents(target.FullPath, dryRun)
 			result.DeletedCount += count
@@ -236,34 +257,6 @@ func ClearTargets(targets []CacheTarget, dryRun, verbose bool) ClearResult {
 	}
 
 	return result
-}
-
-// clearStateFilesInDir recursively finds and deletes all state.json files.
-func clearStateFilesInDir(rootPath string, dryRun bool) (int, int64) {
-	deleted := 0
-	var bytes int64
-
-	_ = filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if info.Name() == "state.json" {
-			bytes += info.Size()
-			if dryRun {
-				deleted++
-			} else {
-				if err := os.Remove(path); err == nil {
-					deleted++
-				}
-			}
-		}
-		return nil
-	})
-
-	return deleted, bytes
 }
 
 // clearDirectoryContents deletes all entries in a directory.
@@ -298,7 +291,7 @@ func clearDirectoryContents(fullPath string, dryRun bool) (int, int64) {
 		if dryRun {
 			deleted++
 		} else {
-			if err := os.RemoveAll(entryPath); err == nil {
+			if err := fileutil.RemoveAllWithRetry(entryPath); err == nil {
 				deleted++
 			}
 		}

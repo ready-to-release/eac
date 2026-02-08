@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
@@ -184,7 +185,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 		switch framework {
 		case FrameworkBuild:
 			if typeConfig != nil && typeConfig.IsBuildable() {
-				unit := createUnitInfo(mod, compName, compType, typeConfig.GetBuilders()[0], workunit.ContextBuild, workspaceRoot, stateMgr)
+				unit := createUnitInfo(mod, compName, compType, typeConfig.GetBuilders()[0], core.ActionBuild, workspaceRoot, stateMgr)
 				units = append(units, unit)
 			} else {
 				skipped = append(skipped, &SkippedComponent{
@@ -201,7 +202,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 				providers := cfg.LintProviders.GetProvidersForComponentType(compType)
 				if len(providers) > 0 {
 					for _, provider := range providers {
-						unit := createUnitInfo(mod, compName, compType, provider, workunit.ContextLint, workspaceRoot, stateMgr)
+						unit := createUnitInfo(mod, compName, compType, provider, core.ActionLint, workspaceRoot, stateMgr)
 						units = append(units, unit)
 					}
 				} else {
@@ -226,7 +227,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 		case FrameworkScan:
 			if typeConfig != nil && typeConfig.IsScannable() {
 				for _, scanner := range typeConfig.GetScanners() {
-					unit := createUnitInfo(mod, compName, compType, scanner, workunit.ContextScan, workspaceRoot, stateMgr)
+					unit := createUnitInfo(mod, compName, compType, scanner, core.ActionScan, workspaceRoot, stateMgr)
 					unit.Container = true // All scanners run in containers
 					unit.HostInstalled = false
 					units = append(units, unit)
@@ -244,7 +245,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 		case FrameworkTest:
 			// Check if component type is testable
 			if typeConfig != nil && typeConfig.IsTestable() {
-				unit := createUnitInfo(mod, compName, compType, "test", workunit.ContextTest, workspaceRoot, stateMgr)
+				unit := createUnitInfo(mod, compName, compType, "test", core.ActionTest, workspaceRoot, stateMgr)
 				units = append(units, unit)
 			}
 			// Note: non-testable components are not reported as skipped since
@@ -256,9 +257,9 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 }
 
 // createUnitInfo creates a UnitInfo for a component.
-func createUnitInfo(mod *modules.ModuleContract, compName, compType, tool string, context workunit.Context, workspaceRoot string, stateMgr *workunit.StateManager) *UnitInfo {
+func createUnitInfo(mod *modules.ModuleContract, compName, compType, tool string, action core.ActionType, workspaceRoot string, stateMgr *workunit.StateManager) *UnitInfo {
 	unitID := workunit.UnitID{
-		Context:   context,
+		Action:    action,
 		Module:    mod.Moniker,
 		Component: compName,
 		Tool:      tool,

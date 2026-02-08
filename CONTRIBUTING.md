@@ -35,7 +35,7 @@ For detailed command usage, see the [Command Reference](docs/how-to-guides/eac/c
 
 This repository is optimized for AI-assisted development.
 
-- If you are using **Junie**, refer to `junie/README.md` for specific agent rules.
+- If you are using **Junie**, refer to `.junie/README.md` for specific agent rules.
 - If you are using **Claude Code**, we have specialized agents and skills in `.claude/`.
 
 ## 📮 Pull Requests & Commits

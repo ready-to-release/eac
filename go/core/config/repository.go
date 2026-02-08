@@ -3,8 +3,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -37,6 +39,14 @@ type RepositoryConfig struct {
 
 	// Container registry configurations for cleanup policies
 	Registries RegistriesConfig `yaml:"registries,omitempty"`
+
+	// DisplayOrder is the precomputed display ordering for modules and components.
+	// Populated during config loading after module groups and component types are resolved.
+	DisplayOrder *DisplayOrder `yaml:"-"`
+
+	// baselineModules records modules that declared depends_on: [root] before stripping.
+	// Used internally by computeDisplayOrder to assign depth -1.
+	baselineModules map[string]bool `yaml:"-"`
 }
 
 // RepositorySettings holds repository-level configuration.
@@ -257,9 +267,10 @@ func (v VersioningConfig) IsUnrestricted() bool {
 
 // PathsConfig defines repository-specific directory structures.
 type PathsConfig struct {
-	SpecsRoot string    `yaml:"specs_root"`
-	Templates string    `yaml:"templates"`
-	Out       OutConfig `yaml:"out"`
+	SpecsRoot      string    `yaml:"specs_root"`
+	ContainersRoot string    `yaml:"containers_root"`
+	Templates      string    `yaml:"templates"`
+	Out            OutConfig `yaml:"out"`
 }
 
 // OutConfig defines output directory structure.
@@ -290,6 +301,9 @@ type ConventionsConfig struct {
 	TemplateSpecsDir       string `yaml:"template_specs_dir"`
 	TemplateReportsDir     string `yaml:"template_reports_dir"`
 	TemplateRiskCatalogDir string `yaml:"template_risk_catalog_dir"`
+	DesignDir              string                   `yaml:"design_dir"`
+	WorkspaceDSL           string                   `yaml:"workspace_dsl"`
+	ComponentDiscovery     []ComponentDiscoveryRule  `yaml:"component_discovery,omitempty"`
 }
 
 // loadRepositoryConfigUnmerged loads repository configuration from user's YAML file only.
@@ -314,16 +328,19 @@ func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 	return &cfg, nil
 }
 
-// TestImplPath returns the full path to a module's gherkin-steps component.
-// Returns empty string if module not found or has no gherkin-steps component.
+// TestImplPath returns the full path to a module's BDD test implementation.
+// Checks for known BDD runner components (godog, cucumberjs).
+// Returns empty string if module not found or has no BDD runner component.
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
 		return ""
 	}
 
-	if comp, ok := module.Components["gherkin-steps"]; ok && comp != nil && comp.Root != "" {
-		return comp.Root
+	for _, compName := range []string{"godog", "cucumberjs"} {
+		if comp, ok := module.Components[compName]; ok && comp != nil && comp.Root != "" {
+			return comp.Root
+		}
 	}
 
 	return ""
@@ -561,6 +578,17 @@ func (c *RepositoryConfig) SpecsFeaturePath(moduleName, featureName string) stri
 	return c.SpecsPath(moduleName) + "/" + featureName + "/" + c.Conventions.Specification
 }
 
+// ReleasePathAbs returns the absolute path to the release directory.
+// The release directory is conventionally at the workspace root under "release/".
+func (c *RepositoryConfig) ReleasePathAbs(workspaceRoot string) string {
+	return filepath.Join(workspaceRoot, "release")
+}
+
+// ReleaseModulePathAbs returns the absolute path to a module's release directory.
+func (c *RepositoryConfig) ReleaseModulePathAbs(workspaceRoot, moniker string) string {
+	return filepath.Join(workspaceRoot, "release", moniker)
+}
+
 // SpecsFeaturePathAbs returns the absolute path to a feature specification file.
 func (c *RepositoryConfig) SpecsFeaturePathAbs(workspaceRoot, moduleName, featureName string) string {
 	return filepath.Join(workspaceRoot, c.SpecsFeaturePath(moduleName, featureName))
@@ -597,36 +625,28 @@ func (c *RepositoryConfig) AllMonikers() []string {
 // ExpandModuleTemplates expands module templates for all modules that reference them.
 // This should be called after loading and merging configs but before ApplyComponentDefaults.
 // Also discovers container modules from containers/*/Dockerfile that aren't explicitly defined.
-func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
-	// Load module templates from defaults
-	templatesConfig, err := LoadModuleTemplates(repoRoot)
-	if err != nil && err != ErrNoDefaults {
-		return err
-	}
-
-	// Get templates map (empty if no templates file)
+// The blueprints parameter provides templates, blueprints, and artifact matrices.
+func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string, blueprints *BlueprintsConfig) error {
+	// Get templates and named discovery rules from config
 	var templates map[string]ModuleTemplate
-	if templatesConfig != nil {
-		templates = templatesConfig.Templates
+	var namedRules map[string]ComponentDiscoveryRule
+	if blueprints != nil {
+		templates = blueprints.Templates
+		namedRules = blueprints.DiscoveryRules
 	}
 
-	// Load artifact matrices from the same defaults file
-	var matrices *ArtifactMatricesConfig
-	data, matrixErr := loadDefaultFile(repoRoot, "module-templates.yml")
-	if matrixErr == nil {
-		matrices, _ = LoadArtifactMatrices(data)
-	}
-
-	// Load discovery conventions
-	conventions := LoadDiscoveryConventions(repoRoot)
+	// Read discovery rules from merged config
+	discoveryRules := c.Conventions.ComponentDiscovery
 
 	// Get owner from repository config
 	owner := c.Repository.Remote.Owner
 
+	// DiscoverContainerModules defaults to "containers" if empty
+	containersRoot := c.Paths.ContainersRoot
+
 	// Collect claimed namespaces to prevent duplicate container auto-discovery.
-	// Includes module monikers and container directory names used as component roots.
-	// Example: oci-tools module with component root "containers/pdf-oci" claims
-	// "pdf-oci", preventing auto-discovery of a separate pdf-oci module.
+	// Includes module monikers, container directory names used as component roots,
+	// and all containers that will be discovered by discover_components: containers.
 	claimedNamespaces := make(map[string]bool)
 	for _, m := range c.Modules {
 		claimedNamespaces[m.Moniker] = true
@@ -638,11 +658,15 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 				claimedNamespaces[name] = true
 			}
 		}
+		// Pre-claim all containers that will be discovered as components
+		if m.DiscoverComponents != nil && m.DiscoverComponents.Type == "containers" {
+			preClaimContainerNames(claimedNamespaces, repoRoot, containersRoot)
+		}
 	}
 
 	// Discover container modules not explicitly defined (mono repos only)
 	if c.Repository.Type == "mono" {
-		discoveredContainers := DiscoverContainerModules(repoRoot, claimedNamespaces)
+		discoveredContainers := DiscoverContainerModules(repoRoot, claimedNamespaces, containersRoot)
 		if len(discoveredContainers) > 0 {
 			c.Modules = append(c.Modules, discoveredContainers...)
 		}
@@ -650,15 +674,43 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string) error {
 
 	// Expand each module (including discovered ones)
 	for i := range c.Modules {
-		if err := ExpandModuleFromTemplate(&c.Modules[i], templates, conventions, repoRoot, owner); err != nil {
+		// Build per-module discovery variables
+		discoveryVars := buildDiscoveryVars(&c.Modules[i], c)
+		discoveryVars["owner"] = owner
+
+		if err := ExpandModuleFromTemplate(&c.Modules[i], templates, discoveryRules, repoRoot, discoveryVars, namedRules); err != nil {
 			return err
 		}
 
+		// Discover container components for modules with discover_components: containers
+		if c.Modules[i].DiscoverComponents != nil && c.Modules[i].DiscoverComponents.Type == "containers" {
+			DiscoverContainerComponents(&c.Modules[i], repoRoot, containersRoot, owner)
+		}
+
 		// Expand artifact matrix reference into Go component artifacts
-		expandArtifactMatrixForModule(&c.Modules[i], matrices)
+		expandArtifactMatrixForModule(&c.Modules[i], blueprints)
 	}
 
 	return nil
+}
+
+// preClaimContainerNames scans the containers directory and adds all container
+// directory names to the claimed set. This prevents DiscoverContainerModules from
+// creating top-level modules for containers that will be discovered as components.
+func preClaimContainerNames(claimed map[string]bool, repoRoot, containersRoot string) {
+	if containersRoot == "" {
+		containersRoot = "containers"
+	}
+	pattern := filepath.Join(repoRoot, containersRoot, "*", "Dockerfile")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return
+	}
+	for _, m := range matches {
+		dir := filepath.Dir(m)
+		name := filepath.Base(dir)
+		claimed[name] = true
+	}
 }
 
 // extractContainerName returns the container directory name from a component root
@@ -674,6 +726,123 @@ func extractContainerName(root string) string {
 		name = name[:idx]
 	}
 	return name
+}
+
+// RootDependency is a reserved sentinel value for depends_on.
+// Modules that declare depends_on: [root] are root-level baseline tooling.
+// When "root" is in depends_on it must be the only entry; it is stripped during
+// loading so the module ends up with no actual dependencies (Layer 0).
+const RootDependency = "root"
+
+// expandModuleGroups resolves group names in depends_on to individual module monikers.
+// Called after all modules are loaded but before template expansion.
+//
+// Resolution rules:
+//  1. The reserved sentinel "root" is validated and stripped first
+//  2. depends_on entries are resolved in order: exact moniker match first, then group match
+//  3. A group name MUST NOT collide with any module moniker
+//  4. Group expansion replaces group names with individual module monikers
+//  5. Self-references are excluded (a module won't depend on itself via group expansion)
+//  6. Duplicates are removed while preserving order
+func (c *RepositoryConfig) expandModuleGroups() error {
+	// Validate and strip the "root" sentinel before group expansion
+	if err := c.validateAndStripRoot(); err != nil {
+		return err
+	}
+
+	// Build moniker set for collision detection
+	monikers := make(map[string]bool, len(c.Modules))
+	for _, m := range c.Modules {
+		monikers[m.Moniker] = true
+	}
+
+	// Build group -> []moniker index (preserving declaration order)
+	groups := make(map[string][]string)
+	for _, m := range c.Modules {
+		if m.ModuleGroup != "" {
+			groups[m.ModuleGroup] = append(groups[m.ModuleGroup], m.Moniker)
+		}
+	}
+
+	// Validate: group names must not collide with module monikers
+	for groupName := range groups {
+		if monikers[groupName] {
+			return fmt.Errorf("module_group %q collides with module moniker %q", groupName, groupName)
+		}
+	}
+
+	// Expand depends_on for each module
+	for i := range c.Modules {
+		if len(c.Modules[i].DependsOn) == 0 {
+			continue
+		}
+
+		var expanded []string
+		seen := make(map[string]bool)
+		for _, dep := range c.Modules[i].DependsOn {
+			if members, isGroup := groups[dep]; isGroup {
+				for _, m := range members {
+					// Skip self-references
+					if m == c.Modules[i].Moniker {
+						continue
+					}
+					if !seen[m] {
+						expanded = append(expanded, m)
+						seen[m] = true
+					}
+				}
+			} else if !seen[dep] {
+				expanded = append(expanded, dep)
+				seen[dep] = true
+			}
+		}
+		c.Modules[i].DependsOn = expanded
+	}
+
+	return nil
+}
+
+// validateAndStripRoot validates the "root" sentinel in depends_on.
+// Rules:
+//   - "root" must be the only entry if present (cannot mix with real dependencies)
+//   - "root" is not a real module; it is stripped so the module has no dependencies
+//   - No module may use "root" as its moniker
+func (c *RepositoryConfig) validateAndStripRoot() error {
+	// Validate: "root" must not be used as a module moniker
+	for _, m := range c.Modules {
+		if m.Moniker == RootDependency {
+			return fmt.Errorf("module moniker %q is reserved; use it in depends_on to mark root-level modules", RootDependency)
+		}
+	}
+
+	c.baselineModules = make(map[string]bool)
+
+	for i := range c.Modules {
+		deps := c.Modules[i].DependsOn
+		if len(deps) == 0 {
+			continue
+		}
+
+		if !slices.Contains(deps, RootDependency) {
+			continue
+		}
+
+		// "root" found — it must be the only entry
+		if len(deps) > 1 {
+			return fmt.Errorf(
+				"module %q has depends_on: %v; when %q is specified it must be the only entry",
+				c.Modules[i].Moniker, deps, RootDependency,
+			)
+		}
+
+		// Record as baseline before stripping
+		c.baselineModules[c.Modules[i].Moniker] = true
+
+		// Strip "root" — module becomes dependency-free (Layer 0)
+		c.Modules[i].DependsOn = []string{}
+	}
+
+	return nil
 }
 
 // EffectiveParallelism returns the maximum number of parallel workers

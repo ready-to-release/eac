@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -28,7 +29,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/hash"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -141,7 +141,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 
 	for _, moniker := range monikers {
 		// Get all UoW manifests for this module
-		manifests, err := reader.ListUoWs(workunit.ContextBuild, moniker)
+		manifests, err := reader.ListUoWs(core.ActionBuild, moniker)
 		if err != nil || len(manifests) == 0 {
 			// No manifests = module needs build
 			changedModules = append(changedModules, moniker)

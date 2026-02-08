@@ -11,36 +11,36 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 
-	testing "github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// TestingConfig implements testing.TestConfigPort.
+// TestingConfig implements core.TestConfigPort.
 // It loads test suite definitions and tag configurations from the eac-testing contract.
 type TestingConfig struct {
-	suites      map[string]*testing.SuiteDefinition
+	suites      map[string]*core.SuiteDefinition
 	suiteOrder  []string // Preserve order from YAML
-	tags        map[string]*testing.TagDefinition
-	tagTypes    map[string]testing.TagType
-	skipReasons []testing.SkipReason
+	tags        map[string]*core.TagDefinition
+	tagTypes    map[string]core.TagType
+	skipReasons []core.SkipReason
 
 	// Compiled patterns for efficient validation (for parameterized tags)
 	compiledPatterns map[string]*regexp.Regexp
 	// Tag lookup by exact name for quick access (excludes parameterized templates)
-	tagLookup map[string]*testing.TagDefinition
+	tagLookup map[string]*core.TagDefinition
 }
 
 // Verify TestingConfig implements TestConfigPort.
-var _ testing.TestConfigPort = (*TestingConfig)(nil)
+var _ core.TestConfigPort = (*TestingConfig)(nil)
 
 // LoadTestingConfig loads the testing configuration from the eac-testing contract.
 // It loads both suites.yml and tags.yml, merging defaults with user overrides.
 func LoadTestingConfig(repoRoot, configRoot string) (*TestingConfig, error) {
 	cfg := &TestingConfig{
-		suites:           make(map[string]*testing.SuiteDefinition),
-		tags:             make(map[string]*testing.TagDefinition),
-		tagTypes:         make(map[string]testing.TagType),
+		suites:           make(map[string]*core.SuiteDefinition),
+		tags:             make(map[string]*core.TagDefinition),
+		tagTypes:         make(map[string]core.TagType),
 		compiledPatterns: make(map[string]*regexp.Regexp),
-		tagLookup:        make(map[string]*testing.TagDefinition),
+		tagLookup:        make(map[string]*core.TagDefinition),
 	}
 
 	// Load suites
@@ -84,7 +84,7 @@ func (c *TestingConfig) initialize() error {
 // loadSuites loads suite definitions from suites.yml.
 func (c *TestingConfig) loadSuites(repoRoot, configRoot string) error {
 	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "testing", paths.DefaultsVersion, "defaults", "suites.yml")
+	defaultPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "test-suites.yml")
 	defaults, err := loadSuitesFile(defaultPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -119,7 +119,7 @@ func (c *TestingConfig) loadSuites(repoRoot, configRoot string) error {
 // loadTags loads tag definitions from tags.yml.
 func (c *TestingConfig) loadTags(repoRoot, configRoot string) error {
 	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "testing", paths.DefaultsVersion, "defaults", "tags.yml")
+	defaultPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "testing-tags.yml")
 	defaults, err := loadTagsFile(defaultPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -158,7 +158,7 @@ func (c *TestingConfig) loadTags(repoRoot, configRoot string) error {
 }
 
 // GetSuite returns a suite definition by moniker.
-func (c *TestingConfig) GetSuite(moniker string) (testing.SuitePort, bool) {
+func (c *TestingConfig) GetSuite(moniker string) (core.SuitePort, bool) {
 	suite, ok := c.suites[moniker]
 	if !ok {
 		return nil, false
@@ -185,7 +185,7 @@ func (c *TestingConfig) GetDefaultSuites() []string {
 
 // GetTag returns a tag definition by tag value.
 // Supports both exact match and pattern-based matching for parameterized tags.
-func (c *TestingConfig) GetTag(tag string) (testing.TagPort, bool) {
+func (c *TestingConfig) GetTag(tag string) (core.TagPort, bool) {
 	// Check exact match first
 	if tagDef, ok := c.tagLookup[tag]; ok {
 		return tagDef, true
@@ -226,7 +226,7 @@ func (c *TestingConfig) GetTagsByType(tagType string) []string {
 }
 
 // GetSkipReasons returns the list of valid skip reason codes.
-func (c *TestingConfig) GetSkipReasons() []testing.SkipReason {
+func (c *TestingConfig) GetSkipReasons() []core.SkipReason {
 	return c.skipReasons
 }
 
@@ -320,12 +320,12 @@ func (c *TestingConfig) IsKnownTag(tag string) bool {
 
 // GetTaxonomyLevelTags returns all taxonomy-level tags (@L0-@L4, @HE2E).
 func (c *TestingConfig) GetTaxonomyLevelTags() []string {
-	return c.GetTagsByType(testing.TagTypeTaxonomyLevel)
+	return c.GetTagsByType(core.TagTypeTaxonomyLevel)
 }
 
 // GetVerificationTags returns all verification type tags.
 func (c *TestingConfig) GetVerificationTags() []string {
-	return c.GetTagsByType(testing.TagTypeVerification)
+	return c.GetTagsByType(core.TagTypeVerification)
 }
 
 // ValidateTag validates a tag and returns an error if invalid.
@@ -380,26 +380,22 @@ func (c *TestingConfig) GetValidSkipReasons() []string {
 }
 
 // ValidateSkipReason checks if a skip reason code is valid.
-func (c *TestingConfig) ValidateSkipReason(code string) (testing.SkipReason, bool) {
+func (c *TestingConfig) ValidateSkipReason(code string) (core.SkipReason, bool) {
 	for _, sr := range c.skipReasons {
 		if sr.Code == code {
 			return sr, true
 		}
 	}
-	return testing.SkipReason{}, false
+	return core.SkipReason{}, false
 }
 
-// BuildGodogSkipTagFilter builds a Godog tag filter excluding @skip:<reason> tags.
-func (c *TestingConfig) BuildGodogSkipTagFilter() string {
-	if len(c.skipReasons) == 0 {
-		return ""
-	}
-
-	var parts []string
+// GetSkipTags returns skip reason tags as a raw slice (e.g., ["@skip:wip", "@skip:broken"]).
+func (c *TestingConfig) GetSkipTags() []string {
+	tags := make([]string, 0, len(c.skipReasons))
 	for _, reason := range c.skipReasons {
-		parts = append(parts, fmt.Sprintf("~@skip:%s", reason.Code))
+		tags = append(tags, fmt.Sprintf("@skip:%s", reason.Code))
 	}
-	return strings.Join(parts, " && ")
+	return tags
 }
 
 // GetSkipTagsForSuite returns skip tags as a slice for test suite selectors.
@@ -414,13 +410,13 @@ func (c *TestingConfig) GetSkipTagsForSuite() []string {
 
 // Helper functions
 
-func loadSuitesFile(path string) (*testing.SuitesConfig, error) {
+func loadSuitesFile(path string) (*core.SuitesConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg testing.SuitesConfig
+	var cfg core.SuitesConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
@@ -428,13 +424,13 @@ func loadSuitesFile(path string) (*testing.SuitesConfig, error) {
 	return &cfg, nil
 }
 
-func loadTagsFile(path string) (*testing.TagsConfig, error) {
+func loadTagsFile(path string) (*core.TagsConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg testing.TagsConfig
+	var cfg core.TagsConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}

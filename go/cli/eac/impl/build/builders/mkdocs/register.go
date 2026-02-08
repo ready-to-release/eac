@@ -3,18 +3,18 @@ package mkdocs
 import (
 	"io"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Handler defines the interface that mkdocs handlers implement.
 // This mirrors the builders.Handler interface for registration.
 type Handler interface {
 	Name() string
-	Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
+	Build(module core.ModuleContractPort, workspaceRoot, outputDir string,
 		logWriter io.Writer, opts BuildOptions) BuildResult
-	ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string
+	ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string
 	Requirements() []string
-	ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error
+	ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error
 	IsContainer() bool
 	IsHostInstalled() bool
 }
@@ -29,7 +29,7 @@ type HandlerRegistry func(name string, h Handler)
 func Handlers(workspaceRoot string) map[string]Handler {
 	return map[string]Handler{
 		"mkdocs-preprocess": NewPreprocessHandler(workspaceRoot),
-		"site-render-oci":   NewSiteRenderHandler(workspaceRoot),
+		"mkdocs-render-oci":   NewSiteRenderHandler(workspaceRoot),
 		"pdf-oci":           NewPDFRenderHandler(workspaceRoot),
 	}
 }
@@ -38,7 +38,7 @@ func Handlers(workspaceRoot string) map[string]Handler {
 func HandlerNames() []string {
 	return []string{
 		"mkdocs-preprocess",
-		"site-render-oci",
+		"mkdocs-render-oci",
 		"pdf-oci",
 	}
 }

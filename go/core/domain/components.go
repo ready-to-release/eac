@@ -115,6 +115,7 @@ type ComponentPatterns struct {
 	Source []string `yaml:"source,omitempty" json:"source,omitempty"`
 	Tests  []string `yaml:"tests,omitempty" json:"tests,omitempty"`
 	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
+	Data   []string `yaml:"data,omitempty" json:"data,omitempty"` // Owned files not processed by tools (testdata, assets)
 }
 
 // UnmarshalYAML implements custom unmarshaling for ComponentEntry.

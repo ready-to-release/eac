@@ -45,7 +45,7 @@ func TestMCPServerInitialize(t *testing.T) {
 
 	serverInfo, ok := result["serverInfo"].(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, "mcp-server-commands", serverInfo["name"])
+	assert.Equal(t, "eac-mcp-server", serverInfo["name"])
 	assert.Equal(t, "0.1.0", serverInfo["version"])
 }
 

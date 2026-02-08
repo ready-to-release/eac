@@ -7,7 +7,7 @@ Feature: eac-cli_drawio-info
 
   Background:
     Given I am in a git repository
-    And the drawio-tool Docker image is available
+    And the drawio-oci Docker image is available
 
   Rule: Shows diagram metadata
 

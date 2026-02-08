@@ -2,13 +2,13 @@ package adapters
 
 import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // Compile-time interface check.
-var _ interfaces.ModuleRegistryPort = (*ModuleRegistryAdapter)(nil)
+var _ core.ModuleRegistryPort = (*ModuleRegistryAdapter)(nil)
 
-// ModuleRegistryAdapter wraps a *modules.Registry to implement interfaces.ModuleRegistryPort.
+// ModuleRegistryAdapter wraps a *modules.Registry to implement core.ModuleRegistryPort.
 type ModuleRegistryAdapter struct {
 	registry *modules.Registry
 }
@@ -25,7 +25,7 @@ func (a *ModuleRegistryAdapter) Unwrap() *modules.Registry {
 }
 
 // Get retrieves a module contract by moniker.
-func (a *ModuleRegistryAdapter) Get(moniker string) (interfaces.ModuleContractPort, bool) {
+func (a *ModuleRegistryAdapter) Get(moniker string) (core.ModuleContractPort, bool) {
 	m, ok := a.registry.Get(moniker)
 	if !ok {
 		return nil, false
@@ -39,7 +39,7 @@ func (a *ModuleRegistryAdapter) Has(moniker string) bool {
 }
 
 // All returns all module domain.
-func (a *ModuleRegistryAdapter) All() []interfaces.ModuleContractPort {
+func (a *ModuleRegistryAdapter) All() []core.ModuleContractPort {
 	return AdaptModules(a.registry.All())
 }
 
@@ -54,12 +54,12 @@ func (a *ModuleRegistryAdapter) Count() int {
 }
 
 // FilterByComponent returns modules with the specified component type.
-func (a *ModuleRegistryAdapter) FilterByComponent(componentType string) []interfaces.ModuleContractPort {
+func (a *ModuleRegistryAdapter) FilterByComponent(componentType string) []core.ModuleContractPort {
 	return AdaptModules(a.registry.FilterByComponent(componentType))
 }
 
 // FindModulesForFile returns modules that own the given file path.
-func (a *ModuleRegistryAdapter) FindModulesForFile(filePath string) []interfaces.ModuleContractPort {
+func (a *ModuleRegistryAdapter) FindModulesForFile(filePath string) []core.ModuleContractPort {
 	return AdaptModules(a.registry.FindModulesForFile(filePath))
 }
 
@@ -69,7 +69,7 @@ func (a *ModuleRegistryAdapter) WorkspaceRoot() string {
 }
 
 // AdaptRegistry is a convenience function to wrap a module registry.
-func AdaptRegistry(r *modules.Registry) interfaces.ModuleRegistryPort {
+func AdaptRegistry(r *modules.Registry) core.ModuleRegistryPort {
 	if r == nil {
 		return nil
 	}

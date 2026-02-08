@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/impl/build/books"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -125,7 +125,7 @@ func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation
 
 func (h *MkDocsHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *MkDocsHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+func (h *MkDocsHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -135,11 +135,11 @@ func (h *MkDocsHandler) ValidateModule(module interfaces.ModuleContractPort, wor
 	return nil
 }
 
-func (h *MkDocsHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+func (h *MkDocsHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/"}
 }
 
-func (h *MkDocsHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *MkDocsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -167,8 +167,8 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 		defaultImage = "pdf-oci:local"
 		defaultContainer = "pdf-oci"
 	} else {
-		defaultImage = "site-render-oci:local"
-		defaultContainer = "site-render-oci"
+		defaultImage = "mkdocs-render-oci:local"
+		defaultContainer = "mkdocs-render-oci"
 	}
 
 	cfg := mkdocsDockerConfig{
@@ -185,7 +185,7 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 	}
 
 	// For site builds: check if module has a dockerfile package with docker_build config
-	// (This is rare - book modules typically use shared containers like site-render-oci)
+	// (This is rare - book modules typically use shared containers like mkdocs-render-oci)
 	dockerfilePkg := module.Components["dockerfile"]
 	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil && len(dockerfilePkg.DockerBuild) > 0 {
 		if tags, ok := dockerfilePkg.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
@@ -376,19 +376,19 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 		relStagingDir = filepath.ToSlash(relStagingDir)
 		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:     "Documentation",
 		DocsDir:      relStagingDir,
 		OutputFormat: "site",
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "containers", "site-render-oci", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
@@ -599,7 +599,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 
 	outputFormat := fmt.Sprintf("pdf-%s", theme)
 	pdfConcurrency := getPDFConcurrency(workspaceRoot)
-	configOpts := books.ConfigOptions{
+	configOpts := mkdocs.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
 		BookTitle:       bookTitle,
@@ -610,7 +610,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 		OutputFormat:    outputFormat,
 		PDFConcurrency:  pdfConcurrency,
 	}
-	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+	if err := mkdocs.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}

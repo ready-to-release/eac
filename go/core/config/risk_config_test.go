@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	security "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRiskConfig_ImplementsPort(t *testing.T) {
-	var _ security.RiskConfigPort = (*RiskConfig)(nil)
+	var _ scanner.RiskConfigPort = (*RiskConfig)(nil)
 }
 
 func TestLoadRiskConfig_NoFiles(t *testing.T) {
@@ -37,7 +37,7 @@ func TestLoadRiskConfig_WithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create contract defaults structure
-	defaultsDir := filepath.Join(tmpDir, "contracts", "security", "0.1.0", "defaults")
+	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
 	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
 
 	// Create risk-config.yml
@@ -86,7 +86,7 @@ func TestLoadRiskConfig_WithUserOverrides(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create contract defaults
-	defaultsDir := filepath.Join(tmpDir, "contracts", "security", "0.1.0", "defaults")
+	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
 	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
 
 	defaultsYAML := `
@@ -269,7 +269,7 @@ func TestSecurityConfig_Risk_Integration(t *testing.T) {
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	// Create contract defaults structure
-	defaultsDir := filepath.Join(tmpDir, "contracts", "security", "0.1.0", "defaults")
+	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
 	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
 
 	// Create minimal scanners.yml

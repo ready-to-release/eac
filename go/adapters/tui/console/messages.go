@@ -143,3 +143,41 @@ type ConfigReadyMsg struct {
 
 // MarqueeTickMsg is sent periodically to animate hovered tab name scrolling.
 type MarqueeTickMsg struct{}
+
+// PlannedWorkMsg delivers predicted work items for grey skeleton tabs.
+type PlannedWorkMsg struct {
+	Items []PlannedWorkItem
+}
+
+// PlannedWorkItem describes predicted work from module/component discovery.
+type PlannedWorkItem struct {
+	ID            string
+	DisplayName   string
+	Weight        int
+	Module        string
+	Component     string
+	ComponentType string
+}
+
+// UoWEnrichMsg carries incremental enrichment data for an existing planned tab.
+type UoWEnrichMsg struct {
+	ID          string
+	Tool        string
+	Container   bool
+	Weight      int
+	CacheStatus CacheHit
+	CacheTime   time.Time
+	DependsOn   []string
+}
+
+// CacheHit describes the cache status of a work unit.
+type CacheHit int
+
+const (
+	CacheUnknown  CacheHit = iota
+	CacheMiss
+	CacheHitFresh
+)
+
+// AllWorkDoneMsg signals that all work including AfterExecute hooks is complete.
+type AllWorkDoneMsg struct{}

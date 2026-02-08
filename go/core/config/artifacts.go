@@ -1,21 +1,25 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 // ArtifactResolver resolves artifact patterns to concrete file paths.
 type ArtifactResolver struct {
-	Moniker  string            // Module moniker
-	BuildDir string            // Build output directory (e.g., out/build/<module>)
-	OS       string            // Target OS (linux, windows, darwin)
-	Arch     string            // Target architecture (amd64, arm64)
-	Metadata map[string]string // Module metadata for custom artifact names
+	Moniker   string            // Module moniker
+	BuildDir  string            // Build output directory (e.g., out/build/<module>)
+	OS        string            // Target OS (linux, windows, darwin)
+	Arch      string            // Target architecture (amd64, arm64)
+	Metadata  map[string]string // Module metadata for custom artifact names
+	Container container.ContainerPort // Optional container runtime for image artifact verification
 }
 
 // NewArtifactResolver creates a new resolver for a module.
@@ -324,6 +328,8 @@ func (r *ArtifactResolver) verifyGlobArtifact(artifact Artifact) ArtifactVerific
 }
 
 // verifyImageArtifact handles Docker image artifacts by checking if the image exists locally.
+// When a ContainerPort is set on the resolver, it uses the port for availability and image
+// checks instead of shelling out to the Docker CLI.
 func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerificationResult {
 	imageRef := r.ResolvePattern(artifact.Pattern)
 
@@ -333,33 +339,22 @@ func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerifi
 		Path:     imageRef, // For images, Path is the image reference
 	}
 
-	// Check if Docker is available
-	if !isDockerAvailable() {
+	// Check if container runtime is available
+	if !r.isContainerAvailable() {
 		result.Error = fmt.Errorf("docker not available for image verification")
 		result.Exists = false
 		return result
 	}
 
-	// Check if image exists locally using `docker images -q <ref>`
-	cmd := exec.Command("docker", "images", "-q", imageRef)
-	output, err := cmd.Output()
-	if err != nil {
-		result.Error = fmt.Errorf("failed to check docker image: %w", err)
-		result.Exists = false
-		return result
-	}
-
-	// If output is non-empty, image exists locally
-	if strings.TrimSpace(string(output)) != "" {
+	// Check if image exists locally
+	if r.containerImageExists(imageRef) {
 		result.Exists = true
 		return result
 	}
 
 	// Image not found locally - for registry images, try manifest inspect
-	if strings.Contains(imageRef, "/") {
-		// Looks like a registry image (e.g., ghcr.io/...)
-		cmd = exec.Command("docker", "manifest", "inspect", imageRef)
-		if err := cmd.Run(); err == nil {
+	if strings.Contains(imageRef, "/") && r.Container != nil {
+		if exists, _ := r.Container.ManifestExists(context.Background(), imageRef); exists {
 			result.Exists = true
 			return result
 		}
@@ -370,10 +365,29 @@ func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerifi
 	return result
 }
 
-// isDockerAvailable checks if Docker CLI is available.
-func isDockerAvailable() bool {
-	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
+// isContainerAvailable checks if the container runtime is available.
+// Uses ContainerPort.IsAvailable() when a port is injected, otherwise
+// falls back to checking the Docker CLI directly.
+func (r *ArtifactResolver) isContainerAvailable() bool {
+	if r.Container != nil {
+		return r.Container.IsAvailable()
+	}
+	// Fallback: direct CLI check
+	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}") //nolint:gosec // G204: legacy fallback
 	return cmd.Run() == nil
+}
+
+// containerImageExists checks if a container image exists locally.
+// Uses ContainerPort.ImageExists() when a port is injected, otherwise
+// falls back to "docker images -q".
+func (r *ArtifactResolver) containerImageExists(imageRef string) bool {
+	if r.Container != nil {
+		return r.Container.ImageExists(context.Background(), imageRef)
+	}
+	// Fallback: direct CLI check
+	cmd := exec.Command("docker", "images", "-q", imageRef) //nolint:gosec // G204: legacy fallback
+	output, err := cmd.Output()
+	return err == nil && strings.TrimSpace(string(output)) != ""
 }
 
 // AllSuccessful returns true if all verification results are successful.

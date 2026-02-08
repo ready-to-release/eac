@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/environment"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 )
 
 // OutputFlags holds TUI and output control flags.
@@ -31,7 +31,7 @@ type OutputFlagSet struct {
 func NewOutputFlagSet() *OutputFlagSet {
 	return &OutputFlagSet{
 		flags: &OutputFlags{
-			TUIHeight: tui.DefaultHeight,
+			TUIHeight: display.DefaultHeight,
 		},
 	}
 }
@@ -73,8 +73,8 @@ func (s *OutputFlagSet) Flags() []FlagDef {
 		{
 			Name:    "tui-height",
 			Type:    "int",
-			Default: fmt.Sprintf("%d", tui.DefaultHeight),
-			Usage:   fmt.Sprintf("Set TUI console height (3-20, default: %d)", tui.DefaultHeight),
+			Default: fmt.Sprintf("%d", display.DefaultHeight),
+			Usage:   fmt.Sprintf("Set TUI console height (3-20, default: %d)", display.DefaultHeight),
 		},
 		{
 			Name:    "ascii",
@@ -217,10 +217,7 @@ func (s *OutputFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 			Behavior:    "tui",
 			EnableFlag:  "--with-tui",
 			DisableFlag: "--no-tui",
-			LegacyFlags: []LegacyFlagMapping{
-				{LegacyFlag: "--tui", MapsTo: "enable"},
-			},
-			DefaultOn: false, // Default depends on environment
+			DefaultOn:   false, // Default depends on environment
 			EnvAware:  true,
 			EnvDefaults: map[string]bool{
 				"local":     true,

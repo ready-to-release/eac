@@ -11,7 +11,7 @@
 // Long: Expected Output:
 // Long: - Markdown table showing module dependencies with columns: Module, Depends On, Used By
 // Long: - Statistics table with metrics like total modules, total dependencies, root/leaf modules
-// Long: - Execution order table showing layers of modules that can run in parallel
+// Long: - Display order table showing modules ordered by depth, group, and declaration order
 // Long:
 // Long: Example:
 // Long:   show dependencies
@@ -25,6 +25,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -100,21 +101,26 @@ func ShowDependencies() int {
 	fmt.Println(tb.Build())
 	fmt.Println("")
 
-	// Calculate and show execution order
-	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Could not calculate execution order: %v\n", err)
-	} else {
-		fmt.Println("## Execution Order")
+	// Show display order from precomputed DisplayOrder
+	cfg, cfgErr := config.Load(config.DefaultLoadOptions())
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not load config for display order: %v\n", cfgErr)
+	} else if cfg.Repository.DisplayOrder != nil {
+		displayOrder := cfg.Repository.DisplayOrder
+		fmt.Println("## Display Order")
 		fmt.Println("")
-		fmt.Printf("Total modules: %d\n", len(plan.ExecutionOrder))
+		fmt.Printf("Total modules: %d\n", len(displayOrder.Modules))
 		fmt.Println("")
 
 		orderTable := render.NewTableBuilder().
-			WithHeaders("Order", "Module")
+			WithHeaders("Order", "Module", "Depth")
 
-		for i, module := range plan.ExecutionOrder {
-			orderTable.AddRow(fmt.Sprintf("%d", i+1), module)
+		for i, module := range displayOrder.Modules {
+			depth := fmt.Sprintf("%d", displayOrder.Depth[module])
+			if displayOrder.IsBaseline[module] {
+				depth += " (baseline)"
+			}
+			orderTable.AddRow(fmt.Sprintf("%d", i+1), module, depth)
 		}
 
 		fmt.Println(orderTable.Build())

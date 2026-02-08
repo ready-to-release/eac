@@ -47,6 +47,15 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+// CIExcludedFilePatterns are documentation files that don't trigger CI rebuilds.
+// These patterns are matched against file basenames within each module's component roots.
+var CIExcludedFilePatterns = []string{
+	"CHANGELOG.md",
+	"README.md",
+	"CONTRIBUTING.md",
+	"LICENSE",
+}
+
 func init() {
 	registry.Register(GetChangedModulesCI)
 }
@@ -655,14 +664,8 @@ func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]stri
 func getCIExcludedFiles(workspaceRoot string) map[string]bool {
 	result := make(map[string]bool)
 
-	// Common CI-excluded file patterns
-	// These patterns are matched against file paths relative to repo root
-	commonPatterns := []string{
-		"CHANGELOG.md",
-		"README.md",
-		"CONTRIBUTING.md",
-		"LICENSE",
-	}
+	// Use the package-level excluded file patterns
+	commonPatterns := CIExcludedFilePatterns
 
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {

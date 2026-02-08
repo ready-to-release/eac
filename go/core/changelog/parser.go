@@ -25,6 +25,9 @@ var (
 
 	// Matches conventional commit format in entry: "feat(scope): description".
 	conventionalEntryRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)(\([^)]+\))?(!)?:\s*(.+)$`)
+
+	// Matches calendar versioning format: YYYY.MM.DD or YYYY.MM.DD.N
+	calverRegex = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 )
 
 // Parse reads and parses a CHANGELOG.md file.
@@ -196,7 +199,5 @@ func addEntryToVersion(v *Version, section ChangeType, entry Entry) {
 
 // isCalverVersion checks if a version string looks like calendar versioning.
 func isCalverVersion(version string) bool {
-	// Calver format: YYYY.MM.DD or YYYY.MM.DD.N
-	calverRegex := regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 	return calverRegex.MatchString(version)
 }

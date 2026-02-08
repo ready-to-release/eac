@@ -21,8 +21,8 @@ type ImplSpecsPair struct {
 	UsesInternal bool     // whether this pair uses shared internal steps
 }
 
-// DiscoverPairs finds all impl↔specs pairs by scanning modules with gherkin-steps components.
-// Each module's gherkin-steps component defines where to find godog_test.go (Go) or cucumber runner (TypeScript).
+// DiscoverPairs finds all impl↔specs pairs by scanning modules with godog components.
+// Each module's godog component defines where to find godog_test.go (Go) or cucumber runner (TypeScript).
 func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
 	// Load EAC config (properly merged with defaults) for path resolution
 	eacCfg, err := config.Load(config.DefaultLoadOptions())
@@ -32,9 +32,9 @@ func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
 
 	var pairs []ImplSpecsPair
 
-	// Iterate modules that have gherkin-steps components
+	// Iterate modules that have godog components
 	for _, module := range eacCfg.Repository.Modules {
-		comp, ok := module.Components["gherkin-steps"]
+		comp, ok := module.Components["godog"]
 		if !ok || comp == nil || comp.Root == "" {
 			continue
 		}

@@ -65,7 +65,7 @@ func TestFilterComponents_BuildableFilter(t *testing.T) {
 		{
 			Moniker:   "mod2",
 			Component: "md",
-			Type:      "markdown",
+			Type:      "assets",
 			Phases:    &ComponentPhases{},
 		},
 	}
@@ -120,8 +120,8 @@ func TestFilterComponents_CombinedFilters(t *testing.T) {
 		},
 		{
 			Moniker:   "mod1",
-			Component: "md",
-			Type:      "markdown",
+			Component: "assets",
+			Type:      "assets",
 			Phases: &ComponentPhases{
 				Lint: &PhaseInfo{Enabled: true, Tools: []string{"markdownlint"}},
 			},
@@ -188,8 +188,8 @@ func TestBuildComponentSummary(t *testing.T) {
 		},
 		{
 			Moniker:   "mod1",
-			Component: "md",
-			Type:      "markdown",
+			Component: "assets",
+			Type:      "assets",
 			Phases: &ComponentPhases{
 				Lint: &PhaseInfo{Enabled: true},
 			},

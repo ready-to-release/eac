@@ -9,7 +9,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/core/cache"
@@ -17,7 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/output"
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // ErrInformationalExit signals that the command should exit with code 1,
@@ -38,26 +38,13 @@ func NewInformationalExit(reason string) ErrInformationalExit {
 	return ErrInformationalExit{Reason: reason}
 }
 
-// CommandType defines the type of command for configuration defaults.
-type CommandType string
-
-const (
-	CommandTypeBuild     CommandType = "build"
-	CommandTypeTest      CommandType = "test"
-	CommandTypeScan      CommandType = "scan"
-	CommandTypeLint      CommandType = "lint"
-	CommandTypeAISummary CommandType = "ai-summary"
-)
-
 // CommandConfig holds all configuration for a command execution.
 // Commands populate this struct and pass it to Run().
 type CommandConfig struct {
 	// Identity
-	Type        CommandType // build, test, scan
+	Type        core.ActionType // build, test, scan
 	CommandPath string      // Command path for TUI binding (e.g., "build", "test", "work create")
-	ActionVerb  string      // "Building", "Testing", "Scanning"
 	OutputDir   string      // Relative path: "out/build", "out/test", "out/scan"
-	LogFileName string      // "build.log", "test.log", "scan.log"
 
 	// Inputs
 	Monikers []string // Module monikers to process (empty = all)
@@ -92,8 +79,42 @@ type CommandConfig struct {
 	// Cache Configuration
 	CacheConfig *cache.Config // Fine-grained cache control (--skip-cache flag)
 
-	// Command-Specific Options
-	Extra map[string]interface{}
+	// Command-Specific Typed Configuration (replaces Extra map)
+	// Each command sets its own config struct; others remain nil.
+	SkipMonikers   []string             // Modules to skip during resolution (set by scan)
+	UnitSpecsCache []workunit.UnitSpec  // Cached UnitSpecs for TUI tree building
+
+	// Command-specific configs are stored as interface{} to avoid import cycles.
+	// Each command package defines its own typed config struct and uses type assertion.
+	BuildCmdConfig   interface{} // *build.BuildConfig (set by build command)
+	BuildCmdContext  interface{} // *build.buildContext (set by build command)
+	BuildWorkSpecs   []workunit.UnitSpec // Cached component work specs for build
+	TestCmdConfig    interface{} // *test.TestFrameworkConfig (set by test command)
+	ScanCmdConfig    interface{} // *scan.ScanFrameworkConfig (set by scan command)
+	ScanCmdWorker    interface{} // scan.ScanWorker (set by scan command)
+	MultiScanConfig  interface{} // *scan.MultiScanConfig (set by scan command)
+	ScanCmdContext   interface{} // *scan.scanContext (set by scan command)
+	LintCmdConfig    interface{} // *lint.LintConfig (set by lint command)
+	LintCmdContext   interface{} // *lint.lintContext (set by lint command)
+	AnalysisType     string      // AI summary analysis type filter (set by ai-summary command)
+}
+
+// ActionVerb returns the present-continuous verb for this command's action type
+// (e.g., "Building", "Testing"). Derived from the ActionDescriptor registry.
+func (c *CommandConfig) ActionVerb() string {
+	if d, ok := core.GetActionDescriptor(c.Type); ok {
+		return d.Verb
+	}
+	return string(c.Type)
+}
+
+// LogFileName returns the log file name for this command's action type
+// (e.g., "build.log", "test.log"). Derived from the ActionDescriptor registry.
+func (c *CommandConfig) LogFileName() string {
+	if d, ok := core.GetActionDescriptor(c.Type); ok {
+		return d.LogFile
+	}
+	return string(c.Type) + ".log"
 }
 
 // ExecutionContext provides access to loaded config and state during execution.
@@ -111,7 +132,7 @@ type ExecutionContext struct {
 	// Module State (populated by phaseResolve)
 	ModuleReport   *reports.ModuleContractReport
 	ModuleRegistry *modules.Registry
-	ExecutionPlan  *repository.ExecutionPlan
+	ScopeMonikers  []string              // Modules in execution scope (requested + expanded deps)
 	ComponentTypesDisplay map[string]string // moniker -> component types (comma-separated)
 
 	// Verification State (populated by phaseVerify)
@@ -131,11 +152,11 @@ type ExecutionContext struct {
 	SummaryBuilder *SummaryBuilder
 
 	// TUI Hooks (nil for console-only mode)
-	TUIHooks interfaces.TUIHooks
+	TUIHooks core.TUIHooks
 
 	// OutputBuffer captures stdout/stderr during TUI mode.
 	// In console mode, this is a passthrough that does nothing.
-	OutputBuffer interfaces.OutputBufferPort
+	OutputBuffer core.OutputBufferPort
 
 	// Internal
 	tuiWriter       io.Writer
@@ -175,10 +196,10 @@ type InitTimings struct {
 	DepsVerify      time.Duration
 }
 
-// WorkerFunc processes a single module and returns an exit code.
+// CommandWorkerFunc processes a single module and returns an exit code.
 // It receives a cancellation context, the execution context, moniker, and a log writer.
 // Return 0 for success, non-zero for failure.
-type WorkerFunc func(goCtx context.Context, ctx *ExecutionContext, moniker string, logWriter io.Writer) int
+type CommandWorkerFunc func(goCtx context.Context, ctx *ExecutionContext, moniker string, logWriter io.Writer) int
 
 // UnitWorkerFunc processes a single work unit and returns an exit code.
 // It receives a cancellation context, the execution context, module moniker, component name, and a log writer.
@@ -208,38 +229,6 @@ type Hooks struct {
 	CustomSummary func(ctx *ExecutionContext) *initsummary.Summary
 }
 
-// GetExtra retrieves a command-specific option with type assertion.
-// Returns the zero value if the key doesn't exist or type doesn't match.
-func (c *CommandConfig) GetExtra(key string) interface{} {
-	if c.Extra == nil {
-		return nil
-	}
-	return c.Extra[key]
-}
-
-// GetExtraString retrieves a string option from Extra.
-func (c *CommandConfig) GetExtraString(key string) string {
-	if v, ok := c.Extra[key].(string); ok {
-		return v
-	}
-	return ""
-}
-
-// GetExtraBool retrieves a bool option from Extra.
-func (c *CommandConfig) GetExtraBool(key string) bool {
-	if v, ok := c.Extra[key].(bool); ok {
-		return v
-	}
-	return false
-}
-
-// GetExtraInt retrieves an int option from Extra.
-func (c *CommandConfig) GetExtraInt(key string) int {
-	if v, ok := c.Extra[key].(int); ok {
-		return v
-	}
-	return 0
-}
 
 // WriteInit writes a message to the init phase output (TUI or console).
 // When TUI is enabled but not yet started, messages also go to console

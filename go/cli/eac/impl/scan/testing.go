@@ -3,15 +3,15 @@
 package scan
 
 import (
-	"github.com/ready-to-release/eac/go/cli/eac/impl/scan/internal"
+	"github.com/ready-to-release/eac/go/core/evidence"
 )
 
 // Evidence represents a security scan evidence file.
-type Evidence = internal.EvidenceFile
+type Evidence = evidence.File
 
 // ReadEvidence reads and parses an evidence file.
 func ReadEvidence(filepath string) (*Evidence, error) {
-	return internal.ReadEvidence(filepath)
+	return evidence.ReadEvidence(filepath)
 }
 
 // SetupMocks configures mock outputs for all security tools.

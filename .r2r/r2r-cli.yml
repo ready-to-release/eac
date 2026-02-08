@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../contracts/r2r-cli/0.1.0/r2r-cli.schema.json
+# yaml-language-server: $schema=../contracts/r2r-cli/0.1.0/schemas/r2r-cli.schema.json
 extensions:
   - name: 'eac'
     image: 'ext-eac:dev'

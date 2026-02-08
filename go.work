@@ -1,26 +1,26 @@
 go 1.24.4
 
 use (
-	./contracts
-	./contracts/ai-adapter/0.1.0/interfaces
-	./contracts/core/0.1.0/interfaces
-	./contracts/docker-adapter/0.1.0/interfaces
-	./contracts/security/0.1.0/interfaces
-	./contracts/testing/0.1.0/interfaces
-	./contracts/tools/0.1.0/interfaces
-	./contracts/tui-adapter/0.1.0/interfaces
+	./contracts/ai-provider/0.1.0
+	./contracts/container-runtime/0.1.0
+	./contracts/core/0.1.0
+	./contracts/docs/0.1.0
+	./contracts/r2r-cli/0.1.0
+	./contracts/scanner/0.1.0
+	./contracts/tui/0.1.0
 	./go/adapters/ai
-	./go/adapters/containerruntime
+	./go/adapters/cucumber
 	./go/adapters/docker
+	./go/adapters/eac
+	./go/adapters/godog
+	./go/adapters/gotest
+	./go/adapters/mocha
+	./go/adapters/npm
 	./go/adapters/tui
 	./go/cli/eac
 	./go/cli/r2r
 	./go/clibase
 	./go/core
-	./go/godog
 	./go/mcp/commands
-	./go/specs/eac-installer
-	./go/specs/implicit-cli
-	./go/specs/r2r-installer
 	./go/specs/repository
 )

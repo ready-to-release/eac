@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestStateManager_Save_CreatesOutputDirectory(t *testing.T) {
 
 	state := &UnitState{
 		ID: UnitID{
-			Context:   ContextBuild,
+			Action:   ActionBuild,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "go",
@@ -54,15 +55,15 @@ func TestStateManager_Save_CreatesOutputDirectory(t *testing.T) {
 		ExecutedAt: time.Now(),
 	}
 
-	// Save should create directory and state file
+	// Save should create state cache directory and state file
 	err := manager.Save(state)
 	require.NoError(t, err, "Save() should succeed")
 
-	// Verify directory was created
-	expectedDir := filepath.Join(tmpDir, state.ID.OutDir())
+	// Verify state cache directory was created
+	expectedDir := filepath.Join(tmpDir, state.ID.StateCacheDir())
 	info, err := os.Stat(expectedDir)
-	require.NoError(t, err, "Output directory should exist")
-	assert.True(t, info.IsDir(), "Output path should be a directory")
+	require.NoError(t, err, "State cache directory should exist")
+	assert.True(t, info.IsDir(), "State cache path should be a directory")
 }
 
 func TestStateManager_Save_WritesStateJSON(t *testing.T) {
@@ -71,7 +72,7 @@ func TestStateManager_Save_WritesStateJSON(t *testing.T) {
 
 	state := &UnitState{
 		ID: UnitID{
-			Context:   ContextTest,
+			Action:   ActionTest,
 			Module:    "test-module",
 			Component: "go",
 			Tool:      "gotest",
@@ -105,7 +106,7 @@ func TestStateManager_Save_OverwritesExistingState(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextLint,
+		Action:   ActionLint,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "golangci-lint",
@@ -147,14 +148,14 @@ func TestStateManager_Load_ReadsStateFromCorrectPath(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextScan,
+		Action:   ActionScan,
 		Module:    "test-module",
 		Component: "go",
 		Tool:      "trivy-vuln",
 	}
 
-	// Create state file manually
-	stateDir := filepath.Join(tmpDir, unitID.OutDir())
+	// Create state file manually in the state cache directory
+	stateDir := filepath.Join(tmpDir, unitID.StateCacheDir())
 	err := os.MkdirAll(stateDir, 0755)
 	require.NoError(t, err)
 
@@ -186,7 +187,7 @@ func TestStateManager_Load_ReturnsErrorIfNotExists(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "nonexistent-module",
 		Component: "go",
 		Tool:      "go",
@@ -202,7 +203,7 @@ func TestStateManager_Load_ReturnsErrorForInvalidJSON(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:   ActionTest,
 		Module:    "invalid-json-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -210,8 +211,8 @@ func TestStateManager_Load_ReturnsErrorForInvalidJSON(t *testing.T) {
 	}
 
 	// Create invalid JSON file
-	stateDir := filepath.Join(tmpDir, unitID.OutDir())
-	err := os.MkdirAll(stateDir, 0755)
+	stateCacheDir := filepath.Join(tmpDir, unitID.StateCacheDir())
+	err := os.MkdirAll(stateCacheDir, 0755)
 	require.NoError(t, err)
 
 	stateFile := filepath.Join(tmpDir, unitID.StateFile())
@@ -233,7 +234,7 @@ func TestStateManager_SaveLoadRoundTrip_PreservesAllFields(t *testing.T) {
 
 	original := &UnitState{
 		ID: UnitID{
-			Context:   ContextTest,
+			Action:   ActionTest,
 			Module:    "roundtrip-module",
 			Component: "gherkin",
 			Tool:      "godog",
@@ -255,7 +256,7 @@ func TestStateManager_SaveLoadRoundTrip_PreservesAllFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify all fields preserved
-	assert.Equal(t, original.ID.Context, loaded.ID.Context)
+	assert.Equal(t, original.ID.Action, loaded.ID.Action)
 	assert.Equal(t, original.ID.Module, loaded.ID.Module)
 	assert.Equal(t, original.ID.Component, loaded.ID.Component)
 	assert.Equal(t, original.ID.Tool, loaded.ID.Tool)
@@ -272,7 +273,7 @@ func TestStateManager_SaveLoadRoundTrip_FailedState(t *testing.T) {
 
 	original := &UnitState{
 		ID: UnitID{
-			Context:   ContextLint,
+			Action:   ActionLint,
 			Module:    "failed-module",
 			Component: "go",
 			Tool:      "golangci-lint",
@@ -297,7 +298,7 @@ func TestStateManager_SaveLoadRoundTrip_EmptyOptionalFields(t *testing.T) {
 
 	original := &UnitState{
 		ID: UnitID{
-			Context:   ContextBuild,
+			Action:   ActionBuild,
 			Module:    "minimal-module",
 			Component: "go",
 			Tool:      "go",
@@ -329,7 +330,7 @@ func TestStateManager_NeedsExecution_NoStateExists(t *testing.T) {
 
 	spec := UnitSpec{
 		ID: UnitID{
-			Context:   ContextBuild,
+			Action:   ActionBuild,
 			Module:    "new-module",
 			Component: "go",
 			Tool:      "go",
@@ -348,7 +349,7 @@ func TestStateManager_NeedsExecution_PreviousFailure(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:   ActionTest,
 		Module:    "failed-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -379,7 +380,7 @@ func TestStateManager_NeedsExecution_PreviousFailure_RuleDisabled(t *testing.T) 
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextTest,
+		Action:   ActionTest,
 		Module:    "failed-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -410,7 +411,7 @@ func TestStateManager_NeedsExecution_SourceChanged(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "changed-module",
 		Component: "go",
 		Tool:      "go",
@@ -440,7 +441,7 @@ func TestStateManager_NeedsExecution_SourceChanged_RuleDisabled(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "changed-module",
 		Component: "go",
 		Tool:      "go",
@@ -470,7 +471,7 @@ func TestStateManager_NeedsExecution_ValidCacheHit(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextLint,
+		Action:   ActionLint,
 		Module:    "cached-module",
 		Component: "go",
 		Tool:      "golangci-lint",
@@ -500,7 +501,7 @@ func TestStateManager_NeedsExecution_AllRulesDisabled(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextScan,
+		Action:   ActionScan,
 		Module:    "always-cached",
 		Component: "go",
 		Tool:      "trivy-vuln",
@@ -534,7 +535,7 @@ func TestStateManager_NeedsExecution_CacheSkipped(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unitID := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "cached-module",
 		Component: "go",
 		Tool:      "go",
@@ -570,7 +571,7 @@ func TestStateManager_DetectChanges_CacheSkipped(t *testing.T) {
 	// Save state for all specs
 	for _, module := range []string{"mod-a", "mod-b"} {
 		state := &UnitState{
-			ID:         UnitID{Context: ContextBuild, Module: module, Component: "go", Tool: "go"},
+			ID:         UnitID{Action: ActionBuild, Module: module, Component: "go", Tool: "go"},
 			SourceHash: "hash-" + module,
 			Passed:     true,
 			ExecutedAt: time.Now(),
@@ -580,8 +581,8 @@ func TestStateManager_DetectChanges_CacheSkipped(t *testing.T) {
 	}
 
 	specs := []UnitSpec{
-		{ID: UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"}},
-		{ID: UnitID{Context: ContextBuild, Module: "mod-b", Component: "go", Tool: "go"}},
+		{ID: UnitID{Action: ActionBuild, Module: "mod-a", Component: "go", Tool: "go"}},
+		{ID: UnitID{Action: ActionBuild, Module: "mod-b", Component: "go", Tool: "go"}},
 	}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
@@ -608,7 +609,7 @@ func TestStateManager_DetectModuleChanges_CacheSkipped(t *testing.T) {
 
 	// Save state for all modules
 	for _, module := range []string{"mod-a", "mod-b"} {
-		err := manager.SaveModuleResult(ContextLint, module, true, "hash-"+module)
+		err := manager.SaveModuleResult(core.ActionLint, module, true, "hash-"+module)
 		require.NoError(t, err)
 	}
 
@@ -624,7 +625,7 @@ func TestStateManager_DetectModuleChanges_CacheSkipped(t *testing.T) {
 	cacheConfig := cache.NewConfig()
 	cacheConfig.SkipAll()
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, cacheConfig)
+	result, err := manager.DetectModuleChanges(core.ActionLint, modules, rule, hashProvider, cacheConfig)
 	require.NoError(t, err)
 
 	assert.Len(t, result.ChangedModules, 2, "All modules should need execution when cache is skipped")
@@ -642,7 +643,7 @@ func TestStateManager_WorksWithTestsets(t *testing.T) {
 
 	unitState := &UnitState{
 		ID: UnitID{
-			Context:   ContextTest,
+			Action:   ActionTest,
 			Module:    "testset-module",
 			Component: "go",
 			Tool:      "gotest",
@@ -667,14 +668,14 @@ func TestStateManager_IsolatesStatesBetweenUnits(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	unit1 := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "module-a",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	unit2 := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "module-b",
 		Component: "go",
 		Tool:      "go",
@@ -717,14 +718,14 @@ func TestStateManager_SameModuleDifferentContexts(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	buildUnit := UnitID{
-		Context:   ContextBuild,
+		Action:   ActionBuild,
 		Module:    "shared-module",
 		Component: "go",
 		Tool:      "go",
 	}
 
 	testUnit := UnitID{
-		Context:   ContextTest,
+		Action:   ActionTest,
 		Module:    "shared-module",
 		Component: "go",
 		Tool:      "gotest",
@@ -772,8 +773,8 @@ func TestStateManager_DetectChanges_FreshRun(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	specs := []UnitSpec{
-		{ID: UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"}},
-		{ID: UnitID{Context: ContextBuild, Module: "mod-b", Component: "go", Tool: "go"}},
+		{ID: UnitID{Action: ActionBuild, Module: "mod-a", Component: "go", Tool: "go"}},
+		{ID: UnitID{Action: ActionBuild, Module: "mod-b", Component: "go", Tool: "go"}},
 	}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
@@ -791,7 +792,7 @@ func TestStateManager_DetectChanges_MixedState(t *testing.T) {
 
 	// Save state for mod-a only
 	state := &UnitState{
-		ID:         UnitID{Context: ContextLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"},
+		ID:         UnitID{Action: ActionLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"},
 		SourceHash: "hash-a",
 		Passed:     true,
 		ExecutedAt: time.Now(),
@@ -800,8 +801,8 @@ func TestStateManager_DetectChanges_MixedState(t *testing.T) {
 	require.NoError(t, err)
 
 	specs := []UnitSpec{
-		{ID: UnitID{Context: ContextLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"}},
-		{ID: UnitID{Context: ContextLint, Module: "mod-b", Component: "go", Tool: "golangci-lint"}},
+		{ID: UnitID{Action: ActionLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"}},
+		{ID: UnitID{Action: ActionLint, Module: "mod-b", Component: "go", Tool: "golangci-lint"}},
 	}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
@@ -844,7 +845,7 @@ func TestStateManager_SaveResult_Success(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	spec := UnitSpec{
-		ID: UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"},
+		ID: UnitID{Action: ActionBuild, Module: "mod-a", Component: "go", Tool: "go"},
 	}
 
 	err := manager.SaveResult(spec, 0, "source-hash-123")
@@ -862,7 +863,7 @@ func TestStateManager_SaveResult_Failure(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	spec := UnitSpec{
-		ID: UnitID{Context: ContextTest, Module: "mod-a", Component: "go", Tool: "gotest"},
+		ID: UnitID{Action: ActionTest, Module: "mod-a", Component: "go", Tool: "gotest"},
 	}
 
 	err := manager.SaveResult(spec, 1, "source-hash-456")
@@ -878,7 +879,7 @@ func TestStateManager_SaveResult_WithMetadata(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	spec := UnitSpec{
-		ID: UnitID{Context: ContextTest, Module: "mod-a", Component: "go", Tool: "gotest"},
+		ID: UnitID{Action: ActionTest, Module: "mod-a", Component: "go", Tool: "gotest"},
 		Metadata: map[string]any{
 			"build_id":        "build-001",
 			"dependency_hash": "dep-hash-xyz",
@@ -902,7 +903,7 @@ func TestStateManager_Exists_True(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	unitID := UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"}
+	unitID := UnitID{Action: ActionBuild, Module: "mod-a", Component: "go", Tool: "go"}
 	state := &UnitState{ID: unitID, SourceHash: "hash", Passed: true, ExecutedAt: time.Now()}
 	err := manager.Save(state)
 	require.NoError(t, err)
@@ -914,7 +915,7 @@ func TestStateManager_Exists_False(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	unitID := UnitID{Context: ContextBuild, Module: "nonexistent", Component: "go", Tool: "go"}
+	unitID := UnitID{Action: ActionBuild, Module: "nonexistent", Component: "go", Tool: "go"}
 	assert.False(t, manager.Exists(unitID))
 }
 
@@ -926,7 +927,7 @@ func TestStateManager_Delete_ExistingState(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	unitID := UnitID{Context: ContextLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"}
+	unitID := UnitID{Action: ActionLint, Module: "mod-a", Component: "go", Tool: "golangci-lint"}
 	state := &UnitState{ID: unitID, SourceHash: "hash", Passed: true, ExecutedAt: time.Now()}
 	err := manager.Save(state)
 	require.NoError(t, err)
@@ -943,7 +944,7 @@ func TestStateManager_Delete_NonexistentState(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	unitID := UnitID{Context: ContextScan, Module: "nonexistent", Component: "go", Tool: "trivy"}
+	unitID := UnitID{Action: ActionScan, Module: "nonexistent", Component: "go", Tool: "trivy"}
 
 	// Should not error when deleting non-existent state
 	err := manager.Delete(unitID)
@@ -960,13 +961,13 @@ func TestStateManager_ClearContext_RemovesAllStatesForContext(t *testing.T) {
 
 	// Save states for multiple contexts
 	buildState := &UnitState{
-		ID:         UnitID{Context: ContextBuild, Module: "mod-a", Component: "go", Tool: "go"},
+		ID:         UnitID{Action: ActionBuild, Module: "mod-a", Component: "go", Tool: "go"},
 		SourceHash: "build-hash",
 		Passed:     true,
 		ExecutedAt: time.Now(),
 	}
 	testState := &UnitState{
-		ID:         UnitID{Context: ContextTest, Module: "mod-a", Component: "go", Tool: "gotest"},
+		ID:         UnitID{Action: ActionTest, Module: "mod-a", Component: "go", Tool: "gotest"},
 		SourceHash: "test-hash",
 		Passed:     true,
 		ExecutedAt: time.Now(),
@@ -978,7 +979,7 @@ func TestStateManager_ClearContext_RemovesAllStatesForContext(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clear build context
-	err = manager.ClearContext(ContextBuild)
+	err = manager.ClearContext(core.ActionBuild)
 	require.NoError(t, err)
 
 	// Build state should be gone
@@ -998,7 +999,7 @@ func TestStateManager_DetectModuleChanges_FreshRun(t *testing.T) {
 	modules := []string{"mod-a", "mod-b", "mod-c"}
 	rule := InvalidationRule{OnSourceChange: true, OnFailure: true}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, nil, nil)
+	result, err := manager.DetectModuleChanges(core.ActionLint, modules, rule, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, result.FreshRun)
@@ -1011,7 +1012,7 @@ func TestStateManager_DetectModuleChanges_MixedState(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	// Save state for mod-a only
-	err := manager.SaveModuleResult(ContextLint, "mod-a", true, "hash-a")
+	err := manager.SaveModuleResult(core.ActionLint, "mod-a", true, "hash-a")
 	require.NoError(t, err)
 
 	modules := []string{"mod-a", "mod-b"}
@@ -1024,7 +1025,7 @@ func TestStateManager_DetectModuleChanges_MixedState(t *testing.T) {
 		return "hash-b", nil
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
+	result, err := manager.DetectModuleChanges(core.ActionLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.False(t, result.FreshRun)
@@ -1039,7 +1040,7 @@ func TestStateManager_DetectModuleChanges_SourceChanged(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	// Save state with old hash
-	err := manager.SaveModuleResult(ContextLint, "mod-a", true, "old-hash")
+	err := manager.SaveModuleResult(core.ActionLint, "mod-a", true, "old-hash")
 	require.NoError(t, err)
 
 	modules := []string{"mod-a"}
@@ -1049,7 +1050,7 @@ func TestStateManager_DetectModuleChanges_SourceChanged(t *testing.T) {
 		return "new-hash", nil // Different hash = needs execution
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
+	result, err := manager.DetectModuleChanges(core.ActionLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.Len(t, result.ChangedModules, 1)
@@ -1061,7 +1062,7 @@ func TestStateManager_DetectModuleChanges_PreviousFailure(t *testing.T) {
 	manager := NewStateManager(tmpDir)
 
 	// Save failed state
-	err := manager.SaveModuleResult(ContextLint, "mod-a", false, "hash-a")
+	err := manager.SaveModuleResult(core.ActionLint, "mod-a", false, "hash-a")
 	require.NoError(t, err)
 
 	modules := []string{"mod-a"}
@@ -1071,7 +1072,7 @@ func TestStateManager_DetectModuleChanges_PreviousFailure(t *testing.T) {
 		return "hash-a", nil // Same hash but previous failure
 	}
 
-	result, err := manager.DetectModuleChanges(ContextLint, modules, rule, hashProvider, nil)
+	result, err := manager.DetectModuleChanges(core.ActionLint, modules, rule, hashProvider, nil)
 	require.NoError(t, err)
 
 	assert.Len(t, result.ChangedModules, 1)
@@ -1082,11 +1083,11 @@ func TestStateManager_SaveModuleResult_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	err := manager.SaveModuleResult(ContextLint, "mod-a", true, "source-hash")
+	err := manager.SaveModuleResult(core.ActionLint, "mod-a", true, "source-hash")
 	require.NoError(t, err)
 
 	// Verify state was saved with representative unit ID
-	unitID := UnitID{Context: ContextLint, Module: "mod-a", Component: "_module", Tool: "_"}
+	unitID := UnitID{Action: ActionLint, Module: "mod-a", Component: "_module", Tool: "_"}
 	loaded, err := manager.Load(unitID)
 	require.NoError(t, err)
 	assert.True(t, loaded.Passed)
@@ -1097,10 +1098,10 @@ func TestStateManager_SaveModuleResult_Failure(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewStateManager(tmpDir)
 
-	err := manager.SaveModuleResult(ContextLint, "mod-a", false, "source-hash")
+	err := manager.SaveModuleResult(core.ActionLint, "mod-a", false, "source-hash")
 	require.NoError(t, err)
 
-	unitID := UnitID{Context: ContextLint, Module: "mod-a", Component: "_module", Tool: "_"}
+	unitID := UnitID{Action: ActionLint, Module: "mod-a", Component: "_module", Tool: "_"}
 	loaded, err := manager.Load(unitID)
 	require.NoError(t, err)
 	assert.False(t, loaded.Passed)

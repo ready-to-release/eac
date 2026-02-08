@@ -154,17 +154,13 @@ func (c *TestingTagsConfig) ValidateSkipReason(code string) (*SkipReason, bool) 
 	return nil, false
 }
 
-// BuildGodogSkipTagFilter builds a Godog tag filter expression that excludes all @skip:<reason> tags.
-func (c *TestingTagsConfig) BuildGodogSkipTagFilter() string {
-	if len(c.SkipReasons) == 0 {
-		return ""
-	}
-
-	var parts []string
+// GetSkipTags returns skip reason tags as a raw slice (e.g., ["@skip:wip", "@skip:broken"]).
+func (c *TestingTagsConfig) GetSkipTags() []string {
+	tags := make([]string, 0, len(c.SkipReasons))
 	for _, reason := range c.SkipReasons {
-		parts = append(parts, fmt.Sprintf("~@skip:%s", reason.Code))
+		tags = append(tags, fmt.Sprintf("@skip:%s", reason.Code))
 	}
-	return strings.Join(parts, " && ")
+	return tags
 }
 
 // GetSkipTagsForSuite returns skip tags as a slice suitable for test suite selectors.

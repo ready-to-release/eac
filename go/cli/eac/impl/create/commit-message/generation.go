@@ -121,7 +121,7 @@ func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affe
 	if promptName == "module" {
 		schemaFilename = "commit-message-module.schema.json"
 	}
-	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), schemaFilename)
+	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), paths.SchemasDir, schemaFilename)
 	validator, err := domain.NewJSONSchemaValidator(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JSON schema validator: %w", err)

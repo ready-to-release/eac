@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ import (
 func TestUnitState_FieldsExist(t *testing.T) {
 	now := time.Now()
 	state := UnitState{
-		ID:             UnitID{Context: ContextBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:             UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
 		SourceHash:     "abc123",
 		BuildID:        "build-456",
 		DependencyHash: "dep789",
@@ -40,7 +41,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "build state with all fields",
 			state: UnitState{
-				ID:         UnitID{Context: ContextBuild, Module: "core", Component: "go", Tool: "go"},
+				ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
 				SourceHash: "sha256:abc123def456",
 				Passed:     true,
 				ExecutedAt: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
@@ -49,7 +50,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "test state with build dependency",
 			state: UnitState{
-				ID:         UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
+				ID:         UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
 				SourceHash: "sha256:source123",
 				BuildID:    "build-20240115-001",
 				Passed:     true,
@@ -59,7 +60,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "integration test state with dependency hash",
 			state: UnitState{
-				ID:             UnitID{Context: ContextTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Extra: map[string]string{"testset": "integration"}},
+				ID:             UnitID{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Extra: map[string]string{"testset": "integration"}},
 				SourceHash:     "sha256:source456",
 				BuildID:        "build-20240115-002",
 				DependencyHash: "sha256:deps789",
@@ -70,7 +71,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "failed scan state",
 			state: UnitState{
-				ID:         UnitID{Context: ContextScan, Module: "web-app", Component: "docker", Tool: "trivy-vuln"},
+				ID:         UnitID{Action: ActionScan, Module: "web-app", Component: "docker", Tool: "trivy-vuln"},
 				SourceHash: "sha256:scan123",
 				BuildID:    "build-20240115-003",
 				Passed:     false,
@@ -98,7 +99,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 
 func TestUnitState_MarshalJSON(t *testing.T) {
 	state := UnitState{
-		ID:         UnitID{Context: ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
 		SourceHash: "sha256:abc123",
 		Passed:     true,
 		ExecutedAt: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
@@ -137,7 +138,7 @@ func TestUnitState_UnmarshalJSON(t *testing.T) {
 
 func TestUnitState_MarshalUnmarshalRoundTrip(t *testing.T) {
 	original := UnitState{
-		ID:             UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
+		ID:             UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
 		SourceHash:     "sha256:source123",
 		BuildID:        "build-001",
 		DependencyHash: "sha256:deps456",
@@ -164,7 +165,7 @@ func TestUnitState_MarshalUnmarshalRoundTrip(t *testing.T) {
 
 func TestUnitState_JSONOmitsEmptyBuildID(t *testing.T) {
 	state := UnitState{
-		ID:         UnitID{Context: ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
 		SourceHash: "sha256:abc123",
 		BuildID:    "", // Empty - should be omitted
 		Passed:     true,
@@ -180,7 +181,7 @@ func TestUnitState_JSONOmitsEmptyBuildID(t *testing.T) {
 
 func TestUnitState_JSONOmitsEmptyDependencyHash(t *testing.T) {
 	state := UnitState{
-		ID:             UnitID{Context: ContextBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:             UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
 		SourceHash:     "sha256:abc123",
 		DependencyHash: "", // Empty - should be omitted
 		Passed:         true,
@@ -231,7 +232,7 @@ func TestDefaultRules_Exists(t *testing.T) {
 }
 
 func TestDefaultRules_HasAllContexts(t *testing.T) {
-	contexts := []Context{ContextBuild, ContextTest, ContextLint, ContextScan}
+	contexts := []core.ActionType{core.ActionBuild, core.ActionTest, core.ActionLint, core.ActionScan}
 
 	for _, ctx := range contexts {
 		t.Run(string(ctx), func(t *testing.T) {
@@ -242,7 +243,7 @@ func TestDefaultRules_HasAllContexts(t *testing.T) {
 }
 
 func TestDefaultRules_BuildContext(t *testing.T) {
-	rule, exists := DefaultRules[ContextBuild]
+	rule, exists := DefaultRules[core.ActionBuild]
 	require.True(t, exists)
 
 	assert.True(t, rule.OnSourceChange, "Build should invalidate on source change")
@@ -252,7 +253,7 @@ func TestDefaultRules_BuildContext(t *testing.T) {
 }
 
 func TestDefaultRules_TestContext(t *testing.T) {
-	rule, exists := DefaultRules[ContextTest]
+	rule, exists := DefaultRules[core.ActionTest]
 	require.True(t, exists)
 
 	assert.True(t, rule.OnSourceChange, "Test should invalidate on source change")
@@ -262,7 +263,7 @@ func TestDefaultRules_TestContext(t *testing.T) {
 }
 
 func TestDefaultRules_LintContext(t *testing.T) {
-	rule, exists := DefaultRules[ContextLint]
+	rule, exists := DefaultRules[core.ActionLint]
 	require.True(t, exists)
 
 	assert.True(t, rule.OnSourceChange, "Lint should invalidate on source change")
@@ -272,7 +273,7 @@ func TestDefaultRules_LintContext(t *testing.T) {
 }
 
 func TestDefaultRules_ScanContext(t *testing.T) {
-	rule, exists := DefaultRules[ContextScan]
+	rule, exists := DefaultRules[core.ActionScan]
 	require.True(t, exists)
 
 	assert.True(t, rule.OnSourceChange, "Scan should invalidate on source change")
@@ -303,7 +304,7 @@ func TestIntegrationTestRule_HasAllFlags(t *testing.T) {
 }
 
 func TestIntegrationTestRule_DiffersFromDefaultTestRule(t *testing.T) {
-	defaultRule := DefaultRules[ContextTest]
+	defaultRule := DefaultRules[core.ActionTest]
 
 	// The key difference is OnDependencyChange
 	assert.False(t, defaultRule.OnDependencyChange,
@@ -328,20 +329,20 @@ func TestInvalidationRule_UsageScenarios(t *testing.T) {
 	}{
 		{
 			name:             "build with source change",
-			rule:             DefaultRules[ContextBuild],
+			rule:             DefaultRules[core.ActionBuild],
 			sourceChanged:    true,
 			shouldInvalidate: true,
 		},
 		{
 			name:             "build with no changes and previous success",
-			rule:             DefaultRules[ContextBuild],
+			rule:             DefaultRules[core.ActionBuild],
 			sourceChanged:    false,
 			prevFailed:       false,
 			shouldInvalidate: false,
 		},
 		{
 			name:             "test with build change",
-			rule:             DefaultRules[ContextTest],
+			rule:             DefaultRules[core.ActionTest],
 			buildChanged:     true,
 			shouldInvalidate: true,
 		},
@@ -353,13 +354,13 @@ func TestInvalidationRule_UsageScenarios(t *testing.T) {
 		},
 		{
 			name:             "default test ignores dependency change",
-			rule:             DefaultRules[ContextTest],
+			rule:             DefaultRules[core.ActionTest],
 			depChanged:       true,
 			shouldInvalidate: false,
 		},
 		{
 			name:             "any rule invalidates on previous failure",
-			rule:             DefaultRules[ContextLint],
+			rule:             DefaultRules[core.ActionLint],
 			prevFailed:       true,
 			shouldInvalidate: true,
 		},
@@ -409,7 +410,7 @@ func TestUnitState_ZeroValueIsValid(t *testing.T) {
 func TestUnitState_ExecutedAtPreservesTimezone(t *testing.T) {
 	utcTime := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 	state := UnitState{
-		ID:         UnitID{Context: ContextBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:         UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
 		SourceHash: "hash",
 		Passed:     true,
 		ExecutedAt: utcTime,
@@ -527,7 +528,7 @@ func TestClassifyTestByTags_NoLTagsDefaultsToUnit(t *testing.T) {
 
 func TestGetRuleForTestSet_UnitReturnsDefaultTestRule(t *testing.T) {
 	rule := GetRuleForTestSet(TestSetUnit)
-	expected := DefaultRules[ContextTest]
+	expected := DefaultRules[core.ActionTest]
 
 	assert.Equal(t, expected.OnSourceChange, rule.OnSourceChange)
 	assert.Equal(t, expected.OnBuildChange, rule.OnBuildChange)

@@ -79,7 +79,7 @@
 //	moduleHashes := make(map[string]string)
 //	for _, m := range []string{"module-a", "module-b"} {
 //	    unitID := workunit.UnitID{
-//	        Context:   workunit.ContextBuild,
+//	        Action:    core.ActionBuild,
 //	        Module:    m,
 //	        Component: "_module",
 //	        Tool:      "_",

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	containerport "github.com/ready-to-release/eac/contracts/docker-adapter/0.1.0/interfaces"
+	containerport "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 )
 
 // TestIsRetryableError_WindowsFileLock tests detection of Windows file lock errors.

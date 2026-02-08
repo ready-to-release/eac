@@ -6,10 +6,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 )
+
+// arrayPathRegex matches array field paths like "module_analyses.0.field".
+var arrayPathRegex = regexp.MustCompile(`^([a-z_]+)\.(\d+)`)
 
 // JSONSchemaValidator validates JSON against a schema.
 type JSONSchemaValidator struct {
@@ -116,7 +120,7 @@ func (v *JSONSchemaValidator) detectArrayPatterns(schemaErrors []gojsonschema.Re
 		pattern := patterns[arrayPath]
 
 		// Track affected items
-		if !contains(pattern.affectedItems, itemIndex) {
+		if !slices.Contains(pattern.affectedItems, itemIndex) {
 			pattern.affectedItems = append(pattern.affectedItems, itemIndex)
 		}
 
@@ -144,8 +148,7 @@ func (v *JSONSchemaValidator) detectArrayPatterns(schemaErrors []gojsonschema.Re
 // parseArrayPath extracts array path and index from field like "module_analyses.0.field".
 func (v *JSONSchemaValidator) parseArrayPath(field string) (arrayPath string, itemIndex int, ok bool) {
 	// Match pattern: path.number or path.number.field
-	re := regexp.MustCompile(`^([a-z_]+)\.(\d+)`)
-	matches := re.FindStringSubmatch(field)
+	matches := arrayPathRegex.FindStringSubmatch(field)
 	if len(matches) < 3 {
 		return "", 0, false
 	}
@@ -289,15 +292,6 @@ func (v *JSONSchemaValidator) enhanceError(schemaErr gojsonschema.ResultError, j
 }
 
 // Helper functions
-
-func contains(slice []int, item int) bool {
-	for _, v := range slice {
-		if v == item {
-			return true
-		}
-	}
-	return false
-}
 
 func formatItemList(items []int) string {
 	if len(items) <= 5 {

@@ -30,20 +30,6 @@ func TestCacheFlagSet_Parse(t *testing.T) {
 			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:               "skip-deps flag",
-			args:               []string{"--skip-deps", "module1"},
-			wantSkipStateCache: false,
-			wantSkipDeps:       true,
-			wantRemaining:      []string{"module1"},
-		},
-		{
-			name:               "both flags",
-			args:               []string{"--skip-cache", "--skip-deps"},
-			wantSkipStateCache: true,
-			wantSkipDeps:       true,
-			wantRemaining:      nil,
-		},
-		{
 			name:               "other flags pass through",
 			args:               []string{"--skip-cache", "--turbo", "--debug"},
 			wantSkipStateCache: true,
@@ -238,8 +224,8 @@ func TestCacheFlagSet_Metadata(t *testing.T) {
 	if !flagNames["skip-cache"] {
 		t.Error("Flags() missing skip-cache flag")
 	}
-	if !flagNames["skip-deps"] {
-		t.Error("Flags() missing skip-deps flag")
+	if !flagNames["no-deps"] {
+		t.Error("Flags() missing no-deps flag")
 	}
 }
 
@@ -299,15 +285,6 @@ func TestCacheFlagSet_DeclarativeFlags(t *testing.T) {
 			wantRemaining:      []string{"module1"},
 		},
 		{
-			name:               "skip-deps remains compatible",
-			args:               []string{"--skip-deps", "module1"},
-			wantSkipStateCache: false,
-			wantCacheExplicit:  false,
-			wantSkipDeps:       true,
-			wantDepsExplicit:   true,
-			wantRemaining:      []string{"module1"},
-		},
-		{
 			name:               "default behavior preserved (no explicit flags)",
 			args:               []string{"module1"},
 			wantSkipStateCache: false,
@@ -322,15 +299,6 @@ func TestCacheFlagSet_DeclarativeFlags(t *testing.T) {
 			wantSkipStateCache: false,
 			wantCacheExplicit:  true,
 			wantSkipDeps:       false,
-			wantDepsExplicit:   true,
-			wantRemaining:      []string{"module1"},
-		},
-		{
-			name:               "mixed legacy and declarative flags",
-			args:               []string{"--no-cache", "--skip-deps", "module1"},
-			wantSkipStateCache: true,
-			wantCacheExplicit:  true,
-			wantSkipDeps:       true,
 			wantDepsExplicit:   true,
 			wantRemaining:      []string{"module1"},
 		},
@@ -464,7 +432,7 @@ func TestCacheFlagSet_AllDeclarativeStates(t *testing.T) {
 	s := NewCacheFlagSet()
 	env := &environment.Env{IsLocalConsole: true}
 
-	_, err := s.Parse([]string{"--with-cache", "--skip-deps"}, env)
+	_, err := s.Parse([]string{"--with-cache", "--no-deps"}, env)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}

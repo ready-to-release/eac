@@ -199,7 +199,7 @@ func ExportManual() int {
 
 	// Validate against schema (JSON only)
 	if formatFlag == "json" {
-		schemaPath := filepath.Join(workspaceRoot, "contracts/core/0.1.0/manual-test-export.schema.json")
+		schemaPath := filepath.Join(workspaceRoot, "contracts/core/0.1.0/schemas/manual-test-export.schema.json")
 		if err := validateAgainstSchema(outputFile, schemaPath); err != nil {
 			log.Errorf("schema validation failed: %v", err)
 			return 1

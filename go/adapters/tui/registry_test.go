@@ -5,6 +5,8 @@ import (
 	"io"
 	"testing"
 	"time"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // mockConsole is a test implementation of Console.
@@ -37,6 +39,9 @@ func (m *mockConsole) SetInitSummary(summary *InitSummary) {}
 func (m *mockConsole) SendConfigReady(commandName, executionContext, parallelismMode string,
 	effectiveWorkers, weightedCapacity int, outputDir string) {
 }
+func (m *mockConsole) SendPlannedWork(items []PlannedWorkItem) {}
+func (m *mockConsole) EnrichUoW(enrichment UoWEnrichment)     {}
+func (m *mockConsole) SignalAllWorkDone()                     {}
 
 // mockFactory creates a factory that returns a mockConsole with the given name.
 func mockFactory(name string) ConsoleFactory {
@@ -266,7 +271,7 @@ func TestRegistry_ConfigPassthrough(t *testing.T) {
 		ASCIIMode:    true,
 		RunPhaseName: "testing",
 		CommandName:  "test",
-		CommandType:  "test",
+		ActionType:   core.ActionTest,
 	}
 
 	r.NewForCommand("test", want)

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
@@ -20,46 +20,46 @@ import (
 // Config Adapter - wraps *config.EACConfig to implement ConfigPort
 // ============================================================================
 
-// configAdapter wraps *config.EACConfig to implement interfaces.ConfigPort.
+// configAdapter wraps *config.EACConfig to implement core.ConfigPort.
 type configAdapter struct {
 	cfg *config.EACConfig
 }
 
 // Compile-time check
-var _ interfaces.ConfigPort = (*configAdapter)(nil)
+var _ core.ConfigPort = (*configAdapter)(nil)
 
 func (a *configAdapter) GetRepoRoot() string   { return a.cfg.RepoRoot }
 func (a *configAdapter) GetConfigRoot() string { return a.cfg.ConfigRoot }
 
-func (a *configAdapter) GetRepository() interfaces.RepositoryConfigPort {
+func (a *configAdapter) GetRepository() core.RepositoryConfigPort {
 	if a.cfg.Repository == nil {
 		return nil
 	}
 	return &repositoryAdapter{cfg: a.cfg}
 }
 
-func (a *configAdapter) GetEnvironments() interfaces.EnvironmentsConfigPort {
+func (a *configAdapter) GetEnvironments() core.EnvironmentsConfigPort {
 	if a.cfg.Environments == nil {
 		return nil
 	}
 	return &environmentsAdapter{envs: a.cfg.Environments}
 }
 
-func (a *configAdapter) GetTestingTags() interfaces.TestingTagsConfigPort {
+func (a *configAdapter) GetTestingTags() core.TestingTagsConfigPort {
 	if a.cfg.TestingTags == nil {
 		return nil
 	}
 	return &testingTagsAdapter{tags: a.cfg.TestingTags}
 }
 
-func (a *configAdapter) GetTestSuites() interfaces.TestSuitesConfigPort {
+func (a *configAdapter) GetTestSuites() core.TestSuitesConfigPort {
 	if a.cfg.TestSuites == nil {
 		return nil
 	}
 	return &testSuitesAdapter{suites: a.cfg.TestSuites}
 }
 
-func (a *configAdapter) GetComponentTypes() interfaces.ComponentTypesConfigPort {
+func (a *configAdapter) GetComponentTypes() core.ComponentTypesConfigPort {
 	if a.cfg.ComponentTypes == nil {
 		return nil
 	}
@@ -79,7 +79,7 @@ func (a *repositoryAdapter) AllMonikers() []string {
 	return monikers
 }
 
-func (a *repositoryAdapter) GetModule(moniker string) (interfaces.ModuleContractPort, bool) {
+func (a *repositoryAdapter) GetModule(moniker string) (core.ModuleContractPort, bool) {
 	for i := range a.cfg.Repository.Modules {
 		if a.cfg.Repository.Modules[i].Moniker == moniker {
 			return &moduleAdapter{module: &a.cfg.Repository.Modules[i], wsRoot: a.cfg.RepoRoot}, true
@@ -108,9 +108,9 @@ func (a *repositoryAdapter) TestOutputDir() string {
 	return a.cfg.Repository.Paths.Out.Test
 }
 
-func (a *repositoryAdapter) GetBuildArtifacts(moniker string, includeAll bool) []interfaces.ArtifactPort {
+func (a *repositoryAdapter) GetBuildArtifacts(moniker string, includeAll bool) []core.ArtifactPort {
 	artifacts := a.cfg.GetBuildArtifacts(moniker, includeAll)
-	result := make([]interfaces.ArtifactPort, len(artifacts))
+	result := make([]core.ArtifactPort, len(artifacts))
 	for i := range artifacts {
 		result[i] = &artifactAdapter{a: &artifacts[i]}
 	}
@@ -121,18 +121,18 @@ func (a *repositoryAdapter) GetBuildArtifactIDs(moniker string, buildAll bool) [
 	return a.cfg.GetBuildArtifactIDs(moniker, buildAll)
 }
 
-func (a *repositoryAdapter) GetBooksByModule(moniker string) []interfaces.BookConfigPort {
+func (a *repositoryAdapter) GetBooksByModule(moniker string) []core.BookConfigPort {
 	books := a.cfg.GetBooksByModule(moniker)
-	result := make([]interfaces.BookConfigPort, len(books))
+	result := make([]core.BookConfigPort, len(books))
 	for i := range books {
 		result[i] = &bookAdapter{b: books[i]}
 	}
 	return result
 }
 
-func (a *repositoryAdapter) GetDefaultBooksByModule(moniker string) []interfaces.BookConfigPort {
+func (a *repositoryAdapter) GetDefaultBooksByModule(moniker string) []core.BookConfigPort {
 	books := a.cfg.GetDefaultBooksByModule(moniker)
-	result := make([]interfaces.BookConfigPort, len(books))
+	result := make([]core.BookConfigPort, len(books))
 	for i := range books {
 		result[i] = &bookAdapter{b: books[i]}
 	}
@@ -227,7 +227,7 @@ type environmentsAdapter struct {
 	envs *config.EnvironmentsConfig
 }
 
-func (a *environmentsAdapter) GetEnvironment(name string) (interfaces.EnvironmentPort, bool) {
+func (a *environmentsAdapter) GetEnvironment(name string) (core.EnvironmentPort, bool) {
 	env, ok := a.envs.GetEnvironment(name)
 	if !ok {
 		return nil, false
@@ -280,8 +280,8 @@ func (a *testSuitesAdapter) ListDefault() []string { return a.suites.ListDefault
 func (a *testSuitesAdapter) GetSuiteLTags(suiteName string) []string {
 	return a.suites.GetSuiteLTags(suiteName)
 }
-func (a *testSuitesAdapter) GetSuites() []interfaces.TestSuitePort {
-	result := make([]interfaces.TestSuitePort, len(a.suites.Suites))
+func (a *testSuitesAdapter) GetSuites() []core.TestSuitePort {
+	result := make([]core.TestSuitePort, len(a.suites.Suites))
 	for i := range a.suites.Suites {
 		result[i] = &testSuiteDefAdapter{s: &a.suites.Suites[i]}
 	}
@@ -301,7 +301,7 @@ type componentTypesAdapter struct {
 	types *config.ComponentTypesConfig
 }
 
-func (a *componentTypesAdapter) Get(name string) interfaces.ComponentTypePort {
+func (a *componentTypesAdapter) Get(name string) core.ComponentTypePort {
 	ct := a.types.Get(name)
 	if ct == nil {
 		return nil
@@ -326,7 +326,7 @@ type componentTypeAdapter struct {
 }
 
 func (a *componentTypeAdapter) GetName() string { return a.name }
-func (a *componentTypeAdapter) GetPatterns() interfaces.ComponentPatternsPort {
+func (a *componentTypeAdapter) GetPatterns() core.ComponentPatternsPort {
 	if a.ct.Files == nil {
 		return nil
 	}
@@ -351,7 +351,7 @@ type toolRegistryAdapter struct {
 	registry *tool.DefaultRegistry
 }
 
-func (a *toolRegistryAdapter) Get(canonicalName string) (interfaces.ToolDefinitionPort, bool) {
+func (a *toolRegistryAdapter) Get(canonicalName string) (core.ToolDefinitionPort, bool) {
 	t, ok := a.registry.Get(canonicalName)
 	if !ok {
 		return nil, false
@@ -359,7 +359,7 @@ func (a *toolRegistryAdapter) Get(canonicalName string) (interfaces.ToolDefiniti
 	return &toolDefinitionAdapter{t: t}, true
 }
 
-func (a *toolRegistryAdapter) GetForComponent(compType string, op interfaces.OperationType) []interfaces.ToolDefinitionPort {
+func (a *toolRegistryAdapter) GetForComponent(compType string, op core.ActionType) []core.ToolDefinitionPort {
 	return nil // Not implemented in tool.DefaultRegistry
 }
 
@@ -383,11 +383,11 @@ type toolDefinitionAdapter struct {
 func (a *toolDefinitionAdapter) GetID() string          { return a.t.ID }
 func (a *toolDefinitionAdapter) GetCanonicalID() string { return a.t.ID }
 func (a *toolDefinitionAdapter) GetDescription() string { return a.t.Description }
-func (a *toolDefinitionAdapter) GetType() interfaces.ToolType {
+func (a *toolDefinitionAdapter) GetType() core.ToolType {
 	if a.t.Type == tool.ToolTypeSystem {
-		return interfaces.ToolTypeSystem
+		return core.ToolTypeSystem
 	}
-	return interfaces.ToolTypeContainer
+	return core.ToolTypeContainer
 }
 func (a *toolDefinitionAdapter) GetBinary() string       { return a.t.Binary }
 func (a *toolDefinitionAdapter) GetImage() string        { return a.t.Image }
@@ -395,22 +395,22 @@ func (a *toolDefinitionAdapter) GetCommand() []string    { return a.t.Command }
 func (a *toolDefinitionAdapter) GetEntrypoint() []string { return a.t.Entrypoint }
 func (a *toolDefinitionAdapter) GetEnv() map[string]string { return a.t.Env }
 func (a *toolDefinitionAdapter) GetWorkDir() string      { return a.t.WorkDir }
-func (a *toolDefinitionAdapter) GetResources() interfaces.ToolResourcesPort { return nil }
-func (a *toolDefinitionAdapter) GetVerify() interfaces.ToolVerifyPort       { return nil }
+func (a *toolDefinitionAdapter) GetResources() core.ToolResourcesPort { return nil }
+func (a *toolDefinitionAdapter) GetVerify() core.ToolVerifyPort       { return nil }
 func (a *toolDefinitionAdapter) DisplayName() string                        { return a.t.DisplayName() }
 func (a *toolDefinitionAdapter) ShortName() string                          { return a.t.ShortName() }
 
 // Compile-time interface check.
-var _ interfaces.SimpleServicesPort = (*Services)(nil)
+var _ core.SimpleServicesPort = (*Services)(nil)
 
 // Services provides core services for EAC commands.
 // It implements the SimpleServicesPort interface.
 type Services struct {
 	workspaceRoot string
 	configRoot    string
-	config        interfaces.ConfigPort
-	modules       interfaces.ModuleRegistryPort
-	tools         interfaces.ToolRegistryPort
+	config        core.ConfigPort
+	modules       core.ModuleRegistryPort
+	tools         core.ToolRegistryPort
 
 	// Cleanup functions to run on Close(), in reverse order
 	cleanups []func() error
@@ -428,7 +428,7 @@ type Services struct {
 // 5. Build module registry from config
 // 6. If DebugMode=true, configure logging
 // 7. Track cleanup functions to run in Close()
-func New(opts interfaces.SimpleServicesOptions) (*Services, error) {
+func New(opts core.SimpleServicesOptions) (*Services, error) {
 	// Step 1: Find workspace root
 	ws, err := workspace.Detect()
 	if err != nil {
@@ -498,18 +498,18 @@ func (s *Services) ConfigRoot() string {
 }
 
 // Config returns the configuration access port.
-func (s *Services) Config() interfaces.ConfigPort {
+func (s *Services) Config() core.ConfigPort {
 	return s.config
 }
 
 // Modules returns the module registry port.
-func (s *Services) Modules() interfaces.ModuleRegistryPort {
+func (s *Services) Modules() core.ModuleRegistryPort {
 	return s.modules
 }
 
 // Tools returns the tool registry port.
 // Returns nil if InitTools was false in options.
-func (s *Services) Tools() interfaces.ToolRegistryPort {
+func (s *Services) Tools() core.ToolRegistryPort {
 	return s.tools
 }
 

@@ -134,7 +134,7 @@ func ImportManual() int {
 	}
 
 	// Validate against schema
-	schemaPath := filepath.Join(workspaceRoot, "contracts/core/0.1.0/manual-test-results.schema.json")
+	schemaPath := filepath.Join(workspaceRoot, "contracts/core/0.1.0/schemas/manual-test-results.schema.json")
 	if err := validateAgainstSchema(inputFlag, schemaPath); err != nil {
 		log.Errorf("schema validation failed: %v", err)
 		return 1

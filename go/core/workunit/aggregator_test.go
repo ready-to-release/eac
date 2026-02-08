@@ -9,9 +9,9 @@ import (
 func TestNewUoWAggregator(t *testing.T) {
 	t.Run("counts UoWs per module", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
-			{Context: ContextTest, Module: "cli", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "cli", Component: "go", Tool: "gotest"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
@@ -37,21 +37,21 @@ func TestNewUoWAggregator(t *testing.T) {
 func TestUoWAggregator_MarkCached(t *testing.T) {
 	t.Run("increments cached count for module", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
 
 		// Mark first UoW as cached
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"})
 
 		total, cached := agg.Stats("core")
 		assert.Equal(t, 2, total)
 		assert.Equal(t, 1, cached)
 
 		// Mark second UoW as cached
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"})
 
 		total, cached = agg.Stats("core")
 		assert.Equal(t, 2, total)
@@ -62,8 +62,8 @@ func TestUoWAggregator_MarkCached(t *testing.T) {
 func TestUoWAggregator_IsModuleCached(t *testing.T) {
 	t.Run("returns false when no UoWs cached", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
@@ -72,25 +72,25 @@ func TestUoWAggregator_IsModuleCached(t *testing.T) {
 
 	t.Run("returns false when only some UoWs cached", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"})
 
 		assert.False(t, agg.IsModuleCached("core"), "module with partial UoWs cached should not be cached")
 	})
 
 	t.Run("returns true when all UoWs cached", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"})
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"})
 
 		assert.True(t, agg.IsModuleCached("core"), "module with all UoWs cached should be cached")
 	})
@@ -104,20 +104,20 @@ func TestUoWAggregator_IsModuleCached(t *testing.T) {
 func TestUoWAggregator_GetModuleLists(t *testing.T) {
 	t.Run("separates modules into changed and up-to-date", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
-			{Context: ContextTest, Module: "cli", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "api", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "cli", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "api", Component: "go", Tool: "gotest"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
 
 		// Mark all core UoWs as cached
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"})
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"})
 
 		// Mark cli UoW as cached (only one, so module is cached)
-		agg.MarkCached(UnitID{Context: ContextTest, Module: "cli", Component: "go", Tool: "gotest"})
+		agg.MarkCached(UnitID{Action: ActionTest, Module: "cli", Component: "go", Tool: "gotest"})
 
 		// api has no cached UoWs
 
@@ -129,9 +129,9 @@ func TestUoWAggregator_GetModuleLists(t *testing.T) {
 
 	t.Run("preserves order from expectedUoWs", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "zzz", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "aaa", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "mmm", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "zzz", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "aaa", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "mmm", Component: "go", Tool: "gotest"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)
@@ -154,9 +154,9 @@ func TestUoWAggregator_GetModuleLists(t *testing.T) {
 
 	t.Run("deduplicates modules", func(t *testing.T) {
 		expectedUoWs := []UnitID{
-			{Context: ContextTest, Module: "core", Component: "go", Tool: "gotest"},
-			{Context: ContextTest, Module: "core", Component: "gherkin", Tool: "godog"},
-			{Context: ContextTest, Module: "core", Component: "ts", Tool: "jest"},
+			{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+			{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog"},
+			{Action: ActionTest, Module: "core", Component: "ts", Tool: "jest"},
 		}
 
 		agg := NewUoWAggregator(expectedUoWs)

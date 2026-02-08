@@ -1,0 +1,983 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/repository/0.1.0",
+  "title": "Repository Configuration Schema",
+  "description": "Unified schema for repository configuration and module contracts",
+  "type": "object",
+  "properties": {
+    "repository": {
+      "$ref": "#/definitions/repository_config",
+      "description": "Repository-level configuration and metadata"
+    },
+    "paths": {
+      "$ref": "#/definitions/paths_config",
+      "description": "Repository path configuration (optional, has sensible defaults)"
+    },
+    "conventions": {
+      "$ref": "#/definitions/conventions_config",
+      "description": "Filename conventions (optional, has sensible defaults)"
+    },
+    "modules": {
+      "type": "array",
+      "description": "List of module definitions",
+      "items": {
+        "$ref": "#/definitions/module"
+      },
+      "minItems": 1
+    },
+    "registries": {
+      "$ref": "#/definitions/registries_config",
+      "description": "Container registry configurations for cleanup policies"
+    },
+    "containers": {
+      "$ref": "#/definitions/containers_config",
+      "description": "Container tool configurations with version pinning"
+    }
+  },
+  "required": ["modules"],
+  "definitions": {
+    "repository_config": {
+      "type": "object",
+      "description": "Repository-level configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["mono", "poly", "adjacent"],
+          "description": "Repository type: mono (monorepo), poly (polyrepo), adjacent (supporting repo)"
+        },
+        "schemes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["Implicit", "SemVer", "CalVer"]
+          },
+          "description": "Valid versioning schemes that modules can declare. Implicit is always available as the default.",
+          "default": ["Implicit", "SemVer", "CalVer"],
+          "minItems": 1
+        },
+        "trunk_branch": {
+          "type": "string",
+          "description": "Main branch name for trunk-based development",
+          "default": "main",
+          "minLength": 1
+        },
+        "max_branch_age_days": {
+          "type": "integer",
+          "description": "Maximum age in days for feature branches",
+          "minimum": 1,
+          "default": 2
+        },
+        "pr": {
+          "$ref": "#/definitions/pr_config",
+          "description": "Pull request configuration"
+        },
+        "versioning": {
+          "$ref": "#/definitions/versioning_config",
+          "description": "Repository-wide versioning constraints and behavior"
+        },
+        "parallelism": {
+          "$ref": "#/definitions/parallelism_config",
+          "description": "Parallelism limits for build and test commands"
+        },
+        "remote": {
+          "$ref": "#/definitions/remote_config",
+          "description": "Remote VCS repository configuration (GitHub, GitLab, Azure DevOps, etc.)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "remote_config": {
+      "type": "object",
+      "description": "Remote VCS repository configuration. Only owner is required - URLs are derived from type + owner if not specified.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["github", "gitlab", "azure-devops", "bitbucket"],
+          "description": "VCS provider type (default: github)",
+          "default": "github"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Organization or username on the VCS provider (required)",
+          "minLength": 1
+        },
+        "repo": {
+          "type": "string",
+          "description": "Repository name - auto-detected from git if not set",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Repository URL - derived from type/owner if not set"
+        },
+        "pages_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Documentation site URL - derived from type/owner if not set"
+        },
+        "registry_url": {
+          "type": "string",
+          "description": "Container registry URL - derived from type/owner if not set"
+        }
+      },
+      "required": ["owner"],
+      "additionalProperties": false
+    },
+    "parallelism_config": {
+      "type": "object",
+      "description": "Parallelism limits for build and test operations. CI uses lower limits to avoid resource contention on shared runners.",
+      "properties": {
+        "ci": {
+          "type": "integer",
+          "description": "Maximum parallel workers in CI environment (GitHub Actions)",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 4
+        },
+        "devbox": {
+          "type": "integer",
+          "description": "Maximum parallel workers in local development environment",
+          "minimum": 1,
+          "maximum": 32,
+          "default": 8
+        }
+      },
+      "default": {
+        "ci": 4,
+        "devbox": 8
+      }
+    },
+    "pr_config": {
+      "type": "object",
+      "description": "Pull request workflow configuration",
+      "properties": {
+        "delete_branch_on_merge": {
+          "type": "boolean",
+          "description": "Automatically delete branch after PR merge",
+          "default": true
+        },
+        "merge_strategy": {
+          "type": "string",
+          "enum": ["squash", "merge", "rebase"],
+          "description": "Default merge strategy for pull requests",
+          "default": "squash"
+        }
+      },
+      "default": {
+        "delete_branch_on_merge": true,
+        "merge_strategy": "squash"
+      }
+    },
+    "versioning_config": {
+      "type": "object",
+      "description": "Repository-wide versioning constraints and behavior control",
+      "properties": {
+        "constraint": {
+          "type": "string",
+          "enum": ["unrestricted", "patch-only", "calver-only"],
+          "description": "Global constraint on version bumping. unrestricted: Allow major, minor, and patch bumps based on conventional commits. patch-only: For semver modules, only allow patch bumps (0.0.x → 0.0.x+1) - stops major/minor bumps during early development. calver-only: Force all modules to use calendar versioning.",
+          "default": "unrestricted"
+        }
+      },
+      "default": {
+        "constraint": "unrestricted"
+      }
+    },
+    "paths_config": {
+      "type": "object",
+      "description": "Repository path configuration for specs, tests, and output directories",
+      "properties": {
+        "specs_root": {
+          "type": "string",
+          "description": "Root directory for feature specifications",
+          "default": "specs"
+        },
+        "templates": {
+          "type": "string",
+          "description": "Templates directory",
+          "default": "templates"
+        },
+        "ai_prompts": {
+          "$ref": "#/definitions/ai_prompts_paths",
+          "description": "AI prompt template paths"
+        },
+        "out": {
+          "$ref": "#/definitions/out_paths",
+          "description": "Output directory structure"
+        }
+      }
+    },
+    "ai_prompts_paths": {
+      "type": "object",
+      "description": "AI prompt template paths with three-tier priority system",
+      "properties": {
+        "system": {
+          "type": "string",
+          "description": "System default prompts (version controlled, shipped with repo)",
+          "default": "templates/ai"
+        },
+        "team": {
+          "type": "string",
+          "description": "Team override prompts (version controlled, team customizations)",
+          "default": ".eac/templates/ai"
+        }
+      },
+      "default": {
+        "system": "templates/ai",
+        "team": ".eac/templates/ai"
+      }
+    },
+    "out_paths": {
+      "type": "object",
+      "description": "Output directory structure for build artifacts, test results, and logs",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root output directory",
+          "default": "out"
+        },
+        "build": {
+          "type": "string",
+          "description": "Build output directory",
+          "default": "out/build"
+        },
+        "test": {
+          "type": "string",
+          "description": "Test output directory",
+          "default": "out/test"
+        },
+        "logs": {
+          "type": "string",
+          "description": "Logs output directory",
+          "default": "out/logs"
+        },
+        "scan": {
+          "type": "string",
+          "description": "Security scan output directory",
+          "default": "out/scan"
+        },
+        "tools": {
+          "type": "string",
+          "description": "Tools output directory (CI tools like commands binary)",
+          "default": "out/tools"
+        }
+      }
+    },
+    "conventions_config": {
+      "type": "object",
+      "description": "Filename conventions used across the repository",
+      "properties": {
+        "godog_test": {
+          "type": "string",
+          "description": "Godog test file name",
+          "default": "godog_test.go"
+        },
+        "package_json": {
+          "type": "string",
+          "description": "Node.js package file name",
+          "default": "package.json"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file name",
+          "default": "CHANGELOG.md"
+        },
+        "build_log": {
+          "type": "string",
+          "description": "Build log filename",
+          "default": "build.log"
+        },
+        "build_timing": {
+          "type": "string",
+          "description": "Build timing report filename",
+          "default": "build-timing.txt"
+        },
+        "test_timing": {
+          "type": "string",
+          "description": "Test timing report filename",
+          "default": "test-timing.txt"
+        },
+        "specification": {
+          "type": "string",
+          "description": "Gherkin specification filename",
+          "default": "specification.feature"
+        },
+        "risk_catalog": {
+          "type": "string",
+          "description": "OSCAL catalog filename",
+          "default": "controls.catalog.json"
+        },
+        "risk_controls_dir": {
+          "type": "string",
+          "description": "Risk controls directory name",
+          "default": ".risk-controls"
+        },
+        "risk_reports_category": {
+          "type": "string",
+          "description": "Risk reports template category subdirectory",
+          "default": "risk"
+        },
+        "risk_assessment_template": {
+          "type": "string",
+          "description": "Risk assessment report template filename",
+          "default": "risk-assess.md"
+        },
+        "template_specs_dir": {
+          "type": "string",
+          "description": "Specs templates subdirectory",
+          "default": "specs"
+        },
+        "template_reports_dir": {
+          "type": "string",
+          "description": "Reports templates subdirectory",
+          "default": "reports"
+        },
+        "template_risk_catalog_dir": {
+          "type": "string",
+          "description": "Risk catalog templates subdirectory",
+          "default": "risk-catalog"
+        }
+      }
+    },
+    "module": {
+      "type": "object",
+      "description": "A module contract definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique module identifier",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable module name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Module description (defaults to name if not specified)"
+        },
+        "template": {
+          "type": "string",
+          "description": "Name of a module template to use as base configuration. Templates are defined in defaults/module-templates.yml.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "auto_discover": {
+          "type": "boolean",
+          "description": "Enable automatic discovery of conventional components (gherkin, structurizr, test-impl, markdown)",
+          "default": false
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Template parameter values for placeholder substitution (e.g., go_root)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of module monikers this module depends on (defaults to []). Use the special value 'root' to mark a module as root-level baseline tooling; when 'root' is specified it must be the only entry.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "depends_on_ci": {
+          "type": "array",
+          "description": "Module dependencies that require CI artifact downloads. These are merged into depends_on AND tracked separately for CI dispatch layering. Use when this module's CI workflow needs to download build artifacts from the dependency's CI.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "files": {
+          "$ref": "#/definitions/files"
+        },
+        "flags": {
+          "$ref": "#/definitions/flags"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Generic key-value store for module-specific data (e.g., executable names, custom properties)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "versioning": {
+          "$ref": "#/definitions/module_versioning",
+          "description": "Module versioning configuration"
+        },
+        "evidence_books": {
+          "type": "array",
+          "description": "Book names for evidence documentation, built via 'update evidence' command. Unlike regular books, these are built independently of the build command.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "build": {
+          "$ref": "#/definitions/module_build",
+          "description": "Per-module build configuration"
+        },
+        "docker_build": {
+          "type": "object",
+          "description": "Per-module Docker build configuration",
+          "additionalProperties": true
+        },
+        "release_bundle": {
+          "$ref": "#/definitions/release_bundle",
+          "description": "Release bundle configuration for modules that create aggregated releases"
+        },
+        "components": {
+          "$ref": "#/definitions/module_components",
+          "description": "Component types for this module (required - defines what the module contains)"
+        }
+      },
+      "required": ["moniker", "name"]
+    },
+    "module_components": {
+      "type": "object",
+      "description": "Component types for a module. Maps component type name to its root path or configuration. The first component listed becomes the default for build operations.",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Root path for this component type (relative to repo root)"
+          },
+          {
+            "type": "null",
+            "description": "Use the default_root from component-types.yml (with {moniker} substitution)"
+          },
+          {
+            "$ref": "#/definitions/component_entry",
+            "description": "Full component configuration with root and optional pattern overrides"
+          }
+        ]
+      },
+      "minProperties": 1
+    },
+    "component_entry": {
+      "type": "object",
+      "description": "Full component configuration for a module",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Component type (e.g., 'go', 'book'). If omitted, the map key (component name) is used as the type. This allows multiple components of the same type with different names."
+        },
+        "root": {
+          "type": "string",
+          "description": "Root path for this component (relative to repo root)"
+        },
+        "patterns": {
+          "type": "object",
+          "description": "Override default file patterns from component-types",
+          "properties": {
+            "source": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Source file patterns (overrides component-type defaults)"
+            },
+            "tests": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Test file patterns (overrides component-type defaults)"
+            },
+            "config": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Config file patterns (overrides component-type defaults)"
+            }
+          }
+        },
+        "build": {
+          "$ref": "#/definitions/module_build",
+          "description": "Build configuration for this component"
+        },
+        "amp": {
+          "$ref": "#/definitions/amp_config",
+          "description": "Resource amplifier for this component's operations"
+        }
+      }
+    },
+    "amp_config": {
+      "type": "object",
+      "description": "Per-operation resource amplifiers (fractional multipliers). Values < 1.0 reduce resources, > 1.0 increase resources.",
+      "properties": {
+        "build": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Build operation weight multiplier"
+        },
+        "lint": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Lint operation weight multiplier"
+        },
+        "test": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Test operation weight multiplier"
+        },
+        "scan": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Scan operation weight multiplier"
+        }
+      },
+      "additionalProperties": false
+    },
+    "post_build_config": {
+      "type": "object",
+      "description": "Post-build actions to execute after successful component build",
+      "properties": {
+        "copy_to": {
+          "type": "string",
+          "description": "Target path to copy build output (relative to workspace root)"
+        }
+      }
+    },
+    "release_bundle": {
+      "type": "object",
+      "description": "Configuration for release bundle modules that aggregate multiple module releases into a single GitHub release",
+      "properties": {
+        "title_format": {
+          "type": "string",
+          "description": "Release title template with placeholders. Use {label} for version, {label_version} for explicit version. Example: '{r2r} ({r2r_version}) + {eac} ({eac_version})'"
+        },
+        "headline": {
+          "type": "object",
+          "description": "Map of label -> moniker for headline modules shown in title",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "description": "Grouped modules for release notes",
+          "items": {
+            "$ref": "#/definitions/release_bundle_category"
+          }
+        }
+      },
+      "required": ["title_format", "headline", "categories"]
+    },
+    "release_bundle_category": {
+      "type": "object",
+      "description": "A category of modules in release notes",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Category name (e.g., 'Core Tools')"
+        },
+        "description": {
+          "type": "string",
+          "description": "Category description"
+        },
+        "modules": {
+          "type": "array",
+          "description": "Module monikers in this category",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        }
+      },
+      "required": ["name", "modules"]
+    },
+    "module_build": {
+      "type": "object",
+      "description": "Per-module build configuration",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "description": "Explicit build handler override"
+        },
+        "artifacts": {
+          "type": "array",
+          "description": "Artifacts to produce",
+          "items": {
+            "$ref": "#/definitions/module_artifact"
+          }
+        },
+        "options": {
+          "$ref": "#/definitions/build_options",
+          "description": "Build behavior options"
+        },
+        "post_build": {
+          "$ref": "#/definitions/post_build_config",
+          "description": "Post-build actions to execute after successful build"
+        }
+      }
+    },
+    "module_artifact": {
+      "type": "object",
+      "description": "An artifact to be produced by a module build",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique artifact identifier"
+        },
+        "type": {
+          "type": "string",
+          "description": "Artifact type: executable, file, directory, image"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Output path pattern"
+        },
+        "compression": {
+          "type": "string",
+          "description": "Compression type: none, strip, upx"
+        },
+        "derive_from": {
+          "type": "string",
+          "description": "Source artifact to derive from"
+        }
+      },
+      "required": ["id", "type", "pattern"]
+    },
+    "build_options": {
+      "type": "object",
+      "description": "Build behavior options (reserved for future use)",
+      "properties": {}
+    },
+    "files": {
+      "type": "object",
+      "description": "File ownership configuration",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root directory for the module (relative to repo root, use '/' for repo root)"
+        },
+        "source": {
+          "type": "array",
+          "description": "Source file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "config": {
+          "type": "array",
+          "description": "Configuration file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "assets": {
+          "type": "array",
+          "description": "Asset file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "tests": {
+          "type": "array",
+          "description": "Test file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "File patterns to exclude from ownership",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "ignore": {
+          "type": "array",
+          "description": "File patterns that are owned but do not trigger change detection (e.g., release workflows, changelogs, README.md). These files belong to the module but changes to them won't trigger CI rebuilds.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
+          "default": "CHANGELOG.md"
+        },
+        "release_notes": {
+          "type": "string",
+          "description": "Release notes file path (defaults to 'release/{moniker}/RELEASE-NOTES.md')"
+        },
+        "workflows": {
+          "$ref": "#/definitions/workflows"
+        },
+        "repo": {
+          "$ref": "#/definitions/repo_files"
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "description": "GitHub Actions workflow file ownership",
+      "properties": {
+        "ci": {
+          "type": "string",
+          "description": "CI workflow file path (e.g., '.github/workflows/ci-{moniker}.yaml')"
+        },
+        "release": {
+          "type": "string",
+          "description": "Release workflow file path (e.g., '.github/workflows/release-{moniker}.yml')"
+        }
+      }
+    },
+    "repo_files": {
+      "type": "object",
+      "description": "Repository-level file ownership (files outside module root)",
+      "properties": {
+        "specs": {
+          "type": "array",
+          "description": "Specification file patterns (defaults to ['specs/<moniker>/**'])",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_impl": {
+          "type": "string",
+          "description": "Path to test implementation directory (e.g., 'go/eac/specs/impl/repository' for godog step definitions)"
+        },
+        "design": {
+          "type": "string",
+          "description": "Path to design workspace directory (e.g., 'specs/<moniker>/.design' for Structurizr DSL files)"
+        },
+        "other": {
+          "type": "array",
+          "description": "Other repository files owned by this module",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Repository file patterns to exclude",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "description": "Module behavior flags",
+      "properties": {
+        "explicit_ownership": {
+          "type": "boolean",
+          "description": "When true, the module only owns files matching explicit patterns (source, config, assets, tests). Disables the default 'all files under root' ownership fallback. Use for catch-all modules that should only own specific files.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "module_versioning": {
+      "type": "object",
+      "description": "Module versioning configuration. Modules are either supporting (Implicit) or releasable (SemVer/CalVer).",
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "enum": ["Implicit", "SemVer", "CalVer"],
+          "description": "Versioning scheme. Implicit: supporting module with no explicit version, released only as part of releasable modules. SemVer/CalVer: releasable module with explicit version and CI/release pipelines.",
+          "default": "Implicit"
+        },
+        "current": {
+          "type": "string",
+          "description": "Current version (releasable modules only)"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Path to changelog file (defaults to release/<moniker>/CHANGELOG.md)"
+        }
+      }
+    },
+    "registries_config": {
+      "type": "object",
+      "description": "Container registry configurations keyed by registry hostname",
+      "additionalProperties": {
+        "$ref": "#/definitions/registry_config"
+      }
+    },
+    "registry_config": {
+      "type": "object",
+      "description": "Configuration for a container registry",
+      "properties": {
+        "org": {
+          "type": "string",
+          "description": "Organization name in the registry (optional, derived from repository.remote.registry_url if not set)",
+          "minLength": 1
+        },
+        "cleanup": {
+          "$ref": "#/definitions/registry_cleanup_policy",
+          "description": "Cleanup policy for container images"
+        }
+      }
+    },
+    "registry_cleanup_policy": {
+      "type": "object",
+      "description": "Cleanup policy for container images. Uses two protection mechanisms: (1) image tag patterns checked locally, (2) GitHub Release API for release correlation.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether cleanup is enabled for this registry",
+          "default": true
+        },
+        "policy": {
+          "type": "string",
+          "enum": ["keep-latest-n"],
+          "description": "Cleanup policy type. keep-latest-n: keep the newest N versions that match prune patterns",
+          "default": "keep-latest-n"
+        },
+        "keep": {
+          "type": "integer",
+          "description": "Number of versions to keep (for keep-latest-n policy)",
+          "minimum": 1,
+          "default": 10
+        },
+        "image_tags": {
+          "$ref": "#/definitions/image_tag_rules",
+          "description": "Rules based on container image tags (OCI tags visible on the image)"
+        },
+        "github_releases": {
+          "$ref": "#/definitions/github_release_rules",
+          "description": "Rules based on GitHub Release API correlation"
+        },
+        "min_age_days": {
+          "type": "integer",
+          "description": "Minimum age in days before a version can be pruned. Versions created more recently than this are protected.",
+          "minimum": 0,
+          "default": 7
+        }
+      }
+    },
+    "image_tag_rules": {
+      "type": "object",
+      "description": "Protection rules based on container image tags (OCI/Docker tags like 'v1.0.0', 'sha-abc123', 'latest')",
+      "properties": {
+        "preserve": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Image tag patterns to preserve (glob). Images with any tag matching these are never deleted. Examples: 'v*' matches 'v1.0.0', 'latest' matches exactly.",
+          "default": ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
+        },
+        "prune": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Image tag patterns eligible for pruning (glob). Only images with tags matching these are candidates. Examples: 'sha-*' matches CI builds, 'pr-*' matches PR builds.",
+          "default": ["sha-*", "dev-*", "pr-*", "ci"]
+        }
+      }
+    },
+    "github_release_rules": {
+      "type": "object",
+      "description": "Configuration for GitHub Release API correlation. Images matching GitHub Releases are ALWAYS protected (non-configurable safety feature).",
+      "properties": {
+        "tag_format": {
+          "type": "string",
+          "description": "Expected format of release tags on images. Use {module} and {version} placeholders. Example: '{module}/{version}' matches 'ext-eac/1.0.0'",
+          "default": "{module}/{version}"
+        }
+      }
+    },
+    "containers_config": {
+      "type": "object",
+      "description": "Container configurations keyed by container name",
+      "properties": {
+        "base_images": {
+          "$ref": "#/definitions/base_images_config",
+          "description": "Pinned versions for Dockerfile base images"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/container_tool_config"
+      }
+    },
+    "base_images_config": {
+      "type": "object",
+      "description": "Base image version pins (ARG values for Dockerfiles)",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Pinned version tag (e.g., '3.12.1', '1.25.0-alpine')"
+      }
+    },
+    "container_tool_config": {
+      "type": "object",
+      "description": "Configuration for a container-based tool",
+      "properties": {
+        "dockerfile": {
+          "type": "string",
+          "description": "Path to Dockerfile relative to repo root"
+        },
+        "image": {
+          "type": "string",
+          "description": "GHCR image reference for container mode"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag for GHCR (e.g., 'v1.0.0', 'sha-abc123')",
+          "default": "latest"
+        },
+        "workdir": {
+          "type": "string",
+          "description": "Working directory inside container",
+          "default": "/workspace"
+        },
+        "command": {
+          "type": "string",
+          "description": "Default command/entrypoint"
+        },
+        "local_binding": {
+          "type": "boolean",
+          "description": "If true, prefer build mode in local development",
+          "default": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this container tool"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "repository": {
+        "type": "mono"
+      },
+      "modules": [
+        {
+          "moniker": "eac-core",
+          "name": "Core Domain Libraries",
+          "description": "Core library containing contracts and repository operations",
+          "components": {
+            "go": "go/eac/core",
+            "specs": null,
+            "design": null
+          }
+        },
+        {
+          "moniker": "vscode-ext",
+          "name": "VSCode Extension",
+          "components": {
+            "typescript": "typescript/vscode-ext",
+            "specs": null
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -128,7 +128,7 @@ func TestGetLoadedFiles_ContractDefaultsPath(t *testing.T) {
 	}
 	require.NotNil(t, contractFile, "contract layer file should be present")
 
-	expectedPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "defaults", "repository.yml")
+	expectedPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "repository.yml")
 	assert.Equal(t, expectedPath, contractFile.Path)
 }
 

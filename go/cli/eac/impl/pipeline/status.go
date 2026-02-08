@@ -125,7 +125,7 @@ func PipelineStatus() int {
 }
 
 // formatWorkflowStatus formats the workflow status for display.
-func formatWorkflowStatus(run pipelinerunner.WorkflowRun) string {
+func formatWorkflowStatus(run pipelinerunner.WorkflowRunSummary) string {
 	if run.Status == "completed" {
 		switch run.Conclusion {
 		case "success":

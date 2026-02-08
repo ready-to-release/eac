@@ -3,7 +3,7 @@ nav:
   - index.md
   - eac-cli.md
   - core.md
-  - mcp-server.md
+  - eac-mcp-server.md
   - ext-eac.md
   - repository.md
   - docs.md

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	securityInterfaces "github.com/ready-to-release/eac/contracts/security/0.1.0/interfaces"
-	testingInterfaces "github.com/ready-to-release/eac/contracts/testing/0.1.0/interfaces"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 	"github.com/ready-to-release/eac/go/core/domain/schema"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/workspace"
@@ -77,6 +77,9 @@ type EACConfig struct {
 	Commands       *CommandsConfig
 	ComponentTypes *ComponentTypesConfig
 	LintProviders  *LintProvidersConfig
+
+	// Blueprints: component blueprints, module templates, artifact matrices
+	Blueprints *BlueprintsConfig
 
 	// New contract-based configs (Phase 2.2/2.3)
 	// These load from versioned contracts (testing, security)
@@ -191,6 +194,7 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 	// Skip if Repository is nil (can happen in test environments without contract files)
 	if c.Repository != nil {
 		c.Repository.ApplyComponentDefaults(c.ComponentTypes, c.RepoRoot)
+		c.Repository.computeDisplayOrder(c.ComponentTypes)
 	}
 
 	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
@@ -319,10 +323,20 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	// Step 8: Final merge: (base + type-specific) + user
 	c.Repository = MergeRepository(mergedDefaults, userCfg)
 
-	// Step 9: Expand module templates
-	// Load templates and expand modules that reference them
-	if err := c.Repository.ExpandModuleTemplates(c.RepoRoot); err != nil {
+	// Step 9: Load blueprints and expand module templates
+	if err := c.LoadBlueprints(validateSchema); err != nil {
+		return fmt.Errorf("loading blueprints: %w", err)
+	}
+
+	if err := c.Repository.ExpandModuleTemplates(c.RepoRoot, c.Blueprints); err != nil {
 		return fmt.Errorf("expanding module templates: %w", err)
+	}
+
+	// Step 10: Expand module groups in depends_on
+	// Must happen after template expansion (templates can add depends_on with group names)
+	// Also validates and strips the "root" sentinel for baseline tooling modules
+	if err := c.Repository.expandModuleGroups(); err != nil {
+		return fmt.Errorf("expanding module groups: %w", err)
 	}
 
 	return nil
@@ -585,6 +599,50 @@ func (c *EACConfig) LoadCommands(validateSchema bool) error {
 	}
 
 	c.Commands = &cfg
+	return nil
+}
+
+// LoadBlueprints loads the blueprints configuration.
+// Loads contract defaults (required), then merges optional .eac/blueprints.yml override.
+func (c *EACConfig) LoadBlueprints(validateSchema bool) error {
+	// 1. Load defaults (required — errors are fatal)
+	cfg, err := LoadBlueprintsDefaults(c.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("loading blueprints defaults: %w", err)
+	}
+
+	// 2. Load .eac/blueprints.yml override (optional)
+	overridePath := filepath.Join(c.ConfigRoot, BlueprintsFileName)
+	if data, err := os.ReadFile(overridePath); err == nil {
+		if validateSchema {
+			if err := c.validateSchema(schema.SchemaBlueprints, data); err != nil {
+				return err
+			}
+		}
+
+		var override BlueprintsConfig
+		if err := yaml.Unmarshal(data, &override); err != nil {
+			return fmt.Errorf("parsing %s: %w", BlueprintsFileName, err)
+		}
+		cfg = MergeBlueprintsConfig(cfg, &override)
+	}
+
+	c.Blueprints = cfg
+
+	// If component-kinds are defined in blueprints, use them as ComponentTypes.
+	// This enables the unified config: component kinds live in blueprints.yml
+	// alongside templates and artifact matrices.
+	if len(cfg.ComponentKinds) > 0 {
+		if c.ComponentTypes == nil {
+			c.ComponentTypes = &ComponentTypesConfig{
+				ComponentTypes: make(map[string]*ComponentType),
+			}
+		}
+		for name, kind := range cfg.ComponentKinds {
+			c.ComponentTypes.ComponentTypes[name] = kind
+		}
+	}
+
 	return nil
 }
 
@@ -875,9 +933,9 @@ func (c *EACConfig) LoadTesting() error {
 	if err != nil {
 		// Non-fatal: testing config is optional, provide empty default
 		c.Testing = &TestingConfig{
-			suites:   make(map[string]*testingInterfaces.SuiteDefinition),
-			tags:     make(map[string]*testingInterfaces.TagDefinition),
-			tagTypes: make(map[string]testingInterfaces.TagType),
+			suites:   make(map[string]*core.SuiteDefinition),
+			tags:     make(map[string]*core.TagDefinition),
+			tagTypes: make(map[string]core.TagType),
 		}
 		return nil
 	}
@@ -892,8 +950,8 @@ func (c *EACConfig) LoadSecurity() error {
 	if err != nil {
 		// Non-fatal: security config is optional, provide empty default
 		c.Security = &SecurityConfig{
-			scanners: make(map[string]*securityInterfaces.ScannerDefinition),
-			policies: &securityInterfaces.PoliciesConfig{
+			scanners: make(map[string]*scanner.ScannerDefinition),
+			policies: &scanner.PoliciesConfig{
 				ComponentScanners: make(map[string][]string),
 				Default:           []string{"trivy-sbom", "trivy-vuln"},
 			},

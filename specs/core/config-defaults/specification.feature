@@ -1,4 +1,4 @@
-@L1 @ov @depm:core
+@L1 @ov @depm:foundation
 Feature: Configuration Defaults System
 
   As a repository maintainer
@@ -29,7 +29,7 @@ Feature: Configuration Defaults System
       And the component types config contains type "go"
       And the component types config contains type "dockerfile"
       And the component types config contains type "typescript"
-      And the component types config contains type "markdown"
+      And the component types config contains type "assets"
       And the repository paths.specs_root is "specs"
       And the repository paths.out.build is "out/build"
       And the system dependencies config contains "go"

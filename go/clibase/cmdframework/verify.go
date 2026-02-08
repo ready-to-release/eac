@@ -4,7 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/tui"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -77,7 +78,7 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Module dependency (build artifact) validation (test/scan only)
 	// Build command creates artifacts - it doesn't need them to exist beforehand
 	// Test/scan commands consume artifacts - they need to verify builds exist
-	if ctx.Config.Type != CommandTypeBuild && !ctx.Config.SkipDepm && artifactValidator != nil {
+	if ctx.Config.Type != core.ActionBuild && !ctx.Config.SkipDepm && artifactValidator != nil {
 		artifactInfo := artifactValidator(ctx)
 		if artifactInfo != nil {
 			summary.ArtifactValidation = artifactInfo
@@ -171,11 +172,11 @@ func displayInitSummary(ctx *ExecutionContext) {
 	}
 }
 
-// convertToTUIInitSummary converts initsummary.Summary to tui.InitSummary.
+// convertToTUIInitSummary converts initsummary.Summary to display.InitSummary.
 // It uses the ExecutionContext to access the UnitProvider for proper ID generation.
-func convertToTUIInitSummary(ctx *ExecutionContext) *tui.InitSummary {
+func convertToTUIInitSummary(ctx *ExecutionContext) *display.InitSummary {
 	s := ctx.InitSummary
-	ts := &tui.InitSummary{
+	ts := &display.InitSummary{
 		Command:           s.Command,
 		ExecutionContext:  s.ExecutionContext,
 		RequestedModules:  len(s.RequestedModules),
@@ -198,7 +199,7 @@ func convertToTUIInitSummary(ctx *ExecutionContext) *tui.InitSummary {
 	}
 
 	// Flags
-	ts.Flags = tui.InitSummaryFlags{
+	ts.Flags = display.InitSummaryFlags{
 		TidyFirst:    s.Flags.TidyFirst,
 		ForceRebuild: s.Flags.ForceRebuild,
 		DryRun:       s.Flags.DryRun,
@@ -248,7 +249,7 @@ func convertToTUIInitSummary(ctx *ExecutionContext) *tui.InitSummary {
 
 // ExtractPlannedTools extracts unique tools from component work units.
 // Returns a list of tools with their IsContainer status for TUI display.
-func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
+func ExtractPlannedTools(ctx *ExecutionContext) []display.PlannedTool {
 	provider := GetUnitProvider(ctx.Config.Type)
 	if provider == nil {
 		return nil
@@ -268,9 +269,9 @@ func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
 	}
 
 	// Convert to slice
-	tools := make([]tui.PlannedTool, 0, len(toolMap))
+	tools := make([]display.PlannedTool, 0, len(toolMap))
 	for name, isContainer := range toolMap {
-		tools = append(tools, tui.PlannedTool{
+		tools = append(tools, display.PlannedTool{
 			Name:        name,
 			IsContainer: isContainer,
 		})
@@ -281,18 +282,10 @@ func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
 
 // buildExecutionTreeFromUnits builds a flat list of modules with their UoWs.
 // Uses UnitProvider to get proper IDs with Longname() for globally unique identification.
-func buildExecutionTreeFromUnits(ctx *ExecutionContext) []tui.ExecutionModule {
-	// Initialize Extra map if needed
-	if ctx.Config.Extra == nil {
-		ctx.Config.Extra = make(map[string]interface{})
-	}
-
+func buildExecutionTreeFromUnits(ctx *ExecutionContext) []display.ExecutionModule {
 	// Check if UnitSpecs are cached
-	if cached, ok := ctx.Config.Extra["componentWorkUnits"].([]workunit.UnitSpec); ok && len(cached) > 0 {
-		return buildModulesFromUnitSpecs(cached)
-	}
-	if cached, ok := ctx.Config.Extra["unitSpecsCache"].([]workunit.UnitSpec); ok && len(cached) > 0 {
-		return buildModulesFromUnitSpecs(cached)
+	if len(ctx.Config.UnitSpecsCache) > 0 {
+		return buildModulesFromUnitSpecs(ctx.Config.UnitSpecsCache)
 	}
 
 	// Try to get UoWs from UnitProvider for proper ID generation
@@ -301,7 +294,7 @@ func buildExecutionTreeFromUnits(ctx *ExecutionContext) []tui.ExecutionModule {
 		units := provider(ctx)
 		if len(units) > 0 {
 			// Cache for subsequent calls
-			ctx.Config.Extra["unitSpecsCache"] = units
+			ctx.Config.UnitSpecsCache = units
 			return buildModulesFromUnitSpecs(units)
 		}
 	}
@@ -310,15 +303,15 @@ func buildExecutionTreeFromUnits(ctx *ExecutionContext) []tui.ExecutionModule {
 }
 
 // buildModulesFromUnitSpecs builds module list from unit specs.
-func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []tui.ExecutionModule {
+func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []display.ExecutionModule {
 	// Build a map of module -> UoWEntries from unit specs
-	moduleUoWs := make(map[string][]tui.UoWEntry)
+	moduleUoWs := make(map[string][]display.UoWEntry)
 	moduleOrder := []string{} // Track module order
 	seenModules := make(map[string]bool)
 
 	for _, spec := range units {
 		module := spec.ID.Module
-		entry := tui.UoWEntry{
+		entry := display.UoWEntry{
 			ID:            spec.ID.Longname(),
 			DisplayName:   spec.ID.DisplayName(),
 			Weight:        spec.Weight,
@@ -337,9 +330,9 @@ func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []tui.ExecutionModule 
 	}
 
 	// Build the flat module list maintaining order
-	modules := make([]tui.ExecutionModule, len(moduleOrder))
+	modules := make([]display.ExecutionModule, len(moduleOrder))
 	for i, moduleName := range moduleOrder {
-		modules[i] = tui.ExecutionModule{
+		modules[i] = display.ExecutionModule{
 			Name: moduleName,
 			UoWs: moduleUoWs[moduleName],
 		}

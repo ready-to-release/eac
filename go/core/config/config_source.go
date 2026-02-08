@@ -99,7 +99,7 @@ func (c *EACConfig) getFilesForConfig(filename string) []LoadedFile {
 	var files []LoadedFile
 
 	// Contract defaults path
-	contractPath := filepath.Join(c.RepoRoot, "contracts", "core", paths.DefaultsVersion, "defaults", filename)
+	contractPath := filepath.Join(c.RepoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", filename)
 	files = append(files, makeLoadedFile(contractPath, LayerContract))
 
 	// User config path

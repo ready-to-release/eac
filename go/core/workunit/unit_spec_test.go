@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // =============================================================================
@@ -14,7 +15,7 @@ import (
 func TestUnitSpec_FieldsExist(t *testing.T) {
 	// Verify UnitSpec struct has all expected fields
 	spec := UnitSpec{
-		ID:            UnitID{Context: ContextBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:            UnitID{Action: core.ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
 		ComponentType: "go",
 		Weight:        1,
 		Container:    false,
@@ -36,10 +37,10 @@ func TestUnitSpec_FieldsExist(t *testing.T) {
 // NewBuildSpec Constructor Tests
 // =============================================================================
 
-func TestNewBuildSpec_CreatesSpecWithContextBuild(t *testing.T) {
+func TestNewBuildSpec_CreatesSpecWithActionBuild(t *testing.T) {
 	spec := NewBuildSpec("core", "go", "go")
 
-	assert.Equal(t, ContextBuild, spec.ID.Context)
+	assert.Equal(t, core.ActionBuild, spec.ID.Action)
 }
 
 func TestNewBuildSpec_SetsCorrectFields(t *testing.T) {
@@ -96,7 +97,7 @@ func TestNewBuildSpec_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := NewBuildSpec(tt.module, tt.component, tt.tool)
 
-			assert.Equal(t, ContextBuild, spec.ID.Context)
+			assert.Equal(t, core.ActionBuild, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
 			assert.Equal(t, tt.component, spec.ID.Component)
 			assert.Equal(t, tt.tool, spec.ID.Tool)
@@ -110,10 +111,10 @@ func TestNewBuildSpec_TableDriven(t *testing.T) {
 // NewTestSpec Constructor Tests
 // =============================================================================
 
-func TestNewTestSpec_CreatesSpecWithContextTest(t *testing.T) {
+func TestNewTestSpec_CreatesSpecWithActionTest(t *testing.T) {
 	spec := NewTestSpec("core", "go", "gotest", "unit")
 
-	assert.Equal(t, ContextTest, spec.ID.Context)
+	assert.Equal(t, core.ActionTest, spec.ID.Action)
 }
 
 func TestNewTestSpec_SetsCorrectFields(t *testing.T) {
@@ -182,7 +183,7 @@ func TestNewTestSpec_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := NewTestSpec(tt.module, tt.component, tt.tool, tt.testset)
 
-			assert.Equal(t, ContextTest, spec.ID.Context)
+			assert.Equal(t, core.ActionTest, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
 			assert.Equal(t, tt.component, spec.ID.Component)
 			assert.Equal(t, tt.tool, spec.ID.Tool)
@@ -197,10 +198,10 @@ func TestNewTestSpec_TableDriven(t *testing.T) {
 // NewLintSpec Constructor Tests
 // =============================================================================
 
-func TestNewLintSpec_CreatesSpecWithContextLint(t *testing.T) {
+func TestNewLintSpec_CreatesSpecWithActionLint(t *testing.T) {
 	spec := NewLintSpec("core", "go", "golangci-lint")
 
-	assert.Equal(t, ContextLint, spec.ID.Context)
+	assert.Equal(t, core.ActionLint, spec.ID.Action)
 }
 
 func TestNewLintSpec_SetsCorrectFields(t *testing.T) {
@@ -240,15 +241,15 @@ func TestNewLintSpec_TableDriven(t *testing.T) {
 			provider:  "eslint",
 		},
 		{
-			name:      "yamllint for yaml",
+			name:      "yamllint for assets",
 			module:    "configs",
-			component: "yaml",
+			component: "assets",
 			provider:  "yamllint",
 		},
 		{
-			name:      "markdown lint",
+			name:      "markdownlint for assets",
 			module:    "docs",
-			component: "markdown",
+			component: "assets",
 			provider:  "markdownlint",
 		},
 	}
@@ -257,7 +258,7 @@ func TestNewLintSpec_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := NewLintSpec(tt.module, tt.component, tt.provider)
 
-			assert.Equal(t, ContextLint, spec.ID.Context)
+			assert.Equal(t, core.ActionLint, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
 			assert.Equal(t, tt.component, spec.ID.Component)
 			assert.Equal(t, tt.provider, spec.ID.Tool)
@@ -271,10 +272,10 @@ func TestNewLintSpec_TableDriven(t *testing.T) {
 // NewScanSpec Constructor Tests
 // =============================================================================
 
-func TestNewScanSpec_CreatesSpecWithContextScan(t *testing.T) {
+func TestNewScanSpec_CreatesSpecWithActionScan(t *testing.T) {
 	spec := NewScanSpec("core", "go", "trivy-vuln")
 
-	assert.Equal(t, ContextScan, spec.ID.Context)
+	assert.Equal(t, core.ActionScan, spec.ID.Action)
 }
 
 func TestNewScanSpec_SetsCorrectFields(t *testing.T) {
@@ -331,7 +332,7 @@ func TestNewScanSpec_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := NewScanSpec(tt.module, tt.component, tt.scanner)
 
-			assert.Equal(t, ContextScan, spec.ID.Context)
+			assert.Equal(t, core.ActionScan, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
 			assert.Equal(t, tt.component, spec.ID.Component)
 			assert.Equal(t, tt.scanner, spec.ID.Tool)
@@ -408,8 +409,8 @@ func TestUnitSpec_DependsOnCanBeSet(t *testing.T) {
 func TestUnitSpec_DependsOnMultiple(t *testing.T) {
 	spec := NewTestSpec("eac-cli", "gherkin", "godog", "integration")
 
-	dep1 := UnitID{Context: ContextBuild, Module: "core", Component: "go", Tool: "go"}
-	dep2 := UnitID{Context: ContextBuild, Module: "eac-cli", Component: "go", Tool: "go"}
+	dep1 := UnitID{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"}
+	dep2 := UnitID{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"}
 
 	spec.DependsOn = []UnitID{dep1, dep2}
 
@@ -487,73 +488,8 @@ func TestUnitSpec_GetPoolAllocation_ExplicitAllocation(t *testing.T) {
 
 	alloc := spec.GetPoolAllocation()
 
-	assert.Equal(t, 4, alloc.HostWeight)
-	assert.Equal(t, 2, alloc.DockerWeight)
+	assert.Equal(t, 4, alloc.GetHostWeight())
+	assert.Equal(t, 2, alloc.GetDockerWeight())
 	assert.True(t, alloc.IsContainer())
 }
 
-func TestUnitSpec_GetPoolAllocation_LegacyDerivation(t *testing.T) {
-	tests := []struct {
-		name            string
-		weight          int
-		container       bool
-		wantHostWeight  int
-		wantDockerWeight int
-		wantIsContainer bool
-	}{
-		{
-			name:             "host only - weight 2",
-			weight:           2,
-			container:        false,
-			wantHostWeight:   2,
-			wantDockerWeight: 0,
-			wantIsContainer:  false,
-		},
-		{
-			name:             "container - weight 4",
-			weight:           4,
-			container:        true,
-			wantHostWeight:   4,
-			wantDockerWeight: 4,
-			wantIsContainer:  true,
-		},
-		{
-			name:             "default weight",
-			weight:           1,
-			container:        false,
-			wantHostWeight:   1,
-			wantDockerWeight: 0,
-			wantIsContainer:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			spec := NewBuildSpec("mod", "comp", "tool")
-			spec.Weight = tt.weight
-			spec.Container = tt.container
-			// Leave PoolAllocation zero - should derive from legacy fields
-
-			alloc := spec.GetPoolAllocation()
-
-			assert.Equal(t, tt.wantHostWeight, alloc.HostWeight)
-			assert.Equal(t, tt.wantDockerWeight, alloc.DockerWeight)
-			assert.Equal(t, tt.wantIsContainer, alloc.IsContainer())
-		})
-	}
-}
-
-func TestUnitSpec_GetPoolAllocation_ExplicitTakesPrecedence(t *testing.T) {
-	spec := NewBuildSpec("mod", "go", "go")
-	spec.Weight = 2
-	spec.Container = true
-	// Set explicit allocation - should override legacy derivation
-	spec.PoolAllocation.HostWeight = 6
-	spec.PoolAllocation.DockerWeight = 3
-
-	alloc := spec.GetPoolAllocation()
-
-	// Should use explicit values, not derived from Weight/Container
-	assert.Equal(t, 6, alloc.HostWeight)
-	assert.Equal(t, 3, alloc.DockerWeight)
-}
