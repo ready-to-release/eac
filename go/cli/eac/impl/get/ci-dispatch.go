@@ -28,11 +28,11 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
-
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 // ciDispatchFlags defines valid flags for the get ci-dispatch command
@@ -113,17 +113,23 @@ func GetCIDispatch() int {
 	}
 	headSHA = shaResult.SHA
 
-	// Parse mock data if provided
-	var mockStatus map[string]bool
+	// Build CICacheChecker: mock mode or real GitHub
+	var checker *cache.CICacheChecker
 	if mockJSON != "" {
+		var mockStatus map[string]bool
 		if err := json.Unmarshal([]byte(mockJSON), &mockStatus); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: invalid mock JSON: %v\n", err)
 			return 1
 		}
+		checker = mockCheckerFromStatus(mockStatus, headSHA)
+	} else {
+		api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+		querier := NewGHCIRunQuerier(api)
+		checker = cache.NewCICacheChecker(querier, nil)
 	}
 
 	// Build result
-	result, err := filterCIDispatch(directlyChanged, invalidated, headSHA, mockStatus, workspaceRoot)
+	result, err := FilterCIDispatch(directlyChanged, invalidated, headSHA, checker, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -168,23 +174,21 @@ func GetCIDispatch() int {
 	})
 }
 
-// filterCIDispatch filters modules for CI dispatch and returns them in dependency order.
+// FilterCIDispatch filters modules for CI dispatch and returns them in dependency order.
 // This is the main entry point that loads CI deps from config.
-func filterCIDispatch(directlyChangedStr, invalidatedStr, headSHA string, mockStatus map[string]bool, workspaceRoot string) (*CIDispatchResult, error) {
+func FilterCIDispatch(directlyChangedStr, invalidatedStr, headSHA string, checker *cache.CICacheChecker, workspaceRoot string) (*CIDispatchResult, error) {
 	// Load CI artifact deps from config.
-	// Note: CI deps are loaded even in mock mode because mock only affects CI validity checking,
-	// not the dependency structure.
 	var ciDeps map[string][]string
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err == nil && cfg.Repository != nil {
 		ciDeps = buildCIArtifactDeps(cfg.Repository)
 	}
 
-	return filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA, mockStatus, workspaceRoot, ciDeps)
+	return filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA, checker, workspaceRoot, ciDeps)
 }
 
 // filterCIDispatchWithDeps filters modules for CI dispatch with explicit CI deps (for testing).
-func filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA string, mockStatus map[string]bool, workspaceRoot string, ciDeps map[string][]string) (*CIDispatchResult, error) {
+func filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA string, checker *cache.CICacheChecker, workspaceRoot string, ciDeps map[string][]string) (*CIDispatchResult, error) {
 	result := &CIDispatchResult{
 		Dispatch:       []string{},
 		Skipped:        []string{},
@@ -193,20 +197,21 @@ func filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA string
 		HeadSHA:        headSHA,
 	}
 
-	// Get valid CI workflow modules for validation (skip when using mock for tests)
+	// Get valid CI workflow modules for validation (skip when checker uses mock)
 	var validModules map[string]bool
-	if mockStatus == nil {
+	if workspaceRoot != "" {
 		var err error
 		validModules, err = getValidCIModules(workspaceRoot)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get valid CI modules: %w", err)
+			// Non-fatal: skip validation if we can't read workflows
+			validModules = nil
 		}
 	}
 
 	// Parse directly changed modules (always dispatch)
 	directlyChanged := parseModuleList(directlyChangedStr)
 	for _, module := range directlyChanged {
-		// Validate module exists (skip validation in mock mode)
+		// Validate module exists
 		if validModules != nil && !validModules[module] {
 			return nil, fmt.Errorf("invalid module %q: no CI workflow ci-%s.yaml exists", module, module)
 		}
@@ -217,27 +222,21 @@ func filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA string
 	// Parse invalidated modules (check for valid CI)
 	invalidatedModules := parseModuleList(invalidatedStr)
 	for _, module := range invalidatedModules {
-		// Validate module exists (skip validation in mock mode)
+		// Validate module exists
 		if validModules != nil && !validModules[module] {
 			return nil, fmt.Errorf("invalid module %q: no CI workflow ci-%s.yaml exists", module, module)
 		}
 	}
 
 	for _, module := range invalidatedModules {
-		hasValidCI, reason, err := checkModuleCIValidity(module, headSHA, mockStatus, workspaceRoot)
-		if err != nil {
-			// On error, dispatch to be safe
-			result.Dispatch = append(result.Dispatch, module)
-			result.Reasons[module] = fmt.Sprintf("error_checking: %v", err)
-			continue
-		}
+		ciResult := checker.Check(module, headSHA)
 
-		if hasValidCI {
+		if ciResult.Cached {
 			result.Skipped = append(result.Skipped, module)
-			result.Reasons[module] = reason
+			result.Reasons[module] = ciResult.Reason
 		} else {
 			result.Dispatch = append(result.Dispatch, module)
-			result.Reasons[module] = reason
+			result.Reasons[module] = ciResult.Reason
 		}
 	}
 
@@ -340,12 +339,46 @@ func computeCIDispatchOrder(modules []string, ciArtifactDeps map[string][]string
 }
 
 // buildCIArtifactDeps builds a map of module -> CI artifact dependencies from config.
+// Uses both CIDeps (from depends_on_ci) AND DependsOn (from depends_on) for modules
+// that have CI workflows. This enables full dependency-aware wave computation.
 func buildCIArtifactDeps(cfg *config.RepositoryConfig) map[string][]string {
+	// Build a set of modules that have CI workflows
+	ciModules := make(map[string]bool)
+	for i := range cfg.Modules {
+		m := &cfg.Modules[i]
+		// Modules with versioning (non-Implicit) or explicit CIDeps likely have CI
+		if m.Versioning != nil && m.Versioning.Scheme != "Implicit" {
+			ciModules[m.Moniker] = true
+		}
+		if len(m.CIDeps) > 0 {
+			ciModules[m.Moniker] = true
+		}
+	}
+
 	deps := make(map[string][]string)
 	for i := range cfg.Modules {
 		module := &cfg.Modules[i]
-		if len(module.CIDeps) > 0 {
-			deps[module.Moniker] = module.CIDeps
+		seen := make(map[string]bool)
+		var allDeps []string
+
+		// Add CIDeps first (explicit CI artifact deps)
+		for _, d := range module.CIDeps {
+			if !seen[d] {
+				seen[d] = true
+				allDeps = append(allDeps, d)
+			}
+		}
+
+		// Add DependsOn entries that are CI modules
+		for _, d := range module.DependsOn {
+			if ciModules[d] && !seen[d] {
+				seen[d] = true
+				allDeps = append(allDeps, d)
+			}
+		}
+
+		if len(allDeps) > 0 {
+			deps[module.Moniker] = allDeps
 		}
 	}
 	return deps
@@ -355,78 +388,33 @@ func parseModuleList(input string) []string {
 	if input == "" {
 		return []string{}
 	}
+	return strings.Fields(input)
+}
 
-	parts := strings.Fields(input)
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
+// MockCheckerFromJSON parses a JSON mock string (map[string]bool) and returns a
+// CICacheChecker backed by a MockCIRunQuerier. Returns nil if JSON is invalid.
+func MockCheckerFromJSON(mockJSON, headSHA string) *cache.CICacheChecker {
+	var mockStatus map[string]bool
+	if err := json.Unmarshal([]byte(mockJSON), &mockStatus); err != nil {
+		return nil
+	}
+	return mockCheckerFromStatus(mockStatus, headSHA)
+}
+
+// mockCheckerFromStatus converts the legacy --mock JSON format (map[string]bool)
+// into a cache.CICacheChecker backed by a MockCIRunQuerier.
+// Modules mapped to true get headSHA as their last successful run; false/missing get "".
+func mockCheckerFromStatus(mockStatus map[string]bool, headSHA string) *cache.CICacheChecker {
+	runs := make(map[string]string, len(mockStatus))
+	for module, valid := range mockStatus {
+		workflow := fmt.Sprintf("ci-%s.yaml", module)
+		if valid {
+			runs[workflow] = headSHA
 		}
+		// If !valid, we leave it absent → querier returns "" → checker says uncached
 	}
-	return result
-}
-
-// checkModuleCIValidity checks if a module has valid CI at the given HEAD SHA
-// Returns (hasValidCI, reason, error).
-func checkModuleCIValidity(module, headSHA string, mockStatus map[string]bool, workspaceRoot string) (bool, string, error) {
-	return checkModuleCIValidityWithAPI(module, headSHA, mockStatus, workspaceRoot, nil)
-}
-
-// checkModuleCIValidityWithAPI checks if a module has valid CI at the given HEAD SHA
-// Accepts an optional github.API for testing. If nil, creates a new GHClient.
-// Returns (hasValidCI, reason, error).
-func checkModuleCIValidityWithAPI(module, headSHA string, mockStatus map[string]bool, workspaceRoot string, api github.API) (bool, string, error) {
-	// Use mock status if provided (for backward compatibility with --mock flag)
-	if mockStatus != nil {
-		if valid, exists := mockStatus[module]; exists {
-			if valid {
-				return true, "mock:valid_ci_at_head", nil
-			}
-			return false, "mock:no_valid_ci", nil
-		}
-		// Module not in mock data - treat as no CI
-		return false, "mock:not_specified", nil
-	}
-
-	// Use provided API or create a new client
-	if api == nil {
-		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
-	}
-
-	// Query GitHub for last successful CI run
-	workflowName := fmt.Sprintf("ci-%s.yaml", module)
-	lastSuccessSHA, err := getLastSuccessfulWorkflowSHAWithAPI(workflowName, api)
-	if err != nil {
-		return false, fmt.Sprintf("query_failed: %v", err), nil // Non-fatal, dispatch to be safe
-	}
-
-	if lastSuccessSHA == "" {
-		return false, "no_ci_run", nil
-	}
-
-	if lastSuccessSHA == headSHA {
-		return true, "valid_ci_at_head", nil
-	}
-
-	return false, fmt.Sprintf("ci_at_different_sha:%s", lastSuccessSHA[:min(7, len(lastSuccessSHA))]), nil
-}
-
-// getLastSuccessfulWorkflowSHAWithAPI queries GitHub for the last successful run of a workflow using the API interface.
-func getLastSuccessfulWorkflowSHAWithAPI(workflowName string, api github.API) (string, error) {
-	runs, err := api.ListRuns(workflowName, github.ListRunsOpts{
-		Status: "success",
-		Limit:  1,
-	})
-	if err != nil {
-		return "", fmt.Errorf("ListRuns failed: %w", err)
-	}
-
-	if len(runs) == 0 {
-		return "", nil
-	}
-
-	return runs[0].HeadSHA, nil
+	querier := cache.NewMockCIRunQuerier(runs)
+	return cache.NewCICacheChecker(querier, nil)
 }
 
 func printCIDispatchUsage() {
@@ -463,7 +451,7 @@ func printCIDispatchUsage() {
 	fmt.Println("  clie get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\"")
 	fmt.Println("")
 	fmt.Println("  # Shell format for workflow scripting")
-	fmt.Println("  eval $(clie get ci-dispatch --format shell --invalidated \"clie-cli eac-ext\")")
+	fmt.Println("  eval $(clie get ci-dispatch --format shell --invalidated \"clie eac-ext\")")
 	fmt.Println("  for module in $DISPATCH; do")
 	fmt.Println("    gh workflow run \"ci-${module}.yaml\" --ref main")
 	fmt.Println("  done")
@@ -474,13 +462,6 @@ func printCIDispatchUsage() {
 	fmt.Println("")
 	fmt.Println("  # Output as JSON")
 	fmt.Println("  clie get ci-dispatch --as-json --directly-changed \"core\" --invalidated \"docs\"")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // getValidCIModules returns a set of valid CI workflow module names.

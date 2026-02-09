@@ -52,5 +52,5 @@ books:
           type: snippet,
           name: module-evidence,
           parameters:
-            { moniker: clie-cli, prefix: "clie-cli-", prefix_title: "clie-cli " },
+            { moniker: clie, prefix: "clie-", prefix_title: "clie " },
         }

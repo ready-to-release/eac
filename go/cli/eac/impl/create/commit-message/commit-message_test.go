@@ -11,7 +11,7 @@ import (
 )
 
 // TestFilterDiffForModule tests git diff filtering for specific modules
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestFilterDiffForModule(t *testing.T) {
 	fullDiff := `diff --git a/go/cli/eac/impl/commit/ai.go b/go/cli/eac/impl/commit/ai.go
 index 1234567..abcdefg 100644
@@ -102,7 +102,7 @@ index 9876543..fedcba9 100644
 }
 
 // TestExtractModelFromAgent tests frontmatter parsing for model configuration
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestExtractModelFromAgent(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -189,7 +189,7 @@ Instructions.`,
 }
 
 // TestCombineCommitSections tests combining top-level and module sections
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestCombineCommitSections(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -199,11 +199,11 @@ func TestCombineCommitSections(t *testing.T) {
 	}{
 		{
 			name: "combines single-module commit (no module sections)",
-			topLevel: `feat(eac-cli): add validation
+			topLevel: `feat(eac): add validation
 
 This commit adds validation logic.`,
 			moduleSections: []string{},
-			want: `feat(eac-cli): add validation
+			want: `feat(eac): add validation
 
 This commit adds validation logic.`,
 		},
@@ -213,10 +213,10 @@ This commit adds validation logic.`,
 
 This affects multiple modules.`,
 			moduleSections: []string{
-				`eac-cli
+				`eac
 ------------
 
-eac-cli: feat: add command validation`,
+eac: feat: add command validation`,
 				`core
 --------
 
@@ -226,10 +226,10 @@ core: feat: add core validation`,
 
 This affects multiple modules.
 
-eac-cli
+eac
 ------------
 
-eac-cli: feat: add command validation
+eac: feat: add command validation
 
 ---
 
@@ -244,19 +244,19 @@ core: feat: add core validation`,
 
 Updates to modules.`,
 			moduleSections: []string{
-				`eac-cli
+				`eac
 ------------
 
-eac-cli: chore: update deps`,
+eac: chore: update deps`,
 			},
 			want: `chore(multi-module): update
 
 Updates to modules.
 
-eac-cli
+eac
 ------------
 
-eac-cli: chore: update deps`,
+eac: chore: update deps`,
 		},
 		{
 			name: "combines three module sections with separators",
@@ -313,7 +313,7 @@ module-c: refactor: rename`,
 }
 
 // TestBuildTopLevelContext tests context building for top-level agent
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestBuildTopLevelContext(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -326,15 +326,15 @@ func TestBuildTopLevelContext(t *testing.T) {
 			name: "builds context for single-module commit",
 			stagedFilesTable: `| File                  | Modules      |
 |---------------------------|--------------|
-| go/cli/eac/ai.go     | eac-cli |`,
+| go/cli/eac/ai.go     | eac |`,
 			gitDiff: `diff --git a/go/cli/eac/ai.go b/go/cli/eac/ai.go
 +func NewFunc() {}`,
-			affectedModules: []string{"eac-cli"},
+			affectedModules: []string{"eac"},
 			wantContains: []string{
 				"## Module Count",
 				"1 (single-module)",
 				"## Affected Modules",
-				"- eac-cli",
+				"- eac",
 				"## Staged Files",
 				"## Git Diff",
 				"```diff",
@@ -345,18 +345,18 @@ func TestBuildTopLevelContext(t *testing.T) {
 			name: "builds context for multi-module commit",
 			stagedFilesTable: `| File                  | Modules      |
 |---------------------------|--------------|
-| go/cli/eac/ai.go     | eac-cli |
+| go/cli/eac/ai.go     | eac |
 | go/eac/ai/executor.go     | core     |`,
 			gitDiff: `diff --git a/go/cli/eac/ai.go b/go/cli/eac/ai.go
 +func NewFunc() {}
 diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 +func Execute() {}`,
-			affectedModules: []string{"eac-cli", "core"},
+			affectedModules: []string{"eac", "core"},
 			wantContains: []string{
 				"## Module Count",
 				"2 (multi-module)",
 				"## Affected Modules",
-				"- eac-cli",
+				"- eac",
 				"- core",
 				"## Staged Files",
 				"## Git Diff",
@@ -379,7 +379,7 @@ diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 }
 
 // TestBuildModuleContext tests context building for module agent
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestBuildModuleContext(t *testing.T) {
 	fullDiff := `diff --git a/go/cli/eac/ai.go b/go/cli/eac/ai.go
 +func NewFunc() {}
@@ -394,13 +394,13 @@ diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 	}{
 		{
 			name:       "builds context for single file module",
-			moduleName: "eac-cli",
+			moduleName: "eac",
 			moduleFiles: []repository.RepositoryFileWithModule{
-				{Name: "go/cli/eac/ai.go", Modules: []string{"eac-cli"}},
+				{Name: "go/cli/eac/ai.go", Modules: []string{"eac"}},
 			},
 			wantContains: []string{
 				"## Module Name",
-				"eac-cli",
+				"eac",
 				"## Files",
 				"go/cli/eac/ai.go",
 				"## Git Diff",
@@ -410,14 +410,14 @@ diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 		},
 		{
 			name:       "builds context for multi-file module",
-			moduleName: "eac-cli",
+			moduleName: "eac",
 			moduleFiles: []repository.RepositoryFileWithModule{
-				{Name: "go/cli/eac/ai.go", Modules: []string{"eac-cli"}},
-				{Name: "go/cli/eac/init.go", Modules: []string{"eac-cli"}},
+				{Name: "go/cli/eac/ai.go", Modules: []string{"eac"}},
+				{Name: "go/cli/eac/init.go", Modules: []string{"eac"}},
 			},
 			wantContains: []string{
 				"## Module Name",
-				"eac-cli",
+				"eac",
 				"## Files",
 				"go/cli/eac/ai.go",
 				"go/cli/eac/init.go",
@@ -440,7 +440,7 @@ diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 }
 
 // TestAddMissingModules tests stub generation for missing module sections
-// Linked to spec: specs\eac-cli\ai-commit-generation\specification.feature
+// Linked to spec: specs\eac\ai-commit-generation\specification.feature
 func TestAddMissingModules(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -457,23 +457,23 @@ func TestAddMissingModules(t *testing.T) {
 
 Body text.
 
-eac-cli
+eac
 ------------
 
-eac-cli: feat: add validation
+eac: feat: add validation
 
 core
 --------
 
 core: feat: add executor`,
-			affectedModules: []string{"eac-cli", "core"},
+			affectedModules: []string{"eac", "core"},
 			allFiles: []repository.RepositoryFileWithModule{
-				{Name: "go/cli/eac/ai.go", Modules: []string{"eac-cli"}},
+				{Name: "go/cli/eac/ai.go", Modules: []string{"eac"}},
 				{Name: "go/eac/ai/executor.go", Modules: []string{"core"}},
 			},
 			gitDiff: "",
 			wantContains: []string{
-				"eac-cli\n------------",
+				"eac\n------------",
 				"core\n--------",
 			},
 			wantNotContains: []string{
@@ -486,19 +486,19 @@ core: feat: add executor`,
 
 Body text.
 
-eac-cli
+eac
 ------------
 
-eac-cli: feat: add validation`,
-			affectedModules: []string{"eac-cli", "core"},
+eac: feat: add validation`,
+			affectedModules: []string{"eac", "core"},
 			allFiles: []repository.RepositoryFileWithModule{
-				{Name: "go/cli/eac/ai.go", Modules: []string{"eac-cli"}},
+				{Name: "go/cli/eac/ai.go", Modules: []string{"eac"}},
 				{Name: "go/eac/ai/executor.go", Modules: []string{"core"}},
 			},
 			gitDiff: `diff --git a/go/eac/ai/executor.go b/go/eac/ai/executor.go
 +func Execute() {}`,
 			wantContains: []string{
-				"eac-cli\n------------",
+				"eac\n------------",
 				"core\n---------",
 				"core: chore:",
 			},
@@ -508,13 +508,13 @@ eac-cli: feat: add validation`,
 			commitMessage: `feat(multi-module): add features
 
 Body text.`,
-			affectedModules: []string{"eac-cli"},
+			affectedModules: []string{"eac"},
 			allFiles: []repository.RepositoryFileWithModule{
-				{Name: "go/cli/eac/very/long/path/to/file/that/exceeds/limit.go", Modules: []string{"eac-cli"}},
+				{Name: "go/cli/eac/very/long/path/to/file/that/exceeds/limit.go", Modules: []string{"eac"}},
 			},
 			gitDiff: "",
 			wantContains: []string{
-				"eac-cli\n------------",
+				"eac\n------------",
 				"...", // Truncated file name
 			},
 		},

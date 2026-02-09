@@ -25,8 +25,8 @@ type ExecutionContext string
 const (
 	// ContextImplicitCLI indicates running locally outside Docker.
 	ContextImplicitCLI ExecutionContext = "implicit-cli"
-	// ContextCLIECLI indicates running inside Docker via clie CLI.
-	ContextCLIECLI ExecutionContext = "clie-cli"
+	// ContextCLIE indicates running inside Docker via clie CLI.
+	ContextCLIE ExecutionContext = "clie"
 )
 
 // executionContext holds the detected execution context.
@@ -64,17 +64,17 @@ func detectExecutionContext() {
 	contextOnce.Do(func() {
 		// Check explicit environment variable first
 		if os.Getenv("CLIE_DOCKER_MODE") == "true" {
-			executionContext = ContextCLIECLI
+			executionContext = ContextCLIE
 			return
 		}
 		// Check for Docker container indicators
 		if _, err := os.Stat("/.dockerenv"); err == nil {
-			executionContext = ContextCLIECLI
+			executionContext = ContextCLIE
 			return
 		}
 		// Check if running from /app path (Docker container convention)
 		if exe, err := os.Executable(); err == nil && len(exe) > 4 && exe[:4] == "/app" {
-			executionContext = ContextCLIECLI
+			executionContext = ContextCLIE
 			return
 		}
 		executionContext = ContextImplicitCLI

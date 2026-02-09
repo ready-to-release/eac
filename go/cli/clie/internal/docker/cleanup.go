@@ -74,18 +74,18 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 			continue
 		}
 
-		// Check if this container was started by clie-cli (look for specific labels or naming patterns)
+		// Check if this container was started by clie (look for specific labels or naming patterns)
 		// Containers started by Show-Documentation use pattern "mkdocs-show-*"
 		for _, name := range cont.Names {
-			if contains(name, "mkdocs-show-") || contains(name, "clie-cli-") {
+			if contains(name, "mkdocs-show-") || contains(name, "clie-") {
 				containersToStop = append(containersToStop, cont.ID)
 				logging.Debugf("Found child container to clean up: container_id=%s container_name=%s", cont.ID[:12], name)
 				break
 			}
 		}
 
-		// Also check labels for clie-cli managed containers
-		if _, ok := cont.Labels["clie-cli"]; ok {
+		// Also check labels for clie managed containers
+		if _, ok := cont.Labels["clie"]; ok {
 			if !containsString(containersToStop, cont.ID) {
 				containersToStop = append(containersToStop, cont.ID)
 				logging.Debugf("Found labeled container to clean up: container_id=%s", cont.ID[:12])
@@ -129,13 +129,13 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 	return nil
 }
 
-// CleanupOrphanedContainers removes containers that match clie-cli patterns but are no longer needed.
+// CleanupOrphanedContainers removes containers that match clie patterns but are no longer needed.
 func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	ctx := context.Background()
 
-	// Create filters for clie-cli managed containers
+	// Create filters for clie managed containers
 	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", "clie-cli")
+	filterArgs.Add("label", "clie")
 
 	// List all containers (including stopped ones)
 	containers, err := ch.client.ContainerList(ctx, container.ListOptions{

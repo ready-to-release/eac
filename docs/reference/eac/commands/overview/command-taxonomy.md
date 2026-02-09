@@ -271,7 +271,7 @@ Release commands manage the release process from changelog generation through ta
 - `release this` - Finalize changelog and prepare module for release
 - `release get-version` - Extract latest version from changelog
 - `release generate-module-calver` - Generate CalVer tag for a module
-- `release clie-cli` - Create SemVer tag for releasing clie-cli
+- `release clie` - Create SemVer tag for releasing clie
 - `release check-ci` - Check CI status before releasing
 - `release tag-pending` - Check for changelog versions without git tags
 

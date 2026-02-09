@@ -45,7 +45,7 @@ func (r *PruneResult) TotalBytesRecovered() int64 {
 // Call DeleteOrphans() to actually remove files.
 func PruneCache(repoRoot string, verbose bool) (*PruneResult, error) {
 	docsDir := paths.DocsSourcePath(repoRoot)
-	cacheDir := paths.DocsCachePath(repoRoot)
+	cacheDir := paths.CacheRootPath(repoRoot)
 
 	result := &PruneResult{}
 
@@ -116,10 +116,6 @@ func computeMermaidFilenames(docsDir, cacheRoot string) (map[string]bool, error)
 			return err
 		}
 		if d.IsDir() {
-			// Skip the cache directory itself
-			if strings.Contains(path, "assets"+string(os.PathSeparator)+"cache") {
-				return filepath.SkipDir
-			}
 			return nil
 		}
 		if !strings.HasSuffix(path, ".md") {
@@ -133,7 +129,7 @@ func computeMermaidFilenames(docsDir, cacheRoot string) (map[string]bool, error)
 
 		blocks := diagrams.ExtractMermaidBlocks(string(content), path, docsDir)
 		for _, block := range blocks {
-			// Use same algorithm as AssetCache - compute the full cache path
+			// Compute the full cache path using the same hash algorithm
 			cleanContent := diagrams.StripSizeDirective(block.Content)
 			hash := computeMermaidCacheHash(cleanContent)
 			cachePath := paths.MermaidCachePath(cacheRoot, block.SourceFile, block.BlockIndex, hash)
@@ -157,7 +153,7 @@ func computeDrawioFilenames(docsDir, cacheRoot string) (map[string]bool, error) 
 	}
 
 	for _, img := range images {
-		// Use same algorithm as AssetCache - compute the full cache path
+		// Compute the full cache path using the same hash algorithm
 		hash := computeDrawioCacheHash(img.Hash, diagrams.MaxImageWidthPDF)
 		cachePath := paths.DrawioCachePath(cacheRoot, img.SourceFile, hash)
 		filename := filepath.Base(cachePath)

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/adapters/npm"
-	"github.com/ready-to-release/eac/go/clibase/ctrf"
+	"github.com/ready-to-release/eac/go/core/ctrf"
 	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/testing"
@@ -43,8 +43,10 @@ func (r *MochaRunner) IsBDD() bool {
 }
 
 // GetTestInfo extracts structured test metadata from a mocha test reference.
-func (r *MochaRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *testrunners.TestInfo {
-	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+func (r *MochaRunner) GetTestInfo(ref testing.TestReference, workspaceRoot string, cfg any) *testrunners.TestInfo {
+	eacCfg := cfg.(*config.EACConfig)
+
+	relPath, err := filepath.Rel(workspaceRoot, ref.FilePath)
 	if err != nil {
 		return nil
 	}
@@ -53,7 +55,7 @@ func (r *MochaRunner) GetTestInfo(test testing.TestReference, workspaceRoot stri
 
 	info := &testrunners.TestInfo{Language: "ts"}
 
-	info.ModuleMoniker = findTsModuleForPath(relDir, cfg)
+	info.ModuleMoniker = findTsModuleForPath(relDir, eacCfg)
 	if info.ModuleMoniker == "" {
 		return nil
 	}
@@ -83,7 +85,7 @@ func findTsModuleForPath(relPath string, cfg *config.EACConfig) string {
 }
 
 // FindTestRoot finds the module root for a mocha test file.
-func (r *MochaRunner) FindTestRoot(testPath string, cfg *config.EACConfig) string {
+func (r *MochaRunner) FindTestRoot(testPath string, cfg any) string {
 	return ""
 }
 
@@ -110,9 +112,9 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 		return result
 	}
 
-	// Prepare isolated npm environment
+	// Prepare isolated npm environment keyed by UoW output dir
 	isolation := npm.NewNpmIsolation(cfg.WorkspaceRoot)
-	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.ModuleMoniker)
+	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.OutputDir)
 	if err != nil {
 		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
 		result.PackageFailed = true

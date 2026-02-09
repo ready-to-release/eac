@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -23,7 +24,7 @@ func TestUnitRegistry_RegisterAndRetrieve(t *testing.T) {
 	mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 		return []workunit.UnitSpec{}
 	}
-	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 		return 0
 	}
 
@@ -85,7 +86,7 @@ func TestUnitRegistry_PartialRegistration(t *testing.T) {
 	}
 
 	// Now register worker
-	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	mockWorker := func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 		return 0
 	}
 	reg.RegisterWorker(core.ActionTest, mockWorker)
@@ -137,7 +138,7 @@ func TestUnitRegistry_AllActionTypes(t *testing.T) {
 		mockProvider := func(ctx *ExecutionContext) []workunit.UnitSpec {
 			return nil
 		}
-		mockWorker := func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+		mockWorker := func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 			return 0
 		}
 
@@ -166,7 +167,7 @@ func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
 			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) []workunit.UnitSpec {
 				return nil
 			})
-			reg.RegisterWorker(cmdType, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+			reg.RegisterWorker(cmdType, func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 				return idx
 			})
 		}(i)
@@ -203,10 +204,10 @@ func TestInjectModuleDependencies_Basic(t *testing.T) {
 	}, "/test")))
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "gherkin", Tool: "godog"}, Index: 1},
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 2},
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "docs", Tool: "mkdocs"}, Index: 3},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "go", ComponentName: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentType: "go", ComponentName: "go", Tool: "go-build"}, Index: 2},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentType: "docs", ComponentName: "docs", Tool: "mkdocs"}, Index: 3},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -237,7 +238,7 @@ func TestInjectModuleDependencies_DepNotInBatch(t *testing.T) {
 	// Note: moduleB is registered but has no UoWs in the work slice
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "go", ComponentName: "go", Tool: "go-build"}, Index: 0},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -259,8 +260,8 @@ func TestInjectModuleDependencies_NoDeps(t *testing.T) {
 	}, "/test")))
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go"}, Index: 0},
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "go", ComponentName: "go"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentType: "go", ComponentName: "go"}, Index: 1},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -271,7 +272,7 @@ func TestInjectModuleDependencies_NoDeps(t *testing.T) {
 
 func TestInjectModuleDependencies_NilRegistry(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "moduleA", Component: "go"}, Index: 0},
+		{ID: workunit.UnitID{Module: "moduleA", ComponentType: "go", ComponentName: "go"}, Index: 0},
 	}
 
 	result := injectModuleDependencies(work, nil)
@@ -296,14 +297,14 @@ func TestInjectModuleDependencies_PreservesExistingDeps(t *testing.T) {
 		DependsOn: []string{},
 	}, "/test")))
 
-	existingDep := workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "static", Tool: "copy"}
+	existingDep := workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "static", ComponentName: "static", Tool: "copy"}
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", Component: "go", Tool: "go-build"},
+			ID:        workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentType: "go", ComponentName: "go", Tool: "go-build"},
 			Index:     0,
 			DependsOn: []workunit.UnitID{existingDep},
 		},
-		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", Component: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentType: "go", ComponentName: "go", Tool: "go-build"}, Index: 1},
 	}
 
 	result := injectModuleDependencies(work, reg)
@@ -337,7 +338,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	}
 
 	// Test RegisterUnitWorker and GetUnitWorker
-	RegisterUnitWorker(core.ActionBuild, func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	RegisterUnitWorker(core.ActionBuild, func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 		return 42
 	})
 
@@ -345,7 +346,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	if worker == nil {
 		t.Fatal("RegisterUnitWorker should register for core.ActionBuild")
 	}
-	if result := worker(context.Background(), nil, "", "", nil); result != 42 {
+	if result := worker(context.Background(), nil, core.UnitSpec{}, nil); result != 42 {
 		t.Errorf("Expected worker to return 42, got %d", result)
 	}
 
@@ -353,4 +354,202 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 	if !HasUnitExecution(core.ActionBuild) {
 		t.Error("HasUnitExecution should return true after registering both provider and worker")
 	}
+}
+
+// --- injectModuleDependencies narrowed fan-out tests ---
+
+func TestInjectModuleDependencies_ComponentDeps_TwoPartNarrowed(t *testing.T) {
+	// Module A has component_deps: ["B:go"] on its "go" component.
+	// Only B's "go" UoWs should be injected as deps for A's "go", not B's "docs".
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "moduleA",
+		DependsOn: []string{"moduleB"},
+		Components: config.ModuleComponents{
+			"go":   &config.ComponentEntry{ComponentDeps: []string{"moduleB:go"}},
+			"docs": &config.ComponentEntry{},
+		},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "moduleB",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}, "docs": &config.ComponentEntry{}},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleA", ComponentName: "docs", ComponentType: "docs", Tool: "mkdocs"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 2},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "moduleB", ComponentName: "docs", ComponentType: "docs", Tool: "mkdocs"}, Index: 3},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// A's "go" should only depend on B's "go" (index 2), not B's "docs"
+	assert.Len(t, result[0].DependsOn, 1, "A:go should depend on 1 B UoW (narrowed)")
+	assert.Equal(t, "go", result[0].DependsOn[0].ComponentName)
+
+	// A's "docs" has no component_deps → narrowed mode for B means no deps from B
+	assert.Empty(t, result[1].DependsOn, "A:docs should have no deps from B (no component_deps)")
+
+	// B's UoWs should have no deps
+	assert.Empty(t, result[2].DependsOn)
+	assert.Empty(t, result[3].DependsOn)
+}
+
+func TestInjectModuleDependencies_ComponentDeps_ThreePartMatching(t *testing.T) {
+	// 3-part: "B:go:go" matches componentType=go only
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "A",
+		DependsOn: []string{"B"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{ComponentDeps: []string{"B:go:go"}},
+		},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "B",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "gherkin", Tool: "godog"}, Index: 2},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// A:go should depend on B:go:go:go-build (index 1), NOT B:go:gherkin:godog (index 2)
+	assert.Len(t, result[0].DependsOn, 1)
+	assert.Equal(t, "go", result[0].DependsOn[0].ComponentType)
+}
+
+func TestInjectModuleDependencies_ComponentDeps_FourPartMatching(t *testing.T) {
+	// 4-part: "B:go:go:gotest" matches exact tool
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "A",
+		DependsOn: []string{"B"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{ComponentDeps: []string{"B:go:go:gotest"}},
+		},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "B",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "go", Tool: "gotest"}, Index: 2},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// A:go should only depend on B:go:go:gotest (index 2)
+	assert.Len(t, result[0].DependsOn, 1)
+	assert.Equal(t, "gotest", result[0].DependsOn[0].Tool)
+}
+
+func TestInjectModuleDependencies_MixedNarrowedAndAllToAll(t *testing.T) {
+	// Module A: depends_on C (all-to-all) + component_deps for B (narrowed)
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "A",
+		DependsOn: []string{"B", "C"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{ComponentDeps: []string{"B:go"}},
+		},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "B",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}, "docs": &config.ComponentEntry{}},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "C",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "docs", ComponentType: "docs", Tool: "mkdocs"}, Index: 2},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "C", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 3},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// A:go should have:
+	// - 1 narrowed dep from B (B:go only)
+	// - 1 all-to-all dep from C (all C UoWs)
+	// Total: 2
+	assert.Len(t, result[0].DependsOn, 2, "A:go should have 1 narrowed (B:go) + 1 all-to-all (C:go)")
+
+	depModules := make(map[string]int)
+	for _, dep := range result[0].DependsOn {
+		depModules[dep.Module]++
+	}
+	assert.Equal(t, 1, depModules["B"], "should have 1 B dep (narrowed to go only)")
+	assert.Equal(t, 1, depModules["C"], "should have 1 C dep (all-to-all)")
+}
+
+func TestInjectModuleDependencies_NoComponentDeps_BackwardCompat(t *testing.T) {
+	// No component_deps anywhere → all-to-all (backward compat)
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "A",
+		DependsOn:  []string{"B"},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}},
+	}, "/test")))
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:    "B",
+		DependsOn:  []string{},
+		Components: config.ModuleComponents{"go": &config.ComponentEntry{}, "docs": &config.ComponentEntry{}},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 1},
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "B", ComponentName: "docs", ComponentType: "docs", Tool: "mkdocs"}, Index: 2},
+	}
+
+	result := injectModuleDependencies(work, reg)
+
+	// A:go should depend on ALL B UoWs (backward compat)
+	assert.Len(t, result[0].DependsOn, 2, "A:go should depend on 2 B UoWs (all-to-all)")
+}
+
+func TestInjectModuleDependencies_ComponentDeps_DepNotInBatch(t *testing.T) {
+	// component_deps references a module not in the execution batch → graceful skip
+	reg := modules.NewRegistry("0.1.0", "/test")
+	require.NoError(t, reg.Add(modules.NewModuleContract(domain.BaseContract{
+		Moniker:   "A",
+		DependsOn: []string{"B"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{ComponentDeps: []string{"B:go"}},
+		},
+	}, "/test")))
+
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go", Tool: "go-build"}, Index: 0},
+	}
+
+	result := injectModuleDependencies(work, reg)
+	assert.Empty(t, result[0].DependsOn, "should gracefully skip when dep module not in batch")
+}
+
+func TestInjectModuleDependencies_ComponentDeps_EmptyRegistry(t *testing.T) {
+	reg := modules.NewRegistry("0.1.0", "/test")
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Action: core.ActionBuild, Module: "A", ComponentName: "go", ComponentType: "go"}, Index: 0},
+	}
+
+	result := injectModuleDependencies(work, reg)
+	assert.Empty(t, result[0].DependsOn, "empty registry should produce no deps")
 }

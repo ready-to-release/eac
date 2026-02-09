@@ -1,23 +1,23 @@
-# eac-adapter
+# eac-to-eac
 
-The `eac-adapter` module provides EAC command execution through both native and containerized adapters.
+The `eac-to-eac` module provides EAC command execution through both native and containerized adapters.
 
 ## System Context
 
 Shows how the EAC adapter bridges CLI and container-based command execution.
 
-<!-- structurizr:eac-adapter:SystemContext -->
+<!-- structurizr:eac-to-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the EAC adapter packages.
 
-<!-- structurizr:eac-adapter:Containers -->
+<!-- structurizr:eac-to-eac:Containers -->
 
 ## Design File
 
-- **Location**: `specs/eac-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module eac-adapter`
+- **Location**: `specs/eac-to-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module eac-to-eac`
 
 ## Key Responsibilities
 

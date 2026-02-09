@@ -11,12 +11,13 @@ import (
 // including all Extra fields for proper uniqueness handling.
 func unitIDFromPort(p core.UnitIDPort) workunit.UnitID {
 	return workunit.UnitID{
-		Action:    core.ActionType(p.GetAction()),
-		Module:    p.GetModule(),
-		Component: p.GetComponent(),
-		Tool:      p.GetTool(),
-		Spec:      p.GetSpec(),
-		Extra:     p.GetExtra(),
+		Action:        core.ActionType(p.GetAction()),
+		Module:        p.GetModule(),
+		ComponentType: p.GetComponent(),
+		ComponentName: p.GetComponent(),
+		Tool:          p.GetTool(),
+		Spec:          p.GetSpec(),
+		Extra:         p.GetExtra(),
 	}
 }
 
@@ -40,10 +41,11 @@ var _ core.OutputReaderPort = (*OutputReaderAdapter)(nil)
 // GetUoW implements OutputReaderPort.GetUoW.
 func (a *OutputReaderAdapter) GetUoW(context, module, component, tool string) (core.UoWManifestPort, error) {
 	id := workunit.UnitID{
-		Action:    core.ActionType(context),
-		Module:    module,
-		Component: component,
-		Tool:      tool,
+		Action:        core.ActionType(context),
+		Module:        module,
+		ComponentType: component,
+		ComponentName: component,
+		Tool:          tool,
 		// Note: Extra is not available through this interface signature.
 		// Use GetUoWByID for UoWs with Extra fields.
 	}
@@ -89,10 +91,11 @@ func (a *OutputReaderAdapter) ListUoWs(context, module string) ([]core.UoWManife
 // ValidateUoW implements OutputReaderPort.ValidateUoW.
 func (a *OutputReaderAdapter) ValidateUoW(context, module, component, tool string) core.ValidationResultPort {
 	id := workunit.UnitID{
-		Action:    core.ActionType(context),
-		Module:    module,
-		Component: component,
-		Tool:      tool,
+		Action:        core.ActionType(context),
+		Module:        module,
+		ComponentType: component,
+		ComponentName: component,
+		Tool:          tool,
 		// Note: Extra is not available through this interface signature.
 		// Use ValidateUoWByID for UoWs with Extra fields.
 	}

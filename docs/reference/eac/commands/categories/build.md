@@ -31,15 +31,15 @@ eac build
 eac build eac-commands
 
 # Build multiple modules
-eac build eac-core clie-cli
+eac build eac-core clie
 ```
 
 ### Building with Dependencies
 
 ```bash
 # Build module and its dependencies
-eac build clie-cli
-# Automatically builds: eac-core → eac-commands → clie-cli
+eac build clie
+# Automatically builds: eac-core → eac-commands → clie
 ```
 
 ### CI/CD Integration

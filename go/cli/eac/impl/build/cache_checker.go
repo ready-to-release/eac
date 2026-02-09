@@ -65,11 +65,12 @@ func (v *UoWBuildCacheVerifier) Verify(ctx context.Context, unit workunit.UnitSp
 	// Verify UoW artifact integrity
 	reader := coreoutput.NewReader(v.workspaceRoot)
 	uowID := workunit.UnitID{
-		Action:    core.ActionBuild,
-		Module:    unit.ID.Module,
-		Component: unit.ID.Component,
-		Tool:      unit.ID.Tool,
-		Extra:     unit.ID.Extra,
+		Action:        core.ActionBuild,
+		Module:        unit.ID.Module,
+		ComponentType: unit.ID.ComponentType,
+		ComponentName: unit.ID.ComponentName,
+		Tool:          unit.ID.Tool,
+		Extra:         unit.ID.Extra,
 	}
 	validationResult := reader.ValidateUoW(uowID)
 

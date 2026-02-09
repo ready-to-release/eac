@@ -97,7 +97,7 @@ func UpdateDocs() int {
 
 	// Final summary
 	if exitCode == 0 && !opts.DryRun {
-		cacheDir := paths.DocsCachePath(repoRoot)
+		cacheDir := paths.CacheRootPath(repoRoot)
 		fmt.Printf("Cache: %s\n", cacheDir)
 	}
 
@@ -201,7 +201,7 @@ func runPruneCache(repoRoot string, verbose, dryRun bool) int {
 		return 0
 	}
 
-	cacheDir := paths.DocsCachePath(repoRoot)
+	cacheDir := paths.CacheRootPath(repoRoot)
 	deleted, err := DeleteOrphans(result, cacheDir)
 	if err != nil {
 		log.Errorf("Error deleting orphans: %v", err)

@@ -144,7 +144,7 @@ func createDesign(deps *Deps) int {
 
 // DesignConfig holds configuration for design create command.
 type DesignConfig struct {
-	Module         string // Module name (e.g., "clie-cli", "commands")
+	Module         string // Module name (e.g., "clie", "commands")
 	SourcePath     string // Path to source code (e.g., "go/cli/eac")
 	OutputPath     string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath     string // Custom AI prompt file path (empty = default prompt)
@@ -281,7 +281,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 
 	// Validate we have a module name
 	if len(positionalArgs) == 0 {
-		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design clie-cli")
+		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design clie")
 	}
 
 	return positionalArgs[0], cmdFlags, nil
@@ -308,7 +308,7 @@ func validateModuleExists(config *DesignConfig, out *design.Output) error {
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
-		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design create <module>\nExample: design create clie-cli (analyzes code in go/cli/clie/)",
+		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design create <module>\nExample: design create clie (analyzes code in go/cli/clie/)",
 			config.Module, config.SourcePath)
 	}
 

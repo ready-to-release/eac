@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/evidence"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/stretchr/testify/assert"
@@ -58,8 +59,8 @@ func TestBuildModuleContext_WithModule(t *testing.T) {
 	// Create a module contract with "go" component
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "api-gateway",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{Root: "go/test"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "go/test"},
 		},
 	}, "/test")
 

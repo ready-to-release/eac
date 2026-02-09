@@ -10,7 +10,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/ready-to-release/eac/contracts/clie-cli/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/clie/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/spf13/cobra v1.10.2
@@ -89,6 +89,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/clibase v0.0.0 // indirect
@@ -130,7 +131,7 @@ require (
 )
 
 replace (
-	github.com/ready-to-release/eac/contracts/clie-cli/0.1.0 => ../../../contracts/clie-cli/0.1.0
+	github.com/ready-to-release/eac/contracts/clie/0.1.0 => ../../../contracts/clie/0.1.0
 	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/core => ../../core
@@ -143,3 +144,5 @@ replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../
 replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
 
 replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/runner/0.1.0 => ../../../contracts/runner/0.1.0

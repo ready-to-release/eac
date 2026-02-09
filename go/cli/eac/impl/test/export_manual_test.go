@@ -629,7 +629,7 @@ modules:
 	}
 
 	// Create contract schema
-	schemaDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0")
+	schemaDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "schemas")
 	require.NoError(t, os.MkdirAll(schemaDir, 0755))
 
 	schemaContent := `{

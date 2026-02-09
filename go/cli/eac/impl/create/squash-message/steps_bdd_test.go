@@ -1,4 +1,4 @@
-// Package squashmessage contains godog step implementations for eac-cli.
+// Package squashmessage contains godog step implementations for eac.
 //
 // This file contains create squash-message command step definitions.
 package squashmessage

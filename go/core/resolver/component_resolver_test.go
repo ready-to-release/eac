@@ -263,7 +263,7 @@ func TestExpandToolChain_TwoTools(t *testing.T) {
 	assert.Equal(t, "mkdocs-pdf", specs[1].Tool)
 	assert.Len(t, specs[1].DependsOn, 1, "second tool depends on first")
 	assert.Equal(t, "preprocess", specs[1].DependsOn[0].Tool)
-	assert.Equal(t, component, specs[1].DependsOn[0].Component)
+	assert.Equal(t, component, specs[1].DependsOn[0].ComponentName)
 }
 
 // TestExpandToolChain_ThreeTools validates that a tool chain with three tools
@@ -308,7 +308,7 @@ func TestExpandToolChain_WithExternalDeps(t *testing.T) {
 
 	// First spec should have external deps
 	assert.Len(t, specs[0].DependsOn, 1, "first tool should have external dep")
-	assert.Equal(t, "structurizr", specs[0].DependsOn[0].Component)
+	assert.Equal(t, "structurizr", specs[0].DependsOn[0].ComponentName)
 
 	// Second spec should only depend on first tool, not external deps
 	assert.Len(t, specs[1].DependsOn, 1, "second tool only depends on first")
@@ -409,8 +409,8 @@ func TestGetWeight_FromToolResources(t *testing.T) {
 
 			// Create config with component type
 			cfg := &config.EACConfig{
-				ComponentTypes: &config.ComponentTypesConfig{
-					ComponentTypes: map[string]*config.ComponentType{
+				ComponentKinds: &config.ComponentKindsConfig{
+					Kinds: map[string]*config.ComponentType{
 						"test-type": {
 							Builders: []string{"test-builder"},
 							Amp:     tt.compTypeAmp,
@@ -425,8 +425,8 @@ func TestGetWeight_FromToolResources(t *testing.T) {
 			// Create module with the test component
 			module := modules.NewModuleContract(domain.BaseContract{
 				Moniker: "test-module",
-				Components: domain.ModuleComponents{
-					"test-comp": &domain.ComponentEntry{
+				Components: config.ModuleComponents{
+					"test-comp": &config.ComponentEntry{
 						Type: "test-type",
 						Root: ".",
 					},
@@ -439,7 +439,7 @@ func TestGetWeight_FromToolResources(t *testing.T) {
 			// Find the spec for our test component
 			var foundSpec bool
 			for _, spec := range specs {
-				if spec.ID.Component == "test-comp" {
+				if spec.ID.ComponentName == "test-comp" {
 					foundSpec = true
 					assert.Equal(t, tt.wantWeight, spec.Weight,
 						"Weight should be calculated from tool resources * amp")
@@ -538,8 +538,8 @@ func TestPoolAllocation_FromToolType(t *testing.T) {
 
 			// Create config with component type
 			cfg := &config.EACConfig{
-				ComponentTypes: &config.ComponentTypesConfig{
-					ComponentTypes: map[string]*config.ComponentType{
+				ComponentKinds: &config.ComponentKindsConfig{
+					Kinds: map[string]*config.ComponentType{
 						"test-type": {
 							Builders: []string{"test-builder"},
 							Amp:     tt.compTypeAmp,
@@ -554,8 +554,8 @@ func TestPoolAllocation_FromToolType(t *testing.T) {
 			// Create module
 			module := modules.NewModuleContract(domain.BaseContract{
 				Moniker: "test-module",
-				Components: domain.ModuleComponents{
-					"test-comp": &domain.ComponentEntry{
+				Components: config.ModuleComponents{
+					"test-comp": &config.ComponentEntry{
 						Type: "test-type",
 						Root: ".",
 					},
@@ -568,7 +568,7 @@ func TestPoolAllocation_FromToolType(t *testing.T) {
 			// Find spec and verify PoolAllocation
 			var foundSpec bool
 			for _, spec := range specs {
-				if spec.ID.Component == "test-comp" {
+				if spec.ID.ComponentName == "test-comp" {
 					foundSpec = true
 					alloc := spec.GetPoolAllocation()
 					assert.Equal(t, tt.wantHostWeight, alloc.GetHostWeight(),

@@ -308,10 +308,10 @@ func theComponentTypeHasExtension(compType, ext string) error {
 }
 
 func getToolComponentType(compType string) (*config.ComponentType, error) {
-	if toolState.cfg == nil || toolState.cfg.ComponentTypes == nil {
+	if toolState.cfg == nil || toolState.cfg.ComponentKinds == nil {
 		return nil, fmt.Errorf("component types config not loaded")
 	}
-	ct := toolState.cfg.ComponentTypes.Get(compType)
+	ct := toolState.cfg.ComponentKinds.Get(compType)
 	if ct == nil {
 		return nil, fmt.Errorf("component type %q not found", compType)
 	}

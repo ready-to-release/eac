@@ -184,8 +184,8 @@ type ValidateConfig struct {
 
 // ValidationResult holds the validation result for a single file.
 type ValidationResult struct {
-	Path   string                      `json:"path"`
-	Valid  bool                        `json:"valid"`
+	Path   string                   `json:"path"`
+	Valid  bool                     `json:"valid"`
 	Errors []domain.ValidationError `json:"errors"`
 }
 
@@ -235,7 +235,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 
 	// Validate path argument
 	if path == "" {
-		return nil, fmt.Errorf("file path or directory is required\n\nUsage: specs validate <path> [--quiet] [--verbose] [--format json]\nExample: specs validate specs/eac-cli/specs/create/specification.feature")
+		return nil, fmt.Errorf("file path or directory is required\n\nUsage: specs validate <path> [--quiet] [--verbose] [--format json]\nExample: specs validate specs/eac/specs/create/specification.feature")
 	}
 
 	cfg.Path = path

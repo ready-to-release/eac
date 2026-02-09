@@ -21,21 +21,21 @@ Each module maintains its architecture diagrams in `specs/[module]/.design/works
 
 | Module             | Design Location                                                                                                            | Description                                        |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| eac-cli            | [specs/eac-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-cli/.design/)                         | CLI command implementations                        |
+| eac            | [specs/eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac/.design/)                         | CLI command implementations                        |
 | core               | [specs/core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/core/.design/)                               | Core domain libraries (config, repository, git)    |
 | clibase            | [specs/clibase/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clibase/.design/)                         | CLI base framework (orchestrator, flags, render)   |
 | eac-mcp-server     | [specs/eac-mcp-server/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-server/.design/)           | MCP server for LLM tool integration                |
-| clie-cli           | [specs/clie-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clie-cli/.design/)                       | Containerized workflow CLI                         |
+| clie           | [specs/clie/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clie/.design/)                       | Containerized workflow CLI                         |
 | eac-ext            | [specs/eac-ext/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-ext/.design/)                         | Docker extension container                         |
-| ai-adapter         | [specs/ai-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ai-adapter/.design/)                   | AI service integration adapter                     |
-| docker-adapter     | [specs/docker-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docker-adapter/.design/)           | Docker container runtime adapter                   |
-| eac-adapter        | [specs/eac-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-adapter/.design/)                 | EAC command execution adapter                      |
-| tui-adapter        | [specs/tui-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/tui-adapter/.design/)                 | Terminal UI adapter (Bubbletea)                     |
-| godog-adapter      | [specs/godog-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/godog-adapter/.design/)             | BDD test infrastructure (Godog)                    |
-| cucumber-adapter   | [specs/cucumber-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/cucumber-adapter/.design/)       | Cucumber test runner adapter                       |
-| gotest-adapter     | [specs/gotest-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/gotest-adapter/.design/)           | Go test runner adapter                             |
-| mocha-adapter      | [specs/mocha-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/mocha-adapter/.design/)             | Mocha test runner adapter                          |
-| npm-adapter        | [specs/npm-adapter/.design/](https://github.com/ready-to-release/eac/tree/main/specs/npm-adapter/.design/)                 | NPM dependency isolation adapter                   |
+| ai-eac         | [specs/ai-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ai-eac/.design/)                   | AI service integration adapter                     |
+| docker-eac     | [specs/docker-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docker-eac/.design/)           | Docker container runtime adapter                   |
+| eac-to-eac        | [specs/eac-to-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-to-eac/.design/)                 | EAC command execution adapter                      |
+| tui-eac        | [specs/tui-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/tui-eac/.design/)                 | Terminal UI adapter (Bubbletea)                     |
+| godog-eac      | [specs/godog-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/godog-eac/.design/)             | BDD test infrastructure (Godog)                    |
+| cucumber-eac   | [specs/cucumber-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/cucumber-eac/.design/)       | Cucumber test runner adapter                       |
+| gotest-eac     | [specs/gotest-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/gotest-eac/.design/)           | Go test runner adapter                             |
+| mocha-eac      | [specs/mocha-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/mocha-eac/.design/)             | Mocha test runner adapter                          |
+| npm-eac        | [specs/npm-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/npm-eac/.design/)                 | NPM dependency isolation adapter                   |
 | docs               | [specs/docs/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docs/.design/)                               | Documentation site architecture                    |
 | contracts          | [specs/contracts/.design/](https://github.com/ready-to-release/eac/tree/main/specs/contracts/.design/)                     | Combined contract modules overview                 |
 
@@ -173,7 +173,7 @@ Generates a workspace.dsl file based on code analysis.
 - **Containers** - Package organization
 - **Component** - Internal library structure
 
-### clie-cli Module
+### clie Module
 
 - **System Context** - CLI in the broader ecosystem
 - **Containers** - Application components

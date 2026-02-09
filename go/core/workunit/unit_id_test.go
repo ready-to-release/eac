@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/stretchr/testify/assert"
 )
 
 // =============================================================================
@@ -21,73 +21,73 @@ func TestUnitID_DisplayName(t *testing.T) {
 		{
 			name: "build - component equals tool",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: "core: go",
 		},
 		{
 			name: "build - component differs from tool",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "docs",
-				Component: "site",
-				Tool:      "mkdocs",
+				Action:        core.ActionBuild,
+				Module:        "docs",
+				ComponentType: "site", ComponentName: "site",
+				Tool: "mkdocs",
 			},
 			expected: "docs: site: mkdocs",
 		},
 		{
 			name: "test - BDD spec",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "eac-cli",
-				Component: "gherkin",
-				Tool:      "godog",
-				Spec:      "build-module",
+				Action:        core.ActionTest,
+				Module:        "eac",
+				ComponentType: "gherkin", ComponentName: "gherkin",
+				Tool: "godog",
+				Spec: "build-module",
 			},
 			expected: "build-module: godog",
 		},
 		{
 			name: "test - unit with testname",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testname": "impl-build"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testname": "impl-build"},
 			},
 			expected: "impl-build: unit",
 		},
 		{
 			name: "test - unit without testname uses component",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "gotest",
 			},
 			expected: "go: unit",
 		},
 		{
 			name: "lint",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "core",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: "lint:go:golangci-lint",
 		},
 		{
 			name: "scan with category",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-sbom",
-				Extra:     map[string]string{"category": "sbom"},
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "trivy-sbom",
+				Extra: map[string]string{"category": "sbom"},
 			},
 			expected: "scan:go:sbom",
 		},
@@ -111,56 +111,56 @@ func TestUnitID_Longname_Basic(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "build:core:go:go",
+			name: "build:core:go:go:go",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
-			expected: "build:core:go:go",
+			expected: "build:core:go:go:go",
 		},
 		{
-			name: "lint:core:go:golangci-lint",
+			name: "lint:core:go:go:golangci-lint",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "core",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
-			expected: "lint:core:go:golangci-lint",
+			expected: "lint:core:go:go:golangci-lint",
 		},
 		{
-			name: "scan:core:go:trivy-vuln",
+			name: "scan:core:go:go:trivy-vuln",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
-			expected: "scan:core:go:trivy-vuln",
+			expected: "scan:core:go:go:trivy-vuln",
 		},
 		{
 			name: "build with empty extra returns base format",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "module-a",
-				Component: "comp",
-				Tool:      "tool",
-				Extra:     map[string]string{},
+				Action:        core.ActionBuild,
+				Module:        "module-a",
+				ComponentType: "comp", ComponentName: "comp",
+				Tool:  "tool",
+				Extra: map[string]string{},
 			},
-			expected: "build:module-a:comp:tool",
+			expected: "build:module-a:comp:comp:tool",
 		},
 		{
 			name: "build with nil extra returns base format",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "module-a",
-				Component: "comp",
-				Tool:      "tool",
-				Extra:     nil,
+				Action:        core.ActionBuild,
+				Module:        "module-a",
+				ComponentType: "comp", ComponentName: "comp",
+				Tool:  "tool",
+				Extra: nil,
 			},
-			expected: "build:module-a:comp:tool",
+			expected: "build:module-a:comp:comp:tool",
 		},
 	}
 
@@ -182,37 +182,37 @@ func TestUnitID_Longname_WithTestset(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "test:core:go:gotest:unit",
+			name: "test:core:go:go:gotest:unit",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
-			expected: "test:core:go:gotest:unit",
+			expected: "test:core:go:go:gotest:unit",
 		},
 		{
-			name: "test:core:go:gotest:integration",
+			name: "test:core:go:go:gotest:integration",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "integration"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "integration"},
 			},
-			expected: "test:core:go:gotest:integration",
+			expected: "test:core:go:go:gotest:integration",
 		},
 		{
 			name: "test with gherkin component",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "eac-cli",
-				Component: "gherkin",
-				Tool:      "godog",
-				Extra:     map[string]string{"testset": "acceptance"},
+				Action:        core.ActionTest,
+				Module:        "eac",
+				ComponentType: "gherkin", ComponentName: "gherkin",
+				Tool:  "godog",
+				Extra: map[string]string{"testset": "acceptance"},
 			},
-			expected: "test:eac-cli:gherkin:godog:acceptance",
+			expected: "test:eac:gherkin:gherkin:godog:acceptance",
 		},
 	}
 
@@ -235,38 +235,38 @@ func TestUnitID_String(t *testing.T) {
 		{
 			name: "build unit string equals longname",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 		},
 		{
 			name: "test unit string equals longname",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 		},
 		{
 			name: "lint unit string equals longname",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "shared-lib",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 		},
 		{
 			name: "scan unit string equals longname",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 		},
 	}
@@ -292,30 +292,30 @@ func TestUnitID_OutDir(t *testing.T) {
 		{
 			name: "build output directory",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join("out", "build", "core", "go-go"),
 		},
 		{
 			name: "lint output directory",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "core",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: filepath.Join("out", "lint", "core", "go-golangci-lint"),
 		},
 		{
 			name: "scan output directory",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
 		},
@@ -337,44 +337,44 @@ func TestUnitID_OutDir_WithTestset(t *testing.T) {
 		{
 			name: "test unit output directory includes testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-unit"),
 		},
 		{
 			name: "test integration output directory",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "integration"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "integration"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-integration"),
 		},
 		{
 			name: "test gherkin output directory",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "eac-cli",
-				Component: "gherkin",
-				Tool:      "godog",
-				Extra:     map[string]string{"testset": "acceptance"},
+				Action:        core.ActionTest,
+				Module:        "eac",
+				ComponentType: "gherkin", ComponentName: "gherkin",
+				Tool:  "godog",
+				Extra: map[string]string{"testset": "acceptance"},
 			},
-			expected: filepath.Join("out", "test", "eac-cli", "gherkin-godog-acceptance"),
+			expected: filepath.Join("out", "test", "eac", "gherkin-godog-acceptance"),
 		},
 		{
 			name: "test without testset falls back to base path",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     nil,
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: nil,
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest"),
 		},
@@ -400,41 +400,41 @@ func TestUnitID_LockFile(t *testing.T) {
 		{
 			name: "build lock file",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join("out", "build", "core", "go-go", ".lock"),
 		},
 		{
 			name: "test lock file with testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-unit", ".lock"),
 		},
 		{
 			name: "lint lock file",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "shared-lib",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", ".lock"),
 		},
 		{
 			name: "scan lock file",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", ".lock"),
 		},
@@ -460,21 +460,21 @@ func TestUnitID_StateCacheDir(t *testing.T) {
 		{
 			name: "build state cache dir",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "build", "core", "go-go"),
 		},
 		{
 			name: "test state cache dir with testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "test", "core", "go-gotest-unit"),
 		},
@@ -496,41 +496,41 @@ func TestUnitID_StateFile(t *testing.T) {
 		{
 			name: "build state file",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "build", "core", "go-go", "state.json"),
 		},
 		{
 			name: "test state file with testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "test", "core", "go-gotest-unit", "state.json"),
 		},
 		{
 			name: "lint state file",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "shared-lib",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "lint", "shared-lib", "go-golangci-lint", "state.json"),
 		},
 		{
 			name: "scan state file",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 			expected: filepath.Join(".cache", "eac", "incremental", "scan", "core", "go-trivy-vuln", "state.json"),
 		},
@@ -556,41 +556,41 @@ func TestUnitID_LogFile(t *testing.T) {
 		{
 			name: "build log file",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join("out", "build", "core", "go-go", "execution.log"),
 		},
 		{
 			name: "test log file with testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-unit", "execution.log"),
 		},
 		{
 			name: "lint log file",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "shared-lib",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", "execution.log"),
 		},
 		{
 			name: "scan log file",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", "execution.log"),
 		},
@@ -616,52 +616,52 @@ func TestUnitID_ResultsFile(t *testing.T) {
 		{
 			name: "test results file with testset",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-unit", "results.json"),
 		},
 		{
 			name: "test integration results file",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "integration"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "integration"},
 			},
 			expected: filepath.Join("out", "test", "core", "go-gotest-integration", "results.json"),
 		},
 		{
 			name: "lint results file",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "shared-lib",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "shared-lib",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
 			expected: filepath.Join("out", "lint", "shared-lib", "go-golangci-lint", "results.json"),
 		},
 		{
 			name: "scan results file",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
 			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln", "results.json"),
 		},
 		{
 			name: "build results file (if applicable)",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
 			expected: filepath.Join("out", "build", "core", "go-go", "results.json"),
 		},
@@ -687,65 +687,65 @@ func TestUnitID_PlanExamples(t *testing.T) {
 		expectedOutDir string
 	}{
 		{
-			name: "build:core:go:go",
+			name: "build:core:go:go:go",
 			unitID: UnitID{
-				Action:    core.ActionBuild,
-				Module:    "core",
-				Component: "go",
-				Tool:      "go",
+				Action:        core.ActionBuild,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "go",
 			},
-			expectedLong:   "build:core:go:go",
-			expectedShort:  "core:go",
+			expectedLong:   "build:core:go:go:go",
+			expectedShort:  "core:go:go",
 			expectedOutDir: filepath.Join("out", "build", "core", "go-go"),
 		},
 		{
-			name: "test:core:go:gotest:unit",
+			name: "test:core:go:go:gotest:unit",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "unit"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "unit"},
 			},
-			expectedLong:   "test:core:go:gotest:unit",
-			expectedShort:  "core:go",
+			expectedLong:   "test:core:go:go:gotest:unit",
+			expectedShort:  "core:go:go",
 			expectedOutDir: filepath.Join("out", "test", "core", "go-gotest-unit"),
 		},
 		{
-			name: "test:core:go:gotest:integration",
+			name: "test:core:go:go:gotest:integration",
 			unitID: UnitID{
-				Action:    core.ActionTest,
-				Module:    "core",
-				Component: "go",
-				Tool:      "gotest",
-				Extra:     map[string]string{"testset": "integration"},
+				Action:        core.ActionTest,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool:  "gotest",
+				Extra: map[string]string{"testset": "integration"},
 			},
-			expectedLong:   "test:core:go:gotest:integration",
-			expectedShort:  "core:go",
+			expectedLong:   "test:core:go:go:gotest:integration",
+			expectedShort:  "core:go:go",
 			expectedOutDir: filepath.Join("out", "test", "core", "go-gotest-integration"),
 		},
 		{
-			name: "lint:core:go:golangci-lint",
+			name: "lint:core:go:go:golangci-lint",
 			unitID: UnitID{
-				Action:    core.ActionLint,
-				Module:    "core",
-				Component: "go",
-				Tool:      "golangci-lint",
+				Action:        core.ActionLint,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "golangci-lint",
 			},
-			expectedLong:   "lint:core:go:golangci-lint",
-			expectedShort:  "core:go",
+			expectedLong:   "lint:core:go:go:golangci-lint",
+			expectedShort:  "core:go:go",
 			expectedOutDir: filepath.Join("out", "lint", "core", "go-golangci-lint"),
 		},
 		{
-			name: "scan:core:go:trivy-vuln",
+			name: "scan:core:go:go:trivy-vuln",
 			unitID: UnitID{
-				Action:    core.ActionScan,
-				Module:    "core",
-				Component: "go",
-				Tool:      "trivy-vuln",
+				Action:        core.ActionScan,
+				Module:        "core",
+				ComponentType: "go", ComponentName: "go",
+				Tool: "trivy-vuln",
 			},
-			expectedLong:   "scan:core:go:trivy-vuln",
-			expectedShort:  "core:go",
+			expectedLong:   "scan:core:go:go:trivy-vuln",
+			expectedShort:  "core:go:go",
 			expectedOutDir: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
 		},
 	}
@@ -778,18 +778,18 @@ func TestUnitID_PlanExamples(t *testing.T) {
 func TestUnitID_EdgeCases(t *testing.T) {
 	t.Run("empty extra map treated same as nil", func(t *testing.T) {
 		nilExtra := UnitID{
-			Action:    core.ActionBuild,
-			Module:    "mod",
-			Component: "comp",
-			Tool:      "tool",
-			Extra:     nil,
+			Action:        core.ActionBuild,
+			Module:        "mod",
+			ComponentType: "comp", ComponentName: "comp",
+			Tool:  "tool",
+			Extra: nil,
 		}
 		emptyExtra := UnitID{
-			Action:    core.ActionBuild,
-			Module:    "mod",
-			Component: "comp",
-			Tool:      "tool",
-			Extra:     map[string]string{},
+			Action:        core.ActionBuild,
+			Module:        "mod",
+			ComponentType: "comp", ComponentName: "comp",
+			Tool:  "tool",
+			Extra: map[string]string{},
 		}
 
 		assert.Equal(t, nilExtra.Longname(), emptyExtra.Longname(),
@@ -800,37 +800,37 @@ func TestUnitID_EdgeCases(t *testing.T) {
 
 	t.Run("module name with hyphens", func(t *testing.T) {
 		uid := UnitID{
-			Action:    core.ActionBuild,
-			Module:    "my-complex-module-name",
-			Component: "go",
-			Tool:      "go",
+			Action:        core.ActionBuild,
+			Module:        "my-complex-module-name",
+			ComponentType: "go", ComponentName: "go",
+			Tool: "go",
 		}
 
-		assert.Equal(t, "build:my-complex-module-name:go:go", uid.Longname())
-		assert.Equal(t, "my-complex-module-name:go", uid.Path())
+		assert.Equal(t, "build:my-complex-module-name:go:go:go", uid.Longname())
+		assert.Equal(t, "my-complex-module-name:go:go", uid.Path())
 	})
 
 	t.Run("component with underscores", func(t *testing.T) {
 		uid := UnitID{
-			Action:    core.ActionTest,
-			Module:    "mod",
-			Component: "go_test",
-			Tool:      "gotest",
-			Extra:     map[string]string{"testset": "unit"},
+			Action:        core.ActionTest,
+			Module:        "mod",
+			ComponentType: "go_test", ComponentName: "go_test",
+			Tool:  "gotest",
+			Extra: map[string]string{"testset": "unit"},
 		}
 
-		assert.Equal(t, "test:mod:go_test:gotest:unit", uid.Longname())
+		assert.Equal(t, "test:mod:go_test:go_test:gotest:unit", uid.Longname())
 	})
 
 	t.Run("tool name with hyphens", func(t *testing.T) {
 		uid := UnitID{
-			Action:    core.ActionLint,
-			Module:    "mod",
-			Component: "go",
-			Tool:      "golangci-lint",
+			Action:        core.ActionLint,
+			Module:        "mod",
+			ComponentType: "go", ComponentName: "go",
+			Tool: "golangci-lint",
 		}
 
-		assert.Equal(t, "lint:mod:go:golangci-lint", uid.Longname())
+		assert.Equal(t, "lint:mod:go:go:golangci-lint", uid.Longname())
 	})
 }
 
@@ -840,11 +840,11 @@ func TestUnitID_EdgeCases(t *testing.T) {
 
 func TestUnitID_FilePathConsistency(t *testing.T) {
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "core",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "core",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	outDir := unitID.OutDir()
@@ -882,19 +882,19 @@ func TestUnitID_FilePathConsistency(t *testing.T) {
 func TestUnitID_MultipleTestSetsForSameModule(t *testing.T) {
 	// Verify that different testsets produce unique paths
 	unitTest := UnitID{
-		Action:    core.ActionTest,
-		Module:    "core",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "core",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	integrationTest := UnitID{
-		Action:    core.ActionTest,
-		Module:    "core",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "integration"},
+		Action:        core.ActionTest,
+		Module:        "core",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "integration"},
 	}
 
 	t.Run("different longnames", func(t *testing.T) {
@@ -932,25 +932,25 @@ func TestUnitID_MultipleTestSetsForSameModule(t *testing.T) {
 
 func TestUnitID_Path(t *testing.T) {
 	u := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "core",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "core",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
-	expected := "core:go"
+	expected := "core:go:go"
 	assert.Equal(t, expected, u.Path())
 }
 
 func TestUnitID_ComponentName(t *testing.T) {
 	u := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "core",
-		Component: "impl/build",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "core",
+		ComponentType: "impl/build", ComponentName: "impl/build",
+		Tool: "go",
 	}
 
-	assert.Equal(t, "impl/build", u.ComponentName())
+	assert.Equal(t, "impl/build", u.GetComponentName())
 }
 
 func TestUnitID_TabLabel(t *testing.T) {
@@ -988,7 +988,7 @@ func TestUnitID_TabLabel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := UnitID{Component: tt.component}
+			u := UnitID{ComponentType: tt.component, ComponentName: tt.component}
 			assert.Equal(t, tt.expected, u.TabLabel(tt.maxWidth))
 		})
 	}

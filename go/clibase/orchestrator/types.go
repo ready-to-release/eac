@@ -146,9 +146,10 @@ type UnitResult struct {
 }
 
 // UnitWorkerFunc processes a single work unit.
-// It receives a context (for cancellation/timeout), the module, component name, and log writer.
+// It receives a context (for cancellation/timeout), the full UnitSpec, and a log writer.
+// Workers should use spec.ID fields directly instead of parsing strings.
 // Returns an exit code (0 for success).
-type UnitWorkerFunc func(ctx context.Context, module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(ctx context.Context, spec core.UnitSpec, logWriter io.Writer) int
 
 // ModuleStatus represents the execution status of a module.
 type ModuleStatus int

@@ -84,10 +84,9 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: |
-          go/cli/eac/go.sum
-          go/core/go.sum
-          go/godog/go.sum
-          go/mcp/commands/go.sum
+          go.work
+          go/*/go.sum
+          go/*/*/go.sum
 
     - name: Check if Node.js is already available
       id: node-check
@@ -107,6 +106,10 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+        cache-dependency-path: |
+          package-lock.json
+          typescript/*/package-lock.json
 
     - name: Check if markdownlint-cli2 is available
       id: markdownlint-check

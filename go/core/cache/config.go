@@ -66,6 +66,11 @@ func (c *Config) ShouldSkipRemoteLayer() bool {
 	return c.ShouldSkip(LevelRemote, TypeLayer)
 }
 
+// ShouldSkipCI returns true if CI cache should be skipped (forces dispatch).
+func (c *Config) ShouldSkipCI() bool {
+	return c.ShouldSkip(LevelRemote, TypeCI)
+}
+
 // ShouldForcePull returns true if Docker images should be force-pulled.
 // This is triggered when local:registry is skipped.
 func (c *Config) ShouldForcePull() bool {

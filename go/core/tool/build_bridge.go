@@ -125,14 +125,14 @@ func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []Com
 	}
 
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
+	if cfg == nil || cfg.ComponentKinds == nil {
 		return nil
 	}
 
 	// Priority 2: Find builders from component types
 	for _, compName := range module.GetEnabledComponents() {
 		compTypeName := module.Components.GetComponentType(compName)
-		compType := cfg.ComponentTypes.Get(compTypeName)
+		compType := cfg.ComponentKinds.Get(compTypeName)
 		if compType == nil || !compType.IsBuildable() {
 			continue
 		}
@@ -248,8 +248,8 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 	// Fall back to component-types.yml builders field
 	if toolID == "" {
 		cfg := config.Global()
-		if cfg != nil && cfg.ComponentTypes != nil {
-			if compType := cfg.ComponentTypes.Get(componentType); compType != nil && compType.IsBuildable() {
+		if cfg != nil && cfg.ComponentKinds != nil {
+			if compType := cfg.ComponentKinds.Get(componentType); compType != nil && compType.IsBuildable() {
 				toolID = compType.GetBuilders()[0]
 			}
 		}
@@ -308,48 +308,38 @@ func GlobalBuildBridge() *BuildBridge {
 	return globalBridge
 }
 
+// globalToolSystem holds the ToolSystem created by InitializeGlobalBridges.
+var globalToolSystem *ToolSystem
+
+// GlobalToolSystem returns the global ToolSystem, or nil if not initialized.
+func GlobalToolSystem() *ToolSystem {
+	return globalToolSystem
+}
+
 // InitializeGlobalBridges initializes all global bridges (build, lint, test, scan, serve) with tool system.
 // Call this during application startup after loading configuration.
+// Internally creates a ToolSystem and populates all legacy globals for backward compatibility.
 func InitializeGlobalBridges(repoRoot, configRoot string) error {
-	// Initialize tool system from config
-	registry, resolver, toolConfig, err := InitializeFromConfig(repoRoot, configRoot)
+	ts, err := NewToolSystem(repoRoot, configRoot, defaultContainerProvider)
 	if err != nil {
-		// Tool config is optional, but log for visibility in case of unexpected issues
-		// Common reasons: no tool-config.yml (expected), invalid YAML (should be investigated)
-		// Note: This warning appears in logs but doesn't fail the build
+		// Tool config is optional — no tool-config.yml is expected in many repos.
 		return nil
 	}
 
-	// Set global registry for verification access throughout codebase
-	SetGlobalRegistry(registry)
+	globalToolSystem = ts
 
-	// Auto-detect and set environment (CI vs local)
-	// This enables environment-specific tool overrides from tool-config.yml
-	env := resolver.DetectEnvironment()
-	resolver.SetEnvironment(env)
+	// Backward compat: populate legacy globals so existing callers continue to work.
+	SetGlobalRegistry(ts.Registry)
+	SetGlobalExecutor(ts.Executor)
 
-	// Create executor with registry for requirement validation
-	executor := NewExecutorWithRegistry(registry)
-
-	// Wire global credentials for host env forwarding to container tools
-	if toolConfig.Credentials != nil {
-		executor.SetCredentials(toolConfig.Credentials)
-	}
-
-	// Configure build bridge
-	GlobalBuildBridge().SetToolSystem(registry, resolver, executor)
-
-	// Configure lint bridge
-	GlobalLintBridge().SetToolSystem(registry, resolver, executor)
-
-	// Configure test bridge
-	GlobalTestBridge().SetToolSystem(registry, resolver, executor)
-
-	// Configure scan bridge
-	GlobalScanBridge().SetToolSystem(registry, resolver, executor)
-
-	// Configure serve bridge
-	GlobalServeBridge().SetToolSystem(registry, resolver, executor)
+	// Wire bridges: use ToolSystem's pre-created bridges by copying handler registrations.
+	// The global bridges may have native handlers registered via init(), so we wire tool
+	// system into those existing bridges rather than replacing them.
+	GlobalBuildBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+	GlobalLintBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+	GlobalTestBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+	GlobalScanBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+	GlobalServeBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 
 	return nil
 }

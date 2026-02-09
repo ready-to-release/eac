@@ -1,4 +1,4 @@
-// Package pipeline contains godog step implementations for eac-cli.
+// Package pipeline contains godog step implementations for eac.
 //
 // This file contains pipeline command step definitions.
 package pipeline

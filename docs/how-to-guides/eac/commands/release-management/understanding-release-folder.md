@@ -14,10 +14,10 @@ The repository uses a centralized `release/` folder to store release artifacts f
 
 ```text
 release/
-├── clie-cli/
+├── clie/
 │   ├── CHANGELOG.md
 │   └── RELEASE-NOTES.md
-├── eac-cli/
+├── eac/
 │   ├── CHANGELOG.md
 │   └── RELEASE-NOTES.md
 ├── eac-ext/
@@ -142,7 +142,7 @@ Module contracts in `.eac/repository.yml` define where each module's changelog l
 
 | Release Type | Changelog Location              | Example                               |
 | ------------ | ------------------------------- | ------------------------------------- |
-| `published`  | `release/<module>/CHANGELOG.md` | `release/clie-cli/CHANGELOG.md`        |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/clie/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/clie-eac-bundle/CHANGELOG.md` |
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
@@ -153,15 +153,15 @@ See [Understanding Release Types](../../../../reference/eac/continuous-delivery/
 
 Published and bundle modules use the pattern: `release/<moniker>/CHANGELOG.md`
 
-**Example** (clie-cli module):
+**Example** (clie module):
 
 ```yaml
 modules:
-  - moniker: clie-cli
+  - moniker: clie
     name: The CLI of CLIs
     versioning:
       scheme: SemVer
-      changelog: release/clie-cli/CHANGELOG.md # Explicit path
+      changelog: release/clie/CHANGELOG.md # Explicit path
 ```
 
 If `versioning.changelog` is omitted, the system defaults to `release/<moniker>/CHANGELOG.md`.
@@ -239,36 +239,36 @@ You never specify the changelog path manually - commands discover it via module 
 
 ```bash
 # Display full changelog
-eac show changelog clie-cli
+eac show changelog clie
 
 # Display specific version
-eac show changelog clie-cli 1.2.4
+eac show changelog clie 1.2.4
 
 # Display unreleased changes
-eac show changelog clie-cli unreleased
+eac show changelog clie unreleased
 
 # Export as JSON
-eac get changelog clie-cli --as-json
+eac get changelog clie --as-json
 ```
 
 ### Viewing Release Notes
 
 ```bash
 # Display latest release notes
-eac show release-notes clie-cli
+eac show release-notes clie
 
 # Display specific version
-eac show release-notes clie-cli 1.2.3
+eac show release-notes clie 1.2.3
 ```
 
 ### Updating Changelogs
 
 ```bash
 # Generate changelog entry (analyzes commits)
-eac release this clie-cli
+eac release this clie
 
 # Validate changelog format
-eac validate release clie-cli
+eac validate release clie
 ```
 
 **What happens**:
@@ -276,7 +276,7 @@ eac validate release clie-cli
 1. Command reads module contract to find changelog path
 2. Analyzes commits since last release tag
 3. Generates entries from conventional commits
-4. Updates `release/clie-cli/CHANGELOG.md`
+4. Updates `release/clie/CHANGELOG.md`
 5. You commit the updated file
 
 ---
@@ -338,17 +338,17 @@ eac validate release <module>
 
 ## Module Examples
 
-### Published SemVer Module (clie-cli)
+### Published SemVer Module (clie)
 
 ```yaml
-moniker: clie-cli
+moniker: clie
 versioning:
   scheme: SemVer
-  changelog: release/clie-cli/CHANGELOG.md
+  changelog: release/clie/CHANGELOG.md
   release_type: published
 ```
 
-**Changelog location**: `release/clie-cli/CHANGELOG.md`
+**Changelog location**: `release/clie/CHANGELOG.md`
 
 **Version format**: `1.2.3` (MAJOR.MINOR.PATCH)
 
@@ -421,7 +421,7 @@ find release -name "RELEASE-NOTES.md"
 
 ```bash
 # Get changelog path for a module
-eac get modules --as-json | jq '.[] | select(.moniker=="clie-cli") | .versioning.changelog'
+eac get modules --as-json | jq '.[] | select(.moniker=="clie") | .versioning.changelog'
 ```
 
 ### Manual Changelog Entries

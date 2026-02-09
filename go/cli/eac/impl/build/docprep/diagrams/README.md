@@ -36,18 +36,18 @@ Diagram processing for the docprep pipeline, scanning markdown for mermaid, Plan
 
 ## Role in System
 
-The diagrams package implements the diagram processing phase (phase 11) of the docprep pipeline in `eac-cli`. It runs three diagram types in parallel using errgroup. For each type, it scans staged markdown for diagram code blocks or HTML comment markers, looks up pre-rendered SVGs from builder output directories via JSON index manifests, and replaces the source blocks with `<img>` tags pointing to the SVG files.
+The diagrams package implements the diagram processing phase (phase 11) of the docprep pipeline in `eac`. It runs three diagram types in parallel using errgroup. For each type, it scans staged markdown for diagram code blocks or HTML comment markers, looks up pre-rendered SVGs from builder output directories via JSON index manifests, and replaces the source blocks with `<img>` tags pointing to the SVG files.
 
 This architecture decouples expensive container-based rendering (handled by builder handlers in the builders package) from the pure-Go preprocessing pipeline. The builder handlers render diagrams to SVGs and write index manifests during the build phase; the diagrams package then consumes those manifests to locate and embed the rendered output.
 
 ## Code Health
 
 ### Tech Debt
-- `mermaid.go` and `plantuml.go` mirror each other structurally (Extract/Hash/CheckCache/Replace/Scan); consider a generic diagram processor to reduce duplication (~740 lines combined)
+- ~~`mermaid.go` and `plantuml.go` mirror each other structurally~~ (resolved: shared `DiagramConfig` abstraction in `diagram.go`; both delegate to generic `ExtractBlocks`, `CheckDiagramCache`, `ReplaceBlocksWithImages`, `ScanForDiagrams`)
 - No test file for `drawio.go`
 
 ### Pain Points
-- Adding a new diagram type requires duplicating the full Extract/Hash/CheckCache/Replace/Scan pattern across a new file
+- None identified -- `DiagramConfig` abstraction makes adding new diagram types a single config struct
 
 ### Optimization Opportunities
-- Extract a shared `DiagramProcessor` abstraction parameterized by block regex, hash function, and index format to unify mermaid and PlantUML processing -- moderate effort, significant deduplication
+- ~~Extract a shared `DiagramProcessor` abstraction~~ (resolved: `DiagramConfig` in `diagram.go`)

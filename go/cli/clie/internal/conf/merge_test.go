@@ -220,7 +220,7 @@ extensions:
     image: "python:3.9"
     description: "Python runtime"
 `
-	baseConfigPath := filepath.Join(clieDir, "clie-cli.yml")
+	baseConfigPath := filepath.Join(clieDir, "clie.yml")
 	err := os.WriteFile(baseConfigPath, []byte(baseConfig), 0644)
 	require.NoError(t, err)
 
@@ -243,7 +243,7 @@ extensions:
   - name: "node"
     image: "node:16"
 `
-	overrideConfigPath := filepath.Join(clieDir, "clie-cli.local.yml")
+	overrideConfigPath := filepath.Join(clieDir, "clie.local.yml")
 	err = os.WriteFile(overrideConfigPath, []byte(overrideConfig), 0644)
 	require.NoError(t, err)
 
@@ -363,7 +363,7 @@ extensions:
   - name: "eac"
     image: "ghcr.io/ready-to-release/eac-ext:v1.0.0"
 `
-	baseConfigPath := filepath.Join(clieDir, "clie-cli.yml")
+	baseConfigPath := filepath.Join(clieDir, "clie.yml")
 	err := os.WriteFile(baseConfigPath, []byte(baseConfig), 0644)
 	require.NoError(t, err)
 
@@ -379,7 +379,7 @@ extensions:
   - name: "eac"
     load_local: true
 `
-	overrideConfigPath := filepath.Join(tempDir, "clie-cli.partial.yml")
+	overrideConfigPath := filepath.Join(tempDir, "clie.partial.yml")
 	err = os.WriteFile(overrideConfigPath, []byte(overrideConfig), 0644)
 	require.NoError(t, err)
 

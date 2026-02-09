@@ -100,7 +100,7 @@ func sendPlannedWork(ctx *ExecutionContext) {
 		}
 
 		for _, compType := range module.GetEnabledComponents() {
-			toolIDs := getToolIDsForComponentType(ctx.EACConfig.ComponentTypes, compType, ctx.Config.Type)
+			toolIDs := getToolIDsForComponentKind(ctx.EACConfig.ComponentKinds, compType, ctx.Config.Type)
 			if len(toolIDs) == 0 {
 				continue
 			}
@@ -127,12 +127,12 @@ func sendPlannedWork(ctx *ExecutionContext) {
 	}
 }
 
-// getToolIDsForComponentType returns the tool IDs for a component type and action type.
-func getToolIDsForComponentType(types *config.ComponentTypesConfig, compType string, cmdType core.ActionType) []string {
-	if types == nil || types.ComponentTypes == nil {
+// getToolIDsForComponentKind returns the tool IDs for a component kind and action type.
+func getToolIDsForComponentKind(kinds *config.ComponentKindsConfig, compType string, cmdType core.ActionType) []string {
+	if kinds == nil || kinds.Kinds == nil {
 		return nil
 	}
-	ct, exists := types.ComponentTypes[compType]
+	ct, exists := kinds.Kinds[compType]
 	if !exists || ct == nil {
 		return nil
 	}

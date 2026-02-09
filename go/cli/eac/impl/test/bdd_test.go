@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
+	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	_ "github.com/ready-to-release/eac/go/cli/eac/impl/get" // register get commands
 	"github.com/ready-to-release/eac/go/clibase/registry"
-	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 func TestFeatures(t *testing.T) {
-	specsBase := "../../../../../specs/eac-cli"
+	specsBase := "../../../../../specs/eac"
 
 	cfg := eacgodog.RunnerConfig{
 		SpecsPath: specsBase + "/get-test-results," +

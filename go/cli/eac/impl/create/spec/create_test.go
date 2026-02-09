@@ -239,10 +239,10 @@ func TestParseConfig_Flags(t *testing.T) {
 		},
 		{
 			name:       "multiple flags combined",
-			args:       []string{"clie", "specs", "create", "-d", "-f", "-m", "clie-cli", "Complex feature description"},
+			args:       []string{"clie", "specs", "create", "-d", "-f", "-m", "clie", "Complex feature description"},
 			wantDebug:  true,
 			wantForce:  true,
-			wantModule: "clie-cli",
+			wantModule: "clie",
 			wantDesc:   "Complex feature description",
 			wantErr:    false,
 		},

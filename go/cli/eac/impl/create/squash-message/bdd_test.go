@@ -10,7 +10,7 @@ import (
 
 func TestFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../../specs/eac-cli/create-squash-message",
+		SpecsPath:         "../../../../../../specs/eac/create-squash-message",
 		DefaultReportName: "cucumber-squash-message",
 		AssetsPath:        "go/cli/eac/impl/create/squash-message/assets",
 		RegisterSteps:     registerSteps,

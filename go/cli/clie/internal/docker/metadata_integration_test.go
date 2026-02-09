@@ -72,8 +72,8 @@ ENTRYPOINT ["/extension-meta"]`
 	}
 
 	// Build test image using Docker CLI (simpler for testing)
-	// To run manually: cd <tmpDir> && docker build -t clie-cli-test-metadata:latest .
-	_ = fmt.Sprintf("clie-cli-test-metadata-%d:latest", time.Now().Unix())
+	// To run manually: cd <tmpDir> && docker build -t clie-test-metadata:latest .
+	_ = fmt.Sprintf("clie-test-metadata-%d:latest", time.Now().Unix())
 
 	// For automated testing, we'll create a mock scenario
 	t.Run("metadata_retrieval_simulation", func(t *testing.T) {
@@ -188,7 +188,7 @@ extensions:
       - name: "TEST_VAR"
         value: "test_value"`
 
-	err = os.WriteFile(".clie/clie-cli.yml", []byte(configContent), 0644)
+	err = os.WriteFile(".clie/clie.yml", []byte(configContent), 0644)
 	if err != nil {
 		t.Fatal("Failed to write config file:", err)
 	}

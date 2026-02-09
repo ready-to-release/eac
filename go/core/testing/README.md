@@ -71,9 +71,9 @@ and fixture-pooling facilities.
 - `discovery.go:20`: package-level `var log` global mutable logger
 
 ### Pain Points
-- `discovery.go` is 951 lines covering Go, Gherkin, and TypeScript discovery in one file; splitting by language would improve navigability
+- ~~`discovery.go` is 951 lines covering Go, Gherkin, and TypeScript discovery in one file~~ (resolved: split into `discovery.go`, `discovery_go.go`, `discovery_feature.go`, `discovery_node.go`)
 - `validation.go` is 551 lines with deeply nested logic; could benefit from smaller validation step functions
 
 ### Optimization Opportunities
-- Extract language-specific discovery (Go, Gherkin, TypeScript) into sub-files to reduce cognitive load (medium effort)
+- ~~Extract language-specific discovery (Go, Gherkin, TypeScript) into sub-files~~ (resolved)
 - Add benchmark tests for fixture pooling to guard against performance regressions (low effort, high value)

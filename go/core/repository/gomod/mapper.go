@@ -54,7 +54,7 @@ func (m *Mapper) buildMappings() {
 }
 
 // GetMonikerFromPath converts a go.mod module path to a module moniker
-// Example: "github.com/ready-to-release/eac/go/cli/clie" -> "clie-cli".
+// Example: "github.com/ready-to-release/eac/go/cli/clie" -> "clie".
 func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	if moniker, ok := m.pathToMoniker[modulePath]; ok {
 		return moniker, nil
@@ -89,7 +89,7 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 }
 
 // GetPathFromMoniker converts a module moniker to a go.mod module path
-// Example: "clie-cli" -> "github.com/ready-to-release/eac/go/cli/clie".
+// Example: "clie" -> "github.com/ready-to-release/eac/go/cli/clie".
 func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 	if path, ok := m.monikerToPath[moniker]; ok {
 		return path, nil
@@ -110,7 +110,7 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 }
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
-// Example: "go/cli/clie" -> "clie-cli"
+// Example: "go/cli/clie" -> "clie"
 // Also handles subdirectories: "go/eac/core/ai" -> "core".
 func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators

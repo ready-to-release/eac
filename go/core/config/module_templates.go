@@ -29,7 +29,7 @@ type ModuleTemplate struct {
 // discovery rules, and artifact matrices — all in one file.
 type BlueprintsConfig struct {
 	// ComponentKinds maps component kind name to its definition (tool bindings, default patterns, resources).
-	// This is the unified replacement for the old component-types.yml.
+	// Component kinds define tool bindings, default file patterns, and resources.
 	ComponentKinds map[string]*ComponentType `yaml:"component-kinds"`
 	// DiscoveryRules maps rule name to its discovery specification.
 	// Templates reference these by name via their "discover" field.
@@ -199,8 +199,12 @@ func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 				continue
 			}
 			modComp, exists := mod.Components[name]
-			if !exists || modComp == nil {
+			if !exists {
 				continue
+			}
+			if modComp == nil {
+				modComp = &ComponentEntry{}
+				mod.Components[name] = modComp
 			}
 			if tmplComp.DockerBuild != nil {
 				if modComp.DockerBuild == nil {

@@ -54,7 +54,7 @@ Creates OSCAL assessment-results from existing test and security scan evidence, 
 
 ## Role in System
 
-The `create risk-assess` command provides automated compliance assessment for `eac-cli`, reading existing test and security evidence to produce OSCAL-standard assessment-results and Markdown risk reports. It bridges the gap between test/scan execution and compliance documentation, enabling teams to assess control satisfaction across all modules with AI-enhanced risk analysis and evidence staleness tracking.
+The `create risk-assess` command provides automated compliance assessment for `eac`, reading existing test and security evidence to produce OSCAL-standard assessment-results and Markdown risk reports. It bridges the gap between test/scan execution and compliance documentation, enabling teams to assess control satisfaction across all modules with AI-enhanced risk analysis and evidence staleness tracking.
 
 ## Code Health
 

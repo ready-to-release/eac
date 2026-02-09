@@ -199,41 +199,63 @@ func resetGlobalCategoryResolver() {
 	globalCategoryResolver.initialized = false
 }
 
-func TestDefaultScannerCategoryMapMatchesResolver(t *testing.T) {
-	// The package-level DefaultScannerCategoryMap should contain every
-	// category returned by AllScannerCategories.
+func TestDefaultScannerCategoriesMatchesResolver(t *testing.T) {
+	// The copy function should return every category known to the resolver.
 	resetGlobalCategoryResolver()
 	defer resetGlobalCategoryResolver()
 
 	categories := AllScannerCategories()
-	if len(categories) != len(DefaultScannerCategoryMap) {
-		t.Errorf("AllScannerCategories() returned %d items but DefaultScannerCategoryMap has %d entries",
-			len(categories), len(DefaultScannerCategoryMap))
+	defaults := DefaultScannerCategories()
+	if len(categories) != len(defaults) {
+		t.Errorf("AllScannerCategories() returned %d items but DefaultScannerCategories() has %d entries",
+			len(categories), len(defaults))
 	}
 
 	for _, cat := range categories {
-		if _, ok := DefaultScannerCategoryMap[cat]; !ok {
-			t.Errorf("Category %q from resolver is missing in DefaultScannerCategoryMap", cat)
+		if _, ok := defaults[cat]; !ok {
+			t.Errorf("Category %q from resolver is missing in DefaultScannerCategories()", cat)
 		}
 	}
 }
 
-func TestDefaultServerTypeMapMatchesResolver(t *testing.T) {
-	// The package-level DefaultServerTypeMap should contain every
-	// server type returned by AllServerTypes.
+func TestDefaultServerTypesMatchesResolver(t *testing.T) {
+	// The copy function should return every server type known to the resolver.
 	resetGlobalCategoryResolver()
 	defer resetGlobalCategoryResolver()
 
 	types := AllServerTypes()
-	if len(types) != len(DefaultServerTypeMap) {
-		t.Errorf("AllServerTypes() returned %d items but DefaultServerTypeMap has %d entries",
-			len(types), len(DefaultServerTypeMap))
+	defaults := DefaultServerTypes()
+	if len(types) != len(defaults) {
+		t.Errorf("AllServerTypes() returned %d items but DefaultServerTypes() has %d entries",
+			len(types), len(defaults))
 	}
 
 	for _, st := range types {
-		if _, ok := DefaultServerTypeMap[st]; !ok {
-			t.Errorf("Server type %q from resolver is missing in DefaultServerTypeMap", st)
+		if _, ok := defaults[st]; !ok {
+			t.Errorf("Server type %q from resolver is missing in DefaultServerTypes()", st)
 		}
+	}
+}
+
+func TestDefaultScannerCategoriesReturnsCopy(t *testing.T) {
+	// Mutating the returned map should not affect the package-level default.
+	m := DefaultScannerCategories()
+	m["mutated"] = "should-not-leak"
+
+	m2 := DefaultScannerCategories()
+	if _, ok := m2["mutated"]; ok {
+		t.Error("DefaultScannerCategories() returned a reference, not a copy")
+	}
+}
+
+func TestDefaultServerTypesReturnsCopy(t *testing.T) {
+	// Mutating the returned map should not affect the package-level default.
+	m := DefaultServerTypes()
+	m["mutated"] = "should-not-leak"
+
+	m2 := DefaultServerTypes()
+	if _, ok := m2["mutated"]; ok {
+		t.Error("DefaultServerTypes() returned a reference, not a copy")
 	}
 }
 
@@ -292,5 +314,28 @@ func TestOverrideServerTypeMap(t *testing.T) {
 	types := AllServerTypes()
 	if len(types) != 1 {
 		t.Errorf("after override, AllServerTypes() returned %d items, want 1", len(types))
+	}
+}
+
+func TestCategoryResolverMethodsOnInstance(t *testing.T) {
+	// Test that methods work on a fresh (non-global) instance.
+	r := newCategoryResolver()
+
+	// Should have defaults loaded
+	if got := r.ScannerToolIDForCategory("sbom"); got != ToolTrivySBOM {
+		t.Errorf("expected %q, got %q", ToolTrivySBOM, got)
+	}
+	if got := r.ServerToolIDForType(ToolStaticSite); got != ToolStaticSite {
+		t.Errorf("expected %q, got %q", ToolStaticSite, got)
+	}
+
+	// Override on instance should not affect global
+	r.OverrideScannerCategoryMap(map[string]string{"custom": "custom-id"})
+	if got := r.ScannerToolIDForCategory("custom"); got != "custom-id" {
+		t.Errorf("expected %q, got %q", "custom-id", got)
+	}
+	// Global should still have defaults
+	if got := ScannerToolIDForCategory("sbom"); got != ToolTrivySBOM {
+		t.Errorf("global should not be affected, got %q", got)
 	}
 }

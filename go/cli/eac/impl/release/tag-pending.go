@@ -9,7 +9,7 @@
 // Long:   - JSON list of versions needing tags, including module, version, tag, and needs_tag fields
 // Long:
 // Long: Examples:
-// Long:   release tag-pending clie-cli        # Check single module
+// Long:   release tag-pending clie        # Check single module
 // Long:   release tag-pending --all          # Check all modules with changelogs
 // Flag.all: type=bool, usage=Check all modules with changelogs
 // Args: modules

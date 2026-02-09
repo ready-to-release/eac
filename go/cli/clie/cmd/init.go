@@ -20,8 +20,8 @@ func init() {
 
 var InitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize a new clie-cli configuration file",
-	Long:  `Creates a minimal .clie/clie-cli.yml configuration file in the repository.`,
+	Short: "Initialize a new clie configuration file",
+	Long:  `Creates a minimal .clie/clie.yml configuration file in the repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		createConfigFile(cmd)
 	},
@@ -52,7 +52,7 @@ func createConfigFile(cmd *cobra.Command) {
 	repoRoot, err := conf.FindRepositoryRoot()
 	if err != nil {
 		logging.Errorf("Error: Not a git repository. %v", err)
-		logging.Info("💡 To enable clie-cli in non-git projects, use: clie init --use-pwd-as-root")
+		logging.Info("💡 To enable clie in non-git projects, use: clie init --use-pwd-as-root")
 		os.Exit(1)
 	}
 
@@ -70,10 +70,10 @@ func createConfigFile(cmd *cobra.Command) {
 		os.Exit(1)
 	}
 
-	configFile := filepath.Join(clieDir, "clie-cli.yml")
+	configFile := filepath.Join(clieDir, "clie.yml")
 
 	if _, err := os.Stat(configFile); err == nil {
-		logging.Error("Error: .clie/clie-cli.yml already exists")
+		logging.Error("Error: .clie/clie.yml already exists")
 		os.Exit(1)
 	}
 
@@ -84,7 +84,7 @@ func createConfigFile(cmd *cobra.Command) {
 
 	err = os.WriteFile(configFile, []byte(minimalConfig), 0o644)
 	if err != nil {
-		logging.Errorf("Error: Failed to create .clie/clie-cli.yml: %v", err)
+		logging.Errorf("Error: Failed to create .clie/clie.yml: %v", err)
 		os.Exit(1)
 	}
 
@@ -95,10 +95,10 @@ func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
 	// List of config files in .clie directory including overrides (but not examples)
 	clieDir := filepath.Join(repoRoot, ".clie")
 	configFiles := []string{
-		"clie-cli.yml",
-		"clie-cli.local.yml",
-		"clie-cli.personal.yml",
-		"clie-cli.dev.yml",
+		"clie.yml",
+		"clie.local.yml",
+		"clie.personal.yml",
+		"clie.dev.yml",
 	}
 
 	deletedCount := 0

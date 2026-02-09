@@ -90,7 +90,7 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 					// 2. Mark as early-cached so worker can short-circuit
 					us.earlyCached.Store(moniker, EarlyCacheInfo{
 						Module:    s.ID.Module,
-						Component: s.ID.Component,
+						Component: s.ID.ComponentName,
 						Handler:   s.ID.Tool,
 						CacheTime: result.CacheTime,
 					})
@@ -116,7 +116,7 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 // This is the core execution extracted from processComponent without dep-waiting or semaphore handling.
 func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorkerFunc) UnitResult {
 	module := spec.ID.Module
-	component := spec.ID.Component
+	component := spec.ID.ComponentName
 	tool := spec.ID.Tool
 
 	result := UnitResult{
@@ -146,10 +146,11 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	startTime := time.Now()
 
 	// Track active tool usage
-	us.addActiveTool(tool, spec.Container, moniker)
+	isContainer := spec.GetPoolAllocation().IsContainer()
+	us.addActiveTool(tool, isContainer, moniker)
 
 	// Create output directory for this component
-	// Structure: out/<context>/<module>/<dirname> (e.g., out/build/books/howto, out/test/eac-cli/go-gotest-impl-build)
+	// Structure: out/<context>/<module>/<dirname> (e.g., out/build/books/howto, out/test/eac/go-gotest-impl-build)
 	// Uses DirName() which includes tool and Extra values for unique directory names
 	sanitizedModule := sanitizePathForFS(output.PackageDisplayName(module))
 	sanitizedDirName := sanitizePathForFS(spec.ID.DirName())
@@ -163,7 +164,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		result.Errors = []string{fmt.Sprintf("Failed to create directory: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
-		us.removeActiveTool(tool, spec.Container, moniker)
+		us.removeActiveTool(tool, isContainer, moniker)
 		return result
 	}
 
@@ -175,7 +176,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		result.Errors = []string{fmt.Sprintf("Failed to create log file: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
-		us.removeActiveTool(tool, spec.Container, moniker)
+		us.removeActiveTool(tool, isContainer, moniker)
 		return result
 	}
 
@@ -211,18 +212,8 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	var exitCode int
 	resultCh := make(chan int, 1)
 	go func() {
-		// Combine component and tool for worker (e.g., "go:golangci-lint")
-		// For tests with Extra["testname"], format is "component:tool:testname" (e.g., "go:gotest:impl-build")
-		// When tool is empty, workerComponent equals component
-		workerComponent := component
-		if tool != "" {
-			workerComponent = component + ":" + tool
-		}
-		// Append testname if present (for test context)
-		if testname := spec.ID.Extra["testname"]; testname != "" {
-			workerComponent = workerComponent + ":" + testname
-		}
-		resultCh <- worker(workerCtx, module, workerComponent, workerWriter)
+		// Pass full spec to worker - no more string joining/parsing
+		resultCh <- worker(workerCtx, spec, workerWriter)
 	}()
 
 	select {
@@ -270,7 +261,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	}
 
 	// Remove tool from active list
-	us.removeActiveTool(tool, spec.Container, moniker)
+	us.removeActiveTool(tool, isContainer, moniker)
 
 	return result
 }

@@ -67,7 +67,7 @@ eac/
 │   │   ├── component-types.schema.json
 │   │   └── ...
 │   ├── eac-docs/0.1.0/         # Documentation schemas
-│   ├── clie-cli/0.1.0/          # CLI-specific schemas
+│   ├── clie/0.1.0/          # CLI-specific schemas
 │   └── vscode-commit/          # VSCode extension schemas
 │
 ├── docs/                       # MkDocs documentation site source
@@ -85,13 +85,13 @@ eac/
 │   ├── godog/                  # Shared BDD test infrastructure
 │   ├── specs/                  # Specs implementations
 │   └── clie/                    # CLIE implementation
-│       └── cli/                # CLIE CLI application (clie-cli module)
+│       └── cli/                # CLIE CLI application (clie module)
 │
 ├── release/                    # Release notes and changelogs
 │   ├── books/                  # Books module releases
 │   ├── docs/                   # Docs module releases
 │   ├── eac-ext/                # Extension releases
-│   ├── clie-cli/                # CLI releases
+│   ├── clie/                # CLI releases
 │   └── clie-eac-bundle/         # Bundle releases
 │
 ├── scripts/                    # Cross-platform scripts
@@ -101,7 +101,7 @@ eac/
 ├── specs/                      # Gherkin BDD specifications
 │   ├── eac-commands/           # Specs for commands module
 │   ├── eac-core/               # Specs for core module
-│   ├── clie-cli/                # Specs for CLI module
+│   ├── clie/                # Specs for CLI module
 │   └── repository/             # Repository-level validation specs
 │
 ├── templates/                  # Project templates
@@ -127,7 +127,7 @@ Modules are organized into two categories:
 
 **Deployable Modules** - Independently built, versioned, and deployed:
 
-- **clie-cli** - Go CLI application with cross-platform executables
+- **clie** - Go CLI application with cross-platform executables
 - **eac-ext** - Docker extension for CLIE CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 

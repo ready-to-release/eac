@@ -45,7 +45,7 @@ Implements the `build` command, which compiles one or more modules by moniker us
 
 ## Role in System
 
-The build package is the largest command implementation in `eac-cli`, orchestrating multi-module parallel builds with per-component granularity. It delegates actual compilation to registered `BuildHandler` implementations in the builders sub-package, while managing incremental caching, artifact derivation, and manifest tracking through the command framework. The docprep sub-package handles MkDocs-specific preprocessing before documentation builds.
+The build package is the largest command implementation in `eac`, orchestrating multi-module parallel builds with per-component granularity. It delegates actual compilation to registered `BuildHandler` implementations in the builders sub-package, while managing incremental caching, artifact derivation, and manifest tracking through the command framework. The docprep sub-package handles MkDocs-specific preprocessing before documentation builds.
 
 ## Code Health
 
@@ -56,9 +56,9 @@ The build package is the largest command implementation in `eac-cli`, orchestrat
 - No tests for `unit_worker.go`, `unit_work.go`, `compression.go`, or `framework.go` -- only `buildflags`, `cache_checker`, and `build_freshness` have test files
 
 ### Pain Points
-- `hasExistingArtifacts` (build.go:577-667) reloads config and module registry on every call despite being invoked per-module in a loop
+- ~~`hasExistingArtifacts` reloads module registry on every call despite being invoked per-module in a loop~~ (resolved: `modRegistry` now passed as parameter from caller)
 - Artifact derivation runs in both `runModuleBuild` and `processAllArtifactDerivations`, relying on comments to explain why duplication is safe
 
 ### Optimization Opportunities
 - Split `buildUnitWorker` into a cache-check phase and a build-execute phase to improve readability and testability -- moderate effort
-- Hoist config/module loading out of `hasExistingArtifacts` into the caller loop to avoid repeated I/O -- low effort, measurable speedup
+- ~~Hoist config/module loading out of `hasExistingArtifacts`~~ (resolved)

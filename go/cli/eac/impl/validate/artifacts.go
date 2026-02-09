@@ -21,7 +21,7 @@
 // Long:
 // Long: Example:
 // Long:   validate artifacts eac-cli
-// Long:   validate artifacts clie-cli --os linux --arch amd64
+// Long:   validate artifacts clie --os linux --arch amd64
 // Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
 //
 // Args: module

@@ -52,7 +52,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 	// This prevents deadlocks from build_after dependencies on non-buildable components
 	scheduledComponents := make(map[string]bool)
 	for compName, compType := range enabledComponents {
-		typeConfig := r.cfg.ComponentTypes.Get(compType)
+		typeConfig := r.cfg.ComponentKinds.Get(compType)
 		if typeConfig == nil || !typeConfig.IsBuildable() {
 			continue
 		}
@@ -86,7 +86,7 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 		}
 
 		// Get component type config
-		typeConfig := r.cfg.ComponentTypes.Get(compType)
+		typeConfig := r.cfg.ComponentKinds.Get(compType)
 
 		// Build external dependencies from dependency graph and component depends_on
 		// These are added to the FIRST tool in a tool chain, or the single tool
@@ -96,9 +96,10 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 				continue
 			}
 			externalDeps = append(externalDeps, toolChainDep{
-				Module:    module.Moniker,
-				Component: depComp,
-				Tool:      r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
+				Module:        module.Moniker,
+				ComponentType: enabledComponents[depComp],
+				Component:     depComp,
+				Tool:          r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
 			})
 		}
 
@@ -117,9 +118,10 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 			}
 			if !alreadyAdded {
 				externalDeps = append(externalDeps, toolChainDep{
-					Module:    module.Moniker,
-					Component: depComp,
-					Tool:      r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
+					Module:        module.Moniker,
+					ComponentType: enabledComponents[depComp],
+					Component:     depComp,
+					Tool:          r.resolveActualToolName(enabledComponents[depComp], PhaseBuild),
 				})
 			}
 		}
@@ -136,26 +138,18 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 				handler := r.buildBridge.GetHandler(tcSpec.Tool)
 				isContainer := handler != nil && handler.IsContainer()
 				weight := r.getToolWeight(module.Moniker, compName, compType)
-
-				// Set PoolAllocation explicitly based on tool type
-				var poolAlloc resource.PoolAllocation
-				if isContainer {
-					poolAlloc = resource.ContainerAllocation(weight, weight)
-				} else {
-					poolAlloc = resource.HostOnlyAllocation(weight)
-				}
+				poolAlloc := resource.AllocationForWeight(weight, isContainer)
 
 				spec := workunit.UnitSpec{
 					ID: workunit.UnitID{
-						Action:    core.ActionBuild,
-						Module:    module.Moniker,
-						Component: compName,
-						Tool:      tcSpec.Tool,
+						Action:        core.ActionBuild,
+						Module:        module.Moniker,
+						ComponentType: compType,
+						ComponentName: compName,
+						Tool:          tcSpec.Tool,
 					},
 					ComponentType:  compType,
 					Weight:         weight,
-					Container:      isContainer,
-					HostInstalled:  !isContainer,
 					PoolAllocation: poolAlloc,
 					DependsOn:      tcSpec.DependsOn,
 					Cached:         cachedModules != nil && cachedModules[module.Moniker],
@@ -175,35 +169,28 @@ func (r *ComponentResolver) ResolveForBuild(module *modules.ModuleContract, cach
 			var dependsOn []workunit.UnitID
 			for _, dep := range externalDeps {
 				dependsOn = append(dependsOn, workunit.UnitID{
-					Action:    core.ActionBuild,
-					Module:    dep.Module,
-					Component: dep.Component,
-					Tool:      dep.Tool,
+					Action:        core.ActionBuild,
+					Module:        dep.Module,
+					ComponentType: enabledComponents[dep.Component],
+					ComponentName: dep.Component,
+					Tool:          dep.Tool,
 				})
 			}
 
 			isContainer := handler.IsContainer()
 			weight := r.getWeight(module.Moniker, compName, compType, core.ActionBuild)
-
-			// Set PoolAllocation explicitly based on tool type
-			var poolAlloc resource.PoolAllocation
-			if isContainer {
-				poolAlloc = resource.ContainerAllocation(weight, weight)
-			} else {
-				poolAlloc = resource.HostOnlyAllocation(weight)
-			}
+			poolAlloc := resource.AllocationForWeight(weight, isContainer)
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionBuild,
-					Module:    module.Moniker,
-					Component: compName,
-					Tool:      actualToolName,
+					Action:        core.ActionBuild,
+					Module:        module.Moniker,
+					ComponentType: compType,
+					ComponentName: compName,
+					Tool:          actualToolName,
 				},
 				ComponentType:  compType,
 				Weight:         weight,
-				Container:      isContainer,
-				HostInstalled:  !isContainer,
 				PoolAllocation: poolAlloc,
 				DependsOn:      dependsOn,
 				Cached:         cachedModules != nil && cachedModules[module.Moniker],
@@ -239,25 +226,18 @@ func (r *ComponentResolver) ResolveForLint(module *modules.ModuleContract, cache
 			isContainer := handler != nil && handler.IsContainer()
 			weight := r.getWeight(module.Moniker, compName, compType, core.ActionLint)
 
-			// Set PoolAllocation explicitly based on tool type
-			var poolAlloc resource.PoolAllocation
-			if isContainer {
-				poolAlloc = resource.ContainerAllocation(weight, weight)
-			} else {
-				poolAlloc = resource.HostOnlyAllocation(weight)
-			}
+			poolAlloc := resource.AllocationForWeight(weight, isContainer)
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionLint,
-					Module:    module.Moniker,
-					Component: compName,
-					Tool:      toolName,
+					Action:        core.ActionLint,
+					Module:        module.Moniker,
+					ComponentType: compType,
+					ComponentName: compName,
+					Tool:          toolName,
 				},
 				ComponentType:  compType,
 				Weight:         weight,
-				Container:      isContainer,
-				HostInstalled:  !isContainer,
 				PoolAllocation: poolAlloc,
 				DependsOn:      []workunit.UnitID{},
 				Cached:         cachedModules != nil && cachedModules[module.Moniker],
@@ -285,7 +265,7 @@ func (r *ComponentResolver) ResolveForScan(module *modules.ModuleContract, scanC
 	enabledComponents := r.getEnabledComponentsMap(module)
 
 	for compName, compType := range enabledComponents {
-		typeConfig := r.cfg.ComponentTypes.Get(compType)
+		typeConfig := r.cfg.ComponentKinds.Get(compType)
 		if typeConfig == nil || !typeConfig.IsScannable() {
 			continue
 		}
@@ -306,16 +286,15 @@ func (r *ComponentResolver) ResolveForScan(module *modules.ModuleContract, scanC
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionScan,
-					Module:    module.Moniker,
-					Component: compName,
-					Tool:      toolName,
-					Extra:     map[string]string{"category": string(category)},
+					Action:        core.ActionScan,
+					Module:        module.Moniker,
+					ComponentType: compType,
+					ComponentName: compName,
+					Tool:          toolName,
+					Extra:         map[string]string{"category": string(category)},
 				},
 				ComponentType:  compType,
 				Weight:         weight,
-				Container:      true, // All scanners run in containers
-				HostInstalled:  false,
 				PoolAllocation: poolAlloc,
 				DependsOn:      []workunit.UnitID{},
 				Cached:         cachedModules != nil && cachedModules[module.Moniker],
@@ -345,10 +324,10 @@ func (r *ComponentResolver) getEnabledComponentsMap(module *modules.ModuleContra
 // getBuildAfterFunc returns a function that retrieves build_after for a component type.
 func (r *ComponentResolver) getBuildAfterFunc() func(compType string) []string {
 	return func(compType string) []string {
-		if r.cfg == nil || r.cfg.ComponentTypes == nil {
+		if r.cfg == nil || r.cfg.ComponentKinds == nil {
 			return nil
 		}
-		typeConfig := r.cfg.ComponentTypes.Get(compType)
+		typeConfig := r.cfg.ComponentKinds.Get(compType)
 		if typeConfig == nil {
 			return nil
 		}
@@ -376,10 +355,10 @@ func (r *ComponentResolver) resolveToolForPhase(compType string, phase Phase, ty
 
 // resolveToolForComponent is a helper that looks up the tool for a component type and phase.
 func (r *ComponentResolver) resolveToolForComponent(compType string, phase Phase) string {
-	if r.cfg == nil || r.cfg.ComponentTypes == nil {
+	if r.cfg == nil || r.cfg.ComponentKinds == nil {
 		return ""
 	}
-	typeConfig := r.cfg.ComponentTypes.Get(compType)
+	typeConfig := r.cfg.ComponentKinds.Get(compType)
 	return r.resolveToolForPhase(compType, phase, typeConfig)
 }
 
@@ -472,8 +451,8 @@ func (r *ComponentResolver) getWeight(moniker, compName, compType string, op cor
 	// Fall back to component type's weight if tool didn't provide one
 	// This handles native handlers (e.g., pdf, site) that aren't in the tool registry
 	var typeConfig *config.ComponentType
-	if r.cfg != nil && r.cfg.ComponentTypes != nil {
-		typeConfig = r.cfg.ComponentTypes.Get(compType)
+	if r.cfg != nil && r.cfg.ComponentKinds != nil {
+		typeConfig = r.cfg.ComponentKinds.Get(compType)
 		if baseWeight == 1 && typeConfig != nil {
 			if typeWeight := typeConfig.GetWeight(); typeWeight > 1 {
 				baseWeight = typeWeight

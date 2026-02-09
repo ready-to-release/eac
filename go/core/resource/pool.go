@@ -26,3 +26,6 @@ var HostOnlyAllocation = core.HostOnlyAllocation
 // ContainerAllocation creates an allocation for container work.
 // Container work requires capacity from both pools.
 var ContainerAllocation = core.ContainerAllocation
+
+// AllocationForWeight creates a PoolAllocation from a weight and container flag.
+var AllocationForWeight = core.AllocationForWeight

@@ -81,8 +81,8 @@ git:
 }
 
 # Create clie alias pointing to the OS-specific binary
-# Binary is now at out/build/clie-cli/go/ (component-level output structure)
-$ClieBinaryPath = Join-Path $PSScriptRoot "out\build\clie-cli\go-go"
+# Binary is now at out/build/clie/go/ (component-level output structure)
+$ClieBinaryPath = Join-Path $PSScriptRoot "out\build\clie\go-go"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
     $ClieBinary = Join-Path $ClieBinaryPath "clie-windows-amd64.exe"
 } elseif ($IsMacOS) {
@@ -118,7 +118,7 @@ function global:eac {
     Write-Host "✅ eac alias created -> clie eac <args>" -ForegroundColor Green
 } else {
     Write-Host "⚠️  clie binary not found at: $ClieBinary" -ForegroundColor Yellow
-    Write-Host "   Run 'build clie-cli' or 'go run ./go/cli/eac build clie-cli' to build it" -ForegroundColor Gray
+    Write-Host "   Run 'build clie' or 'go run ./go/cli/eac build clie' to build it" -ForegroundColor Gray
 }
 
 # Create top-level command aliases unless -NoAlias specified

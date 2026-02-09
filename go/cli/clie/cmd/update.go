@@ -49,8 +49,8 @@ var updateCmd = &cobra.Command{
 
 var updateSelfCmd = &cobra.Command{
 	Use:   "self",
-	Short: "Update clie-cli to the latest version",
-	Long:  `Updates clie-cli to the latest version from GitHub releases.`,
+	Short: "Update clie to the latest version",
+	Long:  `Updates clie to the latest version from GitHub releases.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get latest release info
 		release, err := getLatestRelease()
@@ -60,8 +60,8 @@ var updateSelfCmd = &cobra.Command{
 		}
 
 		currentVersion := strings.TrimPrefix(version.Version, "v")
-		// Tag format is clie-cli/x.y.z - extract just the version
-		latestVersion := strings.TrimPrefix(release.TagName, "clie-cli/")
+		// Tag format is clie/x.y.z - extract just the version
+		latestVersion := strings.TrimPrefix(release.TagName, "clie/")
 		latestVersion = strings.TrimPrefix(latestVersion, "v")
 
 		// Check if update is needed
@@ -115,10 +115,10 @@ var updateSelfCmd = &cobra.Command{
 		}
 
 		// Download new binary using GitHub API asset endpoint (matching installer pattern)
-		logging.Infof("Downloading clie-cli %s...", release.TagName)
+		logging.Infof("Downloading clie %s...", release.TagName)
 		logging.Infof("Size: %.2f MB", float64(selectedAsset.Size)/1024/1024)
 
-		apiDownloadURL := fmt.Sprintf("https://api.github.com/repos/ready-to-release/clie-cli/releases/assets/%d", selectedAsset.ID)
+		apiDownloadURL := fmt.Sprintf("https://api.github.com/repos/ready-to-release/clie/releases/assets/%d", selectedAsset.ID)
 
 		req, err := http.NewRequestWithContext(context.Background(), "GET", apiDownloadURL, http.NoBody)
 		if err != nil {
@@ -132,7 +132,7 @@ var updateSelfCmd = &cobra.Command{
 		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + token))
 		req.Header.Set("Authorization", "Basic "+auth)
 		req.Header.Set("Accept", "application/octet-stream")
-		req.Header.Set("User-Agent", "clie-cli-updater/1.0")
+		req.Header.Set("User-Agent", "clie-updater/1.0")
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -147,7 +147,7 @@ var updateSelfCmd = &cobra.Command{
 		}
 
 		// Create temp file for download
-		tmpFile, err := os.CreateTemp("", "clie-cli-update")
+		tmpFile, err := os.CreateTemp("", "clie-update")
 		if err != nil {
 			logging.Errorf("Failed to create temporary file: %v", err)
 			os.Exit(1)
@@ -274,9 +274,9 @@ func getLatestRelease() (*Release, error) {
 		return nil, fmt.Errorf("GitHub authentication required. Please set GITHUB_USERNAME and GITHUB_TOKEN environment variables")
 	}
 
-	// Query all releases and filter by clie-cli/ tag prefix
+	// Query all releases and filter by clie/ tag prefix
 	// This is necessary because we use --latest=false in a monorepo
-	req, err := http.NewRequestWithContext(context.Background(), "GET", "https://api.github.com/repos/ready-to-release/clie-cli/releases?per_page=50", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", "https://api.github.com/repos/ready-to-release/clie/releases?per_page=50", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,7 @@ func getLatestRelease() (*Release, error) {
 	req.Header.Set("Authorization", "Basic "+auth)
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-Github-Api-Version", "2022-11-28")
-	req.Header.Set("User-Agent", "clie-cli-updater/1.0")
+	req.Header.Set("User-Agent", "clie-updater/1.0")
 
 	// Send request
 	resp, err := http.DefaultClient.Do(req)
@@ -305,7 +305,7 @@ func getLatestRelease() (*Release, error) {
 		return nil, err
 	}
 
-	// Filter releases by clie-cli/ tag prefix and find highest semver
+	// Filter releases by clie/ tag prefix and find highest semver
 	var latestRelease *Release
 	var latestVersion [3]int
 
@@ -313,13 +313,13 @@ func getLatestRelease() (*Release, error) {
 		release := &releases[i]
 		tag := release.TagName
 
-		// Only consider clie-cli/ prefixed tags
-		if !strings.HasPrefix(tag, "clie-cli/") {
+		// Only consider clie/ prefixed tags
+		if !strings.HasPrefix(tag, "clie/") {
 			continue
 		}
 
-		// Extract version from tag (e.g., "clie-cli/1.0.0" -> "1.0.0")
-		versionStr := strings.TrimPrefix(tag, "clie-cli/")
+		// Extract version from tag (e.g., "clie/1.0.0" -> "1.0.0")
+		versionStr := strings.TrimPrefix(tag, "clie/")
 		versionStr = strings.TrimPrefix(versionStr, "v")
 
 		// Parse semver
@@ -344,7 +344,7 @@ func getLatestRelease() (*Release, error) {
 	}
 
 	if latestRelease == nil {
-		return nil, fmt.Errorf("no clie-cli releases found")
+		return nil, fmt.Errorf("no clie releases found")
 	}
 
 	return latestRelease, nil

@@ -212,7 +212,7 @@ func printScanUsage() {
 	log.Info("Examples:")
 	log.Info("  scan                                  # All modules, default scanners")
 	log.Info("  scan core                         # Single module, default scanners")
-	log.Info("  scan core clie-cli                 # Multiple modules")
+	log.Info("  scan core clie                 # Multiple modules")
 	log.Info("  scan --scanner sbom                   # All modules, single scanner")
 	log.Info("  scan core --scanner sbom,vuln     # Single module, multiple scanners")
 	log.Info("  scan --severity HIGH                  # Vuln with severity filter")

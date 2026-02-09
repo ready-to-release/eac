@@ -35,7 +35,7 @@ func extractModuleFromPath(filePath string) string {
 			relativePath := normalizedPath[idx+len(implPattern):]
 			parts := strings.Split(relativePath, "/")
 			if len(parts) >= 1 && parts[0] != "" {
-				return parts[0] // Return module name directly (e.g., "core", "clie-cli")
+				return parts[0] // Return module name directly (e.g., "core", "clie")
 			}
 		}
 	}

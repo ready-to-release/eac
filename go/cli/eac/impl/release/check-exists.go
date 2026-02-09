@@ -11,8 +11,8 @@
 // Long:   --format shell: EXISTS="true" TAG="..." ERROR="..."
 // Long:
 // Long: Example:
-// Long:   release check-exists --tag clie-cli/1.0.0
-// Long:   eval $(release check-exists --tag clie-cli/1.0.0 --format shell)
+// Long:   release check-exists --tag clie/1.0.0
+// Long:   eval $(release check-exists --tag clie/1.0.0 --format shell)
 // Flag.tag: type=string, usage=Tag name to check (required)
 // Flag.format: type=string, usage=Output format (default, shell)
 package release

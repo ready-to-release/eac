@@ -1,4 +1,4 @@
-// Package init contains godog step implementations for eac-cli.
+// Package init contains godog step implementations for eac.
 //
 // This file contains init command step definitions.
 package init
@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.

@@ -37,8 +37,8 @@ func TestYAML() {
 
 	for i := range config.Modules {
 		mod := &config.Modules[i]
-		if mod.Moniker == "clie-cli" {
-			fmt.Printf("clie-cli: %+v\n", mod.Versioning)
+		if mod.Moniker == "clie" {
+			fmt.Printf("clie: %+v\n", mod.Versioning)
 			break
 		}
 	}

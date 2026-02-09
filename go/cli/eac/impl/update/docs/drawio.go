@@ -21,14 +21,11 @@ type DrawioResult struct {
 }
 
 // runDrawioUpdate handles the drawio area update.
-// It scans docs for drawio.png images and optimizes missing ones to cache.
+// It scans docs for drawio.png images and optimizes missing ones to the acceleration cache.
 func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (DrawioResult, error) {
 	result := DrawioResult{}
 
 	fmt.Fprintln(logWriter, "Updating drawio image cache...")
-
-	// Create asset cache (nil = use cache normally)
-	cache := caching.NewAssetCache(repoRoot, nil, nil)
 
 	// Scan docs/ for drawio images
 	docsDir := paths.DocsSourcePath(repoRoot)
@@ -47,14 +44,15 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 		return result, nil
 	}
 
+	// Use acceleration cache (.cache/eac/) as root; DrawioCachePath adds the drawio/ subdirectory
+	cacheDir := paths.CacheRootPath(repoRoot)
+
 	// Ensure drawio cache directory exists
-	cacheDir := paths.DocsCachePath(repoRoot)
-	drawioCacheDir := filepath.Join(cacheDir, "drawio")
-	if err := os.MkdirAll(drawioCacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(paths.DrawioAccelCachePath(repoRoot), 0o755); err != nil {
 		return result, fmt.Errorf("creating drawio cache directory: %w", err)
 	}
 
-	// Local cache status type (was books.DrawioCacheStatus, removed during builder migration)
+	// Local cache status type
 	type drawioCacheStatus struct {
 		Image     diagrams.DrawioImage
 		Cached    bool
@@ -65,15 +63,18 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 	drawioStatuses := []drawioCacheStatus{}
 
 	for _, img := range drawioImages {
-		cachePath, hit := cache.GetDrawio(caching.DrawioCacheKey{
+		hash := caching.HashDrawioKey(caching.DrawioCacheKey{
 			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
 			MaxWidth:   diagrams.MaxImageWidthPDF,
 		})
+		cachePath := paths.DrawioCachePath(cacheDir, img.SourceFile, hash)
 
-		// In force mode, treat everything as a cache miss
-		if opts.Force {
-			hit = false
+		hit := false
+		if !opts.Force {
+			if _, err := os.Stat(cachePath); err == nil {
+				hit = true
+			}
 		}
 
 		if hit {
@@ -128,16 +129,6 @@ func runDrawioUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (
 			log.Errorf("  Failed to optimize %s: %v", img.RelPath, err)
 			result.Failed++
 			continue
-		}
-
-		// Store in persistent cache
-		if err := cache.PutDrawio(status.CachePath, caching.DrawioCacheKey{
-			SourcePath: img.SourceFile,
-			SourceHash: img.Hash,
-			MaxWidth:   diagrams.MaxImageWidthPDF,
-		}); err != nil {
-			log.Warnf("  Failed to cache %s: %v", img.RelPath, err)
-			// Non-fatal - continue
 		}
 
 		result.Optimized++

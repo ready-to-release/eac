@@ -85,11 +85,11 @@ Flags:
 
 Example:
   build core
-  build core eac-cli
+  build core eac
 `,
 			wantDesc:     "build - Build one or more modules by moniker\n\nBuilds the specified modules and their dependencies.",
 			wantUsage:    "build [module...] [flags]",
-			wantExamples: "build core\n  build core eac-cli",
+			wantExamples: "build core\n  build core eac",
 			wantArgs:     1,
 			wantFlags:    2,
 		},
@@ -272,13 +272,13 @@ func TestDedentExamples(t *testing.T) {
 	}{
 		{
 			name:  "no indent",
-			input: "build core\nbuild eac-cli",
-			want:  "build core\nbuild eac-cli",
+			input: "build core\nbuild eac",
+			want:  "build core\nbuild eac",
 		},
 		{
 			name:  "consistent indent after trim",
-			input: "  build core\n  build eac-cli",
-			want:  "build core\n  build eac-cli",
+			input: "  build core\n  build eac",
+			want:  "build core\n  build eac",
 		},
 		{
 			name:  "mixed indent after trim",
@@ -408,13 +408,13 @@ func TestFormatCommandHelp_WithFlags(t *testing.T) {
 func TestFormatCommandHelp_WithExamples(t *testing.T) {
 	help := &CommandHelp{
 		Name:     "build",
-		Examples: "build core\nbuild eac-cli",
+		Examples: "build core\nbuild eac",
 	}
 
 	result := FormatCommandHelp(help, 2, false)
 
 	assert.Contains(t, result, "```bash\n")
-	assert.Contains(t, result, "build core\nbuild eac-cli")
+	assert.Contains(t, result, "build core\nbuild eac")
 }
 
 func TestFormatCommandHelp_WithArguments(t *testing.T) {

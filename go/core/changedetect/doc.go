@@ -81,7 +81,8 @@
 //	    unitID := workunit.UnitID{
 //	        Action:    core.ActionBuild,
 //	        Module:    m,
-//	        Component: "_module",
+//	        ComponentType: "_module",
+//	        ComponentName: "_module",
 //	        Tool:      "_",
 //	    }
 //	    if state, err := stateMgr.Load(unitID); err == nil {

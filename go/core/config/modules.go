@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,7 +25,7 @@ type Module struct {
 	Metadata      map[string]string     `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
 	Versioning    *ModuleVersioning     `yaml:"versioning,omitempty"`
 	Components    ModuleComponents      `yaml:"components"`        // Component types for this module (required)
-	Linting       *domain.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
+	Linting       *ModuleLinting        `yaml:"linting,omitempty"` // Linting configuration overrides
 
 	// Component discovery
 	DiscoverComponents *DiscoverComponentsConfig `yaml:"discover_components,omitempty"`
@@ -182,7 +181,7 @@ func (m *Module) ShouldAggregateFromDependencies() bool {
 // ReleaseBundle configures how the release module creates GitHub releases.
 type ReleaseBundle struct {
 	TitleFormat string                  `yaml:"title_format"` // Title template, e.g., "{clie} ({clie_version}) + {eac} ({eac_version})"
-	Headline    map[string]string       `yaml:"headline"`     // Map of label -> moniker for title, e.g., {"clie": "clie-cli", "eac": "eac-ext"}
+	Headline    map[string]string       `yaml:"headline"`     // Map of label -> moniker for title, e.g., {"clie": "clie", "eac": "eac-ext"}
 	Categories  []ReleaseBundleCategory `yaml:"categories"`   // Grouped modules for release notes
 }
 
@@ -277,6 +276,15 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 	return clone
 }
 
+// ModuleLinting configures linting behavior for a module.
+type ModuleLinting struct {
+	// Enabled lists specific lint providers to use (empty = use all applicable from lint-providers.yml)
+	Enabled []string `yaml:"enabled,omitempty"`
+
+	// Disabled lists lint providers to skip, or "all" to disable linting entirely
+	Disabled []string `yaml:"disabled,omitempty"`
+}
+
 // ModuleComponents is a map of component type name to its configuration.
 // The first component in the map becomes the default for build operations.
 // Each entry can be:
@@ -348,9 +356,20 @@ type ComponentEntry struct {
 	// Values here override defaults from component-types.yml.
 	Config map[string]string `yaml:"config,omitempty" json:"config,omitempty"`
 
+	// ComponentGroup is the group name for this component.
+	// Components with the same group can be referenced as a single dependency target.
+	// Defaults to the component name if not explicitly set (via applyComponentGroupDefaults).
+	ComponentGroup string `yaml:"component_group,omitempty" json:"component_group,omitempty"`
+
 	// DependsOn lists component names this component depends on within the same module.
 	// Used for intra-module build ordering (e.g., pdf-render depends on base-site).
 	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+
+	// ComponentDeps lists inter-module component dependencies using the addressing
+	// format "module:componentName[:componentType[:tool]]". Unlike module-level
+	// depends_on (which causes all-to-all fan-out), component_deps enables narrowed
+	// dependency matching: only the specified remote components are awaited.
+	ComponentDeps []string `yaml:"component_deps,omitempty" json:"component_deps,omitempty"`
 
 	// Resolved indicates if this entry has been resolved with defaults
 	Resolved bool `yaml:"-" json:"-"`
@@ -389,6 +408,14 @@ func (ce *ComponentEntry) GetDependsOn() []string {
 		return nil
 	}
 	return ce.DependsOn
+}
+
+// GetComponentDeps returns the list of inter-module component dependencies.
+func (ce *ComponentEntry) GetComponentDeps() []string {
+	if ce == nil {
+		return nil
+	}
+	return ce.ComponentDeps
 }
 
 // ComponentPatterns contains optional file pattern overrides for a component.
@@ -431,9 +458,10 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 	for name, entry := range mc {
 		if entry != nil {
 			clonedEntry := &ComponentEntry{
-				Type:     entry.Type,
-				Root:     entry.Root,
-				Resolved: entry.Resolved,
+				Type:           entry.Type,
+				Root:           entry.Root,
+				ComponentGroup: entry.ComponentGroup,
+				Resolved:       entry.Resolved,
 			}
 			if entry.Patterns != nil {
 				clonedEntry.Patterns = &ComponentPatterns{}
@@ -469,6 +497,10 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 			if entry.DependsOn != nil {
 				clonedEntry.DependsOn = make([]string, len(entry.DependsOn))
 				copy(clonedEntry.DependsOn, entry.DependsOn)
+			}
+			if entry.ComponentDeps != nil {
+				clonedEntry.ComponentDeps = make([]string, len(entry.ComponentDeps))
+				copy(clonedEntry.ComponentDeps, entry.ComponentDeps)
 			}
 			clone[name] = clonedEntry
 		} else {
@@ -522,6 +554,20 @@ func (mc ModuleComponents) GetComponentRoot(compName string) string {
 		return entry.Root
 	}
 	return ""
+}
+
+// GetAllRoots returns a map of component name to root path.
+func (mc ModuleComponents) GetAllRoots() map[string]string {
+	if mc == nil {
+		return nil
+	}
+	roots := make(map[string]string, len(mc))
+	for name, entry := range mc {
+		if entry != nil {
+			roots[name] = entry.Root
+		}
+	}
+	return roots
 }
 
 // GetComponentType returns the type for a named component.
@@ -602,6 +648,29 @@ func (mc ModuleComponents) GetComponentConfig(compName, key string) string {
 	return entry.GetConfig(key)
 }
 
+// GetAllComponentDeps returns all inter-module component_deps across all components,
+// deduplicated and sorted.
+func (mc ModuleComponents) GetAllComponentDeps() []string {
+	if mc == nil {
+		return nil
+	}
+	seen := make(map[string]bool)
+	var result []string
+	for _, entry := range mc {
+		if entry == nil {
+			continue
+		}
+		for _, dep := range entry.ComponentDeps {
+			if !seen[dep] {
+				seen[dep] = true
+				result = append(result, dep)
+			}
+		}
+	}
+	sort.Strings(result)
+	return result
+}
+
 // GetComponentDependsOn returns intra-module dependencies for a component.
 func (mc ModuleComponents) GetComponentDependsOn(compName string) []string {
 	if mc == nil {
@@ -612,6 +681,50 @@ func (mc ModuleComponents) GetComponentDependsOn(compName string) []string {
 		return nil
 	}
 	return entry.GetDependsOn()
+}
+
+// GetBuildableRoot returns the root path of the first buildable component
+// (go or typescript). Returns empty string if none found.
+func (mc ModuleComponents) GetBuildableRoot() string {
+	if mc == nil {
+		return ""
+	}
+	// Prefer "go" component
+	if entry, ok := mc["go"]; ok && entry != nil && entry.Root != "" {
+		return entry.Root
+	}
+	// Try "typescript"
+	if entry, ok := mc["typescript"]; ok && entry != nil && entry.Root != "" {
+		return entry.Root
+	}
+	return ""
+}
+
+// GetComponentGroup returns the component group for a named component.
+// Returns empty string if the component doesn't exist or has no group.
+func (mc ModuleComponents) GetComponentGroup(compName string) string {
+	if mc == nil {
+		return ""
+	}
+	entry, ok := mc[compName]
+	if !ok || entry == nil {
+		return ""
+	}
+	return entry.ComponentGroup
+}
+
+// applyComponentGroupDefaults sets ComponentGroup to the component name
+// for any entry that doesn't already have an explicit ComponentGroup.
+// This provides a self-named default so that every component belongs to a group.
+func (mc ModuleComponents) applyComponentGroupDefaults() {
+	for name, entry := range mc {
+		if entry == nil {
+			continue
+		}
+		if entry.ComponentGroup == "" {
+			entry.ComponentGroup = name
+		}
+	}
 }
 
 // GetBuildHandler returns the first explicit build handler found in components.
@@ -701,7 +814,7 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 
 // ApplyComponentDefaults resolves component roots and patterns from component-types.yml.
 // This should be called after ComponentTypes are loaded.
-func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentTypesConfig, repoRoot string) {
+func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfig, repoRoot string) {
 	for i := range c.Modules {
 		m := &c.Modules[i]
 		m.resolveComponentRoots(compTypes)
@@ -710,7 +823,7 @@ func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentTypesConfi
 }
 
 // resolveComponentRoots resolves default roots and patterns for all components in the module.
-func (m *Module) resolveComponentRoots(compTypes *ComponentTypesConfig) {
+func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 	if compTypes == nil {
 		return
 	}
@@ -751,6 +864,17 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentTypesConfig) {
 		}
 		if entry.Patterns.Config == nil && ct.Files != nil {
 			entry.Patterns.Config = substituteMoniker(ct.Files.Config, m.Moniker)
+		}
+
+		// Apply ComponentGroup from component-kind if not already set
+		if entry.ComponentGroup == "" && ct.ComponentGroup != "" {
+			entry.ComponentGroup = ct.ComponentGroup
+		}
+
+		// Apply DependsOn from component-kind if not already set
+		if len(entry.DependsOn) == 0 && len(ct.DependsOn) > 0 {
+			entry.DependsOn = make([]string, len(ct.DependsOn))
+			copy(entry.DependsOn, ct.DependsOn)
 		}
 
 		// Apply component-type defaults (convention-over-configuration)

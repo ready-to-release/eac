@@ -263,7 +263,7 @@ func runLoadValidation(repoRoot, configRoot string, result *ConfigValidationResu
 	}{
 		{"repository", cfg.LoadRepository},
 		{"environments", cfg.LoadEnvironments},
-		{"component-types", cfg.LoadComponentTypes},
+		{"component-types", cfg.LoadComponentKinds},
 	}
 
 	for _, ct := range configTypes {
@@ -300,14 +300,14 @@ func runCrossReferenceValidation(repoRoot, configRoot string, result *ConfigVali
 	}
 
 	// Check that module component types are valid
-	if cfg.Repository != nil && cfg.ComponentTypes != nil {
+	if cfg.Repository != nil && cfg.ComponentKinds != nil {
 		for _, mod := range cfg.Repository.Modules {
 			for compName, comp := range mod.Components {
 				compType := comp.Type
 				if compType == "" {
 					compType = compName
 				}
-				if cfg.ComponentTypes.Get(compType) == nil {
+				if cfg.ComponentKinds.Get(compType) == nil {
 					result.Warnings = append(result.Warnings, ConfigIssue{
 						File:    "repository.yml",
 						Message: fmt.Sprintf("module %q component %q has unknown type %q", mod.Moniker, compName, compType),
@@ -331,6 +331,47 @@ func runCrossReferenceValidation(repoRoot, configRoot string, result *ConfigVali
 						File:    "repository.yml",
 						Message: fmt.Sprintf("module %q has unknown dependency %q", mod.Moniker, dep),
 					})
+				}
+			}
+		}
+
+		// Check component_deps cross-references
+		for _, mod := range cfg.Repository.Modules {
+			for compName, entry := range mod.Components {
+				if entry == nil {
+					continue
+				}
+				for _, dep := range entry.ComponentDeps {
+					parsed, err := config.ParseComponentDep(dep)
+					if err != nil {
+						result.Warnings = append(result.Warnings, ConfigIssue{
+							File:    "repository.yml",
+							Message: fmt.Sprintf("module %q component %q: invalid component_deps entry %q: %v", mod.Moniker, compName, dep, err),
+						})
+						continue
+					}
+					if parsed.Module == mod.Moniker {
+						result.Warnings = append(result.Warnings, ConfigIssue{
+							File:    "repository.yml",
+							Message: fmt.Sprintf("module %q component %q: component_deps entry %q is a self-reference", mod.Moniker, compName, dep),
+						})
+						continue
+					}
+					if !moduleIndex[parsed.Module] {
+						result.Warnings = append(result.Warnings, ConfigIssue{
+							File:    "repository.yml",
+							Message: fmt.Sprintf("module %q component %q: component_deps entry %q references unknown module %q", mod.Moniker, compName, dep, parsed.Module),
+						})
+						continue
+					}
+					// Check target component exists in target module (warning only)
+					targetMod, found := cfg.Repository.GetModule(parsed.Module)
+					if found && !targetMod.HasComponent(parsed.ComponentName) {
+						result.Warnings = append(result.Warnings, ConfigIssue{
+							File:    "repository.yml",
+							Message: fmt.Sprintf("module %q component %q: component_deps entry %q references component %q not found in module %q", mod.Moniker, compName, dep, parsed.ComponentName, parsed.Module),
+						})
+					}
 				}
 			}
 		}

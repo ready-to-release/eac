@@ -2,7 +2,7 @@
 
 The `clibase` module provides shared CLI infrastructure for orchestration, flags, command framework, and rendering.
 
-It is the foundation for command execution across `eac-cli` and other CLI modules.
+It is the foundation for command execution across `eac` and other CLI modules.
 
 ## System Context
 

@@ -37,7 +37,7 @@ Synchronizes documentation assets by rendering mermaid diagrams, optimizing draw
 
 ## Role in System
 
-The `docs` update package keeps documentation assets current in `eac-cli` by rendering diagrams and syncing command references into a content-addressed cache. It is typically invoked before commits that include documentation changes, ensuring rendered assets stay in sync with their source definitions.
+The `docs` update package keeps documentation assets current in `eac` by rendering diagrams and syncing command references into a content-addressed cache. It is typically invoked before commits that include documentation changes, ensuring rendered assets stay in sync with their source definitions.
 
 ## Code Health
 

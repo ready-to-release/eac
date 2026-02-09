@@ -16,10 +16,10 @@ func BuildOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
 }
 
-// ComponentBuildOutputPath returns the path to a component's build output directory.
-// Structure: out/build/<module>/<component>.
-func ComponentBuildOutputPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, component)
+// UnitBuildOutputPath returns the path to a unit's build output directory.
+// Structure: out/build/<module>/<unitDir>.
+func UnitBuildOutputPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir)
 }
 
 // TestOutputPath returns the path to a module's test output directory.
@@ -27,10 +27,10 @@ func TestOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
 }
 
-// ComponentTestOutputPath returns the path to a component's test output directory.
-// Structure: out/test/<module>/<component>.
-func ComponentTestOutputPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, module, component)
+// UnitTestOutputPath returns the path to a unit's test output directory.
+// Structure: out/test/<module>/<unitDir>.
+func UnitTestOutputPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, module, unitDir)
 }
 
 // LintOutputPath returns the path to a module's lint output directory.
@@ -50,10 +50,10 @@ func sanitizeMonikerForPath(moniker string) string {
 	return moniker
 }
 
-// ComponentLintOutputPath returns the path to a component's lint output directory.
-// Structure: out/lint/<module>/<component>.
-func ComponentLintOutputPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, LintDir, module, component)
+// UnitLintOutputPath returns the path to a unit's lint output directory.
+// Structure: out/lint/<module>/<unitDir>.
+func UnitLintOutputPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, LintDir, module, unitDir)
 }
 
 // TestOutputDir returns the root test output directory.
@@ -81,10 +81,10 @@ func SecurityOutputPath(repoRoot, scanner string) string {
 	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
 }
 
-// ComponentScanOutputPath returns the path to a component's scan output directory.
-// Structure: out/scan/<module>/<component>.
-func ComponentScanOutputPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, SecurityDir, module, component)
+// UnitScanOutputPath returns the path to a unit's scan output directory.
+// Structure: out/scan/<module>/<unitDir>.
+func UnitScanOutputPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, SecurityDir, module, unitDir)
 }
 
 // RiskProfilePath returns the path to a module's OSCAL profile.
@@ -161,10 +161,10 @@ func BuildLogPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build.log")
 }
 
-// ComponentBuildLogPath returns the path to a component's build.log file.
-// Structure: out/build/<module>/<component>/build.log.
-func ComponentBuildLogPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, component, "build.log")
+// UnitBuildLogPath returns the path to a unit's build.log file.
+// Structure: out/build/<module>/<unitDir>/build.log.
+func UnitBuildLogPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir, "build.log")
 }
 
 // BuildTimingPath returns the path to a module's build-timing.txt file.
@@ -172,10 +172,10 @@ func BuildTimingPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
 }
 
-// ComponentBuildTimingPath returns the path to a component's build-timing.txt file.
-// Structure: out/build/<module>/<component>/build-timing.txt.
-func ComponentBuildTimingPath(repoRoot, module, component string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, component, "build-timing.txt")
+// UnitBuildTimingPath returns the path to a unit's build-timing.txt file.
+// Structure: out/build/<module>/<unitDir>/build-timing.txt.
+func UnitBuildTimingPath(repoRoot, module, unitDir string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir, "build-timing.txt")
 }
 
 // TestModuleDir returns the path to a module's test output directory

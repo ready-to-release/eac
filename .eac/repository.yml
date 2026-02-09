@@ -26,20 +26,10 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/core/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod", "go.sum"]
-          data: ["README.md"]
-      assets:
-        root: contracts/core/0.1.0/schemas
-        patterns:
-          source: ["**/*.json", "defaults/**/*.yml"]
+      go: contracts/core/0.1.0
+      assets: contracts/core/0.1.0
       # Shared contracts architecture design (covers all contract modules)
-      structurizr-contracts:
-        type: structurizr
-        root: specs/contracts/.design
+      structurizr: specs/contracts/.design
 
   - moniker: contracts-scanner
     name: Scanner Contracts
@@ -47,16 +37,8 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/scanner/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
-          data: ["README.md"]
-      assets:
-        root: contracts/scanner/0.1.0/schemas
-        patterns:
-          source: ["defaults/**/*.yml"]
+      go: contracts/scanner/0.1.0
+      assets: contracts/scanner/0.1.0
 
   - moniker: contracts-runtime
     name: Container Runtime Contract
@@ -64,11 +46,7 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/container-runtime/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
+      go: contracts/container-runtime/0.1.0
 
   - moniker: contracts-ai
     name: AI Provider Contract
@@ -76,11 +54,7 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/ai-provider/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
+      go: contracts/ai-provider/0.1.0
 
   - moniker: contracts-tui
     name: TUI Contract
@@ -88,11 +62,15 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/tui/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
+      go: contracts/tui/0.1.0
+
+  - moniker: contracts-runner
+    name: Runner Contracts
+    description: Test runner port interfaces for build, test, lint, and scan adapters
+    template: go-contracts
+    module_group: contracts
+    components:
+      go: contracts/runner/0.1.0
 
   - moniker: contracts-docs
     name: Documentation Contracts
@@ -100,26 +78,16 @@ modules:
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/docs/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
+      go: contracts/docs/0.1.0
 
-  - moniker: contracts-clie-cli
+  - moniker: contracts-clie
     name: CLIE CLI Contracts
     description: CLIE CLI contract schemas, EBNF grammar, and embedded defaults
     template: go-contracts
     module_group: contracts
     components:
-      go:
-        root: contracts/clie-cli/0.1.0
-        patterns:
-          source: ["**/*.go"]
-          config: ["go.mod"]
-          data: ["README.md"]
-      assets:
-        root: contracts/clie-cli/0.1.0/schemas
+      go: contracts/clie/0.1.0
+      assets: contracts/clie/0.1.0
 
   - moniker: mkdocs-render-oci
     name: MkDocs Render Container
@@ -129,7 +97,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/mkdocs-render-oci
 
   - moniker: mkdocs-dev-oci
     name: MkDocs Dev Container
@@ -140,22 +107,17 @@ modules:
     components:
       dockerfile:
         root: containers/mkdocs-dev-oci
+        docker_build:
+          push: false
 
   - moniker: drawio-oci
     name: DrawIO Container
-    description: DrawIO diagram rendering container (local only)
+    description: DrawIO diagram rendering container
     template: container
     module_group: oci-tools
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/drawio-oci
-        docker_build:
-          push: false
-      assets:
-        root: containers/drawio-oci
-        patterns:
-          source: ["*.py", "*.js", "templates/**/*.xml"]
 
   - moniker: mermaid-oci
     name: Mermaid Container
@@ -165,9 +127,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/mermaid-oci
-      assets:
-        root: containers/mermaid-oci
 
   - moniker: pdf-oci
     name: PDF Container
@@ -177,9 +136,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/pdf-oci
-      assets:
-        root: containers/pdf-oci
 
   - moniker: pdf-cli-oci
     name: PDF CLI Container
@@ -189,7 +145,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/pdf-cli-oci
         docker_build:
           push: false
 
@@ -201,7 +156,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/cgo-oci
         docker_build:
           push: false
 
@@ -213,7 +167,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/go-oci
         docker_build:
           push: false
 
@@ -225,7 +178,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/gource-oci
 
   - moniker: nginx-oci
     name: Nginx Container
@@ -235,7 +187,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/nginx-oci
 
   - moniker: git-oci
     name: Git Container
@@ -245,7 +196,6 @@ modules:
     depends_on: [root]
     components:
       dockerfile:
-        root: containers/git-oci
 
   - moniker: repository
     name: Repository Root Module
@@ -255,7 +205,6 @@ modules:
       # Text/config files without typed extensions
       repo-config:
         type: repository
-        root: /
       assets:
         root: /
         patterns:
@@ -266,9 +215,9 @@ modules:
             - ".junie/**/*.md"
             - "scripts/**/*.md"
             - "release/*.md"
-            - "release/eac-cli/**/*.md"
+            - "release/eac/**/*.md"
             - "release/eac-ext/**/*.md"
-            - "release/clie-cli/**/*.md"
+            - "release/clie/**/*.md"
             - ".eac/**/*.yml"
             - ".eac/**/*.yaml"
             - ".clie/**/*.yml"
@@ -281,7 +230,7 @@ modules:
             - ".markdownlint.yml"
             - ".markdownlint-cli2.yaml"
             - "cspell.config.yml"
-            - "clie-cli.yml"
+            - "clie.yml"
             - ".mcp.json"
             - ".eac/**/*.json"
             - ".vscode/**/*.json"
@@ -306,12 +255,10 @@ modules:
             - "scripts/pwsh/claude/**/*.ps1"
             - "scripts/pwsh/local-dev/**/*.ps1"
             - "importer.ps1"
-      go:
-        root: go/specs/repository
-        patterns:
-          config: [go.mod, go.sum]
-          data: ["README.md"]
-      godog:
+      go: go/specs/repository
+      godog: go/specs/repository
+      go-assets:
+        type: assets
         root: go/specs/repository
       # gherkin, structurizr auto-inferred from specs/repository/
 
@@ -333,24 +280,16 @@ modules:
     template: go-library
     depends_on: [contracts-core, contracts-scanner]
     components:
-      go:
-        root: go/core
-        patterns:
-          source: ["**/*.go", "**/*.json"]
-          data:
-            - "testing/testdata/**/*"
-            - "specs/gherkin/testdata/**/*.feature"
-            - "github/cli_fixtures/**/*"
+      go: go/core
       # Auto-discovered: assets, godog, gherkin, structurizr
 
-  - moniker: godog-adapter
+  - moniker: godog-eac
     name: Godog Adapter
     description: BDD test infrastructure adapter for Godog integration
     template: go-library
     depends_on: [core]
     components:
-      go:
-        root: go/adapters/godog
+      go: go/adapters/godog
 
   - moniker: clibase
     name: CLI Base Framework
@@ -358,178 +297,118 @@ modules:
     template: go-library
     depends_on: [core]
     components:
-      go:
-        root: go/clibase
+      go: go/clibase
 
   - moniker: templates
     name: Project Templates
-    description: Project templates for repository initialization
+    description: Templates for e2e testing, repository initialization, reports etc.
     components:
-      templates:
-        root: templates
+      templates: templates
 
-  - moniker: ai-adapter
+  - moniker: ai-eac
     name: AI Adapter
     description: AI service integration adapter
     template: go-library
     depends_on: [contracts-ai, core]
     components:
-      go:
-        root: go/adapters/ai
+      go: go/adapters/ai
 
-  - moniker: docker-adapter
+  - moniker: docker-eac
     name: Docker Adapter
     description: Docker container runtime adapter
     template: go-library
     depends_on: [contracts-runtime, core]
     components:
-      go:
-        root: go/adapters/docker
+      go: go/adapters/docker
 
-  - moniker: eac-adapter
+  - moniker: eac-to-eac
     name: EAC Command Adapter
     description: EAC command execution adapter
     template: go-library
     depends_on: [contracts-runtime, core]
     components:
-      go:
-        root: go/adapters/eac
+      go: go/adapters/eac
 
-  - moniker: tui-adapter
+  - moniker: tui-eac
     name: TUI Adapter
     description: Terminal UI adapter for console rendering
     template: go-library
     depends_on: [contracts-tui, core, clibase]
     components:
-      go:
-        root: go/adapters/tui
+      go: go/adapters/tui
 
-  - moniker: cucumber-adapter
+  - moniker: cucumber-eac
     name: Cucumber Test Runner
     description: Cucumber/Gherkin test runner adapter for TypeScript BDD execution
     template: go-library
     depends_on: [core, clibase]
     components:
-      go:
-        root: go/adapters/cucumber
+      go: go/adapters/cucumber
 
-  - moniker: gotest-adapter
+  - moniker: gotest-eac
     name: Go Test Runner
     description: Go test runner adapter for unit and integration test execution
     template: go-library
     depends_on: [core, clibase]
     components:
-      go:
-        root: go/adapters/gotest
+      go: go/adapters/gotest
 
-  - moniker: mocha-adapter
+  - moniker: mocha-eac
     name: Mocha Test Runner
     description: Mocha test runner adapter for TypeScript unit test execution
     template: go-library
     depends_on: [core, clibase]
     components:
-      go:
-        root: go/adapters/mocha
+      go: go/adapters/mocha
 
-  - moniker: npm-adapter
+  - moniker: npm-eac
     name: NPM Adapter
     description: NPM package manager adapter for dependency isolation
     template: go-library
     depends_on: [core, clibase]
     components:
-      go:
-        root: go/adapters/npm
+      go: go/adapters/npm
 
   - moniker: docs
     name: Documentation Site
     description: MkDocs HTML documentation site for GitHub Pages
+    template: docs-site
     versioning:
       scheme: CalVer
       release_type: published
-    depends_on: [contracts-docs, repository, oci-tools]
+    depends_on: [contracts-docs, repository, oci-tools, vscode-commit, eac-mcp-server]
     components:
-      # HTML site (tool chain: preprocess -> mkdocs-render-oci)
       site:
         type: docs-site
-        root: docs
-        config:
-          book: site
         amp:
           build: 1.25
-      assets:
-        root: docs
-        patterns:
-          source:
-            - "**/*.md"
-            - "**/*.markdown"
-            - "**/.nav.yml"
-            - "mkdocs.yml"
-            - "assets/**/*.drawio.png"
-            - "assets/**/*.png"
-            - "assets/**/*.jpg"
-            - "assets/**/*.svg"
-            - "assets/**/*.css"
-            - "assets/**/*.scss"
-            - "assets/**/*.js"
-            - "assets/**/*.pdf"
-            - "assets/**/*.drawio"
-            - "assets/*.json"
-            - "assets/*.yml"
-            - "LICENSE"
-            - "LICENSE.*"
-      # structurizr auto-inferred
-
-      # Diagram rendering components (build before site/PDFs via build_after)
+      # docs-assets, structurizr: auto-discovered by docs-site template
       drawio:
         type: docs-drawio
-        root: docs/assets
       mermaid:
         type: docs-mermaid
-        root: docs
-        # source patterns now come from component-type default: ["**/*.md"]
-
-      # Diataxis PDF components (tool chain: preprocess -> pdf-oci)
       tutorials:
         type: docs-pdf
-        config:
-          book: tutorials
       howto:
         type: docs-pdf
-        config:
-          book: howto
       explanation:
         type: docs-pdf
-        config:
-          book: explanation
       reference:
         type: docs-pdf
-        config:
-          book: reference
 
-  - moniker: eac-cli
+  - moniker: eac
     name: Go Commands Library
     description: Go library containing CLI command implementations
     template: go-exe
-    depends_on: [core, clibase, godog-adapter, ai-adapter, docker-adapter, eac-adapter, tui-adapter, cucumber-adapter, gotest-adapter, mocha-adapter, npm-adapter, oci-tools]
+    depends_on: [core, clibase, godog-eac, ai-eac, docker-eac, eac-to-eac, tui-eac, cucumber-eac, gotest-eac, mocha-eac, npm-eac, oci-tools]
     artifact_matrix: cross-platform-upx
     components:
       go:
         root: go/cli/eac
         build:
           binary_name: eac
-        patterns:
-          data:
-            - "testdata/**/*.txt"
-            - "testdata/**/*.yml"
-            - "testdata/**/*.yaml"
-            - "specs/assets/**/*.txt"
-            - "specs/assets/**/*.json"
-            - "specs/assets/**/*.md"
-            - "impl/**/assets/**/*.txt"
-            - "impl/**/assets/**/*.json"
       # godog: explicit (no godog_test.go at go/cli/eac/specs yet)
-      godog:
-        root: go/cli/eac/specs
+      godog: go/cli/eac/specs
       # Absorbed from eac-installer:
       bash-installer:
         type: bash
@@ -557,60 +436,45 @@ modules:
       # Absorbed from implicit-cli specs:
       gherkin-invoker:
         type: gherkin
-        root: specs/eac-cli/implicit-cli
+        root: specs/eac/implicit-cli
       structurizr-invoker:
         type: structurizr
-        root: specs/eac-cli/implicit-cli/.design
+        root: specs/eac/implicit-cli/.design
       # gherkin, structurizr, assets: auto-discovered
 
-  - moniker: clie-cli
+  - moniker: clie
     name: The CLI of CLIs
     description: The extendable go-based CLI tool
     template: go-exe
     versioning:
       scheme: SemVer
-      changelog: release/clie-cli/CHANGELOG.md
+      changelog: release/clie/CHANGELOG.md
       release_type: published
-    depends_on: [contracts-clie-cli, oci-tools]
+    depends_on: [contracts-clie, oci-tools]
     artifact_matrix: cross-platform-upx
-    evidence_books: [release-evidence-clie-cli]
+    evidence_books: [release-evidence-clie]
     components:
-      # go: override source to include embedded JSON
       go:
         root: go/cli/clie
         build:
           binary_name: clie
-        patterns:
-          source: ["**/*.go", "**/*.json"]
-          data: ["internal/validator/config/**/*.json"]
-      # Absorbed from clie-installer:
-      bash:
-        root: scripts/sh/cli
-      pwsh:
-        root: scripts/pwsh/cli
-      godog-installer:
-        type: godog
-        root: go/cli/clie/specs/installer
-      # Absorbed from clie-installer specs:
-      gherkin-installer:
-        type: gherkin
-        root: specs/clie-cli/installer
+      bash: scripts/sh/cli
+      pwsh: scripts/pwsh/cli
+      godog: go/cli/clie/specs/installer
+      gherkin: specs/clie/installer
+      structurizr: specs/clie/.design
       structurizr-installer:
         type: structurizr
-        root: specs/clie-cli/installer/.design
-      # gherkin, structurizr: auto-discovered from specs/clie-cli/
+        root: specs/clie/installer/.design
 
   - moniker: vscode-commit
     name: VSCode Extension - Git Commit
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
     template: vscode-extension
-    depends_on: [eac-cli, oci-tools]
+    depends_on: [eac, oci-tools]
     components:
       typescript:
         root: typescript/vscode-commit
-        patterns:
-          config: ["package.json", "tsconfig.json", "*.config.js", "cucumber.js", ".mocharc.json", ".vscodeignore"]
-          data: ["*.md"]
         build:
           post_build:
             copy_to: ".vscode/extensions/vscode-commit/out"
@@ -622,7 +486,7 @@ modules:
     name: EAC MCP Server
     description: MCP server exposing EAC commands for AI assistant integration
     template: go-internal
-    depends_on: [eac-cli, oci-tools]
+    depends_on: [eac, oci-tools]
     artifact_matrix: single-platform
     components:
       go: go/mcp/commands
@@ -636,19 +500,14 @@ modules:
       changelog: release/eac-ext/CHANGELOG.md
       release_type: published
     evidence_books: [release-evidence-eac-ext]
-    depends_on: [eac-cli, oci-tools]
-    depends_on_ci: [clie-cli]
+    depends_on: [eac, oci-tools]
+    depends_on_ci: [clie]
     components:
       dockerfile:
         root: containers/eac-ext
         docker_build:
-          context: "."
-        build:
-          artifacts:
-            - id: image
-              type: image
-              pattern: "{moniker}:latest"
-      # structurizr auto-inferred
+          context: "out/build/eac/go-go"
+          dockerfile: "containers/eac-ext/Dockerfile"
 
   - moniker: clie-eac-bundle
     name: Release Bundle
@@ -657,20 +516,20 @@ modules:
       scheme: SemVer
       changelog: release/clie-eac-bundle/CHANGELOG.md
       release_type: bundle
-    depends_on: [eac-cli, clie-cli, eac-ext, docs, repository, oci-tools]
+    depends_on: [eac, clie, eac-ext, docs, repository, oci-tools]
     evidence_books: [release-evidence-clie-eac-bundle]
     release_bundle:
       title_format: "clie-({clie_version}) ∞ eac-({eac_version}) ∞ eac-({eac-ext_version})"
       headline:
-        clie: clie-cli
+        clie: clie
         eac: eac
         eac-ext: eac-ext
       categories:
         - name: Core Tools
           description: CLI tools and extensions
           modules:
-            - eac-cli
-            - clie-cli
+            - eac
+            - clie
             - eac-ext
         - name: Documentation
           description: Documentation and guides

@@ -34,7 +34,7 @@ Provides a Docker client wrapper for managing MkDocs live-reload containers used
 
 ## Role in System
 
-The `docs/helper` package encapsulates MkDocs Docker container management for the `update docs` and documentation serve commands in `eac-cli`. It generates MkDocs configuration, launches live-reload containers with proper volume mounts, and provides browser integration, serving as the shared infrastructure between documentation update and interactive documentation preview workflows.
+The `docs/helper` package encapsulates MkDocs Docker container management for the `update docs` and documentation serve commands in `eac`. It generates MkDocs configuration, launches live-reload containers with proper volume mounts, and provides browser integration, serving as the shared infrastructure between documentation update and interactive documentation preview workflows.
 
 ## Code Health
 

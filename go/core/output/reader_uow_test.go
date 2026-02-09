@@ -117,14 +117,14 @@ func TestOutputReader_GetModule_AggregatesComponentsForModule(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create UoWs for multiple components in the same module
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "go")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "buildx")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "buildx")
 
 	reader := NewReader(f.workspaceRoot)
-	view, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	view, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
-	assert.Equal(t, "eac-cli", view.Module)
+	assert.Equal(t, "eac", view.Module)
 	assert.Len(t, view.Components, 2) // go, docker
 }
 
@@ -132,11 +132,11 @@ func TestOutputReader_GetModule_ComputesStatusFromComponentStatuses_AllCompleted
 	f := newTestFixture(t)
 
 	// All components successful
-	f.createUoWManifestWithExitCode(core.ActionBuild, "eac-cli", "go", "go", 0)
-	f.createUoWManifestWithExitCode(core.ActionBuild, "eac-cli", "docker", "docker", 0)
+	f.createUoWManifestWithExitCode(core.ActionBuild, "eac", "go", "go", 0)
+	f.createUoWManifestWithExitCode(core.ActionBuild, "eac", "docker", "docker", 0)
 
 	reader := NewReader(f.workspaceRoot)
-	view, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	view, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Equal(t, StatusCompleted, view.Status)
 }
@@ -145,11 +145,11 @@ func TestOutputReader_GetModule_ComputesStatusFromComponentStatuses_OneFailed(t 
 	f := newTestFixture(t)
 
 	// One component failed
-	f.createUoWManifestWithExitCode(core.ActionBuild, "eac-cli", "go", "go", 0)
-	f.createUoWManifestWithExitCode(core.ActionBuild, "eac-cli", "docker", "docker", 1)
+	f.createUoWManifestWithExitCode(core.ActionBuild, "eac", "go", "go", 0)
+	f.createUoWManifestWithExitCode(core.ActionBuild, "eac", "docker", "docker", 1)
 
 	reader := NewReader(f.workspaceRoot)
-	view, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	view, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Equal(t, StatusFailed, view.Status)
 }
@@ -158,12 +158,12 @@ func TestOutputReader_GetModule_ReturnsCorrectTotalUoWs(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create 3 UoWs across 2 components
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "go")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "cgo")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "cgo")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
 
 	reader := NewReader(f.workspaceRoot)
-	view, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	view, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	totalUoWs := 0
 	for _, comp := range view.Components {
@@ -176,15 +176,15 @@ func TestOutputReader_GetModule_ComputesTotalSize(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create UoWs with artifacts
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "go", "go", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "go", "go", map[string][]byte{
 		"binary": make([]byte, 5000),
 	})
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "docker", "docker", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "docker", "docker", map[string][]byte{
 		"image.tar": make([]byte, 10000),
 	})
 
 	reader := NewReader(f.workspaceRoot)
-	view, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	view, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Equal(t, int64(15000), view.TotalSize)
 }
@@ -221,12 +221,12 @@ func TestOutputReader_ListUoWs_ReturnsAllManifestsForModule(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create multiple UoWs
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "go")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "cgo")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "cgo")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
 
 	reader := NewReader(f.workspaceRoot)
-	manifests, err := reader.ListUoWs(core.ActionBuild, "eac-cli")
+	manifests, err := reader.ListUoWs(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Len(t, manifests, 3)
 }

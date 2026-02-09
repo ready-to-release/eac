@@ -17,10 +17,10 @@ import (
 
 // TestReleaseTypeWorkflowValidation_PublishedModules tests that published SemVer modules
 // are allowed to trigger release workflows and have changelogs.
-// Published SemVer modules: clie-cli, eac-ext (docs is CalVer, no changelog)
+// Published SemVer modules: clie, eac-ext (docs is CalVer, no changelog)
 func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 	// Published SemVer modules that should be allowed to release
-	publishedModules := []string{"clie-cli", "eac-ext"}
+	publishedModules := []string{"clie", "eac-ext"}
 
 	// Use mock registry with predictable data
 	registryOpts := make([]eactesting.RegistryOption, 0, len(publishedModules))

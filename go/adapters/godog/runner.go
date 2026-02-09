@@ -37,7 +37,7 @@ type RunnerConfig struct {
 	DefaultReportName string
 
 	// AssetsPath is the path to the assets directory relative to the repository root.
-	// Example: "go/cli/eac/specs/assets" for eac-cli.
+	// Example: "go/cli/eac/specs/assets" for eac.
 	// If empty, LoadAsset will fail with an error.
 	AssetsPath string
 
@@ -189,7 +189,7 @@ func logSuiteInitDiagnostics(repoRoot, specsPath string) {
 			fmt.Fprintf(os.Stderr, "\n")
 			fmt.Fprintf(os.Stderr, "  ⚠️  WARNING: Commands binary not found!\n")
 			fmt.Fprintf(os.Stderr, "  Tests requiring command execution will fail.\n")
-			fmt.Fprintf(os.Stderr, "  Ensure eac-cli is built before running tests.\n")
+			fmt.Fprintf(os.Stderr, "  Ensure eac is built before running tests.\n")
 		}
 		fmt.Fprintf(os.Stderr, "══════════════════════════════════════════════════════════════════\n")
 		fmt.Fprintf(os.Stderr, "\n")

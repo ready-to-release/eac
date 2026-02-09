@@ -1,13 +1,9 @@
 # Release eac-ext - Container Image Release Workflow
 #
-# This workflow releases the EAC extension container image using reusable actions:
-# 1. approve-release: Validates CI passed and release preconditions
-# 2. attested-container-publish: Retags, attests, and publishes container
-#
-# CI Verification: Requires a successful ci-eac-ext.yaml run on the EXACT commit
-# being released (strict mode). This ensures the container was built and tested.
+# Retags, attests, and publishes the EAC extension container image.
+# Release type (container) is derived from core config.
 
-name: "release-eac-ext (stage 8+)"
+name: "Release: eac-ext"
 
 on:
   workflow_dispatch:
@@ -17,183 +13,22 @@ on:
         required: true
         type: string
       skip-ci-check:
-        description: 'Skip CI verification (dangerous - very hot fixes only, unregulated path)'
+        description: 'Skip CI verification (dangerous - hotfixes only)'
         required: false
         type: boolean
         default: false
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  approve:
-    name: Approve Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      version: ${{ steps.gate.outputs.version }}
-      tag_name: ${{ steps.gate.outputs.tag_name }}
-      ci_sha: ${{ steps.gate.outputs.ci_sha }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Approve release
-        id: gate
-        uses: ./.github/actions/approve-release
-        with:
-          module: eac-ext
-          skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
-          timeout: '900'
-
   release:
-    name: Publish Container
-    needs: approve
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_module-release.yaml
+    with:
+      module: eac-ext
+      version: ${{ inputs.version }}
+      skip-ci-check: ${{ inputs.skip-ci-check }}
     permissions:
       contents: write
       packages: write
+      pages: write
       id-token: write
       attestations: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Publish container
-        uses: ./.github/actions/attested-container-publish
-        with:
-          module: eac-ext
-          version: ${{ needs.approve.outputs.version }}
-          tag_name: ${{ needs.approve.outputs.tag_name }}
-          ci_sha: ${{ needs.approve.outputs.ci_sha }}
-
-  evidence:
-    name: Update Evidence
-    needs: [approve, release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
       actions: read
-    outputs:
-      evidence-count: ${{ steps.evidence.outputs.evidence-count }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Update evidence
-        id: evidence
-        uses: ./.github/actions/update-evidence
-        with:
-          module: eac-ext
-          tag_name: ${{ needs.approve.outputs.tag_name }}
-          ci-sha: ${{ github.sha }}
-
-  cleanup:
-    name: Cleanup on Failure
-    needs: [approve, release, evidence]
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Cleanup failed release
-        uses: ./.github/actions/cleanup-failed-release
-        with:
-          tag_name: ${{ needs.approve.outputs.tag_name }}
-
-  summary:
-    name: Summary
-    needs: [approve, release, evidence, cleanup]
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-
-      - name: Generate summary
-        env:
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${{ needs.approve.outputs.version }}"
-          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
-          APPROVE_RESULT="${{ needs.approve.result }}"
-          RELEASE_RESULT="${{ needs.release.result }}"
-          EVIDENCE_RESULT="${{ needs.evidence.result }}"
-          EVIDENCE_COUNT="${{ needs.evidence.outputs.evidence-count }}"
-          CLEANUP_RESULT="${{ needs.cleanup.result }}"
-          RUN_ID="${{ github.run_id }}"
-          COMMIT="${{ github.sha }}"
-          SHORT_SHA="${COMMIT:0:7}"
-
-          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/eac-ext"
-
-          if [ "$APPROVE_RESULT" = "failure" ]; then
-            echo "## :x: Release Failed - Approval" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Release preconditions not met. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
-            if [ "$CLEANUP_RESULT" = "success" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "Tag cleaned up. Retry after fixing." >> $GITHUB_STEP_SUMMARY
-            fi
-            echo "" >> $GITHUB_STEP_SUMMARY
-            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-eac-ext.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
-          elif [ "$RELEASE_RESULT" = "failure" ]; then
-            echo "## :x: Release Failed - Publish" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Container publish failed. Check the release job for details." >> $GITHUB_STEP_SUMMARY
-            if [ "$CLEANUP_RESULT" = "success" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "Tag cleaned up. Retry with same version." >> $GITHUB_STEP_SUMMARY
-            fi
-            echo "" >> $GITHUB_STEP_SUMMARY
-            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_NAME:sha-$SHORT_SHA" >> $GITHUB_STEP_SUMMARY
-          elif [ "$EVIDENCE_RESULT" = "failure" ]; then
-            echo "## :x: Release Failed - Evidence" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Release published but evidence generation failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-eac-ext.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
-          elif [ "$RELEASE_RESULT" = "success" ]; then
-            RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-            echo "## :white_check_mark: eac-ext v$VERSION Released" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
-            if [ -n "$EVIDENCE_COUNT" ] && [ "$EVIDENCE_COUNT" != "0" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "**Evidence**: $EVIDENCE_COUNT file(s) attached" >> $GITHUB_STEP_SUMMARY
-            fi
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Container Image" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull $IMAGE_NAME:$VERSION" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## :grey_question: Release Status Unknown" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Approve | $APPROVE_RESULT |" >> $GITHUB_STEP_SUMMARY
-            echo "| Release | $RELEASE_RESULT |" >> $GITHUB_STEP_SUMMARY
-            echo "| Evidence | $EVIDENCE_RESULT |" >> $GITHUB_STEP_SUMMARY
-            echo "| Cleanup | $CLEANUP_RESULT |" >> $GITHUB_STEP_SUMMARY
-          fi

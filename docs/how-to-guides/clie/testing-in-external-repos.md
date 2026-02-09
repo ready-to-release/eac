@@ -192,7 +192,7 @@ Verify the configuration files were created:
 
 ```powershell
 # Check clie local config
-cat .clie\clie-cli.local.yml
+cat .clie\clie.local.yml
 
 # Check EAC config (after clie eac init)
 cat .clie\eac\agent.yml
@@ -278,13 +278,13 @@ Each repository maintains its own configuration:
 ```text
 project-a/
   .clie/
-    clie-cli.local.yml      # Points to eac-ext:dev
+    clie.local.yml      # Points to eac-ext:dev
     eac/
       agent.yml             # Project A specific config
 
 project-b/
   .clie/
-    clie-cli.local.yml      # Points to eac-ext:dev
+    clie.local.yml      # Points to eac-ext:dev
     eac/
       agent.yml             # Project B specific config
 ```
@@ -380,7 +380,7 @@ cd C:\path\to\external-test-repo
 **3. Create local clie config:**
 
 ```yaml
-# .clie/clie-cli.local.yml
+# .clie/clie.local.yml
 version: "1.0"
 extensions:
   - name: your-extension
@@ -425,17 +425,17 @@ docker build -f containers\your-extension\Dockerfile -t your-extension:dev .
 
 # Test in monorepo
 cd C:\repos\test-monorepo
-# Create .clie/clie-cli.local.yml
+# Create .clie/clie.local.yml
 clie your-extension <command>
 
 # Test in single-module repo
 cd C:\repos\test-single-module
-# Create .clie/clie-cli.local.yml
+# Create .clie/clie.local.yml
 clie your-extension <command>
 
 # Test in polyglot repo
 cd C:\repos\test-polyglot
-# Create .clie/clie-cli.local.yml
+# Create .clie/clie.local.yml
 clie your-extension <command>
 ```
 
@@ -470,7 +470,7 @@ extensions:
     image: ext-env-check:dev
     load_local: true
     image_pull_policy: Never
-"@ | Out-File -FilePath .clie\clie-cli.local.yml -Encoding UTF8
+"@ | Out-File -FilePath .clie\clie.local.yml -Encoding UTF8
 
 # 4. Test
 clie env-check HOME USER SHELL

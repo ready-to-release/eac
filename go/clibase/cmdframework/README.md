@@ -61,7 +61,7 @@ Acts as the central execution engine for all orchestrated CLI commands. Commands
 ### Tech Debt
 - `framework.go:28` `Run()` is ~218 lines; the phased orchestration would benefit from extracting each phase dispatch into named helpers
 - `summary.go:105` `generateComponentTUISummary` is ~258 lines and `printComponentConsoleSummary` ~144 lines; both duplicate `moduleCache` iteration logic
-- `execute.go:76` package-level mutable `registry` var; could race if multiple commands register concurrently
+- ~~`execute.go:76` package-level mutable `registry` var; could race if multiple commands register concurrently~~ (resolved: `sync.RWMutex` already protects all reads/writes; `Register()`, `Get()`, `GetAll()`, `Reset()`, and `Len()` all properly lock/unlock)
 - `framework.go:16` package-level `log` var initialized at import time
 
 ### Pain Points

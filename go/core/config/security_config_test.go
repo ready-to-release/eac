@@ -46,7 +46,7 @@ func TestLoadSecurityConfig(t *testing.T) {
 
 	t.Run("skip modules", func(t *testing.T) {
 		assert.True(t, cfg.ShouldSkipModule("repository"), "repository should be skipped")
-		assert.False(t, cfg.ShouldSkipModule("eac-cli"), "eac-cli should not be skipped")
+		assert.False(t, cfg.ShouldSkipModule("eac"), "eac should not be skipped")
 	})
 }
 

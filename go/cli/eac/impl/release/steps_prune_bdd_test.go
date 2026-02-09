@@ -1,7 +1,7 @@
-// Package release contains godog step implementations for eac-cli.
+// Package release contains godog step implementations for eac.
 //
 // This file contains release prune-packages command step definitions.
-// Features: specs/eac-cli/release-prune-packages/
+// Features: specs/eac/release-prune-packages/
 package release
 
 import (

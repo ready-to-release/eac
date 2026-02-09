@@ -124,7 +124,7 @@ func (b *LintBridge) resolveHandlerName(providerName string) string {
 }
 
 // GetProvidersForModule returns all applicable lint providers for a module's components.
-func (b *LintBridge) GetProvidersForModule(module interface{ GetEnabledComponents() []string }, lintProviders *config.LintProvidersConfig, componentTypes *config.ComponentTypesConfig) []string {
+func (b *LintBridge) GetProvidersForModule(module interface{ GetEnabledComponents() []string }, lintProviders *config.LintProvidersConfig, componentTypes *config.ComponentKindsConfig) []string {
 	if module == nil || lintProviders == nil {
 		return nil
 	}

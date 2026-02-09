@@ -15,8 +15,8 @@
 // Long:   ...
 // Long:
 // Long: Example:
-// Long:   get binary-sizes --module clie-cli --binary-prefix clie
-// Long:   eval $(get binary-sizes --module clie-cli --binary-prefix clie --format shell)
+// Long:   get binary-sizes --module clie --binary-prefix clie
+// Long:   eval $(get binary-sizes --module clie --binary-prefix clie --format shell)
 package get
 
 import (

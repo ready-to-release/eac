@@ -16,9 +16,9 @@
 // Long:   - Exit code 0 on success, non-zero on error
 // Long:
 // Long: Example:
-// Long:   test export-manual --module eac-cli --release v1.2.0 --format json
-// Long:   test export-manual --module eac-cli --release v1.2.0 --format csv
-// Long:   test export-manual --module eac-cli --release v1.2.0 --format markdown
+// Long:   test export-manual --module eac --release v1.2.0 --format json
+// Long:   test export-manual --module eac --release v1.2.0 --format csv
+// Long:   test export-manual --module eac --release v1.2.0 --format markdown
 // Flag.module: type=string, usage=Module moniker to export manual tests from (required)
 // Flag.release: type=string, usage=Release version being tested (required)
 // Flag.format: type=string, usage=Export format: json, csv, markdown (default: json)
@@ -34,8 +34,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/fileutil"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/specs/export/formats"
 	"github.com/ready-to-release/eac/go/core/specs/gherkin"
 	"github.com/ready-to-release/eac/go/core/tool"

@@ -376,8 +376,8 @@ func TestNormalizeSpecPath(t *testing.T) {
 		},
 		{
 			name:     "complex path",
-			input:    "../../../specs/eac-cli/create/test.feature",
-			expected: "specs/eac-cli/create/test.feature",
+			input:    "../../../specs/eac/create/test.feature",
+			expected: "specs/eac/create/test.feature",
 		},
 	}
 

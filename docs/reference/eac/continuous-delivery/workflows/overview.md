@@ -14,7 +14,10 @@ The workflow system is designed around three core architectural principles:
 
 ### Incremental CI with Change Detection
 
-The CI system performs incremental builds by detecting which modules have changed and only rebuilding those modules plus their dependents.
+The CI system performs incremental builds by detecting which modules have changed
+and only rebuilding those modules plus their dependents. CI build status is
+tracked as a first-class cache type (`remote:ci`) in the core
+[cache system](../../architecture/cache-system.md#2d-cache-taxonomy).
 
 **For pull requests:**
 
@@ -23,10 +26,16 @@ The CI system performs incremental builds by detecting which modules have change
 **For push to main:**
 
 - Compare against last successful CI run to build only what changed since last success
+- A `CICacheChecker` queries GitHub Actions for each module's last successful run
+  and skips dispatch when the run's HEAD SHA matches the current commit
 
 **Bootstrap mode:**
 
 - When no previous successful CI run exists, build all modules
+
+**Bypass:**
+
+- `--skip-cache=remote:ci` forces dispatch for all modules regardless of CI status
 
 ### Dependency-Based Execution Order
 
@@ -110,7 +119,7 @@ Child workflows download artifacts from the trigger workflow using the `trigger_
 Workflow status checks follow a consistent naming pattern:
 
 - **CI workflows:** `CI: {module-name}` (e.g., `CI: eac-commands`)
-- **Release workflows:** `Release: {module-name}` (e.g., `Release: clie-cli`)
+- **Release workflows:** `Release: {module-name}` (e.g., `Release: clie`)
 - **Orchestration:** `CI Trigger`, `Release Trigger`
 - **Security:** `CodeQL`
 
@@ -183,14 +192,14 @@ Extracts and validates version from git tag or workflow input.
 
 **Inputs:**
 
-- `module-prefix` (required) - Module tag prefix (e.g., clie-cli)
+- `module-prefix` (required) - Module tag prefix (e.g., clie)
 - `legacy-prefixes` (optional) - Legacy tag prefixes for backwards compatibility
 - `commands-path` (required) - Path to commands binary
 
 **Outputs:**
 
 - `version` - Extracted version (e.g., 1.0.0)
-- `tag_name` - Full tag name (e.g., clie-cli/1.0.0)
+- `tag_name` - Full tag name (e.g., clie/1.0.0)
 - `is_valid` - Whether version is valid semver (true/false)
 
 **Usage:**
@@ -200,7 +209,7 @@ Extracts and validates version from git tag or workflow input.
   id: extract_version
   uses: ./.github/actions/extract-release-version
   with:
-    module-prefix: clie-cli
+    module-prefix: clie
     commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
 

@@ -21,7 +21,7 @@ into a unified `EACConfig` that the rest of the system consumes.
 
 - Three-layer merge: contract defaults from embedded YAML, user config from `.eac/`, personal overrides from `.eac.personal/`
 - Factory default singletons use `sync.Once` with clone-on-read to provide thread-safe default values
-- Core configs (repository, component-types) fail fast on errors; optional configs (environments, books) log and continue
+- Core configs (repository) fail fast on errors; optional configs (environments, books) log and continue
 - `LoadAll` orchestrates loading all sections in sequence, separating core from optional
 - `Global()` singleton provides a process-wide config instance with `SetGlobalForTesting()` for tests
 - Schema validation delegates to `domain/schema.Validator` when `ValidateSchemas` is enabled

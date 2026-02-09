@@ -111,8 +111,8 @@ func TestBackgroundCacheDetection_DoesNotIncrementCounter(t *testing.T) {
 	defer us.Close()
 
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1, Index: 0},
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp2"}, Weight: 1, Index: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}, Weight: 1, Index: 1},
 	}
 
 	us.InitializeWork(work)
@@ -147,9 +147,9 @@ func TestBackgroundCacheDetection_DoesNotIncrementCounter(t *testing.T) {
 	assert.Equal(t, 0, completed, "background cache detection should NOT increment tuiCompleted")
 
 	// Verify items were marked as early cached (visual state is fine)
-	// Longname format: context:module:component:tool (empty context and tool in this test)
-	_, ok1 := us.earlyCached.Load(":mod1:comp1:")
-	_, ok2 := us.earlyCached.Load(":mod1:comp2:")
+	// Longname format: context:module:componentType:componentName:tool (empty context and tool in this test)
+	_, ok1 := us.earlyCached.Load(":mod1:comp1:comp1:")
+	_, ok2 := us.earlyCached.Load(":mod1:comp2:comp2:")
 	assert.True(t, ok1, "comp1 should be marked as early cached")
 	assert.True(t, ok2, "comp2 should be marked as early cached")
 }
@@ -179,7 +179,7 @@ func TestRunComponents_CounterMatchesTotal(t *testing.T) {
 	work := make([]workunit.UnitSpec, 10)
 	for i := 0; i < 10; i++ {
 		work[i] = workunit.UnitSpec{
-			ID:     workunit.UnitID{Module: "mod1", Component: string(rune('a' + i))},
+			ID:     workunit.UnitID{Module: "mod1", ComponentType: string(rune('a' + i)), ComponentName: string(rune('a' + i))},
 			Weight: 1,
 			Index:  i,
 		}
@@ -204,7 +204,7 @@ func TestRunComponents_CounterMatchesTotal(t *testing.T) {
 
 	// Track how many workers actually executed vs short-circuited
 	var executedCount int32
-	worker := func(ctx context.Context, module, component string, logWriter io.Writer) int {
+	worker := func(ctx context.Context, spec core.UnitSpec, logWriter io.Writer) int {
 		atomic.AddInt32(&executedCount, 1)
 		time.Sleep(10 * time.Millisecond) // Simulate work
 		return 0

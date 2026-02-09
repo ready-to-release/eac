@@ -63,19 +63,19 @@ function Write-ColorOutput {
 function Get-LatestVersion {
     # Skip API call in test mode
     if ($env:__EAC_TEST_MOCK -eq "1") {
-        Write-ColorOutput "Test mode: Using mock version eac-cli/v0.0.0-test" "Gray"
-        return "eac-cli/v0.0.0-test"
+        Write-ColorOutput "Test mode: Using mock version eac/v0.0.0-test" "Gray"
+        return "eac/v0.0.0-test"
     }
 
     try {
-        # Fetch releases and find the latest eac-cli/* release (monorepo has multiple release tags)
+        # Fetch releases and find the latest eac/* release (monorepo has multiple release tags)
         $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=20" -UseBasicParsing
         foreach ($release in $releases) {
-            if ($release.tag_name -like "eac-cli/*") {
+            if ($release.tag_name -like "eac/*") {
                 return $release.tag_name
             }
         }
-        Write-ColorOutput "No eac-cli release found" "Red"
+        Write-ColorOutput "No eac release found" "Red"
         exit 1
     }
     catch {
@@ -126,15 +126,15 @@ function Install-Binary {
 
             Write-ColorOutput "Test mode: Using pre-built binary from out/build (skipping download)" "Gray"
 
-            # Use the actual built eac-cli binary from the build output
-            # This is available because eac-installer depends on eac-cli module
+            # Use the actual built eac binary from the build output
+            # This is available because eac-installer depends on eac module
             # When running from build output: out/build/eac-installer/pwsh-scripts/
-            # Go up 2 levels to out/build, then access eac-cli/go-go/
-            $builtBinary = Join-Path $PSScriptRoot "..\..\eac-cli\go-go\eac-windows-amd64.exe"
+            # Go up 2 levels to out/build, then access eac/go-go/
+            $builtBinary = Join-Path $PSScriptRoot "..\..\eac\go-go\eac-windows-amd64.exe"
 
             if (-not (Test-Path $builtBinary)) {
                 Write-ColorOutput "Test mode: Pre-built binary not found at $builtBinary" "Red"
-                Write-ColorOutput "Ensure eac-cli module is built before running installer tests" "Yellow"
+                Write-ColorOutput "Ensure eac module is built before running installer tests" "Yellow"
                 exit 1
             }
 

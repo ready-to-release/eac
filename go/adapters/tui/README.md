@@ -53,7 +53,7 @@ subcommand selection.
 
 ## Role in System
 
-The `tui-adapter` module implements the TUI contract interfaces, providing
+The `tui-eac` module implements the TUI contract interfaces, providing
 the interactive terminal experience for build, test, lint, and scan
 commands. It bridges between the core orchestrator's execution events and
 the bubbletea-based rendering, handling parallel task visualization,

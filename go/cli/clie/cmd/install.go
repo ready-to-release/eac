@@ -64,10 +64,10 @@ Examples:
 				os.Exit(1)
 			}
 
-			// Check for config file at .clie/clie-cli.yml
+			// Check for config file at .clie/clie.yml
 			configPaths := []string{
-				filepath.Join(repoRoot, ".clie", "clie-cli.yml"),
-				filepath.Join(repoRoot, ".clie", "clie-cli.yaml"),
+				filepath.Join(repoRoot, ".clie", "clie.yml"),
+				filepath.Join(repoRoot, ".clie", "clie.yaml"),
 			}
 			configFound := false
 			for _, cp := range configPaths {
@@ -77,7 +77,7 @@ Examples:
 				}
 			}
 			if !configFound {
-				configPath := filepath.Join(repoRoot, ".clie", "clie-cli.yml")
+				configPath := filepath.Join(repoRoot, ".clie", "clie.yml")
 				logging.Error("❌ No configuration file found.")
 				logging.Infof("To install all configured extensions, you need a configuration file at: %s", configPath)
 				logging.Info("\nTo get started:")
@@ -191,10 +191,10 @@ func addExtensionToConfig(extensionName string) error {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Check for config file at .clie/clie-cli.yml
+	// Check for config file at .clie/clie.yml
 	configPaths := []string{
-		filepath.Join(repoRoot, ".clie", "clie-cli.yml"),
-		filepath.Join(repoRoot, ".clie", "clie-cli.yaml"),
+		filepath.Join(repoRoot, ".clie", "clie.yml"),
+		filepath.Join(repoRoot, ".clie", "clie.yaml"),
 	}
 
 	var configPath string
@@ -209,8 +209,8 @@ func addExtensionToConfig(extensionName string) error {
 	}
 
 	if configPath == "" {
-		// No config exists, create at .clie/clie-cli.yml
-		configPath = filepath.Join(repoRoot, ".clie", "clie-cli.yml")
+		// No config exists, create at .clie/clie.yml
+		configPath = filepath.Join(repoRoot, ".clie", "clie.yml")
 
 		// Ensure .clie directory exists
 		clieDir := filepath.Join(repoRoot, ".clie")

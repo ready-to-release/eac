@@ -24,14 +24,14 @@ with npm isolation and CTRF report generation.
 
 - `adapters/npm` -- NPM isolation for safe parallel test execution
 - `clibase/testrunners` -- `TestTypeRunner` interface and registration
-- `clibase/ctrf` -- CTRF report format types
+- `core/ctrf` -- CTRF report format types
 - `core/config` -- EAC configuration for module resolution
 - `core/testing` -- `TestReference` type
 - `core/tool` -- tool registry and command building
 
 ## Role in System
 
-The `mocha-adapter` module enables TypeScript unit test execution within
+The `mocha-eac` module enables TypeScript unit test execution within
 the unified test framework. It handles npm dependency installation in
 isolated environments, runs mocha with the JSON reporter, and converts
 results to CTRF format for standardized test result aggregation.

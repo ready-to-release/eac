@@ -1,4 +1,4 @@
-// Package show contains godog step implementations for eac-cli.
+// Package show contains godog step implementations for eac.
 //
 // This file contains show-workspaces command step definitions.
 package show

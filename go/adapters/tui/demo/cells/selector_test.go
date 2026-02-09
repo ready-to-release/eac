@@ -32,7 +32,7 @@ func TestSelectorCell_Render(t *testing.T) {
 				{Moniker: "contracts", Status: UnitComplete},
 				{Moniker: "core", Status: UnitRunning},
 				{Moniker: "docs", Status: UnitPending},
-				{Moniker: "eac-cli", Status: UnitSkipped},
+				{Moniker: "eac", Status: UnitSkipped},
 			},
 			selected:  "core",
 			wantParts: []string{"contracts", "core", "docs"},

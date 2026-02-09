@@ -28,21 +28,18 @@ type MermaidResult struct {
 }
 
 // runMermaidUpdate handles the mermaid area update.
-// It scans docs for mermaid diagrams and renders missing ones to cache.
+// It scans docs for mermaid diagrams and renders missing ones to the acceleration cache.
 func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) (MermaidResult, error) {
 	result := MermaidResult{}
 
 	fmt.Fprintln(logWriter, "Updating mermaid cache...")
 
-	// Create asset cache (nil = use cache normally)
-	cache := caching.NewAssetCache(repoRoot, nil, nil)
-
 	// Scan docs/ for markdown files
 	docsDir := paths.DocsSourcePath(repoRoot)
 
 	// Collect all mermaid blocks
-	allBlocks := []diagrams.MermaidBlock{}
-	blocksByFile := make(map[string][]diagrams.MermaidBlock)
+	var allBlocks []diagrams.MermaidBlock
+	filesWithDiagrams := 0
 
 	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -61,7 +58,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 
 		blocks := diagrams.ExtractMermaidBlocks(string(content), path, docsDir)
 		if len(blocks) > 0 {
-			blocksByFile[path] = blocks
+			filesWithDiagrams++
 			allBlocks = append(allBlocks, blocks...)
 
 			if opts.Verbose {
@@ -80,7 +77,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	}
 
 	result.DiagramsFound = len(allBlocks)
-	result.FilesWithDiagrams = len(blocksByFile)
+	result.FilesWithDiagrams = filesWithDiagrams
 
 	fmt.Fprintf(logWriter, "Scanned %d files, found %d mermaid diagrams in %d files\n",
 		result.FilesScanned, result.DiagramsFound, result.FilesWithDiagrams)
@@ -90,12 +87,11 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 		return result, nil
 	}
 
-	// Check cache status for each block
-	cacheDir := paths.DocsCachePath(repoRoot)
-	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
+	// Use acceleration cache (.cache/eac/) as root; MermaidCachePath adds the mermaid/ subdirectory
+	cacheDir := paths.CacheRootPath(repoRoot)
 
-	// Ensure cache directory exists
-	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
+	// Ensure mermaid cache directory exists
+	if err := os.MkdirAll(paths.MermaidAccelCachePath(repoRoot), 0o755); err != nil {
 		return result, fmt.Errorf("creating cache directory: %w", err)
 	}
 
@@ -104,15 +100,18 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 
 	for _, block := range allBlocks {
 		cleanContent := diagrams.StripSizeDirective(block.Content)
-		cachePath, hit := cache.GetMermaid(caching.MermaidCacheKey{
+		hash := caching.HashMermaidKey(caching.MermaidCacheKey{
 			SourceFile: block.SourceFile,
 			BlockIndex: block.BlockIndex,
 			Code:       cleanContent,
 		})
+		cachePath := paths.MermaidCachePath(cacheDir, block.SourceFile, block.BlockIndex, hash)
 
-		// In force mode, treat everything as a cache miss
-		if opts.Force {
-			hit = false
+		hit := false
+		if !opts.Force {
+			if _, err := os.Stat(cachePath); err == nil {
+				hit = true
+			}
 		}
 
 		if hit {
@@ -164,7 +163,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	// Render cache misses using batch tool
 	fmt.Fprintf(logWriter, "Rendering %d diagram(s) via mermaid-render tool...\n", result.CacheMisses)
 
-	rendered, failed, err := renderMermaidBatch(repoRoot, statuses, cache, logWriter)
+	rendered, failed, err := renderMermaidBatch(repoRoot, cacheDir, statuses, logWriter)
 	result.Rendered = rendered
 	result.Failed = failed
 
@@ -182,8 +181,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 }
 
 // renderMermaidBatch renders diagrams using the mermaid-render tool.
-// Uses shared types from books package to avoid duplication.
-func renderMermaidBatch(repoRoot string, statuses []diagrams.CacheStatus, cache *caching.AssetCache, logWriter io.Writer) (int, int, error) {
+func renderMermaidBatch(repoRoot, cacheDir string, statuses []diagrams.CacheStatus, logWriter io.Writer) (int, int, error) {
 	// Filter for cache misses
 	toRender := []diagrams.CacheStatus{}
 	for i := range statuses {
@@ -198,7 +196,6 @@ func renderMermaidBatch(repoRoot string, statuses []diagrams.CacheStatus, cache 
 	}
 
 	// Create work directory for manifest and temp files
-	cacheDir := paths.DocsCachePath(repoRoot)
 	workDir := filepath.Join(cacheDir, ".mermaid-work")
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return 0, 0, fmt.Errorf("creating work directory: %w", err)
@@ -266,7 +263,7 @@ func renderMermaidBatch(repoRoot string, statuses []diagrams.CacheStatus, cache 
 	bridge := tool.GlobalHandlerToolBridge()
 	tc := &tool.ToolContext{
 		WorkspaceRoot: repoRoot,
-		StagingDir:    cacheDir, // Use cache dir as staging for update command
+		StagingDir:    cacheDir,
 		LogWriter:     logWriter,
 	}
 
@@ -278,23 +275,12 @@ func renderMermaidBatch(repoRoot string, statuses []diagrams.CacheStatus, cache 
 		return 0, len(toRender), fmt.Errorf("mermaid-render tool exited with code %d", exitCode)
 	}
 
-	// Verify outputs and update cache
+	// Verify outputs
 	rendered := 0
 	failed := 0
 	for _, status := range toRender {
 		if _, err := os.Stat(status.CachePath); err == nil {
 			rendered++
-
-			// Store in persistent cache
-			block := status.Block
-			cleanContent := diagrams.StripSizeDirective(block.Content)
-			if err := cache.PutMermaid(status.CachePath, caching.MermaidCacheKey{
-				SourceFile: block.SourceFile,
-				BlockIndex: block.BlockIndex,
-				Code:       cleanContent,
-			}); err != nil {
-				log.Warnf("Failed to cache %s: %v", block.Filename, err)
-			}
 		} else {
 			failed++
 		}

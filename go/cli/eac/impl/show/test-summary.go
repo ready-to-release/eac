@@ -273,7 +273,7 @@ func generateCombinedSummary(views []*testview.TestModuleView, cfg *config.EACCo
 
 // extractFeatureName extracts a human-readable feature name from package or file path.
 func extractFeatureName(pkg, filePath string) string {
-	// Try to extract from package path first (e.g., "specs/eac-cli/work-create")
+	// Try to extract from package path first (e.g., "specs/eac/work-create")
 	// The last path component is usually the feature name
 	path := pkg
 	if path == "" {

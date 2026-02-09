@@ -260,4 +260,4 @@ modules:
 
 - [Project Structure](./project-structure.md) - Directory organization
 - [Contracts Reference](../../eac/architecture/contracts.md) - Full contract documentation
-- [Component Types](../../eac/architecture/component-types.md) - All available types
+- [Component Types](../../eac/architecture/component-kinds.md) - All available types

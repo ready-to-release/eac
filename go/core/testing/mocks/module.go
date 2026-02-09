@@ -12,8 +12,10 @@ type MockModule struct {
 	moniker          string
 	name             string
 	description      string
+	moduleGroup      string
 	components       map[string]string // componentType -> root
 	componentAmps    map[string]map[string]float64 // componentType -> operation -> amp
+	componentGroups  map[string]string // componentName -> group
 	dependsOn        []string
 	versioningScheme string
 	releaseType      string
@@ -24,10 +26,12 @@ type MockModule struct {
 // NewMockModule creates a new MockModule with the given moniker.
 func NewMockModule(moniker string) *MockModule {
 	return &MockModule{
-		moniker:    moniker,
-		name:       moniker,
-		components: make(map[string]string),
-		metadata:   make(map[string]interface{}),
+		moniker:         moniker,
+		name:            moniker,
+		moduleGroup:     moniker,
+		components:      make(map[string]string),
+		componentGroups: make(map[string]string),
+		metadata:        make(map[string]interface{}),
 	}
 }
 
@@ -40,6 +44,12 @@ func (m *MockModule) WithName(name string) *MockModule {
 // WithDescription sets the module description.
 func (m *MockModule) WithDescription(desc string) *MockModule {
 	m.description = desc
+	return m
+}
+
+// WithModuleGroup sets the module group.
+func (m *MockModule) WithModuleGroup(group string) *MockModule {
+	m.moduleGroup = group
 	return m
 }
 
@@ -104,6 +114,12 @@ func (m *MockModule) WithMetadata(key string, value interface{}) *MockModule {
 	return m
 }
 
+// WithComponentGroup sets the component group for a component.
+func (m *MockModule) WithComponentGroup(componentName, group string) *MockModule {
+	m.componentGroups[componentName] = group
+	return m
+}
+
 // WithComponentAmp sets the amplifier for a component operation.
 func (m *MockModule) WithComponentAmp(componentType, operation string, amp float64) *MockModule {
 	if m.componentAmps == nil {
@@ -129,6 +145,11 @@ func (m *MockModule) GetName() string {
 // GetDescription implements core.ModuleContractPort.
 func (m *MockModule) GetDescription() string {
 	return m.description
+}
+
+// GetModuleGroup implements core.ModuleContractPort.
+func (m *MockModule) GetModuleGroup() string {
+	return m.moduleGroup
 }
 
 // HasComponent implements core.ModuleContractPort.
@@ -158,6 +179,17 @@ func (m *MockModule) GetComponentTypesDisplay() string {
 		types = append(types, t)
 	}
 	return strings.Join(types, ", ")
+}
+
+// GetComponentGroup implements core.ModuleContractPort.
+func (m *MockModule) GetComponentGroup(componentName string) string {
+	if group, ok := m.componentGroups[componentName]; ok {
+		return group
+	}
+	if _, ok := m.components[componentName]; ok {
+		return componentName
+	}
+	return ""
 }
 
 // GetComponentAmp implements core.ModuleContractPort.

@@ -1,16 +1,16 @@
 # clie-installer
 
-Cross-platform installer for the clie-cli tool.
+Cross-platform installer for the clie tool.
 
 ## System Context
 
-<!-- structurizr:clie-cli:SystemContext -->
+<!-- structurizr:clie:SystemContext -->
 
 ## Container Architecture
 
-<!-- structurizr:clie-cli:Containers -->
+<!-- structurizr:clie:Containers -->
 
 ## Design File
 
-- **Location**: `specs/clie-cli/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module clie-cli`
+- **Location**: `specs/clie/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module clie`

@@ -252,48 +252,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		return repoCtx.scriptsCmdDirShouldContainOnlyDirectoriesIfExists()
 	})
 
-	// Docs mermaid cache validation steps
-	sc.Step(`^I scan docs/ for all mermaid code blocks$`, func() error {
-		return repoCtx.scanDocsForMermaidBlocks()
-	})
-	sc.Step(`^I check each mermaid block against the cache$`, func() error {
-		return repoCtx.checkMermaidBlocksAgainstCache()
-	})
-	sc.Step(`^all mermaid diagrams should have cached SVGs$`, func() error {
-		return repoCtx.allMermaidDiagramsShouldHaveCachedSVGs()
-	})
-	sc.Step(`^if any diagrams are missing from cache, I should see:$`, func(expected *godog.DocString) error {
-		return repoCtx.ifDiagramsMissingShowUpdateCommand(expected)
-	})
-
-	// Docs drawio cache validation steps
-	sc.Step(`^I scan docs/ for all drawio\.png images$`, func() error {
-		return repoCtx.scanDocsForDrawioImages()
-	})
-	sc.Step(`^I check each drawio image against the cache$`, func() error {
-		return repoCtx.checkDrawioImagesAgainstCache()
-	})
-	sc.Step(`^all drawio images should have cached optimized PNGs$`, func() error {
-		return repoCtx.allDrawioImagesShouldHaveCachedPNGs()
-	})
-	sc.Step(`^if any images are missing from cache, I should see:$`, func(expected *godog.DocString) error {
-		return repoCtx.ifImagesMissingShowUpdateCommand(expected)
-	})
-
-	// Docs structurizr cache validation steps
-	sc.Step(`^I scan specs/ for all workspace\.dsl files$`, func() error {
-		return repoCtx.scanSpecsForWorkspaceDSLFiles()
-	})
-	sc.Step(`^I check each Structurizr view against the cache$`, func() error {
-		return repoCtx.checkStructurizrViewsAgainstCache()
-	})
-	sc.Step(`^all Structurizr views should have cached SVGs$`, func() error {
-		return repoCtx.allStructurizrViewsShouldHaveCachedSVGs()
-	})
-	sc.Step(`^if any views are missing from cache, I should see:$`, func(expected *godog.DocString) error {
-		return repoCtx.ifViewsMissingShowUpdateCommand(expected)
-	})
-
 	// Release folder validation steps
 	sc.Step(`^I scan the release directory for subdirectories$`, func() error {
 		return repoCtx.scanReleaseDirectoryForSubdirectories()
@@ -354,18 +312,6 @@ type repositoryContext struct {
 	disallowedScripts  []string
 	looseScriptsInType []string
 
-	// Docs mermaid cache validation
-	mermaidBlocks         []mermaidBlockInfo
-	uncachedMermaidBlocks []mermaidBlockInfo
-
-	// Docs drawio cache validation
-	drawioImages         []drawioImageInfo
-	uncachedDrawioImages []drawioImageInfo
-
-	// Docs structurizr cache validation
-	structurizrViews         []structurizrViewInfo
-	uncachedStructurizrViews []structurizrViewInfo
-
 	// Release folder validation
 	releaseSubdirs         []string
 	orphanReleaseDirs      []string
@@ -373,31 +319,6 @@ type repositoryContext struct {
 	unexpectedReleaseFiles []string
 }
 
-// mermaidBlockInfo is a local struct for mermaid block tracking
-// (to avoid importing books package which violates module isolation).
-type mermaidBlockInfo struct {
-	content    string
-	hash       string
-	sourceFile string
-	blockIndex int
-}
-
-// drawioImageInfo is a local struct for drawio image tracking
-// (to avoid importing books package which violates module isolation).
-type drawioImageInfo struct {
-	sourceFile string
-	relPath    string
-	hash       string
-}
-
-// structurizrViewInfo is a local struct for structurizr view tracking
-// (to avoid importing design package which violates module isolation).
-type structurizrViewInfo struct {
-	module  string // Module name (e.g., "eac-cli")
-	viewKey string // View key (e.g., "SystemContext")
-	dslHash string // Hash of workspace.dsl content
-	dslPath string // Path to workspace.dsl file
-}
 
 func (c *repositoryContext) ensureRepoRoot() error {
 	if c.repoRoot == "" {

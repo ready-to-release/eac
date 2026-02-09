@@ -45,7 +45,7 @@ Installs project template files for documentation, AI prompts, specifications, r
 
 ## Role in System
 
-The `templates` package provides the `templates install` command family for `eac-cli`, enabling projects to bootstrap standard file structures for documentation, AI prompts, security specifications, compliance reports, and Claude Code integration. Its `Renderer` supports both raw copying for initial scaffolding and value-substituted rendering for automated generation, while the `internal/security` layer ensures template paths cannot escape their designated output directories.
+The `templates` package provides the `templates install` command family for `eac`, enabling projects to bootstrap standard file structures for documentation, AI prompts, security specifications, compliance reports, and Claude Code integration. Its `Renderer` supports both raw copying for initial scaffolding and value-substituted rendering for automated generation, while the `internal/security` layer ensures template paths cannot escape their designated output directories.
 
 ## Code Health
 

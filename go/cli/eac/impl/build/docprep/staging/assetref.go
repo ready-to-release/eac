@@ -97,6 +97,9 @@ func NormalizeAssetPath(ref, mdFilePath, workspaceDir string) string {
 // For patterns like "docs/**/*.md", returns "docs".
 // Returns empty string if no directory can be extracted.
 func ResolveSourceDir(pattern, workspaceRoot string) string {
+	if !strings.Contains(pattern, "**") {
+		return ""
+	}
 	parts := strings.Split(pattern, "**")
 	if len(parts) > 0 && parts[0] != "" {
 		dir := strings.TrimSuffix(parts[0], "/")

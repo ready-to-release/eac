@@ -140,7 +140,7 @@ This command works with two different types of tags:
 | Type             | Source                          | Examples                          | Purpose                            |
 | ---------------- | ------------------------------- | --------------------------------- | ---------------------------------- |
 | **Image Tags**   | Container registry (OCI/Docker) | `sha-abc1234`, `v1.0.0`, `latest` | Identify specific container images |
-| **Release Tags** | GitHub Releases API             | `eac-ext/1.0.0`, `clie-cli/2.0.0`  | Mark official releases             |
+| **Release Tags** | GitHub Releases API             | `eac-ext/1.0.0`, `clie/2.0.0`  | Mark official releases             |
 
 The `image_tags` configuration controls which container image tags to preserve or prune.
 The `github_releases` configuration correlates container images with GitHub Releases.

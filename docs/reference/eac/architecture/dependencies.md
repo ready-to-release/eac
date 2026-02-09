@@ -17,7 +17,7 @@ The following diagram illustrates how dependencies flow from Trunk through Deplo
 ```yaml
 # In .eac/repository.yml
 modules:
-  - moniker: eac-cli
+  - moniker: eac
     depends_on:
       - core
 ```
@@ -70,8 +70,8 @@ Uses **Kahn's topological sort**:
 
 ```go
 type ExecutionPlan struct {
-    Layers         [][]string // [[eac-core], [eac-commands, clie-cli], [eac-ext]]
-    ExecutionOrder []string   // Flattened: [eac-core, eac-commands, clie-cli, eac-ext]
+    Layers         [][]string // [[eac-core], [eac-commands, clie], [eac-ext]]
+    ExecutionOrder []string   // Flattened: [eac-core, eac-commands, clie, eac-ext]
     LayerCount     int
 }
 ```
@@ -155,13 +155,20 @@ CI workflows run in parallel for all changed modules. Release workflows verify d
 
 ### CI Dispatch
 
+CI dispatch uses a `CICacheChecker` (from the core [cache system](./cache-system.md#ci-cache-architecture))
+to skip modules that already have a successful CI build at the current HEAD SHA.
+
 ```text
 change-trigger.yaml
     │
-    └──► Dispatch CI workflows in parallel
-         [eac-core, eac-commands, clie-cli, eac-ext, docs, books, ...]
-         No layering, no waiting
+    └──► CICacheChecker filters modules (remote:ci cache)
+         │
+         └──► Dispatch CI workflows for uncached modules
+              [eac-core, eac-commands, clie, eac-ext, docs, books, ...]
+              No layering, no waiting
 ```
+
+Bypass with `--skip-cache=remote:ci` to force dispatch for all modules.
 
 ### Release Verification
 
@@ -228,14 +235,14 @@ Dependencies: eac-commands, eac-core
 ```text
 core (root)
     │
-    ├──► eac-cli ──┬──► eac-ext
+    ├──► eac ──┬──► eac-ext
     │       │      │
     │       │      │
     │       └──► docs
     │
-    ├──► clie-cli ──► eac-ext (also depends on eac-cli)
+    ├──► clie ──► eac-ext (also depends on eac)
     │
-    ├──► godog-adapter
+    ├──► godog-eac
     │
     └──► eac-mcp-server
 ```

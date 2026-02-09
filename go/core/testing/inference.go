@@ -191,7 +191,7 @@ func defaultInferences() []Inference {
 }
 
 // InferSystemDepsFromModuleDeps infers system dependencies based on module dependencies
-// For example, if a test has @depm:eac-cli and eac-cli is a go-* module,
+// For example, if a test has @depm:eac and eac is a go-* module,
 // then @deps:go should be inferred
 // Tracks inferred deps in TestReference.InferredDeps.
 func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Registry) []TestReference {

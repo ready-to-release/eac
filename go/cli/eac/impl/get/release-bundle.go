@@ -21,7 +21,7 @@
 // Long:
 // Long: With --with-versions, each module includes:
 // Long:   - version: Current released version (empty if not released)
-// Long:   - tag: Full release tag (e.g., clie-cli/1.0.0)
+// Long:   - tag: Full release tag (e.g., clie/1.0.0)
 // Long:   - release_url: GitHub release URL
 // Long:
 // Long: With --format markdown, outputs release notes directly:
@@ -32,7 +32,7 @@
 // Long:   | **Name** | `1.0.0` | [Release](https://github.com/org/repo/releases/tag/name/1.0.0) |
 // Long:
 // Long: With --format shell, outputs for eval:
-// Long:   RELEASE_MAP='{"clie-cli":{"tag":"clie-cli/1.0.0","version":"1.0.0"},...}'
+// Long:   RELEASE_MAP='{"clie":{"tag":"clie/1.0.0","version":"1.0.0"},...}'
 // Long:   ALL_RELEASED="true"
 // Long:
 // Long: Example:

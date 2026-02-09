@@ -49,7 +49,7 @@ phase-based layout, tabbed output panes, and status visualization.
 
 ## Role in System
 
-The `console` sub-package is the rendering engine within `tui-adapter`,
+The `console` sub-package is the rendering engine within `tui-eac`,
 responsible for all visual output in the parallel TUI. It receives typed
 messages from `ParallelConsole` and translates them into terminal output
 through the bubbletea framework, maintaining phase state, tab management,

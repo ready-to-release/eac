@@ -20,6 +20,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
@@ -47,3 +48,5 @@ replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../
 replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
 
 replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/runner/0.1.0 => ../../../contracts/runner/0.1.0

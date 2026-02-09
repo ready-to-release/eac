@@ -1,6 +1,6 @@
 # clie validate
 
-Validate the syntax and structure of `.clie/clie-cli.yml` configuration file.
+Validate the syntax and structure of `.clie/clie.yml` configuration file.
 
 ## Syntax
 
@@ -51,7 +51,7 @@ clie validate
 
 # If valid, commit
 if [ $? -eq 0 ]; then
-    git add .clie/clie-cli.yml
+    git add .clie/clie.yml
     git commit -m "Update CLIE configuration"
 fi
 ```

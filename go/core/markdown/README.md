@@ -43,7 +43,7 @@ produces human-readable validation summaries for CLI output.
 ## Code Health
 
 ### Tech Debt
-- validator.go:306-307 -- commented-out `case "go"` block; decide whether to implement Go syntax validation or remove the placeholder
+- ~~validator.go:306-307 -- commented-out `case "go"` block~~ (resolved: removed)
 - `extractCodeBlocks` and `extractSections` share near-identical AST walk boilerplate; a generic walk-and-collect helper would reduce duplication
 
 ### Pain Points

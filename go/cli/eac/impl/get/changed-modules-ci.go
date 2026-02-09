@@ -40,6 +40,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -172,8 +173,9 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 	// Filter to only modules with CI workflows
 	modulesWithCI, filteredOut := filterModulesWithWorkflows(allModules, workspaceRoot)
 
-	// Create GitHub API client (may not be used if mocking)
+	// Create GitHub API client and CI run querier (may not be used if mocking)
 	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	querier := NewGHCIRunQuerier(api)
 
 	// Track results
 	result := &CIChangedModulesResult{
@@ -214,8 +216,8 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 				status = ModuleCIStatus{HasValidCI: false, Reason: "no_ci_history"}
 			}
 		} else {
-			// Use real GitHub API
-			status = checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot, api, ciExcludedFiles)
+			// Use real GitHub API via querier
+			status = checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot, querier, ciExcludedFiles)
 		}
 		result.ModuleStatus[module] = status
 
@@ -325,14 +327,11 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 
 // checkModuleCIStatusPerModule checks the CI status for a single module.
 // Returns whether the module has valid CI and why.
-func checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot string, api github.API, ciExcludedFiles map[string]bool) ModuleCIStatus {
+func checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot string, querier cache.CIRunQuerier, ciExcludedFiles map[string]bool) ModuleCIStatus {
 	workflowName := fmt.Sprintf("ci-%s.yaml", module)
 
-	// Query module's CI workflow for last successful run
-	runs, err := api.ListRuns(workflowName, github.ListRunsOpts{
-		Status: "success",
-		Limit:  1,
-	})
+	// Query module's CI workflow for last successful run via the querier port
+	lastSuccessSHA, err := querier.LastSuccessfulRunSHA(workflowName)
 	if err != nil {
 		return ModuleCIStatus{
 			HasValidCI: false,
@@ -341,14 +340,12 @@ func checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot string,
 	}
 
 	// No successful CI runs for this module
-	if len(runs) == 0 {
+	if lastSuccessSHA == "" {
 		return ModuleCIStatus{
 			HasValidCI: false,
 			Reason:     "no_ci_history",
 		}
 	}
-
-	lastSuccessSHA := runs[0].HeadSHA
 
 	// If CI passed at current HEAD, module has valid CI
 	if lastSuccessSHA == headSHA {

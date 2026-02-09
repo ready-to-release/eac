@@ -189,7 +189,7 @@ func TestOutputReader_GetUoW_LoadsManifestFromCorrectPath(t *testing.T) {
 	expected := f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	manifest, err := reader.GetUoW(id)
 	require.NoError(t, err)
 	assert.Equal(t, expected.Action, manifest.Action)
@@ -202,7 +202,7 @@ func TestOutputReader_GetUoW_ReturnsErrorWhenManifestMissing(t *testing.T) {
 	f := newTestFixture(t)
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "nonexistent", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "nonexistent", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	manifest, err := reader.GetUoW(id)
 	assert.Error(t, err)
 	assert.Nil(t, manifest)
@@ -225,7 +225,7 @@ func TestOutputReader_GetUoW_AllContexts(t *testing.T) {
 			f.createUoWManifest(ctx, "module", "component", "tool")
 
 			reader := NewReader(f.workspaceRoot)
-			id := workunit.UnitID{Action: ctx, Module: "module", Component: "component", Tool: "tool"}
+			id := workunit.UnitID{Action: ctx, Module: "module", ComponentType: "component", ComponentName: "component", Tool: "tool"}
 			manifest, err := reader.GetUoW(id)
 			require.NoError(t, err)
 			assert.Equal(t, ctx, manifest.Action)
@@ -243,42 +243,42 @@ func TestOutputReader_GetUoW_TableDriven(t *testing.T) {
 	}{
 		{
 			name:      "build go module",
-			action:   core.ActionBuild,
+			action:    core.ActionBuild,
 			module:    "core",
 			component: "go",
 			tool:      "go",
 		},
 		{
 			name:      "test with gotest",
-			action:   core.ActionTest,
-			module:    "eac-cli",
+			action:    core.ActionTest,
+			module:    "eac",
 			component: "go",
 			tool:      "gotest",
 		},
 		{
 			name:      "lint with eslint",
-			action:   core.ActionLint,
+			action:    core.ActionLint,
 			module:    "web-app",
 			component: "typescript",
 			tool:      "eslint",
 		},
 		{
 			name:      "scan with trivy",
-			action:   core.ActionScan,
-			module:    "eac-cli",
+			action:    core.ActionScan,
+			module:    "eac",
 			component: "docker",
 			tool:      "trivy-vuln",
 		},
 		{
 			name:      "module with hyphens",
-			action:   core.ActionBuild,
+			action:    core.ActionBuild,
 			module:    "my-complex-module",
 			component: "go",
 			tool:      "go",
 		},
 		{
 			name:      "tool with hyphens",
-			action:   core.ActionLint,
+			action:    core.ActionLint,
 			module:    "core",
 			component: "go",
 			tool:      "golangci-lint",
@@ -292,7 +292,7 @@ func TestOutputReader_GetUoW_TableDriven(t *testing.T) {
 			expected := f.createUoWManifest(tt.action, tt.module, tt.component, tt.tool)
 
 			reader := NewReader(f.workspaceRoot)
-			id := workunit.UnitID{Action: tt.action, Module: tt.module, Component: tt.component, Tool: tt.tool}
+			id := workunit.UnitID{Action: tt.action, Module: tt.module, ComponentType: tt.component, ComponentName: tt.component, Tool: tt.tool}
 			manifest, err := reader.GetUoW(id)
 			require.NoError(t, err)
 			assert.Equal(t, expected.Module, manifest.Module)

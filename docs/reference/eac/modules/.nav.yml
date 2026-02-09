@@ -1,20 +1,20 @@
 title: Modules
 nav:
   - index.md
-  - eac-cli.md
+  - eac.md
   - core.md
   - clibase.md
   - eac-mcp-server.md
   - eac-ext.md
-  - ai-adapter.md
-  - docker-adapter.md
-  - eac-adapter.md
-  - tui-adapter.md
-  - godog-adapter.md
-  - cucumber-adapter.md
-  - gotest-adapter.md
-  - mocha-adapter.md
-  - npm-adapter.md
+  - ai-eac.md
+  - docker-eac.md
+  - eac-to-eac.md
+  - tui-eac.md
+  - godog-eac.md
+  - cucumber-eac.md
+  - gotest-eac.md
+  - mocha-eac.md
+  - npm-eac.md
   - repository.md
   - docs.md
   - templates.md

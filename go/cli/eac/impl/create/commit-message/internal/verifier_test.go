@@ -8,7 +8,7 @@ import (
 )
 
 func TestVerifyCommitMessageContract_ValidMessage(t *testing.T) {
-	validMessage := `feat(eac-cli): add commit message verifier
+	validMessage := `feat(eac): add commit message verifier
 
 Auditor-Summary: Implemented contract verifier to validate commit
 messages against formal structure requirements.
@@ -17,9 +17,9 @@ This commit adds a contract verifier to validate commit messages
 against the formal structure defined in the contract. Ensures
 compliance with all formatting and structural requirements.
 
-eac-cli
+eac
 ------------
-eac-cli: feat: add commit message contract verifier
+eac: feat: add commit message contract verifier
 
 Implements validation logic to programmatically verify commit messages
 against contract rules including heading format, line length, module
@@ -40,7 +40,7 @@ paths:
 
 `
 
-	errors := VerifyCommitMessageContract(validMessage, []string{"eac-cli"})
+	errors := VerifyCommitMessageContract(validMessage, []string{"eac"})
 
 	if len(errors) > 0 {
 		t.Errorf("Expected valid message to have no errors, got %d errors:", len(errors))
@@ -141,13 +141,13 @@ Body text here.
 }
 
 func TestVerifyCommitMessageContract_InvalidSubjectFormat(t *testing.T) {
-	invalidMessage := `feat(eac-cli): add feature
+	invalidMessage := `feat(eac): add feature
 
 Auditor-Summary: Summary text for the overall change.
 
 Summary text for the overall change.
 
-eac-cli
+eac
 ------------
 
 This is not a valid subject line format
@@ -156,7 +156,7 @@ Body text here.
 
 `
 
-	errors := VerifyCommitMessageContract(invalidMessage, []string{"eac-cli"})
+	errors := VerifyCommitMessageContract(invalidMessage, []string{"eac"})
 
 	foundError := false
 	for _, err := range errors {
@@ -172,16 +172,16 @@ Body text here.
 }
 
 func TestVerifyCommitMessageContract_UnclosedCodeBlock(t *testing.T) {
-	invalidMessage := `feat(eac-cli): add feature
+	invalidMessage := `feat(eac): add feature
 
 Auditor-Summary: Summary text for the overall change.
 
 Summary text for the overall change.
 
-eac-cli
+eac
 ------------
 
-eac-cli: feat: add feature
+eac: feat: add feature
 
 Body text.
 
@@ -282,7 +282,7 @@ filtering options.
 func TestVerifyCommitMessageContract_OrphanedDashesLineDetected(t *testing.T) {
 	// This test verifies that actual orphaned dashes lines (not ---)
 	// are still detected correctly
-	invalidMessage := `feat(eac-cli): add feature
+	invalidMessage := `feat(eac): add feature
 
 Auditor-Summary: Summary text.
 
@@ -293,7 +293,7 @@ Some body text here.
 More text here.
 `
 
-	errors := VerifyCommitMessageContract(invalidMessage, []string{"eac-cli"})
+	errors := VerifyCommitMessageContract(invalidMessage, []string{"eac"})
 
 	foundError := false
 	for _, err := range errors {

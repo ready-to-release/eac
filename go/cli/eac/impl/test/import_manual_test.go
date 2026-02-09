@@ -1045,7 +1045,7 @@ modules:
 	}
 
 	// Create contract schema for results
-	schemaDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0")
+	schemaDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "schemas")
 	require.NoError(t, os.MkdirAll(schemaDir, 0755))
 
 	// Read the real results schema from the repo

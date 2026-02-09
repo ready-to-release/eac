@@ -52,7 +52,7 @@ Starts Docker-based servers for module build output, supporting static site serv
 
 ## Role in System
 
-The `serve` package provides local server capabilities for `eac-cli`, enabling developers to preview documentation sites, PDF outputs, architecture diagrams, and git history visualizations through Docker containers. Its dual-mode approach (live-reload for rapid iteration, static for production preview) and auto-staleness management make it the primary interface for local content viewing during development.
+The `serve` package provides local server capabilities for `eac`, enabling developers to preview documentation sites, PDF outputs, architecture diagrams, and git history visualizations through Docker containers. Its dual-mode approach (live-reload for rapid iteration, static for production preview) and auto-staleness management make it the primary interface for local content viewing during development.
 
 ## Code Health
 

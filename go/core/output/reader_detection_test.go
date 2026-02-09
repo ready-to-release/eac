@@ -26,7 +26,7 @@ func TestOutputReader_ValidateUoW_ReturnsValidWhenManifestAndArtifactsExist(t *t
 	})
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	result := reader.ValidateUoW(id)
 	assert.True(t, result.Valid)
 	assert.True(t, result.ManifestExists)
@@ -52,7 +52,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWithMissingArtifacts(t *testing.
 	require.NoError(t, err)
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	result := reader.ValidateUoW(id)
 	assert.False(t, result.Valid)
 	assert.True(t, result.ManifestExists)
@@ -66,7 +66,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWhenManifestMissing(t *testing.T
 
 	// No manifest exists
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "nonexistent", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "nonexistent", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	result := reader.ValidateUoW(id)
 	assert.False(t, result.Valid)
 	assert.False(t, result.ManifestExists)
@@ -104,7 +104,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWhenArtifactsCorrupt(t *testing.
 	require.NoError(t, err)
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	result := reader.ValidateUoW(id)
 	assert.False(t, result.Valid)
 	assert.False(t, result.ArtifactsValid)
@@ -118,7 +118,7 @@ func TestOutputReader_ValidateUoW_ReturnsValidForEmptyArtifacts(t *testing.T) {
 	f.createUoWManifest(core.ActionLint, "test-module", "go", "golangci-lint")
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionLint, Module: "test-module", Component: "go", Tool: "golangci-lint"}
+	id := workunit.UnitID{Action: core.ActionLint, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "golangci-lint"}
 	result := reader.ValidateUoW(id)
 	assert.True(t, result.Valid)
 	assert.True(t, result.ArtifactsValid)
@@ -199,7 +199,7 @@ func TestOutputReader_ValidateUoW_TableDriven(t *testing.T) {
 			}
 
 			reader := NewReader(f.workspaceRoot)
-			id := workunit.UnitID{Action: core.ActionBuild, Module: "test", Component: "go", Tool: "go"}
+			id := workunit.UnitID{Action: core.ActionBuild, Module: "test", ComponentType: "go", ComponentName: "go", Tool: "go"}
 			result := reader.ValidateUoW(id)
 			assert.Equal(t, tt.expectValid, result.Valid)
 			assert.Equal(t, tt.expectManifest, result.ManifestExists)
@@ -218,18 +218,18 @@ func TestOutputReader_ValidateModule_ChecksAllExpectedUoWs(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create expected UoWs
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "go", "go", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "go", "go", map[string][]byte{
 		"binary": []byte("binary content"),
 	})
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	reader := NewReader(f.workspaceRoot)
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.True(t, result.Valid)
 }
 
@@ -237,16 +237,16 @@ func TestOutputReader_ValidateModule_ReturnsInvalidWhenUoWMissing(t *testing.T) 
 	f := newTestFixture(t)
 
 	// Only create one of two expected UoWs
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "go")
 	// Missing: docker
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	reader := NewReader(f.workspaceRoot)
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.False(t, result.Valid)
 }
 
@@ -254,29 +254,29 @@ func TestOutputReader_ValidateModule_ReturnsInvalidWhenAnyUoWInvalid(t *testing.
 	f := newTestFixture(t)
 
 	// Create one valid UoW
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "go", "go", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "go", "go", map[string][]byte{
 		"binary": []byte("binary content"),
 	})
 
 	// Create one UoW with missing artifacts
-	manifest := f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
+	manifest := f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
 	manifest.Artifacts = []Artifact{
 		{ID: "image", Path: "missing-image.tar", SHA256: "sha256:missing", Size: 1000, Type: "docker-image"},
 	}
 	dirName := manifest.DirName()
-	manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "eac-cli", dirName, "uow.manifest.json")
+	manifestPath := filepath.Join(f.workspaceRoot, "out", "build", "eac", dirName, "uow.manifest.json")
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	require.NoError(t, err)
 	err = os.WriteFile(manifestPath, data, 0644)
 	require.NoError(t, err)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	reader := NewReader(f.workspaceRoot)
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.False(t, result.Valid)
 }
 
@@ -286,7 +286,7 @@ func TestOutputReader_ValidateModule_SucceedsWithEmptyExpectedList(t *testing.T)
 	expectedUoWs := []workunit.UnitID{}
 
 	reader := NewReader(f.workspaceRoot)
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.True(t, result.Valid) // No expected UoWs, so validation passes
 	_ = f
 }
@@ -295,17 +295,17 @@ func TestOutputReader_ValidateModule_IgnoresUnexpectedUoWs(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create more UoWs than expected
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "go", "go")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "docker", "docker")
-	f.createUoWManifest(core.ActionBuild, "eac-cli", "extra", "extra") // Unexpected
+	f.createUoWManifest(core.ActionBuild, "eac", "go", "go")
+	f.createUoWManifest(core.ActionBuild, "eac", "docker", "docker")
+	f.createUoWManifest(core.ActionBuild, "eac", "extra", "extra") // Unexpected
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	reader := NewReader(f.workspaceRoot)
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.True(t, result.Valid) // Extra UoWs should not cause failure
 }
 
@@ -324,7 +324,7 @@ func TestOutputReader_ValidateModule_AllContexts(t *testing.T) {
 			f.createUoWManifest(ctx, "module", "component", "tool")
 
 			expectedUoWs := []workunit.UnitID{
-				{Action: ctx, Module: "module", Component: "component", Tool: "tool"},
+				{Action: ctx, Module: "module", ComponentType: "component", ComponentName: "component", Tool: "tool"},
 			}
 
 			reader := NewReader(f.workspaceRoot)
@@ -354,7 +354,7 @@ func TestOutputReader_ConcurrentGetUoW(t *testing.T) {
 		go func(moduleNum int) {
 			defer wg.Done()
 			module := "module" + string(rune('0'+moduleNum))
-			id := workunit.UnitID{Action: core.ActionBuild, Module: module, Component: "go", Tool: "go"}
+			id := workunit.UnitID{Action: core.ActionBuild, Module: module, ComponentType: "go", ComponentName: "go", Tool: "go"}
 			manifest, err := reader.GetUoW(id)
 			assert.NoError(t, err)
 			assert.Equal(t, module, manifest.Module)
@@ -405,7 +405,7 @@ func TestOutputReader_ConcurrentValidateUoW(t *testing.T) {
 			go func(moduleNum int) {
 				defer wg.Done()
 				module := "module" + string(rune('0'+moduleNum))
-				id := workunit.UnitID{Action: core.ActionBuild, Module: module, Component: "go", Tool: "go"}
+				id := workunit.UnitID{Action: core.ActionBuild, Module: module, ComponentType: "go", ComponentName: "go", Tool: "go"}
 				result := reader.ValidateUoW(id)
 				assert.True(t, result.Valid)
 			}(i)
@@ -430,7 +430,7 @@ func TestOutputReader_GetUoW_HandlesInvalidManifestJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	manifest, err := reader.GetUoW(id)
 	assert.Error(t, err)
 	assert.Nil(t, manifest)
@@ -448,7 +448,7 @@ func TestOutputReader_GetUoW_HandlesEmptyManifest(t *testing.T) {
 	require.NoError(t, err)
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	_, err = reader.GetUoW(id)
 	assert.Error(t, err)
 }
@@ -494,7 +494,7 @@ func TestOutputReader_WorksWithSpecialCharactersInNames(t *testing.T) {
 	f.createUoWManifest(core.ActionBuild, "my-complex-module", "go-component", "my-tool")
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "my-complex-module", Component: "go-component", Tool: "my-tool"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "my-complex-module", ComponentType: "go-component", ComponentName: "go-component", Tool: "my-tool"}
 	manifest, err := reader.GetUoW(id)
 	require.NoError(t, err)
 	assert.Equal(t, "my-complex-module", manifest.Module)
@@ -511,7 +511,7 @@ func TestOutputReader_ValidateUoW_MultipleArtifacts(t *testing.T) {
 	})
 
 	reader := NewReader(f.workspaceRoot)
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "test-module", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	result := reader.ValidateUoW(id)
 	assert.True(t, result.Valid)
 	assert.True(t, result.ArtifactsValid)
@@ -525,39 +525,39 @@ func TestOutputReader_FullWorkflow_BuildModule(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Simulate a full build output structure
-	// eac-cli module with go and docker components
+	// eac module with go and docker components
 
 	// Go component
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "go", "go", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "go", "go", map[string][]byte{
 		"eac-linux-amd64":       make([]byte, 10000),
 		"eac-darwin-amd64":      make([]byte, 11000),
 		"eac-windows-amd64.exe": make([]byte, 12000),
 	})
 
 	// Docker component
-	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac-cli", "docker", "docker", map[string][]byte{
+	f.createUoWManifestWithArtifacts(core.ActionBuild, "eac", "docker", "docker", map[string][]byte{
 		"image.tar": make([]byte, 50000),
 	})
 
 	reader := NewReader(f.workspaceRoot)
 
 	// 1. List all UoWs
-	manifests, err := reader.ListUoWs(core.ActionBuild, "eac-cli")
+	manifests, err := reader.ListUoWs(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Len(t, manifests, 2)
 
 	// 2. Get module view
-	moduleView, err := reader.GetModule(core.ActionBuild, "eac-cli")
+	moduleView, err := reader.GetModule(core.ActionBuild, "eac")
 	require.NoError(t, err)
 	assert.Equal(t, StatusCompleted, moduleView.Status)
 	assert.Len(t, moduleView.Components, 2)
 
 	// 3. Validate module
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "eac", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
-	result := reader.ValidateModule(core.ActionBuild, "eac-cli", expectedUoWs)
+	result := reader.ValidateModule(core.ActionBuild, "eac", expectedUoWs)
 	assert.True(t, result.Valid)
 }
 
@@ -579,7 +579,7 @@ func TestOutputReader_FullWorkflow_PartialFailure(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Simulate partial test failure
-	f.createUoWManifestWithExitCode(core.ActionTest, "core", "go", "gotest", 0)    // Pass
+	f.createUoWManifestWithExitCode(core.ActionTest, "core", "go", "gotest", 0)     // Pass
 	f.createUoWManifestWithExitCode(core.ActionTest, "core", "gherkin", "godog", 1) // Fail
 
 	reader := NewReader(f.workspaceRoot)
@@ -665,8 +665,8 @@ func TestOutputReader_GetModule_StatusComputation(t *testing.T) {
 
 func TestOutputReader_ValidateModule_Comprehensive(t *testing.T) {
 	tests := []struct {
-		name         string
-		setupUoWs    []struct {
+		name      string
+		setupUoWs []struct {
 			component string
 			tool      string
 			artifacts map[string][]byte
@@ -687,8 +687,8 @@ func TestOutputReader_ValidateModule_Comprehensive(t *testing.T) {
 				{component: "docker", tool: "docker", artifacts: map[string][]byte{"image": []byte("image")}},
 			},
 			expectedUoWs: []workunit.UnitID{
-				{Action: core.ActionBuild, Module: "module", Component: "go", Tool: "go"},
-				{Action: core.ActionBuild, Module: "module", Component: "docker", Tool: "docker"},
+				{Action: core.ActionBuild, Module: "module", ComponentType: "go", ComponentName: "go", Tool: "go"},
+				{Action: core.ActionBuild, Module: "module", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 			},
 			expectValid: true,
 		},
@@ -703,8 +703,8 @@ func TestOutputReader_ValidateModule_Comprehensive(t *testing.T) {
 				{component: "go", tool: "go", artifacts: map[string][]byte{"binary": []byte("content")}},
 			},
 			expectedUoWs: []workunit.UnitID{
-				{Action: core.ActionBuild, Module: "module", Component: "go", Tool: "go"},
-				{Action: core.ActionBuild, Module: "module", Component: "docker", Tool: "docker"}, // Missing
+				{Action: core.ActionBuild, Module: "module", ComponentType: "go", ComponentName: "go", Tool: "go"},
+				{Action: core.ActionBuild, Module: "module", ComponentType: "docker", ComponentName: "docker", Tool: "docker"}, // Missing
 			},
 			expectValid: false,
 		},
@@ -719,7 +719,7 @@ func TestOutputReader_ValidateModule_Comprehensive(t *testing.T) {
 				{component: "go", tool: "go", artifacts: map[string][]byte{"binary": []byte("content")}, wrongHash: true},
 			},
 			expectedUoWs: []workunit.UnitID{
-				{Action: core.ActionBuild, Module: "module", Component: "go", Tool: "go"},
+				{Action: core.ActionBuild, Module: "module", ComponentType: "go", ComponentName: "go", Tool: "go"},
 			},
 			expectValid: false,
 		},

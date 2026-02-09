@@ -140,7 +140,7 @@ func generateFeatureName(filePath, featureLine string) string {
 
 // extractModuleFromPath extracts the module name from a spec file path
 // e.g., specs/core/logging/specification.feature -> core
-// e.g., specs/eac-cli/commit/specification.feature -> eac-cli.
+// e.g., specs/eac/commit/specification.feature -> eac.
 func extractModuleFromPath(filePath string) string {
 	// Normalize path separators
 	normalized := filepath.ToSlash(filePath)

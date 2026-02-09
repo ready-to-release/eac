@@ -5,6 +5,8 @@ package domain
 
 import (
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/config"
 )
 
 func TestBaseContract_Getters(t *testing.T) {
@@ -12,8 +14,8 @@ func TestBaseContract_Getters(t *testing.T) {
 		Moniker:     "test-moniker",
 		Name:        "Test Name",
 		Description: "Test description",
-		Components: ModuleComponents{
-			"go": &ComponentEntry{Root: "test/root"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "test/root"},
 		},
 	}
 
@@ -49,7 +51,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "explicit changelog path",
 			contract: BaseContract{
 				Moniker: "test-module",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:    "SemVer",
 					Changelog: "custom/path/CHANGELOG.md",
 				},
@@ -60,7 +62,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "SemVer module defaults to release folder",
 			contract: BaseContract{
 				Moniker: "test-module",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "SemVer",
 				},
 			},
@@ -70,7 +72,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "CalVer module returns empty (auto-managed)",
 			contract: BaseContract{
 				Moniker: "my-module",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "CalVer",
 				},
 			},
@@ -80,7 +82,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "Implicit module returns empty (non-releasable)",
 			contract: BaseContract{
 				Moniker: "internal-module",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "Implicit",
 				},
 			},
@@ -98,7 +100,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "explicit changelog with CalVer module",
 			contract: BaseContract{
 				Moniker: "eac-mcp-server",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:    "CalVer",
 					Changelog: "go/eac/mcp/commands/CHANGELOG.md",
 				},
@@ -109,7 +111,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 			name: "SemVer module with special characters in moniker",
 			contract: BaseContract{
 				Moniker: "eac-mcp-server",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "SemVer",
 				},
 			},
@@ -132,7 +134,7 @@ func TestBaseContract_GetChangelog(t *testing.T) {
 func TestBaseContract_GetChangelog_ConsistentDefault(t *testing.T) {
 	contract := BaseContract{
 		Moniker: "test-module",
-		Versioning: &ModuleVersioning{
+		Versioning: &config.ModuleVersioning{
 			Scheme: "SemVer",
 		},
 	}
@@ -163,7 +165,7 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 			name: "empty moniker with explicit changelog",
 			contract: BaseContract{
 				Moniker: "",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Changelog: "path/CHANGELOG.md",
 				},
 			},
@@ -173,7 +175,7 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 			name: "empty moniker SemVer module",
 			contract: BaseContract{
 				Moniker: "",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "SemVer",
 				},
 			},
@@ -183,7 +185,7 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 			name: "moniker with slash for SemVer module",
 			contract: BaseContract{
 				Moniker: "module/submodule",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "SemVer",
 				},
 			},
@@ -193,7 +195,7 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 			name: "absolute path in changelog",
 			contract: BaseContract{
 				Moniker: "test",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Changelog: "/absolute/path/CHANGELOG.md",
 				},
 			},
@@ -203,7 +205,7 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 			name: "CalVer without explicit changelog returns empty",
 			contract: BaseContract{
 				Moniker: "test",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme: "CalVer",
 				},
 			},
@@ -225,15 +227,15 @@ func TestBaseContract_GetChangelog_EdgeCases(t *testing.T) {
 func TestModuleVersioning_ReleaseType(t *testing.T) {
 	tests := []struct {
 		name        string
-		versioning  *ModuleVersioning
+		versioning  *config.ModuleVersioning
 		wantType    string
 		description string
 	}{
 		{
 			name: "published release type",
-			versioning: &ModuleVersioning{
+			versioning: &config.ModuleVersioning{
 				Scheme:      "SemVer",
-				Changelog:   "release/clie-cli/CHANGELOG.md",
+				Changelog:   "release/clie/CHANGELOG.md",
 				ReleaseType: "published",
 			},
 			wantType:    "published",
@@ -241,7 +243,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 		},
 		{
 			name: "internal release type",
-			versioning: &ModuleVersioning{
+			versioning: &config.ModuleVersioning{
 				Scheme:      "SemVer",
 				Changelog:   "go/cli/eac/CHANGELOG.md",
 				ReleaseType: "internal",
@@ -251,7 +253,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 		},
 		{
 			name: "bundle release type",
-			versioning: &ModuleVersioning{
+			versioning: &config.ModuleVersioning{
 				Scheme:      "CalVer",
 				Changelog:   "release/clie-eac-bundle/CHANGELOG.md",
 				ReleaseType: "bundle",
@@ -261,7 +263,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 		},
 		{
 			name: "none release type",
-			versioning: &ModuleVersioning{
+			versioning: &config.ModuleVersioning{
 				Scheme:      "Implicit",
 				ReleaseType: "none",
 			},
@@ -270,7 +272,7 @@ func TestModuleVersioning_ReleaseType(t *testing.T) {
 		},
 		{
 			name: "empty release type defaults to empty",
-			versioning: &ModuleVersioning{
+			versioning: &config.ModuleVersioning{
 				Scheme:    "SemVer",
 				Changelog: "release/test/CHANGELOG.md",
 			},
@@ -300,10 +302,10 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 		{
 			name: "published with release/ changelog - OK",
 			contract: BaseContract{
-				Moniker: "clie-cli",
+				Moniker: "clie",
 				Versioning: &ModuleVersioning{
 					Scheme:      "SemVer",
-					Changelog:   "release/clie-cli/CHANGELOG.md",
+					Changelog:   "release/clie/CHANGELOG.md",
 					ReleaseType: "published",
 				},
 			},
@@ -314,7 +316,7 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 			name: "published with non-release/ changelog - INVALID",
 			contract: BaseContract{
 				Moniker: "bad-published",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:      "SemVer",
 					Changelog:   "go/bad/CHANGELOG.md",
 					ReleaseType: "published",
@@ -326,8 +328,8 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 		{
 			name: "internal with module root changelog - OK",
 			contract: BaseContract{
-				Moniker: "eac-cli",
-				Versioning: &ModuleVersioning{
+				Moniker: "eac",
+				Versioning: &config.ModuleVersioning{
 					Scheme:      "SemVer",
 					Changelog:   "go/cli/eac/CHANGELOG.md",
 					ReleaseType: "internal",
@@ -340,7 +342,7 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 			name: "internal with release/ changelog - INVALID",
 			contract: BaseContract{
 				Moniker: "bad-internal",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:      "SemVer",
 					Changelog:   "release/bad-internal/CHANGELOG.md",
 					ReleaseType: "internal",
@@ -353,7 +355,7 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 			name: "bundle with release/ changelog - OK",
 			contract: BaseContract{
 				Moniker: "clie-eac-bundle",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:      "CalVer",
 					Changelog:   "release/clie-eac-bundle/CHANGELOG.md",
 					ReleaseType: "bundle",
@@ -366,7 +368,7 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 			name: "none release type - always OK",
 			contract: BaseContract{
 				Moniker: "core",
-				Versioning: &ModuleVersioning{
+				Versioning: &config.ModuleVersioning{
 					Scheme:      "Implicit",
 					ReleaseType: "none",
 				},
@@ -387,31 +389,26 @@ func TestBaseContract_ReleaseTypeConsistency(t *testing.T) {
 }
 
 // validateReleaseTypeConsistency checks if a module's release_type aligns with its changelog location.
-// This is a helper function that will be used by validation commands.
 func validateReleaseTypeConsistency(contract BaseContract) bool {
 	if contract.Versioning == nil {
-		return true // No versioning = no requirements
+		return true
 	}
 
 	releaseType := contract.Versioning.ReleaseType
 	changelogPath := contract.GetChangelog()
 
-	// Determine if changelog is in release/ folder
-	isInReleaseFolder := len(changelogPath) >= 8 && changelogPath[:8] == "release/"
+	// Must be release/<module>/CHANGELOG.md (with subdirectory, not just release/)
+	isInReleaseFolder := len(changelogPath) >= 8 && changelogPath[:8] == "release/" &&
+		strings.Count(changelogPath, "/") >= 2
 
 	switch releaseType {
 	case "published", "bundle":
-		// Must be in release/ folder
 		return isInReleaseFolder
 	case "internal":
-		// Must NOT be in release/ folder
 		return !isInReleaseFolder
 	case "none", "":
-		// No restrictions
 		return true
 	default:
-		// Unknown release type
 		return false
 	}
 }
-

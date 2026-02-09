@@ -14,9 +14,9 @@ import (
 
 // detectExecutionContext returns a human-readable execution context string.
 // Combines container detection (clie vs implicit) with environment (CI vs devbox).
-// Returns: "implicit-cli (devbox)", "implicit-cli (CI)", "clie-cli (devbox)", "clie-cli (CI)".
+// Returns: "implicit-cli (devbox)", "implicit-cli (CI)", "clie (devbox)", "clie (CI)".
 func detectExecutionContext() string {
-	// CLI mode: clie-cli (container) or implicit-cli (local)
+	// CLI mode: clie (container) or implicit-cli (local)
 	cliMode := string(logging.GetExecutionContext())
 
 	// Environment: CI or devbox
@@ -264,7 +264,7 @@ func ExtractPlannedTools(ctx *ExecutionContext) []display.PlannedTool {
 	toolMap := make(map[string]bool)
 	for _, unit := range units {
 		if unit.ID.Tool != "" {
-			toolMap[unit.ID.Tool] = unit.Container
+			toolMap[unit.ID.Tool] = unit.IsContainerSpec()
 		}
 	}
 
@@ -316,10 +316,10 @@ func buildModulesFromUnitSpecs(units []workunit.UnitSpec) []display.ExecutionMod
 			DisplayName:   spec.ID.DisplayName(),
 			Weight:        spec.Weight,
 			Module:        spec.ID.Module,
-			Component:     spec.ID.Component,
+			Component:     spec.ID.ComponentName,
 			Tool:          spec.ID.Tool,
 			ComponentType: spec.ComponentType,
-			Container:     spec.Container,
+			Container:     spec.IsContainerSpec(),
 		}
 		moduleUoWs[module] = append(moduleUoWs[module], entry)
 

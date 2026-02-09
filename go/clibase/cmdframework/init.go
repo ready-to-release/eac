@@ -190,6 +190,7 @@ func phaseInitDeferred(ctx *ExecutionContext) error {
 		log.Debugf("Tool bridge initialization skipped: %v", err)
 		// Continue - tool config is optional, native handlers will still work
 	}
+	ctx.ToolSystem = tool.GlobalToolSystem()
 	ctx.initTimings.ToolInit = time.Since(toolStart)
 
 	// Create output directory

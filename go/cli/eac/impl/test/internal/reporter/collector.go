@@ -236,7 +236,7 @@ func parseGoTestLog(logPath string) (int, string, error) {
 }
 
 // extractModuleFromFeaturePath extracts module name from feature file path
-// Example: "specs/eac-cli/templates/specification.feature" -> "eac-cli".
+// Example: "specs/eac/templates/specification.feature" -> "eac".
 func extractModuleFromFeaturePath(featurePath string) string {
 	// Normalize to forward slashes
 	normalized := filepath.ToSlash(featurePath)

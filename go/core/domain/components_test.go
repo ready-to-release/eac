@@ -3,24 +3,26 @@ package domain
 import (
 	"sort"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/config"
 )
 
 func TestAmpConfig_GetAmp(t *testing.T) {
 	tests := []struct {
 		name     string
-		amp      *AmpConfig
+		amp      *config.AmpConfig
 		op       string
 		expected float64
 	}{
 		{"nil returns 1.0", nil, "build", 1.0},
-		{"empty struct returns 1.0", &AmpConfig{}, "build", 1.0},
-		{"build 2.0", &AmpConfig{Build: 2.0}, "build", 2.0},
-		{"lint 0.5", &AmpConfig{Lint: 0.5}, "lint", 0.5},
-		{"test 1.5", &AmpConfig{Test: 1.5}, "test", 1.5},
-		{"scan 3.0", &AmpConfig{Scan: 3.0}, "scan", 3.0},
-		{"unknown op returns 1.0", &AmpConfig{Build: 2.0}, "unknown", 1.0},
-		{"zero value returns 1.0", &AmpConfig{Build: 0}, "build", 1.0},
-		{"negative value returns 1.0", &AmpConfig{Build: -1.0}, "build", 1.0},
+		{"empty struct returns 1.0", &config.AmpConfig{}, "build", 1.0},
+		{"build 2.0", &config.AmpConfig{Build: 2.0}, "build", 2.0},
+		{"lint 0.5", &config.AmpConfig{Lint: 0.5}, "lint", 0.5},
+		{"test 1.5", &config.AmpConfig{Test: 1.5}, "test", 1.5},
+		{"scan 3.0", &config.AmpConfig{Scan: 3.0}, "scan", 3.0},
+		{"unknown op returns 1.0", &config.AmpConfig{Build: 2.0}, "unknown", 1.0},
+		{"zero value returns 1.0", &config.AmpConfig{Build: 0}, "build", 1.0},
+		{"negative value returns 1.0", &config.AmpConfig{Build: -1.0}, "build", 1.0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -35,13 +37,13 @@ func TestAmpConfig_GetAmp(t *testing.T) {
 func TestComponentEntry_GetAmpForOperation(t *testing.T) {
 	tests := []struct {
 		name     string
-		entry    *ComponentEntry
+		entry    *config.ComponentEntry
 		op       string
 		expected float64
 	}{
 		{"nil entry returns 1.0", nil, "build", 1.0},
-		{"nil amp returns 1.0", &ComponentEntry{}, "build", 1.0},
-		{"configured amp", &ComponentEntry{Amp: &AmpConfig{Build: 2.0}}, "build", 2.0},
+		{"nil amp returns 1.0", &config.ComponentEntry{}, "build", 1.0},
+		{"configured amp", &config.ComponentEntry{Amp: &config.AmpConfig{Build: 2.0}}, "build", 2.0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -56,7 +58,7 @@ func TestComponentEntry_GetAmpForOperation(t *testing.T) {
 func TestModuleComponents_GetComponentTypes(t *testing.T) {
 	tests := []struct {
 		name     string
-		mc       ModuleComponents
+		mc       config.ModuleComponents
 		expected []string
 	}{
 		{
@@ -66,42 +68,42 @@ func TestModuleComponents_GetComponentTypes(t *testing.T) {
 		},
 		{
 			name:     "empty map returns empty slice",
-			mc:       ModuleComponents{},
+			mc:       config.ModuleComponents{},
 			expected: []string{},
 		},
 		{
 			name: "name is type when Type field empty",
-			mc: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/"},
+			mc: config.ModuleComponents{
+				"go": &config.ComponentEntry{Root: "go/"},
 			},
 			expected: []string{"go"},
 		},
 		{
 			name: "Type field overrides name",
-			mc: ModuleComponents{
-				"python": &ComponentEntry{Type: "testdata", Root: "testdata/python"},
+			mc: config.ModuleComponents{
+				"python": &config.ComponentEntry{Type: "testdata", Root: "testdata/python"},
 			},
 			expected: []string{"testdata"},
 		},
 		{
 			name: "deduplicates types",
-			mc: ModuleComponents{
-				"main-go":  &ComponentEntry{Type: "go", Root: "main/"},
-				"other-go": &ComponentEntry{Type: "go", Root: "other/"},
+			mc: config.ModuleComponents{
+				"main-go":  &config.ComponentEntry{Type: "go", Root: "main/"},
+				"other-go": &config.ComponentEntry{Type: "go", Root: "other/"},
 			},
 			expected: []string{"go"},
 		},
 		{
 			name: "mixed explicit and implicit types",
-			mc: ModuleComponents{
-				"go":     &ComponentEntry{Root: "go/"},                               // implicit type: "go"
-				"python": &ComponentEntry{Type: "testdata", Root: "testdata/python"}, // explicit type: "testdata"
+			mc: config.ModuleComponents{
+				"go":     &config.ComponentEntry{Root: "go/"},                               // implicit type: "go"
+				"python": &config.ComponentEntry{Type: "testdata", Root: "testdata/python"}, // explicit type: "testdata"
 			},
 			expected: []string{"go", "testdata"},
 		},
 		{
 			name: "nil entry uses name as type",
-			mc: ModuleComponents{
+			mc: config.ModuleComponents{
 				"assets": nil,
 			},
 			expected: []string{"assets"},
@@ -130,8 +132,8 @@ func TestModuleComponents_GetComponentTypes(t *testing.T) {
 // TestModuleComponents_GetEnabled_ReturnsNames verifies that GetEnabled returns component names,
 // not types. This is the key distinction that caused the Python dependency false positive bug.
 func TestModuleComponents_GetEnabled_ReturnsNames(t *testing.T) {
-	mc := ModuleComponents{
-		"python": &ComponentEntry{Type: "testdata", Root: "testdata/python"},
+	mc := config.ModuleComponents{
+		"python": &config.ComponentEntry{Type: "testdata", Root: "testdata/python"},
 	}
 
 	enabled := mc.GetEnabled()

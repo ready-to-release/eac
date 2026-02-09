@@ -18,7 +18,7 @@ eac build
 eac build eac-commands
 
 # Build specific modules
-eac build eac-core clie-cli
+eac build eac-core clie
 ```
 
 ## See Also

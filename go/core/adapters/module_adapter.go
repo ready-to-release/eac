@@ -39,6 +39,11 @@ func (a *ModuleContractAdapter) GetDescription() string {
 	return a.module.GetDescription()
 }
 
+// GetModuleGroup returns the module's group name.
+func (a *ModuleContractAdapter) GetModuleGroup() string {
+	return a.module.GetModuleGroup()
+}
+
 // HasComponent returns true if the module has the specified component type.
 func (a *ModuleContractAdapter) HasComponent(componentType string) bool {
 	return a.module.HasComponent(componentType)
@@ -57,6 +62,11 @@ func (a *ModuleContractAdapter) GetComponentRoots() map[string]string {
 // GetComponentTypesDisplay returns a comma-separated list of component types.
 func (a *ModuleContractAdapter) GetComponentTypesDisplay() string {
 	return a.module.GetComponentTypesDisplay()
+}
+
+// GetComponentGroup returns the component group for a named component.
+func (a *ModuleContractAdapter) GetComponentGroup(componentName string) string {
+	return a.module.GetComponentGroup(componentName)
 }
 
 // GetComponentAmp returns the resource amplifier for a component's operation.

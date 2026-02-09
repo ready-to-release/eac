@@ -33,6 +33,7 @@ type ModuleContractPort interface {
 	GetMoniker() string
 	GetName() string
 	GetDescription() string
+	GetModuleGroup() string
 
 	// Components
 	HasComponent(componentType string) bool
@@ -40,6 +41,7 @@ type ModuleContractPort interface {
 	GetComponentRoots() map[string]string
 	GetComponentTypesDisplay() string
 	GetComponentAmp(componentName, operation string) float64
+	GetComponentGroup(componentName string) string
 
 	// Dependencies
 	GetDependsOn() []string

@@ -1,12 +1,12 @@
-// Package help contains godog step implementations for eac-cli.
+// Package help contains godog step implementations for eac.
 //
 // This file contains help command step definitions for show-help and get-commands features.
 package help
 
 import (
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.
@@ -99,7 +99,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 	sc.Step(`^the array contains module monikers$`, func() error {
 		// Check that modules array has content
-		return eacgodog.OutputContainsAny(ctx, "core", "eac-cli", "docs")
+		return eacgodog.OutputContainsAny(ctx, "core", "eac", "docs")
 	})
 	sc.Step(`^"([^"]*)" has "([^"]*)" set to "([^"]*)"$`, func(cmd, field, value string) error {
 		// Check that command has args field with specific value

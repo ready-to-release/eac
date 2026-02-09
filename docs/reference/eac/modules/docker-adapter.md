@@ -1,18 +1,18 @@
-# docker-adapter
+# docker-eac
 
-The `docker-adapter` module wraps the Docker SDK to implement `ContainerPort` for container lifecycle management.
+The `docker-eac` module wraps the Docker SDK to implement `ContainerPort` for container lifecycle management.
 
 ## System Context
 
 Shows how the Docker adapter provides container operations to CLI commands.
 
-<!-- structurizr:docker-adapter:SystemContext -->
+<!-- structurizr:docker-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Docker adapter packages.
 
-<!-- structurizr:docker-adapter:Containers -->
+<!-- structurizr:docker-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,24 +20,24 @@ High-level view of the Docker adapter packages.
 
 ContainerPort implementation with retry logic and exponential backoff.
 
-<!-- structurizr:docker-adapter:ContainerAdapterComponents -->
+<!-- structurizr:docker-eac:ContainerAdapterComponents -->
 
 ### Docker Client Components
 
 Abstracted Docker SDK client with real, mock, and factory variants.
 
-<!-- structurizr:docker-adapter:DockerClientComponents -->
+<!-- structurizr:docker-eac:DockerClientComponents -->
 
 ### Serve Components
 
 Long-running container management with port reservation and browser launching.
 
-<!-- structurizr:docker-adapter:ServeComponents -->
+<!-- structurizr:docker-eac:ServeComponents -->
 
 ## Design File
 
-- **Location**: `specs/docker-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module docker-adapter`
+- **Location**: `specs/docker-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module docker-eac`
 
 ## Key Responsibilities
 

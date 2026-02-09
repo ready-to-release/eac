@@ -37,7 +37,7 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 	checked := 0
 
 	for _, spec := range specs {
-		key := unitKey{spec.ID.Module, spec.ID.Component, spec.ID.Tool}
+		key := unitKey{spec.ID.Module, spec.ID.ComponentName, spec.ID.Tool}
 		if skipManifestCheck[key] {
 			log.Debugf("[%s-ASSERT] Skipping manifest check for failed/cached/skipped UoW: %s", prefix, spec.ID.Longname())
 			continue

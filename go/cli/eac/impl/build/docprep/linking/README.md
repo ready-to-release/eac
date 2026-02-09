@@ -33,7 +33,7 @@ Link rewriting engine for the docprep pipeline that translates source-relative p
 
 ## Role in System
 
-The linking package implements phase 5 of the docprep preprocessing pipeline in `eac-cli`. When documentation sources are copied from multiple directories into a flat staging structure, internal cross-references break because the relative path relationships between files change.
+The linking package implements phase 5 of the docprep preprocessing pipeline in `eac`. When documentation sources are copied from multiple directories into a flat staging structure, internal cross-references break because the relative path relationships between files change.
 
 The `TranslationMap` receives file mapping data from the copy phase, computes the necessary path translations by comparing source and staging locations, then rewrites all markdown links, image references, and HTML src/href attributes to point to the correct staging-relative paths.
 

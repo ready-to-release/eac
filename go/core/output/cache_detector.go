@@ -217,10 +217,11 @@ func (r *DiskOutputReader) IsModuleChanged(
 	// Check each manifest
 	for _, m := range manifests {
 		id := workunit.UnitID{
-			Action:    ctx,
-			Module:    module,
-			Component: m.Component,
-			Tool:      m.Tool,
+			Action:        ctx,
+			Module:        module,
+			ComponentType: m.Component,
+			ComponentName: m.Component,
+			Tool:          m.Tool,
 		}
 
 		// Check if previous execution failed

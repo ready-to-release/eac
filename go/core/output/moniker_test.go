@@ -34,13 +34,13 @@ func TestMonikerParse(t *testing.T) {
 		},
 		{
 			name:  "2-part moniker (module:component)",
-			input: "eac-cli:docker",
+			input: "eac:docker",
 			expected: ParsedMoniker{
 				Action:    "",
-				Module:    "eac-cli",
+				Module:    "eac",
 				Component: "docker",
 				Tool:      "",
-				Full:      "eac-cli:docker",
+				Full:      "eac:docker",
 			},
 		},
 		{
@@ -118,8 +118,8 @@ func TestMonikerModuleName(t *testing.T) {
 		},
 		{
 			name:     "2-part moniker",
-			input:    "eac-cli:docker",
-			expected: "eac-cli",
+			input:    "eac:docker",
+			expected: "eac",
 		},
 		{
 			name:     "1-part moniker (module only)",
@@ -161,8 +161,8 @@ func TestMonikerShortname(t *testing.T) {
 		},
 		{
 			name:     "2-part moniker",
-			input:    "eac-cli:docker",
-			expected: "eac-cli:docker",
+			input:    "eac:docker",
+			expected: "eac:docker",
 		},
 		{
 			name:     "1-part moniker",

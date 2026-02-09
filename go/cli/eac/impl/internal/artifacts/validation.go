@@ -25,7 +25,7 @@ func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.U
 	// Build set of expected component-tool keys (dash separator matches UnitID.DirName())
 	expectedSet := make(map[string]bool)
 	for _, id := range expected {
-		key := id.Component + "-" + id.Tool
+		key := id.ComponentName + "-" + id.Tool
 		expectedSet[key] = true
 	}
 
@@ -100,11 +100,12 @@ func ValidateBuildArtifactsWithExpected(
 		for _, comp := range moduleView.Components {
 			for _, uow := range comp.UoWs {
 				id := workunit.UnitID{
-					Action:    core.ActionBuild,
-					Module:    module,
-					Component: uow.Component,
-					Tool:      uow.Tool,
-					Extra:     uow.Extra,
+					Action:        core.ActionBuild,
+					Module:        module,
+					ComponentType: uow.Component,
+					ComponentName: uow.Component,
+					Tool:          uow.Tool,
+					Extra:         uow.Extra,
 				}
 				result := reader.ValidateUoW(id)
 				if !result.Valid {

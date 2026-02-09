@@ -10,7 +10,7 @@
 // Long: Fails if any dependency with a CI workflow has no successful CI run.
 // Long:
 // Long: Example:
-// Long:   pipeline download-evidence-artifacts clie-cli
+// Long:   pipeline download-evidence-artifacts clie
 // Long:   pipeline download-evidence-artifacts eac-ext --output-dir custom/path
 // Args: module (required) - Module moniker to download evidence artifacts for
 // Flag.output-dir: type=string, default=out, usage=Base output directory (test/ and scan/ subdirs will be created)

@@ -4,7 +4,7 @@
     Initialize local clie configuration for EAC development
 
 .DESCRIPTION
-    Creates .clie/clie-cli.local.yml configuration file for local Docker development.
+    Creates .clie/clie.local.yml configuration file for local Docker development.
     Configures clie to use locally built Docker images instead of pulling from registry.
 
 .PARAMETER ImageTag
@@ -133,7 +133,7 @@ else {
 }
 
 # Check if config already exists
-$configPath = Join-Path $clieDir "clie-cli.local.yml"
+$configPath = Join-Path $clieDir "clie.local.yml"
 if ((Test-Path $configPath) -and -not $Force) {
     Write-ColorOutput ""
     Write-ColorOutput "Configuration file already exists:" "Yellow"

@@ -1,23 +1,23 @@
-# gotest-adapter
+# gotest-eac
 
-The `gotest-adapter` module provides Go test runner integration for unit and integration test execution.
+The `gotest-eac` module provides Go test runner integration for unit and integration test execution.
 
 ## System Context
 
 Shows how the GoTest adapter integrates with the test execution framework.
 
-<!-- structurizr:gotest-adapter:SystemContext -->
+<!-- structurizr:gotest-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the GoTest adapter packages.
 
-<!-- structurizr:gotest-adapter:Containers -->
+<!-- structurizr:gotest-eac:Containers -->
 
 ## Design File
 
-- **Location**: `specs/gotest-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module gotest-adapter`
+- **Location**: `specs/gotest-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module gotest-eac`
 
 ## Key Responsibilities
 

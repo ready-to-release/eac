@@ -6,13 +6,13 @@ Dynamic workflow diagrams showing the execution flow for key CLIE CLI operations
 
 The flow when executing `clie run <extension> <command>` or `clie <extension> <command>`.
 
-<!-- structurizr:clie-cli:RunWorkflow -->
+<!-- structurizr:clie:RunWorkflow -->
 
 **Workflow steps:**
 
 1. Developer executes command (e.g., `clie eac build`)
 2. Command layer parses arguments via EBNF parser
-3. Configuration loaded from `.clie/clie-cli.yml`
+3. Configuration loaded from `.clie/clie.yml`
 4. Extension system ensures image exists locally
 5. GitHub registry checked for updates (if pull policy allows)
 6. Image pulled if needed
@@ -27,7 +27,7 @@ The flow when executing `clie run <extension> <command>` or `clie <extension> <c
 
 The flow when installing extensions via `clie install <extension>`.
 
-<!-- structurizr:clie-cli:InstallWorkflow -->
+<!-- structurizr:clie:InstallWorkflow -->
 
 **Workflow steps:**
 

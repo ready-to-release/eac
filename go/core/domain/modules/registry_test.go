@@ -6,44 +6,32 @@ package modules
 import (
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 )
 
-func createTestModule(moniker, pkgType string) *ModuleContract {
+func createTestModule(moniker, compType string) *ModuleContract {
 	base := domain.BaseContract{
 		Moniker: moniker,
 		Name:    "Test " + moniker,
-		Packages: domain.ModulePackages{
-			pkgType: &domain.PackageEntry{Root: "test/" + moniker},
-		},
-		Files: domain.Files{
-			Root: "test/" + moniker,
+		Components: config.ModuleComponents{
+			compType: &config.ComponentEntry{Root: "test/" + moniker},
 		},
 	}
 	return NewModuleContract(base, "/workspace")
 }
 
-func createTestModuleWithPackages(moniker string, packages map[string]string) *ModuleContract {
-	pkgs := make(domain.ModulePackages)
-	for name, root := range packages {
-		pkgs[name] = &domain.PackageEntry{Root: root}
+func createTestModuleWithPackages(moniker string, components map[string]string) *ModuleContract {
+	comps := make(config.ModuleComponents)
+	for name, root := range components {
+		comps[name] = &config.ComponentEntry{Root: root}
 	}
 	base := domain.BaseContract{
-		Moniker:  moniker,
-		Name:     "Test " + moniker,
-		Packages: pkgs,
-		Files: domain.Files{
-			Root: packages[getFirstKey(packages)],
-		},
+		Moniker:    moniker,
+		Name:       "Test " + moniker,
+		Components: comps,
 	}
 	return NewModuleContract(base, "/workspace")
-}
-
-func getFirstKey(m map[string]string) string {
-	for k := range m {
-		return k
-	}
-	return ""
 }
 
 func TestNewRegistry(t *testing.T) {
@@ -181,7 +169,7 @@ func TestRegistry_AllMonikers(t *testing.T) {
 	}
 }
 
-func TestRegistry_FilterByPackage(t *testing.T) {
+func TestRegistry_FilterByComponent(t *testing.T) {
 	registry := NewRegistry("0.1.0", "/workspace")
 
 	// Create modules with various package combinations
@@ -190,25 +178,25 @@ func TestRegistry_FilterByPackage(t *testing.T) {
 	_ = registry.Add(createTestModuleWithPackages("module3", map[string]string{"go": "go/mod3", "design": "specs/mod3/.design"}))
 	_ = registry.Add(createTestModuleWithPackages("module4", map[string]string{"book": "docs"}))
 
-	// Filter by 'go' package
-	goModules := registry.FilterByPackage("go")
+	// Filter by 'go' component
+	goModules := registry.FilterByComponent("go")
 	if len(goModules) != 2 {
-		t.Errorf("Expected 2 modules with 'go' package, got %d", len(goModules))
+		t.Errorf("Expected 2 modules with 'go' component, got %d", len(goModules))
 	}
 	for _, m := range goModules {
 		if !m.HasComponent("go") {
-			t.Errorf("Module %s should have 'go' package", m.Moniker)
+			t.Errorf("Module %s should have 'go' component", m.Moniker)
 		}
 	}
 
-	// Filter by 'specs' package
-	specsModules := registry.FilterByPackage("specs")
+	// Filter by 'specs' component
+	specsModules := registry.FilterByComponent("specs")
 	if len(specsModules) != 1 {
-		t.Errorf("Expected 1 module with 'specs' package, got %d", len(specsModules))
+		t.Errorf("Expected 1 module with 'specs' component, got %d", len(specsModules))
 	}
 }
 
-func TestRegistry_FilterByAnyPackage(t *testing.T) {
+func TestRegistry_FilterByAnyComponent(t *testing.T) {
 	registry := NewRegistry("0.1.0", "/workspace")
 
 	_ = registry.Add(createTestModuleWithPackages("module1", map[string]string{"go": "go/mod1"}))
@@ -216,9 +204,9 @@ func TestRegistry_FilterByAnyPackage(t *testing.T) {
 	_ = registry.Add(createTestModuleWithPackages("module3", map[string]string{"book": "docs"}))
 
 	// Filter by any of 'go' or 'typescript'
-	codeModules := registry.FilterByAnyPackage("go", "typescript")
+	codeModules := registry.FilterByAnyComponent("go", "typescript")
 	if len(codeModules) != 2 {
-		t.Errorf("Expected 2 modules with 'go' or 'typescript' package, got %d", len(codeModules))
+		t.Errorf("Expected 2 modules with 'go' or 'typescript' component, got %d", len(codeModules))
 	}
 }
 
@@ -227,20 +215,20 @@ func TestRegistry_FindByRoot(t *testing.T) {
 
 	base1 := domain.BaseContract{
 		Moniker: "module1",
-		Files: domain.Files{
-			Root: "src/test",
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "src/test"},
 		},
 	}
 	base2 := domain.BaseContract{
 		Moniker: "module2",
-		Files: domain.Files{
-			Root: "src/test",
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "src/test"},
 		},
 	}
 	base3 := domain.BaseContract{
 		Moniker: "module3",
-		Files: domain.Files{
-			Root: "src/other",
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "src/other"},
 		},
 	}
 

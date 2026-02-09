@@ -41,7 +41,7 @@ Scans documentation assets, tracks their usage across markdown files, and mainta
 
 ## Role in System
 
-The `docs-manifest` package provides asset inventory management for `eac-cli` documentation, enabling both human curation of asset descriptions and automated tracking of which assets are actually referenced. Its check mode integrates with CI to catch stale manifests before merge.
+The `docs-manifest` package provides asset inventory management for `eac` documentation, enabling both human curation of asset descriptions and automated tracking of which assets are actually referenced. Its check mode integrates with CI to catch stale manifests before merge.
 
 ## Code Health
 

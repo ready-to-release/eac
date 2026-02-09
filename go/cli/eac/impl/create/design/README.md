@@ -42,7 +42,7 @@ Generates Structurizr DSL workspace files for a module by analyzing its source c
 
 ## Role in System
 
-The `create design` command provides AI-powered architecture documentation generation for `eac-cli`, enabling teams to bootstrap Structurizr DSL workspaces from source code analysis. It integrates with the design validation pipeline to ensure generated workspaces are syntactically valid, and outputs to the standard specs directory structure for use with `serve design` and `validate design` commands.
+The `create design` command provides AI-powered architecture documentation generation for `eac`, enabling teams to bootstrap Structurizr DSL workspaces from source code analysis. It integrates with the design validation pipeline to ensure generated workspaces are syntactically valid, and outputs to the standard specs directory structure for use with `serve design` and `validate design` commands.
 
 ## Code Health
 

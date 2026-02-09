@@ -64,7 +64,7 @@ type Command struct {
 
 // Requirements defines extension requirements.
 type Requirements struct {
-	CLIECLIVersion    string `yaml:"clie-version"`
+	CLIEVersion      string `yaml:"clie-version"`
 	ContainerRuntime string `yaml:"container-runtime"`
 	MinimumMemory    string `yaml:"minimum-memory"`
 	MinimumCPU       string `yaml:"minimum-cpu"`
@@ -131,7 +131,7 @@ func ExtensionMeta() int {
 		},
 		Commands: commands,
 		Requirements: Requirements{
-			CLIECLIVersion:    ">=1.0.0",
+			CLIEVersion:      ">=1.0.0",
 			ContainerRuntime: "docker",
 			MinimumMemory:    "256Mi",
 			MinimumCPU:       "0.1",

@@ -28,7 +28,7 @@ and godog BDD tests, with JSON event streaming and CTRF report generation.
 
 - `adapters/godog` -- `GodogTagTranslator` for tag filter conversion
 - `clibase/testrunners` -- `TestTypeRunner` interface and registration
-- `clibase/ctrf` -- CTRF report format types
+- `core/ctrf` -- CTRF report format types
 - `core/config` -- EAC configuration for module resolution
 - `core/testing` -- `TestReference` type
 - `core/tool` -- tool registry and command building
@@ -36,7 +36,7 @@ and godog BDD tests, with JSON event streaming and CTRF report generation.
 
 ## Role in System
 
-The `gotest-adapter` module is registered as both the Go test runner and
+The `gotest-eac` module is registered as both the Go test runner and
 the fallback runner in the test execution framework. It handles `go test`
 invocation with JSON output parsing, coverage collection, and CTRF
 report generation, enabling the orchestrator to run Go unit tests and

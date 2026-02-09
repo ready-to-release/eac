@@ -5,7 +5,7 @@
 // Long: and bidirectional dependencies (depends_on, depended_by).
 // Long:
 // Long: Filter Examples:
-// Long:   get components --module eac-cli    # Components in specific module
+// Long:   get components --module eac    # Components in specific module
 // Long:   get components --type go                # Only Go components
 // Long:   get components --buildable              # Only buildable components
 // Long:   get components --lintable --scannable   # Lintable AND scannable

@@ -53,7 +53,7 @@ Parent command that displays repository information in human-readable format. Ho
 
 ## Role in System
 
-The `show` package is the human-readable counterpart to `get`, producing formatted markdown tables and CI summaries rather than machine-parseable output. It is heavily used in GitHub Actions workflows where its output is directed to `$GITHUB_STEP_SUMMARY`, providing consistent build, test, and release reporting across all modules in the `eac-cli` pipeline.
+The `show` package is the human-readable counterpart to `get`, producing formatted markdown tables and CI summaries rather than machine-parseable output. It is heavily used in GitHub Actions workflows where its output is directed to `$GITHUB_STEP_SUMMARY`, providing consistent build, test, and release reporting across all modules in the `eac` pipeline.
 
 ## Code Health
 

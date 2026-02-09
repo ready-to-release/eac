@@ -113,16 +113,16 @@ detect_platform() {
 get_latest_version() {
     # Skip API call in test mode
     if [[ "${__EAC_TEST_MOCK:-}" == "1" ]]; then
-        echo -e "${BLUE}Test mode: Using mock version eac-cli/v0.0.0-test${NC}" >&2
-        echo "eac-cli/v0.0.0-test"
+        echo -e "${BLUE}Test mode: Using mock version eac/v0.0.0-test${NC}" >&2
+        echo "eac/v0.0.0-test"
         return
     fi
 
     local latest
-    # Fetch releases and find the latest eac-cli/* release (monorepo has multiple release tags)
-    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'eac-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    # Fetch releases and find the latest eac/* release (monorepo has multiple release tags)
+    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'eac/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ -z "$latest" ]]; then
-        echo -e "${RED}No eac-cli release found${NC}"
+        echo -e "${RED}No eac release found${NC}"
         exit 1
     fi
     echo "$latest"
@@ -172,16 +172,16 @@ install_binary() {
 
         echo -e "${BLUE}Test mode: Using pre-built binary from out/build (skipping download)${NC}"
 
-        # Use the actual built eac-cli binary from the build output
-        # This is available because eac-installer depends on eac-cli module
+        # Use the actual built eac binary from the build output
+        # This is available because eac-installer depends on eac module
         # When running from build output: out/build/eac-installer/bash-scripts/
-        # Go up 2 levels to out/build, then access eac-cli/go-go/
+        # Go up 2 levels to out/build, then access eac/go-go/
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        built_binary="${script_dir}/../../eac-cli/go-go/eac-${OS}-${ARCH}"
+        built_binary="${script_dir}/../../eac/go-go/eac-${OS}-${ARCH}"
 
         if [[ ! -f "$built_binary" ]]; then
             echo -e "${RED}Test mode: Pre-built binary not found at ${built_binary}${NC}"
-            echo -e "${YELLOW}Ensure eac-cli module is built before running installer tests${NC}"
+            echo -e "${YELLOW}Ensure eac module is built before running installer tests${NC}"
             exit 1
         fi
 

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func computeTestOrder(t *testing.T, cfg *RepositoryConfig, ct *ComponentTypesConfig) *DisplayOrder {
+func computeTestOrder(t *testing.T, cfg *RepositoryConfig, ct *ComponentKindsConfig) *DisplayOrder {
 	t.Helper()
 	require.NoError(t, cfg.expandModuleGroups())
 	cfg.computeDisplayOrder(ct)
@@ -127,8 +127,8 @@ func TestDisplayOrder_ComponentOrder_DependsOn(t *testing.T) {
 }
 
 func TestDisplayOrder_ComponentOrder_BuildAfter(t *testing.T) {
-	compTypes := &ComponentTypesConfig{
-		ComponentTypes: map[string]*ComponentType{
+	compTypes := &ComponentKindsConfig{
+		Kinds: map[string]*ComponentType{
 			"docs-site": {},
 			"docs-pdf":  {BuildAfter: []string{"docs-site"}},
 			"go":        {},

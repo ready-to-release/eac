@@ -28,19 +28,19 @@ func TestResolve_SimpleRoot(t *testing.T) {
 func TestResolve_SubOwnership(t *testing.T) {
 	r := NewResolver([]ModuleDefinition{
 		{
-			Moniker: "eac-cli",
+			Moniker: "eac",
 			Components: map[string]*ComponentOwnership{
-				"go":        {Root: "go/cli/eac"},
-				"testdata":  {Root: "go/cli/eac/testdata", ComponentType: "testdata"},
-				"gherkin":   {Root: "go/cli/eac/specs"},
-				"assets":    {Root: "go/cli/eac/specs/assets", ComponentType: "testdata"},
+				"go":       {Root: "go/cli/eac"},
+				"testdata": {Root: "go/cli/eac/testdata", ComponentType: "testdata"},
+				"gherkin":  {Root: "go/cli/eac/specs"},
+				"assets":   {Root: "go/cli/eac/specs/assets", ComponentType: "testdata"},
 			},
 		},
 	})
 
 	tests := []struct {
-		path      string
-		wantComp  string
+		path     string
+		wantComp string
 	}{
 		{"go/cli/eac/main.go", "go"},
 		{"go/cli/eac/testdata/sample.txt", "testdata"},
@@ -57,8 +57,8 @@ func TestResolve_SubOwnership(t *testing.T) {
 		if owner.Component != tc.wantComp {
 			t.Errorf("Resolve(%q): expected component %q, got %q", tc.path, tc.wantComp, owner.Component)
 		}
-		if owner.Module != "eac-cli" {
-			t.Errorf("Resolve(%q): expected module eac-cli, got %s", tc.path, owner.Module)
+		if owner.Module != "eac" {
+			t.Errorf("Resolve(%q): expected module eac, got %s", tc.path, owner.Module)
 		}
 	}
 }
@@ -171,7 +171,7 @@ func TestResolve_CatchAllRoot(t *testing.T) {
 func TestResolve_CrossDirectoryOwnership(t *testing.T) {
 	r := NewResolver([]ModuleDefinition{
 		{
-			Moniker: "eac-cli",
+			Moniker: "eac",
 			Components: map[string]*ComponentOwnership{
 				"go":         {Root: "go/cli/eac"},
 				"dockerfile": {Root: "containers/drawio-oci"},
@@ -306,7 +306,7 @@ func TestResolveModule(t *testing.T) {
 			},
 		},
 		{
-			Moniker: "eac-cli",
+			Moniker: "eac",
 			Components: map[string]*ComponentOwnership{
 				"go": {Root: "go/cli/eac"},
 			},
@@ -325,9 +325,9 @@ func TestResolveModule(t *testing.T) {
 		t.Errorf("expected 2 core files, got %d", len(coreFiles))
 	}
 
-	eacFiles := r.ResolveModule("eac-cli", allFiles)
+	eacFiles := r.ResolveModule("eac", allFiles)
 	if len(eacFiles) != 1 {
-		t.Errorf("expected 1 eac-cli file, got %d", len(eacFiles))
+		t.Errorf("expected 1 eac file, got %d", len(eacFiles))
 	}
 }
 
@@ -497,7 +497,7 @@ func TestResolve_CrossModuleMostSpecificWins(t *testing.T) {
 func TestResolveComponent(t *testing.T) {
 	r := NewResolver([]ModuleDefinition{
 		{
-			Moniker: "eac-cli",
+			Moniker: "eac",
 			Components: map[string]*ComponentOwnership{
 				"go":       {Root: "go/cli/eac"},
 				"testdata": {Root: "go/cli/eac/testdata", ComponentType: "testdata"},
@@ -511,12 +511,12 @@ func TestResolveComponent(t *testing.T) {
 		"go/cli/eac/testdata/sample.txt",
 	}
 
-	goFiles := r.ResolveComponent("eac-cli", "go", allFiles)
+	goFiles := r.ResolveComponent("eac", "go", allFiles)
 	if len(goFiles) != 2 {
 		t.Errorf("expected 2 go files, got %d: %v", len(goFiles), goFiles)
 	}
 
-	tdFiles := r.ResolveComponent("eac-cli", "testdata", allFiles)
+	tdFiles := r.ResolveComponent("eac", "testdata", allFiles)
 	if len(tdFiles) != 1 {
 		t.Errorf("expected 1 testdata file, got %d: %v", len(tdFiles), tdFiles)
 	}

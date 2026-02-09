@@ -85,8 +85,8 @@ type Config struct {
 	SkipTUIDelay bool // Skip exit delay
 
 	// Command Context
-	RunPhaseName string // Custom name for Run phase (e.g., "building")
-	CommandName  string // Name of the command being run
+	RunPhaseName string          // Custom name for Run phase (e.g., "building")
+	CommandName  string          // Name of the command being run
 	ActionType   core.ActionType // ActionBuild, ActionTest, ActionLint, ActionScan, etc.
 
 	// Advanced Configuration (optional)
@@ -327,13 +327,13 @@ type InitSummary struct {
 
 // UoWEntry represents a unit of work with its globally unique ID.
 type UoWEntry struct {
-	ID          string           // UnitIDPort.Longname() - the canonical key (context:module:component:tool[:extra])
-	DisplayName string           // UnitIDPort.Shortname() - for tabs (module:component or spec name)
-	Weight      int              // Scheduling weight for resource allocation
-	Tags        core.TagSummary  // Classified tag data (test UoWs only)
+	ID          string          // UnitIDPort.Longname() - the canonical key (context:module:component:tool[:extra])
+	DisplayName string          // UnitIDPort.Shortname() - for tabs (module:component or spec name)
+	Weight      int             // Scheduling weight for resource allocation
+	Tags        core.TagSummary // Classified tag data (test UoWs only)
 
 	// Structured identity (decomposed from UnitSpec/UnitID)
-	Module        string // Module moniker (e.g., "core", "eac-cli")
+	Module        string // Module moniker (e.g., "core", "eac")
 	Component     string // Component name (e.g., "go", "gherkin")
 	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
 	ComponentType string // From component-types.yml (e.g., "go", "gherkin", "dockerfile")

@@ -33,7 +33,7 @@ Module-specific continuous integration workflows that build and test individual 
 - `ci-eac-core.yaml` - EAC Core module CI
 - `ci-eac-mcp-commands.yaml` - EAC MCP Commands module CI
 - `ci-eac-ext.yaml` - EAC Extension module CI
-- `ci-clie-cli.yaml` - CLIE CLI module CI
+- `ci-clie.yaml` - CLIE CLI module CI
 - `ci-vscode-commit.yaml` - VSCode Extension module CI
 - `ci-books.yaml` - Books documentation module CI
 - `ci-docs.yaml` - Docs site module CI
@@ -46,7 +46,7 @@ Workflows that publish deployable artifacts to production:
 
 - `release-docs.yaml` - Documentation site release (GitHub Pages)
 - `release-eac-ext.yaml` - EAC Extension release (Docker Hub)
-- `release-clie-cli.yaml` - CLIE CLI binary release (GitHub Releases)
+- `release-clie.yaml` - CLIE CLI binary release (GitHub Releases)
 - `release-books.yaml` - Books PDF release (GitHub Releases)
 
 ### Orchestration Workflows (3)

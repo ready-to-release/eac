@@ -49,14 +49,14 @@ type ModelBootState struct {
 
 // DisplayConfig holds display configuration values.
 type DisplayConfig struct {
-	Height               int           // Total height (default: tui.DefaultHeight)
-	Width                int           // Terminal width
-	RunPhaseName         string        // Custom name for Run phase (e.g., "building", "testing")
-	AsciiMode            bool          // Use ASCII-only characters (--ascii flag)
+	Height                int           // Total height (default: tui.DefaultHeight)
+	Width                 int           // Terminal width
+	RunPhaseName          string        // Custom name for Run phase (e.g., "building", "testing")
+	AsciiMode             bool          // Use ASCII-only characters (--ascii flag)
 	MetricsUpdateInterval time.Duration // How often to refresh CPU/memory metrics
-	MinDisplayTime       time.Duration // Minimum time to show completion state
-	AutoScrollResume     time.Duration // Auto-scroll resume delay
-	BufferSizeUoW        int           // Buffer size per UoW
+	MinDisplayTime        time.Duration // Minimum time to show completion state
+	AutoScrollResume      time.Duration // Auto-scroll resume delay
+	BufferSizeUoW         int           // Buffer size per UoW
 }
 
 // ExecutionState tracks execution progress, pane state, capacity, and channels.
@@ -105,9 +105,9 @@ type ExecutionState struct {
 	DoneChan   <-chan struct{} // Termination signal - closes to unblock listeners
 
 	// Done state
-	LinesDone    bool
-	StatusDone   bool
-	AllWorkDone  bool // True after AfterExecute hooks complete (AllWorkDoneMsg received)
+	LinesDone   bool
+	StatusDone  bool
+	AllWorkDone bool // True after AfterExecute hooks complete (AllWorkDoneMsg received)
 }
 
 // InteractionState tracks user interaction, exit/freeze state, and display preferences.
@@ -188,18 +188,18 @@ type SelectionState struct {
 
 // UoWState tracks per-module execution state for tab display.
 type UoWState struct {
-	Moniker     string       // Full ID for matching (Longname: context:module:component:tool)
-	DisplayName string       // Context-aware name for display
-	Index       int          // 1-based index in execution order (for tab display)
-	Weight      int          // Scheduling weight/pressure (shown in tab)
-	Buffer      *RingBuffer  // Module-specific output buffer
-	Status      UoWStatus // Running, Complete, Failed
-	StartTime   time.Time    // When module started
-	EndTime     time.Time    // When module finished (zero if running)
-	ExitCode    int          // Exit code (only valid when complete/failed)
-	DecayTime   time.Time    // When tab should disappear (zero = don't decay)
-	CacheTime   time.Time    // For cached modules: when the artifact was last built
-	LogPath     string       // Path to build log file (if available)
+	Moniker     string      // Full ID for matching (Longname: context:module:component:tool)
+	DisplayName string      // Context-aware name for display
+	Index       int         // 1-based index in execution order (for tab display)
+	Weight      int         // Scheduling weight/pressure (shown in tab)
+	Buffer      *RingBuffer // Module-specific output buffer
+	Status      UoWStatus   // Running, Complete, Failed
+	StartTime   time.Time   // When module started
+	EndTime     time.Time   // When module finished (zero if running)
+	ExitCode    int         // Exit code (only valid when complete/failed)
+	DecayTime   time.Time   // When tab should disappear (zero = don't decay)
+	CacheTime   time.Time   // For cached modules: when the artifact was last built
+	LogPath     string      // Path to build log file (if available)
 
 	// Structured identity (from UoWEntry, populated once on creation)
 	Module        string
@@ -214,10 +214,10 @@ type UoWStatus int
 
 const (
 	UoWPending  UoWStatus = iota // Scheduled, waiting for slot
-	UoWRunning                      // Actively executing
-	UoWComplete                     // Finished successfully
-	UoWSkipped                      // Skipped (cached, unchanged)
-	UoWFailed                       // Finished with error
+	UoWRunning                   // Actively executing
+	UoWComplete                  // Finished successfully
+	UoWSkipped                   // Skipped (cached, unchanged)
+	UoWFailed                    // Finished with error
 )
 
 // ViewMode represents the display mode for the components pane.
@@ -233,7 +233,7 @@ type TabViewMode int
 
 const (
 	TabViewName   TabViewMode = iota // Component display name (default)
-	TabViewModule                    // Module moniker (core, eac-cli)
+	TabViewModule                    // Module moniker (core, eac)
 	TabViewType                      // Component type (go-lib, dockerfile, godog)
 	TabViewTool                      // Tool/runner/builder name (go, buildx, mocha)
 	TabViewExec                      // Execution mode: "container" or "host"
@@ -426,7 +426,7 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 			DoneChan:      doneChan,
 			StartTime:     time.Now(),
 			UoWStates:     make(map[string]*UoWState), // Per-module state tracking
-			UoWOrder:      make([]string, 0),           // Tab ordering
+			UoWOrder:      make([]string, 0),          // Tab ordering
 		},
 		Interaction: InteractionState{
 			MouseMode:         true, // Start with mouse ON (scrolling enabled)
@@ -747,7 +747,7 @@ type PlannedTool struct {
 
 // ExecutionModule represents a module and its units of work.
 type ExecutionModule struct {
-	Name string     // Module name (e.g., "eac-cli")
+	Name string     // Module name (e.g., "eac")
 	UoWs []UoWEntry // Units of work with ID and display name
 }
 
@@ -758,7 +758,7 @@ type UoWEntry struct {
 	Weight      int    // Scheduling weight for resource allocation
 
 	// Structured identity (from core port UnitInfo)
-	Module        string // Module moniker (e.g., "core", "eac-cli")
+	Module        string // Module moniker (e.g., "core", "eac")
 	Component     string // Component name (e.g., "go", "gherkin")
 	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
 	ComponentType string // Component type from component-types.yml

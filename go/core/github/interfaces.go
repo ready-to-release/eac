@@ -49,20 +49,6 @@ type API interface {
 	ReleaseExists(tag string) (bool, error)
 }
 
-// global holds the current API implementation.
-var global API
-
-// SetGlobal sets the global GitHub API implementation.
-// Use this in main() for production, or in tests for mocks.
-func SetGlobal(api API) {
-	global = api
-}
-
-// Global returns the current GitHub API implementation.
-// Returns nil if not set - callers should check.
-func Global() API {
-	return global
-}
 
 // CLIExecutor defines the interface for executing GitHub CLI commands.
 // Implementations include GHClient (real) and CLIMock (testing).

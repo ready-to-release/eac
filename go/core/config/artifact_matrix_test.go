@@ -680,7 +680,7 @@ artifact-matrices:
 
 	cfg := parseBlueprintsFromYAML(t, yamlData)
 
-	t.Run("cross-platform for clie-cli", func(t *testing.T) {
+	t.Run("cross-platform for clie", func(t *testing.T) {
 		artifacts := cfg.ExpandArtifactMatrix("cross-platform", map[string]string{"moniker": "clie"})
 
 		require.Len(t, artifacts, 5)
@@ -697,7 +697,7 @@ artifact-matrices:
 		assert.Contains(t, ids, "windows-amd64")
 	})
 
-	t.Run("cross-platform-upx for clie-cli", func(t *testing.T) {
+	t.Run("cross-platform-upx for clie", func(t *testing.T) {
 		artifacts := cfg.ExpandArtifactMatrix("cross-platform-upx", map[string]string{"moniker": "clie"})
 
 		require.Len(t, artifacts, 7) // 5 base + 2 upx

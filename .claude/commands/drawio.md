@@ -8,7 +8,7 @@ You are editing or creating DrawIO diagrams using the EAC visual language.
 
 ## Commands Available
 
-Use the eac-cli CLI to work with DrawIO files:
+Use the eac CLI to work with DrawIO files:
 
 ```bash
 # Create a new diagram

@@ -148,5 +148,5 @@ modules: []
 	})
 
 	// NOTE: Feature-specific steps (work, risks, specs, etc.) are registered
-	// in their respective step files in impl/eac-cli/
+	// in their respective step files in impl/eac/
 }

@@ -7,11 +7,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
-
-var discoveryLog = logging.C()
 
 // groupTestsByPackage groups tests by their package path for execution.
 // Uses each test type's registered runner to determine grouping strategy:
@@ -49,12 +46,12 @@ func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cf
 			testRoot := testRunner.FindTestRoot(relPath, cfg)
 			if testRoot == "" {
 				// No test runner found - skip this test
-				discoveryLog.Debugf("groupTestsByPackage: skipping %s test (no test root): %s", test.Type, relPath)
+				log.Debugf("groupTestsByPackage: skipping %s test (no test root): %s", test.Type, relPath)
 				typeSkipped[test.Type]++
 				continue
 			}
 			pkgPath = testRunner.BuildPackagePath(testRoot, relPath)
-			discoveryLog.Debugf("groupTestsByPackage: %s test grouped to %s (root=%s)", test.Type, pkgPath, testRoot)
+			log.Debugf("groupTestsByPackage: %s test grouped to %s (root=%s)", test.Type, pkgPath, testRoot)
 		} else {
 			// Non-BDD tests (gotest, mocha): group by directory
 			absDir := filepath.Dir(test.FilePath)
@@ -70,13 +67,13 @@ func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cf
 	}
 
 	// Log summary
-	discoveryLog.Debugf("groupTestsByPackage: grouped %d tests into %d packages", len(tests), len(testsByPackage))
+	log.Debugf("groupTestsByPackage: grouped %d tests into %d packages", len(tests), len(testsByPackage))
 	for t, c := range typeCounts {
 		skipped := typeSkipped[t]
 		if skipped > 0 {
-			discoveryLog.Debugf("groupTestsByPackage: %s: %d grouped, %d skipped", t, c, skipped)
+			log.Debugf("groupTestsByPackage: %s: %d grouped, %d skipped", t, c, skipped)
 		} else {
-			discoveryLog.Debugf("groupTestsByPackage: %s: %d grouped", t, c)
+			log.Debugf("groupTestsByPackage: %s: %d grouped", t, c)
 		}
 	}
 

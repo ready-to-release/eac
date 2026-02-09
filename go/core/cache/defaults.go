@@ -1,7 +1,7 @@
 package cache
 
-// DefaultSkipSpecs defines what --skip-cache (bare flag) expands to.
-// This triggers a rebuild without destroying expensive tool caches.
+// DefaultSkipSpecs returns the specs that --skip-cache (bare flag) expands to.
+// Returns a fresh copy each call to prevent accidental mutation.
 //
 // Skipped:
 //   - local:state - incremental state (triggers rebuild)
@@ -12,7 +12,9 @@ package cache
 //   - local:registry - Docker images (slow to pull)
 //   - local:layer    - BuildKit cache (very slow to rebuild)
 //   - remote:*       - never touched by default
-var DefaultSkipSpecs = []Spec{
-	{Level: LevelLocal, Type: TypeState},
-	{Level: LevelLocal, Type: TypeWork},
+func DefaultSkipSpecs() []Spec {
+	return []Spec{
+		{Level: LevelLocal, Type: TypeState},
+		{Level: LevelLocal, Type: TypeWork},
+	}
 }

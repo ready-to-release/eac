@@ -139,7 +139,7 @@ func TestBookTemplate_GeneratorFromCategories(t *testing.T) {
 func TestBookTemplate_GeneratorFromModules(t *testing.T) {
 	modules := []Module{
 		{Moniker: "eac-ext", EvidenceBooks: []string{"release-evidence-eac-ext"}},
-		{Moniker: "clie-cli", EvidenceBooks: []string{"release-evidence-clie-cli"}},
+		{Moniker: "clie", EvidenceBooks: []string{"release-evidence-clie"}},
 	}
 
 	raw := &BooksConfigRaw{
@@ -170,9 +170,9 @@ func TestBookTemplate_GeneratorFromModules(t *testing.T) {
 	assert.Equal(t, "show release-notes eac-ext latest", expanded.Books[0].Sources[0].Command)
 
 	// Second evidence book
-	assert.Equal(t, "release-evidence-clie-cli", expanded.Books[1].Name)
+	assert.Equal(t, "release-evidence-clie", expanded.Books[1].Name)
 	require.Len(t, expanded.Books[1].Sources, 1)
-	assert.Equal(t, "show release-notes clie-cli latest", expanded.Books[1].Sources[0].Command)
+	assert.Equal(t, "show release-notes clie latest", expanded.Books[1].Sources[0].Command)
 }
 
 func TestBookTemplate_MergeBooksConfigs(t *testing.T) {

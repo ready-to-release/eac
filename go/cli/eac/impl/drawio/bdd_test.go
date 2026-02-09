@@ -9,7 +9,7 @@ import (
 )
 
 func TestFeatures(t *testing.T) {
-	specsBase := "../../../../../specs/eac-cli"
+	specsBase := "../../../../../specs/eac"
 
 	cfg := eacgodog.RunnerConfig{
 		SpecsPath: specsBase + "/drawio-create," +

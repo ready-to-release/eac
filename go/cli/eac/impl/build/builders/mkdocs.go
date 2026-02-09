@@ -93,8 +93,8 @@ func formatDockerShm(containerMemory int64) string {
 // Returns the component type's resources.cpus from component-types.yml.
 func getEffectiveWeight(componentType string) int {
 	cfg := config.Global()
-	if cfg != nil && cfg.ComponentTypes != nil {
-		if ct := cfg.ComponentTypes.Get(componentType); ct != nil {
+	if cfg != nil && cfg.ComponentKinds != nil {
+		if ct := cfg.ComponentKinds.Get(componentType); ct != nil {
 			return ct.GetWeight()
 		}
 	}
@@ -187,22 +187,21 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 	// For site builds: check if module has a dockerfile package with docker_build config
 	// (This is rare - book modules typically use shared containers like mkdocs-render-oci)
 	dockerfilePkg := module.Components["dockerfile"]
-	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil && len(dockerfilePkg.DockerBuild) > 0 {
-		if tags, ok := dockerfilePkg.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
-			if tag, ok := tags[0].(string); ok {
-				cfg.ImageName = tag
-			}
-		} else if container, ok := dockerfilePkg.DockerBuild["container"].(string); ok {
-			cfg.ImageName = container + ":local"
+	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil {
+		dbCfg := dockerfilePkg.DockerBuild
+		if len(dbCfg.Tags) > 0 {
+			cfg.ImageName = dbCfg.Tags[0]
+		} else if dbCfg.Container != "" {
+			cfg.ImageName = dbCfg.Container + ":local"
 		}
 
-		if context, ok := dockerfilePkg.DockerBuild["context"].(string); ok {
-			cfg.ContainerDir = filepath.Base(context)
-			cfg.ContextPath = filepath.Join(workspaceRoot, context)
+		if dbCfg.Context != "" {
+			cfg.ContainerDir = filepath.Base(dbCfg.Context)
+			cfg.ContextPath = filepath.Join(workspaceRoot, dbCfg.Context)
 		}
 
-		if dockerfile, ok := dockerfilePkg.DockerBuild["dockerfile"].(string); ok {
-			cfg.DockerfilePath = filepath.Join(workspaceRoot, dockerfile)
+		if dbCfg.Dockerfile != "" {
+			cfg.DockerfilePath = filepath.Join(workspaceRoot, dbCfg.Dockerfile)
 		}
 	}
 

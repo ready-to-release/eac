@@ -13,8 +13,8 @@ import (
 
 func TestNewDependencyScheduler(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp2"}, Weight: 2},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}, Weight: 2},
 	}
 
 	s, err := NewDependencyScheduler(work)
@@ -28,9 +28,9 @@ func TestDependencyScheduler_LPT_Ordering(t *testing.T) {
 	// LPT = Longest Processing Time First
 	// Items should pop in weight descending order
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "light"}, Weight: 1},
-		{ID: workunit.UnitID{Module: "mod1", Component: "heavy"}, Weight: 8},
-		{ID: workunit.UnitID{Module: "mod1", Component: "medium"}, Weight: 4},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "light", ComponentName: "light"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "heavy", ComponentName: "heavy"}, Weight: 8},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "medium", ComponentName: "medium"}, Weight: 4},
 	}
 
 	s, err := NewDependencyScheduler(work)
@@ -39,21 +39,21 @@ func TestDependencyScheduler_LPT_Ordering(t *testing.T) {
 	// Should get heaviest first
 	item1 := s.WaitForReady()
 	require.NotNil(t, item1)
-	assert.Equal(t, "heavy", item1.ID.Component)
+	assert.Equal(t, "heavy", item1.ID.ComponentName)
 	assert.Equal(t, 8, item1.Weight)
 	s.MarkComplete(item1.ID)
 
 	// Then medium
 	item2 := s.WaitForReady()
 	require.NotNil(t, item2)
-	assert.Equal(t, "medium", item2.ID.Component)
+	assert.Equal(t, "medium", item2.ID.ComponentName)
 	assert.Equal(t, 4, item2.Weight)
 	s.MarkComplete(item2.ID)
 
 	// Then light
 	item3 := s.WaitForReady()
 	require.NotNil(t, item3)
-	assert.Equal(t, "light", item3.ID.Component)
+	assert.Equal(t, "light", item3.ID.ComponentName)
 	assert.Equal(t, 1, item3.Weight)
 	s.MarkComplete(item3.ID)
 
@@ -64,11 +64,11 @@ func TestDependencyScheduler_LPT_Ordering(t *testing.T) {
 func TestDependencyScheduler_DependencyRespect(t *testing.T) {
 	// comp2 depends on comp1
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    8, // Higher weight but blocked
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -78,7 +78,7 @@ func TestDependencyScheduler_DependencyRespect(t *testing.T) {
 	// Even though comp2 has higher weight, comp1 should pop first because comp2 is blocked
 	item1 := s.WaitForReady()
 	require.NotNil(t, item1)
-	assert.Equal(t, "comp1", item1.ID.Component, "comp1 should pop first (comp2 is blocked)")
+	assert.Equal(t, "comp1", item1.ID.ComponentName, "comp1 should pop first (comp2 is blocked)")
 
 	// Mark comp1 complete
 	s.MarkComplete(item1.ID)
@@ -86,17 +86,17 @@ func TestDependencyScheduler_DependencyRespect(t *testing.T) {
 	// Now comp2 should be ready
 	item2 := s.WaitForReady()
 	require.NotNil(t, item2)
-	assert.Equal(t, "comp2", item2.ID.Component)
+	assert.Equal(t, "comp2", item2.ID.ComponentName)
 }
 
 func TestDependencyScheduler_FailurePropagation(t *testing.T) {
 	// comp2 depends on comp1
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -106,13 +106,13 @@ func TestDependencyScheduler_FailurePropagation(t *testing.T) {
 	// Pop and fail comp1
 	item1 := s.WaitForReady()
 	require.NotNil(t, item1)
-	assert.Equal(t, "comp1", item1.ID.Component)
+	assert.Equal(t, "comp1", item1.ID.ComponentName)
 	s.MarkFailed(item1.ID)
 
 	// comp2 should become ready (deps complete, even if failed)
 	item2 := s.WaitForReady()
 	require.NotNil(t, item2)
-	assert.Equal(t, "comp2", item2.ID.Component)
+	assert.Equal(t, "comp2", item2.ID.ComponentName)
 
 	// comp2 should report that it has a failed dependency
 	assert.True(t, s.HasFailedDependency(item2.ID))
@@ -124,11 +124,11 @@ func TestDependencyScheduler_InFlightTracking(t *testing.T) {
 	// - Item stays "in-flight" until MarkComplete/MarkFailed
 	// - Dependencies only unblock on MarkComplete
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -141,7 +141,7 @@ func TestDependencyScheduler_InFlightTracking(t *testing.T) {
 	// Pop comp1 - now it's in-flight
 	item1 := s.WaitForReady()
 	require.NotNil(t, item1)
-	assert.Equal(t, "comp1", item1.ID.Component)
+	assert.Equal(t, "comp1", item1.ID.ComponentName)
 
 	// Only 1 item in queue now (comp2 is still there, blocked)
 	assert.Equal(t, 1, s.Len())
@@ -156,23 +156,23 @@ func TestDependencyScheduler_InFlightTracking(t *testing.T) {
 	// comp2 should now be ready
 	item2 = s.Next()
 	require.NotNil(t, item2)
-	assert.Equal(t, "comp2", item2.ID.Component)
+	assert.Equal(t, "comp2", item2.ID.ComponentName)
 }
 
 func TestDependencyScheduler_CycleDetection(t *testing.T) {
 	// Create a cycle: A -> B -> C -> A
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "A"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "C"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "C", ComponentName: "C"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "B", ComponentName: "B"}},
 		},
 	}
 
@@ -189,7 +189,7 @@ func TestDependencyScheduler_ConcurrentAccess(t *testing.T) {
 	work := make([]workunit.UnitSpec, 100)
 	for i := 0; i < 100; i++ {
 		work[i] = workunit.UnitSpec{
-			ID:     workunit.UnitID{Module: "mod1", Component: fmt.Sprintf("comp%d", i)},
+			ID:     workunit.UnitID{Module: "mod1", ComponentType: fmt.Sprintf("comp%d", i), ComponentName: fmt.Sprintf("comp%d", i)},
 			Weight: i%10 + 1,
 			Index:  i,
 		}
@@ -236,16 +236,16 @@ func TestDependencyScheduler_ConcurrentAccess(t *testing.T) {
 
 func TestDependencyScheduler_Stats(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp3"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp3", ComponentName: "comp3"},
 			Weight:    3,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -263,11 +263,11 @@ func TestDependencyScheduler_Stats(t *testing.T) {
 
 func TestDependencyScheduler_Stats_AfterCompletion(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -307,7 +307,7 @@ func TestDependencyScheduler_EmptyWork(t *testing.T) {
 
 func TestDependencyScheduler_Close(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 	}
 
 	s, err := NewDependencyScheduler(work)
@@ -324,9 +324,9 @@ func TestDependencyScheduler_Close(t *testing.T) {
 func TestDependencyScheduler_PreservesIndex(t *testing.T) {
 	// Index field should be preserved for result ordering
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1, Index: 0},
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp2"}, Weight: 8, Index: 1},
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp3"}, Weight: 4, Index: 2},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}, Weight: 8, Index: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp3", ComponentName: "comp3"}, Weight: 4, Index: 2},
 	}
 
 	s, err := NewDependencyScheduler(work)
@@ -349,11 +349,11 @@ func TestDependencyScheduler_PreservesIndex(t *testing.T) {
 func TestDependencyScheduler_Next_NonBlocking(t *testing.T) {
 	// All items are blocked - Next should return nil immediately
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -363,7 +363,7 @@ func TestDependencyScheduler_Next_NonBlocking(t *testing.T) {
 	// Pop comp1 (the only ready item)
 	item1 := s.Next()
 	require.NotNil(t, item1)
-	assert.Equal(t, "comp1", item1.ID.Component)
+	assert.Equal(t, "comp1", item1.ID.ComponentName)
 
 	// Next should return nil immediately (comp2 is blocked, comp1 is in-flight)
 	item2 := s.Next()
@@ -378,23 +378,23 @@ func TestDependencyScheduler_ComplexDependencyGraph(t *testing.T) {
 	//    \ /
 	//     D
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"},
 			Weight:    3,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:     workunit.UnitID{Module: "mod1", Component: "D"},
+			ID:     workunit.UnitID{Module: "mod1", ComponentType: "D", ComponentName: "D"},
 			Weight: 4,
 			DependsOn: []workunit.UnitID{
-				{Module: "mod1", Component: "B"},
-				{Module: "mod1", Component: "C"},
+				{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+				{Module: "mod1", ComponentType: "C", ComponentName: "C"},
 			},
 		},
 	}
@@ -410,7 +410,7 @@ func TestDependencyScheduler_ComplexDependencyGraph(t *testing.T) {
 	// Pop A
 	itemA := s.WaitForReady()
 	require.NotNil(t, itemA)
-	assert.Equal(t, "A", itemA.ID.Component)
+	assert.Equal(t, "A", itemA.ID.ComponentName)
 	s.MarkComplete(itemA.ID)
 
 	// B and C should now be ready, D still blocked
@@ -421,18 +421,18 @@ func TestDependencyScheduler_ComplexDependencyGraph(t *testing.T) {
 	// Pop B and C (C has higher weight, should come first)
 	itemC := s.WaitForReady()
 	require.NotNil(t, itemC)
-	assert.Equal(t, "C", itemC.ID.Component)
+	assert.Equal(t, "C", itemC.ID.ComponentName)
 	s.MarkComplete(itemC.ID)
 
 	itemB := s.WaitForReady()
 	require.NotNil(t, itemB)
-	assert.Equal(t, "B", itemB.ID.Component)
+	assert.Equal(t, "B", itemB.ID.ComponentName)
 	s.MarkComplete(itemB.ID)
 
 	// D should now be ready
 	itemD := s.WaitForReady()
 	require.NotNil(t, itemD)
-	assert.Equal(t, "D", itemD.ID.Component)
+	assert.Equal(t, "D", itemD.ID.ComponentName)
 	s.MarkComplete(itemD.ID)
 
 	// Queue should be empty
@@ -443,8 +443,8 @@ func TestDependencyScheduler_ComplexDependencyGraph(t *testing.T) {
 
 func TestUnitHeap_LessFunction(t *testing.T) {
 	h := unitHeap{
-		{ID: workunit.UnitID{Component: "a"}, Weight: 5},
-		{ID: workunit.UnitID{Component: "b"}, Weight: 10},
+		{ID: workunit.UnitID{ComponentType: "a", ComponentName: "a"}, Weight: 5},
+		{ID: workunit.UnitID{ComponentType: "b", ComponentName: "b"}, Weight: 10},
 	}
 
 	// Less returns true if i should come before j
@@ -457,50 +457,50 @@ func TestUnitHeap_LessFunction(t *testing.T) {
 
 func TestDependencyTracker_IsReady(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 
 	// comp1 has no deps - always ready
-	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp1"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}))
 
 	// comp2 depends on comp1 - not ready yet
-	assert.False(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.False(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 
 	// Mark comp1 complete
-	dt.MarkComplete(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	dt.MarkComplete(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"})
 
 	// Now comp2 is ready
-	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 }
 
 func TestDependencyTracker_HasFailedDependency(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 
 	// Initially no failures
-	assert.False(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.False(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 
 	// Mark comp1 as failed
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"})
 
 	// comp2 should report failed dependency
-	assert.True(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.True(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 
 	// comp2 should also be ready now (failed deps are marked complete)
-	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 }
 
 // --- CascadeFail tests ---
@@ -508,69 +508,69 @@ func TestDependencyTracker_HasFailedDependency(t *testing.T) {
 func TestDependencyTracker_CascadeFail_Chain(t *testing.T) {
 	// Chain: A -> B -> C (C depends on B, B depends on A)
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "B", ComponentName: "B"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 
 	// Mark A as failed
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 
 	// Cascade from A — should get B and C
-	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 	assert.Len(t, cascaded, 2)
 
 	names := make(map[string]bool)
 	for _, c := range cascaded {
-		names[c.Component] = true
+		names[c.ComponentName] = true
 	}
 	assert.True(t, names["B"])
 	assert.True(t, names["C"])
 
 	// Both should be marked failed and completed
-	assert.True(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", Component: "B"}))
-	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "C"})) // completed = ready
+	assert.True(t, dt.HasFailedDependency(workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"})) // completed = ready
 }
 
 func TestDependencyTracker_CascadeFail_Diamond(t *testing.T) {
 	// Diamond: A -> B, A -> C, B -> D, C -> D
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID: workunit.UnitID{Module: "mod1", Component: "D"},
+			ID: workunit.UnitID{Module: "mod1", ComponentType: "D", ComponentName: "D"},
 			DependsOn: []workunit.UnitID{
-				{Module: "mod1", Component: "B"},
-				{Module: "mod1", Component: "C"},
+				{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+				{Module: "mod1", ComponentType: "C", ComponentName: "C"},
 			},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 
-	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 	// B, C, and D should all be cascade-failed (D via B or C)
 	assert.Len(t, cascaded, 3, "diamond should cascade to all 3 dependents")
 
 	names := make(map[string]bool)
 	for _, c := range cascaded {
-		names[c.Component] = true
+		names[c.ComponentName] = true
 	}
 	assert.True(t, names["B"])
 	assert.True(t, names["C"])
@@ -581,36 +581,36 @@ func TestDependencyTracker_CascadeFail_Partial(t *testing.T) {
 	// Two independent chains: A->B and C->D
 	// Fail A — only B should cascade, not C or D
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
-		{ID: workunit.UnitID{Module: "mod2", Component: "C"}},
+		{ID: workunit.UnitID{Module: "mod2", ComponentType: "C", ComponentName: "C"}},
 		{
-			ID:        workunit.UnitID{Module: "mod2", Component: "D"},
-			DependsOn: []workunit.UnitID{{Module: "mod2", Component: "C"}},
+			ID:        workunit.UnitID{Module: "mod2", ComponentType: "D", ComponentName: "D"},
+			DependsOn: []workunit.UnitID{{Module: "mod2", ComponentType: "C", ComponentName: "C"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 
-	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 	assert.Len(t, cascaded, 1, "only B should cascade")
-	assert.Equal(t, "B", cascaded[0].Component)
+	assert.Equal(t, "B", cascaded[0].ComponentName)
 }
 
 func TestDependencyTracker_CascadeFail_NoDependents(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
-		{ID: workunit.UnitID{Module: "mod1", Component: "B"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"}},
 	}
 
 	dt := NewDependencyTracker(work)
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 
-	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 	assert.Empty(t, cascaded, "no dependents means no cascade")
 }
 
@@ -619,18 +619,18 @@ func TestDependencyTracker_CascadeFail_NoDependents(t *testing.T) {
 func TestDependencyScheduler_MarkFailedCascade_Chain(t *testing.T) {
 	// A -> B -> C, fail A — B and C removed from queue
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}, Weight: 1, Index: 0},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
 			Weight:    2,
 			Index:     1,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "C"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "C", ComponentName: "C"},
 			Weight:    3,
 			Index:     2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "B", ComponentName: "B"}},
 		},
 	}
 
@@ -640,7 +640,7 @@ func TestDependencyScheduler_MarkFailedCascade_Chain(t *testing.T) {
 	// Pop A
 	itemA := s.WaitForReady()
 	require.NotNil(t, itemA)
-	assert.Equal(t, "A", itemA.ID.Component)
+	assert.Equal(t, "A", itemA.ID.ComponentName)
 
 	// Cascade fail A
 	cascaded := s.MarkFailedCascade(itemA.ID)
@@ -649,7 +649,7 @@ func TestDependencyScheduler_MarkFailedCascade_Chain(t *testing.T) {
 	assert.Len(t, cascaded, 2)
 	names := make(map[string]bool)
 	for _, c := range cascaded {
-		names[c.ID.Component] = true
+		names[c.ID.ComponentName] = true
 	}
 	assert.True(t, names["B"])
 	assert.True(t, names["C"])
@@ -665,12 +665,12 @@ func TestDependencyScheduler_MarkFailedCascade_Chain(t *testing.T) {
 func TestDependencyScheduler_MarkFailedCascade_PreservesIndex(t *testing.T) {
 	// Verify cascaded specs preserve their original Index
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 5},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}, Weight: 1, Index: 5},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
 			Weight:    2,
 			Index:     10,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 	}
 
@@ -688,12 +688,12 @@ func TestDependencyScheduler_MarkFailedCascade_PreservesIndex(t *testing.T) {
 func TestDependencyScheduler_MarkFailedCascade_InFlightNotCascaded(t *testing.T) {
 	// A -> B, both popped. Fail A — B is in-flight (already popped), not in queue.
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}, Weight: 1, Index: 0},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
 			Weight:    2,
 			Index:     1,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 	}
 
@@ -709,7 +709,7 @@ func TestDependencyScheduler_MarkFailedCascade_InFlightNotCascaded(t *testing.T)
 	// Pop B (now in-flight)
 	itemB := s.WaitForReady()
 	require.NotNil(t, itemB)
-	assert.Equal(t, "B", itemB.ID.Component)
+	assert.Equal(t, "B", itemB.ID.ComponentName)
 
 	// Now fail A via cascade — B is already popped, so cascade should return empty
 	cascaded := s.MarkFailedCascade(itemA.ID)
@@ -721,8 +721,8 @@ func TestDependencyScheduler_MarkFailedCascade_InFlightNotCascaded(t *testing.T)
 
 func TestDependencyScheduler_MarkFailedCascade_NoDependents(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}, Weight: 1, Index: 0},
-		{ID: workunit.UnitID{Module: "mod1", Component: "B"}, Weight: 2, Index: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}, Weight: 1, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"}, Weight: 2, Index: 1},
 	}
 
 	s, err := NewDependencyScheduler(work)
@@ -731,7 +731,7 @@ func TestDependencyScheduler_MarkFailedCascade_NoDependents(t *testing.T) {
 	// LPT: B (weight 2) pops first
 	itemB := s.WaitForReady()
 	require.NotNil(t, itemB)
-	assert.Equal(t, "B", itemB.ID.Component)
+	assert.Equal(t, "B", itemB.ID.ComponentName)
 
 	// Fail B — A is independent, should not cascade
 	cascaded := s.MarkFailedCascade(itemB.ID)
@@ -740,45 +740,45 @@ func TestDependencyScheduler_MarkFailedCascade_NoDependents(t *testing.T) {
 	// A should still be available
 	itemA := s.WaitForReady()
 	require.NotNil(t, itemA)
-	assert.Equal(t, "A", itemA.ID.Component)
+	assert.Equal(t, "A", itemA.ID.ComponentName)
 }
 
 func TestDependencyTracker_GetDependsOn(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 
-	deps := dt.GetDependsOn(workunit.UnitID{Module: "mod1", Component: "comp2"})
+	deps := dt.GetDependsOn(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"})
 	require.Len(t, deps, 1)
-	assert.Equal(t, "comp1", deps[0].Component)
+	assert.Equal(t, "comp1", deps[0].ComponentName)
 }
 
 func TestDependencyTracker_GetBlocks(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp3"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp3", ComponentName: "comp3"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 
-	blocks := dt.GetBlocks(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	blocks := dt.GetBlocks(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"})
 	require.Len(t, blocks, 2)
 
 	// Check that both comp2 and comp3 depend on comp1
-	components := []string{blocks[0].Component, blocks[1].Component}
+	components := []string{blocks[0].ComponentName, blocks[1].ComponentName}
 	assert.Contains(t, components, "comp2")
 	assert.Contains(t, components, "comp3")
 }
@@ -788,11 +788,11 @@ func TestDependencyTracker_GetBlocks(t *testing.T) {
 func TestNewDependencyScheduler_WithSkipValidation(t *testing.T) {
 	// Normal case: acyclic graph with SkipValidation
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}, Weight: 1},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}, Weight: 1},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
 			Weight:    2,
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -806,12 +806,12 @@ func TestNewDependencyScheduler_WithSkipValidation_CyclesNotDetected(t *testing.
 	// WithSkipValidation skips cycle detection - cyclic graph succeeds construction
 	work := []workunit.UnitSpec{
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "A"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "B"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "B", ComponentName: "B"}},
 		},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 	}
 
@@ -829,10 +829,10 @@ func TestNewDependencyScheduler_WithSkipValidation_CyclesNotDetected(t *testing.
 
 func TestDependencyTracker_LazyBlocks_NotBuiltUntilNeeded(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -842,16 +842,16 @@ func TestDependencyTracker_LazyBlocks_NotBuiltUntilNeeded(t *testing.T) {
 	assert.Nil(t, dt.blocks, "reverse map should be lazy - not built at construction time")
 
 	// Forward map should work immediately
-	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp1"}))
-	assert.False(t, dt.IsReady(workunit.UnitID{Module: "mod1", Component: "comp2"}))
+	assert.True(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}))
+	assert.False(t, dt.IsReady(workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"}))
 }
 
 func TestDependencyTracker_LazyBlocks_BuiltOnGetBlocks(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "comp2"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "comp1"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "comp2", ComponentName: "comp2"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 		},
 	}
 
@@ -859,42 +859,42 @@ func TestDependencyTracker_LazyBlocks_BuiltOnGetBlocks(t *testing.T) {
 	assert.Nil(t, dt.blocks)
 
 	// GetBlocks triggers lazy construction
-	blocks := dt.GetBlocks(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	blocks := dt.GetBlocks(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"})
 	assert.NotNil(t, dt.blocks, "reverse map should be built after GetBlocks")
 	require.Len(t, blocks, 1)
-	assert.Equal(t, "comp2", blocks[0].Component)
+	assert.Equal(t, "comp2", blocks[0].ComponentName)
 }
 
 func TestDependencyTracker_LazyBlocks_BuiltOnCascadeFail(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "A"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		{
-			ID:        workunit.UnitID{Module: "mod1", Component: "B"},
-			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "A"}},
+			ID:        workunit.UnitID{Module: "mod1", ComponentType: "B", ComponentName: "B"},
+			DependsOn: []workunit.UnitID{{Module: "mod1", ComponentType: "A", ComponentName: "A"}},
 		},
 	}
 
 	dt := NewDependencyTracker(work)
 	assert.Nil(t, dt.blocks)
 
-	dt.MarkFailed(workunit.UnitID{Module: "mod1", Component: "A"})
+	dt.MarkFailed(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 
 	// CascadeFail triggers lazy construction
-	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", Component: "A"})
+	cascaded := dt.CascadeFail(workunit.UnitID{Module: "mod1", ComponentType: "A", ComponentName: "A"})
 	assert.NotNil(t, dt.blocks, "reverse map should be built after CascadeFail")
 	require.Len(t, cascaded, 1)
-	assert.Equal(t, "B", cascaded[0].Component)
+	assert.Equal(t, "B", cascaded[0].ComponentName)
 }
 
 func TestDependencyTracker_LazyBlocks_WorkReleasedAfterBuild(t *testing.T) {
 	work := []workunit.UnitSpec{
-		{ID: workunit.UnitID{Module: "mod1", Component: "comp1"}},
+		{ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"}},
 	}
 
 	dt := NewDependencyTracker(work)
 	assert.NotNil(t, dt.work, "work should be retained before blocks built")
 
 	// Trigger build
-	dt.GetBlocks(workunit.UnitID{Module: "mod1", Component: "comp1"})
+	dt.GetBlocks(workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"})
 	assert.Nil(t, dt.work, "work should be released after blocks built")
 }

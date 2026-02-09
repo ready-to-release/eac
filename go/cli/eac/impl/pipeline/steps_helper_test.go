@@ -1,4 +1,4 @@
-// Package pipeline contains godog step implementations for eac-cli.
+// Package pipeline contains godog step implementations for eac.
 //
 // This file contains helper utilities for pipeline testing to reduce boilerplate.
 package pipeline
@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/github"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/github"
 )
 
 // PipelineTestHelper provides utilities for pipeline testing.

@@ -23,10 +23,9 @@ const EACConfigRelPath = paths.EACConfigRelPath
 
 // Config file names.
 const (
-	EnvironmentsFileName   = "environments.yml"
-	TestingTagsFileName    = "testing-tags.yml"
-	TestSuitesFileName     = "test-suites.yml"
-	ComponentTypesFileName = "component-types.yml"
+	EnvironmentsFileName = "environments.yml"
+	TestingTagsFileName  = "testing-tags.yml"
+	TestSuitesFileName   = "test-suites.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -38,7 +37,7 @@ const (
 // The loader uses fail-fast for core configs and empty defaults for optional configs:
 //
 //   - Repository:     GUARANTEED non-nil (fails if cannot load defaults)
-//   - ComponentTypes: GUARANTEED non-nil (loads defaults if file missing)
+//   - ComponentKinds: GUARANTEED non-nil (loads defaults if file missing)
 //   - Security:       GUARANTEED non-nil (loads from security contract)
 //   - Environments:   GUARANTEED non-nil (empty if file missing)
 //   - TestingTags:    GUARANTEED non-nil (empty if file missing)
@@ -75,7 +74,7 @@ type EACConfig struct {
 	TestSuites     *TestSuitesConfig
 	Books          *BooksConfig
 	Commands       *CommandsConfig
-	ComponentTypes *ComponentTypesConfig
+	ComponentKinds *ComponentKindsConfig
 	LintProviders  *LintProvidersConfig
 
 	// Blueprints: component blueprints, module templates, artifact matrices
@@ -173,7 +172,8 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 }
 
 // LoadAll loads all configuration files.
-// Core configs (Repository, ComponentTypes) must load successfully - fails immediately on error.
+// Core config (Repository) must load successfully - fails immediately on error.
+// Component kinds are loaded from blueprints.yml component-kinds.
 // Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
 func (c *EACConfig) LoadAll(opts LoadOptions) error {
 	validateSchemas := opts.ValidateSchemas
@@ -185,16 +185,23 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		return fmt.Errorf("core config failed - repository: %w", err)
 	}
 
-	// Load component types for component-specific defaults
-	if err := c.LoadComponentTypes(validateSchemas); err != nil {
-		return fmt.Errorf("core config failed - component-types: %w", err)
+	// Load component kinds (from blueprints component-kinds)
+	if err := c.LoadComponentKinds(validateSchemas); err != nil {
+		return fmt.Errorf("core config failed - component-kinds: %w", err)
 	}
 
-	// Apply component-specific defaults after both modules and component types are loaded
+	// Apply component-specific defaults after both modules and component kinds are loaded
 	// Skip if Repository is nil (can happen in test environments without contract files)
 	if c.Repository != nil {
-		c.Repository.ApplyComponentDefaults(c.ComponentTypes, c.RepoRoot)
-		c.Repository.computeDisplayOrder(c.ComponentTypes)
+		c.Repository.ApplyComponentDefaults(c.ComponentKinds, c.RepoRoot)
+
+		// Expand component groups AFTER component defaults are applied
+		// (component-kinds may set component_group and depends_on)
+		if err := c.Repository.expandAllComponentGroups(); err != nil {
+			return fmt.Errorf("expanding component groups: %w", err)
+		}
+
+		c.Repository.computeDisplayOrder(c.ComponentKinds)
 	}
 
 	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
@@ -237,7 +244,7 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		errs = append(errs, fmt.Errorf("security (security): %w", err))
 	}
 
-	// Note: ComponentTypes is loaded in core configs section above
+	// Note: ComponentKinds is loaded in core configs section above
 
 	if len(errs) > 0 {
 		return &MultiError{Errors: errs}
@@ -300,6 +307,13 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 			}
 		}
 		c.Repository = mergedDefaults
+
+		// Load blueprints even without repository.yml so that component kinds
+		// from the embedded defaults (and any user .eac/blueprints.yml) are available.
+		if err := c.LoadBlueprints(validateSchema); err != nil {
+			return fmt.Errorf("loading blueprints: %w", err)
+		}
+
 		return nil
 	}
 
@@ -332,12 +346,22 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 		return fmt.Errorf("expanding module templates: %w", err)
 	}
 
-	// Step 10: Expand module groups in depends_on
+	// Step 10: Apply module group defaults then expand module groups in depends_on
 	// Must happen after template expansion (templates can add depends_on with group names)
 	// Also validates and strips the "root" sentinel for baseline tooling modules
+	c.Repository.applyModuleGroupDefaults()
 	if err := c.Repository.expandModuleGroups(); err != nil {
 		return fmt.Errorf("expanding module groups: %w", err)
 	}
+
+	// Step 11: Derive module-level deps from component_deps
+	// Must happen after expandModuleGroups so we can check overlap with explicit depends_on
+	if err := c.Repository.deriveModuleDepsFromComponentDeps(); err != nil {
+		return fmt.Errorf("deriving module deps from component_deps: %w", err)
+	}
+
+	// Note: component group expansion moved to LoadAll, after ApplyComponentDefaults,
+	// because component-kinds may set component_group and depends_on defaults.
 
 	return nil
 }
@@ -629,17 +653,17 @@ func (c *EACConfig) LoadBlueprints(validateSchema bool) error {
 
 	c.Blueprints = cfg
 
-	// If component-kinds are defined in blueprints, use them as ComponentTypes.
+	// If component-kinds are defined in blueprints, load them into ComponentKinds.
 	// This enables the unified config: component kinds live in blueprints.yml
 	// alongside templates and artifact matrices.
 	if len(cfg.ComponentKinds) > 0 {
-		if c.ComponentTypes == nil {
-			c.ComponentTypes = &ComponentTypesConfig{
-				ComponentTypes: make(map[string]*ComponentType),
+		if c.ComponentKinds == nil {
+			c.ComponentKinds = &ComponentKindsConfig{
+				Kinds: make(map[string]*ComponentType),
 			}
 		}
 		for name, kind := range cfg.ComponentKinds {
-			c.ComponentTypes.ComponentTypes[name] = kind
+			c.ComponentKinds.Kinds[name] = kind
 		}
 	}
 

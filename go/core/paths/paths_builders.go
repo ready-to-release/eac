@@ -51,13 +51,6 @@ func StagingAssetsPath(stagingDir string) string {
 	return filepath.Join(stagingDir, "assets")
 }
 
-// DocsCachePath returns the path to the docs cache directory (git-tracked)
-// This is used for assets that should be committed to the repository
-// for CI optimization (e.g., pre-rendered mermaid diagrams).
-func DocsCachePath(repoRoot string) string {
-	return filepath.Join(repoRoot, DocsDir, AssetsDir, DocsCacheDir)
-}
-
 // DocsSourcePath returns the path to docs directory within a source root.
 func DocsSourcePath(sourceRoot string) string {
 	return filepath.Join(sourceRoot, DocsDir)

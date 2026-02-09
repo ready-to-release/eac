@@ -36,9 +36,9 @@ func TestDependencyGraphHandlerInterface(t *testing.T) {
 
 func TestGetPlantUMLDiagramProducesContent(t *testing.T) {
 	graph := &repository.ModuleDependencyGraph{
-		Modules: []string{"eac-cli", "eac-core", "eac-docker"},
+		Modules: []string{"eac", "eac-core", "eac-docker"},
 		Edges: []repository.ModuleDependency{
-			{From: "eac-cli", To: "eac-core"},
+			{From: "eac", To: "eac-core"},
 			{From: "eac-docker", To: "eac-core"},
 		},
 	}
@@ -56,8 +56,8 @@ func TestGetPlantUMLDiagramProducesContent(t *testing.T) {
 	if !containsStr(puml, "@enduml") {
 		t.Error("Expected @enduml in output")
 	}
-	if !containsStr(puml, "eac-cli") {
-		t.Error("Expected module name 'eac-cli' in output")
+	if !containsStr(puml, "eac") {
+		t.Error("Expected module name 'eac' in output")
 	}
 	if !containsStr(puml, "eac-core") {
 		t.Error("Expected module name 'eac-core' in output")

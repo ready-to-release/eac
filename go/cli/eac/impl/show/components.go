@@ -8,7 +8,7 @@
 // Long:
 // Long: Filter Examples:
 // Long:   show components                         # All components
-// Long:   show components --module eac-cli   # Components in specific module
+// Long:   show components --module eac   # Components in specific module
 // Long:   show components --type go               # Only Go components
 // Long:   show components --buildable             # Only buildable components
 // Flag.module: type=string, default="", usage=Filter to specific module

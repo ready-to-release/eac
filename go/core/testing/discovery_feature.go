@@ -97,7 +97,7 @@ func parseFeatureFile(filePath string, dc *DiscoveryConfig) ([]TestReference, er
 			allTags := mergeFeatureAndScenarioTags(featureTags, scenarioTags)
 
 			// Infer internal module dependency from file path
-			// Example: specs/clie-cli/verify-configuration/... → @deps:clie-cli
+			// Example: specs/clie/verify-configuration/... → @deps:clie
 			inferredDepTag := inferInternalDependencyFromPath(filePath, dc)
 			if inferredDepTag != "" {
 				allTags = append(allTags, inferredDepTag)
@@ -268,7 +268,7 @@ func extractRiskControlTags(tags []string) []string {
 }
 
 // inferInternalDependencyFromPath infers @depm:<module> from feature file path.
-// Example: specs/clie-cli/verify-configuration/specification.feature → @depm:clie-cli.
+// Example: specs/clie/verify-configuration/specification.feature → @depm:clie.
 func inferInternalDependencyFromPath(filePath string, dc *DiscoveryConfig) string {
 	// Normalize path separators
 	normalized := filepath.ToSlash(filePath)
@@ -324,7 +324,7 @@ func extractSystemDependencies(tags []string) []string {
 }
 
 // extractModuleDependencies extracts module dependency names from @depm:<module> tags
-// Example: @depm:clie-cli → "clie-cli".
+// Example: @depm:clie → "clie".
 func extractModuleDependencies(tags []string) []string {
 	deps := []string{}
 	for _, tag := range tags {

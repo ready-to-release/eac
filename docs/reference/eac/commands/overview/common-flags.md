@@ -75,6 +75,53 @@ eac create pr --debug
 
 ---
 
+### Skip Cache Flag
+
+**Available on**: `build`, `test`, `lint`, `scan`, `get ci-dispatch`
+
+```bash
+--skip-cache <spec>    Bypass specific cache types
+```
+
+The `--skip-cache` flag uses a 2D taxonomy (Level x Type) to target specific caches.
+
+**Spec format**: `level:type`, `level`, `type`, or `all`
+
+| Spec             | Effect                                              |
+|------------------|-----------------------------------------------------|
+| `local:state`    | Ignore UoW manifests (force rebuild)                |
+| `local:asset`    | Re-render all diagrams (Mermaid, Structurizr)       |
+| `local:layer`    | Docker build with `--no-cache`                      |
+| `local:registry` | Force `docker pull` (ignore local image cache)      |
+| `remote:ci`      | Force CI dispatch for all modules                   |
+| `remote:layer`   | Skip remote BuildKit cache                          |
+| `local`          | Skip all local caches                               |
+| `remote`         | Skip all remote caches                              |
+| `all`            | Skip all caches                                     |
+
+**Usage**:
+
+```bash
+# Force rebuild ignoring local state
+eac build --skip-cache=local:state
+
+# Re-render all diagrams
+eac build --skip-cache=local:asset
+
+# Force CI dispatch for all modules
+eac get ci-dispatch --skip-cache=remote:ci
+
+# Combine multiple specs
+eac build --skip-cache=local:state,local:asset
+
+# Skip everything
+eac build --skip-cache=all
+```
+
+See [Cache System](../../architecture/cache-system.md) for the full 2D taxonomy reference.
+
+---
+
 ## Common Flag Patterns
 
 ### Module Selection
@@ -313,7 +360,7 @@ eac release check-ci --branch release/v1.2.0
 
 ```bash
 # Run specific stage
-eac pipeline run --stage build clie-cli
+eac pipeline run --stage build clie
 
 # Wait with custom timeout
 eac pipeline wait --timeout 120 --interval 60

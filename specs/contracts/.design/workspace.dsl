@@ -72,7 +72,7 @@ workspace "Contracts" "Port interface definitions, embedded schemas, and configu
             # CLIE CLI contract
             clie_cli_contract = container "CLIE CLI Contract" "Embedded schemas and EBNF grammar for CLIE CLI configuration" "Go Package" {
                 embedded_fs = component "Embedded FS" "go:embed filesystem carrier for schemas" "Go"
-                cli_schema = component "CLI Schema" "clie-cli.schema.json for configuration validation" "JSON Schema"
+                cli_schema = component "CLI Schema" "clie.schema.json for configuration validation" "JSON Schema"
                 command_ebnf = component "Command EBNF" "EBNF grammar for CLI command parsing" "EBNF"
             }
 

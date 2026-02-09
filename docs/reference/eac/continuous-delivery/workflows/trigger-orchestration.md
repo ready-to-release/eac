@@ -10,7 +10,7 @@ This workflow serves as the main entry point for continuous integration and hand
 
 On push to main, after CI workflows complete, the workflow checks for pending releases from two sources:
 
-- **Semver modules**: Changelog versions without corresponding git tags (clie-cli, eac-ext)
+- **Semver modules**: Changelog versions without corresponding git tags (clie, eac-ext)
 - **Calver modules**: Modules that had CI dispatched and auto-release on every push (docs, books)
 
 Releases are triggered in dependency order, with each layer completing before the next begins.
@@ -157,7 +157,7 @@ RESULT=$(commands get changed-modules-ci --pr-base "⟪ github.event.pull_reques
 **Push to Main:**
 
 ```bash
-# Compare against last successful CI run
+# Compare against last successful CI run (uses CIRunQuerier via GitHub API)
 RESULT=$(commands get changed-modules-ci --as-json)
 ```
 
@@ -165,6 +165,13 @@ RESULT=$(commands get changed-modules-ci --as-json)
 
 - Triggered when no previous successful CI run exists
 - Builds all modules
+
+**CI Cache Filtering:**
+
+- After detecting changed modules, `get ci-dispatch` uses a `CICacheChecker` to
+  skip modules that already have a successful CI build at the current HEAD SHA
+- This avoids re-dispatching CI for modules whose source hasn't changed
+- Bypass with `--skip-cache=remote:ci` to force all dispatches
 
 **Dependency Invalidation:**
 
@@ -204,7 +211,7 @@ PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
   "layers": [
     ["eac-core", "eac-ai"],
     ["eac-commands", "eac-mcp-commands"],
-    ["clie-cli"]
+    ["clie"]
   ]
 }
 ```
@@ -213,7 +220,7 @@ PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
 
 - Layer 1: `eac-core`, `eac-ai` - No dependencies
 - Layer 2: `eac-commands`, `eac-mcp-commands` - Depend on Layer 1
-- Layer 3: `clie-cli` - Depends on Layer 2
+- Layer 3: `clie` - Depends on Layer 2
 
 #### Job: `execute-layers`
 
@@ -312,7 +319,28 @@ Compares current commit against last successful CI run:
 commands get changed-modules-ci --as-json
 ```
 
-The command queries GitHub Actions API to find the last successful run of `change-trigger.yaml` on the main branch.
+The command uses a `CIRunQuerier` (backed by the GitHub Actions API) to find the
+last successful run of `change-trigger.yaml` on the main branch.
+
+### CI Cache Integration
+
+Module CI dispatch uses the core cache system's **CI cache** (`remote:ci`) to
+determine which modules already have a valid CI build at the current HEAD SHA.
+
+The `get ci-dispatch` command creates a `CICacheChecker` that:
+
+1. Queries GitHub Actions for each module's last successful `ci-{module}.yaml` run
+2. Compares the run's HEAD SHA against the current commit SHA
+3. Skips dispatch for modules where the SHAs match (CI-cached)
+
+This is a first-class cache type in the 2D taxonomy. It can be bypassed with:
+
+```bash
+commands get ci-dispatch --skip-cache=remote:ci  # Force dispatch all modules
+```
+
+See [Cache System](../../architecture/cache-system.md#ci-cache-architecture) for
+the full CI cache architecture including the port/adapter pattern.
 
 ### Bootstrap Mode
 
@@ -332,10 +360,10 @@ The change detection includes transitive invalidation:
 **Example:**
 
 ```text
-eac-core (changed) → eac-commands (invalidated) → clie-cli (invalidated)
+eac-core (changed) → eac-commands (invalidated) → clie (invalidated)
 ```
 
-If `eac-core` changes, both `eac-commands` and `clie-cli` are rebuilt.
+If `eac-core` changes, both `eac-commands` and `clie` are rebuilt.
 
 ## Workflow Dispatch Parameters
 

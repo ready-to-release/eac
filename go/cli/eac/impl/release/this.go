@@ -26,10 +26,10 @@
 // Long:   - Changelog file ready to be committed and submitted in a pull request
 // Long:
 // Long: Examples:
-// Long:   release this clie-cli                      # Update single module changelog
-// Long:   release this clie-cli eac-ext              # Update multiple modules
-// Long:   release this clie-cli eac-ext --dry-run    # Preview without writing
-// Long:   release this clie-cli --json               # Output result as JSON
+// Long:   release this clie                      # Update single module changelog
+// Long:   release this clie eac-ext              # Update multiple modules
+// Long:   release this clie eac-ext --dry-run    # Preview without writing
+// Long:   release this clie --json               # Output result as JSON
 // Flag.dry-run: type=bool, usage=Preview changes without writing to changelog
 // Flag.json: type=bool, usage=Output result in JSON format
 // Flag.date: type=string, usage=Override release date (YYYY-MM-DD format)

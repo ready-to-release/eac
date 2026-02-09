@@ -4,37 +4,37 @@ import "testing"
 
 func TestDisplayNameResolver_Resolve(t *testing.T) {
 	tests := []struct {
-		name   string
-		units  []UnitID
-		query  UnitID
-		want   string
+		name  string
+		units []UnitID
+		query UnitID
+		want  string
 	}{
 		{
 			name: "unique component returns just component",
 			units: []UnitID{
-				{Module: "core", Component: "go"},
-				{Module: "eac-cli", Component: "impl"},
+				{Module: "core", ComponentType: "go", ComponentName: "go"},
+				{Module: "eac", ComponentType: "impl", ComponentName: "impl"},
 			},
-			query: UnitID{Module: "core", Component: "go"},
+			query: UnitID{Module: "core", ComponentType: "go", ComponentName: "go"},
 			want:  "go",
 		},
 		{
 			name: "duplicate component returns module:component",
 			units: []UnitID{
-				{Module: "core", Component: "go"},
-				{Module: "eac-cli", Component: "go"},
+				{Module: "core", ComponentType: "go", ComponentName: "go"},
+				{Module: "eac", ComponentType: "go", ComponentName: "go"},
 			},
-			query: UnitID{Module: "core", Component: "go"},
+			query: UnitID{Module: "core", ComponentType: "go", ComponentName: "go"},
 			want:  "core:go",
 		},
 		{
 			name: "three modules same component all disambiguated",
 			units: []UnitID{
-				{Module: "mod-a", Component: "lib"},
-				{Module: "mod-b", Component: "lib"},
-				{Module: "mod-c", Component: "lib"},
+				{Module: "mod-a", ComponentType: "lib", ComponentName: "lib"},
+				{Module: "mod-b", ComponentType: "lib", ComponentName: "lib"},
+				{Module: "mod-c", ComponentType: "lib", ComponentName: "lib"},
 			},
-			query: UnitID{Module: "mod-b", Component: "lib"},
+			query: UnitID{Module: "mod-b", ComponentType: "lib", ComponentName: "lib"},
 			want:  "mod-b:lib",
 		},
 	}
@@ -61,28 +61,28 @@ func TestDisplayNameResolver_ResolveTabLabel(t *testing.T) {
 		{
 			name: "short unique component fits",
 			units: []UnitID{
-				{Module: "core", Component: "go"},
+				{Module: "core", ComponentType: "go", ComponentName: "go"},
 			},
-			query:    UnitID{Module: "core", Component: "go"},
+			query:    UnitID{Module: "core", ComponentType: "go", ComponentName: "go"},
 			maxWidth: 10,
 			want:     "go",
 		},
 		{
 			name: "long disambiguated name truncated",
 			units: []UnitID{
-				{Module: "core", Component: "component"},
-				{Module: "eac-cli", Component: "component"},
+				{Module: "core", ComponentType: "component", ComponentName: "component"},
+				{Module: "eac", ComponentType: "component", ComponentName: "component"},
 			},
-			query:    UnitID{Module: "core", Component: "component"},
+			query:    UnitID{Module: "core", ComponentType: "component", ComponentName: "component"},
 			maxWidth: 10,
 			want:     "core:co...",
 		},
 		{
 			name: "very short maxWidth",
 			units: []UnitID{
-				{Module: "core", Component: "go"},
+				{Module: "core", ComponentType: "go", ComponentName: "go"},
 			},
-			query:    UnitID{Module: "core", Component: "go"},
+			query:    UnitID{Module: "core", ComponentType: "go", ComponentName: "go"},
 			maxWidth: 2,
 			want:     "go",
 		},
@@ -101,9 +101,9 @@ func TestDisplayNameResolver_ResolveTabLabel(t *testing.T) {
 
 func TestDisplayNameResolver_NeedsDisambiguation(t *testing.T) {
 	units := []UnitID{
-		{Module: "core", Component: "go"},
-		{Module: "eac-cli", Component: "go"},
-		{Module: "eac-specs", Component: "unique"},
+		{Module: "core", ComponentType: "go", ComponentName: "go"},
+		{Module: "eac", ComponentType: "go", ComponentName: "go"},
+		{Module: "eac-specs", ComponentType: "unique", ComponentName: "unique"},
 	}
 	resolver := NewDisplayNameResolver(units)
 
@@ -120,10 +120,10 @@ func TestDisplayNameResolver_NeedsDisambiguation(t *testing.T) {
 
 func TestDisplayNameResolver_Count(t *testing.T) {
 	units := []UnitID{
-		{Module: "a", Component: "go"},
-		{Module: "b", Component: "go"},
-		{Module: "c", Component: "go"},
-		{Module: "d", Component: "unique"},
+		{Module: "a", ComponentType: "go", ComponentName: "go"},
+		{Module: "b", ComponentType: "go", ComponentName: "go"},
+		{Module: "c", ComponentType: "go", ComponentName: "go"},
+		{Module: "d", ComponentType: "unique", ComponentName: "unique"},
 	}
 	resolver := NewDisplayNameResolver(units)
 
@@ -152,29 +152,29 @@ func TestDisplayNameResolver_Resolve_WithSpec(t *testing.T) {
 		{
 			name: "unique spec returns just spec name",
 			units: []UnitID{
-				{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
-				{Action: ActionBuild, Module: "core", Component: "go"},
+				{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go"},
 			},
-			query: UnitID{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+			query: UnitID{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
 			want:  "build-module",
 		},
 		{
 			name: "duplicate spec returns module:specname",
 			units: []UnitID{
-				{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
-				{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Action: ActionTest, Module: "core", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
 			},
-			query: UnitID{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
-			want:  "eac-cli:build-module",
+			query: UnitID{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
+			want:  "eac:build-module",
 		},
 		{
 			name: "mixed spec and non-spec units",
 			units: []UnitID{
-				{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
-				{Action: ActionBuild, Module: "core", Component: "go"},
-				{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
+				{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
+				{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go"},
+				{Action: ActionTest, Module: "core", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
 			},
-			query: UnitID{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
+			query: UnitID{Action: ActionTest, Module: "core", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "cache-invalidation"},
 			want:  "cache-invalidation",
 		},
 	}
@@ -192,10 +192,10 @@ func TestDisplayNameResolver_Resolve_WithSpec(t *testing.T) {
 
 func TestDisplayNameResolver_NeedsDisambiguation_WithSpec(t *testing.T) {
 	units := []UnitID{
-		{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Spec: "build-module"},
-		{Action: ActionTest, Module: "core", Component: "gherkin", Tool: "godog", Spec: "build-module"}, // Duplicate spec name
-		{Action: ActionBuild, Module: "core", Component: "go"},
-		{Action: ActionTest, Module: "eac-specs", Component: "gherkin", Tool: "godog", Spec: "unique-spec"},
+		{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"},
+		{Action: ActionTest, Module: "core", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "build-module"}, // Duplicate spec name
+		{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go"},
+		{Action: ActionTest, Module: "eac-specs", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Spec: "unique-spec"},
 	}
 	resolver := NewDisplayNameResolver(units)
 
@@ -209,4 +209,3 @@ func TestDisplayNameResolver_NeedsDisambiguation_WithSpec(t *testing.T) {
 		t.Error("go should not need disambiguation (only 1 unit)")
 	}
 }
-

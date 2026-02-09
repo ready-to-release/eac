@@ -101,12 +101,12 @@ return orchestrator.GetExitCode(results)
 ### Example Output
 
 ```text
-Building 3 modules in parallel: [eac-core clie-cli eac-commands]
+Building 3 modules in parallel: [eac-core clie eac-commands]
 
-Status: 2s elapsed, 0/3 completed. 3 running (clie-cli, eac-commands, eac-core)
+Status: 2s elapsed, 0/3 completed. 3 running (clie, eac-commands, eac-core)
 [building] eac-core (See out/build/eac-core/build.log for details) ........ Done
-Status: 4s elapsed, 1/3 completed. 2 running (clie-cli, eac-commands)
-[building] clie-cli (See out/build/clie-cli/build.log for details) ........ Done
+Status: 4s elapsed, 1/3 completed. 2 running (clie, eac-commands)
+[building] clie (See out/build/clie/build.log for details) ........ Done
 [building] eac-commands (See out/build/eac-commands/build.log for details) ........ Done
 
 ===========================================

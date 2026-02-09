@@ -43,7 +43,7 @@ cached file access with GitHub API fallback in CI.
 - `core/domain/modules` -- `ModuleContract`, `Registry` for module loading and matching
 - `core/environments` -- CI detection and container root environment variables
 - `core/git` -- `GitRepository`, `Repository`, `RepositoryManager` for git operations
-- `core/github` -- `Global` API for GitHub Trees API in CI
+- `core/github` -- `API` interface for GitHub Trees API in CI (injected via `FileCache.githubAPI`)
 - `core/paths` -- `EACConfigPath` for repository config directory
 - `core/workspace` -- `DetectWithOptions` for workspace root detection
 
@@ -60,7 +60,7 @@ the declared module contracts.
 
 ### Tech Debt
 - `file_cache.go`: 6 filter methods (`FilesByExtension`, `FilesBySuffix`, `FilesInDir`, etc.) with near-identical iteration patterns -- could be generalized with a predicate-based `Filter(func(string) bool)` method
-- `file_cache.go:109`: CI path depends on `GITHUB_SHA` env var and `github.Global()` being set -- implicit coupling to global state
+- ~~`file_cache.go:109`: CI path depends on `GITHUB_SHA` env var and `github.Global()` being set -- implicit coupling to global state~~ (resolved: `githubAPI` field injected directly on `FileCache`; no global dependency)
 
 ### Pain Points
 - `repository_test.go:16`: mutable package-level `var testRepos` map shared across tests -- risk of test pollution in parallel runs

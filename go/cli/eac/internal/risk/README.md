@@ -38,7 +38,7 @@ Risk scoring subsystem that collects security and test evidence, manages OSCAL c
 
 ## Role in System
 
-The risk sub-packages provide the domain logic behind the `validate risk-profile` and `validate risk-catalog` commands in `eac-cli`. Evidence collection discovers scan outputs and test manifests, the OSCAL layer manages compliance documents against NIST 800-53 catalogs, and scoring computes quantitative risk ratings. The AI scorer optionally enriches likelihood estimates using LLM analysis of vulnerability findings.
+The risk sub-packages provide the domain logic behind the `validate risk-profile` and `validate risk-catalog` commands in `eac`. Evidence collection discovers scan outputs and test manifests, the OSCAL layer manages compliance documents against NIST 800-53 catalogs, and scoring computes quantitative risk ratings. The AI scorer optionally enriches likelihood estimates using LLM analysis of vulnerability findings.
 
 ## Code Health
 

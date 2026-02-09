@@ -26,14 +26,14 @@ directories.
 
 ## Dependencies
 
-- `clibase/fileutil` -- `RemoveAllWithRetry` for Windows file lock handling
+- `core/fileutil` -- `RemoveAllWithRetry` for Windows file lock handling
 - `core/paths` -- npm cache directory path resolution
 
 ## Role in System
 
-The `npm-adapter` module solves Windows EPERM errors and parallel test
+The `npm-eac` module solves Windows EPERM errors and parallel test
 interference by providing isolated npm environments. Both the
-`cucumber-adapter` and `mocha-adapter` depend on it to prepare safe work
+`cucumber-eac` and `mocha-eac` depend on it to prepare safe work
 directories before running TypeScript tests, ensuring that concurrent
 npm installs and test runs do not conflict.
 

@@ -23,69 +23,69 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 			},
 			// category comes before testset alphabetically
-			expected: "scan:core:go:trivy:sbom:unit",
+			expected: "scan:core:go:go:trivy:sbom:unit",
 		},
 		{
 			name: "scan context with category extra field",
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy-sbom",
 				Extra:     map[string]string{"category": "sbom"},
 			},
-			expected: "scan:core:go:trivy-sbom:sbom",
+			expected: "scan:core:go:go:trivy-sbom:sbom",
 		},
 		{
 			name: "empty values in extra are skipped",
 			unitID: UnitID{
 				Action:    core.ActionTest,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "gotest",
 				Extra:     map[string]string{"category": "", "testset": "unit"},
 			},
 			// empty category should be skipped, only testset appended
-			expected: "test:core:go:gotest:unit",
+			expected: "test:core:go:go:gotest:unit",
 		},
 		{
 			name: "three extra fields sorted alphabetically",
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
 			},
 			// category < testset < zone alphabetically
-			expected: "scan:core:go:trivy:sbom:unit:prod",
+			expected: "scan:core:go:go:trivy:sbom:unit:prod",
 		},
 		{
 			name: "single non-testset extra field",
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "vuln"},
 			},
-			expected: "scan:core:go:trivy:vuln",
+			expected: "scan:core:go:go:trivy:vuln",
 		},
 		{
 			name: "all empty extra values produce base format",
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "", "testset": ""},
 			},
-			expected: "scan:core:go:trivy",
+			expected: "scan:core:go:go:trivy",
 		},
 	}
 
@@ -108,7 +108,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 			},
@@ -120,7 +120,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy-sbom",
 				Extra:     map[string]string{"category": "sbom"},
 			},
@@ -131,7 +131,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionTest,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "gotest",
 				Extra:     map[string]string{"category": "", "testset": "unit"},
 			},
@@ -143,7 +143,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
 			},
@@ -155,7 +155,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 			unitID: UnitID{
 				Action:    core.ActionScan,
 				Module:    "core",
-				Component: "go",
+				ComponentType: "go", ComponentName: "go",
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "vuln"},
 			},
@@ -178,7 +178,7 @@ func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
 	sbomScan := UnitID{
 		Action:    core.ActionScan,
 		Module:    "core",
-		Component: "go",
+		ComponentType: "go", ComponentName: "go",
 		Tool:      "trivy",
 		Extra:     map[string]string{"category": "sbom"},
 	}
@@ -186,7 +186,7 @@ func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
 	vulnScan := UnitID{
 		Action:    core.ActionScan,
 		Module:    "core",
-		Component: "go",
+		ComponentType: "go", ComponentName: "go",
 		Tool:      "trivy",
 		Extra:     map[string]string{"category": "vuln"},
 	}
@@ -202,11 +202,11 @@ func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
 	})
 
 	t.Run("sbom scan has expected longname", func(t *testing.T) {
-		assert.Equal(t, "scan:core:go:trivy:sbom", sbomScan.Longname())
+		assert.Equal(t, "scan:core:go:go:trivy:sbom", sbomScan.Longname())
 	})
 
 	t.Run("vuln scan has expected longname", func(t *testing.T) {
-		assert.Equal(t, "scan:core:go:trivy:vuln", vulnScan.Longname())
+		assert.Equal(t, "scan:core:go:go:trivy:vuln", vulnScan.Longname())
 	})
 
 	t.Run("sbom scan has expected outdir", func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestUnitID_DerivedFiles_WithAllExtraFields(t *testing.T) {
 	unitID := UnitID{
 		Action:    core.ActionScan,
 		Module:    "core",
-		Component: "go",
+		ComponentType: "go", ComponentName: "go",
 		Tool:      "trivy",
 		Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 	}

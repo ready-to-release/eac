@@ -17,11 +17,11 @@ func TestExtractVersionLogic_TagRef(t *testing.T) {
 	}{
 		{
 			name:        "semver from tag ref",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
-			ref:         "refs/tags/clie-cli/1.2.3",
+			ref:         "refs/tags/clie/1.2.3",
 			wantVersion: "1.2.3",
-			wantTag:     "clie-cli/1.2.3",
+			wantTag:     "clie/1.2.3",
 			wantValid:   true,
 		},
 		{
@@ -35,26 +35,26 @@ func TestExtractVersionLogic_TagRef(t *testing.T) {
 		},
 		{
 			name:        "invalid semver with v prefix",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
-			ref:         "refs/tags/clie-cli/v1.2.3",
+			ref:         "refs/tags/clie/v1.2.3",
 			wantVersion: "v1.2.3",
-			wantTag:     "clie-cli/v1.2.3",
+			wantTag:     "clie/v1.2.3",
 			wantValid:   false,
 		},
 		{
 			name:        "explicit version semver",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
 			ref:         "",
 			version:     "2.0.0",
 			wantVersion: "2.0.0",
-			wantTag:     "clie-cli/2.0.0",
+			wantTag:     "clie/2.0.0",
 			wantValid:   true,
 		},
 		{
 			name:        "no version provided semver",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
 			ref:         "",
 			version:     "",
@@ -213,7 +213,7 @@ func TestGenerateCalver(t *testing.T) {
 func TestExtractVersionOutput_Struct(t *testing.T) {
 	output := ExtractVersionOutput{
 		Version: "1.2.3",
-		TagName: "clie-cli/1.2.3",
+		TagName: "clie/1.2.3",
 		IsValid: true,
 		Message: "",
 	}
@@ -221,8 +221,8 @@ func TestExtractVersionOutput_Struct(t *testing.T) {
 	if output.Version != "1.2.3" {
 		t.Errorf("Version = %q, want %q", output.Version, "1.2.3")
 	}
-	if output.TagName != "clie-cli/1.2.3" {
-		t.Errorf("TagName = %q, want %q", output.TagName, "clie-cli/1.2.3")
+	if output.TagName != "clie/1.2.3" {
+		t.Errorf("TagName = %q, want %q", output.TagName, "clie/1.2.3")
 	}
 	if !output.IsValid {
 		t.Error("IsValid = false, want true")
@@ -240,7 +240,7 @@ func TestExtractVersionLogic_ErrorMessages(t *testing.T) {
 	}{
 		{
 			name:        "no version provided semver",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
 			ref:         "",
 			version:     "",
@@ -248,7 +248,7 @@ func TestExtractVersionLogic_ErrorMessages(t *testing.T) {
 		},
 		{
 			name:        "invalid semver format",
-			module:      "clie-cli",
+			module:      "clie",
 			versionType: "semver",
 			ref:         "",
 			version:     "v1.0.0",

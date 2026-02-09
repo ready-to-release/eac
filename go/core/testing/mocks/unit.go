@@ -27,6 +27,8 @@ type MockUnitID struct {
 
 func (m *MockUnitID) GetAction() string            { return m.ContextVal }
 func (m *MockUnitID) GetModule() string           { return m.ModuleVal }
+func (m *MockUnitID) GetComponentType() string    { return m.ComponentVal }
+func (m *MockUnitID) GetComponentName() string    { return m.ComponentVal }
 func (m *MockUnitID) GetComponent() string        { return m.ComponentVal }
 func (m *MockUnitID) GetTool() string             { return m.ToolVal }
 func (m *MockUnitID) GetSpec() string             { return m.SpecVal }
@@ -132,8 +134,6 @@ func (m *MockUnitID) WithExtra(extra map[string]string) *MockUnitID {
 type MockUnitSpec struct {
 	IDVal            core.UnitIDPort
 	ComponentTypeVal string
-	WeightVal        int
-	ContainerVal     bool
 	CachedVal        bool
 	DependsOnVal     []core.UnitIDPort
 	HostWeightVal    int
@@ -142,8 +142,6 @@ type MockUnitSpec struct {
 
 func (m *MockUnitSpec) GetID() core.UnitIDPort         { return m.IDVal }
 func (m *MockUnitSpec) GetComponentType() string        { return m.ComponentTypeVal }
-func (m *MockUnitSpec) GetWeight() int                  { return m.WeightVal }
-func (m *MockUnitSpec) IsContainer() bool               { return m.ContainerVal }
 func (m *MockUnitSpec) IsCached() bool                  { return m.CachedVal }
 func (m *MockUnitSpec) GetDependsOn() []core.UnitIDPort { return m.DependsOnVal }
 func (m *MockUnitSpec) GetPoolAllocation() core.PoolAllocationPort {
@@ -172,9 +170,9 @@ func (m *MockPoolAllocation) TotalWeight() int {
 // NewMockUnitSpec creates a MockUnitSpec with a fluent builder pattern.
 func NewMockUnitSpec(module, component string) *MockUnitSpec {
 	return &MockUnitSpec{
-		IDVal: NewMockUnitID().WithModule(module).WithComponent(component),
+		IDVal:            NewMockUnitID().WithModule(module).WithComponent(component),
 		ComponentTypeVal: component,
-		WeightVal:        1,
+		HostWeightVal:    1,
 		DependsOnVal:     []core.UnitIDPort{},
 	}
 }
@@ -186,16 +184,6 @@ func (m *MockUnitSpec) WithID(id core.UnitIDPort) *MockUnitSpec {
 
 func (m *MockUnitSpec) WithComponentType(ct string) *MockUnitSpec {
 	m.ComponentTypeVal = ct
-	return m
-}
-
-func (m *MockUnitSpec) WithWeight(w int) *MockUnitSpec {
-	m.WeightVal = w
-	return m
-}
-
-func (m *MockUnitSpec) WithContainer(c bool) *MockUnitSpec {
-	m.ContainerVal = c
 	return m
 }
 

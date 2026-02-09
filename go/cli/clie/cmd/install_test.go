@@ -27,7 +27,7 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 	}
 
 	// Verify config file doesn't exist in preferred location
-	configPath := filepath.Join(tempDir, ".clie", "clie-cli.yml")
+	configPath := filepath.Join(tempDir, ".clie", "clie.yml")
 	if _, err := os.Stat(configPath); err == nil {
 		t.Fatal("Config file should not exist initially")
 	}
@@ -40,7 +40,7 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 
 	// Verify config file was created in .clie directory
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("Config file should have been created at .clie/clie-cli.yml")
+		t.Fatal("Config file should have been created at .clie/clie.yml")
 	}
 
 	// Read and verify config content
@@ -102,7 +102,7 @@ func TestInstallCommand_AddToExistingConfig(t *testing.T) {
 	if err := os.MkdirAll(clieDir, 0755); err != nil {
 		t.Fatalf("Failed to create .clie directory: %v", err)
 	}
-	configPath := filepath.Join(clieDir, "clie-cli.yml")
+	configPath := filepath.Join(clieDir, "clie.yml")
 	existingConfig := `version: "1.0"
 extensions:
   - name: "python"
@@ -182,7 +182,7 @@ func TestInstallCommand_PreventDuplicates(t *testing.T) {
 	if err := os.MkdirAll(clieDir, 0755); err != nil {
 		t.Fatalf("Failed to create .clie directory: %v", err)
 	}
-	configPath := filepath.Join(clieDir, "clie-cli.yml")
+	configPath := filepath.Join(clieDir, "clie.yml")
 	existingConfig := `version: "1.0"
 extensions:
   - name: "eac"
@@ -339,7 +339,7 @@ func TestInstallCommand_ConfigFilePermissions(t *testing.T) {
 	}
 
 	// Check file permissions - config is created in .clie directory
-	configPath := filepath.Join(tempDir, ".clie", "clie-cli.yml")
+	configPath := filepath.Join(tempDir, ".clie", "clie.yml")
 	stat, err := os.Stat(configPath)
 	if err != nil {
 		t.Fatalf("Failed to stat config file: %v", err)
@@ -371,7 +371,7 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 	}
 
 	// Verify no config exists initially in .clie directory
-	configPath := filepath.Join(tempDir, ".clie", "clie-cli.yml")
+	configPath := filepath.Join(tempDir, ".clie", "clie.yml")
 	if _, err := os.Stat(configPath); err == nil {
 		t.Fatal("Config file should not exist initially")
 	}
@@ -388,7 +388,7 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 
 	// Verify config file was created in .clie directory
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("Config file should have been created at .clie/clie-cli.yml")
+		t.Fatal("Config file should have been created at .clie/clie.yml")
 	}
 
 	// Read and verify the created config
@@ -480,7 +480,7 @@ func TestInstallCommand_UnauthenticatedPublicRegistry(t *testing.T) {
 	}
 
 	// If it succeeded, verify the config was created correctly
-	configPath := filepath.Join(tempDir, ".clie", "clie-cli.yml")
+	configPath := filepath.Join(tempDir, ".clie", "clie.yml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatal("Config file should have been created")
 	}

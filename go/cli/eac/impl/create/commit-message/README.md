@@ -48,7 +48,7 @@ Generates AI-powered conventional commit messages from staged git changes. Analy
 
 ## Role in System
 
-The `commit-message` package is the AI-driven commit workflow in `eac-cli`, bridging staged git changes with conventional commit format through structured AI generation. It ensures every commit message conforms to the project schema contract, includes module attribution, and can optionally auto-commit the result.
+The `commit-message` package is the AI-driven commit workflow in `eac`, bridging staged git changes with conventional commit format through structured AI generation. It ensures every commit message conforms to the project schema contract, includes module attribution, and can optionally auto-commit the result.
 
 ## Code Health
 

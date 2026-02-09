@@ -273,7 +273,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 		for i, w := range work {
 			results[i] = UnitResult{
 				Module:    w.ID.Module,
-				Component: w.ID.Component,
+				Component: w.ID.ComponentName,
 				Handler:   w.ID.Tool,
 				ExitCode:  1,
 				Errors:    []string{fmt.Sprintf("circular dependency: %v", err)},
@@ -371,7 +371,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 					}
 					result = UnitResult{
 						Module:    spec.ID.Module,
-						Component: spec.ID.Component,
+						Component: spec.ID.ComponentName,
 						Handler:   spec.ID.Tool,
 						ExitCode:  1,
 						Errors:    []string{errMsg},
@@ -405,7 +405,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 					for ci := range cascaded {
 						cascadeResult := UnitResult{
 							Module:    cascaded[ci].ID.Module,
-							Component: cascaded[ci].ID.Component,
+							Component: cascaded[ci].ID.ComponentName,
 							Handler:   cascaded[ci].ID.Tool,
 							ExitCode:  1,
 							Errors:    []string{fmt.Sprintf("Skipped: dependency failed (%s)", spec.ID.Module)},

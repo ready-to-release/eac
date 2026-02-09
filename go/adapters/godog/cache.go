@@ -378,6 +378,11 @@ func (a *moduleContractAdapter) GetDescription() string {
 	return a.module.GetDescription()
 }
 
+// GetModuleGroup implements core.ModuleContractPort.
+func (a *moduleContractAdapter) GetModuleGroup() string {
+	return a.module.GetModuleGroup()
+}
+
 // HasComponent implements core.ModuleContractPort.
 func (a *moduleContractAdapter) HasComponent(componentType string) bool {
 	return a.module.HasComponent(componentType)
@@ -396,6 +401,11 @@ func (a *moduleContractAdapter) GetComponentRoots() map[string]string {
 // GetComponentTypesDisplay implements core.ModuleContractPort.
 func (a *moduleContractAdapter) GetComponentTypesDisplay() string {
 	return a.module.GetComponentTypesDisplay()
+}
+
+// GetComponentGroup implements core.ModuleContractPort.
+func (a *moduleContractAdapter) GetComponentGroup(componentName string) string {
+	return a.module.GetComponentGroup(componentName)
 }
 
 // GetComponentAmp implements core.ModuleContractPort.

@@ -48,19 +48,19 @@ Implements the `test` command, which discovers, filters, and executes tests acro
 
 ## Role in System
 
-The test package is the second-largest command implementation in `eac-cli`, parallel to the build command in structure. It discovers tests across the repository, applies suite-based filtering from configuration, maps tests to modules, and dispatches them as component-level work units through the command framework. Sub-packages handle result format parsing (cucumber, CTRF, test-json) and report generation, while the testers sub-package delegates actual test execution to handlers registered in the tool system.
+The test package is the second-largest command implementation in `eac`, parallel to the build command in structure. It discovers tests across the repository, applies suite-based filtering from configuration, maps tests to modules, and dispatches them as component-level work units through the command framework. Sub-packages handle result format parsing (cucumber, CTRF, test-json) and report generation, while the testers sub-package delegates actual test execution to handlers registered in the tool system.
 
 ## Code Health
 
 ### Tech Debt
 - `framework.go`: `testAfterResolve` is ~231 lines (173-403) -- the largest single function in the CLI; it handles suite filtering, test discovery, module mapping, hash pre-computation, and incremental detection all inline
-- `framework.go` is 812 lines and `test.go` is 673 lines; together they carry the bulk of the test command logic
-- `test.go:372`: `newCommand` is a mutable package-level `var` function used to enable test stubbing; prefer an interface
+- ~~`framework.go` is 812 lines~~ (resolved: split into `framework.go`, `framework_hooks.go`, `framework_selection.go`); `test.go` is still 673 lines
+- ~~`test.go:372`: `newCommand` is a mutable package-level `var` function used to enable test stubbing; prefer an interface~~ (resolved: dead code removed)
 
 ### Pain Points
 - No test file for `framework.go`, `unit_worker.go`, `discovery.go`, `incremental.go`, `module_mapping.go`, or `summary.go`
-- Three separate logger globals (`log`, `discoveryLog`, `componentWorkLog`) across different files in the same package
+- ~~Three separate logger globals (`log`, `discoveryLog`, `componentWorkLog`) across different files in the same package~~ (resolved: consolidated into single `log` in test.go)
 
 ### Optimization Opportunities
 - Break `testAfterResolve` into focused sub-functions (discover, filter-suite, map-modules, detect-incremental) -- high impact on maintainability
-- Consolidate logger instances into a single package-level logger or use a context-carried logger -- low effort
+- ~~Consolidate logger instances into a single package-level logger or use a context-carried logger -- low effort~~ (resolved)

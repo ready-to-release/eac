@@ -15,7 +15,7 @@
     "contracts/core/0.1.0/schemas/repository.schema.json": [".eac/repository.yml", ".clie/**/repository.yml"],
     "contracts/core/0.1.0/schemas/component-types.schema.json": "contracts/**/schemas/defaults/component-types.yml",
     "contracts/core/0.1.0/schemas/books.schema.json": ".eac/books.yml",
-    "contracts/clie-cli/0.1.0/schemas/clie-cli.schema.json": [".clie/clie-cli.yml", "clie-cli.yml"]
+    "contracts/clie/0.1.0/schemas/clie.schema.json": [".clie/clie.yml", "clie.yml"]
   },
 
   // Markdown settings (built-in preview)

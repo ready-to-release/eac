@@ -1,6 +1,10 @@
 package domain
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/ready-to-release/eac/go/core/config"
+)
 
 // RepositoryContract represents repository-level configuration.
 type RepositoryContract struct {
@@ -64,77 +68,24 @@ type DefaultConventions struct {
 	Changelog   string `yaml:"changelog"`    // Changelog file name
 }
 
-// ModuleVersioning contains module versioning configuration.
-type ModuleVersioning struct {
-	Scheme      string `yaml:"scheme"`                 // SemVer | CalVer | Implicit
-	Current     string `yaml:"current,omitempty"`      // Current version (optional)
-	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
-	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
-}
+// NOTE: ModuleVersioning, ReleaseBundle, and component types (ModuleComponents, ComponentEntry, etc.)
+// are defined in config package as the single source of truth.
 
 // BaseContract represents the base structure for module domain.
 type BaseContract struct {
-	Moniker       string            `yaml:"moniker"`
-	Name          string            `yaml:"name"`
-	Description   string            `yaml:"description"`
-	ModuleGroup   string            `yaml:"module_group,omitempty"` // Group name for depends_on expansion
-	DependsOn     []string          `yaml:"depends_on"`
-	Versioning    *ModuleVersioning `yaml:"versioning,omitempty"`
-	EvidenceBooks []string          `yaml:"evidence_books,omitempty"` // Evidence book names
-	ReleaseBundle *ReleaseBundle    `yaml:"release_bundle,omitempty"`
-	Metadata      map[string]string `yaml:"metadata,omitempty"`
-	Components     ModuleComponents  `yaml:"components"`        // Component types mapped to their roots
-	ComponentOrder []string          `yaml:"-"`                 // YAML declaration order of component keys
-	Linting        *ModuleLinting    `yaml:"linting,omitempty"` // Linting configuration overrides
+	Moniker       string                  `yaml:"moniker"`
+	Name          string                  `yaml:"name"`
+	Description   string                  `yaml:"description"`
+	ModuleGroup   string                  `yaml:"module_group,omitempty"` // Group name for depends_on expansion
+	DependsOn     []string                `yaml:"depends_on"`
+	Versioning    *config.ModuleVersioning `yaml:"versioning,omitempty"`
+	EvidenceBooks []string                `yaml:"evidence_books,omitempty"` // Evidence book names
+	ReleaseBundle *config.ReleaseBundle   `yaml:"release_bundle,omitempty"`
+	Metadata      map[string]string       `yaml:"metadata,omitempty"`
+	Components     config.ModuleComponents `yaml:"components"`        // Component types mapped to their roots
+	ComponentOrder []string               `yaml:"-"`                 // YAML declaration order of component keys
+	Linting        *config.ModuleLinting  `yaml:"linting,omitempty"` // Linting configuration overrides
 }
-
-// ModuleLinting configures linting behavior for a module.
-type ModuleLinting struct {
-	// Enabled lists specific lint providers to use (empty = use all applicable from lint-providers.yml)
-	Enabled []string `yaml:"enabled,omitempty"`
-
-	// Disabled lists lint providers to skip, or "all" to disable linting entirely
-	Disabled []string `yaml:"disabled,omitempty"`
-}
-
-// ReleaseBundle configures how the release module creates GitHub releases.
-type ReleaseBundle struct {
-	TitleFormat string                  `yaml:"title_format" json:"title_format"` // Title template, e.g., "{clie} ({clie_version}) + {eac} ({eac_version})"
-	Headline    map[string]string       `yaml:"headline" json:"headline"`         // Map of label -> moniker for title modules
-	Categories  []ReleaseBundleCategory `yaml:"categories" json:"categories"`     // Grouped modules for release notes
-}
-
-// ReleaseBundleCategory groups modules in release notes.
-type ReleaseBundleCategory struct {
-	Name        string   `yaml:"name" json:"name"`               // Category name, e.g., "Core Tools"
-	Description string   `yaml:"description" json:"description"` // Category description
-	Modules     []string `yaml:"modules" json:"modules"`         // Module monikers in this category
-}
-
-// ModuleBuild contains per-module build configuration
-// This allows modules to define their own artifacts instead of relying on type-level defaults.
-type ModuleBuild struct {
-	Handler   string           `yaml:"handler,omitempty"`   // Explicit build handler override (e.g., "mkdocs", "docker")
-	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"` // Artifacts to produce
-	Options   *BuildOptions    `yaml:"options,omitempty"`   // Build behavior options
-}
-
-// ModuleArtifact defines an artifact to be produced by a module build.
-type ModuleArtifact struct {
-	ID          string `yaml:"id"`                    // Unique artifact identifier
-	Type        string `yaml:"type"`                  // executable, file, directory, test
-	Pattern     string `yaml:"pattern"`               // Output path pattern with variables: {moniker}, {ext}
-	Compression string `yaml:"compression,omitempty"` // none, strip, upx
-	DeriveFrom  string `yaml:"derive_from,omitempty"` // Source artifact to derive from (for compressed variants)
-}
-
-// BuildOptions contains optional build behavior flags.
-type BuildOptions struct {
-	// Reserved for future build options
-}
-
-// NOTE: Files, Workflows, Flags, RepoPatterns structs removed.
-// File ownership is now determined by components.
 
 // Getter methods for BaseContract
 
@@ -148,6 +99,10 @@ func (b *BaseContract) GetName() string {
 
 func (b *BaseContract) GetDescription() string {
 	return b.Description
+}
+
+func (b *BaseContract) GetModuleGroup() string {
+	return b.ModuleGroup
 }
 
 // GetComponentRoot returns the root for a specific component type.
@@ -166,24 +121,14 @@ func (b *BaseContract) HasBuildArtifacts() bool {
 }
 
 // GetBuildArtifacts returns all build artifacts from all components.
-func (b *BaseContract) GetBuildArtifacts() []ModuleArtifact {
-	var result []ModuleArtifact
+func (b *BaseContract) GetBuildArtifacts() []config.ModuleArtifact {
+	var result []config.ModuleArtifact
 	for _, comp := range b.Components {
 		if comp != nil && comp.Build != nil {
-			for _, a := range comp.Build.Artifacts {
-				result = append(result, ModuleArtifact(a))
-			}
+			result = append(result, comp.Build.Artifacts...)
 		}
 	}
 	return result
-}
-
-// GetComponentBuildArtifacts returns build artifacts for a specific component.
-func (b *BaseContract) GetComponentBuildArtifacts(compName string) []ComponentArtifact {
-	if comp, ok := b.Components[compName]; ok && comp != nil && comp.Build != nil {
-		return comp.Build.Artifacts
-	}
-	return nil
 }
 
 // HasExecutableArtifacts returns true if any component has executable artifacts.
@@ -225,22 +170,14 @@ func (b *BaseContract) GetBuildHandler() string {
 	return ""
 }
 
-// GetComponentBuildHandler returns the build handler for a specific component.
-func (b *BaseContract) GetComponentBuildHandler(compName string) string {
-	if comp, ok := b.Components[compName]; ok && comp != nil && comp.Build != nil {
-		return comp.Build.Handler
-	}
-	return ""
-}
-
 // GetArtifactsByType returns all artifacts of the specified type from all components.
-func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact {
-	var result []ModuleArtifact
+func (b *BaseContract) GetArtifactsByType(artifactType string) []config.ModuleArtifact {
+	var result []config.ModuleArtifact
 	for _, comp := range b.Components {
 		if comp != nil && comp.Build != nil {
 			for _, a := range comp.Build.Artifacts {
 				if a.Type == artifactType {
-					result = append(result, ModuleArtifact(a))
+					result = append(result, a)
 				}
 			}
 		}
@@ -323,6 +260,16 @@ func (b *BaseContract) GetMetadata() map[string]interface{} {
 		result[k] = v
 	}
 	return result
+}
+
+// GetAllComponentDeps returns all inter-module component_deps across all components.
+func (b *BaseContract) GetAllComponentDeps() []string {
+	return b.Components.GetAllComponentDeps()
+}
+
+// GetComponentGroup returns the component group for a named component.
+func (b *BaseContract) GetComponentGroup(compName string) string {
+	return b.Components.GetComponentGroup(compName)
 }
 
 // GetComponentAmp returns the weight amplifier for a component and operation.

@@ -7,6 +7,79 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// --- applyModuleGroupDefaults tests ---
+
+func TestApplyModuleGroupDefaults_SetsMoniker(t *testing.T) {
+	cfg := &RepositoryConfig{
+		Modules: []Module{
+			{Moniker: "core"},
+			{Moniker: "cli"},
+			{Moniker: "docs"},
+		},
+	}
+
+	cfg.applyModuleGroupDefaults()
+
+	for _, m := range cfg.Modules {
+		assert.Equal(t, m.Moniker, m.ModuleGroup, "module %q should default ModuleGroup to its Moniker", m.Moniker)
+	}
+}
+
+func TestApplyModuleGroupDefaults_PreservesExplicitGroup(t *testing.T) {
+	cfg := &RepositoryConfig{
+		Modules: []Module{
+			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "core"},
+		},
+	}
+
+	cfg.applyModuleGroupDefaults()
+
+	assert.Equal(t, "oci-tools", cfg.GetByMoniker("pdf-oci").ModuleGroup)
+	assert.Equal(t, "oci-tools", cfg.GetByMoniker("drawio-oci").ModuleGroup)
+	assert.Equal(t, "core", cfg.GetByMoniker("core").ModuleGroup)
+}
+
+func TestApplyModuleGroupDefaults_EmptyModules(t *testing.T) {
+	cfg := &RepositoryConfig{
+		Modules: []Module{},
+	}
+
+	cfg.applyModuleGroupDefaults()
+
+	assert.Empty(t, cfg.Modules)
+}
+
+func TestApplyModuleGroupDefaults_IntegrationWithExpandModuleGroups(t *testing.T) {
+	// Simulates the full pipeline: defaults applied, then group expansion
+	cfg := &RepositoryConfig{
+		Modules: []Module{
+			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "core"},                                            // No explicit group
+			{Moniker: "docs", DependsOn: []string{"core", "oci-tools"}}, // Depends on moniker + group
+		},
+	}
+
+	cfg.applyModuleGroupDefaults()
+
+	// "core" should now have ModuleGroup == "core" (self-named default)
+	assert.Equal(t, "core", cfg.GetByMoniker("core").ModuleGroup)
+	// "docs" should now have ModuleGroup == "docs"
+	assert.Equal(t, "docs", cfg.GetByMoniker("docs").ModuleGroup)
+
+	err := cfg.expandModuleGroups()
+	require.NoError(t, err)
+
+	docs := cfg.GetByMoniker("docs")
+	require.NotNil(t, docs)
+	// "core" resolves as direct moniker, "oci-tools" expands to pdf-oci + drawio-oci
+	assert.ElementsMatch(t, []string{"core", "pdf-oci", "drawio-oci"}, docs.DependsOn)
+}
+
+// --- expandModuleGroups tests ---
+
 func TestExpandModuleGroups_BasicExpansion(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{

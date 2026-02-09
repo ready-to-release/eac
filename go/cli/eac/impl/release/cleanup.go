@@ -14,9 +14,9 @@
 // Long:   - Deletion of git tags from the remote repository
 // Long:
 // Long: Example:
-// Long:   release cleanup --tag clie-cli/1.0.0
+// Long:   release cleanup --tag clie/1.0.0
 // Long:   release cleanup --tag eac-ext/2.0.0
-// Flag.tag: type=string, usage=Tag name to clean up (e.g., clie-cli/1.0.0)
+// Flag.tag: type=string, usage=Tag name to clean up (e.g., clie/1.0.0)
 package release
 
 import (

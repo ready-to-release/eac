@@ -11,7 +11,7 @@
 // Long:   - new: Never executed before
 // Long:
 // Long: Filter Examples:
-// Long:   get units build --module eac-cli    # Build units for specific module
+// Long:   get units build --module eac    # Build units for specific module
 // Long:   get units test --cached                  # Only cached test units
 // Long:   get units scan --stale                   # Only stale scan units
 // Long:   get units lint --container               # Only container-based lint units

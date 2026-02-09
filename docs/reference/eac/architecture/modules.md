@@ -69,7 +69,7 @@ modules:
 
 ## Component Types
 
-See [Component Types Reference](./component-types.md) for full documentation.
+See [Component Types Reference](./component-kinds.md) for full documentation.
 
 **File**: `contracts/core/0.1.0/schemas/defaults/component-types.yml`
 
@@ -140,7 +140,7 @@ modules:
     template: go-library
     depends_on: [logging-go]
 
-  - moniker: eac-cli
+  - moniker: eac
     template: go-exe
     depends_on: [core]
 ```
@@ -149,7 +149,7 @@ modules:
 
 1. `logging-go`
 2. `core`
-3. `eac-cli`
+3. `eac`
 
 ### Commands
 
@@ -548,15 +548,15 @@ eac update-design <module>
 | Module               | Type        | Purpose                                                                  |
 | -------------------- | ----------- | ------------------------------------------------------------------------ |
 | **core**             | go-library  | Core libraries (contracts, repository, git)                              |
-| **eac-cli**          | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
-| **godog-adapter**    | go-library  | BDD test infrastructure (Godog)                                          |
+| **eac**          | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
+| **godog-eac**    | go-library  | BDD test infrastructure (Godog)                                          |
 | **eac-mcp-server**   | go-mcp      | MCP server (LLM tool integration)                                        |
 
 ### CLI and Extensions
 
 | Module      | Type          | Purpose                              |
 | ----------- | ------------- | ------------------------------------ |
-| **clie-cli** | go-cli        | CLI framework (Docker orchestration) |
+| **clie** | go-cli        | CLI framework (Docker orchestration) |
 | **eac-ext** | clie-extension | EAC Docker extension image           |
 
 ### Libraries

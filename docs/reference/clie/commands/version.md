@@ -28,7 +28,7 @@ clie version
 **Example output:**
 
 ```text
-clie-cli version 1.2.3
+clie version 1.2.3
 ```
 
 ## Examples

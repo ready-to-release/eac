@@ -8,26 +8,28 @@ import (
 )
 
 // UnitID uniquely identifies a unit of work.
-// Format: context:module:component:tool[:extra]
+// Format: action:module:componentType:componentName:tool[:extra...]
 type UnitID struct {
-	Action    ActionType        `json:"context"` // build, test, lint, scan (JSON tag kept as "context" for cache compat)
-	Module    string            // module moniker (e.g., "core")
-	Component string            // component name (e.g., "go", "gherkin")
-	Tool      string            // handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
-	Extra     map[string]string // context-specific (e.g., testset: "unit")
-	Spec      string            // Spec name for BDD tests (godog, tscucumber), e.g., "build-module"
+	Action        ActionType        `json:"context"`        // build, test, lint, scan (JSON tag kept as "context" for cache compat)
+	Module        string            `json:"module"`         // module moniker (e.g., "core")
+	ComponentType string            `json:"component_type"` // from component-types.yml (e.g., "go", "gherkin")
+	ComponentName string            `json:"component_name"` // instance name within module (e.g., "go", "docker")
+	Tool          string            `json:"tool"`           // handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
+	Extra         map[string]string `json:"extra,omitempty"`// context-specific (e.g., testset: "unit")
+	Spec          string            `json:"spec,omitempty"` // Spec name for BDD tests (godog, tscucumber), e.g., "build-module"
 }
 
-// Path returns module:component for component-level identification.
+// Path returns module:componentType:componentName for component-level identification.
 // Note: This is NOT a unique work unit identifier - use Longname() for that.
 func (u UnitID) Path() string {
-	return u.Module + ":" + u.Component
+	return u.Module + ":" + u.ComponentType + ":" + u.ComponentName
 }
 
-// ComponentName returns just the component name.
-func (u UnitID) ComponentName() string {
-	return u.Component
-}
+// GetComponentType returns the component type from component-types.yml.
+func (u UnitID) GetComponentType() string { return u.ComponentType }
+
+// GetComponentName returns the component instance name.
+func (u UnitID) GetComponentName() string { return u.ComponentName }
 
 // DisplayName returns a context-aware compact display name.
 // This is the primary method for TUI tabs and progress indicators.
@@ -39,28 +41,28 @@ func (u UnitID) DisplayName() string {
 		}
 		testname := u.Extra["testname"]
 		if testname == "" {
-			testname = u.Component
+			testname = u.ComponentName
 		}
 		return testname + ": unit"
 
 	case ActionBuild:
-		if u.Component == u.Tool || u.Tool == "" {
-			return u.Module + ": " + u.Component
+		if u.ComponentName == u.Tool || u.Tool == "" {
+			return u.Module + ": " + u.ComponentName
 		}
-		return u.Module + ": " + u.Component + ": " + u.Tool
+		return u.Module + ": " + u.ComponentName + ": " + u.Tool
 
 	case ActionLint:
-		return "lint:" + u.Component + ":" + u.Tool
+		return "lint:" + u.ComponentName + ":" + u.Tool
 
 	case ActionScan:
 		category := u.Extra["category"]
 		if category == "" {
 			category = u.Tool
 		}
-		return "scan:" + u.Component + ":" + category
+		return "scan:" + u.ComponentName + ":" + category
 
 	default:
-		return u.Component
+		return u.ComponentName
 	}
 }
 
@@ -68,10 +70,10 @@ func (u UnitID) DisplayName() string {
 func (u UnitID) NormalDisplay() string {
 	switch u.Action {
 	case ActionBuild:
-		if u.Tool == "" || u.Tool == u.Component {
-			return "Building " + u.Component + " in " + u.Module
+		if u.Tool == "" || u.Tool == u.ComponentName {
+			return "Building " + u.ComponentName + " in " + u.Module
 		}
-		return "Building " + u.Component + " in " + u.Module + " with " + u.Tool
+		return "Building " + u.ComponentName + " in " + u.Module + " with " + u.Tool
 
 	case ActionTest:
 		if u.Spec != "" {
@@ -79,22 +81,22 @@ func (u UnitID) NormalDisplay() string {
 		}
 		testname := u.Extra["testname"]
 		if testname == "" {
-			testname = u.Component
+			testname = u.ComponentName
 		}
 		return "Testing " + testname + " in " + u.Module
 
 	case ActionLint:
-		return "Linting " + u.Component + " in " + u.Module + " with " + u.Tool
+		return "Linting " + u.ComponentName + " in " + u.Module + " with " + u.Tool
 
 	case ActionScan:
 		category := u.Extra["category"]
 		if category == "" {
 			category = u.Tool
 		}
-		return "Scanning " + u.Component + " in " + u.Module + " for " + category
+		return "Scanning " + u.ComponentName + " in " + u.Module + " for " + category
 
 	default:
-		return string(u.Action) + " " + u.Component + " in " + u.Module
+		return string(u.Action) + " " + u.ComponentName + " in " + u.Module
 	}
 }
 
@@ -108,12 +110,12 @@ func (u UnitID) DisplayKey() string {
 			return testname
 		}
 	}
-	return u.Component
+	return u.ComponentName
 }
 
 // TabLabel returns truncated name for TUI tabs (max width).
 func (u UnitID) TabLabel(maxWidth int) string {
-	name := u.Component
+	name := u.ComponentName
 	if u.Spec != "" {
 		name = u.Spec
 	}
@@ -129,9 +131,9 @@ func (u UnitID) TabLabel(maxWidth int) string {
 	return name
 }
 
-// Longname returns full ID: context:module:component:tool[:extra...]
+// Longname returns full ID: action:module:componentType:componentName:tool[:extra...]
 func (u UnitID) Longname() string {
-	base := fmt.Sprintf("%s:%s:%s:%s", u.Action, u.Module, u.Component, u.Tool)
+	base := fmt.Sprintf("%s:%s:%s:%s:%s", u.Action, u.Module, u.ComponentType, u.ComponentName, u.Tool)
 
 	if len(u.Extra) > 0 {
 		keys := make([]string, 0, len(u.Extra))
@@ -154,8 +156,9 @@ func (u UnitID) String() string {
 }
 
 // DirName returns the unique directory name for this unit.
+// Format: componentName-tool[-extra1][-extra2]...
 func (u UnitID) DirName() string {
-	dirName := u.Component
+	dirName := u.ComponentName
 	if u.Tool != "" {
 		dirName += "-" + u.Tool
 	}
@@ -212,7 +215,8 @@ func (u UnitID) GetAction() string { return string(u.Action) }
 func (u UnitID) GetModule() string { return u.Module }
 
 // GetComponent implements UnitIDPort.
-func (u UnitID) GetComponent() string { return u.Component }
+// Deprecated: Use GetComponentName() instead.
+func (u UnitID) GetComponent() string { return u.ComponentName }
 
 // GetTool implements UnitIDPort.
 func (u UnitID) GetTool() string { return u.Tool }
@@ -368,6 +372,15 @@ func ContainerAllocation(hostWeight, dockerWeight int) PoolAllocation {
 	return PoolAllocation{HostWeight: hostWeight, DockerWeight: dockerWeight}
 }
 
+// AllocationForWeight creates a PoolAllocation from a weight and container flag.
+// Container tools get equal host and docker weights; host-only tools get host weight only.
+func AllocationForWeight(weight int, isContainer bool) PoolAllocation {
+	if isContainer {
+		return ContainerAllocation(weight, weight)
+	}
+	return HostOnlyAllocation(weight)
+}
+
 // ============================================================================
 // UnitSpec (moved from go/core/workunit)
 // ============================================================================
@@ -378,8 +391,6 @@ type UnitSpec struct {
 	ID             UnitID         // Unique identifier for this work unit
 	ComponentType  string         // From component-types.yml (e.g., "go", "gherkin")
 	Weight         int            // Scheduling weight for resource allocation (host pool)
-	Container      bool           // Whether this runs in Docker (DEPRECATED: use PoolAllocation)
-	HostInstalled  bool           // Whether this runs on host system (opposite of Container)
 	PoolAllocation PoolAllocation // Dual pool allocation for scheduling
 	DependsOn      []UnitID       // Work units that must complete first (within module)
 	Cached         bool           // Skip execution if up-to-date
@@ -395,7 +406,7 @@ func (s UnitSpec) DependsOnComponents() []string {
 	}
 	components := make([]string, len(s.DependsOn))
 	for i, dep := range s.DependsOn {
-		components[i] = dep.Component
+		components[i] = dep.ComponentName
 	}
 	return components
 }
@@ -403,7 +414,7 @@ func (s UnitSpec) DependsOnComponents() []string {
 // DisplayName returns context-aware compact display name.
 func (s UnitSpec) DisplayName() string { return s.ID.DisplayName() }
 
-// Longname returns the full ID: context:module:component:tool[:extra]
+// Longname returns the full ID: action:module:componentType:componentName:tool[:extra...]
 func (s UnitSpec) Longname() string { return s.ID.Longname() }
 
 // OutDir returns the output directory for this unit.
@@ -426,18 +437,18 @@ func (s UnitSpec) ImplDir() string {
 func NewBuildSpec(module, component, tool string) UnitSpec {
 	return UnitSpec{
 		ID: UnitID{
-			Action:    ActionBuild,
-			Module:    module,
-			Component: component,
-			Tool:      tool,
+			Action:        ActionBuild,
+			Module:        module,
+			ComponentType: component,
+			ComponentName: component,
+			Tool:          tool,
 		},
-		ComponentType: component,
-		Weight:        1,
-		Container:     false,
-		HostInstalled: true,
-		DependsOn:     []UnitID{},
-		Cached:        false,
-		Metadata:      make(map[string]any),
+		ComponentType:  component,
+		Weight:         1,
+		PoolAllocation: HostOnlyAllocation(1),
+		DependsOn:      []UnitID{},
+		Cached:         false,
+		Metadata:       make(map[string]any),
 	}
 }
 
@@ -445,19 +456,19 @@ func NewBuildSpec(module, component, tool string) UnitSpec {
 func NewTestSpec(module, component, tool, testset string) UnitSpec {
 	return UnitSpec{
 		ID: UnitID{
-			Action:    ActionTest,
-			Module:    module,
-			Component: component,
-			Tool:      tool,
-			Extra:     map[string]string{"testset": testset},
+			Action:        ActionTest,
+			Module:        module,
+			ComponentType: component,
+			ComponentName: component,
+			Tool:          tool,
+			Extra:         map[string]string{"testset": testset},
 		},
-		ComponentType: component,
-		Weight:        1,
-		Container:     false,
-		HostInstalled: true,
-		DependsOn:     []UnitID{},
-		Cached:        false,
-		Metadata:      make(map[string]any),
+		ComponentType:  component,
+		Weight:         1,
+		PoolAllocation: HostOnlyAllocation(1),
+		DependsOn:      []UnitID{},
+		Cached:         false,
+		Metadata:       make(map[string]any),
 	}
 }
 
@@ -465,18 +476,18 @@ func NewTestSpec(module, component, tool, testset string) UnitSpec {
 func NewLintSpec(module, component, provider string) UnitSpec {
 	return UnitSpec{
 		ID: UnitID{
-			Action:    ActionLint,
-			Module:    module,
-			Component: component,
-			Tool:      provider,
+			Action:        ActionLint,
+			Module:        module,
+			ComponentType: component,
+			ComponentName: component,
+			Tool:          provider,
 		},
-		ComponentType: component,
-		Weight:        1,
-		Container:     false,
-		HostInstalled: true,
-		DependsOn:     []UnitID{},
-		Cached:        false,
-		Metadata:      make(map[string]any),
+		ComponentType:  component,
+		Weight:         1,
+		PoolAllocation: HostOnlyAllocation(1),
+		DependsOn:      []UnitID{},
+		Cached:         false,
+		Metadata:       make(map[string]any),
 	}
 }
 
@@ -484,18 +495,18 @@ func NewLintSpec(module, component, provider string) UnitSpec {
 func NewScanSpec(module, component, scanner string) UnitSpec {
 	return UnitSpec{
 		ID: UnitID{
-			Action:    ActionScan,
-			Module:    module,
-			Component: component,
-			Tool:      scanner,
+			Action:        ActionScan,
+			Module:        module,
+			ComponentType: component,
+			ComponentName: component,
+			Tool:          scanner,
 		},
-		ComponentType: component,
-		Weight:        1,
-		Container:     false,
-		HostInstalled: true,
-		DependsOn:     []UnitID{},
-		Cached:        false,
-		Metadata:      make(map[string]any),
+		ComponentType:  component,
+		Weight:         1,
+		PoolAllocation: HostOnlyAllocation(1),
+		DependsOn:      []UnitID{},
+		Cached:         false,
+		Metadata:       make(map[string]any),
 	}
 }
 
@@ -508,8 +519,8 @@ func (s UnitSpec) GetComponentType() string { return s.ComponentType }
 // GetWeight implements UnitSpecPort.
 func (s UnitSpec) GetWeight() int { return s.Weight }
 
-// IsContainerSpec implements UnitSpecPort.
-func (s UnitSpec) IsContainerSpec() bool { return s.Container }
+// IsContainerSpec returns whether this spec runs in a container.
+func (s UnitSpec) IsContainerSpec() bool { return s.GetPoolAllocation().IsContainer() }
 
 // IsCached implements UnitSpecPort.
 func (s UnitSpec) IsCached() bool { return s.Cached }
@@ -525,14 +536,7 @@ func (s UnitSpec) GetDependsOn() []UnitIDPort {
 
 // GetPoolAllocation implements UnitSpecPort.
 func (s UnitSpec) GetPoolAllocation() PoolAllocationPort {
-	if s.PoolAllocation.HostWeight != 0 || s.PoolAllocation.DockerWeight != 0 {
-		return s.PoolAllocation
-	}
-	alloc := PoolAllocation{HostWeight: s.Weight}
-	if s.Container {
-		alloc.DockerWeight = s.Weight
-	}
-	return alloc
+	return s.PoolAllocation
 }
 
 // ============================================================================

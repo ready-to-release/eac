@@ -62,7 +62,7 @@ modules:
 
 ## Component Types
 
-See [Component Types Reference](../architecture/component-types.md) for full documentation.
+See [Component Types Reference](../architecture/component-kinds.md) for full documentation.
 
 **File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
 
@@ -542,7 +542,7 @@ eac update-design <module>
 
 | Module      | Type          | Purpose                              |
 | ----------- | ------------- | ------------------------------------ |
-| **clie-cli** | go-cli        | CLI framework (Docker orchestration) |
+| **clie** | go-cli        | CLI framework (Docker orchestration) |
 | **eac-ext** | clie-extension | EAC Docker extension image           |
 
 ### Libraries
@@ -660,4 +660,4 @@ eac release-this <module>      # Create release
 - [Architecture](../architecture/index.md) - System architecture and components
 - [Contracts](../architecture/contracts.md) - Contract system and YAML schemas
 - [Dependencies](../architecture/dependencies.md) - Dependency resolution details
-- [Module Types](../architecture/component-types.md) - Module type specifications
+- [Module Types](../architecture/component-kinds.md) - Module type specifications

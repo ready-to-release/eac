@@ -1,6 +1,6 @@
 # eac-ext
 
-The `eac-ext` module defines the Docker extension image that packages the EAC tooling for use with clie-cli.
+The `eac-ext` module defines the Docker extension image that packages the EAC tooling for use with clie.
 
 It provides a containerized environment with all dependencies pre-installed.
 

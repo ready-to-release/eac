@@ -44,7 +44,7 @@ validation.
 
 ## Role in System
 
-The `ai-adapter` module implements the AI provider abstraction used by
+The `ai-eac` module implements the AI provider abstraction used by
 commands that require LLM capabilities (spec generation, risk assessment,
 commit messages). It loads provider configuration from the `.eac` directory,
 supports multiple AI backends through a pluggable factory pattern, and
@@ -54,7 +54,7 @@ interface.
 ## Code Health
 
 ### Tech Debt
-- `substituteEnvVars` in config_loader.go compiles a new `regexp.MustCompile` on every call; compiling once at package level would avoid repeated allocation
+- ~~`substituteEnvVars` in config_loader.go compiles a new `regexp.MustCompile` on every call~~ (resolved: hoisted to package level)
 - Package-level `schemaValidator` and `schemaValidatorOnce` in config_loader.go are global mutable state coupled to the workspace root of the first caller
 
 ### Pain Points

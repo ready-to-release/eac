@@ -1,4 +1,4 @@
-// Package validate contains godog step implementations for eac-cli.
+// Package validate contains godog step implementations for eac.
 //
 // This file contains specs command step definitions for specification management.
 package validate
@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // specsTestState holds state for specs tests.

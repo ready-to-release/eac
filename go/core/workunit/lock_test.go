@@ -81,7 +81,7 @@ func TestLockInfo_MarshalUnmarshalRoundTrip(t *testing.T) {
 	original := LockInfo{
 		PID:       99999,
 		StartedAt: time.Date(2024, 6, 20, 14, 45, 30, 0, time.UTC),
-		UnitID:    "lint:eac-cli:go:golangci-lint",
+		UnitID:    "lint:eac:go:golangci-lint",
 	}
 
 	data, err := json.Marshal(original)
@@ -104,10 +104,10 @@ func TestUnitID_Lock_CreatesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Create the output directory structure expected by LockFile()
@@ -141,11 +141,11 @@ func TestUnitID_Lock_FailsIfAlreadyLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	// Setup directory and change to tmpDir
@@ -175,10 +175,10 @@ func TestUnitID_Lock_ContainsValidLockInfo(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionLint,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "golangci-lint",
+		Action:        core.ActionLint,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "golangci-lint",
 	}
 
 	// Setup
@@ -230,10 +230,10 @@ func TestUnitID_Unlock_RemovesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionScan,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "trivy-vuln",
+		Action:        core.ActionScan,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "trivy-vuln",
 	}
 
 	// Setup
@@ -263,10 +263,10 @@ func TestUnitID_Unlock_IsIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Setup - create directory but NO lock file
@@ -293,11 +293,11 @@ func TestUnitID_Unlock_SucceedsAfterMultipleLockUnlockCycles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "cycle-test",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "cycle-test",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	// Setup
@@ -329,25 +329,25 @@ func TestUnitID_MultipleUnitsCanBeLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unit1 := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "module-a",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "module-a",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	unit2 := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "module-b",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "module-b",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	unit3 := UnitID{
-		Action:    core.ActionTest,
-		Module:    "module-a",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "module-a",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	// Setup directories for all units
@@ -393,25 +393,25 @@ func TestUnitID_SameModuleDifferentContextsCanBeLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	buildUnit := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "shared-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "shared-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	testUnit := UnitID{
-		Action:    core.ActionTest,
-		Module:    "shared-module",
-		Component: "go",
-		Tool:      "gotest",
-		Extra:     map[string]string{"testset": "unit"},
+		Action:        core.ActionTest,
+		Module:        "shared-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool:  "gotest",
+		Extra: map[string]string{"testset": "unit"},
 	}
 
 	lintUnit := UnitID{
-		Action:    core.ActionLint,
-		Module:    "shared-module",
-		Component: "go",
-		Tool:      "golangci-lint",
+		Action:        core.ActionLint,
+		Module:        "shared-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "golangci-lint",
 	}
 
 	// Setup directories
@@ -451,11 +451,11 @@ func TestUnitID_Lock_CreatesDirectoriesIfNeeded(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "deep-nested",
-		Component: "gherkin",
-		Tool:      "godog",
-		Extra:     map[string]string{"testset": "acceptance"},
+		Action:        core.ActionTest,
+		Module:        "deep-nested",
+		ComponentType: "gherkin", ComponentName: "gherkin",
+		Tool:  "godog",
+		Extra: map[string]string{"testset": "acceptance"},
 	}
 
 	originalWd, err := os.Getwd()
@@ -520,10 +520,10 @@ func TestUnitID_Lock_ReturnsErrLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "gotest",
+		Action:        core.ActionTest,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "gotest",
 	}
 
 	originalWd, err := os.Getwd()
@@ -556,10 +556,10 @@ func TestUnitID_LockWithRoot_CreatesLockFileInRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Acquire lock with explicit root
@@ -579,10 +579,10 @@ func TestUnitID_UnlockWithRoot_RemovesLockFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Acquire and release lock with root
@@ -602,10 +602,10 @@ func TestUnitID_LockWithRoot_FailsIfAlreadyLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "gotest",
+		Action:        core.ActionTest,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "gotest",
 	}
 
 	// First lock
@@ -629,10 +629,10 @@ func TestUnitID_IsLocked_ReturnsTrueWhenLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	originalWd, err := os.Getwd()
@@ -662,10 +662,10 @@ func TestUnitID_IsLockedWithRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Not locked initially
@@ -694,10 +694,10 @@ func TestUnitID_ReadLockInfo_ReturnsNilWhenNotLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	originalWd, err := os.Getwd()
@@ -714,10 +714,10 @@ func TestUnitID_ReadLockInfo_ReturnsInfoWhenLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	originalWd, err := os.Getwd()
@@ -743,10 +743,10 @@ func TestUnitID_ReadLockInfoWithRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Lock with root
@@ -784,10 +784,10 @@ func TestUnitID_LockWithWait_ImmediateSuccess(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	cfg := LockWaitConfig{
@@ -812,10 +812,10 @@ func TestUnitID_LockWithWait_WaitsAndAcquires(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// First, acquire the lock
@@ -851,10 +851,10 @@ func TestUnitID_LockWithWait_TimeoutReturnsErrLocked(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// First, acquire the lock and don't release it
@@ -884,10 +884,10 @@ func TestUnitID_LockWithWait_ContextCancellation(t *testing.T) {
 	ctx, cancel = contextWithCancel(ctx)
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// First, acquire the lock and don't release it
@@ -926,10 +926,10 @@ func TestUnitID_LockWithWait_UsesDefaultConfig(t *testing.T) {
 	ctx := t.Context()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Pass zero config - should use defaults
@@ -951,10 +951,10 @@ func TestUnitID_TryBreakStaleLock_ReturnsFalseWhenNotLocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// No lock exists
@@ -973,10 +973,10 @@ func TestUnitID_TryBreakStaleLock_ReturnsFalseForLiveProcess(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	unitID := UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go", ComponentName: "go",
+		Tool: "go",
 	}
 
 	// Create a lock held by current process (which is alive)

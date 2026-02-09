@@ -19,12 +19,6 @@ var (
 )
 
 var (
-	factoryComponentTypesDefaults     *ComponentTypesConfig
-	factoryComponentTypesDefaultsOnce sync.Once
-	factoryComponentTypesDefaultsErr  error
-)
-
-var (
 	factoryEnvironmentsDefaults     *EnvironmentsConfig
 	factoryEnvironmentsDefaultsOnce sync.Once
 	factoryEnvironmentsDefaultsErr  error
@@ -171,35 +165,6 @@ func parseRegistriesDefaults() (RegistriesConfig, error) {
 		return nil, fmt.Errorf("parsing factory registries defaults: %w", err)
 	}
 	return wrapper.Registries, nil
-}
-
-// --- Component Types ---
-
-func getFactoryComponentTypesDefaults() (*ComponentTypesConfig, error) {
-	factoryComponentTypesDefaultsOnce.Do(func() {
-		factoryComponentTypesDefaults, factoryComponentTypesDefaultsErr = parseComponentTypesDefaults()
-	})
-	return factoryComponentTypesDefaults, factoryComponentTypesDefaultsErr
-}
-
-func cloneComponentTypesDefaults() (*ComponentTypesConfig, error) {
-	factory, err := getFactoryComponentTypesDefaults()
-	if err != nil {
-		return nil, err
-	}
-	return clone.Clone(factory), nil
-}
-
-func parseComponentTypesDefaults() (*ComponentTypesConfig, error) {
-	data, err := loadDefaultFile("", ComponentTypesFileName)
-	if err != nil {
-		return nil, err
-	}
-	var cfg ComponentTypesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing factory component-types defaults: %w", err)
-	}
-	return &cfg, nil
 }
 
 // --- Environments ---
@@ -387,10 +352,6 @@ func ResetFactoryDefaultsForTesting() {
 	factoryRepositoryDefaultsOnce = sync.Once{}
 	factoryRepositoryDefaults = nil
 	factoryRepositoryDefaultsErr = nil
-
-	factoryComponentTypesDefaultsOnce = sync.Once{}
-	factoryComponentTypesDefaults = nil
-	factoryComponentTypesDefaultsErr = nil
 
 	factoryEnvironmentsDefaultsOnce = sync.Once{}
 	factoryEnvironmentsDefaults = nil

@@ -1,4 +1,4 @@
-// Package test contains godog step implementations for specs/eac-cli.
+// Package test contains godog step implementations for specs/eac.
 //
 // This file contains step definitions for get-test-results and show-test-results features.
 package test
@@ -155,10 +155,10 @@ type cucumberFeatureJSON struct {
 }
 
 type cucumberElementJSON struct {
-	Name  string              `json:"name"`
-	Type  string              `json:"type"`
-	Tags  []cucumberTagJSON   `json:"tags,omitempty"`
-	Steps []cucumberStepJSON  `json:"steps"`
+	Name  string             `json:"name"`
+	Type  string             `json:"type"`
+	Tags  []cucumberTagJSON  `json:"tags,omitempty"`
+	Steps []cucumberStepJSON `json:"steps"`
 }
 
 type cucumberTagJSON struct {
@@ -191,7 +191,7 @@ func makeCucumberScenario(name string, tags []string, status string, durationMs 
 	}
 }
 
-// godogAssetFeatures returns the cucumber features equivalent to eac-cli-with-godog.manifest.json.
+// godogAssetFeatures returns the cucumber features equivalent to eac-with-godog.manifest.json.
 func godogAssetFeatures() []cucumberFeatureJSON {
 	return []cucumberFeatureJSON{
 		{
@@ -231,7 +231,7 @@ func core5PassedTests() []ctrfTestEntry {
 	}
 }
 
-// eacCLI10PassedTests returns the CTRF test entries equivalent to eac-cli-10-passed.manifest.json.
+// eacCLI10PassedTests returns the CTRF test entries equivalent to eac-10-passed.manifest.json.
 func eacCLI10PassedTests() []ctrfTestEntry {
 	names := []string{"TestBuild", "TestTest", "TestValidate", "TestShow", "TestGet", "TestCreate", "TestRelease", "TestWork", "TestScan", "TestInit"}
 	tests := make([]ctrfTestEntry, len(names))
@@ -263,7 +263,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		switch {
 		case module == "core" && count == 5:
 			return createCTRFUoW(ctx, module, "go", "gotest", core5PassedTests(), 2.5)
-		case module == "eac-cli" && count == 10:
+		case module == "eac" && count == 10:
 			return createCTRFUoW(ctx, module, "go", "gotest", eacCLI10PassedTests(), 5.2)
 		default:
 			return createCucumberUoW(ctx, module, "gherkin", "godog", godogAssetFeatures(), 33.1)
@@ -297,7 +297,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 			}
 
 			features = append(features, cucumberFeatureJSON{
-				URI:      fmt.Sprintf("specs/eac-cli/%s/specification.feature", featureName),
+				URI:      fmt.Sprintf("specs/eac/%s/specification.feature", featureName),
 				Name:     featureName,
 				Elements: elements,
 			})
@@ -324,7 +324,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 
 		features := []cucumberFeatureJSON{
 			{
-				URI:      fmt.Sprintf("specs/eac-cli/feature-%s/specification.feature", control),
+				URI:      fmt.Sprintf("specs/eac/feature-%s/specification.feature", control),
 				Name:     fmt.Sprintf("Feature for %s", control),
 				Elements: elements,
 			},
@@ -334,7 +334,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^test has tags \["([^"]*)", "([^"]*)", "([^"]*)"\]$`, func(tag1, tag2, tag3 string) error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^no test manifests exist in out/test/$`, func() error {
@@ -350,7 +350,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		}
 
 		// Also create a valid UoW for another module so there's something to process
-		return createCTRFUoW(ctx, "eac-cli", "go", "gotest", core5PassedTests(), 2.5)
+		return createCTRFUoW(ctx, "eac", "go", "gotest", core5PassedTests(), 2.5)
 	})
 
 	sc.Step(`^test manifests exist$`, func() error {
@@ -358,7 +358,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	sc.Step(`^test "([^"]*)" in manifest has:$`, func(testName string, table *godog.Table) error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	// When steps - command execution
@@ -488,14 +488,14 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 
 	// Then steps - output verification for show test-results
 	sc.Step(`^test execution data is available$`, func() error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^multiple modules with test results$`, func() error {
 		if err := createCTRFUoW(ctx, "core", "go", "gotest", core5PassedTests(), 2.5); err != nil {
 			return err
 		}
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^the output uses markdown template$`, func() error {
@@ -571,7 +571,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     name: EAC Core
     components:
       go: go/eac/core
-  - moniker: eac-cli
+  - moniker: eac
     name: EAC Commands
     components:
       go: go/cli/eac
@@ -613,7 +613,7 @@ repository:
 		}
 
 		// Create module contracts for each module
-		modules := []string{"core", "eac-cli", "eac-test", "eac-utils", "eac-types", "eac-specs"}
+		modules := []string{"core", "eac", "eac-test", "eac-utils", "eac-types", "eac-specs"}
 		for _, mod := range modules {
 			moduleContract := fmt.Sprintf(`module:
   moniker: %s
@@ -632,7 +632,7 @@ paths:
 	})
 
 	sc.Step(`^(\d+) modules were tested$`, func(count int) error {
-		modules := []string{"core", "eac-cli", "eac-test", "eac-utils", "eac-types", "eac-specs"}
+		modules := []string{"core", "eac", "eac-test", "eac-utils", "eac-types", "eac-specs"}
 
 		timestamp := state.testTimestamp
 		if timestamp == "" {
@@ -684,7 +684,7 @@ paths:
 	})
 
 	sc.Step(`^feature "([^"]*)" has (\d+) scenarios: (\d+) passed, (\d+) failed$`, func(feature string, total, passed, failed int) error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^feature has control tags: \[([^\]]+)\]$`, func(controls string) error {
@@ -702,7 +702,7 @@ paths:
 	})
 
 	sc.Step(`^(\d+) features with scenarios$`, func(count int) error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^(\d+) total scenarios: (\d+) passed, (\d+) failed$`, func(total, passed, failed int) error {
@@ -716,7 +716,7 @@ paths:
 	})
 
 	sc.Step(`^control "([^"]*)" has (\d+) tests across (\d+) modules$`, func(control string, tests, modules int) error {
-		return createCucumberUoW(ctx, "eac-cli", "gherkin", "godog", godogAssetFeatures(), 33.1)
+		return createCucumberUoW(ctx, "eac", "gherkin", "godog", godogAssetFeatures(), 33.1)
 	})
 
 	sc.Step(`^all (\d+) tests passed$`, func(count int) error {
@@ -750,7 +750,7 @@ paths:
 			})
 		}
 
-		return createCTRFUoW(ctx, "eac-cli", "go", "gotest", tests, 1.5)
+		return createCTRFUoW(ctx, "eac", "go", "gotest", tests, 1.5)
 	})
 
 	sc.Step(`^status is formatted with icons:$`, func(table *godog.Table) error {

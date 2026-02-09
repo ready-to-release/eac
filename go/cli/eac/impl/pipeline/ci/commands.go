@@ -7,6 +7,7 @@ func init() {
 		PipelineCI,
 		PipelineCIDispatchAndWait,
 		PipelineCIGetRunID,
+		PipelineCISchedule,
 		PipelineCISummaryLink,
 	)
 }

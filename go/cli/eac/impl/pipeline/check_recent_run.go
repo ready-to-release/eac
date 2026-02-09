@@ -85,10 +85,7 @@ func PipelineCheckRecentRun() int {
 	}
 
 	// Use GitHub API
-	api := github.Global()
-	if api == nil {
-		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
-	}
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	hasRecent, err := api.HasRecentSuccess(workflow, sha, since)
 	if err != nil {

@@ -25,10 +25,10 @@ func GenerateTestMoniker(testRef TestReference, module string) string {
 
 // generateBDDMoniker creates moniker for BDD/Gherkin tests (godog, tscucumber).
 // Format: module_feature-name_scenario-name
-// Example: clie-cli_cli-invocation_version-flag-displays-version.
+// Example: clie_cli-invocation_version-flag-displays-version.
 func generateBDDMoniker(testRef TestReference, module string) string {
 	// Extract feature name from file path
-	// Path: specs/clie-cli/cli-invocation/specification.feature
+	// Path: specs/clie/cli-invocation/specification.feature
 	// Feature: cli-invocation
 	featureName := extractFeatureName(testRef.FilePath)
 
@@ -45,7 +45,7 @@ func generateBDDMoniker(testRef TestReference, module string) string {
 
 // generateGoTestMoniker creates moniker for Go unit tests
 // Format: module_test-file_TestName
-// Example: clie-cli_install-test_TestInstallCommand-CreateConfigFile.
+// Example: clie_install-test_TestInstallCommand-CreateConfigFile.
 func generateGoTestMoniker(testRef TestReference, module string) string {
 	// Extract test file name without extension
 	// Path: C:\projects\eac\go\clie\cli\cmd\install_test.go
@@ -64,7 +64,7 @@ func generateGoTestMoniker(testRef TestReference, module string) string {
 }
 
 // extractFeatureName extracts the feature directory name from a feature file path
-// specs/clie-cli/cli-invocation/specification.feature -> cli-invocation.
+// specs/clie/cli-invocation/specification.feature -> cli-invocation.
 func extractFeatureName(filePath string) string {
 	normalized := filepath.ToSlash(filePath)
 	parts := strings.Split(normalized, "/")

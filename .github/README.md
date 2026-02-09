@@ -18,13 +18,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ready-to-release/eac/releases?q=eac-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-cli/*&style=for-the-badge&logo=gnubash&logoColor=white&label=eac-cli&color=22c55e" alt="eac-cli"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=eac"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac/*&style=for-the-badge&logo=gnubash&logoColor=white&label=eac&color=22c55e" alt="eac"></a>
   &nbsp;
   <a href="https://github.com/ready-to-release/eac/pkgs/container/eac-ext"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-ext/*&style=for-the-badge&logo=docker&logoColor=white&label=eac-ext&color=8b5cf6" alt="eac-ext"></a>
   &nbsp;
   <a href="https://github.com/ready-to-release/eac/releases?q=eac-mcp-server"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-mcp-server/*&style=for-the-badge&logo=gnubash&logoColor=white&label=mcp-server&color=f97316" alt="mcp-server"></a>
   &nbsp;
-  <a href="https://github.com/ready-to-release/eac/releases?q=clie-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=clie-cli/*&style=for-the-badge&logo=gnubash&logoColor=white&label=clie-cli&color=64748b" alt="clie-cli"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=clie"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=clie/*&style=for-the-badge&logo=gnubash&logoColor=white&label=clie&color=64748b" alt="clie"></a>
   &nbsp;
   <a href="https://ready-to-release.github.io/eac/"><img src="https://img.shields.io/badge/docs-live-22c55e?style=for-the-badge&logo=materialformkdocs&logoColor=white" alt="docs"></a>
 </p>

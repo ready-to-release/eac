@@ -28,7 +28,7 @@ import (
 // ConfigOutput represents the structured output of all configs.
 type ConfigOutput struct {
 	Modules        interface{} `yaml:"modules" json:"modules"`
-	ComponentTypes interface{} `yaml:"component_types" json:"component_types"`
+	ComponentKinds interface{} `yaml:"component_kinds" json:"component_kinds"`
 	Environments   interface{} `yaml:"environments" json:"environments"`
 	Testing        interface{} `yaml:"testing" json:"testing"`
 }
@@ -55,8 +55,8 @@ func GetConfig() int {
 			output.Modules = cfg.Repository
 		}
 
-		if cfg.ComponentTypes != nil {
-			output.ComponentTypes = cfg.ComponentTypes
+		if cfg.ComponentKinds != nil {
+			output.ComponentKinds = cfg.ComponentKinds
 		}
 
 		if cfg.Environments != nil {

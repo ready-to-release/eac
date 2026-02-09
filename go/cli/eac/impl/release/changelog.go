@@ -13,9 +13,9 @@
 // Long:   - Updated release/<module>/CHANGELOG.md file if --write flag is specified
 // Long:
 // Long: Examples:
-// Long:   release changelog clie-cli              # Preview changelog entries
-// Long:   release changelog clie-cli --write      # Update release/clie-cli/CHANGELOG.md
-// Long:   release changelog clie-cli --from v1.0  # From specific tag
+// Long:   release changelog clie              # Preview changelog entries
+// Long:   release changelog clie --write      # Update release/clie/CHANGELOG.md
+// Long:   release changelog clie --from v1.0  # From specific tag
 // Flag.write: type=bool, usage=Write changes to changelog file (default: preview only)
 // Flag.from: type=string, usage=Start from specific tag/ref (default: latest release tag)
 // Flag.to: type=string, usage=End at specific tag/ref (default: HEAD)

@@ -30,7 +30,7 @@ type DependencyGraph struct {
 
 // ModuleNode represents a single module in the dependency graph.
 type ModuleNode struct {
-	Moniker    string   // Module moniker (e.g., "clie-cli")
+	Moniker    string   // Module moniker (e.g., "clie")
 	ModulePath string   // Full module path
 	SourceRoot string   // Relative source root (e.g., "go/cli/clie")
 	GoModPath  string   // Path to go.mod file

@@ -34,7 +34,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/fileutil"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/config"
 )
 

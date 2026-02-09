@@ -5,12 +5,9 @@ package tool
 
 import "sync"
 
-// DefaultScannerCategoryMap maps security scanner categories to their default tool IDs.
-// These mappings are used by ScannerToolIDForCategory() and align with the
-// "security" namespace in tool-config.yml.
-//
-// To override at runtime, call OverrideScannerCategoryMap before first use.
-var DefaultScannerCategoryMap = map[string]string{
+// defaultScannerCategoryMap maps security scanner categories to their default tool IDs.
+// Unexported to prevent mutation. Use DefaultScannerCategories() for a safe copy.
+var defaultScannerCategoryMap = map[string]string{
 	"sbom":       ToolTrivySBOM,
 	"vuln":       ToolTrivyVuln,
 	"secrets":    ToolTrivySecrets,
@@ -20,15 +17,30 @@ var DefaultScannerCategoryMap = map[string]string{
 	"zap":        ToolZap,
 }
 
-// DefaultServerTypeMap maps server types to their default tool IDs.
-// These mappings are used by ServerToolIDForType() and align with the
-// serve-capable tools in tool-config.yml.
-//
-// To override at runtime, call OverrideServerTypeMap before first use.
-var DefaultServerTypeMap = map[string]string{
+// defaultServerTypeMap maps server types to their default tool IDs.
+// Unexported to prevent mutation. Use DefaultServerTypes() for a safe copy.
+var defaultServerTypeMap = map[string]string{
 	ToolStaticSite:      ToolStaticSite,
 	ToolMkDocsLive:      ToolMkDocsLive,
 	ToolStructurizrLite: ToolStructurizrLite,
+}
+
+// DefaultScannerCategories returns a fresh copy of the scanner category map.
+func DefaultScannerCategories() map[string]string {
+	m := make(map[string]string, len(defaultScannerCategoryMap))
+	for k, v := range defaultScannerCategoryMap {
+		m[k] = v
+	}
+	return m
+}
+
+// DefaultServerTypes returns a fresh copy of the server type map.
+func DefaultServerTypes() map[string]string {
+	m := make(map[string]string, len(defaultServerTypeMap))
+	for k, v := range defaultServerTypeMap {
+		m[k] = v
+	}
+	return m
 }
 
 // CategoryResolver maps scanner categories to default tool IDs.
@@ -53,97 +65,121 @@ func (r *CategoryResolver) initDefaultMappings() {
 		return
 	}
 
-	// Copy from package-level defaults so callers can override
-	// DefaultScannerCategoryMap / DefaultServerTypeMap before first access.
-	r.scannerMap = make(map[string]string, len(DefaultScannerCategoryMap))
-	for k, v := range DefaultScannerCategoryMap {
+	r.scannerMap = make(map[string]string, len(defaultScannerCategoryMap))
+	for k, v := range defaultScannerCategoryMap {
 		r.scannerMap[k] = v
 	}
 
-	r.serverMap = make(map[string]string, len(DefaultServerTypeMap))
-	for k, v := range DefaultServerTypeMap {
+	r.serverMap = make(map[string]string, len(defaultServerTypeMap))
+	for k, v := range defaultServerTypeMap {
 		r.serverMap[k] = v
 	}
 
 	r.initialized = true
 }
 
-// OverrideScannerCategoryMap replaces the active scanner category mappings.
-// This allows config-driven overrides to take effect after initialization.
-// Thread-safe: acquires write lock.
-func OverrideScannerCategoryMap(m map[string]string) {
-	globalCategoryResolver.mu.Lock()
-	defer globalCategoryResolver.mu.Unlock()
-
-	globalCategoryResolver.scannerMap = make(map[string]string, len(m))
-	for k, v := range m {
-		globalCategoryResolver.scannerMap[k] = v
-	}
-	globalCategoryResolver.initialized = true
-}
-
-// OverrideServerTypeMap replaces the active server type mappings.
-// This allows config-driven overrides to take effect after initialization.
-// Thread-safe: acquires write lock.
-func OverrideServerTypeMap(m map[string]string) {
-	globalCategoryResolver.mu.Lock()
-	defer globalCategoryResolver.mu.Unlock()
-
-	globalCategoryResolver.serverMap = make(map[string]string, len(m))
-	for k, v := range m {
-		globalCategoryResolver.serverMap[k] = v
-	}
-	globalCategoryResolver.initialized = true
-}
-
 // ScannerToolIDForCategory returns the default tool ID for a scanner category.
-// Categories: sbom, vuln, secrets, compliance, iac, sast, zap
-// Returns empty string if category is unknown.
-func ScannerToolIDForCategory(category string) string {
-	globalCategoryResolver.initDefaultMappings()
-
-	globalCategoryResolver.mu.RLock()
-	defer globalCategoryResolver.mu.RUnlock()
-	return globalCategoryResolver.scannerMap[category]
+func (r *CategoryResolver) ScannerToolIDForCategory(category string) string {
+	r.initDefaultMappings()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.scannerMap[category]
 }
 
 // ServerToolIDForType returns the tool ID for a server type.
-// Server types: nginx-oci, mkdocs-live, structurizr-lite
-// Returns empty string if type is unknown.
-func ServerToolIDForType(serverType string) string {
-	globalCategoryResolver.initDefaultMappings()
-
-	globalCategoryResolver.mu.RLock()
-	defer globalCategoryResolver.mu.RUnlock()
-	return globalCategoryResolver.serverMap[serverType]
+func (r *CategoryResolver) ServerToolIDForType(serverType string) string {
+	r.initDefaultMappings()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.serverMap[serverType]
 }
 
 // AllScannerCategories returns all known scanner categories.
-func AllScannerCategories() []string {
-	globalCategoryResolver.initDefaultMappings()
+func (r *CategoryResolver) AllScannerCategories() []string {
+	r.initDefaultMappings()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	globalCategoryResolver.mu.RLock()
-	defer globalCategoryResolver.mu.RUnlock()
-
-	categories := make([]string, 0, len(globalCategoryResolver.scannerMap))
-	for cat := range globalCategoryResolver.scannerMap {
+	categories := make([]string, 0, len(r.scannerMap))
+	for cat := range r.scannerMap {
 		categories = append(categories, cat)
 	}
 	return categories
 }
 
 // AllServerTypes returns all known server types.
-func AllServerTypes() []string {
-	globalCategoryResolver.initDefaultMappings()
+func (r *CategoryResolver) AllServerTypes() []string {
+	r.initDefaultMappings()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	globalCategoryResolver.mu.RLock()
-	defer globalCategoryResolver.mu.RUnlock()
-
-	types := make([]string, 0, len(globalCategoryResolver.serverMap))
-	for t := range globalCategoryResolver.serverMap {
+	types := make([]string, 0, len(r.serverMap))
+	for t := range r.serverMap {
 		types = append(types, t)
 	}
 	return types
+}
+
+// OverrideScannerCategoryMap replaces the active scanner category mappings.
+// Thread-safe: acquires write lock.
+func (r *CategoryResolver) OverrideScannerCategoryMap(m map[string]string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.scannerMap = make(map[string]string, len(m))
+	for k, v := range m {
+		r.scannerMap[k] = v
+	}
+	r.initialized = true
+}
+
+// OverrideServerTypeMap replaces the active server type mappings.
+// Thread-safe: acquires write lock.
+func (r *CategoryResolver) OverrideServerTypeMap(m map[string]string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.serverMap = make(map[string]string, len(m))
+	for k, v := range m {
+		r.serverMap[k] = v
+	}
+	r.initialized = true
+}
+
+// Package-level convenience functions using globalCategoryResolver.
+
+// ScannerToolIDForCategory returns the default tool ID for a scanner category.
+// Categories: sbom, vuln, secrets, compliance, iac, sast, zap
+// Returns empty string if category is unknown.
+func ScannerToolIDForCategory(category string) string {
+	return globalCategoryResolver.ScannerToolIDForCategory(category)
+}
+
+// ServerToolIDForType returns the tool ID for a server type.
+// Server types: nginx-oci, mkdocs-live, structurizr-lite
+// Returns empty string if type is unknown.
+func ServerToolIDForType(serverType string) string {
+	return globalCategoryResolver.ServerToolIDForType(serverType)
+}
+
+// AllScannerCategories returns all known scanner categories.
+func AllScannerCategories() []string {
+	return globalCategoryResolver.AllScannerCategories()
+}
+
+// AllServerTypes returns all known server types.
+func AllServerTypes() []string {
+	return globalCategoryResolver.AllServerTypes()
+}
+
+// OverrideScannerCategoryMap replaces the active scanner category mappings on the global resolver.
+func OverrideScannerCategoryMap(m map[string]string) {
+	globalCategoryResolver.OverrideScannerCategoryMap(m)
+}
+
+// OverrideServerTypeMap replaces the active server type mappings on the global resolver.
+func OverrideServerTypeMap(m map[string]string) {
+	globalCategoryResolver.OverrideServerTypeMap(m)
 }
 
 // IsScannerCategory returns true if the string is a known scanner category.
@@ -155,4 +191,3 @@ func IsScannerCategory(s string) bool {
 func IsServerType(s string) bool {
 	return ServerToolIDForType(s) != ""
 }
-

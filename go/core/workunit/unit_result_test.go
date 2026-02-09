@@ -13,7 +13,7 @@ import (
 
 func TestUnitResult_FieldsExist(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 0,
 		Duration: 5 * time.Second,
 		LogPath:  "/path/to/log",
@@ -33,7 +33,7 @@ func TestUnitResult_FieldsExist(t *testing.T) {
 
 func TestUnitResult_Success_ReturnsTrueWhenExitCodeIsZero(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 0,
 	}
 
@@ -42,7 +42,7 @@ func TestUnitResult_Success_ReturnsTrueWhenExitCodeIsZero(t *testing.T) {
 
 func TestUnitResult_Success_ReturnsFalseWhenExitCodeIsNegative(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: -1,
 	}
 
@@ -51,7 +51,7 @@ func TestUnitResult_Success_ReturnsFalseWhenExitCodeIsNegative(t *testing.T) {
 
 func TestUnitResult_Success_ReturnsFalseWhenExitCodeIsPositive(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 1,
 	}
 
@@ -86,7 +86,7 @@ func TestUnitResult_Success_TableDriven(t *testing.T) {
 
 func TestUnitResult_Cached_ReturnsTrueWhenExitCodeIsMinusOne(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: -1,
 	}
 
@@ -95,7 +95,7 @@ func TestUnitResult_Cached_ReturnsTrueWhenExitCodeIsMinusOne(t *testing.T) {
 
 func TestUnitResult_Cached_ReturnsFalseWhenExitCodeIsZero(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 0,
 	}
 
@@ -104,7 +104,7 @@ func TestUnitResult_Cached_ReturnsFalseWhenExitCodeIsZero(t *testing.T) {
 
 func TestUnitResult_Cached_ReturnsFalseWhenExitCodeIsPositive(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 1,
 	}
 
@@ -138,7 +138,7 @@ func TestUnitResult_Cached_TableDriven(t *testing.T) {
 
 func TestUnitResult_Failed_ReturnsTrueWhenExitCodeIsPositive(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 1,
 	}
 
@@ -147,7 +147,7 @@ func TestUnitResult_Failed_ReturnsTrueWhenExitCodeIsPositive(t *testing.T) {
 
 func TestUnitResult_Failed_ReturnsFalseWhenExitCodeIsZero(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: 0,
 	}
 
@@ -156,7 +156,7 @@ func TestUnitResult_Failed_ReturnsFalseWhenExitCodeIsZero(t *testing.T) {
 
 func TestUnitResult_Failed_ReturnsFalseWhenExitCodeIsNegative(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ExitCode: -1,
 	}
 
@@ -318,7 +318,7 @@ func TestUnitResult_CommonExitCodes_ExactlyOneStateTrue(t *testing.T) {
 
 func TestUnitResult_MetricsCanStoreTestCounts(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionTest, Module: "mod", Component: "go", Tool: "gotest"},
+		ID:       UnitID{Action: ActionTest, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 		ExitCode: 0,
 		Metrics: map[string]any{
 			"tests_passed":  42,
@@ -334,7 +334,7 @@ func TestUnitResult_MetricsCanStoreTestCounts(t *testing.T) {
 
 func TestUnitResult_MetricsCanStoreScanFindings(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionScan, Module: "mod", Component: "go", Tool: "trivy-vuln"},
+		ID:       UnitID{Action: ActionScan, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "trivy-vuln"},
 		ExitCode: 0,
 		Metrics: map[string]any{
 			"issues_found": 5,
@@ -351,7 +351,7 @@ func TestUnitResult_MetricsCanStoreScanFindings(t *testing.T) {
 
 func TestUnitResult_MetricsCanStoreLintIssues(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionLint, Module: "mod", Component: "go", Tool: "golangci-lint"},
+		ID:       UnitID{Action: ActionLint, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "golangci-lint"},
 		ExitCode: 1,
 		Metrics: map[string]any{
 			"issues_found": 12,
@@ -365,7 +365,7 @@ func TestUnitResult_MetricsCanStoreLintIssues(t *testing.T) {
 
 func TestUnitResult_MetricsCanBeNil(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: 0,
 		Metrics:  nil,
 	}
@@ -375,7 +375,7 @@ func TestUnitResult_MetricsCanBeNil(t *testing.T) {
 
 func TestUnitResult_MetricsCanBeEmpty(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: 0,
 		Metrics:  map[string]any{},
 	}
@@ -390,7 +390,7 @@ func TestUnitResult_MetricsCanBeEmpty(t *testing.T) {
 
 func TestUnitResult_DurationIsAccessible(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: 0,
 		Duration: 2*time.Minute + 30*time.Second,
 	}
@@ -400,7 +400,7 @@ func TestUnitResult_DurationIsAccessible(t *testing.T) {
 
 func TestUnitResult_DurationCanBeZero(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: -1, // Cached, so duration might be 0
 		Duration: 0,
 	}
@@ -414,7 +414,7 @@ func TestUnitResult_DurationCanBeZero(t *testing.T) {
 
 func TestUnitResult_LogPathIsAccessible(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: 0,
 		LogPath:  "out/build/core/go/execution.log",
 	}
@@ -424,7 +424,7 @@ func TestUnitResult_LogPathIsAccessible(t *testing.T) {
 
 func TestUnitResult_LogPathCanBeEmpty(t *testing.T) {
 	result := UnitResult{
-		ID:       UnitID{Action: ActionBuild, Module: "mod", Component: "go", Tool: "go"},
+		ID:       UnitID{Action: ActionBuild, Module: "mod", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		ExitCode: -1, // Cached, might not have log
 		LogPath:  "",
 	}
@@ -449,7 +449,7 @@ func TestUnitResult_RealWorldScenarios(t *testing.T) {
 		{
 			name: "successful build",
 			result: UnitResult{
-				ID:       UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+				ID:       UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 				ExitCode: 0,
 				Duration: 15 * time.Second,
 				LogPath:  "out/build/core/go/execution.log",
@@ -459,7 +459,7 @@ func TestUnitResult_RealWorldScenarios(t *testing.T) {
 		{
 			name: "cached build (up-to-date)",
 			result: UnitResult{
-				ID:       UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+				ID:       UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 				ExitCode: -1,
 				Duration: 0,
 				LogPath:  "",
@@ -469,7 +469,7 @@ func TestUnitResult_RealWorldScenarios(t *testing.T) {
 		{
 			name: "failed test run",
 			result: UnitResult{
-				ID:       UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
+				ID:       UnitID{Action: ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
 				ExitCode: 1,
 				Duration: 45 * time.Second,
 				LogPath:  "out/test/core/go/unit/execution.log",
@@ -480,7 +480,7 @@ func TestUnitResult_RealWorldScenarios(t *testing.T) {
 		{
 			name: "successful lint with no issues",
 			result: UnitResult{
-				ID:       UnitID{Action: ActionLint, Module: "core", Component: "go", Tool: "golangci-lint"},
+				ID:       UnitID{Action: ActionLint, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "golangci-lint"},
 				ExitCode: 0,
 				Duration: 8 * time.Second,
 				LogPath:  "out/lint/core/go/execution.log",
@@ -491,7 +491,7 @@ func TestUnitResult_RealWorldScenarios(t *testing.T) {
 		{
 			name: "scan found vulnerabilities",
 			result: UnitResult{
-				ID:       UnitID{Action: ActionScan, Module: "core", Component: "go", Tool: "trivy-vuln"},
+				ID:       UnitID{Action: ActionScan, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "trivy-vuln"},
 				ExitCode: 1,
 				Duration: 30 * time.Second,
 				LogPath:  "out/scan/core/go/execution.log",

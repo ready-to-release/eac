@@ -8,13 +8,10 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/testing"
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
-
-var componentWorkLog = logging.C()
 
 // ResolveTestUnitSpecs converts TestsByPackage to component work specs.
 // Returns parallel tests first, followed by sequential tests.
@@ -35,7 +32,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 	}
 
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
+	if cfg == nil || cfg.ComponentKinds == nil {
 		return nil
 	}
 
@@ -61,7 +58,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 		// Module mapping is configured via test-impl component in component-types.yml
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
 		if moduleMoniker == "" {
-			componentWorkLog.Warnf("ResolveTestUnitSpecs: no module found for pkgPath=%s, skipping", pkgPath)
+			log.Warnf("ResolveTestUnitSpecs: no module found for pkgPath=%s, skipping", pkgPath)
 			continue
 		}
 
@@ -82,7 +79,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			// Get weight (base weight × amp, calculated internally)
 			// For tests, we find the component by mapping test type -> component type
 			compTypeName := getTestTypeComponentType(testType)
-			componentName := findComponentOfType(ctx, moduleMoniker, compTypeName)
+			componentName := findComponentForTests(ctx, moduleMoniker, compTypeName, pkgPath)
 			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
 
 			// Compute testname - unique identifier within module:component
@@ -101,7 +98,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 			// Skip if testname could not be determined (configuration error)
 			if testname == "" {
-				componentWorkLog.Warnf("ResolveTestUnitSpecs: skipping tests at pkgPath=%s - could not determine unique testname", pkgPath)
+				log.Warnf("ResolveTestUnitSpecs: skipping tests at pkgPath=%s - could not determine unique testname", pkgPath)
 				continue
 			}
 
@@ -114,18 +111,20 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				toolName = "none"
 			}
 
-			// Build UnitID with structure: test:module:component:tool:testname
-			// - Component = component TYPE (e.g., "go", "typescript")
+			// Build UnitID with structure: test:module:componentType:componentName:tool:testname
+			// - ComponentType = component TYPE from component-types.yml (e.g., "go", "gherkin")
+			// - ComponentName = component instance name within module (e.g., "go")
 			// - Extra["testname"] = unique test identifier within module:component
-			// This gives: Longname = test:eac-cli:go:gotest:impl-build
+			// This gives: Longname = test:eac:go:go:gotest:impl-build
 			//             DirName  = go-gotest-impl-build
 			unitID := workunit.UnitID{
-				Action:    core.ActionTest,
-				Module:    moduleMoniker,
-				Component: compTypeName, // Component TYPE, not path-derived name
-				Tool:      toolName,
-				Spec:      spec,
-				Extra:     map[string]string{"testname": testname},
+				Action:        core.ActionTest,
+				Module:        moduleMoniker,
+				ComponentType: compTypeName,  // Component TYPE from component-types.yml
+				ComponentName: componentName, // Component instance name from findComponentOfType
+				Tool:          toolName,
+				Spec:          spec,
+				Extra:         map[string]string{"testname": testname},
 			}
 
 			// Check UoW-level cache first, fall back to module-level
@@ -138,16 +137,15 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
 			work := workunit.UnitSpec{
-				ID: unitID, // Use the same UnitID for consistency
-				ComponentType: testType,
-				Weight:        weight,
-				Container:     isContainer,
-				HostInstalled: !isContainer,
-				DependsOn:     nil, // Tests don't have intra-module deps
-				Cached:        isCached,
-				Metadata:      map[string]any{"pkgPath": pkgPath}, // Full path for test lookup
-				Index:         0,                                  // Will be set per-layer below
-				Tags:          tagSummary,
+				ID:             unitID, // Use the same UnitID for consistency
+				ComponentType:  testType,
+				Weight:         weight,
+				PoolAllocation: core.AllocationForWeight(weight, isContainer),
+				DependsOn:      nil, // Tests don't have intra-module deps
+				Cached:         isCached,
+				Metadata:       map[string]any{"pkgPath": pkgPath}, // Full path for test lookup
+				Index:          0,                                  // Will be set per-layer below
+				Tags:           tagSummary,
 			}
 
 			// Store mapping from testname to pkgPath for worker lookup
@@ -197,17 +195,61 @@ func getTestTypeComponentType(testType string) string {
 
 // findComponentOfType finds the first component of the given type in a module.
 // Returns empty string if not found.
+// findComponentForTests finds the correct component for a test package path.
+// For BDD tests (pkgPath format: "specname:testRoot:featurePath"), it uses the
+// feature file path to match against component roots via longest-prefix matching.
+// This ensures deterministic results when a module has multiple components of the same type.
+// Falls back to findComponentOfType for non-BDD or unresolved cases.
+func findComponentForTests(ctx *cmdframework.ExecutionContext, moniker, compTypeName, pkgPath string) string {
+	module, exists := ctx.ModuleRegistry.Get(moniker)
+	if !exists {
+		return ""
+	}
+
+	// For BDD tests, extract the feature file path and match against component roots
+	parts := strings.SplitN(pkgPath, ":", 3)
+	if len(parts) == 3 {
+		featurePath := filepath.ToSlash(parts[2])
+		var bestName string
+		var bestLen int
+		for name := range module.Components {
+			if module.Components.GetComponentType(name) != compTypeName {
+				continue
+			}
+			root := filepath.ToSlash(module.Components.GetComponentRoot(name))
+			if root == "" {
+				continue
+			}
+			if strings.HasPrefix(featurePath, root+"/") || featurePath == root {
+				if len(root) > bestLen {
+					bestLen = len(root)
+					bestName = name
+				}
+			}
+		}
+		if bestName != "" {
+			return bestName
+		}
+	}
+
+	// Fallback: find any component of the matching type (deterministic: shortest name wins)
+	return findComponentOfType(ctx, moniker, compTypeName)
+}
+
 func findComponentOfType(ctx *cmdframework.ExecutionContext, moniker, compTypeName string) string {
 	module, exists := ctx.ModuleRegistry.Get(moniker)
 	if !exists {
 		return ""
 	}
+	var best string
 	for name := range module.Components {
 		if module.Components.GetComponentType(name) == compTypeName {
-			return name
+			if best == "" || name < best {
+				best = name
+			}
 		}
 	}
-	return ""
+	return best
 }
 
 // getTestComponentWeight returns the scheduling weight for a set of tests.
@@ -251,7 +293,7 @@ func getTestComponentWeight(moniker, componentName string, tests []testing.TestR
 
 // extractSpecName extracts the spec name from a BDD pkgPath.
 // For godog tests, pkgPath format is: "specname:testRoot:featurePath"
-// Example: "build-module:go/eac/specs/impl/eac-cli:specs/eac-cli/build-module/specification.feature"
+// Example: "build-module:go/eac/specs/impl/eac:specs/eac/build-module/specification.feature"
 // Returns the spec name (first part before colon), or empty string if not found.
 // The result is sanitized for use in file paths.
 func extractSpecName(pkgPath string) string {
@@ -313,13 +355,13 @@ func uniqueComponentName(pkgPath, moduleMoniker string, mapper *ModuleMapper) st
 	normalizedPath := filepath.ToSlash(pkgPath)
 
 	if mapper == nil || mapper.registry == nil {
-		componentWorkLog.Warnf("uniqueComponentName: mapper unavailable for pkgPath=%s, moduleMoniker=%s", pkgPath, moduleMoniker)
+		log.Warnf("uniqueComponentName: mapper unavailable for pkgPath=%s, moduleMoniker=%s", pkgPath, moduleMoniker)
 		return ""
 	}
 
 	module, exists := mapper.registry.Get(moduleMoniker)
 	if !exists {
-		componentWorkLog.Warnf("uniqueComponentName: module not found: moniker=%s, pkgPath=%s", moduleMoniker, pkgPath)
+		log.Warnf("uniqueComponentName: module not found: moniker=%s, pkgPath=%s", moduleMoniker, pkgPath)
 		return ""
 	}
 
@@ -353,7 +395,7 @@ func uniqueComponentName(pkgPath, moduleMoniker string, mapper *ModuleMapper) st
 	}
 
 	if bestSuffix == "" {
-		componentWorkLog.Warnf("uniqueComponentName: no component root matched for pkgPath=%s in module=%s (roots=%v)",
+		log.Warnf("uniqueComponentName: no component root matched for pkgPath=%s in module=%s (roots=%v)",
 			pkgPath, moduleMoniker, module.GetComponentRoots())
 		return ""
 	}

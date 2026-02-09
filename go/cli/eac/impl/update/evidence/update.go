@@ -145,7 +145,7 @@ func UpdateEvidence() int {
 		// The builder only uses this for logging and Docker config (which defaults for PDF)
 		minimalModule := modules.NewModuleContract(domain.BaseContract{
 			Moniker:    moniker,
-			Components: domain.ModuleComponents{"evidence": nil},
+			Components: config.ModuleComponents{"evidence": nil},
 		}, repoRoot)
 
 		// Build each evidence book

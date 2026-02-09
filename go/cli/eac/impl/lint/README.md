@@ -51,7 +51,7 @@ Lints one or more modules in parallel using provider-specific linters, with incr
 
 ## Role in System
 
-The `lint` package provides the `lint` command for `eac-cli`, running language-appropriate linters across all modules with parallel execution, incremental caching, and TUI feedback. It integrates with the `cmdframework` to share execution infrastructure with build, test, and scan commands while maintaining lint-specific behavior like auto-fix support and provider-per-component granularity.
+The `lint` package provides the `lint` command for `eac`, running language-appropriate linters across all modules with parallel execution, incremental caching, and TUI feedback. It integrates with the `cmdframework` to share execution infrastructure with build, test, and scan commands while maintaining lint-specific behavior like auto-fix support and provider-per-component granularity.
 
 ## Code Health
 

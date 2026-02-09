@@ -375,23 +375,23 @@ func TestExtractBundleModuleVersions(t *testing.T) {
 					TagName: "clie-eac-bundle/2025.01.15",
 					Body: `## Core Tools
 - eac-ext: v1.0.0
-- clie-cli: v2.3.4
+- clie: v2.3.4
 
 ## Documentation
 - docs: 2025.01.15`,
 				},
 			},
-			expected: []string{"eac-ext/1.0.0", "clie-cli/2.3.4", "docs/2025.01.15"},
+			expected: []string{"eac-ext/1.0.0", "clie/2.3.4", "docs/2025.01.15"},
 		},
 		{
 			name: "extracts module/version format",
 			releases: []Release{
 				{
 					TagName: "test-bundle/1.0.0",
-					Body:    "Includes eac-ext/1.2.3 and clie-cli/4.5.6",
+					Body:    "Includes eac-ext/1.2.3 and clie/4.5.6",
 				},
 			},
-			expected: []string{"eac-ext/1.2.3", "clie-cli/4.5.6"},
+			expected: []string{"eac-ext/1.2.3", "clie/4.5.6"},
 		},
 		{
 			name: "ignores non-bundle releases",
@@ -427,7 +427,7 @@ func TestSafetyChecker_BundleProtection(t *testing.T) {
 	releases := []Release{
 		{
 			TagName: "clie-eac-bundle/2025.01.15",
-			Body:    "Includes eac-ext/1.0.0 and clie-cli/2.0.0",
+			Body:    "Includes eac-ext/1.0.0 and clie/2.0.0",
 		},
 	}
 	checker := NewPackageSafetyChecker(

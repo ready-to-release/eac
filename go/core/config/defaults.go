@@ -95,19 +95,6 @@ func LoadRegistriesDefaults(repoRoot string) (RegistriesConfig, error) {
 	return cfg, nil
 }
 
-// LoadComponentTypesDefaults loads default component types from contract defaults.
-// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
-func LoadComponentTypesDefaults(repoRoot string) (*ComponentTypesConfig, error) {
-	cfg, err := cloneComponentTypesDefaults()
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNoDefaults
-		}
-		return nil, fmt.Errorf("loading component-types defaults: %w", err)
-	}
-	return cfg, nil
-}
-
 // LoadEnvironmentsDefaults loads default environments from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadEnvironmentsDefaults(repoRoot string) (*EnvironmentsConfig, error) {

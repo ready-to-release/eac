@@ -266,7 +266,7 @@ clie my-ext do-something --flag value
 
 ### 2. Register the Extension
 
-Add your extension to `.clie/clie-cli.yml`:
+Add your extension to `.clie/clie.yml`:
 
 ```yaml
 extensions:
@@ -645,7 +645,7 @@ Test the complete integration:
 
 ```bash
 # Create local config
-cat > .clie/clie-cli.local.yml <<EOF
+cat > .clie/clie.local.yml <<EOF
 version: "1.0"
 extensions:
   - name: my-ext

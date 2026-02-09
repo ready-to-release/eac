@@ -2,7 +2,7 @@ title: EAC Architecture
 nav:
   - index.md
   - cli-integration.md
-  - component-types.md
+  - component-kinds.md
   - contracts.md
   - dependencies.md
   - modules.md

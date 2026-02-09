@@ -1,4 +1,4 @@
-// Package implicitcli contains godog step implementations for specs/eac-cli/implicit-cli.
+// Package implicitcli contains godog step implementations for specs/eac/implicit-cli.
 //
 // This package tests implicit-cli features (importer scripts)
 // via subprocess execution of PowerShell/Bash scripts.
@@ -17,7 +17,7 @@ import (
 
 func TestScriptsImplicitCLIFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../specs/eac-cli/implicit-cli",
+		SpecsPath:         "../../../../../specs/eac/implicit-cli",
 		DefaultReportName: "cucumber-implicit-cli",
 		RegisterSteps:     RegisterSteps,
 	}

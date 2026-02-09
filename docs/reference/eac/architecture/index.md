@@ -25,7 +25,7 @@ eac serve design
 
 **Design files:**
 
-- **eac-cli**: [specs/eac-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-cli/.design/)
+- **eac**: [specs/eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac/.design/)
 - **core**: [specs/core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/core/.design/)
 - **eac-mcp-server**: [specs/eac-mcp-server/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-server/.design/)
 - **eac-ext**: [specs/eac-ext/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-ext/.design/)
@@ -46,7 +46,7 @@ graph TB
 
     Ext --> Commands
     Commands --> Core[core]
-    Commands --> Specs[godog-adapter]
+    Commands --> Specs[godog-eac]
 
     Core --> Contracts[YAML Contracts]
     Core --> Modules[Go Modules]
@@ -71,9 +71,9 @@ graph TB
 
 | Module               | Purpose                                                                  | Type        |
 | -------------------- | ------------------------------------------------------------------------ | ----------- |
-| **eac-cli**          | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
+| **eac**          | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
 | **core**             | Domain libraries, contract system, dependency graph                      | go-library  |
-| **godog-adapter**    | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
+| **godog-eac**    | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
 | **eac-mcp-server**   | MCP server for LLM tool integration                                      | go-mcp      |
 
 See [Modules Reference](../modules/index.md) for detailed module documentation.
@@ -125,7 +125,7 @@ See [Contracts System](./contracts.md) for detailed specification.
 
 Modules are the fundamental unit of organization in EAC repositories. Each module:
 
-- Has a unique moniker (e.g., `eac-commands`, `clie-cli`)
+- Has a unique moniker (e.g., `eac-commands`, `clie`)
 - Owns specific files (defined in `modules.yml`)
 - Declares dependencies on other modules
 - Has a module type that determines build/test/release behavior
@@ -171,7 +171,7 @@ See [Dependency System](./dependencies.md) for graph algorithms and caching stra
 | **AI**         | `create-commit-message`, `create-spec`, `create-design`, `create-pr` |
 | **CI/CD**      | `pipeline-run`, `pipeline-wait`, `get-changed-modules-ci`            |
 
-All commands are implemented in `eac-cli` following a consistent pattern:
+All commands are implemented in `eac` following a consistent pattern:
 
 ```go
 // All commands follow this pattern
@@ -317,21 +317,31 @@ This hierarchy allows:
 
 ### Caching
 
-- **UoW manifests**: Each Unit of Work writes a manifest to `out/` with input/output hashes
-- **Mtime-optimized hashing**: File modification times provide fast-path cache checks via `.cache/eac/`
-- **Go modules**: Module cache for dependency downloads
-- **Docker layers**: Layer caching for fast container image builds
+The cache system uses a **2D taxonomy** (Level x Type) to classify all caches:
 
-See [Cache System](./cache-system.md) for the full caching architecture.
+- **Level**: `local` (developer machine) or `remote` (network/CI)
+- **Type**: `registry`, `state`, `asset`, `layer`, `work`, or `ci`
+
+Key cache types:
+
+- **`local:state`** — UoW manifests in `out/` with input/output hashes
+- **`local:asset`** — Rendered diagrams (Mermaid, Structurizr) with content-based invalidation
+- **`local:layer`** — Docker BuildKit layer cache
+- **`remote:ci`** — CI build status (last successful GitHub Actions run per module)
+
+Any cache can be bypassed with `--skip-cache=<spec>` (e.g., `--skip-cache=remote:ci`).
+
+See [Cache System](./cache-system.md) for the full 2D taxonomy and CI cache architecture.
 
 ### Change Detection
 
-EAC uses **UoW manifest-based change detection** to minimize unnecessary work:
+EAC uses **UoW manifest-based change detection** for local builds and **CI cache checking** for remote CI dispatch:
 
 1. **Input hashing**: SHA256 of all source files matched by component patterns
 2. **Manifest comparison**: Compare current input hash against stored UoW manifest
 3. **Cross-context invalidation**: Rebuild tests when builds produce new output
 4. **Dependency propagation**: Rebuild dependents of changed modules
+5. **CI cache**: Skip CI dispatch when a module's last successful run matches HEAD SHA
 
 See [Cache System](./cache-system.md) for the detection algorithm.
 
@@ -365,7 +375,7 @@ See [CLI Integration](./cli-integration.md) for details on the CLIE ↔ EAC boun
 - [Modules Reference](../modules/index.md) - Module documentation and C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
 - [Dependency System](./dependencies.md) - Module dependency graph
-- [Component Types](./component-types.md) - Component type reference
+- [Component Types](./component-kinds.md) - Component type reference
 - [Repository Layout](./repository-layout.md) - File organization conventions
 - [CLI Integration](./cli-integration.md) - CLIE ↔ EAC integration details
 - [Build Execution System](./build-execution.md) - UoW orchestration and parallel scheduling

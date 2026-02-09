@@ -16,7 +16,7 @@ inputs:
   cross-compile-windows:
     description: |
       Cross-compile for Windows when building on Linux. Default: false.
-      Set to true only for workflows that have Windows test jobs (clie-cli, scripts-*).
+      Set to true only for workflows that have Windows test jobs (clie, scripts-*).
       This avoids unnecessary Windows builds for Linux-only CI workflows.
     default: 'false'
 
@@ -225,10 +225,9 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: |
-          go/cli/eac/go.sum
-          go/core/go.sum
-          go/clibase/go.sum
-          go/specs/*/go.sum
+          go.work
+          go/*/go.sum
+          go/*/*/go.sum
 
     - name: Build from source (Linux)
       if: runner.os == 'Linux' && steps.check.outputs.available != 'true'

@@ -39,7 +39,7 @@ Provides commands for editing DrawIO diagram files stored as `.drawio.png` (PNG 
 
 ## Role in System
 
-The `drawio` package enables LLM-powered diagram editing in `eac-cli` by providing a complete toolchain for manipulating DrawIO diagrams stored as `.drawio.png` files. Its decode/encode/embed pipeline allows programmatic extraction and modification of diagram XML, while the render command produces viewable PNG images, supporting the documentation workflow alongside the `update docs` command.
+The `drawio` package enables LLM-powered diagram editing in `eac` by providing a complete toolchain for manipulating DrawIO diagrams stored as `.drawio.png` files. Its decode/encode/embed pipeline allows programmatic extraction and modification of diagram XML, while the render command produces viewable PNG images, supporting the documentation workflow alongside the `update docs` command.
 
 ## Code Health
 

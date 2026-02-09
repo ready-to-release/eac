@@ -23,8 +23,8 @@ func findConfigFile(fileName string) (string, error) {
 	// Config files are located in .clie directory
 	clieDir := filepath.Join(repoRoot, ".clie")
 
-	// If looking for clie-cli.yml, use priority-based discovery for user-specific configs
-	if fileName == "clie-cli.yml" {
+	// If looking for clie.yml, use priority-based discovery for user-specific configs
+	if fileName == "clie.yml" {
 		candidates := getConfigFileCandidates(repoRoot)
 
 		// Check each candidate file in priority order
@@ -37,7 +37,7 @@ func findConfigFile(fileName string) (string, error) {
 			}
 		}
 
-		return "", NewConfigFileNotFoundError(".clie/clie-cli.yml", repoRoot)
+		return "", NewConfigFileNotFoundError(".clie/clie.yml", repoRoot)
 	}
 
 	// For other filenames, look in .clie directory
@@ -70,14 +70,14 @@ func getConfigFileCandidates(repoRoot string) []string {
 
 	// 1. User-specific configuration files (highest to lowest priority)
 	userSpecificFiles := []string{
-		"clie-cli.local.yml",    // Local development overrides (highest priority)
-		"clie-cli.personal.yml", // Personal user customizations
-		"clie-cli.dev.yml",      // Development environment settings
+		"clie.local.yml",    // Local development overrides (highest priority)
+		"clie.personal.yml", // Personal user customizations
+		"clie.dev.yml",      // Development environment settings
 	}
 
 	// Add username-specific config if we can get the current user
 	if currentUser, err := user.Current(); err == nil {
-		userSpecificFiles = append(userSpecificFiles, fmt.Sprintf("clie-cli.%s.yml", currentUser.Username))
+		userSpecificFiles = append(userSpecificFiles, fmt.Sprintf("clie.%s.yml", currentUser.Username))
 	}
 
 	// Add user-specific files to candidates (in .clie directory)
@@ -86,7 +86,7 @@ func getConfigFileCandidates(repoRoot string) []string {
 	}
 
 	// 2. Repository default configuration (lowest priority)
-	candidates = append(candidates, filepath.Join(clieDir, "clie-cli.yml"))
+	candidates = append(candidates, filepath.Join(clieDir, "clie.yml"))
 
 	return candidates
 }
@@ -134,7 +134,7 @@ func InitConfig() {
 	}
 
 	// Load base configuration file
-	configFile, err := findConfigFile("clie-cli.yml")
+	configFile, err := findConfigFile("clie.yml")
 	if err != nil {
 		logging.Fatalf("Error finding config file. Please run 'clie init' from the root of your project.: %v", err)
 	}
@@ -144,16 +144,16 @@ func InitConfig() {
 	}
 
 	// Check for and merge local override configurations
-	// Priority order (highest to lowest): clie-cli.local.yml, clie-cli.personal.yml, clie-cli.dev.yml
+	// Priority order (highest to lowest): clie.local.yml, clie.personal.yml, clie.dev.yml
 	// All override files are in .clie directory
 	repoRoot, _ := FindRepositoryRoot() //nolint:errcheck // empty string is valid fallback
 	RootDir = repoRoot // Store root directory for cache operations
 	if repoRoot != "" {
 		clieDir := filepath.Join(repoRoot, ".clie")
 		overrideFiles := []string{
-			"clie-cli.local.yml",
-			"clie-cli.personal.yml",
-			"clie-cli.dev.yml",
+			"clie.local.yml",
+			"clie.personal.yml",
+			"clie.dev.yml",
 		}
 
 		for _, overrideFile := range overrideFiles {

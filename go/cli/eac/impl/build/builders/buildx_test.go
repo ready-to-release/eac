@@ -1,9 +1,9 @@
 package builders
 
 import (
-	"io"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -12,19 +12,19 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "oci-tools",
-			Components: domain.ModuleComponents{
-				"pdf-oci": &domain.ComponentEntry{
-					DockerBuild: map[string]interface{}{
-						"container":  "pdf-oci",
-						"context":    "containers/pdf-oci",
-						"dockerfile": "containers/pdf-oci/Dockerfile",
+			Components: config.ModuleComponents{
+				"pdf-oci": &config.ComponentEntry{
+					DockerBuild: &config.DockerBuildConfig{
+						Container:  "pdf-oci",
+						Context:    "containers/pdf-oci",
+						Dockerfile: "containers/pdf-oci/Dockerfile",
 					},
 				},
-				"mkdocs-render-oci": &domain.ComponentEntry{
-					DockerBuild: map[string]interface{}{
-						"container":  "mkdocs-render-oci",
-						"context":    "containers/mkdocs-render-oci",
-						"dockerfile": "containers/mkdocs-render-oci/Dockerfile",
+				"mkdocs-render-oci": &config.ComponentEntry{
+					DockerBuild: &config.DockerBuildConfig{
+						Container:  "mkdocs-render-oci",
+						Context:    "containers/mkdocs-render-oci",
+						Dockerfile: "containers/mkdocs-render-oci/Dockerfile",
 					},
 				},
 			},
@@ -32,7 +32,7 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 	}
 
 	// Should find config for named component "pdf-oci"
-	cfg := getDockerBuildConfig(module, "pdf-oci", io.Discard)
+	cfg := getDockerBuildConfig(module, "pdf-oci")
 	if cfg == nil {
 		t.Fatal("expected non-nil config for pdf-oci")
 	}
@@ -41,7 +41,7 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 	}
 
 	// Should find config for named component "mkdocs-render-oci"
-	cfg2 := getDockerBuildConfig(module, "mkdocs-render-oci", io.Discard)
+	cfg2 := getDockerBuildConfig(module, "mkdocs-render-oci")
 	if cfg2 == nil {
 		t.Fatal("expected non-nil config for mkdocs-render-oci")
 	}
@@ -50,7 +50,7 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 	}
 
 	// Should return nil for non-existent component
-	cfg3 := getDockerBuildConfig(module, "nonexistent", io.Discard)
+	cfg3 := getDockerBuildConfig(module, "nonexistent")
 	if cfg3 != nil {
 		t.Error("expected nil config for nonexistent component")
 	}
@@ -60,11 +60,11 @@ func TestGetDockerBuildConfig_LegacyDockerfileKey(t *testing.T) {
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "pdf-oci",
-			Components: domain.ModuleComponents{
-				"dockerfile": &domain.ComponentEntry{
-					DockerBuild: map[string]interface{}{
-						"container": "pdf-oci",
-						"context":   "containers/pdf-oci",
+			Components: config.ModuleComponents{
+				"dockerfile": &config.ComponentEntry{
+					DockerBuild: &config.DockerBuildConfig{
+						Container: "pdf-oci",
+						Context:   "containers/pdf-oci",
 					},
 				},
 			},
@@ -72,7 +72,7 @@ func TestGetDockerBuildConfig_LegacyDockerfileKey(t *testing.T) {
 	}
 
 	// With component name "dockerfile", finds via first lookup (named component)
-	cfg := getDockerBuildConfig(module, "dockerfile", io.Discard)
+	cfg := getDockerBuildConfig(module, "dockerfile")
 	if cfg == nil {
 		t.Fatal("expected non-nil config for dockerfile component")
 	}
@@ -81,7 +81,7 @@ func TestGetDockerBuildConfig_LegacyDockerfileKey(t *testing.T) {
 	}
 
 	// With empty component name, falls back to "dockerfile" key
-	cfg2 := getDockerBuildConfig(module, "", io.Discard)
+	cfg2 := getDockerBuildConfig(module, "")
 	if cfg2 == nil {
 		t.Fatal("expected non-nil config via fallback to 'dockerfile' key")
 	}
@@ -94,18 +94,18 @@ func TestGetDockerBuildConfig_EmptyDockerBuild(t *testing.T) {
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "test-module",
-			Components: domain.ModuleComponents{
-				"pdf-oci": &domain.ComponentEntry{
-					DockerBuild: map[string]interface{}{}, // empty
+			Components: config.ModuleComponents{
+				"pdf-oci": &config.ComponentEntry{
+					DockerBuild: nil, // nil DockerBuild
 				},
 			},
 		},
 	}
 
-	// Empty DockerBuild should return nil
-	cfg := getDockerBuildConfig(module, "pdf-oci", io.Discard)
+	// nil DockerBuild should return nil
+	cfg := getDockerBuildConfig(module, "pdf-oci")
 	if cfg != nil {
-		t.Error("expected nil config for empty DockerBuild map")
+		t.Error("expected nil config for nil DockerBuild")
 	}
 }
 
@@ -113,13 +113,13 @@ func TestGetDockerBuildConfig_NilComponent(t *testing.T) {
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "test-module",
-			Components: domain.ModuleComponents{
+			Components: config.ModuleComponents{
 				"pdf-oci": nil, // nil entry
 			},
 		},
 	}
 
-	cfg := getDockerBuildConfig(module, "pdf-oci", io.Discard)
+	cfg := getDockerBuildConfig(module, "pdf-oci")
 	if cfg != nil {
 		t.Error("expected nil config for nil component entry")
 	}
@@ -131,14 +131,14 @@ func TestGetDockerBuildConfig_NamedComponentFallsBackToDockerfile(t *testing.T) 
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "mixed-module",
-			Components: domain.ModuleComponents{
-				"my-comp": &domain.ComponentEntry{
+			Components: config.ModuleComponents{
+				"my-comp": &config.ComponentEntry{
 					// No DockerBuild here
 				},
-				"dockerfile": &domain.ComponentEntry{
-					DockerBuild: map[string]interface{}{
-						"container": "fallback-container",
-						"context":   "containers/fallback",
+				"dockerfile": &config.ComponentEntry{
+					DockerBuild: &config.DockerBuildConfig{
+						Container: "fallback-container",
+						Context:   "containers/fallback",
 					},
 				},
 			},
@@ -146,7 +146,7 @@ func TestGetDockerBuildConfig_NamedComponentFallsBackToDockerfile(t *testing.T) 
 	}
 
 	// Looking up "my-comp" should fall back to "dockerfile" key
-	cfg := getDockerBuildConfig(module, "my-comp", io.Discard)
+	cfg := getDockerBuildConfig(module, "my-comp")
 	if cfg == nil {
 		t.Fatal("expected fallback to 'dockerfile' key")
 	}

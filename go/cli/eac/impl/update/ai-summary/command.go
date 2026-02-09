@@ -19,7 +19,7 @@
 // Long:
 // Long: Example:
 // Long:   update ai-summary                  # Analyze all modules
-// Long:   update ai-summary eac-cli          # Analyze single module
+// Long:   update ai-summary eac          # Analyze single module
 // Long:   update ai-summary --type=dsl core  # Analyze only DSL for core
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // Flag.type: type=string, shorthand=t, default=, usage=Specific analysis type (dsl, specs, source, docs)
@@ -113,7 +113,7 @@ func UpdateAISummary() int {
 		SkipDeps:       true, // AI analysis doesn't need system deps
 		SkipDepm:       true, // No module dependencies
 		ForceRebuild:   config.SkipCache,
-		MaxConcurrency: 2,     // AI tasks are token-limited, not CPU/RAM-limited
+		MaxConcurrency: 2, // AI tasks are token-limited, not CPU/RAM-limited
 		Turbo:          config.Turbo,
 		DryRun:         config.DryRun,
 		UseTUI:         config.UseTUI,
@@ -242,6 +242,6 @@ func printUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  update ai-summary                   # Analyze all modules")
-	log.Info("  update ai-summary eac-cli           # Analyze single module")
+	log.Info("  update ai-summary eac           # Analyze single module")
 	log.Info("  update ai-summary --type=dsl core   # Analyze only DSL for core")
 }

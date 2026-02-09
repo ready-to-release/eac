@@ -46,7 +46,7 @@ and Windows-safe moniker sanitization for output paths.
 - Many path builder functions repeat `filepath.Join(repoRoot, OutDir, ...)` inline rather than calling a shared helper
 
 ### Pain Points
-- File is over 1000 lines with 60+ exported functions; grouping into sub-files (e.g., `cache_paths.go`, `build_paths.go`) would improve navigability
+- ~~File is over 1000 lines with 60+ exported functions; grouping into sub-files would improve navigability~~ (resolved: split into `paths_output.go`, `paths_cache.go`, `paths_config.go`, `paths_builders.go`)
 - No validation that `repoRoot` is non-empty or absolute in any builder function
 
 ### Optimization Opportunities

@@ -2,7 +2,7 @@ title: Local Setup
 nav:
   - index.md
   - install-toolchain.md
-  - install-eac-cli.md
+  - install-eac.md
   - configure-ai.md
   - configure-claude-code.md
   - local-dev-workflows.md

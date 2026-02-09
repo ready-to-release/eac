@@ -89,7 +89,7 @@ func registerConfigSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	sc.Step(`^the module "([^"]*)" component "([^"]*)" has root "([^"]*)"$`, configTheModuleComponentHasRoot)
 
 	// Then steps - component types assertions
-	sc.Step(`^the component types config contains type "([^"]*)"$`, configTheComponentTypesConfigContainsType)
+	sc.Step(`^the component types config contains type "([^"]*)"$`, configTheComponentKindsConfigContainsType)
 	sc.Step(`^the type "([^"]*)" has capability "([^"]*)"$`, configTheTypeHasCapability)
 	sc.Step(`^the type "([^"]*)" has description "([^"]*)"$`, configTheTypeHasDescription)
 	sc.Step(`^the type "([^"]*)" has default source pattern "([^"]*)"$`, configTheTypeHasDefaultSourcePattern)
@@ -430,14 +430,14 @@ func configTheModuleComponentHasRoot(moniker, comp, expectedRoot string) error {
 // Component Types Assertions
 // ============================================================================
 
-func configTheComponentTypesConfigContainsType(typeName string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+func configTheComponentKindsConfigContainsType(typeName string) error {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("component types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		var available []string
-		for name := range cfgState.cfg.ComponentTypes.ComponentTypes {
+		for name := range cfgState.cfg.ComponentKinds.Kinds {
 			available = append(available, name)
 		}
 		return fmt.Errorf("type %q not found in config (available: %v)", typeName, available)
@@ -446,10 +446,10 @@ func configTheComponentTypesConfigContainsType(typeName string) error {
 }
 
 func configTheTypeHasCapability(typeName, capability string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("package types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
@@ -457,10 +457,10 @@ func configTheTypeHasCapability(typeName, capability string) error {
 }
 
 func configTheTypeHasDescription(typeName, expected string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("package types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
@@ -468,10 +468,10 @@ func configTheTypeHasDescription(typeName, expected string) error {
 }
 
 func configTheTypeHasDefaultSourcePattern(typeName, pattern string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("package types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
@@ -487,10 +487,10 @@ func configTheTypeHasDefaultSourcePattern(typeName, pattern string) error {
 }
 
 func configTheTypeHasBuilder(typeName, builder string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("component types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
@@ -506,10 +506,10 @@ func configTheTypeHasBuilder(typeName, builder string) error {
 }
 
 func configTheTypeHasExtension(typeName, ext string) error {
-	if cfgState.cfg == nil || cfgState.cfg.ComponentTypes == nil {
+	if cfgState.cfg == nil || cfgState.cfg.ComponentKinds == nil {
 		return fmt.Errorf("component types config not loaded")
 	}
-	pt := cfgState.cfg.ComponentTypes.Get(typeName)
+	pt := cfgState.cfg.ComponentKinds.Get(typeName)
 	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}

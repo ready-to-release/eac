@@ -1,6 +1,6 @@
 // Command: get cli-release-notes
 // Short: Generate release notes for CLI releases
-// Flag.module: type=string, default=clie-cli, usage=Module name
+// Flag.module: type=string, default=clie, usage=Module name
 // Flag.binary-prefix: type=string, default=clie, usage=Binary name prefix
 // Flag.version: type=string, usage=Version string (required)
 // Flag.tag: type=string, usage=Git tag name (required)
@@ -13,7 +13,7 @@
 // Long: security information about build attestations.
 // Long:
 // Long: Example:
-// Long:   get cli-release-notes --version 1.0.0 --tag clie-cli/1.0.0 --commit abc123
+// Long:   get cli-release-notes --version 1.0.0 --tag clie/1.0.0 --commit abc123
 package get
 
 import (
@@ -35,7 +35,7 @@ func GetCLIReleaseNotes() int {
 
 	args := os.Args[3:] // Skip program name, "get", and "cli-release-notes"
 
-	module := "clie-cli"
+	module := "clie"
 	binaryPrefix := "clie"
 	version := ""
 	tag := ""

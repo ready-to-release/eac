@@ -169,9 +169,9 @@ Feature: Configuration Defaults System
   Rule: User component types merge with defaults correctly
 
     Scenario: C1 - User adds new type alongside defaults
-      Given the repository has file ".eac/component-types.yml" with:
+      Given the repository has file ".eac/blueprints.yml" with:
         """
-        component-types:
+        component-kinds:
           custom-go-lib:
             extensions: [".go"]
             builders: [go]
@@ -182,9 +182,9 @@ Feature: Configuration Defaults System
       And the type "custom-go-lib" has builder "go"
 
     Scenario: C2 - User overrides default type definition
-      Given the repository has file ".eac/component-types.yml" with:
+      Given the repository has file ".eac/blueprints.yml" with:
         """
-        component-types:
+        component-kinds:
           go:
             extensions: [".go", ".go2"]
             builders: [go]
@@ -194,9 +194,9 @@ Feature: Configuration Defaults System
       And the type "go" has extension ".go2"
 
     Scenario: C3 - User type with default file patterns
-      Given the repository has file ".eac/component-types.yml" with:
+      Given the repository has file ".eac/blueprints.yml" with:
         """
-        component-types:
+        component-kinds:
           my-go-lib:
             extensions: [".go"]
             builders: [go]
@@ -209,9 +209,9 @@ Feature: Configuration Defaults System
       And the type "my-go-lib" has default source pattern "lib/**/*.go"
 
     Scenario: C4 - Empty user types list preserves defaults
-      Given the repository has file ".eac/component-types.yml" with:
+      Given the repository has file ".eac/blueprints.yml" with:
         """
-        component-types: {}
+        component-kinds: {}
         """
       When I load the EAC configuration
       Then the component types config contains type "go"

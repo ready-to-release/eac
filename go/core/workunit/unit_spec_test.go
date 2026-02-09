@@ -3,9 +3,9 @@ package workunit
 import (
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // =============================================================================
@@ -15,10 +15,9 @@ import (
 func TestUnitSpec_FieldsExist(t *testing.T) {
 	// Verify UnitSpec struct has all expected fields
 	spec := UnitSpec{
-		ID:            UnitID{Action: core.ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:            UnitID{Action: core.ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		ComponentType: "go",
 		Weight:        1,
-		Container:    false,
 		DependsOn:     []UnitID{},
 		Cached:        false,
 		Metadata:      map[string]any{"key": "value"},
@@ -27,7 +26,6 @@ func TestUnitSpec_FieldsExist(t *testing.T) {
 	assert.Equal(t, "mod", spec.ID.Module)
 	assert.Equal(t, "go", spec.ComponentType)
 	assert.Equal(t, 1, spec.Weight)
-	assert.False(t, spec.Container)
 	assert.Empty(t, spec.DependsOn)
 	assert.False(t, spec.Cached)
 	assert.Equal(t, "value", spec.Metadata["key"])
@@ -47,7 +45,7 @@ func TestNewBuildSpec_SetsCorrectFields(t *testing.T) {
 	spec := NewBuildSpec("core", "go", "go")
 
 	assert.Equal(t, "core", spec.ID.Module)
-	assert.Equal(t, "go", spec.ID.Component)
+	assert.Equal(t, "go", spec.ID.ComponentName)
 	assert.Equal(t, "go", spec.ID.Tool)
 }
 
@@ -56,7 +54,7 @@ func TestNewBuildSpec_SetsReasonableDefaults(t *testing.T) {
 
 	assert.Equal(t, 1, spec.Weight, "Weight should default to 1")
 	assert.False(t, spec.Cached, "Cached should default to false")
-	assert.False(t, spec.Container, "Container should default to false")
+	assert.False(t, spec.GetPoolAllocation().IsContainer(), "Should default to host-only (not container)")
 	assert.Empty(t, spec.DependsOn, "DependsOn should be empty by default")
 }
 
@@ -81,7 +79,7 @@ func TestNewBuildSpec_TableDriven(t *testing.T) {
 		},
 		{
 			name:      "docker build",
-			module:    "eac-cli",
+			module:    "eac",
 			component: "docker",
 			tool:      "docker",
 		},
@@ -99,7 +97,7 @@ func TestNewBuildSpec_TableDriven(t *testing.T) {
 
 			assert.Equal(t, core.ActionBuild, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
-			assert.Equal(t, tt.component, spec.ID.Component)
+			assert.Equal(t, tt.component, spec.ID.ComponentName)
 			assert.Equal(t, tt.tool, spec.ID.Tool)
 			assert.Equal(t, 1, spec.Weight)
 			assert.False(t, spec.Cached)
@@ -121,7 +119,7 @@ func TestNewTestSpec_SetsCorrectFields(t *testing.T) {
 	spec := NewTestSpec("core", "go", "gotest", "unit")
 
 	assert.Equal(t, "core", spec.ID.Module)
-	assert.Equal(t, "go", spec.ID.Component)
+	assert.Equal(t, "go", spec.ID.ComponentName)
 	assert.Equal(t, "gotest", spec.ID.Tool)
 }
 
@@ -137,7 +135,7 @@ func TestNewTestSpec_SetsReasonableDefaults(t *testing.T) {
 
 	assert.Equal(t, 1, spec.Weight, "Weight should default to 1")
 	assert.False(t, spec.Cached, "Cached should default to false")
-	assert.False(t, spec.Container, "Container should default to false")
+	assert.False(t, spec.GetPoolAllocation().IsContainer(), "Should default to host-only (not container)")
 	assert.Empty(t, spec.DependsOn, "DependsOn should be empty by default")
 }
 
@@ -165,7 +163,7 @@ func TestNewTestSpec_TableDriven(t *testing.T) {
 		},
 		{
 			name:      "acceptance tests with gherkin",
-			module:    "eac-cli",
+			module:    "eac",
 			component: "gherkin",
 			tool:      "godog",
 			testset:   "acceptance",
@@ -185,7 +183,7 @@ func TestNewTestSpec_TableDriven(t *testing.T) {
 
 			assert.Equal(t, core.ActionTest, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
-			assert.Equal(t, tt.component, spec.ID.Component)
+			assert.Equal(t, tt.component, spec.ID.ComponentName)
 			assert.Equal(t, tt.tool, spec.ID.Tool)
 			assert.Equal(t, tt.testset, spec.ID.Extra["testset"])
 			assert.Equal(t, 1, spec.Weight)
@@ -208,7 +206,7 @@ func TestNewLintSpec_SetsCorrectFields(t *testing.T) {
 	spec := NewLintSpec("core", "go", "golangci-lint")
 
 	assert.Equal(t, "core", spec.ID.Module)
-	assert.Equal(t, "go", spec.ID.Component)
+	assert.Equal(t, "go", spec.ID.ComponentName)
 	assert.Equal(t, "golangci-lint", spec.ID.Tool)
 }
 
@@ -217,7 +215,7 @@ func TestNewLintSpec_SetsReasonableDefaults(t *testing.T) {
 
 	assert.Equal(t, 1, spec.Weight, "Weight should default to 1")
 	assert.False(t, spec.Cached, "Cached should default to false")
-	assert.False(t, spec.Container, "Container should default to false")
+	assert.False(t, spec.GetPoolAllocation().IsContainer(), "Should default to host-only (not container)")
 	assert.Empty(t, spec.DependsOn, "DependsOn should be empty by default")
 }
 
@@ -260,7 +258,7 @@ func TestNewLintSpec_TableDriven(t *testing.T) {
 
 			assert.Equal(t, core.ActionLint, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
-			assert.Equal(t, tt.component, spec.ID.Component)
+			assert.Equal(t, tt.component, spec.ID.ComponentName)
 			assert.Equal(t, tt.provider, spec.ID.Tool)
 			assert.Equal(t, 1, spec.Weight)
 			assert.False(t, spec.Cached)
@@ -282,7 +280,7 @@ func TestNewScanSpec_SetsCorrectFields(t *testing.T) {
 	spec := NewScanSpec("core", "go", "trivy-vuln")
 
 	assert.Equal(t, "core", spec.ID.Module)
-	assert.Equal(t, "go", spec.ID.Component)
+	assert.Equal(t, "go", spec.ID.ComponentName)
 	assert.Equal(t, "trivy-vuln", spec.ID.Tool)
 }
 
@@ -291,7 +289,7 @@ func TestNewScanSpec_SetsReasonableDefaults(t *testing.T) {
 
 	assert.Equal(t, 1, spec.Weight, "Weight should default to 1")
 	assert.False(t, spec.Cached, "Cached should default to false")
-	assert.False(t, spec.Container, "Container should default to false")
+	assert.False(t, spec.GetPoolAllocation().IsContainer(), "Should default to host-only (not container)")
 	assert.Empty(t, spec.DependsOn, "DependsOn should be empty by default")
 }
 
@@ -334,7 +332,7 @@ func TestNewScanSpec_TableDriven(t *testing.T) {
 
 			assert.Equal(t, core.ActionScan, spec.ID.Action)
 			assert.Equal(t, tt.module, spec.ID.Module)
-			assert.Equal(t, tt.component, spec.ID.Component)
+			assert.Equal(t, tt.component, spec.ID.ComponentName)
 			assert.Equal(t, tt.scanner, spec.ID.Tool)
 			assert.Equal(t, 1, spec.Weight)
 			assert.False(t, spec.Cached)
@@ -407,10 +405,10 @@ func TestUnitSpec_DependsOnCanBeSet(t *testing.T) {
 }
 
 func TestUnitSpec_DependsOnMultiple(t *testing.T) {
-	spec := NewTestSpec("eac-cli", "gherkin", "godog", "integration")
+	spec := NewTestSpec("eac", "gherkin", "godog", "integration")
 
-	dep1 := UnitID{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"}
-	dep2 := UnitID{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"}
+	dep1 := UnitID{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"}
+	dep2 := UnitID{Action: core.ActionBuild, Module: "eac", ComponentType: "go", ComponentName: "go", Tool: "go"}
 
 	spec.DependsOn = []UnitID{dep1, dep2}
 
@@ -438,14 +436,14 @@ func TestUnitSpec_MetadataCanStoreAnyValues(t *testing.T) {
 }
 
 // =============================================================================
-// UnitSpec Container Tests
+// UnitSpec PoolAllocation Container Tests
 // =============================================================================
 
-func TestUnitSpec_ContainerCanBeSet(t *testing.T) {
-	spec := NewBuildSpec("eac-cli", "docker", "docker")
-	spec.Container = true
+func TestUnitSpec_ContainerViaPoolAllocation(t *testing.T) {
+	spec := NewBuildSpec("eac", "docker", "docker")
+	spec.PoolAllocation = core.ContainerAllocation(1, 1)
 
-	assert.True(t, spec.Container)
+	assert.True(t, spec.GetPoolAllocation().IsContainer())
 }
 
 // =============================================================================
@@ -492,4 +490,3 @@ func TestUnitSpec_GetPoolAllocation_ExplicitAllocation(t *testing.T) {
 	assert.Equal(t, 2, alloc.GetDockerWeight())
 	assert.True(t, alloc.IsContainer())
 }
-

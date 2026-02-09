@@ -53,7 +53,7 @@ Initializes EAC project configuration by creating the `.eac` directory structure
 
 ## Role in System
 
-The `init` package is the onboarding entry point for `eac-cli`, bootstrapping a project's `.eac` configuration from scratch or updating it as the repository evolves. Its scanner detects modules across multiple languages, and its strategy-based config generation produces repository.yml either through heuristics or AI-enhanced analysis, making it the foundation that all other commands depend on for configuration.
+The `init` package is the onboarding entry point for `eac`, bootstrapping a project's `.eac` configuration from scratch or updating it as the repository evolves. Its scanner detects modules across multiple languages, and its strategy-based config generation produces repository.yml either through heuristics or AI-enhanced analysis, making it the foundation that all other commands depend on for configuration.
 
 ## Code Health
 

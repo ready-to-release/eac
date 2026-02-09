@@ -34,7 +34,7 @@ Navigation generation and macro management for the docprep pipeline, ensuring ev
 
 ## Role in System
 
-The navigation package implements phases 7 and 10 of the docprep preprocessing pipeline in `eac-cli`. Phase 7 ensures every directory in staging has a valid `.nav.yml` and that a root `index.md` exists, providing MkDocs with the navigation structure it needs. It validates existing nav files against the actual directory contents and generates new ones where missing.
+The navigation package implements phases 7 and 10 of the docprep preprocessing pipeline in `eac`. Phase 7 ensures every directory in staging has a valid `.nav.yml` and that a root `index.md` exists, providing MkDocs with the navigation structure it needs. It validates existing nav files against the actual directory contents and generates new ones where missing.
 
 Phase 10 handles output-mode-specific macro processing. For site builds, it injects breadcrumb and Diataxis footer macros into markdown files in the standard documentation sections. For PDF builds, it strips all Jinja2 macro calls and nav titles since the PDF rendering container does not support the macros plugin.
 

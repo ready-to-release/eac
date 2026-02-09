@@ -25,6 +25,7 @@ const (
 	TypeAsset    Type = "asset"    // Rendered assets (mermaid, structurizr)
 	TypeLayer    Type = "layer"    // Build layer caches (BuildKit)
 	TypeWork     Type = "work"     // Ephemeral work directories
+	TypeCI       Type = "ci"       // CI build status (remote)
 	TypeAll      Type = "all"      // All types (wildcard)
 )
 
@@ -35,7 +36,7 @@ func AllLevels() []Level {
 
 // AllTypes returns all concrete Type values (excluding TypeAll).
 func AllTypes() []Type {
-	return []Type{TypeRegistry, TypeState, TypeAsset, TypeLayer, TypeWork}
+	return []Type{TypeRegistry, TypeState, TypeAsset, TypeLayer, TypeWork, TypeCI}
 }
 
 // Spec represents a cache specification (level:type pair).
@@ -122,7 +123,7 @@ func isLevel(s string) bool {
 
 func isType(s string) bool {
 	switch Type(s) {
-	case TypeRegistry, TypeState, TypeAsset, TypeLayer, TypeWork, TypeAll:
+	case TypeRegistry, TypeState, TypeAsset, TypeLayer, TypeWork, TypeCI, TypeAll:
 		return true
 	}
 	return false

@@ -282,8 +282,8 @@ func TestTestingConfig_GetTag_PatternMatching(t *testing.T) {
 
 		// Pattern-based tags - @depm:<module-name>
 		{
-			name:     "pattern match - depm:clie-cli",
-			tag:      "@depm:clie-cli",
+			name:     "pattern match - depm:clie",
+			tag:      "@depm:clie",
 			wantOk:   true,
 			wantType: "module_dependency",
 		},
@@ -394,7 +394,7 @@ func TestTestingConfig_IsKnownTag(t *testing.T) {
 
 		// Pattern match tags
 		{"pattern - deps:docker", "@deps:docker", true},
-		{"pattern - depm:clie-cli", "@depm:clie-cli", true},
+		{"pattern - depm:clie", "@depm:clie", true},
 		{"pattern - env:isolated", "@env:isolated", true},
 		{"pattern - skip:wip", "@skip:wip", true},
 		{"pattern - control:ac-2", "@control:ac-2", true},
@@ -693,7 +693,7 @@ func TestTestingConfig_ValidateTag(t *testing.T) {
 
 		// Valid pattern match tags
 		{"valid - deps:docker", "@deps:docker", false, ""},
-		{"valid - depm:clie-cli", "@depm:clie-cli", false, ""},
+		{"valid - depm:clie", "@depm:clie", false, ""},
 		{"valid - env:staging", "@env:staging", false, ""},
 		{"valid - control:ac-2", "@control:ac-2", false, ""},
 

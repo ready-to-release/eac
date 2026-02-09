@@ -327,7 +327,7 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "bundle release type - should aggregate",
 			module: Module{
 				Moniker:   "clie-eac-bundle",
-				DependsOn: []string{"clie-cli", "eac-ext"},
+				DependsOn: []string{"clie", "eac-ext"},
 				Versioning: &ModuleVersioning{
 					ReleaseType: "bundle",
 				},

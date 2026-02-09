@@ -6,7 +6,7 @@
 // Long: This helps identify dead code and maintain a clean test codebase.
 // Long: Shared steps from go/eac/specs/internal/steps.go are checked against all pairs.
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed output including all scanned files
-// Flag.module: type=string, shorthand=m, default=, usage=Only analyze a specific module (e.g., eac-cli)
+// Flag.module: type=string, shorthand=m, default=, usage=Only analyze a specific module (e.g., eac)
 // Usage: specs unused-steps [--verbose] [--module=<name>]
 package unused
 

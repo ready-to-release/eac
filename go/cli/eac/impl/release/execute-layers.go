@@ -205,7 +205,7 @@ func ReleaseExecuteLayers() int {
 // dispatchAndGetRunID dispatches a workflow and returns the run ID.
 func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (string, error) {
 	// Dispatch the workflow
-	// Semver releases (clie-cli, eac-ext) require version input
+	// Semver releases (clie, eac-ext) require version input
 	// Calver releases (books, docs, clie-eac-bundle) auto-generate versions
 	args := []string{"workflow", "run", workflow}
 	if versionType == "semver" {

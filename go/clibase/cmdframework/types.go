@@ -17,6 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -129,6 +130,10 @@ type ExecutionContext struct {
 	RepoConfig    *config.RepositoryConfig
 	Orchestrator  *orchestrator.Orchestrator
 
+	// ToolSystem provides access to tool registry, executor, and bridges.
+	// Populated during phaseInitDeferred. May be nil if tool config is absent.
+	ToolSystem *tool.ToolSystem
+
 	// Module State (populated by phaseResolve)
 	ModuleReport   *reports.ModuleContractReport
 	ModuleRegistry *modules.Registry
@@ -202,9 +207,10 @@ type InitTimings struct {
 type CommandWorkerFunc func(goCtx context.Context, ctx *ExecutionContext, moniker string, logWriter io.Writer) int
 
 // UnitWorkerFunc processes a single work unit and returns an exit code.
-// It receives a cancellation context, the execution context, module moniker, component name, and a log writer.
+// It receives a cancellation context, the execution context, the full UnitSpec, and a log writer.
+// Workers should use spec.ID fields directly instead of parsing strings.
 // Return 0 for success, non-zero for failure.
-type UnitWorkerFunc func(goCtx context.Context, ctx *ExecutionContext, module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(goCtx context.Context, ctx *ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int
 
 // PhaseHook is called at specific points during command execution.
 // Return an error to abort execution.

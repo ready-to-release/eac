@@ -169,7 +169,7 @@ func (r *Repository) getCommitFiles(c *object.Commit) ([]string, error) {
 	return files, err
 }
 
-// TagsMatching returns tags matching a glob pattern (e.g., "clie-cli/*").
+// TagsMatching returns tags matching a glob pattern (e.g., "clie/*").
 // Tags are returned sorted by version (newest first for semver).
 func (r *Repository) TagsMatching(pattern string) ([]string, error) {
 	tagIter, err := r.repo.Tags()
@@ -289,7 +289,7 @@ func (r *Repository) resolveRef(ref string) (plumbing.Hash, error) {
 		return head.Hash(), nil
 	}
 
-	// Try as a tag first (e.g., "clie-cli/0.0.14")
+	// Try as a tag first (e.g., "clie/0.0.14")
 	tagRef, err := r.repo.Reference(plumbing.NewTagReferenceName(ref), true)
 	if err == nil {
 		// For annotated tags, dereference
@@ -345,7 +345,7 @@ func (r *Repository) resolveRef(ref string) (plumbing.Hash, error) {
 }
 
 // matchTagPattern matches a tag name against a simple glob pattern.
-// Supports: * (matches anything), and prefix matching (e.g., "clie-cli/*").
+// Supports: * (matches anything), and prefix matching (e.g., "clie/*").
 func matchTagPattern(tagName, pattern string) bool {
 	if pattern == "" || pattern == "*" {
 		return true

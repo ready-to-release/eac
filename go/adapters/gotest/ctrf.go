@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/ctrf"
+	"github.com/ready-to-release/eac/go/core/ctrf"
 	"github.com/ready-to-release/eac/go/clibase/testrunners"
 )
 

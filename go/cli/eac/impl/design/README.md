@@ -51,7 +51,7 @@ Provides architecture documentation operations using Structurizr DSL, including 
 
 ## Role in System
 
-The `design` package provides architecture-as-code capabilities for `eac-cli`, enabling teams to author Structurizr DSL workspaces, validate them in CI via Docker, export diagrams to SVG for documentation, and interactively edit designs with a live Structurizr Lite server. It is used by both the `validate design` and `serve design` commands.
+The `design` package provides architecture-as-code capabilities for `eac`, enabling teams to author Structurizr DSL workspaces, validate them in CI via Docker, export diagrams to SVG for documentation, and interactively edit designs with a live Structurizr Lite server. It is used by both the `validate design` and `serve design` commands.
 
 ## Code Health
 

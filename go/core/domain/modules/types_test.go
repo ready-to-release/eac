@@ -15,12 +15,11 @@ func TestNewModuleContract(t *testing.T) {
 	base := domain.BaseContract{
 		Moniker: "test-module",
 		Name:    "Test Module",
-		Packages: domain.ModulePackages{
-			"test-type": &domain.PackageEntry{Root: "test/root"},
-		},
-		Files: domain.Files{
-			Root:   "test/root",
-			Source: []string{"**/*.go"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
+				Root:     "test/root",
+				Patterns: &config.ComponentPatterns{Source: []string{"**/*.go"}},
+			},
 		},
 	}
 
@@ -41,7 +40,8 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 		moniker  string
 		root     string
 		source   []string
-		specs    []string
+		specs    string   // specs component root (repo-root relative)
+		specsPat []string // specs component patterns
 		expected []string
 	}{
 		{
@@ -49,7 +49,8 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 			moniker:  "eac-test",
 			root:     "go/eac/test",
 			source:   []string{"**/*.go"},
-			specs:    []string{"specs/eac-test/**"},
+			specs:    "specs/eac-test",
+			specsPat: []string{"**"},
 			expected: []string{"go/eac/test/**/*.go", "specs/eac-test/**"},
 		},
 		{
@@ -57,42 +58,67 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 			moniker:  "eac-mcp-vscode",
 			root:     "go/eac/mcp/vscode",
 			source:   []string{"go.mod", "**.go"},
-			specs:    []string{"specs/eac-mcp-vscode/**"},
+			specs:    "specs/eac-mcp-vscode",
+			specsPat: []string{"**"},
 			expected: []string{"go/eac/mcp/vscode/go.mod", "go/eac/mcp/vscode/**.go", "specs/eac-mcp-vscode/**"},
 		},
 		{
 			name:     "specs patterns are repo-root relative",
-			moniker:  "clie-cli",
+			moniker:  "clie",
 			root:     "go/cli/clie",
 			source:   []string{"go.mod", "**.go"},
-			specs:    []string{"specs/clie-cli/**"},
-			expected: []string{"go/cli/clie/go.mod", "go/cli/clie/**.go", "specs/clie-cli/**"},
+			specs:    []string{"specs/clie/**"},
+			expected: []string{"go/cli/clie/go.mod", "go/cli/clie/**.go", "specs/clie/**"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			base := domain.BaseContract{
-				Moniker: tt.moniker,
-				Files: domain.Files{
-					Root:   tt.root,
-					Source: tt.source,
-					Repo: domain.RepoPatterns{
-						Specs: tt.specs,
-					},
+			components := config.ModuleComponents{
+				"go": &config.ComponentEntry{
+					Root:     tt.root,
+					Patterns: &config.ComponentPatterns{Source: tt.source},
 				},
+			}
+			if tt.specs != "" {
+				components["specs"] = &config.ComponentEntry{
+					Root:     tt.specs,
+					Patterns: &config.ComponentPatterns{Source: tt.specsPat},
+				}
+			}
+
+			base := domain.BaseContract{
+				Moniker:    tt.moniker,
+				Components: components,
 			}
 			module := NewModuleContract(base, "")
 
 			globs := module.GetGlobPatterns()
 
 			if len(globs) != len(tt.expected) {
-				t.Fatalf("Expected %d patterns, got %d", len(tt.expected), len(globs))
+				t.Fatalf("Expected %d patterns, got %d: %v", len(tt.expected), len(globs), globs)
 			}
 
-			for i, expected := range tt.expected {
-				if globs[i] != expected {
-					t.Errorf("Pattern %d: expected '%s', got '%s'", i, expected, globs[i])
+			// Check all expected patterns are present (map iteration order is non-deterministic)
+			expectedSet := make(map[string]bool, len(tt.expected))
+			for _, e := range tt.expected {
+				expectedSet[e] = true
+			}
+			for _, g := range globs {
+				if !expectedSet[g] {
+					t.Errorf("Unexpected pattern %q in result %v", g, globs)
+				}
+			}
+			for _, e := range tt.expected {
+				found := false
+				for _, g := range globs {
+					if g == e {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected pattern %q not found in result %v", e, globs)
 				}
 			}
 		})
@@ -101,9 +127,13 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 
 func TestModuleContract_MatchesFile(t *testing.T) {
 	base := domain.BaseContract{
-		Files: domain.Files{
-			Root:   "go/eac/mcp/vscode",
-			Source: []string{"go.mod", "**/*.go"},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
+				Root: "go/eac/mcp/vscode",
+				Patterns: &config.ComponentPatterns{
+					Source: []string{"go.mod", "**/*.go"},
+				},
+			},
 		},
 	}
 	module := NewModuleContract(base, "")
@@ -179,35 +209,17 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 		{"root slash nested", "/", []string{"**/agent.md"}, "docs/agent.md", true},
 		{"root slash pattern", "/", []string{".claude/*.json"}, ".claude/mcp.json", true},
 		{"root slash no match", "/", []string{"agent.md"}, "OTHER.md", false},
-
-		// Edge case: absolute patterns (leading /) should match from repository root
-		{"absolute simple", "go/eac/mcp/vscode", []string{"/specs/spec.md"}, "specs/spec.md", true},
-		{"absolute with **", "go/eac/mcp/vscode", []string{"/specs/**/*.md"}, "specs/api/spec.md", true},
-		{"absolute with *", "go/eac/mcp/vscode", []string{"/specs/*"}, "specs/spec.md", true},
-		{"absolute no match", "go/eac/mcp/vscode", []string{"/specs/*.md"}, "other/spec.md", false},
-		{"absolute and relative", "go/eac/mcp/vscode", []string{"go.mod", "/specs/*.md"}, "go/eac/mcp/vscode/go.mod", true},
-		{"absolute and relative 2", "go/eac/mcp/vscode", []string{"go.mod", "/specs/*.md"}, "specs/spec.md", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Separate absolute patterns (starting with /) from relative patterns
-			var source []string
-			var repoOther []string
-			for _, pattern := range tt.includes {
-				if len(pattern) > 0 && pattern[0] == '/' {
-					repoOther = append(repoOther, pattern[1:]) // Remove leading /
-				} else {
-					source = append(source, pattern)
-				}
-			}
-
 			base := domain.BaseContract{
-				Files: domain.Files{
-					Root:   tt.root,
-					Source: source,
-					Repo: domain.RepoPatterns{
-						Other: repoOther,
+				Components: config.ModuleComponents{
+					"source": &config.ComponentEntry{
+						Root: tt.root,
+						Patterns: &config.ComponentPatterns{
+							Source: tt.includes,
+						},
 					},
 				},
 			}
@@ -221,88 +233,101 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 	}
 }
 
-// TestModuleContract_MatchesFile_RepoSpecs tests that Repo.Specs patterns match spec files
-func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
+// TestModuleContract_MatchesFile_RepoAbsolutePatterns tests that components with
+// repo-root-relative paths match files outside the main component root.
+func TestModuleContract_MatchesFile_RepoAbsolutePatterns(t *testing.T) {
 	tests := []struct {
 		name     string
 		root     string
-		specs    []string
 		source   []string
+		repoRoot string // root of the "other" component (repo-root-relative)
+		repoPat  []string
 		filePath string
 		expected bool
 	}{
-		{"specs matches file", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/clie-cli/test.feature", true},
-		{"specs matches nested", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/clie-cli/design/workspace.dsl", true},
-		{"specs doesn't match other specs", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "specs/core/test.feature", false},
-		{"source pattern with specs", "go/cli/clie", []string{"specs/clie-cli/**"}, []string{"go.mod"}, "go/cli/clie/go.mod", true},
+		{"specs matches file", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/clie/test.feature", true},
+		{"specs matches nested", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/clie/design/workspace.dsl", true},
+		{"specs doesn't match other specs", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/core/test.feature", false},
+		{"source pattern with specs", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "go/cli/clie/go.mod", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			base := domain.BaseContract{
-				Files: domain.Files{
-					Root:   tt.root,
-					Source: tt.source,
-					Repo: domain.RepoPatterns{
-						Specs: tt.specs,
+			components := config.ModuleComponents{
+				"go": &config.ComponentEntry{
+					Root: tt.root,
+					Patterns: &config.ComponentPatterns{
+						Source: tt.source,
 					},
 				},
+			}
+			if tt.repoRoot != "" {
+				components["other"] = &config.ComponentEntry{
+					Root: tt.repoRoot,
+					Patterns: &config.ComponentPatterns{
+						Source: tt.repoPat,
+					},
+				}
+			}
+
+			base := domain.BaseContract{
+				Components: components,
 			}
 			module := NewModuleContract(base, "")
 
 			got := module.MatchesFile(tt.filePath)
 			if got != tt.expected {
-				t.Errorf("MatchesFile(%s) with root=%q specs=%v source=%v = %v, expected %v",
-					tt.filePath, tt.root, tt.specs, tt.source, got, tt.expected)
+				t.Errorf("MatchesFile(%s) = %v, expected %v", tt.filePath, got, tt.expected)
 			}
 		})
 	}
 }
 
-// TestModuleContract_MatchesFile_ExplicitOwnership tests the flags.explicit_ownership behavior
-func TestModuleContract_MatchesFile_ExplicitOwnership(t *testing.T) {
+// TestModuleContract_MatchesFile_RepoSpecs tests that specs component patterns match spec files
+func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
 	tests := []struct {
-		name              string
-		root              string
-		source            []string
-		explicitOwnership bool
-		filePath          string
-		expected          bool
+		name     string
+		root     string
+		specs    string   // specs component root
+		specsPat []string // specs component patterns
+		source   []string
+		filePath string
+		expected bool
 	}{
-		// Without explicit_ownership (default), all files under root match if no patterns
-		{"default ownership, no patterns, file under root", "go/module", nil, false, "go/module/main.go", true},
-		{"default ownership, no patterns, nested file", "go/module", nil, false, "go/module/sub/lib.go", true},
-
-		// With explicit_ownership=true, files only match if patterns are defined
-		{"explicit ownership, no patterns, file under root", "go/module", nil, true, "go/module/main.go", false},
-		{"explicit ownership, no patterns, nested file", "go/module", nil, true, "go/module/sub/lib.go", false},
-
-		// With explicit_ownership=true and patterns, only matching files owned
-		{"explicit ownership, with patterns, matching", "go/module", []string{"**/*.go"}, true, "go/module/main.go", true},
-		{"explicit ownership, with patterns, not matching", "go/module", []string{"**/*.go"}, true, "go/module/README.md", false},
-
-		// Default ownership with patterns still uses pattern matching
-		{"default ownership, with patterns, matching", "go/module", []string{"**/*.go"}, false, "go/module/main.go", true},
-		{"default ownership, with patterns, not matching", "go/module", []string{"**/*.go"}, false, "go/module/README.md", false},
+		{"specs matches file", "go/cli/clie", "specs/clie", []string{"**"}, []string{"go.mod"}, "specs/clie/test.feature", true},
+		{"specs matches nested", "go/cli/clie", "specs/clie", []string{"**"}, []string{"go.mod"}, "specs/clie/design/workspace.dsl", true},
+		{"specs doesn't match other specs", "go/cli/clie", "specs/clie", []string{"**"}, []string{"go.mod"}, "specs/core/test.feature", false},
+		{"source pattern with specs", "go/cli/clie", "specs/clie", []string{"**"}, []string{"go.mod"}, "go/cli/clie/go.mod", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			components := config.ModuleComponents{
+				"go": &config.ComponentEntry{
+					Root: tt.root,
+					Patterns: &config.ComponentPatterns{
+						Source: tt.source,
+					},
+				},
+			}
+			if tt.specs != "" {
+				components["specs"] = &config.ComponentEntry{
+					Root: tt.specs,
+					Patterns: &config.ComponentPatterns{
+						Source: tt.specsPat,
+					},
+				}
+			}
+
 			base := domain.BaseContract{
-				Files: domain.Files{
-					Root:   tt.root,
-					Source: tt.source,
-				},
-				Flags: domain.Flags{
-					ExplicitOwnership: tt.explicitOwnership,
-				},
+				Components: components,
 			}
 			module := NewModuleContract(base, "")
 
 			got := module.MatchesFile(tt.filePath)
 			if got != tt.expected {
-				t.Errorf("MatchesFile(%s) with explicit_ownership=%v, patterns=%v = %v, expected %v",
-					tt.filePath, tt.explicitOwnership, tt.source, got, tt.expected)
+				t.Errorf("MatchesFile(%s) with root=%q specs=%q source=%v = %v, expected %v",
+					tt.filePath, tt.root, tt.specs, tt.source, got, tt.expected)
 			}
 		})
 	}
@@ -333,20 +358,19 @@ func TestModuleContract_IsDefinitionsFile(t *testing.T) {
 	tests := []struct {
 		name     string
 		moniker  string
-		pkgType  string
 		expected bool
 	}{
-		{"definitions moniker", "definitions", "test", true},
-		{"definitions type", "test", "definitions-type", true},
-		{"neither", "test", "test-type", false},
+		{"definitions moniker", "definitions", true},
+		{"non-definitions moniker", "test", false},
+		{"empty moniker", "", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			base := domain.BaseContract{
 				Moniker: tt.moniker,
-				Packages: domain.ModulePackages{
-					tt.pkgType: &domain.PackageEntry{Root: "test"},
+				Components: config.ModuleComponents{
+					"go": &config.ComponentEntry{Root: "test"},
 				},
 			}
 			module := NewModuleContract(base, "")
@@ -374,7 +398,7 @@ func Test_matchGlobPattern(t *testing.T) {
 
 		// **/*.ext patterns (previously broken, now fixed)
 		{"double star slash wildcard .go", "go/eac/mcp/vscode/main.go", "**/*.go", true},
-		{"double star slash wildcard .yml", "contracts/modules/0.1.0/clie-cli.yml", "**/*.yml", true},
+		{"double star slash wildcard .yml", "contracts/modules/0.1.0/clie.yml", "**/*.yml", true},
 		{"double star slash wildcard .md", "docs/guide/getting-started.md", "**/*.md", true},
 		{"double star slash wildcard no match", "go/eac/main.txt", "**/*.go", false},
 		{"prefix double star slash wildcard", "go/eac/mcp/vscode/main.go", "go/**/*.go", true},
@@ -414,7 +438,7 @@ func Test_matchGlobPattern(t *testing.T) {
 		// Complex real-world patterns
 		{"complex: test files", "go/eac/mcp/vscode/module_test.go", "**/*_test.go", true},
 		{"complex: specific test dir", "go/eac/mcp/test/integration.go", "go/**/test/*.go", true},
-		{"complex: yaml in specific dir", "contracts/modules/0.1.0/clie-cli.yml", "contracts/**/*.yml", true},
+		{"complex: yaml in specific dir", "contracts/modules/0.1.0/clie.yml", "contracts/**/*.yml", true},
 		{"complex: markdown docs", ".claude/agents/boot.md", ".claude/**/*.md", true},
 
 		// Edge cases
@@ -458,9 +482,9 @@ func Test_normalizePathSeparators(t *testing.T) {
 
 func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 	tests := []struct {
-		name           string
-		gherkinSteps   string
-		expected       string
+		name         string
+		gherkinSteps string
+		expected     string
 	}{
 		{
 			name:         "godog component defined",
@@ -481,13 +505,15 @@ func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			components := config.ModuleComponents{}
+			if tt.gherkinSteps != "" {
+				components["godog"] = &config.ComponentEntry{Root: tt.gherkinSteps}
+			}
 			base := domain.BaseContract{
-				Moniker: "test-module",
+				Moniker:    "test-module",
+				Components: components,
 			}
 			module := NewModuleContract(base, "/workspace")
-			if tt.gherkinSteps != "" {
-				module.Components["godog"] = &config.ComponentEntry{Root: tt.gherkinSteps}
-			}
 
 			got := module.GetTestImplementationPath()
 			if got != tt.expected {
@@ -501,19 +527,19 @@ func TestModuleContract_GetDesignPath(t *testing.T) {
 	tests := []struct {
 		name            string
 		moniker         string
-		design          string
+		design          string // design component root
 		expected        string
 		useFilepathJoin bool // if true, expected is built with filepath.Join
 	}{
 		{
 			name:     "explicit design path",
-			moniker:  "eac-cli",
-			design:   "specs/eac-cli/.design",
-			expected: "specs/eac-cli/.design",
+			moniker:  "eac",
+			design:   "specs/eac/.design",
+			expected: "specs/eac/.design",
 		},
 		{
 			name:            "empty design uses default",
-			moniker:         "clie-cli",
+			moniker:         "clie",
 			design:          "",
 			expected:        "", // will be computed with filepath.Join
 			useFilepathJoin: true,
@@ -528,14 +554,16 @@ func TestModuleContract_GetDesignPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			components := config.ModuleComponents{
+				"go": &config.ComponentEntry{Root: "src/test"},
+			}
+			if tt.design != "" {
+				components["design"] = &config.ComponentEntry{Root: tt.design}
+			}
+
 			base := domain.BaseContract{
-				Moniker: tt.moniker,
-				Files: domain.Files{
-					Root: "src/test",
-					Repo: domain.RepoPatterns{
-						Design: tt.design,
-					},
-				},
+				Moniker:    tt.moniker,
+				Components: components,
 			}
 			module := NewModuleContract(base, "/workspace")
 

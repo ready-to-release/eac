@@ -13,9 +13,9 @@
 // Long:   - List of module monikers this module depends on
 // Long:
 // Long: Examples:
-// Long:   get dependencies clie-cli                    # YAML list
-// Long:   get dependencies clie-cli --format space     # Space-separated: "dep1 dep2 dep3"
-// Long:   get dependencies clie-cli --format list      # One per line
+// Long:   get dependencies clie                    # YAML list
+// Long:   get dependencies clie --format space     # Space-separated: "dep1 dep2 dep3"
+// Long:   get dependencies clie --format list      # One per line
 package get
 
 import (

@@ -42,8 +42,7 @@ func recordScanResult(sctx *scanContext, moniker string, passed bool) {
 
 // scanUnitWorker runs scans for a single component using component-level execution.
 // This is called by the UnitScheduler for parallel scan component execution.
-// The component parameter is in "compName:scannerType" format (e.g., "go:trivy-vuln", "go:semgrep").
-func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
+func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 	// Get multi-scan config if available (contains scanner settings)
 	multiCfg, _ := ctx.Config.MultiScanConfig.(*MultiScanConfig)
 	if multiCfg == nil {
@@ -53,6 +52,12 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 			VulnSeverities: nil,
 		}
 	}
+
+	// Extract identity from spec - no more string parsing
+	moniker := spec.ID.Module
+	compName := spec.ID.ComponentName
+	scannerTypeStr := spec.ID.Tool
+	component := compName + ":" + scannerTypeStr // For display/logging
 
 	// Get scan context for caching
 	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
@@ -69,16 +74,8 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		pipeline.CachedUoWs = sctx.cachedUoWs
 	}
 
-	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
-	compName, scannerTypeStr := cmdframework.ParseComponent(component)
-
-	// Build UnitID for UoW-level cache lookup
-	unitID := workunit.UnitID{
-		Action:    core.ActionScan,
-		Module:    moniker,
-		Component: compName,
-		Tool:      scannerTypeStr,
-	}
+	// Use spec's UnitID directly for cache lookup
+	unitID := spec.ID
 
 	// Check UoW-level cache first
 	log.Debugf("[SCAN-UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
@@ -101,7 +98,7 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 
 	// Get component type for this component
 	compTypeName := module.Components.GetComponentType(compName)
-	compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
+	compType := ctx.EACConfig.ComponentKinds.Get(compTypeName)
 
 	// Skip non-scannable component types
 	if compType == nil || !compType.IsScannable() {
@@ -109,8 +106,8 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 0
 	}
 
-	// Acquire lock for this component+scanner with wait
-	componentDir := cmdframework.ComponentDir(compName, scannerTypeStr)
+	// Acquire lock for this unit (component+scanner) with wait
+	componentDir := cmdframework.UnitDir(compName, scannerTypeStr)
 	release, err := pipeline.AcquireLock(ctx, moniker, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
@@ -223,7 +220,8 @@ func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 
 	// Write UoW manifest for incremental cache
 	if sctx != nil {
-		writeUoWScanManifest(ctx, sctx, moniker, component, string(scannerType), inputHash, scanStart)
+		compTypeName := module.Components.GetComponentType(component)
+		writeUoWScanManifest(ctx, sctx, moniker, compTypeName, component, string(scannerType), inputHash, scanStart)
 	}
 
 	return 0
@@ -240,7 +238,7 @@ func computeScanInputHash(ctx *cmdframework.ExecutionContext, module *modules.Mo
 }
 
 // writeUoWScanManifest writes a UoW manifest for a successful scan.
-func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext, moniker, component, tool, inputHash string, startTime time.Time) {
+func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext, moniker, compType, component, tool, inputHash string, startTime time.Time) {
 	// Initialize tracker if needed
 	sctx.mu.Lock()
 	if sctx.tracker == nil {
@@ -251,10 +249,11 @@ func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext,
 
 	// Build UnitID for the tracker
 	unitID := workunit.UnitID{
-		Action:    core.ActionScan,
-		Module:    moniker,
-		Component: component,
-		Tool:      tool,
+		Action:        core.ActionScan,
+		Module:        moniker,
+		ComponentType: compType,
+		ComponentName: component,
+		Tool:          tool,
 	}
 
 	// Create and record the manifest
@@ -407,7 +406,7 @@ func multiScanWorker(_ context.Context, ctx *cmdframework.ExecutionContext, moni
 		seenScanners := make(map[string]bool)
 		for _, componentName := range module.GetEnabledComponents() {
 			compTypeName := module.Components.GetComponentType(componentName)
-			compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
+			compType := ctx.EACConfig.ComponentKinds.Get(compTypeName)
 			if compType == nil || !compType.IsScannable() {
 				continue // Skip non-scannable component types
 			}

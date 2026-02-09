@@ -43,8 +43,8 @@ func TestDetectUoWChanges_FreshRun_NoManifests(t *testing.T) {
 	reader := NewReader(f.workspaceRoot)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -80,13 +80,13 @@ func TestDetectUoWChanges_AllCached_HashesMatch(t *testing.T) {
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	// Return matching hashes
 	getInputHash := func(id workunit.UnitID) (string, error) {
-		if id.Component == "go" {
+		if id.ComponentName == "go" {
 			return "sha256:hash-go", nil
 		}
 		return "sha256:hash-docker", nil
@@ -114,13 +114,13 @@ func TestDetectUoWChanges_PartialCached_SomeHashesDiffer(t *testing.T) {
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	// Go hash matches, docker hash differs
 	getInputHash := func(id workunit.UnitID) (string, error) {
-		if id.Component == "go" {
+		if id.ComponentName == "go" {
 			return "sha256:hash-go", nil
 		}
 		return "sha256:hash-docker-new", nil // Changed!
@@ -134,11 +134,11 @@ func TestDetectUoWChanges_PartialCached_SomeHashesDiffer(t *testing.T) {
 	assert.Len(t, result.UpToDate, 1, "one UoW should be up-to-date")
 
 	// Docker should be changed
-	assert.Equal(t, "docker", result.Changed[0].Component)
+	assert.Equal(t, "docker", result.Changed[0].ComponentName)
 	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "source changed")
 
 	// Go should be up-to-date
-	assert.Equal(t, "go", result.UpToDate[0].Component)
+	assert.Equal(t, "go", result.UpToDate[0].ComponentName)
 }
 
 func TestDetectUoWChanges_MissingManifest_MarkedAsChanged(t *testing.T) {
@@ -152,8 +152,8 @@ func TestDetectUoWChanges_MissingManifest_MarkedAsChanged(t *testing.T) {
 	// docker manifest is missing
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
-		{Action: core.ActionBuild, Module: "core", Component: "docker", Tool: "docker"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "docker", ComponentName: "docker", Tool: "docker"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -168,7 +168,7 @@ func TestDetectUoWChanges_MissingManifest_MarkedAsChanged(t *testing.T) {
 	assert.Len(t, result.UpToDate, 1, "existing manifest should be up-to-date")
 
 	// Docker should be changed due to missing manifest
-	assert.Equal(t, "docker", result.Changed[0].Component)
+	assert.Equal(t, "docker", result.Changed[0].ComponentName)
 	assert.Contains(t, result.ChangeReasons[result.Changed[0].Longname()], "no prior manifest")
 }
 
@@ -182,7 +182,7 @@ func TestDetectUoWChanges_PreviousFailure_MarkedAsChanged(t *testing.T) {
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	// Hash matches but previous run failed
@@ -215,7 +215,7 @@ func TestDetectUoWChanges_InvalidArtifacts_MarkedAsChanged(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	// Hash matches
@@ -257,7 +257,7 @@ func TestDetectUoWChanges_HashProviderError_MarkedAsChanged(t *testing.T) {
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	// Hash provider returns error
@@ -277,7 +277,7 @@ func TestDetectUoWChanges_RecordsDetectionTime(t *testing.T) {
 	reader := NewReader(f.workspaceRoot)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -309,7 +309,7 @@ func TestDetectUoWChanges_AllContexts(t *testing.T) {
 			f.saveManifest(m1)
 
 			expectedUoWs := []workunit.UnitID{
-				{Action: ctx, Module: "core", Component: "go", Tool: "tool"},
+				{Action: ctx, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "tool"},
 			}
 
 			getInputHash := func(id workunit.UnitID) (string, error) {
@@ -358,7 +358,7 @@ func TestIsModuleChanged_AllUoWsCached_ReturnsNotChanged(t *testing.T) {
 	f.saveManifest(m2)
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
-		if id.Component == "go" {
+		if id.ComponentName == "go" {
 			return "sha256:hash-go", nil
 		}
 		return "sha256:hash-docker", nil
@@ -385,7 +385,7 @@ func TestIsModuleChanged_OneUoWChanged_ReturnsChanged(t *testing.T) {
 	f.saveManifest(m2)
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
-		if id.Component == "go" {
+		if id.ComponentName == "go" {
 			return "sha256:hash-go", nil
 		}
 		return "sha256:hash-docker-new", nil // Different!
@@ -540,10 +540,11 @@ func TestUoWManifest_MetadataField_LoadFromDisk(t *testing.T) {
 	// Load using reader
 	reader := NewReader(f.workspaceRoot)
 	id := workunit.UnitID{
-		Action:    core.ActionTest,
-		Module:    "core",
-		Component: "go",
-		Tool:      "gotest",
+		Action:        core.ActionTest,
+		Module:        "core",
+		ComponentType: "go",
+		ComponentName: "go",
+		Tool:          "gotest",
 	}
 	loaded, err := reader.GetUoW(id)
 	require.NoError(t, err)
@@ -570,10 +571,11 @@ func TestDetectUoWChanges_ConcurrentSafe(t *testing.T) {
 	var expectedUoWs []workunit.UnitID
 	for i := 0; i < 10; i++ {
 		expectedUoWs = append(expectedUoWs, workunit.UnitID{
-			Action:    core.ActionBuild,
-			Module:    "core",
-			Component: "comp" + string(rune('0'+i)),
-			Tool:      "tool",
+			Action:        core.ActionBuild,
+			Module:        "core",
+			ComponentType: "comp" + string(rune('0'+i)),
+			ComponentName: "comp" + string(rune('0'+i)),
+			Tool:          "tool",
 		})
 	}
 
@@ -608,7 +610,7 @@ func TestDetectUoWChanges_NoArtifacts_StillValid(t *testing.T) {
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionLint, Module: "core", Component: "go", Tool: "golangci-lint"},
+		{Action: core.ActionLint, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "golangci-lint"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -631,7 +633,7 @@ func TestDetectUoWChanges_NilHashProvider_AllChanged(t *testing.T) {
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	// nil hash provider - should treat as hash error or always changed
@@ -658,7 +660,7 @@ func TestDetectUoWChanges_ConsistentWithValidateUoW(t *testing.T) {
 	f.saveManifest(m1)
 
 	// ValidateUoW should return valid
-	id := workunit.UnitID{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"}
+	id := workunit.UnitID{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"}
 	validationResult := reader.ValidateUoW(id)
 	assert.True(t, validationResult.Valid, "ValidateUoW should return valid")
 
@@ -694,7 +696,7 @@ func TestDetectUoWChanges_NoOpManifest_AlwaysUpToDate(t *testing.T) {
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "templates", Component: "none", Tool: ""},
+		{Action: core.ActionBuild, Module: "templates", ComponentType: "none", ComponentName: "none", Tool: ""},
 	}
 
 	// Hash provider shouldn't even be called for NoOp UoWs
@@ -723,7 +725,7 @@ func TestDetectUoWChanges_NoOpManifest_WithFailure_MarkedAsChanged(t *testing.T)
 	f.saveManifest(m1)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "templates", Component: "none", Tool: ""},
+		{Action: core.ActionBuild, Module: "templates", ComponentType: "none", ComponentName: "none", Tool: ""},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -772,8 +774,8 @@ func TestDetectUoWChanges_MixedNoOpAndRegular(t *testing.T) {
 	f.saveManifest(m2)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "templates", Component: "none", Tool: "none"},
-		{Action: core.ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "templates", ComponentType: "none", ComponentName: "none", Tool: "none"},
+		{Action: core.ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -813,7 +815,7 @@ func TestDetectUoWChanges_NoOpInAllContexts(t *testing.T) {
 			f.saveManifest(m1)
 
 			expectedUoWs := []workunit.UnitID{
-				{Action: tc.ctx, Module: "placeholder", Component: "none", Tool: "none"},
+				{Action: tc.ctx, Module: "placeholder", ComponentType: "none", ComponentName: "none", Tool: "none"},
 			}
 
 			result, err := reader.DetectUoWChanges(tc.ctx, expectedUoWs, nil, nil)
@@ -849,7 +851,7 @@ func TestDetectUoWChanges_TestInvalidatedByNewerBuild(t *testing.T) {
 	f.saveManifest(buildManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 	}
 
 	// Hash matches - normally would be cached
@@ -886,7 +888,7 @@ func TestDetectUoWChanges_TestNotInvalidatedByOlderBuild(t *testing.T) {
 	f.saveManifest(buildManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -921,7 +923,7 @@ func TestDetectUoWChanges_LintInvalidatedByNewerBuild(t *testing.T) {
 	f.saveManifest(buildManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionLint, Module: "core", Component: "go", Tool: "golangci-lint"},
+		{Action: core.ActionLint, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "golangci-lint"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -955,7 +957,7 @@ func TestDetectUoWChanges_ScanInvalidatedByNewerBuild(t *testing.T) {
 	f.saveManifest(buildManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionScan, Module: "core", Component: "go", Tool: "trivy"},
+		{Action: core.ActionScan, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "trivy"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -983,7 +985,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByBuild(t *testing.T) {
 	f.saveManifest(buildManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1024,7 +1026,7 @@ func TestDetectUoWChanges_TestInvalidatedByAnyBuildComponent(t *testing.T) {
 	f.saveManifest(buildDockerManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "core", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1063,7 +1065,7 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
 	}
 
 	// Hash matches - normally would be cached
@@ -1109,7 +1111,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1151,7 +1153,7 @@ func TestDetectUoWChanges_NilDependencyResolver_NoInvalidation(t *testing.T) {
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1193,7 +1195,7 @@ func TestDetectUoWChanges_MultipleDependencies_AnyNewerInvalidates(t *testing.T)
 	f.saveManifest(depBManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "my-image", Component: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "my-image", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1236,7 +1238,7 @@ func TestDetectUoWChanges_DependencyResolver_OnlyAffectsBuildContext(t *testing.
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionTest, Module: "eac-ext", Component: "go", Tool: "gotest"},
+		{Action: core.ActionTest, Module: "eac-ext", ComponentType: "go", ComponentName: "go", Tool: "gotest"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1273,7 +1275,7 @@ func TestDetectUoWChanges_DependencyWithNoDeps_NotInvalidated(t *testing.T) {
 	f.saveManifest(manifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "standalone", Component: "go", Tool: "go"},
+		{Action: core.ActionBuild, Module: "standalone", ComponentType: "go", ComponentName: "go", Tool: "go"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {

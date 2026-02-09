@@ -433,8 +433,8 @@ func TestAggregateToModuleResultSets(t *testing.T) {
 			wantDurations:  []time.Duration{},
 		},
 		{
-			name:    "nil input returns empty slice",
-			results: nil,
+			name:           "nil input returns empty slice",
+			results:        nil,
 			wantModules:    []string{},
 			wantComponents: [][]string{},
 			wantStatuses:   []ModuleStatus{},
@@ -537,12 +537,12 @@ func TestAggregateToModuleResultSets(t *testing.T) {
 			name: "complex scenario with multiple modules and components",
 			results: []UnitResult{
 				{Module: "core", Component: "go", ExitCode: 0, Duration: 5 * time.Second},
-				{Module: "eac-cli", Component: "go", ExitCode: 0, Duration: 10 * time.Second},
+				{Module: "eac", Component: "go", ExitCode: 0, Duration: 10 * time.Second},
 				{Module: "core", Component: "typescript", ExitCode: 0, Duration: 3 * time.Second},
-				{Module: "eac-cli", Component: "book", ExitCode: 1, Duration: 2 * time.Second},
+				{Module: "eac", Component: "book", ExitCode: 1, Duration: 2 * time.Second},
 				{Module: "core", Component: "book", ExitCode: 0, Duration: 8 * time.Second},
 			},
-			wantModules:    []string{"eac-cli", "core"},
+			wantModules:    []string{"eac", "core"},
 			wantComponents: [][]string{{"book", "go"}, {"book", "go", "typescript"}},
 			wantStatuses:   []ModuleStatus{ModuleStatusFailed, ModuleStatusSuccess},
 			wantDurations:  []time.Duration{10 * time.Second, 8 * time.Second},
@@ -731,9 +731,9 @@ func TestAggregateToModuleResultSets_DoesNotModifyInput(t *testing.T) {
 // are sorted correctly.
 func TestAggregateToModuleResultSets_ModuleWithSamePrefix(t *testing.T) {
 	input := []UnitResult{
-		{Module: "eac-cli-extra", Component: "go", ExitCode: 0},
+		{Module: "eac-extra", Component: "go", ExitCode: 0},
 		{Module: "eac", Component: "go", ExitCode: 0},
-		{Module: "eac-cli", Component: "go", ExitCode: 0},
+		{Module: "eac", Component: "go", ExitCode: 0},
 	}
 
 	got := AggregateToModuleResultSets(input)
@@ -742,7 +742,7 @@ func TestAggregateToModuleResultSets_ModuleWithSamePrefix(t *testing.T) {
 		t.Fatalf("Expected 3 result sets, got %d", len(got))
 	}
 
-	expectedOrder := []string{"eac", "eac-cli", "eac-cli-extra"}
+	expectedOrder := []string{"eac", "eac", "eac-extra"}
 	for i, rs := range got {
 		if rs.Module != expectedOrder[i] {
 			t.Errorf("ResultSet[%d].Module = %q, want %q", i, rs.Module, expectedOrder[i])

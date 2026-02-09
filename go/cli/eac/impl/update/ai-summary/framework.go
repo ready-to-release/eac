@@ -74,16 +74,16 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 
 			spec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionAISummary,
-					Module:    moniker,
-					Component: "ai-" + aType,
-					Tool:      toolID,
+					Action:        core.ActionAISummary,
+					Module:        moniker,
+					ComponentType: "ai-" + aType,
+					ComponentName: "ai-" + aType,
+					Tool:          toolID,
 				},
-				ComponentType: "ai-" + aType,
-				Weight:        getAnalysisWeight(aType),
-				Container:     false,
-				HostInstalled: true,
-				DependsOn:     []workunit.UnitID{},
+				ComponentType:  "ai-" + aType,
+				Weight:         getAnalysisWeight(aType),
+				PoolAllocation: core.HostOnlyAllocation(getAnalysisWeight(aType)),
+				DependsOn:      []workunit.UnitID{},
 				Cached:        false,
 				Metadata:      make(map[string]any),
 			}
@@ -95,18 +95,18 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 		if analysisType == "" || analysisType == "source" {
 			sourceSpec := workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionAISummary,
-					Module:    moniker,
-					Component: "ai-source",
-					Tool:      "ai-source-analyzer",
+					Action:        core.ActionAISummary,
+					Module:        moniker,
+					ComponentType: "ai-source",
+					ComponentName: "ai-source",
+					Tool:          "ai-source-analyzer",
 				},
-				ComponentType: "ai-source",
-				Weight:        1, // AI tasks use weight 1 (API-bound, not CPU-bound)
-				Container:     false,
-				HostInstalled: true,
+				ComponentType:  "ai-source",
+				Weight:         1, // AI tasks use weight 1 (API-bound, not CPU-bound)
+				PoolAllocation: core.HostOnlyAllocation(1),
 				DependsOn: []workunit.UnitID{
-					{Action: core.ActionAISummary, Module: moniker, Component: "ai-dsl", Tool: "ai-dsl-analyzer"},
-					{Action: core.ActionAISummary, Module: moniker, Component: "ai-specs", Tool: "ai-specs-analyzer"},
+					{Action: core.ActionAISummary, Module: moniker, ComponentType: "ai-dsl", ComponentName: "ai-dsl", Tool: "ai-dsl-analyzer"},
+					{Action: core.ActionAISummary, Module: moniker, ComponentType: "ai-specs", ComponentName: "ai-specs", Tool: "ai-specs-analyzer"},
 				},
 				Cached:   false,
 				Metadata: make(map[string]any),
@@ -133,7 +133,10 @@ func getAnalysisWeight(analysisType string) int {
 }
 
 // aiSummaryUnitWorker executes a single AI analysis unit.
-func aiSummaryUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func aiSummaryUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
+	module := spec.ID.Module
+	component := spec.ID.ComponentName
+
 	// Get module contract
 	moduleContract, exists := ctx.ModuleRegistry.Get(module)
 	if !exists {

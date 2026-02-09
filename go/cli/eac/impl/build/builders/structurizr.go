@@ -30,9 +30,9 @@ func init() {
 // Uses .cache/eac/structurizr/ for incremental builds.
 type StructurizrRenderHandler struct{}
 
-func (h *StructurizrRenderHandler) Name() string         { return "structurizr-render" }
+func (h *StructurizrRenderHandler) Name() string           { return "structurizr-render" }
 func (h *StructurizrRenderHandler) Requirements() []string { return []string{"docker"} }
-func (h *StructurizrRenderHandler) IsContainer() bool     { return true }
+func (h *StructurizrRenderHandler) IsContainer() bool      { return true }
 func (h *StructurizrRenderHandler) IsHostInstalled() bool  { return false }
 
 func (h *StructurizrRenderHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
@@ -56,7 +56,7 @@ type StructurizrIndex struct {
 
 // StructurizrIndexEntry maps a single Structurizr view to its SVG file.
 type StructurizrIndexEntry struct {
-	Module      string `json:"module"`       // Module name (e.g., "eac-cli")
+	Module      string `json:"module"`       // Module name (e.g., "eac")
 	ViewKey     string `json:"view_key"`     // View key from DSL (e.g., "SystemContext")
 	DSLHash     string `json:"dsl_hash"`     // First 8 chars of SHA256 of workspace.dsl
 	SVGFilename string `json:"svg_filename"` // Filename in the output directory

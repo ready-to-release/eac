@@ -210,7 +210,7 @@ To add support for a new language:
 3. **Define component type** - Create default file patterns and settings
 4. **Register handler** - Add to handler registry in `init()`
 
-See [Component Types Reference](../architecture/component-types.md) for detailed instructions.
+See [Component Types Reference](../architecture/component-kinds.md) for detailed instructions.
 
 ---
 
@@ -240,7 +240,7 @@ See [Component Types Reference](../architecture/component-types.md) for detailed
 
 ## Related Documentation
 
-- [Component Types Reference](../architecture/component-types.md) - Detailed component type specifications
+- [Component Types Reference](../architecture/component-kinds.md) - Detailed component type specifications
 - [Architecture](../architecture/index.md) - System architecture and component design
 - [Build Command](./build/build.md) - Build command reference
 - [Test Command](./test/test.md) - Test command reference

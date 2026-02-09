@@ -1,4 +1,4 @@
-// Package validator provides validation for clie-cli commands
+// Package validator provides validation for clie commands
 // It uses the command parser to parse arguments and then validates them
 // against business rules and the EBNF schema.
 package validator
@@ -103,7 +103,7 @@ func (cv *CommandValidator) addWarnings(result *CommandValidationResult, parsed 
 	for _, arg := range parsed.ContainerArgs {
 		if cv.parser.IsGlobalFlag(arg) {
 			result.Warnings = append(result.Warnings,
-				fmt.Sprintf("Global flag '%s' found in container arguments - will be passed to container, not processed by clie-cli", arg))
+				fmt.Sprintf("Global flag '%s' found in container arguments - will be passed to container, not processed by clie", arg))
 		}
 	}
 

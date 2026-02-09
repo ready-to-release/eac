@@ -43,12 +43,12 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	}
 
 	// Load component types for component-specific defaults
-	if err := cfg.LoadComponentTypes(validate); err != nil {
+	if err := cfg.LoadComponentKinds(validate); err != nil {
 		// Component types are optional - continue with defaults
 	}
 
 	// Apply component-specific defaults with repository path variables
-	cfg.Repository.ApplyComponentDefaults(cfg.ComponentTypes, cfg.RepoRoot)
+	cfg.Repository.ApplyComponentDefaults(cfg.ComponentKinds, cfg.RepoRoot)
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)
@@ -56,6 +56,8 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	// Convert config.Module to domain.BaseContract and process
 	for _, m := range cfg.Repository.Modules {
 		// Convert to BaseContract for ModuleContract creation
+		// Components use config types directly (no lossy copy needed)
+		// Config types are used directly (no lossy copy needed)
 		base := domain.BaseContract{
 			Moniker:        m.Moniker,
 			Name:           m.Name,
@@ -65,85 +67,10 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 			Metadata:       m.Metadata,
 			EvidenceBooks:  m.EvidenceBooks,
 			ComponentOrder: m.ComponentOrder,
-		}
-
-		// Convert Components config
-		if m.Components != nil {
-			base.Components = make(domain.ModuleComponents)
-			for compName, entry := range m.Components {
-				if entry != nil {
-					base.Components[compName] = &domain.ComponentEntry{
-						Type:      entry.Type,
-						Root:      entry.Root,
-						Resolved:  entry.Resolved,
-						Config:    entry.Config,
-						DependsOn: entry.DependsOn,
-					}
-					if entry.Patterns != nil {
-						base.Components[compName].Patterns = &domain.ComponentPatterns{
-							Source: entry.Patterns.Source,
-							Tests:  entry.Patterns.Tests,
-							Config: entry.Patterns.Config,
-							Data:   entry.Patterns.Data,
-						}
-					}
-					// Convert Build config
-					if entry.Build != nil {
-						base.Components[compName].Build = &domain.ComponentBuild{
-							Handler: entry.Build.Handler,
-						}
-						for _, a := range entry.Build.Artifacts {
-							base.Components[compName].Build.Artifacts = append(base.Components[compName].Build.Artifacts, domain.ComponentArtifact{
-								ID:          a.ID,
-								Type:        a.Type,
-								Pattern:     a.Pattern,
-								Compression: a.Compression,
-								DeriveFrom:  a.DeriveFrom,
-							})
-						}
-					}
-					// Convert DockerBuild from typed struct to map
-					if entry.DockerBuild != nil {
-						base.Components[compName].DockerBuild = config.DockerBuildConfigToMap(entry.DockerBuild)
-					}
-					// Convert Amp config
-					if entry.Amp != nil {
-						base.Components[compName].Amp = &domain.AmpConfig{
-							Build: entry.Amp.Build,
-							Lint:  entry.Amp.Lint,
-							Test:  entry.Amp.Test,
-							Scan:  entry.Amp.Scan,
-						}
-					}
-				} else {
-					base.Components[compName] = nil
-				}
-			}
-		}
-
-		// Convert Versioning config if present
-		if m.Versioning != nil {
-			base.Versioning = &domain.ModuleVersioning{
-				Scheme:      m.Versioning.Scheme,
-				Current:     m.Versioning.Current,
-				Changelog:   m.Versioning.Changelog,
-				ReleaseType: m.Versioning.ReleaseType,
-			}
-		}
-
-		// Convert ReleaseBundle config if present
-		if m.ReleaseBundle != nil {
-			base.ReleaseBundle = &domain.ReleaseBundle{
-				TitleFormat: m.ReleaseBundle.TitleFormat,
-				Headline:    m.ReleaseBundle.Headline,
-			}
-			for _, cat := range m.ReleaseBundle.Categories {
-				base.ReleaseBundle.Categories = append(base.ReleaseBundle.Categories, domain.ReleaseBundleCategory{
-					Name:        cat.Name,
-					Description: cat.Description,
-					Modules:     cat.Modules,
-				})
-			}
+			Components:     m.Components,
+			Linting:        m.Linting,
+			Versioning:     m.Versioning,
+			ReleaseBundle:  m.ReleaseBundle,
 		}
 
 		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyComponentDefaults()

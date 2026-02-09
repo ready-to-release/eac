@@ -9,7 +9,7 @@
 // Long:
 // Long: Filter Examples:
 // Long:   show units build                        # All build units
-// Long:   show units test --module eac-cli   # Test units for specific module
+// Long:   show units test --module eac   # Test units for specific module
 // Long:   show units lint --stale                 # Only stale lint units
 // Long:   show units scan --container             # Only container-based scan units
 // Flag.module: type=string, default="", usage=Filter to specific module

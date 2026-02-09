@@ -21,13 +21,13 @@ action:module:component:tool
 | Field       | Description                                 | Examples                          |
 |-------------|---------------------------------------------|-----------------------------------|
 | **Action**  | What operation to perform                   | `build`, `test`, `lint`, `scan`   |
-| **Module**  | Which module owns this work                 | `eac-cli`, `core`, `eac-ext`     |
+| **Module**  | Which module owns this work                 | `eac`, `core`, `eac-ext`     |
 | **Component** | Which component within the module          | `go`, `dockerfile`, `typescript`  |
 | **Tool**    | Which tool executes the work                | `go`, `buildx`, `gotest`, `godog` |
 
 **Examples**:
 
-- `build:eac-cli:go:go` — Compile the eac-cli Go binary
+- `build:eac:go:go` — Compile the eac Go binary
 - `build:eac-ext:dockerfile:buildx` — Build the eac-ext Docker image
 - `test:core:go:gotest` — Run Go unit tests for the core module
 - `lint:docs:markdown:markdownlint` — Lint documentation markdown
@@ -44,7 +44,7 @@ out/{action}/{module}/{component}-{tool}/
 
 Examples:
 
-- `out/build/eac-cli/go-go/` — contains cross-compiled binaries and `uow.manifest.json`
+- `out/build/eac/go-go/` — contains cross-compiled binaries and `uow.manifest.json`
 - `out/test/core/go-gotest/` — contains test results and `uow.manifest.json`
 
 **Source**: `UnitID.OutDir()` in `go/core/workunit/unit_id.go`
@@ -55,7 +55,7 @@ Every completed UoW produces a manifest at `{outdir}/uow.manifest.json`:
 
 ```json
 {
-  "id": "build:eac-cli:go:go",
+  "id": "build:eac:go:go",
   "input_hash": "sha256:abc123...",
   "output_hash": "sha256:def456...",
   "executed_at": "2025-02-07T15:30:00Z",
@@ -168,7 +168,7 @@ from two sources:
 1. **Intra-module** (`build_after`): Component A builds after component B
    within the same module. Example: `dockerfile` builds after `go`.
 2. **Cross-module** (`depends_on`): All UoWs in module A depend on all UoWs
-   in module B. Example: `eac-ext` depends on `eac-cli`.
+   in module B. Example: `eac-ext` depends on `eac`.
 
 Cross-module dependencies are injected by `injectModuleDependencies()` in
 `go/clibase/cmdframework/execute.go`. This function reads each module's
@@ -220,8 +220,8 @@ The build command accepts explicit module names or builds all modules:
 
 ```bash
 eac build                    # All modules
-eac build eac-cli eac-ext    # Specific modules
-eac build --module eac-cli   # Single module
+eac build eac eac-ext    # Specific modules
+eac build --module eac   # Single module
 ```
 
 When specific modules are requested, the framework resolves their
@@ -345,5 +345,5 @@ Build summaries aggregate results across all UoWs:
 
 - [Cache System](./cache-system.md) — Input hashing and incremental builds
 - [Component Resolution](./component-resolution.md) — How components become UoWs
-- [Component Types](./component-types.md) — Component type definitions
+- [Component Types](./component-kinds.md) — Component type definitions
 - [Dependencies](./dependencies.md) — Module dependency graph

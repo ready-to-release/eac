@@ -17,7 +17,7 @@
 // Long:
 // Long: Example:
 // Long:   test eac-cli                    # Test single module
-// Long:   test core clie-cli                # Test multiple modules
+// Long:   test core clie                # Test multiple modules
 // Long:   test                                 # Test all modules
 // Long:   test eac-cli --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
@@ -320,7 +320,8 @@ func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePa
 // runPackageTestsDirect executes tests for a single package.
 // The orchestrator (UoW) manages log files and output directories.
 // logWriter is provided by the orchestrator for all output.
-func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pkgPath string, tests []testing.TestReference, logWriter io.Writer) PackageResult {
+// outputDir is the pre-created UoW output directory (e.g., out/test/<module>/<dirname>).
+func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pkgPath string, tests []testing.TestReference, logWriter io.Writer, outputDir string) PackageResult {
 	// Determine test type and get appropriate runner
 	testType := getPackageTestType(tests)
 	testRunner := testrunners.Get(testType)
@@ -335,6 +336,7 @@ func (ctx *TestExecutionContext) runPackageTestsDirect(goCtx context.Context, pk
 		Coverage:       ctx.coverage,
 		SuiteTagFilter: ctx.suiteTagFilter,
 		Parallelism:    ctx.testParallelism,
+		OutputDir:      outputDir,
 	}
 
 	runResult := testRunner.Execute(pkgPath, tests, logWriter, cfg)
@@ -402,7 +404,7 @@ func printTestUsage() {
 	log.Info("Examples:")
 	log.Info("  clie eac test                          # Test all modules (default suites)")
 	log.Info("  clie eac test eac-cli             # Test single module")
-	log.Info("  clie eac test clie-cli core         # Test multiple modules")
+	log.Info("  clie eac test clie core         # Test multiple modules")
 	log.Info("  clie eac test --suite acceptance       # Run acceptance suite")
 	log.Info("  clie eac test eac-cli --no-tui    # Disable TUI display")
 }

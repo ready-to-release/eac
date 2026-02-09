@@ -294,7 +294,8 @@ func (m *StateManager) DetectModuleChanges(ctx core.ActionType, modules []string
 		unitID := UnitID{
 			Action:    ctx,
 			Module:    module,
-			Component: "_module", // Representative component for module-level state
+			ComponentType: "_module", // Representative component for module-level state
+			ComponentName: "_module",
 			Tool:      "_",
 		}
 		if m.Exists(unitID) {
@@ -319,8 +320,9 @@ func (m *StateManager) DetectModuleChanges(ctx core.ActionType, modules []string
 		unitID := UnitID{
 			Action:    ctx,
 			Module:    module,
-			Component: "_module",
-			Tool:      "_",
+			ComponentType: "_module",
+			ComponentName: "_module",
+			Tool:          "_",
 		}
 		spec := UnitSpec{ID: unitID}
 
@@ -356,10 +358,11 @@ func (m *StateManager) DetectModuleChanges(ctx core.ActionType, modules []string
 // Uses a representative unit ID for the module.
 func (m *StateManager) SaveModuleResult(ctx core.ActionType, module string, passed bool, sourceHash string) error {
 	unitID := UnitID{
-		Action:    ctx,
-		Module:    module,
-		Component: "_module",
-		Tool:      "_",
+		Action:        ctx,
+		Module:        module,
+		ComponentType: "_module",
+		ComponentName: "_module",
+		Tool:          "_",
 	}
 
 	state := &UnitState{
@@ -444,9 +447,10 @@ func (m *StateManager) DetectTestModuleChanges(
 		unitID := UnitID{
 			Action:    core.ActionTest,
 			Module:    moniker,
-			Component: "_module",
-			Tool:      "_",
-			Extra:     map[string]string{"testset": string(testSet)},
+			ComponentType: "_module",
+			ComponentName: "_module",
+			Tool:          "_",
+			Extra:         map[string]string{"testset": string(testSet)},
 		}
 		if m.Exists(unitID) {
 			hasAnyState = true
@@ -472,9 +476,10 @@ func (m *StateManager) DetectTestModuleChanges(
 		unitID := UnitID{
 			Action:    core.ActionTest,
 			Module:    moniker,
-			Component: "_module",
-			Tool:      "_",
-			Extra:     map[string]string{"testset": string(testSet)},
+			ComponentType: "_module",
+			ComponentName: "_module",
+			Tool:          "_",
+			Extra:         map[string]string{"testset": string(testSet)},
 		}
 
 		state, err := m.Load(unitID)
@@ -558,11 +563,12 @@ func (m *StateManager) DetectTestModuleChanges(
 					currentBuildID := loadDepBuildID(dep)
 					// Load dep's state to compare BuildID
 					depUnitID := UnitID{
-						Action:    core.ActionTest,
-						Module:    dep,
-						Component: "_module",
-						Tool:      "_",
-						Extra:     map[string]string{"testset": string(testSet)},
+						Action:        core.ActionTest,
+						Module:        dep,
+						ComponentType: "_module",
+						ComponentName: "_module",
+						Tool:          "_",
+						Extra:         map[string]string{"testset": string(testSet)},
 					}
 					depState, _ := m.Load(depUnitID)
 					if depState != nil && currentBuildID != "" && depState.BuildID != "" && currentBuildID != depState.BuildID {
@@ -614,11 +620,12 @@ func (m *StateManager) SaveTestModuleResult(
 	dependencyHash string,
 ) error {
 	unitID := UnitID{
-		Action:    core.ActionTest,
-		Module:    module,
-		Component: "_module",
-		Tool:      "_",
-		Extra:     map[string]string{"testset": string(testSet)},
+		Action:        core.ActionTest,
+		Module:        module,
+		ComponentType: "_module",
+		ComponentName: "_module",
+		Tool:          "_",
+		Extra:         map[string]string{"testset": string(testSet)},
 	}
 
 	state := &UnitState{

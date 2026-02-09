@@ -21,7 +21,7 @@ workspace "EAC Specs Infrastructure" "Shared godog test runner, context, and com
             impl = container "Implementation Modules" "Per-module step definitions and feature tests" "Go Packages" {
                 eac_commands_impl = component "EAC Commands Steps" "Steps for eac-commands features" "Go"
                 eac_core_impl = component "EAC Core Steps" "Steps for eac-core features" "Go"
-                clie_cli_impl = component "CLIE CLI Steps" "Steps for clie-cli features" "Go"
+                clie_cli_impl = component "CLIE CLI Steps" "Steps for clie features" "Go"
                 repository_impl = component "Repository Steps" "Steps for repository features" "Go"
                 github_impl = component "GitHub Steps" "Steps for github workflow features" "Go"
             }

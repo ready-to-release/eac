@@ -165,10 +165,11 @@ func TestUoWTrackerAdapter_RecordComplete(t *testing.T) {
 	// Verify manifest was written
 	reader := NewReader(f.workspaceRoot)
 	id := workunit.UnitID{
-		Action:    core.ActionBuild,
-		Module:    "test-module",
-		Component: "go",
-		Tool:      "go",
+		Action:        core.ActionBuild,
+		Module:        "test-module",
+		ComponentType: "go",
+		ComponentName: "go",
+		Tool:          "go",
 	}
 	loaded, err := reader.GetUoW(id)
 	require.NoError(t, err)
@@ -343,6 +344,8 @@ type testUnitID struct {
 
 func (t *testUnitID) GetAction() string            { return t.context }
 func (t *testUnitID) GetModule() string           { return t.module }
+func (t *testUnitID) GetComponentType() string    { return t.component }
+func (t *testUnitID) GetComponentName() string    { return t.component }
 func (t *testUnitID) GetComponent() string        { return t.component }
 func (t *testUnitID) GetTool() string             { return t.tool }
 func (t *testUnitID) GetSpec() string             { return "" }

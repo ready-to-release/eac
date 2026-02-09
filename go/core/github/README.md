@@ -17,7 +17,7 @@ container package management, and package version safety assessment.
 ## Patterns
 
 - Interface abstraction: `API` and `CLIExecutor` decouple from `gh` binary
-- Global singleton: `SetGlobal`/`Global` provide ambient API access
+- Constructor injection: callers create or receive `API` instances directly
 - Builder pattern: `CLIMock` uses `With*` methods for fixture setup
 - Safety-first deletion: `PackageSafetyChecker` enforces release protection
 
@@ -46,7 +46,7 @@ never accidentally deleted during cleanup operations.
 ## Code Health
 
 ### Tech Debt
-- `interfaces.go:53`: mutable global singleton `var global API` with `SetGlobal`/`Global` -- risks test pollution across parallel tests; prefer explicit dependency injection
+- ~~`interfaces.go:53`: mutable global singleton `var global API` with `SetGlobal`/`Global` -- risks test pollution across parallel tests; prefer explicit dependency injection~~ (resolved: global removed; pipeline callers create `NewGHClient` directly; `FileCache` accepts API via field injection)
 - `package_safety.go:213,220`: compiled regexps at package level are fine, but `bundleTagPattern` and `moduleVersionPattern` lack doc comments explaining expected formats
 
 ### Pain Points
@@ -54,5 +54,5 @@ never accidentally deleted during cleanup operations.
 - No clear boundary between "workflow" and "release" concerns within the `API` interface -- callers that need only releases still import workflow types
 
 ### Optimization Opportunities
-- Replace the global singleton with constructor injection to enable safe parallel testing (medium effort, eliminates a class of test-isolation bugs)
+- ~~Replace the global singleton with constructor injection to enable safe parallel testing (medium effort, eliminates a class of test-isolation bugs)~~ (resolved)
 - No TODO/FIXME markers found -- no deferred work items in the codebase

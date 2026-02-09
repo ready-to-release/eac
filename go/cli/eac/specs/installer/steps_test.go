@@ -1,7 +1,7 @@
-// Package installer contains godog step implementations for specs/eac-cli/installer.
+// Package installer contains godog step implementations for specs/eac/installer.
 //
 // Features:
-// - specs/eac-cli/installer/cli-installation/
+// - specs/eac/installer/cli-installation/
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/core/paths"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // installerContext holds state between steps for installer tests.
@@ -69,7 +69,7 @@ func initializeInstallerContext() {
 	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
 	// and doesn't need to be copied to isolated test environments
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "eac-cli")
+	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "eac")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "eac-installer-test-*")
@@ -149,7 +149,7 @@ var (
 	binaryCheckDone = false
 )
 
-// checkLatestReleaseHasBinary checks if the latest eac-cli release has the expected binary.
+// checkLatestReleaseHasBinary checks if the latest eac release has the expected binary.
 // Sets binaryAvailable flag - if false, subsequent steps should pass without doing real work.
 // Tests use UPX-compressed binaries for faster downloads where available.
 // In mock mode (__EAC_TEST_MOCK=1), skips GitHub API call and assumes binary is available.
@@ -220,23 +220,23 @@ func checkLatestReleaseHasBinary() {
 		return
 	}
 
-	// Find latest eac-cli release
+	// Find latest eac release
 	for _, release := range releases {
-		if strings.HasPrefix(release.TagName, "eac-cli/") {
+		if strings.HasPrefix(release.TagName, "eac/") {
 			// Check if expected binary exists in assets
 			for _, asset := range release.Assets {
 				if asset.Name == expectedBinary {
 					return // Binary exists - test can proceed
 				}
 			}
-			// Found eac-cli release but binary not present
+			// Found eac release but binary not present
 			fmt.Printf("[SKIP] Release %s missing binary %s - release needs rebuild\n", release.TagName, expectedBinary)
 			binaryAvailable = false
 			return
 		}
 	}
 
-	fmt.Printf("[SKIP] No eac-cli release found on GitHub\n")
+	fmt.Printf("[SKIP] No eac release found on GitHub\n")
 	binaryAvailable = false
 }
 

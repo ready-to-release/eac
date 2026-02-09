@@ -15,7 +15,7 @@
 // Long: Example:
 // Long:   get test-results
 // Long:   get test-results eac-ext
-// Long:   get test-results eac-ext clie-cli
+// Long:   get test-results eac-ext clie
 // Long:   get test-results eac-ext --as-json
 // Args: [module...]
 // Flag.as-yaml: type=bool, usage=Output as YAML (default format)

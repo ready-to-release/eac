@@ -375,7 +375,7 @@ func getActualImageVersion(image string) string {
 
 	// For extension images, provide the specific GitHub packages URL if we couldn't get a tag
 	if extensionName != "" {
-		return fmt.Sprintf("run-XXX  # Check for stable versions at https://github.com/ready-to-release/eac/go/cli/clie/pkgs/container/clie-cli%%2Fextensions%%2F%s", extensionName)
+		return fmt.Sprintf("run-XXX  # Check for stable versions at https://github.com/ready-to-release/eac/go/cli/clie/pkgs/container/clie%%2Fextensions%%2F%s", extensionName)
 	}
 
 	// This shouldn't happen for our extension images, but handle gracefully

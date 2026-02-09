@@ -37,15 +37,15 @@ Feature: clie-installer_cli-installation
 		},
 		{
 			name: "Feature with L2, Scenario without L-tag - should not error",
-			featureContent: `@L2 @ov @depm:clie-cli
-Feature: clie-cli_cli-invocation
+			featureContent: `@L2 @ov @depm:clie
+Feature: clie_cli-invocation
 
   As a user
   I want to run the CLI
 
   Rule: CLI can be invoked
 
-    @ov @depm:clie-cli
+    @ov @depm:clie
     Scenario: Basic invocation
       Given I have the CLI installed
       When I run "clie --help"
@@ -75,7 +75,7 @@ Feature: clie-installer_cli-installation
 		},
 		{
 			name: "Multiple scenarios, some with conflicting L-tags",
-			featureContent: `@L2 @ov @depm:eac-cli
+			featureContent: `@L2 @ov @depm:eac
 Feature: eac-cli_commit
 
   As a developer
@@ -83,13 +83,13 @@ Feature: eac-cli_commit
 
   Rule: Commit message generation
 
-    @L2 @ov @depm:eac-cli
+    @L2 @ov @depm:eac
     Scenario: Generate basic commit message
       Given I have staged changes
       When I run "clie commit message"
       Then a commit message is generated
 
-    @L3 @ov @depm:eac-cli
+    @L3 @ov @depm:eac
     Scenario: Generate commit with AI
       Given I have staged changes
       When I run "clie commit message --ai"

@@ -28,11 +28,11 @@ func TestMain(m *testing.M) {
 // TestLoadMinimalConfig validates that a minimal config loads correctly
 // and all values fall back to sensible defaults when fields are empty
 func TestLoadMinimalConfig(t *testing.T) {
-	// Create a temporary .clie/clie-cli.yml with minimal extension
+	// Create a temporary .clie/clie.yml with minimal extension
 	tempDir := t.TempDir()
 	clieDir := filepath.Join(tempDir, ".clie")
 	os.MkdirAll(clieDir, 0755)
-	tempConfigPath := filepath.Join(clieDir, "clie-cli.yml")
+	tempConfigPath := filepath.Join(clieDir, "clie.yml")
 
 	// Write minimal valid config with empty values
 	configContent := `extensions:
@@ -78,12 +78,12 @@ func TestConfigDocumentation(t *testing.T) {
 	repoRoot, err := FindRepositoryRoot()
 	require.NoError(t, err, "Failed to find repository root")
 
-	// Path to clie-cli.yml.md (in contracts/clie-cli/0.1.0/)
-	docsPath := filepath.Join(repoRoot, "contracts", "clie-cli", "0.1.0", "schemas", "clie-cli.yml.md")
+	// Path to clie.yml.md (in contracts/clie/0.1.0/)
+	docsPath := filepath.Join(repoRoot, "contracts", "clie", "0.1.0", "schemas", "clie.yml.md")
 
 	// Read the documentation file
 	content, err := os.ReadFile(docsPath)
-	require.NoError(t, err, "Failed to read clie-cli.yml.md")
+	require.NoError(t, err, "Failed to read clie.yml.md")
 
 	// Convert to string for validation
 	docsContent := string(content)
@@ -126,7 +126,7 @@ func TestConfigDocumentation(t *testing.T) {
 
 	for _, pattern := range requiredPatterns {
 		assert.Contains(t, docsContent, pattern,
-			"clie-cli.yml.md should document: %s", pattern)
+			"clie.yml.md should document: %s", pattern)
 	}
 }
 
@@ -135,7 +135,7 @@ func TestConfigDocumentation(t *testing.T) {
 func TestEmptyExtensionsConfig(t *testing.T) {
 	// Create a temporary config with empty extensions
 	tempDir := t.TempDir()
-	tempConfigPath := filepath.Join(tempDir, "clie-cli.yml")
+	tempConfigPath := filepath.Join(tempDir, "clie.yml")
 
 	// Write config with empty extensions array
 	configContent := `extensions: []
@@ -1015,16 +1015,16 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 
 	// Create different configuration files with different content to verify priority
 	configs := map[string]string{
-		"clie-cli.yml": `extensions:
+		"clie.yml": `extensions:
   - name: "default-ext"
     image: "default:latest"`,
-		"clie-cli.local.yml": `extensions:
+		"clie.local.yml": `extensions:
   - name: "local-ext"
     image: "local:latest"`,
-		"clie-cli.personal.yml": `extensions:
+		"clie.personal.yml": `extensions:
   - name: "personal-ext"
     image: "personal:latest"`,
-		"clie-cli.dev.yml": `extensions:
+		"clie.dev.yml": `extensions:
   - name: "dev-ext"
     image: "dev:latest"`,
 	}
@@ -1038,31 +1038,31 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 	}{
 		{
 			name:           "only default config",
-			filesToCreate:  []string{"clie-cli.yml"},
+			filesToCreate:  []string{"clie.yml"},
 			expectedConfig: "default-ext",
 			expectedImage:  "default:latest",
 		},
 		{
 			name:           "local overrides default",
-			filesToCreate:  []string{"clie-cli.yml", "clie-cli.local.yml"},
+			filesToCreate:  []string{"clie.yml", "clie.local.yml"},
 			expectedConfig: "local-ext",
 			expectedImage:  "local:latest",
 		},
 		{
 			name:           "local has higher priority than personal",
-			filesToCreate:  []string{"clie-cli.yml", "clie-cli.local.yml", "clie-cli.personal.yml"},
+			filesToCreate:  []string{"clie.yml", "clie.local.yml", "clie.personal.yml"},
 			expectedConfig: "local-ext",
 			expectedImage:  "local:latest",
 		},
 		{
 			name:           "personal has higher priority than dev",
-			filesToCreate:  []string{"clie-cli.yml", "clie-cli.personal.yml", "clie-cli.dev.yml"},
+			filesToCreate:  []string{"clie.yml", "clie.personal.yml", "clie.dev.yml"},
 			expectedConfig: "personal-ext",
 			expectedImage:  "personal:latest",
 		},
 		{
 			name:           "local has highest priority among user configs",
-			filesToCreate:  []string{"clie-cli.yml", "clie-cli.local.yml", "clie-cli.personal.yml", "clie-cli.dev.yml"},
+			filesToCreate:  []string{"clie.yml", "clie.local.yml", "clie.personal.yml", "clie.dev.yml"},
 			expectedConfig: "local-ext",
 			expectedImage:  "local:latest",
 		},
@@ -1071,7 +1071,7 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up any existing config files (in .clie directory)
-			configFiles := []string{"clie-cli.yml", "clie-cli.local.yml", "clie-cli.personal.yml", "clie-cli.dev.yml"}
+			configFiles := []string{"clie.yml", "clie.local.yml", "clie.personal.yml", "clie.dev.yml"}
 			for _, configFile := range configFiles {
 				os.Remove(filepath.Join(clieDir, configFile))
 			}
@@ -1092,7 +1092,7 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 			require.NoError(t, err)
 
 			// Find config file using our discovery logic
-			configFile, err := findConfigFile("clie-cli.yml")
+			configFile, err := findConfigFile("clie.yml")
 			require.NoError(t, err, "Failed to find config file")
 
 			// Load the configuration
@@ -1122,9 +1122,9 @@ func TestGetConfigFileCandidates(t *testing.T) {
 
 	// Check that specific files are included in the right order (now in .clie directory)
 	expectedFiles := []string{
-		"clie-cli.local.yml",
-		"clie-cli.personal.yml",
-		"clie-cli.dev.yml",
+		"clie.local.yml",
+		"clie.personal.yml",
+		"clie.dev.yml",
 	}
 
 	for i, expectedFile := range expectedFiles {
@@ -1133,7 +1133,7 @@ func TestGetConfigFileCandidates(t *testing.T) {
 	}
 
 	// Repository default should be last (in .clie directory)
-	expectedDefault := filepath.Join(clieDir, "clie-cli.yml")
+	expectedDefault := filepath.Join(clieDir, "clie.yml")
 	assert.Equal(t, expectedDefault, candidates[len(candidates)-1], "Repository default should be last")
 }
 
@@ -1154,7 +1154,7 @@ func TestUserSpecificConfigNotFound(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to find config file - should fail
-	_, err = findConfigFile("clie-cli.yml")
+	_, err = findConfigFile("clie.yml")
 	require.Error(t, err, "Should fail when no config files exist")
 
 	// Should be a ConfigFileNotFoundError
@@ -1184,7 +1184,7 @@ func TestUserSpecificConfigPermissionError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a config file with no read permissions (in .clie directory)
-	configPath := filepath.Join(clieDir, "clie-cli.local.yml")
+	configPath := filepath.Join(clieDir, "clie.local.yml")
 	err = os.WriteFile(configPath, []byte("extensions: []"), 0644)
 	require.NoError(t, err)
 
@@ -1204,7 +1204,7 @@ func TestUserSpecificConfigPermissionError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to find config file - should return permission error
-	_, err = findConfigFile("clie-cli.yml")
+	_, err = findConfigFile("clie.yml")
 	if err != nil {
 		// Should be a permission error
 		assert.Contains(t, err.Error(), "permission")
@@ -1227,7 +1227,7 @@ func TestConfigDebugLogging(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a local config file (in .clie directory)
-	configPath := filepath.Join(clieDir, "clie-cli.local.yml")
+	configPath := filepath.Join(clieDir, "clie.local.yml")
 	configContent := `extensions:
   - name: "test-ext"
     image: "test:latest"`
@@ -1243,7 +1243,7 @@ func TestConfigDebugLogging(t *testing.T) {
 	require.NoError(t, err)
 
 	// Find config file - should find the local one and log debug message
-	foundConfig, err := findConfigFile("clie-cli.yml")
+	foundConfig, err := findConfigFile("clie.yml")
 	require.NoError(t, err)
 
 	// Verify correct file was found
@@ -1251,5 +1251,5 @@ func TestConfigDebugLogging(t *testing.T) {
 
 	// Note: In a real test environment with log capture, you would verify:
 	// assert.Contains(t, capturedLogs, "Using configuration file")
-	// assert.Contains(t, capturedLogs, "clie-cli.local.yml")
+	// assert.Contains(t, capturedLogs, "clie.local.yml")
 }

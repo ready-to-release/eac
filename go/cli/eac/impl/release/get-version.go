@@ -7,13 +7,13 @@
 // Long:
 // Long: Expected Output:
 // Long:   - Version string (e.g., 0.0.14) by default
-// Long:   - Tag format (e.g., clie-cli/0.0.14) if --tag flag is specified
+// Long:   - Tag format (e.g., clie/0.0.14) if --tag flag is specified
 // Long:
 // Long: Examples:
-// Long:   release get-version clie-cli              # Output: 0.0.14
+// Long:   release get-version clie              # Output: 0.0.14
 // Long:   release get-version docs                 # Output: 2025.12.01
-// Long:   release get-version clie-cli --tag        # Output: clie-cli/0.0.14
-// Long:   release get-version clie-cli --json       # Output JSON format
+// Long:   release get-version clie --tag        # Output: clie/0.0.14
+// Long:   release get-version clie --json       # Output JSON format
 // Flag.tag: type=bool, usage=Output as git tag format (module/version)
 // Flag.json: type=bool, usage=Output in JSON format
 // Flag.path: type=string, usage=Override changelog path (default: release/<module>/CHANGELOG.md)

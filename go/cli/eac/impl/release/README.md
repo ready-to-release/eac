@@ -14,7 +14,7 @@ Manages the full release lifecycle including changelog generation, version calcu
 
 ## Patterns
 
-- Registry-based subcommand dispatch: each subcommand file calls `registry.Register` in `init()`
+- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
 - Idempotent release: detects already-pending versions to avoid double bumps
 - Layered execution: processes releases in dependency order, awaiting each layer
 - GitHub CLI integration: dispatches workflows and polls run status via `gh`
@@ -41,7 +41,7 @@ Manages the full release lifecycle including changelog generation, version calcu
 | prune.go | Prune old release artifacts |
 | prune_packages.go | Prune old container packages |
 | eac-ext.go | EAC extension release handling |
-| clie-cli.go | CLI-specific release handling |
+| clie.go | CLI-specific release handling |
 
 ## Dependencies
 
@@ -58,14 +58,14 @@ Manages the full release lifecycle including changelog generation, version calcu
 
 ## Role in System
 
-The `release` package orchestrates the entire release pipeline in `eac-cli`, from detecting pending changes through version calculation to dispatching GitHub Actions workflows in dependency order. It is the primary interface for both interactive developer-initiated releases (`release this`) and automated CI/CD release flows (`release pending`, `release execute-layers`).
+The `release` package orchestrates the entire release pipeline in `eac`, from detecting pending changes through version calculation to dispatching GitHub Actions workflows in dependency order. It is the primary interface for both interactive developer-initiated releases (`release this`) and automated CI/CD release flows (`release pending`, `release execute-layers`).
 
 ## Code Health
 
 ### Tech Debt
-- 18 files each declare `func init()` with near-identical registry-registration boilerplate
+- ~~18 files each declare `func init()` with near-identical registry-registration boilerplate~~ (resolved: table-driven `commands.go` with `RegisterAll()`)
 - Several oversized functions: `ReleaseCheckCI` (~213 lines in check-ci.go), `ReleaseAwaitDeps` (~214 lines in await-deps.go), `performRelease` (~292 lines in this.go), `ReleaseChangelog` (~286 lines in changelog.go)
-- No tests for execute-layers.go, cleanup.go, tag-pending.go, or clie-cli.go
+- No tests for execute-layers.go, cleanup.go, tag-pending.go, or clie.go
 
 ### Pain Points
 - Duplication across command files: each subcommand repeats flag-parsing, usage-printing, and error-handling scaffolding that could be extracted into a shared harness

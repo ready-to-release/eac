@@ -27,8 +27,7 @@ import (
 
 // buildUnitWorker builds a single component within a module.
 // This is called by the UnitScheduler for parallel component execution.
-// The component parameter is in "compName:builderName" format (e.g., "go:go", "docs:mkdocs").
-func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 	buildCfg, ok := ctx.Config.BuildCmdConfig.(*BuildConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: BuildCmdConfig not found or wrong type")
@@ -40,17 +39,14 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		return 1
 	}
 
-	// Check incremental cache first - if module/UoW is cached, verify artifacts and skip (blue in TUI)
-	// Parse component to build unitID for UoW cache lookup
-	compName, toolName := cmdframework.ParseComponent(component)
+	// Extract identity from spec - no more string parsing
+	module := spec.ID.Module
+	component := spec.ID.ComponentName + ":" + spec.ID.Tool // For display/legacy compat
+	compName := spec.ID.ComponentName
+	toolName := spec.ID.Tool
 
-	// Build UnitID for UoW-level cache lookup
-	unitID := workunit.UnitID{
-		Action:    core.ActionBuild,
-		Module:    module,
-		Component: compName,
-		Tool:      toolName,
-	}
+	// Use spec's UnitID directly for cache lookup
+	unitID := spec.ID
 
 	// Create pipeline for shared cache/lock/manifest orchestration
 	pipeline := &cmdframework.UnitPipeline{
@@ -76,16 +72,17 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	}
 
 	// Handle placeholder "none" component (modules with no buildable components)
-	if component == "none" {
+	if compName == "none" {
 		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
 		// Write a NoOp manifest for the "none" placeholder to satisfy manifest assertions
 		// NoOp manifests are always considered up-to-date in cache detection
 		if bctx.tracker != nil {
 			noneID := workunit.UnitID{
-				Action:    core.ActionBuild,
-				Module:    module,
-				Component: "none",
-				Tool:      "",
+				Action:        core.ActionBuild,
+				Module:        module,
+				ComponentType: "none",
+				ComponentName: "none",
+				Tool:          "",
 			}
 			manifest := coreoutput.NewNoOpManifest(
 				core.ActionBuild,
@@ -119,8 +116,8 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		}
 	}
 
-	// Acquire component-level lock with wait (skip in dry-run)
-	componentDir := cmdframework.ComponentDir(compName, builderName)
+	// Acquire unit-level lock with wait (skip in dry-run)
+	componentDir := cmdframework.UnitDir(compName, builderName)
 	release, err := pipeline.AcquireLock(ctx, module, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
@@ -196,10 +193,11 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	// Update UoW ID with actual handler name (may differ from parsed tool name)
 	// and record start
 	unitID = workunit.UnitID{
-		Action:    core.ActionBuild,
-		Module:    module,
-		Component: compName,
-		Tool:      handler.Name(),
+		Action:        core.ActionBuild,
+		Module:        module,
+		ComponentType: spec.ID.ComponentType,
+		ComponentName: compName,
+		Tool:          handler.Name(),
 	}
 	if bctx.tracker != nil {
 		if err := bctx.tracker.RecordStart(unitID); err != nil {
@@ -218,7 +216,7 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 
 	// Build the component
 	// Use component-level output directory: out/build/<module>/<component>/<builder>
-	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
+	componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
 	exitCode := handler.Build(modulePort, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
 
 	// Handle exit codes:

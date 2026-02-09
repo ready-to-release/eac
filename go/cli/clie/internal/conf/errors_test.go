@@ -35,10 +35,10 @@ func TestConfigErrorTypes(t *testing.T) {
 		{
 			name: "config file not found error",
 			errorFunc: func() *ConfigError {
-				return NewConfigFileNotFoundError("clie-cli.yml", "/repo/root")
+				return NewConfigFileNotFoundError("clie.yml", "/repo/root")
 			},
 			expectType: ErrorTypeConfigFileNotFound,
-			expectMsg:  "Configuration file clie-cli.yml not found",
+			expectMsg:  "Configuration file clie.yml not found",
 			expectSugg: "Create a configuration file at",
 		},
 		{
@@ -66,7 +66,7 @@ func TestConfigErrorTypes(t *testing.T) {
 			},
 			expectType: ErrorTypeYAMLUnmarshalError,
 			expectMsg:  "Failed to process configuration structure",
-			expectSugg: "Verify that the YAML structure matches the expected clie-cli.yml schema",
+			expectSugg: "Verify that the YAML structure matches the expected clie.yml schema",
 		},
 	}
 
@@ -242,7 +242,7 @@ func TestFindRepositoryRootWithStructuredErrors(t *testing.T) {
 
 // TestFindConfigFileWithStructuredErrors tests config file discovery with new error handling
 func TestFindConfigFileWithStructuredErrors(t *testing.T) {
-	// Get repository root (should work since we're in the clie-cli repo)
+	// Get repository root (should work since we're in the clie repo)
 	repoRoot, err := FindRepositoryRoot()
 	require.NoError(t, err)
 

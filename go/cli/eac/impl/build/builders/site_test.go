@@ -103,7 +103,7 @@ func TestResolveBookNameForSite(t *testing.T) {
 			// Create a minimal module contract
 			base := domain.BaseContract{
 				Moniker:    "test-module",
-				Components: make(domain.ModuleComponents),
+				Components: make(config.ModuleComponents),
 			}
 			module := modules.NewModuleContract(base, "/workspace")
 
@@ -121,8 +121,8 @@ func TestResolveBookNameForSite_WithConfigOverride(t *testing.T) {
 	// Create a module with explicit book config
 	base := domain.BaseContract{
 		Moniker: "test-module",
-		Components: domain.ModuleComponents{
-			"docs-site": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"docs-site": &config.ComponentEntry{
 				Type: config.ComponentTypeDocsSite,
 				Config: map[string]string{
 					"book": "custom-book-name",

@@ -35,6 +35,7 @@ Feature: repository_no-scattered-scripts
         | scripts/sh/<package>/*               | Shell packages             |
         | scripts/cmd/<package>/*              | Batch packages             |
         | containers/*/entrypoint.sh           | Container entrypoints      |
+        | containers/*/*.sh                    | Container scripts          |
         | importer.sh                          | Root shell importer        |
         | importer.ps1                         | Root PowerShell importer   |
       And no scripts should exist in:

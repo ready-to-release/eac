@@ -101,7 +101,7 @@ func parsePairFromGodogFile(godogFile, repoRoot string) (ImplSpecsPair, error) {
 // extractSpecsPath parses the SpecsPath value from godog_test.go content.
 // It extracts the specs-relative path and resolves it from repoRoot.
 func extractSpecsPath(content, repoRoot string) (string, error) {
-	// Match: SpecsPath: "../../../../specs/eac-cli",
+	// Match: SpecsPath: "../../../../specs/eac",
 	matches := reSpecsPath.FindStringSubmatch(content)
 	if len(matches) < 2 {
 		return "", fmt.Errorf("SpecsPath not found in file")
@@ -116,7 +116,7 @@ func extractSpecsPath(content, repoRoot string) (string, error) {
 		return "", fmt.Errorf("SpecsPath does not contain '%s/': %s", paths.SpecsDir, relativePath)
 	}
 
-	// Get the specs-relative path (e.g., "specs/eac-cli")
+	// Get the specs-relative path (e.g., "specs/eac")
 	specsRelPath := relativePath[specsIdx:]
 
 	// Resolve from repo root

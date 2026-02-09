@@ -1,6 +1,9 @@
 # Release Trigger - Orchestrates pending releases after CI completion
 #
-# This workflow checks for pending releases and triggers them in dependency order.
+# This workflow checks for pending releases and dispatches them all in parallel.
+# Each release template's config job derives whether it needs to await dependencies
+# (e.g., bundle releases await their dependency releases via core config).
+#
 # It can be invoked:
 # 1. Automatically by change-trigger.yaml after CI completes
 # 2. Manually via workflow_dispatch to retry failed releases
@@ -9,11 +12,7 @@
 # 1. await-ci: Verify CI has passed (should be instant if called from change-trigger)
 # 2. await-releases: Wait for any active release workflows to complete
 # 3. check-pending: Detect pending releases (semver from changelog, calver from CI)
-# 4. execute-layers: Trigger releases in dependency order
-#
-# Releases are processed layer by layer:
-# - Layer 0: Independent modules (clie-cli, eac-ext, docs, books)
-# - Layer 1: Bundle modules that depend on Layer 0 (clie-eac-bundle)
+# 4. dispatch: Trigger all pending releases in parallel (each handles its own deps)
 
 name: "Release Trigger"
 
@@ -66,7 +65,7 @@ jobs:
             ${COMMANDS:?COMMANDS not set} pipeline await-ci --timeout 1800
           }
           echo ""
-          echo "✅ CI verification complete"
+          echo "CI verification complete"
 
       # Step 2: Wait for any active release workflows to complete
       - name: Await active releases
@@ -77,7 +76,7 @@ jobs:
           echo "Checking for active release workflows..."
           # Exclude ourselves to avoid waiting for our own workflow
           ${COMMANDS:?COMMANDS not set} pipeline await-release --timeout 600 --exclude release-trigger.yaml
-          echo "✅ No conflicting releases in progress"
+          echo "No conflicting releases in progress"
 
       # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
       - name: Check for pending releases
@@ -86,17 +85,47 @@ jobs:
         with:
           dispatched-modules: ${{ inputs.dispatched-modules }}
 
-      # Step 4: Trigger releases in dependency order (layer by layer)
-      - name: Trigger releases by layer
+      # Step 4: Dispatch all pending releases in parallel
+      # Each release template has a config job that derives whether to await deps
+      - name: Dispatch pending releases
         if: steps.check.outputs.has_pending == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
-          LAYERS_JSON: ${{ steps.check.outputs.layers_json }}
+          MODULES_JSON: ${{ steps.check.outputs.modules_json }}
         run: |
-          echo "Executing releases in dependency order..."
+          echo "Dispatching all pending releases in parallel..."
           echo ""
-          ${COMMANDS:?COMMANDS not set} release execute-layers --layers "$LAYERS_JSON"
+
+          TOTAL=0
+          for row in $(echo "$MODULES_JSON" | jq -r '.[] | @base64'); do
+            MODULE=$(echo "$row" | base64 -d | jq -r '.module')
+            VERSION=$(echo "$row" | base64 -d | jq -r '.version')
+            TYPE=$(echo "$row" | base64 -d | jq -r '.type')
+
+            WORKFLOW="release-${MODULE}.yaml"
+
+            if [ ! -f ".github/workflows/$WORKFLOW" ]; then
+              echo "  [$MODULE] No release workflow found: $WORKFLOW - skipping"
+              continue
+            fi
+
+            echo "  [$MODULE] ($TYPE) Dispatching $WORKFLOW"
+
+            # Build dispatch args - semver modules get version, calver auto-generates
+            DISPATCH_ARGS=""
+            if [ "$TYPE" = "semver" ] && [ -n "$VERSION" ]; then
+              DISPATCH_ARGS="-f version=$VERSION"
+            fi
+
+            gh workflow run "$WORKFLOW" --ref main $DISPATCH_ARGS
+            TOTAL=$((TOTAL + 1))
+            sleep 2
+          done
+
+          echo ""
+          echo "Dispatched $TOTAL release workflow(s) in parallel"
+          echo "Each release template handles its own dependency awaiting via core config."
 
       - name: Release Summary
         if: always()
@@ -107,8 +136,19 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
-            LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
-            ${COMMANDS:?COMMANDS not set} show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
+            MODULES_JSON='${{ steps.check.outputs.modules_json }}'
+            echo "**Pending releases dispatched in parallel:**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Module | Version | Type |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|------|" >> $GITHUB_STEP_SUMMARY
+            for row in $(echo "$MODULES_JSON" | jq -r '.[] | @base64'); do
+              MODULE=$(echo "$row" | base64 -d | jq -r '.module')
+              VERSION=$(echo "$row" | base64 -d | jq -r '.version')
+              TYPE=$(echo "$row" | base64 -d | jq -r '.type')
+              echo "| $MODULE | $VERSION | $TYPE |" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> Each release workflow derives its own config (release type, dep awaiting) from core." >> $GITHUB_STEP_SUMMARY
           else
             echo "No pending releases detected." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

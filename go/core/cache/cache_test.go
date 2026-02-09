@@ -27,12 +27,13 @@ func TestAllLevels_ReturnsConcreteValues(t *testing.T) {
 func TestAllTypes_ReturnsConcreteValues(t *testing.T) {
 	types := AllTypes()
 
-	assert.Len(t, types, 5)
+	assert.Len(t, types, 6)
 	assert.Contains(t, types, TypeRegistry)
 	assert.Contains(t, types, TypeState)
 	assert.Contains(t, types, TypeAsset)
 	assert.Contains(t, types, TypeLayer)
 	assert.Contains(t, types, TypeWork)
+	assert.Contains(t, types, TypeCI)
 	assert.NotContains(t, types, TypeAll, "AllTypes should not include wildcard")
 }
 
@@ -274,6 +275,9 @@ func TestParseSpec_ValidSpecs(t *testing.T) {
 		{"work", Spec{Level: LevelAll, Type: TypeWork}},
 		{"STATE", Spec{Level: LevelAll, Type: TypeState}},
 
+		// Type-only CI
+		{"ci", Spec{Level: LevelAll, Type: TypeCI}},
+
 		// Explicit level:type
 		{"local:state", Spec{Level: LevelLocal, Type: TypeState}},
 		{"local:asset", Spec{Level: LevelLocal, Type: TypeAsset}},
@@ -283,6 +287,7 @@ func TestParseSpec_ValidSpecs(t *testing.T) {
 		{"remote:state", Spec{Level: LevelRemote, Type: TypeState}},
 		{"remote:layer", Spec{Level: LevelRemote, Type: TypeLayer}},
 		{"remote:registry", Spec{Level: LevelRemote, Type: TypeRegistry}},
+		{"remote:ci", Spec{Level: LevelRemote, Type: TypeCI}},
 		{"LOCAL:STATE", Spec{Level: LevelLocal, Type: TypeState}},
 		{"  local:state  ", Spec{Level: LevelLocal, Type: TypeState}},
 	}
@@ -422,7 +427,7 @@ func TestParseSpec_AllKnownLevels(t *testing.T) {
 }
 
 func TestParseSpec_AllKnownTypes(t *testing.T) {
-	validTypes := []string{"state", "asset", "registry", "layer", "work"}
+	validTypes := []string{"state", "asset", "registry", "layer", "work", "ci"}
 	for _, typ := range validTypes {
 		t.Run(typ, func(t *testing.T) {
 			spec, err := ParseSpec(typ)

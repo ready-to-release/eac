@@ -3,7 +3,7 @@ description: Extract version from tag trigger or workflow dispatch input
 
 inputs:
   module-prefix:
-    description: 'Module prefix in tag (e.g., clie-cli, eac-ext, docs, books)'
+    description: 'Module prefix in tag (e.g., clie, eac-ext, docs, books)'
     required: true
   version-type:
     description: 'Version format: semver (x.y.z) or calver (YYYY.MMDD.HHMM)'
@@ -19,7 +19,7 @@ outputs:
     description: 'Extracted version without prefix (e.g., 1.2.3 or 2025.1214.1630)'
     value: ${{ steps.extract.outputs.version }}
   tag_name:
-    description: 'Full tag name (e.g., clie-cli/1.2.3 or docs/2025.1214.1630)'
+    description: 'Full tag name (e.g., clie/1.2.3 or docs/2025.1214.1630)'
     value: ${{ steps.extract.outputs.tag_name }}
   is_valid:
     description: 'Whether version is valid for its type (true/false)'

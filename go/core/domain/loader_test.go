@@ -27,12 +27,12 @@ func TestLoader_LoadYAML(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create test YAML file with new package-based format
+	// Create test YAML file with component-based format
 	testYAML := `
 moniker: "test-module"
 name: "Test Module"
 description: "Test description"
-packages:
+components:
   test-type:
     root: "test/root"
 `

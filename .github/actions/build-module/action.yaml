@@ -32,7 +32,7 @@ inputs:
   cross-compile-windows:
     description: |
       Cross-compile for Windows when building on Linux. Default: false.
-      Set to true only for workflows that have Windows test jobs (clie-cli, scripts-*).
+      Set to true only for workflows that have Windows test jobs (clie, scripts-*).
     required: false
     default: 'false'
 

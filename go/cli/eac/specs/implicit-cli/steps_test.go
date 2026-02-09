@@ -1,7 +1,7 @@
-// Package implicitcli contains godog step implementations for specs/eac-cli/implicit-cli.
+// Package implicitcli contains godog step implementations for specs/eac/implicit-cli.
 //
 // Features:
-// - specs/eac-cli/implicit-cli/importer/
+// - specs/eac/implicit-cli/importer/
 //
 // These tests invoke the importer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.

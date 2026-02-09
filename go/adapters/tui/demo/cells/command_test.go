@@ -32,20 +32,20 @@ func TestCommandCell_Render(t *testing.T) {
 			expected: "test core",
 		},
 		{
-			name:     "truncate long list",
-			command:  "build",
-			modules:  []string{"contracts", "core", "eac-cli", "docs", "ai-adapter", "tui-adapter"},
-			width:    40,
+			name:    "truncate long list",
+			command: "build",
+			modules: []string{"contracts", "core", "eac", "docs", "ai-eac", "tui-eac"},
+			width:   40,
 			// 40 - 4 = 36 max before truncation
-			// "build contracts core eac-cli docs" = 33 <= 36, fits
-			// "build contracts core eac-cli docs ai-adapter" = 44 > 36, truncate
-			expected: "build contracts core eac-cli docs ...",
+			// "build contracts core eac docs" = 33 <= 36, fits
+			// "build contracts core eac docs ai-eac" = 44 > 36, truncate
+			expected: "build contracts core eac docs ai-eac ...",
 		},
 		{
-			name:     "truncate very narrow",
-			command:  "build",
-			modules:  []string{"contracts", "core"},
-			width:    20,
+			name:    "truncate very narrow",
+			command: "build",
+			modules: []string{"contracts", "core"},
+			width:   20,
 			// 20 - 4 = 16 max before truncation
 			// "build contracts" = 15 <= 16
 			// "build contracts core" = 24 > 16, truncate

@@ -59,7 +59,7 @@ Framework commands that manage extensions:
 
 ### Configuration
 
-- **File**: `.clie/clie-cli.yml`
+- **File**: `.clie/clie.yml`
 - **Purpose**: Extension registry and runtime settings
 - **Scope**: Framework-level configuration
 
@@ -124,7 +124,7 @@ User runs: eac build
 
    ↓
 [CLIE CLI]
-  ├─ Reads .clie/clie-cli.yml
+  ├─ Reads .clie/clie.yml
   ├─ Finds 'eac' extension config
   ├─ Pulls image if needed
   ├─ Mounts workspace volume
@@ -148,7 +148,7 @@ User runs: eac build
 | **Installation**  | System-wide binary     | Per-project Docker images |
 | **Runs**          | On host machine        | Inside containers         |
 | **Updates**       | `clie update`           | Automatic via registry    |
-| **Configuration** | `.clie/clie-cli.yml`     | `.clie/<extension>/`       |
+| **Configuration** | `.clie/clie.yml`     | `.clie/<extension>/`       |
 | **Commands**      | Framework operations   | Tool-specific operations  |
 | **Examples**      | init, install, cleanup | build, test, scan         |
 
@@ -159,7 +159,7 @@ User runs: eac build
 ```text
 Project Root/
 ├── .clie/
-│   ├── clie-cli.yml              ← Tier 1: Framework config
+│   ├── clie.yml              ← Tier 1: Framework config
 │   │                                (Which extensions to use)
 │   └── eac/                     ← Tier 2: Extension config
 │       ├── ai-provider.yml          (How EAC behaves)
@@ -168,7 +168,7 @@ Project Root/
 
 ### Configuration Purposes
 
-**Tier 1** (`.clie/clie-cli.yml`):
+**Tier 1** (`.clie/clie.yml`):
 
 ```yaml
 extensions:
@@ -229,7 +229,7 @@ clie pwsh run-script.ps1
 
 ### Example 2: Development vs CI
 
-**Development** (`.clie/clie-cli.local.yml`):
+**Development** (`.clie/clie.local.yml`):
 
 ```yaml
 extensions:
@@ -238,7 +238,7 @@ extensions:
     pull_policy: 'Never'          # Don't pull
 ```
 
-**CI** (`.clie/clie-cli.yml`):
+**CI** (`.clie/clie.yml`):
 
 ```yaml
 extensions:

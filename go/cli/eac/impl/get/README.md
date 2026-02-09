@@ -12,7 +12,7 @@ Parent command that retrieves repository data in structured output formats (YAML
 
 ## Patterns
 
-- Registry-based subcommand dispatch: each subcommand file calls `registry.Register` in `init()`
+- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
 - Shared `ExecuteGetCommand` helper: wraps flag parsing, data fetching, and rendering
 - TUI selector fallback: interactive subcommand picker when run without arguments
 - Comment-driven metadata: command, flags, and grouping declared via structured comments
@@ -51,7 +51,7 @@ Parent command that retrieves repository data in structured output formats (YAML
 
 ## Role in System
 
-The `get` package is the primary data retrieval interface in `eac-cli`, exposing repository structure, configuration, and CI/CD state as machine-readable output. Each subcommand follows a uniform pattern of loading data through core domain services and rendering via the shared `ExecuteGetCommand` helper, making output format selection consistent across all queries.
+The `get` package is the primary data retrieval interface in `eac`, exposing repository structure, configuration, and CI/CD state as machine-readable output. Each subcommand follows a uniform pattern of loading data through core domain services and rendering via the shared `ExecuteGetCommand` helper, making output format selection consistent across all queries.
 
 ## Code Health
 

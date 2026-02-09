@@ -39,7 +39,7 @@ have not been built.
 ## Code Health
 
 ### Tech Debt
-- No unit tests exist for this package (0 test files); `Verify`, `VerifyAll`, and `ModuleChecker` are untested
+- ~~No unit tests exist for this package (0 test files); `Verify`, `VerifyAll`, and `ModuleChecker` are untested~~ (resolved: `verify_test.go` has 39 tests covering format validation, public API, `checkSourceRootExists`, `checkAnyPlatformExists` with platform/arch edge cases, and `init()` idempotency)
 - `verify.go:229-230`: hardcoded platform/arch lists (`"linux", "windows", "darwin"`, `"amd64"`, `"arm64"`) should come from config
 
 ### Pain Points
@@ -47,5 +47,5 @@ have not been built.
 - `loadModuleContract()` calls `repository.GetRepositoryRoot("")` internally, creating hidden filesystem coupling
 
 ### Optimization Opportunities
-- Add unit tests with a mock `ModuleRegistry` to cover artifact resolution paths (high priority, medium effort)
+- ~~Add unit tests with a mock `ModuleRegistry` to cover artifact resolution paths~~ (resolved: covered in verify_test.go with filesystem-based happy-path and edge-case tests)
 - Extract platform/arch constants to a shared location to avoid drift between this package and build logic (low effort)

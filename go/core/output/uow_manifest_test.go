@@ -64,7 +64,7 @@ func TestUoWManifest_ManifestPath_LintContext(t *testing.T) {
 func TestUoWManifest_ManifestPath_ScanContext(t *testing.T) {
 	manifest := UoWManifest{
 		Action:    core.ActionScan,
-		Module:    "eac-cli",
+		Module:    "eac",
 		Component: "docker",
 		Tool:      "trivy-vuln",
 	}
@@ -72,7 +72,7 @@ func TestUoWManifest_ManifestPath_ScanContext(t *testing.T) {
 	workspaceRoot := "/workspace"
 	path := manifest.ManifestPath(workspaceRoot)
 
-	expected := filepath.Join(workspaceRoot, "out", "scan", "eac-cli", "docker-trivy-vuln", "uow.manifest.json")
+	expected := filepath.Join(workspaceRoot, "out", "scan", "eac", "docker-trivy-vuln", "uow.manifest.json")
 	assert.Equal(t, expected, path)
 }
 
@@ -98,11 +98,11 @@ func TestUoWManifest_ManifestPath_TableDriven(t *testing.T) {
 		{
 			name:          "test gherkin with godog",
 			context:       core.ActionTest,
-			module:        "eac-cli",
+			module:        "eac",
 			component:     "gherkin",
 			tool:          "godog",
 			workspaceRoot: "/project",
-			expectedPath:  filepath.Join("/project", "out", "test", "eac-cli", "gherkin-godog", "uow.manifest.json"),
+			expectedPath:  filepath.Join("/project", "out", "test", "eac", "gherkin-godog", "uow.manifest.json"),
 		},
 		{
 			name:          "lint assets files",
@@ -407,7 +407,7 @@ func TestUoWManifest_Save_MultipleArtifacts(t *testing.T) {
 
 	manifest := UoWManifest{
 		Action:     core.ActionBuild,
-		Module:     "eac-cli",
+		Module:     "eac",
 		Component:  "go",
 		Tool:       "go",
 		ExitCode:   0,
@@ -415,9 +415,9 @@ func TestUoWManifest_Save_MultipleArtifacts(t *testing.T) {
 		ExecutedAt: time.Now().UTC().Truncate(time.Second),
 		Duration:   45 * time.Second,
 		Artifacts: []Artifact{
-			{ID: "eac-linux-amd64", Path: "out/build/eac-cli/go/eac-linux-amd64", SHA256: "sha256:linux", Size: 10000000, Type: "binary"},
-			{ID: "eac-darwin-amd64", Path: "out/build/eac-cli/go/eac-darwin-amd64", SHA256: "sha256:darwin", Size: 11000000, Type: "binary"},
-			{ID: "eac-windows-amd64", Path: "out/build/eac-cli/go/eac-windows-amd64.exe", SHA256: "sha256:windows", Size: 12000000, Type: "binary"},
+			{ID: "eac-linux-amd64", Path: "out/build/eac/go/eac-linux-amd64", SHA256: "sha256:linux", Size: 10000000, Type: "binary"},
+			{ID: "eac-darwin-amd64", Path: "out/build/eac/go/eac-darwin-amd64", SHA256: "sha256:darwin", Size: 11000000, Type: "binary"},
+			{ID: "eac-windows-amd64", Path: "out/build/eac/go/eac-windows-amd64.exe", SHA256: "sha256:windows", Size: 12000000, Type: "binary"},
 		},
 		OutputHash: "sha256:multi-output",
 		Version:    "1.0.0",

@@ -169,7 +169,7 @@ file:
     - error
   formatter: json
 `
-	configPath := filepath.Join(clieDir, "clie-cli-logging.yml")
+	configPath := filepath.Join(clieDir, "clie-logging.yml")
 	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestLoadConfigWithInvalidYAML(t *testing.T) {
 	}
 
 	// Write invalid config file
-	configPath := filepath.Join(clieDir, "clie-cli-logging.yml")
+	configPath := filepath.Join(clieDir, "clie-logging.yml")
 	if err := os.WriteFile(configPath, []byte("invalid: yaml: content: [[["), 0o644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}

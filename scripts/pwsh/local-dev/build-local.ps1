@@ -275,7 +275,7 @@ try {
     Write-ColorOutput ""
     Write-ColorOutput "Next Steps:" "Cyan"
     Write-ColorOutput "  1. Configure clie to use this local image:" "White"
-    Write-ColorOutput "     Create .clie/clie-cli.local.yml with:" "White"
+    Write-ColorOutput "     Create .clie/clie.local.yml with:" "White"
     Write-ColorOutput ""
     Write-ColorOutput "     load_local: true" "Gray"
     Write-ColorOutput "     extensions:" "Gray"

@@ -42,12 +42,12 @@ Acts as the command dispatch layer between the CLI entry point and individual co
 ## Code Health
 
 ### Tech Debt
-- `registry.go:79` mutable package-level `commandRegistry` map; concurrent `Register()` calls from `init()` are safe by Go spec, but test-time mutations could race
-- `registry.go:15` exported mutable `InitialWorkingDir` package-level var; safer as a function or singleton with controlled initialization
+- ~~`registry.go:79` mutable package-level `commandRegistry` map; test-time mutations could race~~ (resolved: `sync.RWMutex` protects all reads/writes; `GetCommandRegistry()` returns snapshot copy)
+- ~~`registry.go:15` exported mutable `InitialWorkingDir` package-level var~~ (resolved: removed dead variable; eac main.go has its own)
 
 ### Pain Points
-- `registry.go` (508 lines) combines type definitions, registration logic, and dispatch in a single file; splitting would improve readability
+- `registry.go` (530 lines) combines type definitions, registration logic, and dispatch in a single file; splitting would improve readability
 
 ### Optimization Opportunities
-- Protect `commandRegistry` with `sync.RWMutex` for safe concurrent test access (low effort)
+- ~~Protect `commandRegistry` with `sync.RWMutex` for safe concurrent test access~~ (resolved)
 - Split `registry.go` into `types.go`, `register.go`, and `dispatch.go` for clarity (low effort)

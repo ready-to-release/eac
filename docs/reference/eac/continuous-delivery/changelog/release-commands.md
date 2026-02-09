@@ -27,13 +27,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-clie release pending clie-cli
+clie release pending clie
 
 # Check all modules
 clie release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-clie release pending clie-cli --quiet
+clie release pending clie --quiet
 ```
 
 **Output includes**:
@@ -51,13 +51,13 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-clie release this clie-cli
+clie release this clie
 
 # Preview without writing
-clie release this clie-cli --dry-run
+clie release this clie --dry-run
 
 # Output as JSON
-clie release this clie-cli --json
+clie release this clie --json
 ```
 
 **What it does**:
@@ -74,7 +74,7 @@ clie release this clie-cli --json
 Check for changelog versions without corresponding git tags. Used by CI.
 
 ```bash
-clie release tag-pending clie-cli
+clie release tag-pending clie
 clie release tag-pending --all
 ```
 
@@ -85,7 +85,7 @@ clie release tag-pending --all
 Validate changelog format and structure.
 
 ```bash
-clie release validate clie-cli
+clie release validate clie
 clie release validate --all
 ```
 
@@ -143,7 +143,7 @@ Developer
 
 ```text
 release/
-├── clie-cli/
+├── clie/
 │   └── CHANGELOG.md    # CLI changelog (semver)
 ├── eac-ext/
     └── CHANGELOG.md    # Extension changelog (semver)
@@ -158,14 +158,14 @@ release/
 | Workflow              | Trigger                                            | Action                                      |
 | --------------------- | -------------------------------------------------- | ------------------------------------------- |
 | `release-auto.yml`    | Push to main with `release/*/CHANGELOG.md` changes | Creates git tag                             |
-| `release-clie-cli.yml` | `clie-cli/*` tag                                    | Builds CLI binaries, creates GitHub release |
+| `release-clie.yml` | `clie/*` tag                                    | Builds CLI binaries, creates GitHub release |
 | `release-eac-ext.yml` | `eac-ext/*` tag                                    | Retags container images                     |
 
 ### Tag Format
 
 Tags follow the pattern `<module>/<version>`:
 
-- `clie-cli/0.1.0`
+- `clie/0.1.0`
 - `eac-ext/1.0.0`
 
 ---

@@ -14,10 +14,11 @@
 // UnitID provides multiple naming methods for different use cases:
 //
 //	id := workunit.UnitID{
-//	    Action:    core.ActionBuild,
-//	    Module:    "core",
-//	    Component: "go",
-//	    Tool:      "go",
+//	    Action:        core.ActionBuild,
+//	    Module:        "core",
+//	    ComponentType: "go",
+//	    ComponentName: "go",
+//	    Tool:          "go",
 //	}
 //
 // Longname - Unique identifier for matching and state tracking:
@@ -58,11 +59,11 @@
 //
 //	id := workunit.UnitID{
 //	    Action:  core.ActionTest,
-//	    Module:  "eac-cli",
+//	    Module:  "eac",
 //	    Tool:    "godog",
 //	    Spec:    "build-module",
 //	}
-//	id.Longname()     // "eac-cli:spec:build-module"
+//	id.Longname()     // "eac:spec:build-module"
 //	id.DisplayName()  // "build-module: godog"
 //
 // # When to Use Each Method

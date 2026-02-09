@@ -168,7 +168,7 @@ func FormatDurationShort(d time.Duration) string {
 }
 
 // ListInline formats a list as a single line with truncation.
-// Example: " (core, eac-cli, ...)" or " (core)"
+// Example: " (core, eac, ...)" or " (core)"
 // Returns empty string if items is empty.
 func ListInline(items []string, maxLen int) string {
 	if len(items) == 0 {
@@ -285,7 +285,7 @@ func PackageDisplayName(pkgPath string) string {
 		implPath := parts[1]
 		// Extract module name from implPath (last component)
 		// e.g., "typescript/vscode-commit" -> "vscode-commit"
-		// e.g., "go/eac/specs/impl/eac-cli" -> "eac-cli"
+		// e.g., "go/eac/specs/impl/eac" -> "eac"
 		implParts := strings.Split(implPath, "/")
 		moduleName := implParts[len(implParts)-1]
 		return moduleName + "/" + specName

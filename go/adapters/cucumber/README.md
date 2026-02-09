@@ -33,7 +33,7 @@ tests, with npm isolation and tag filter translation.
 
 ## Role in System
 
-The `cucumber-adapter` module enables TypeScript BDD test execution within
+The `cucumber-eac` module enables TypeScript BDD test execution within
 the unified test framework. It owns feature files for TypeScript modules,
 translates tag filters to cucumber-js syntax, and manages npm dependency
 isolation to prevent file lock conflicts during parallel test runs.

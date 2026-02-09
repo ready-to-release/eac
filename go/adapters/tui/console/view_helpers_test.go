@@ -74,8 +74,8 @@ func TestGetModuleName(t *testing.T) {
 	}{
 		{
 			name:     "simple module:component",
-			moniker:  "eac-cli:impl/build",
-			expected: "eac-cli",
+			moniker:  "eac:impl/build",
+			expected: "eac",
 		},
 		{
 			name:     "module with single component",
@@ -217,7 +217,7 @@ func TestTabViewModeCycling(t *testing.T) {
 func TestTabLabelForViewMode(t *testing.T) {
 	inst := TabInstance{
 		DisplayName:   "go",
-		Module:        "eac-cli",
+		Module:        "eac",
 		Component:     "go",
 		Tool:          "gotest",
 		ComponentType: "go-lib",
@@ -229,7 +229,7 @@ func TestTabLabelForViewMode(t *testing.T) {
 		expected string
 	}{
 		{TabViewName, "go"},
-		{TabViewModule, "eac-cli"},
+		{TabViewModule, "eac"},
 		{TabViewType, "go-lib"},
 		{TabViewTool, "gotest"},
 		{TabViewExec, "host"},
@@ -353,24 +353,24 @@ func TestComponentsWidth(t *testing.T) {
 		expectMax     int
 	}{
 		{
-			name:          "default 4-col at 15w",
-			tabWidth:      15, paneWidthCols: 4, termWidth: 200,
-			expectMin:     65, expectMax: 65, // 4*15 + 3*1 + 2 = 65
+			name:     "default 4-col at 15w",
+			tabWidth: 15, paneWidthCols: 4, termWidth: 200,
+			expectMin: 65, expectMax: 65, // 4*15 + 3*1 + 2 = 65
 		},
 		{
-			name:          "2-col at 10w",
-			tabWidth:      10, paneWidthCols: 2, termWidth: 200,
-			expectMin:     23, expectMax: 23, // 2*10 + 1*1 + 2 = 23
+			name:     "2-col at 10w",
+			tabWidth: 10, paneWidthCols: 2, termWidth: 200,
+			expectMin: 23, expectMax: 23, // 2*10 + 1*1 + 2 = 23
 		},
 		{
-			name:          "minimum width enforced",
-			tabWidth:      10, paneWidthCols: 1, termWidth: 200,
-			expectMin:     20, expectMax: 20, // 1*10 + 0 + 2 = 12 -> clamped to 20
+			name:     "minimum width enforced",
+			tabWidth: 10, paneWidthCols: 1, termWidth: 200,
+			expectMin: 20, expectMax: 20, // 1*10 + 0 + 2 = 12 -> clamped to 20
 		},
 		{
-			name:          "max clamp snaps to exact columns",
-			tabWidth:      30, paneWidthCols: 6, termWidth: 100,
-			expectMin:     32, expectMax: 32, // max=60, cols=(60-2+1)/31=1, 1*30+0+2=32
+			name:     "max clamp snaps to exact columns",
+			tabWidth: 30, paneWidthCols: 6, termWidth: 100,
+			expectMin: 32, expectMax: 32, // max=60, cols=(60-2+1)/31=1, 1*30+0+2=32
 		},
 	}
 	for _, tt := range tests {

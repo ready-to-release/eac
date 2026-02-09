@@ -45,7 +45,7 @@ Document preprocessing pipeline that transforms source markdown and assets into 
 
 ## Role in System
 
-The docprep package is the preprocessing engine behind documentation builds in `eac-cli`. The site and PDF build handlers in builders invoke `DefaultPipeline().Execute()` to transform source documentation into a staged directory before handing off to containerized MkDocs rendering. Each sub-package owns a distinct concern (staging, linking, diagrams, etc.) and exposes functions consumed by the pipeline phases.
+The docprep package is the preprocessing engine behind documentation builds in `eac`. The site and PDF build handlers in builders invoke `DefaultPipeline().Execute()` to transform source documentation into a staged directory before handing off to containerized MkDocs rendering. Each sub-package owns a distinct concern (staging, linking, diagrams, etc.) and exposes functions consumed by the pipeline phases.
 
 ## Code Health
 

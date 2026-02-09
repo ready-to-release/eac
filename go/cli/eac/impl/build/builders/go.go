@@ -15,7 +15,6 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -394,7 +393,7 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot, workspaceRoot, 
 }
 
 // buildSingleBinaryFromArtifact builds a single binary from a per-module artifact definition.
-func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifact domain.ModuleArtifact) int {
+func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifact config.ModuleArtifact) int {
 	// Resolve artifact pattern to binary name
 	resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", runtime.GOOS, runtime.GOARCH)
 	binaryName := resolver.ResolvePattern(artifact.Pattern)
@@ -409,7 +408,7 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, w
 }
 
 // buildCrossCompiledFromArtifacts builds binaries for multiple platforms from per-module artifact definitions.
-func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []domain.ModuleArtifact) int {
+func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []config.ModuleArtifact) int {
 	// Extract platform targets from artifact IDs
 	type buildTarget struct {
 		goos        string

@@ -49,7 +49,7 @@ Registry of build handler implementations that compile, render, or package modul
 
 ## Role in System
 
-The builders package provides all concrete `BuildHandler` implementations used by the build command in `eac-cli`. When the build framework dispatches a component work unit, it looks up the appropriate handler from the global build bridge, validates the module, and invokes `Build()`. The mkdocs sub-package further decomposes documentation builds into preprocessing and container-based rendering steps.
+The builders package provides all concrete `BuildHandler` implementations used by the build command in `eac`. When the build framework dispatches a component work unit, it looks up the appropriate handler from the global build bridge, validates the module, and invokes `Build()`. The mkdocs sub-package further decomposes documentation builds into preprocessing and container-based rendering steps.
 
 ## Code Health
 

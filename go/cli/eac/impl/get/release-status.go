@@ -15,8 +15,8 @@
 // Long:   --format shell: RELEASED="mod1 mod2" MISSING="mod3"
 // Long:
 // Long: Example:
-// Long:   get release-status --modules "clie-cli eac-ext docs"
-// Long:   get release-status --modules "clie-cli eac-ext" --format shell
+// Long:   get release-status --modules "clie eac-ext docs"
+// Long:   get release-status --modules "clie eac-ext" --format shell
 // Flag.modules: type=string, usage=Space-separated list of modules to check
 // Flag.format: type=string, usage=Output format (json, shell)
 package get
@@ -109,7 +109,7 @@ func GetReleaseStatus() int {
 // checkModuleRelease queries GitHub for the latest release of a module.
 func checkModuleRelease(module, workspaceRoot string) ModuleReleaseStatus {
 	// Query GitHub releases for this module's tag pattern
-	// Tags are formatted as: module/version (e.g., clie-cli/1.0.0)
+	// Tags are formatted as: module/version (e.g., clie/1.0.0)
 	output, err := ghexec.Run(workspaceRoot, "release", "list",
 		"--limit", "10",
 		"--json", "tagName",

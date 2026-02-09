@@ -1,4 +1,4 @@
-// Package release contains godog step implementations for eac-cli.
+// Package release contains godog step implementations for eac.
 //
 // This file contains release command step definitions.
 package release

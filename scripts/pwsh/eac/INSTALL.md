@@ -15,7 +15,7 @@ Download the script first to pass arguments:
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac/install.ps1 -OutFile install.ps1
 
 # Install specific version
-.\install.ps1 -Version "eac-cli/v1.0.0"
+.\install.ps1 -Version "eac/v1.0.0"
 
 # Install system-wide (requires Administrator)
 .\install.ps1 -System

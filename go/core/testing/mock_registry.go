@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -27,7 +28,7 @@ func WithModule(moniker string, opts ...ModuleOption) RegistryOption {
 	return func(r *modules.Registry) {
 		base := domain.BaseContract{
 			Moniker:    moniker,
-			Components: make(domain.ModuleComponents),
+			Components: make(config.ModuleComponents),
 		}
 
 		// Apply module options
@@ -43,7 +44,7 @@ func WithModule(moniker string, opts ...ModuleOption) RegistryOption {
 // WithVersioning adds versioning configuration to a module with default CalVer scheme.
 func WithVersioning() ModuleOption {
 	return func(m *domain.BaseContract) {
-		m.Versioning = &domain.ModuleVersioning{
+		m.Versioning = &config.ModuleVersioning{
 			Scheme: "CalVer", // Default to CalVer
 		}
 	}
@@ -52,7 +53,7 @@ func WithVersioning() ModuleOption {
 // WithSemver adds semver versioning configuration to a module.
 func WithSemver() ModuleOption {
 	return func(m *domain.BaseContract) {
-		m.Versioning = &domain.ModuleVersioning{
+		m.Versioning = &config.ModuleVersioning{
 			Scheme: "SemVer",
 		}
 	}
@@ -62,7 +63,7 @@ func WithSemver() ModuleOption {
 func WithChangelog(path string) ModuleOption {
 	return func(m *domain.BaseContract) {
 		if m.Versioning == nil {
-			m.Versioning = &domain.ModuleVersioning{
+			m.Versioning = &config.ModuleVersioning{
 				Scheme: "CalVer",
 			}
 		}
@@ -81,9 +82,9 @@ func WithDependsOn(dependencies ...string) ModuleOption {
 func WithComponent(componentType, root string) ModuleOption {
 	return func(m *domain.BaseContract) {
 		if m.Components == nil {
-			m.Components = make(domain.ModuleComponents)
+			m.Components = make(config.ModuleComponents)
 		}
-		m.Components[componentType] = &domain.ComponentEntry{
+		m.Components[componentType] = &config.ComponentEntry{
 			Root: root,
 		}
 	}
@@ -108,7 +109,7 @@ func WithSpecsComponent(root string) ModuleOption {
 func WithReleaseType(releaseType string) ModuleOption {
 	return func(m *domain.BaseContract) {
 		if m.Versioning == nil {
-			m.Versioning = &domain.ModuleVersioning{
+			m.Versioning = &config.ModuleVersioning{
 				Scheme: "CalVer",
 			}
 		}

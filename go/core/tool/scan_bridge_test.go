@@ -226,8 +226,8 @@ func TestScanBridge_GetScannersForModule(t *testing.T) {
 	// Create a module with a go component
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: domain.ModuleComponents{
-			"main": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"main": &config.ComponentEntry{
 				Root: ".",
 				Type: "go",
 			},
@@ -235,8 +235,8 @@ func TestScanBridge_GetScannersForModule(t *testing.T) {
 	}, "/workspace")
 
 	// Create component types config with scanners (tool IDs now)
-	componentTypes := &config.ComponentTypesConfig{
-		ComponentTypes: map[string]*config.ComponentType{
+	componentTypes := &config.ComponentKindsConfig{
+		Kinds: map[string]*config.ComponentType{
 			"go": {
 				Scanners: []string{"trivy-sbom", "trivy-vuln", "trivy-secrets"},
 			},
@@ -273,12 +273,12 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 	// Create a module with multiple components
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: domain.ModuleComponents{
-			"main": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"main": &config.ComponentEntry{
 				Root: ".",
 				Type: "go",
 			},
-			"config": &domain.ComponentEntry{
+			"config": &config.ComponentEntry{
 				Root: "config",
 				Type: "dockerfile",
 			},
@@ -286,8 +286,8 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 	}, "/workspace")
 
 	// Create component types config with different scanners
-	componentTypes := &config.ComponentTypesConfig{
-		ComponentTypes: map[string]*config.ComponentType{
+	componentTypes := &config.ComponentKindsConfig{
+		Kinds: map[string]*config.ComponentType{
 			"go": {
 				Scanners: []string{"trivy-sbom", "trivy-vuln"},
 			},

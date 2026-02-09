@@ -48,7 +48,7 @@ func init() {
 		conf.InitConfig()
 
 		if len(conf.Global.Extensions) == 0 {
-			cmd.Printf("  \033[1;33m⚠️  No extensions configured - check your .clie/clie-cli.yml\033[0m\n")
+			cmd.Printf("  \033[1;33m⚠️  No extensions configured - check your .clie/clie.yml\033[0m\n")
 		} else {
 			// Create container host for metadata extraction
 			host, err := docker.NewContainerHost()

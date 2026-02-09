@@ -113,16 +113,16 @@ detect_platform() {
 get_latest_version() {
     # Skip API call in test mode
     if [[ "${__CLIE_TEST_MOCK:-}" == "1" ]]; then
-        echo -e "${BLUE}Test mode: Using mock version clie-cli/v0.0.0-test${NC}" >&2
-        echo "clie-cli/v0.0.0-test"
+        echo -e "${BLUE}Test mode: Using mock version clie/v0.0.0-test${NC}" >&2
+        echo "clie/v0.0.0-test"
         return
     fi
 
     local latest
-    # Fetch releases and find the latest clie-cli/* release (monorepo has multiple release tags)
-    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'clie-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    # Fetch releases and find the latest clie/* release (monorepo has multiple release tags)
+    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'clie/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ -z "$latest" ]]; then
-        echo -e "${RED}No clie-cli release found${NC}"
+        echo -e "${RED}No clie release found${NC}"
         exit 1
     fi
     echo "$latest"
@@ -172,16 +172,16 @@ install_binary() {
 
         echo -e "${BLUE}Test mode: Using pre-built binary from out/build (skipping download)${NC}"
 
-        # Use the actual built clie-cli binary from the build output
-        # This is available because clie-installer depends on clie-cli module
+        # Use the actual built clie binary from the build output
+        # This is available because clie-installer depends on clie module
         # When running from build output: out/build/clie-installer/bash-scripts/
-        # Go up 2 levels to out/build, then access clie-cli/go-go/
+        # Go up 2 levels to out/build, then access clie/go-go/
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        built_binary="${script_dir}/../../clie-cli/go-go/clie-${OS}-${ARCH}"
+        built_binary="${script_dir}/../../clie/go-go/clie-${OS}-${ARCH}"
 
         if [[ ! -f "$built_binary" ]]; then
             echo -e "${RED}Test mode: Pre-built binary not found at ${built_binary}${NC}"
-            echo -e "${YELLOW}Ensure clie-cli module is built before running installer tests${NC}"
+            echo -e "${YELLOW}Ensure clie module is built before running installer tests${NC}"
             exit 1
         fi
 

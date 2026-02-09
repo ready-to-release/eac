@@ -1,4 +1,4 @@
-// Package installer contains godog step implementations for specs/clie-cli/installer.
+// Package installer contains godog step implementations for specs/clie/installer.
 //
 // This package tests clie-installer features (CLI installation scripts)
 // via subprocess execution of PowerShell/Bash installer scripts.
@@ -21,7 +21,7 @@ func TestCLIEInstallerFeatures(t *testing.T) {
 	os.Setenv("__CLIE_TEST_MOCK", "1")
 
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../specs/clie-cli/installer",
+		SpecsPath:         "../../../../../specs/clie/installer",
 		DefaultReportName: "cucumber-clie-installer",
 		RegisterSteps:     RegisterSteps,
 	}

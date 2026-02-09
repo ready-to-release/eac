@@ -49,7 +49,7 @@ serving capabilities.
 
 ## Role in System
 
-The `docker-adapter` module is the primary implementation of the
+The `docker-eac` module is the primary implementation of the
 `ContainerPort` contract, enabling the core orchestrator to run builds,
 tests, scans, and documentation servers in Docker containers. It handles
 DinD path translation for CI environments and provides both one-shot

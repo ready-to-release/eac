@@ -180,7 +180,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 		}
 
 		compType := mod.Components.GetComponentType(compName)
-		typeConfig := cfg.ComponentTypes.Get(compType)
+		typeConfig := cfg.ComponentKinds.Get(compType)
 
 		switch framework {
 		case FrameworkBuild:
@@ -259,10 +259,11 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 // createUnitInfo creates a UnitInfo for a component.
 func createUnitInfo(mod *modules.ModuleContract, compName, compType, tool string, action core.ActionType, workspaceRoot string, stateMgr *workunit.StateManager) *UnitInfo {
 	unitID := workunit.UnitID{
-		Action:    action,
-		Module:    mod.Moniker,
-		Component: compName,
-		Tool:      tool,
+		Action:        action,
+		Module:        mod.Moniker,
+		ComponentType: compType,
+		ComponentName: compName,
+		Tool:          tool,
 	}
 
 	info := &UnitInfo{

@@ -706,7 +706,7 @@ func TestLoadTestingMocks_RealWorldScenarios(t *testing.T) {
 			baseYAML: `mocks:
   ai:
     enabled: true
-    mock_dir: "go/eac/specs/impl/eac-cli/assets"
+    mock_dir: "go/eac/specs/impl/eac/assets"
   security:
     enabled: true
   docker:
@@ -719,7 +719,7 @@ func TestLoadTestingMocks_RealWorldScenarios(t *testing.T) {
 			description: "Personal override allows local testing against real AI API",
 			want: TestingMocksConfig{
 				Mocks: MocksConfig{
-					AI:       AIMockConfig{Enabled: false, MockDir: "go/eac/specs/impl/eac-cli/assets"},
+					AI:       AIMockConfig{Enabled: false, MockDir: "go/eac/specs/impl/eac/assets"},
 					Security: SecurityMockConfig{Enabled: true},
 					Docker:   DockerMockConfig{Enabled: true},
 					GitHub:   GitHubMockConfig{Enabled: true},
@@ -731,7 +731,7 @@ func TestLoadTestingMocks_RealWorldScenarios(t *testing.T) {
 			baseYAML: `mocks:
   ai:
     enabled: true
-    mock_dir: "go/eac/specs/impl/eac-cli/assets"
+    mock_dir: "go/eac/specs/impl/eac/assets"
   security:
     enabled: true
     tools: []
@@ -745,7 +745,7 @@ func TestLoadTestingMocks_RealWorldScenarios(t *testing.T) {
 			description: "CI uses base config without personal overrides",
 			want: TestingMocksConfig{
 				Mocks: MocksConfig{
-					AI:       AIMockConfig{Enabled: true, MockDir: "go/eac/specs/impl/eac-cli/assets"},
+					AI:       AIMockConfig{Enabled: true, MockDir: "go/eac/specs/impl/eac/assets"},
 					Security: SecurityMockConfig{Enabled: true, Tools: []string{}},
 					Docker:   DockerMockConfig{Enabled: true},
 					GitHub:   GitHubMockConfig{Enabled: true, NoWorkflows: false},

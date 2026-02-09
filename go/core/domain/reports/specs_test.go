@@ -41,10 +41,10 @@ func TestGetSpecs(t *testing.T) {
 		},
 		{
 			name:           "regular module without dependencies",
-			module:         "eac-cli",
+			module:         "eac",
 			version:        "unreleased",
 			wantErr:        false,
-			expectedModule: "eac-cli",
+			expectedModule: "eac",
 		},
 		{
 			name:        "invalid module",
@@ -143,7 +143,7 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 	SetGitRepo(mockRepo)
 	defer SetGitRepo(nil)
 
-	// Test eac-ext bundle module (depends on eac-cli and clie-cli)
+	// Test eac-ext bundle module (depends on eac and clie)
 	t.Run("eac-ext aggregates specs from dependencies", func(t *testing.T) {
 		bundleReport, err := GetSpecs(workspaceRoot, "eac-ext", "unreleased", "")
 		if err != nil {
@@ -151,15 +151,15 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 		}
 
 		// Get specs for dependency module directly
-		depReport, err := GetSpecs(workspaceRoot, "eac-cli", "unreleased", "")
+		depReport, err := GetSpecs(workspaceRoot, "eac", "unreleased", "")
 		if err != nil {
-			t.Fatalf("GetSpecs(eac-cli) failed: %v", err)
+			t.Fatalf("GetSpecs(eac) failed: %v", err)
 		}
 
 		// Bundle should have at least as many specs as the dependency
 		// (unless dependency has no specs)
 		if len(depReport.SpecFiles) > 0 && len(bundleReport.SpecFiles) < len(depReport.SpecFiles) {
-			t.Errorf("Bundle eac-ext has fewer specs (%d) than dependency eac-cli (%d)",
+			t.Errorf("Bundle eac-ext has fewer specs (%d) than dependency eac (%d)",
 				len(bundleReport.SpecFiles), len(depReport.SpecFiles))
 		}
 
@@ -167,28 +167,28 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 		if len(depReport.SpecFiles) > 0 {
 			foundDepSpec := false
 			for _, spec := range bundleReport.SpecFiles {
-				if strings.Contains(spec.RelativePath, "specs/eac-cli/") {
+				if strings.Contains(spec.RelativePath, "specs/eac/") {
 					foundDepSpec = true
 					break
 				}
 			}
 			if !foundDepSpec {
-				t.Error("Bundle eac-ext should include specs from dependency eac-cli")
+				t.Error("Bundle eac-ext should include specs from dependency eac")
 			}
 		}
 	})
 
 	// Test regular module (no dependencies)
 	t.Run("regular module only includes own specs", func(t *testing.T) {
-		report, err := GetSpecs(workspaceRoot, "eac-cli", "unreleased", "")
+		report, err := GetSpecs(workspaceRoot, "eac", "unreleased", "")
 		if err != nil {
-			t.Fatalf("GetSpecs(eac-cli) failed: %v", err)
+			t.Fatalf("GetSpecs(eac) failed: %v", err)
 		}
 
-		// All specs should be from eac-cli directory
+		// All specs should be from eac directory
 		for _, spec := range report.SpecFiles {
-			if !strings.Contains(spec.RelativePath, "specs/eac-cli/") {
-				t.Errorf("Regular module eac-cli should only include own specs, found: %s",
+			if !strings.Contains(spec.RelativePath, "specs/eac/") {
+				t.Errorf("Regular module eac should only include own specs, found: %s",
 					spec.RelativePath)
 			}
 		}

@@ -7,14 +7,14 @@ import "strings"
 // Examples:
 //   - "build:core:go:go" (full 4-part)
 //   - "core:go:gotest" (3-part, no context)
-//   - "eac-cli:docker" (2-part)
+//   - "eac:docker" (2-part)
 //   - "core" (1-part, module only)
 type Moniker string
 
 // ParsedMoniker contains the parsed components of a moniker.
 type ParsedMoniker struct {
 	Action    string // e.g., "build", "test", "lint", "scan"
-	Module    string // e.g., "core", "eac-cli"
+	Module    string // e.g., "core", "eac"
 	Component string // e.g., "go", "docker"
 	Tool      string // e.g., "go", "gotest", "trivy-vuln"
 	Full      string // Original full moniker string
@@ -63,7 +63,7 @@ func (m Moniker) ModuleName() string {
 // Shortname returns a display-friendly short form (module:component).
 // For "build:core:go:go" returns "core:go".
 // For "core:go:gotest" returns "core:go".
-// For "eac-cli:docker" returns "eac-cli:docker".
+// For "eac:docker" returns "eac:docker".
 // For "core" returns "core".
 func (m Moniker) Shortname() string {
 	p := m.Parse()

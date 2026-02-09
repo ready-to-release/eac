@@ -45,7 +45,7 @@ Tier 2 utility packages providing thin wrappers around external tool execution.
 ## Architecture Notes
 
 The clibase module sits between the pure-domain `core` module and the command
-implementations in `eac-cli`. It provides the execution machinery: `cmdframework`
+implementations in `eac`. It provides the execution machinery: `cmdframework`
 defines the command lifecycle, `orchestrator` handles parallel work unit dispatch,
 and `services` wires up core adapters for command consumption. Output flows through
 `render` and `display` for format-aware presentation, while `locking` and `capacity`

@@ -85,9 +85,12 @@ func (c *repositoryContext) allScriptsShouldBeInApprovedLocations(table *godog.T
 			}
 		}
 
-		// Allow container entrypoint scripts (standard Docker pattern)
-		if !approved && strings.HasPrefix(script, "containers/") && strings.HasSuffix(script, "/entrypoint.sh") {
-			approved = true
+		// Allow container scripts (entrypoints, CI test scripts, etc.)
+		if !approved && strings.HasPrefix(script, "containers/") {
+			parts := strings.Split(script, "/")
+			if len(parts) == 3 { // containers/<name>/<script>
+				approved = true
+			}
 		}
 
 		if !approved {

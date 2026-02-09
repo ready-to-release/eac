@@ -1,4 +1,4 @@
-// Package installer contains godog step implementations for specs/eac-cli/installer.
+// Package installer contains godog step implementations for specs/eac/installer.
 //
 // This package tests eac-installer features (CLI installation scripts)
 // via subprocess execution of PowerShell/Bash installer scripts.
@@ -21,7 +21,7 @@ func TestEACInstallerFeatures(t *testing.T) {
 	os.Setenv("__EAC_TEST_MOCK", "1")
 
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../specs/eac-cli/installer",
+		SpecsPath:         "../../../../../specs/eac/installer",
 		DefaultReportName: "cucumber-eac-installer",
 		RegisterSteps:     RegisterSteps,
 	}

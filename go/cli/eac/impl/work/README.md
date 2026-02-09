@@ -46,7 +46,7 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 
 ## Role in System
 
-The `work` package enables parallel feature development in `eac-cli` by managing git worktrees as isolated workspaces. Each workspace gets its own directory and branch, allowing developers to run multiple Claude Code sessions simultaneously without branch conflicts or stash juggling.
+The `work` package enables parallel feature development in `eac` by managing git worktrees as isolated workspaces. Each workspace gets its own directory and branch, allowing developers to run multiple Claude Code sessions simultaneously without branch conflicts or stash juggling.
 
 ## Code Health
 

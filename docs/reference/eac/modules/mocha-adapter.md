@@ -1,23 +1,23 @@
-# mocha-adapter
+# mocha-eac
 
-The `mocha-adapter` module provides Mocha test runner integration for TypeScript unit test execution.
+The `mocha-eac` module provides Mocha test runner integration for TypeScript unit test execution.
 
 ## System Context
 
 Shows how the Mocha adapter integrates with the test execution framework.
 
-<!-- structurizr:mocha-adapter:SystemContext -->
+<!-- structurizr:mocha-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Mocha adapter packages.
 
-<!-- structurizr:mocha-adapter:Containers -->
+<!-- structurizr:mocha-eac:Containers -->
 
 ## Design File
 
-- **Location**: `specs/mocha-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module mocha-adapter`
+- **Location**: `specs/mocha-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module mocha-eac`
 
 ## Key Responsibilities
 

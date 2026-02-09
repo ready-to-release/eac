@@ -39,7 +39,7 @@ type FileValidationResult struct {
 
 // ValidationResult represents the outcome of validating a module's workspace(s).
 type ValidationResult struct {
-	Module        string                 `json:"module"`          // Module name (e.g., "clie-cli")
+	Module        string                 `json:"module"`          // Module name (e.g., "clie")
 	WorkspacePath string                 `json:"workspace_path"`  // Path to workspace.dsl file (backward compat)
 	Valid         bool                   `json:"valid"`           // Overall validation status
 	Errors        []ValidationMessage    `json:"errors"`          // Validation errors (backward compat)

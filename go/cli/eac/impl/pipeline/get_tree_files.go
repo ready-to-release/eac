@@ -53,11 +53,8 @@ func PipelineGetTreeFiles() int {
 		sha = strings.TrimSpace(string(output))
 	}
 
-	// Use GitHub API if available, otherwise fall back to mock/global
-	api := github.Global()
-	if api == nil {
-		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
-	}
+	// Use GitHub API
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	files, err := api.GetTreeFiles(sha)
 	if err != nil {

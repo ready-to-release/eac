@@ -1,54 +1,26 @@
 # Module CI - Reusable Workflow (internal)
 #
-# Standard CI pipeline for modules with parallel test and scan jobs:
+# Standard CI pipeline for ALL module types. Config-driven: the module moniker
+# is the sole input; all behavior (container, scans, tests, evidence) is derived
+# from core config via `eac get ci-config`.
 #
-#   ┌─────────┐
-#   │  Build  │ (Job A)
-#   └────┬────┘
-#        │
-#   ┌────┼────────────┬────────────┐
-#   ▼    ▼            ▼            ▼
-# ┌─────┐ ┌─────────┐ ┌───────┐ ┌──────┐
-# │Test │ │ Test    │ │ Test  │ │ Scan │ (Jobs B, B2, B3, C - parallel)
-# │Linux│ │ Windows │ │ macOS │ │      │
-# └─────┘ └─────────┘ └───────┘ └──────┘
+#   ┌────────┐
+#   │ Config │  ← eac get ci-config --module <moniker>
+#   └───┬────┘
+#       │
+#   ┌───┴────┐
+#   │  Build │
+#   └───┬────┘
+#       │
+#   ┌───┼────────────┬────────────┬──────┬──────────────┐
+#   ▼   ▼            ▼            ▼      ▼              ▼
+# ┌────┐ ┌─────────┐ ┌───────┐ ┌──────┐ ┌──────────────┐
+# │Test│ │ Test    │ │ Test  │ │ Scan │ │Container Test│
+# │Lin.│ │ Windows │ │ macOS │ │      │ │              │
+# └────┘ └─────────┘ └───────┘ └──────┘ └──────────────┘
 #
 # Underscore prefix convention: internal/shared workflows that are not meant
 # to be triggered directly. This workflow is called by ci-*.yaml workflows.
-#
-# Usage in ci-*.yaml:
-#   jobs:
-#     ci-eac-core:
-#       uses: ./.github/workflows/_module-ci.yaml
-#       with:
-#         module: eac-core
-#         scans: sbom,vuln,secrets
-#
-# For modules needing Windows testing:
-#   jobs:
-#     ci-clie-cli:
-#       uses: ./.github/workflows/_module-ci.yaml
-#       with:
-#         module: clie-cli
-#         test-on-windows: true
-#         cross-compile-windows: true
-#
-# For modules needing macOS testing:
-#   jobs:
-#     ci-clie-cli:
-#       uses: ./.github/workflows/_module-ci.yaml
-#       with:
-#         module: clie-cli
-#         test-on-macos: true
-#
-# For container modules:
-#   jobs:
-#     ci-eac-ext:
-#       uses: ./.github/workflows/_module-ci.yaml
-#       with:
-#         module: eac-ext
-#         container: true
-#         download-modules: clie-cli  # Specific modules needed for integration testing
 
 name: Module CI
 
@@ -74,86 +46,6 @@ on:
         required: false
         type: string
         default: ''
-      # Build options
-      build-args:
-        description: 'Extra arguments for build command'
-        required: false
-        type: string
-        default: ''
-      cross-compile-windows:
-        description: 'Cross-compile for Windows (for CLI modules)'
-        required: false
-        type: boolean
-        default: false
-      download-modules:
-        description: 'Space-separated list of modules to download from CI before build (for integration testing)'
-        required: false
-        type: string
-        default: ''
-      container:
-        description: 'Build as container module (uses build-container action)'
-        required: false
-        type: boolean
-        default: false
-      container-registry:
-        description: 'Container registry for container builds'
-        required: false
-        type: string
-        default: 'ghcr.io'
-      upload-build-artifact:
-        description: 'Upload build artifacts'
-        required: false
-        type: boolean
-        default: true
-      # Test options
-      test-suites:
-        description: 'Test suites to run (comma-separated)'
-        required: false
-        type: string
-        default: 'unit,integration'
-      test-suites-full:
-        description: 'Test suites for main/release branches'
-        required: false
-        type: string
-        default: 'unit,integration,acceptance'
-      test-on-windows:
-        description: 'Also run tests on Windows'
-        required: false
-        type: boolean
-        default: false
-      test-on-macos:
-        description: 'Also run tests on macOS'
-        required: false
-        type: boolean
-        default: false
-      # Scan options
-      scans:
-        description: 'Security scans to run (comma-separated, empty to skip)'
-        required: false
-        type: string
-        default: 'sbom,vuln,secrets'
-      scan-fail-mode:
-        description: 'How to handle scan failures: error, warn, ignore'
-        required: false
-        type: string
-        default: 'warn'
-      # Container test options
-      container-test-enabled:
-        description: 'Enable container testing (pulls image and runs tests)'
-        required: false
-        type: boolean
-        default: false
-      container-test-command:
-        description: 'Command to run inside container for health check'
-        required: false
-        type: string
-        default: ''
-      # Evidence options
-      build-evidence:
-        description: 'Build evidence books (PDF compliance docs from test/scan results)'
-        required: false
-        type: boolean
-        default: false
 
     outputs:
       build-result:
@@ -174,21 +66,20 @@ on:
       container-test-result:
         description: 'Container test job result'
         value: ${{ jobs.container-test.result }}
-      # Container outputs (only populated when container: true)
       container-image:
-        description: 'Container image name (when container: true)'
+        description: 'Container image name (when container)'
         value: ${{ jobs.build.outputs.image-name }}
       container-tag:
-        description: 'Container image tag (when container: true)'
+        description: 'Container image tag (when container)'
         value: ${{ jobs.build.outputs.image-tag }}
       container-short-sha:
-        description: 'Short SHA used for container tag (when container: true)'
+        description: 'Short SHA used for container tag (when container)'
         value: ${{ jobs.build.outputs.short-sha }}
       evidence-result:
         description: 'Evidence job result'
         value: ${{ jobs.evidence.result }}
       evidence-artifact:
-        description: 'Evidence artifact name (when build-evidence: true)'
+        description: 'Evidence artifact name'
         value: ${{ jobs.evidence.outputs.artifact-name }}
 
 concurrency:
@@ -197,18 +88,58 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write  # Required for container builds (push to GHCR)
+  packages: write
   actions: read
 
 jobs:
+  # ===========================================================================
+  # Job 0: Config - derive all CI configuration from core config
+  # ===========================================================================
+  config:
+    name: Config
+    runs-on: ubuntu-latest
+    outputs:
+      is-container: ${{ steps.ci-config.outputs.is-container }}
+      container-push: ${{ steps.ci-config.outputs.container-push }}
+      has-tests: ${{ steps.ci-config.outputs.has-tests }}
+      test-on-windows: ${{ steps.ci-config.outputs.test-on-windows }}
+      test-on-macos: ${{ steps.ci-config.outputs.test-on-macos }}
+      scans: ${{ steps.ci-config.outputs.scans }}
+      scan-fail-mode: ${{ steps.ci-config.outputs.scan-fail-mode }}
+      build-evidence: ${{ steps.ci-config.outputs.build-evidence }}
+      cross-compile-windows: ${{ steps.ci-config.outputs.cross-compile-windows }}
+      build-args: ${{ steps.ci-config.outputs.build-args }}
+      download-modules: ${{ steps.ci-config.outputs.download-modules }}
+      container-test-script: ${{ steps.ci-config.outputs.container-test-script }}
+      test-suites: ${{ steps.ci-config.outputs.test-suites }}
+      test-suites-full: ${{ steps.ci-config.outputs.test-suites-full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Derive CI Config
+        id: ci-config
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} get ci-config \
+            --module "${{ inputs.module }}" \
+            --format github-output >> $GITHUB_OUTPUT
+
   # ===========================================================================
   # Job A: Build
   # ===========================================================================
   build:
     name: Build
+    needs: config
     runs-on: ubuntu-latest
     outputs:
-      # Container outputs (only populated when container: true)
       image-name: ${{ steps.container-build.outputs.image-name }}
       image-tag: ${{ steps.container-build.outputs.image-tag }}
       short-sha: ${{ steps.container-build.outputs.short-sha }}
@@ -220,39 +151,38 @@ jobs:
 
       # Binary build (default)
       - name: Build Module
-        if: ${{ !inputs.container }}
+        if: needs.config.outputs.is-container != 'true'
         uses: ./.github/actions/build-module
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
-          extra-args: ${{ inputs.build-args }}
-          cross-compile-windows: ${{ inputs.cross-compile-windows && 'true' || 'false' }}
+          upload-artifact: 'true'
+          extra-args: ${{ needs.config.outputs.build-args }}
+          cross-compile-windows: ${{ needs.config.outputs.cross-compile-windows }}
 
-      # Container build (when container: true)
+      # Container build
       - name: Build Container
         id: container-build
-        if: ${{ inputs.container }}
+        if: needs.config.outputs.is-container == 'true'
         uses: ./.github/actions/build-container
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-          upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
-          extra-args: ${{ inputs.build-args }}
-          download-modules: ${{ inputs.download-modules }}
-          registry: ${{ inputs.container-registry }}
+          upload-artifact: 'true'
+          extra-args: ${{ needs.config.outputs.build-args }}
+          download-modules: ${{ needs.config.outputs.download-modules }}
+          registry: ghcr.io
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
   # ===========================================================================
   # Job B: Test (Linux) - parallel with scan
-  # Skip for container modules (use container-test instead)
   # ===========================================================================
   test-linux:
     name: Test (Linux)
-    needs: build
-    if: ${{ !inputs.container }}
+    needs: [config, build]
+    if: needs.config.outputs.has-tests == 'true' && needs.config.outputs.is-container != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -261,10 +191,10 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Module Dependencies
-        if: ${{ inputs.download-modules != '' }}
+        if: needs.config.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ inputs.download-modules }}
+          module: ${{ needs.config.outputs.download-modules }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
@@ -272,12 +202,11 @@ jobs:
         id: suites
         shell: bash
         run: |
-          # PRs use lighter suite, main/release use full suite
           REF="${{ inputs.ref || github.ref }}"
           if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ inputs.test-suites }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
           else
-            echo "suites=${{ inputs.test-suites-full }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Test Module
@@ -287,16 +216,16 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-linux
-          skip-depm: ${{ inputs.download-modules == '' }}
-          download-artifact: ${{ inputs.upload-build-artifact }}
+          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
+          download-artifact: true
 
   # ===========================================================================
   # Job B2: Test (Windows) - optional, parallel with scan
   # ===========================================================================
   test-windows:
     name: Test (Windows)
-    needs: build
-    if: inputs.test-on-windows
+    needs: [config, build]
+    if: needs.config.outputs.test-on-windows == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -305,10 +234,10 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Module Dependencies
-        if: ${{ inputs.download-modules != '' }}
+        if: needs.config.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ inputs.download-modules }}
+          module: ${{ needs.config.outputs.download-modules }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
@@ -318,9 +247,9 @@ jobs:
         run: |
           REF="${{ inputs.ref || github.ref }}"
           if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ inputs.test-suites }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
           else
-            echo "suites=${{ inputs.test-suites-full }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Test Module
@@ -330,16 +259,16 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-windows
-          skip-depm: ${{ inputs.download-modules == '' }}
-          download-artifact: ${{ inputs.upload-build-artifact }}
+          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
+          download-artifact: true
 
   # ===========================================================================
   # Job B3: Test (macOS) - optional, parallel with scan
   # ===========================================================================
   test-macos:
     name: Test (macOS)
-    needs: build
-    if: inputs.test-on-macos
+    needs: [config, build]
+    if: needs.config.outputs.test-on-macos == 'true'
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -348,10 +277,10 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Module Dependencies
-        if: ${{ inputs.download-modules != '' }}
+        if: needs.config.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ inputs.download-modules }}
+          module: ${{ needs.config.outputs.download-modules }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
@@ -361,9 +290,9 @@ jobs:
         run: |
           REF="${{ inputs.ref || github.ref }}"
           if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ inputs.test-suites }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
           else
-            echo "suites=${{ inputs.test-suites-full }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Test Module
@@ -373,16 +302,16 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-macos
-          skip-depm: ${{ inputs.download-modules == '' }}
-          download-artifact: ${{ inputs.upload-build-artifact }}
+          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
+          download-artifact: true
 
   # ===========================================================================
   # Job C: Scan - parallel with test
   # ===========================================================================
   scan:
     name: Scan
-    needs: build
-    if: inputs.scans != ''
+    needs: [config, build]
+    if: needs.config.outputs.scans != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -395,16 +324,16 @@ jobs:
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          scans: ${{ inputs.scans }}
-          fail-on-error: ${{ inputs.scan-fail-mode }}
+          scans: ${{ needs.config.outputs.scans }}
+          fail-on-error: ${{ needs.config.outputs.scan-fail-mode }}
 
   # ===========================================================================
-  # Job B3: Container Test - for container modules
+  # Job D: Container Test - for container modules with test scripts
   # ===========================================================================
   container-test:
     name: Container Test
-    needs: build
-    if: ${{ inputs.container && inputs.container-test-enabled }}
+    needs: [config, build]
+    if: needs.config.outputs.is-container == 'true' && needs.config.outputs.container-test-script != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -415,7 +344,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ inputs.container-registry }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
@@ -435,14 +364,21 @@ jobs:
           name: build-artifacts-${{ inputs.module }}
           path: out/build/
 
-      - name: Run Container Test
-        if: ${{ inputs.container-test-command != '' }}
+      - name: Download Module Dependencies
+        if: needs.config.outputs.download-modules != ''
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ needs.config.outputs.download-modules }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+
+      - name: Run Container Tests
         env:
-          TEST_IMAGE: ${{ inputs.module }}:ci-test
-          TEST_CMD: ${{ inputs.container-test-command }}
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+          MODULE: ${{ inputs.module }}
         run: |
-          echo "Running container test command..."
-          docker run --rm "$TEST_IMAGE" $TEST_CMD
+          chmod +x "${{ needs.config.outputs.container-test-script }}"
+          bash "${{ needs.config.outputs.container-test-script }}"
 
       - name: Container Test Summary
         if: always()
@@ -461,12 +397,12 @@ jobs:
           echo "**Image**: \`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Job D: Evidence - builds compliance PDFs from test/scan results
+  # Job E: Evidence - builds compliance PDFs from test/scan results
   # ===========================================================================
   evidence:
     name: Evidence
-    needs: [build, test-linux, test-windows, test-macos, container-test, scan]
-    if: inputs.build-evidence && !contains(needs.*.result, 'failure')
+    needs: [config, build, test-linux, test-windows, test-macos, container-test, scan]
+    if: needs.config.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     outputs:
       artifact-name: ${{ steps.evidence.outputs.artifact-name }}
@@ -490,7 +426,7 @@ jobs:
   # ===========================================================================
   summary:
     name: Summary
-    needs: [build, test-linux, test-windows, test-macos, container-test, scan, evidence]
+    needs: [config, build, test-linux, test-windows, test-macos, container-test, scan, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -512,12 +448,12 @@ jobs:
           CONTAINER_TEST_RESULT: ${{ needs.container-test.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
           EVIDENCE_RESULT: ${{ needs.evidence.result }}
-          TEST_ON_WINDOWS: ${{ inputs.test-on-windows }}
-          TEST_ON_MACOS: ${{ inputs.test-on-macos }}
-          CONTAINER: ${{ inputs.container }}
-          CONTAINER_TEST_ENABLED: ${{ inputs.container-test-enabled }}
-          SCANS: ${{ inputs.scans }}
-          BUILD_EVIDENCE: ${{ inputs.build-evidence }}
+          TEST_ON_WINDOWS: ${{ needs.config.outputs.test-on-windows }}
+          TEST_ON_MACOS: ${{ needs.config.outputs.test-on-macos }}
+          CONTAINER: ${{ needs.config.outputs.is-container }}
+          CONTAINER_TEST_ENABLED: ${{ needs.config.outputs.container-test-script != '' }}
+          SCANS: ${{ needs.config.outputs.scans }}
+          BUILD_EVIDENCE: ${{ needs.config.outputs.build-evidence }}
         run: |
           echo "## CI Summary: $MODULE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -557,7 +493,7 @@ jobs:
         env:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
           MODULE: ${{ inputs.module }}
-          CONTAINER: ${{ inputs.container }}
+          CONTAINER: ${{ needs.config.outputs.is-container }}
         run: |
           if [ "$CONTAINER" = "true" ]; then
             ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY

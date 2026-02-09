@@ -13,7 +13,7 @@ type ConfigPort interface {
 	GetEnvironments() EnvironmentsConfigPort
 	GetTestingTags() TestingTagsConfigPort
 	GetTestSuites() TestSuitesConfigPort
-	GetComponentTypes() ComponentTypesConfigPort
+	GetComponentKinds() ComponentKindsConfigPort
 }
 
 // RepositoryConfigPort provides repository-level configuration.
@@ -84,8 +84,8 @@ type TestSuitePort interface {
 	IsDefault() bool
 }
 
-// ComponentTypesConfigPort provides component type configuration.
-type ComponentTypesConfigPort interface {
+// ComponentKindsConfigPort provides component kind configuration.
+type ComponentKindsConfigPort interface {
 	Get(name string) ComponentTypePort
 	List() []string
 }

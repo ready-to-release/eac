@@ -10,7 +10,7 @@ type MockConfig struct {
 	environments   core.EnvironmentsConfigPort
 	testingTags    core.TestingTagsConfigPort
 	testSuites     core.TestSuitesConfigPort
-	componentTypes core.ComponentTypesConfigPort
+	componentKinds core.ComponentKindsConfigPort
 }
 
 // NewMockConfig creates a new MockConfig with sensible defaults.
@@ -57,9 +57,9 @@ func (m *MockConfig) WithTestSuites(suites core.TestSuitesConfigPort) *MockConfi
 	return m
 }
 
-// WithComponentTypes sets the component types configuration.
-func (m *MockConfig) WithComponentTypes(types core.ComponentTypesConfigPort) *MockConfig {
-	m.componentTypes = types
+// WithComponentKinds sets the component kinds configuration.
+func (m *MockConfig) WithComponentKinds(kinds core.ComponentKindsConfigPort) *MockConfig {
+	m.componentKinds = kinds
 	return m
 }
 
@@ -96,9 +96,9 @@ func (m *MockConfig) GetTestSuites() core.TestSuitesConfigPort {
 	return m.testSuites
 }
 
-// GetComponentTypes implements core.ConfigPort.
-func (m *MockConfig) GetComponentTypes() core.ComponentTypesConfigPort {
-	return m.componentTypes
+// GetComponentKinds implements core.ConfigPort.
+func (m *MockConfig) GetComponentKinds() core.ComponentKindsConfigPort {
+	return m.componentKinds
 }
 
 // Interface compliance check

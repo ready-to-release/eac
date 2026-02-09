@@ -136,7 +136,7 @@ This will:
 1. Check prerequisites
 2. Build the Docker image as `eac-ext:dev` in EAC repo
 3. Install the clie binary (if not already installed)
-4. Create `.clie/clie-cli.local.yml` configuration in the external repo
+4. Create `.clie/clie.local.yml` configuration in the external repo
 5. Test the setup
 
 ## Step-by-Step Setup for External Repositories
@@ -201,7 +201,7 @@ Create a local clie configuration that uses your Docker image:
 | `-MountWorkspace` | Add volume mount for live development | `false`       |
 | `-EnableDebug`    | Add debug environment variables       | `false`       |
 
-This creates `.clie/clie-cli.local.yml` with:
+This creates `.clie/clie.local.yml` with:
 
 ```yaml
 # Local development configuration (gitignored)
@@ -245,8 +245,8 @@ eac show modules
 
 clie uses a configuration hierarchy:
 
-1. `.clie/clie-cli.yml` - Base configuration (committed to git)
-2. `.clie/clie-cli.local.yml` - Local overrides (gitignored)
+1. `.clie/clie.yml` - Base configuration (committed to git)
+2. `.clie/clie.local.yml` - Local overrides (gitignored)
 
 Local files override base configuration for development.
 
@@ -411,7 +411,7 @@ If missing, rebuild:
 **Solution**: Check your local configuration:
 
 ```powershell
-cat .clie\clie-cli.local.yml
+cat .clie\clie.local.yml
 ```
 
 Ensure it contains:
@@ -448,10 +448,10 @@ echo $env:CLIE_REPO_ROOT
 
 ```powershell
 # Verify file exists
-Test-Path .clie\clie-cli.local.yml
+Test-Path .clie\clie.local.yml
 
 # Check for YAML syntax errors
-cat .clie\clie-cli.local.yml
+cat .clie\clie.local.yml
 ```
 
 ### Build Failures
@@ -509,8 +509,8 @@ cat .clie\clie-cli.local.yml
 
 | File                     | Purpose            | Committed       |
 | ------------------------ | ------------------ | --------------- |
-| `.clie/clie-cli.yml`       | Base configuration | Yes             |
-| `.clie/clie-cli.local.yml` | Local overrides    | No (gitignored) |
+| `.clie/clie.yml`       | Base configuration | Yes             |
+| `.clie/clie.local.yml` | Local overrides    | No (gitignored) |
 
 ### Environment Variables
 

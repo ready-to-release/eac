@@ -32,7 +32,7 @@ Unified help printing for CLI commands, formatting usage, flags, and subcommand 
 
 ## Role in System
 
-The help package provides the standard help rendering used by all CLI commands in `eac-cli`. It reads `CommandRegistration` metadata from the registry to produce consistent, structured help output including grouped subcommands, behavior flag pairs, and usage examples.
+The help package provides the standard help rendering used by all CLI commands in `eac`. It reads `CommandRegistration` metadata from the registry to produce consistent, structured help output including grouped subcommands, behavior flag pairs, and usage examples.
 
 For parent commands (e.g., `show`, `validate`), `PrintHelp` renders a grouped list of subcommands with their descriptions and a footer prompting for per-subcommand help. For leaf commands (e.g., `build`, `test`), it renders the long description, categorized flags (behavior flags first, then regular flags), and examples.
 

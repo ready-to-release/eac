@@ -22,7 +22,7 @@
 // Long: Example:
 // Long:   pipeline await-ci                              # Auto-detect SHA, all ci-*.yaml
 // Long:   pipeline await-ci --sha abc123                 # Explicit SHA
-// Long:   pipeline await-ci --pattern ci-clie-cli.yaml    # Specific workflow
+// Long:   pipeline await-ci --pattern ci-clie.yaml    # Specific workflow
 // Long:   pipeline await-ci --run-id 12345               # Wait for specific run
 // Long:   pipeline await-ci --timeout 600                # 10 minute timeout
 // Long:   pipeline await-ci --exclude ci-foo             # Exclude workflow

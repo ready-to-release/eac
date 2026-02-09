@@ -92,7 +92,7 @@ func TestFormatCompactWithTestInfo(t *testing.T) {
 
 func TestFormatDetailed(t *testing.T) {
 	s := New("build").
-		SetRequest([]string{"core", "eac-cli"}, []string{"core", "eac-cli", "eac-logging"}).
+		SetRequest([]string{"core", "eac"}, []string{"core", "eac", "eac-logging"}).
 		SetFlags(Flags{TidyFirst: true, TidyExplicit: false}).
 		SetExecutionContext("local").
 		SetDepmStatus(DepmStatus{

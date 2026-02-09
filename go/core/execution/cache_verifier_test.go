@@ -24,7 +24,7 @@ func TestCacheVerifierFunc(t *testing.T) {
 	)
 
 	result, err := verifier.Verify(context.Background(), workunit.UnitSpec{
-		ID: workunit.UnitID{Module: "mod1", Component: "comp1"},
+		ID: workunit.UnitID{Module: "mod1", ComponentType: "comp1", ComponentName: "comp1"},
 	})
 
 	assert.NoError(t, err)

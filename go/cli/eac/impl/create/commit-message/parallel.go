@@ -74,11 +74,11 @@ import (
 // Example:
 //
 //	cfg := &executionConfig{
-//	    affectedModules: []string{"clie-cli", "core", "eac-cli"},
+//	    affectedModules: []string{"clie", "core", "eac-cli"},
 //	    ...
 //	}
 //	sections, err := generateModuleSectionsParallel(cfg, logger, nil)
-//	// sections[0] corresponds to "clie-cli"
+//	// sections[0] corresponds to "clie"
 //	// sections[1] corresponds to "core"
 //	// sections[2] corresponds to "eac-cli"
 func generateModuleSectionsParallel(deps *Deps, cfg *executionConfig, testExecutor *ai.Executor) ([]string, error) {

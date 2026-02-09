@@ -1,8 +1,8 @@
 // Command: release extract-version
 // Short: Extract and validate release version from tag or input
-// Flag.module: type=string, usage=Module prefix (e.g., clie-cli, docs)
+// Flag.module: type=string, usage=Module prefix (e.g., clie, docs)
 // Flag.type: type=string, default=semver, usage=Version type (semver or calver)
-// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/clie-cli/1.0.0)
+// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/clie/1.0.0)
 // Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
 // Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
 // Long: The release extract-version command extracts version information from a git tag ref
@@ -14,13 +14,13 @@
 // Long:
 // Long: Expected Output (--format shell):
 // Long:   VERSION="1.0.0"
-// Long:   TAG_NAME="clie-cli/1.0.0"
+// Long:   TAG_NAME="clie/1.0.0"
 // Long:   IS_VALID="true"
 // Long:
 // Long: Example:
-// Long:   release extract-version --module clie-cli --ref refs/tags/clie-cli/1.0.0
+// Long:   release extract-version --module clie --ref refs/tags/clie/1.0.0
 // Long:   release extract-version --module docs --type calver --version ""
-// Long:   eval $(release extract-version --module clie-cli --ref "$GITHUB_REF" --format shell)
+// Long:   eval $(release extract-version --module clie --ref "$GITHUB_REF" --format shell)
 package release
 
 import (

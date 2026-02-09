@@ -31,7 +31,9 @@ func (a *UnitIDAdapter) Unwrap() workunit.UnitID {
 
 func (a *UnitIDAdapter) GetAction() string             { return string(a.id.Action) }
 func (a *UnitIDAdapter) GetModule() string             { return a.id.Module }
-func (a *UnitIDAdapter) GetComponent() string          { return a.id.Component }
+func (a *UnitIDAdapter) GetComponentType() string      { return a.id.ComponentType }
+func (a *UnitIDAdapter) GetComponentName() string      { return a.id.ComponentName }
+func (a *UnitIDAdapter) GetComponent() string          { return a.id.ComponentName } // Deprecated: use GetComponentName()
 func (a *UnitIDAdapter) GetTool() string               { return a.id.Tool }
 func (a *UnitIDAdapter) GetSpec() string               { return a.id.Spec }
 func (a *UnitIDAdapter) GetExtra() map[string]string   { return a.id.Extra }
@@ -65,8 +67,6 @@ func (a *UnitSpecAdapter) GetID() core.UnitIDPort {
 }
 
 func (a *UnitSpecAdapter) GetComponentType() string { return a.spec.ComponentType }
-func (a *UnitSpecAdapter) GetWeight() int           { return a.spec.Weight }
-func (a *UnitSpecAdapter) IsContainer() bool        { return a.spec.Container }
 func (a *UnitSpecAdapter) IsCached() bool           { return a.spec.Cached }
 
 func (a *UnitSpecAdapter) GetDependsOn() []core.UnitIDPort {

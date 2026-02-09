@@ -34,7 +34,7 @@ the architecture is designed to support additional languages through custom hand
 Languages like Python, Rust, and Java can use the `container` or `static` component types with custom build scripts,
 but lack native build/test handlers.
 
-See [Component Types Reference](./architecture/component-types.md) for detailed language support per component type.
+See [Component Types Reference](./architecture/component-kinds.md) for detailed language support per component type.
 
 ---
 
@@ -47,7 +47,7 @@ See [Component Types Reference](./architecture/component-types.md) for detailed 
 - Cross-platform CLI (`clie`, `clie.exe`) for Windows, macOS, and Linux
 - Docker-based extension execution with isolated, reproducible environments
 - Git-aware working directory mounting
-- Configurable extension management via `.clie/clie-cli.yml`
+- Configurable extension management via `.clie/clie.yml`
 
 **The EAC extension** (`eac-ext:latest`) provides:
 
@@ -103,7 +103,7 @@ cli/
 │   │   ├── mcp/                # eac-mcp-commands (MCP server)
 │   │   └── specs/              # eac-specs (BDD infrastructure)
 │   └── clie/                    # CLIE CLI
-│       └── cli/                # clie-cli (CLI application)
+│       └── cli/                # clie (CLI application)
 │
 ├── specs/                      # Gherkin BDD specifications
 │   ├── eac-commands/           # Specs for commands module
@@ -137,7 +137,7 @@ cli/
 
 **Deployable Modules** - Independently built, versioned, and deployed:
 
-- **clie-cli** - Go CLI application with cross-platform executables
+- **clie** - Go CLI application with cross-platform executables
 - **eac-ext** - Docker extension for CLIE CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 
@@ -159,7 +159,7 @@ All modules defined in `.eac/repository.yml` with explicit dependencies and file
 | [Architecture](./architecture/index.md)                  | System architecture, components, and execution models |
 | [Viewing Architecture](./architecture/viewing-diagrams.md) | How to view and work with C4 architecture diagrams    |
 | [Modules](./architecture/modules.md)                     | Module system, dependencies, and build management     |
-| [Component Types](./architecture/component-types.md)     | Language support and component type specifications    |
+| [Component Types](./architecture/component-kinds.md)     | Language support and component type specifications    |
 | [Contracts](./architecture/contracts.md)                 | YAML contracts, schemas, and validation system        |
 | [Repository Layout](./architecture/repository-layout.md) | Directory structure and file organization             |
 | [Creating Commands](./architecture/creating-commands.md) | Developer guide for extending EAC with new commands   |

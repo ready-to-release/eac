@@ -34,7 +34,7 @@ Content-addressable caching for expensive documentation preprocessing operations
 
 ## Role in System
 
-The caching package provides the performance optimization layer for documentation builds in `eac-cli`. Diagram rendering (mermaid, DrawIO) is expensive and container-based; the `AssetCache` avoids re-rendering unchanged diagrams by storing outputs keyed by content hash. The `FileHashCache` enables incremental markdown processing by tracking which source files have changed between builds, persisting hash state as JSON.
+The caching package provides the performance optimization layer for documentation builds in `eac`. Diagram rendering (mermaid, DrawIO) is expensive and container-based; the `AssetCache` avoids re-rendering unchanged diagrams by storing outputs keyed by content hash. The `FileHashCache` enables incremental markdown processing by tracking which source files have changed between builds, persisting hash state as JSON.
 
 Both caches are consulted by the diagram processing and content phases in the docprep pipeline. The `AssetCache` is also used directly by the DrawIO and mermaid builder handlers in the builders package for standalone diagram rendering outside the pipeline.
 

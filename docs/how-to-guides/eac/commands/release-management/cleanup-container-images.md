@@ -137,7 +137,7 @@ eac release prune-packages eac-ext --json
 | Type             | Source              | Examples                          |
 | ---------------- | ------------------- | --------------------------------- |
 | **Image Tags**   | Container registry  | `sha-abc1234`, `v1.0.0`, `latest` |
-| **Release Tags** | GitHub Releases API | `eac-ext/1.0.0`, `clie-cli/2.0.0`  |
+| **Release Tags** | GitHub Releases API | `eac-ext/1.0.0`, `clie/2.0.0`  |
 
 The cleanup command correlates these to protect released images.
 

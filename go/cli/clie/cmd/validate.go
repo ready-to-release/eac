@@ -21,8 +21,8 @@ var (
 // validateCmd represents the validate command.
 var validateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
-	Short: "Validate clie-cli.yml configuration file",
-	Long: `Validate an clie-cli.yml configuration file against the embedded schema.
+	Short: "Validate clie.yml configuration file",
+	Long: `Validate an clie.yml configuration file against the embedded schema.
 
 This command checks your configuration file for:
   - Required fields (extensions array, name, image)
@@ -36,7 +36,7 @@ Examples:
   clie validate
 
   # Validate a specific configuration file
-  clie validate ./clie-cli.local.yml
+  clie validate ./clie.local.yml
 
   # Use strict validation mode (warnings become errors)
   clie validate --strict
@@ -60,7 +60,7 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("no configuration file specified and could not find repository root: %w", err)
 			}
-			configFile = filepath.Join(repoRoot, ".clie", "clie-cli.yml")
+			configFile = filepath.Join(repoRoot, ".clie", "clie.yml")
 		}
 
 		// Check if file exists
@@ -157,7 +157,7 @@ func init() {
 func showEmbeddedSchema() error {
 	logging.Info("Embedded Schema Information:")
 	logging.Infof("  Version: %s", validator.GetEmbeddedSchemaVersion())
-	logging.Info("  Schema ID: clie-cli-config/v1.0")
+	logging.Info("  Schema ID: clie-config/v1.0")
 
 	// Get and parse the schema
 	schemaStr := validator.GetEmbeddedSchema()
@@ -188,7 +188,7 @@ func showEmbeddedSchema() error {
 		logging.Infof("  Required Fields: %v", required)
 	}
 
-	logging.Info("\nTo see the full schema, check: schemas/clie-cli-config/v1.0/schema.json")
+	logging.Info("\nTo see the full schema, check: schemas/clie-config/v1.0/schema.json")
 
 	return nil
 }

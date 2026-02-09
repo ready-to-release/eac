@@ -14,19 +14,19 @@ func TestTopologicalSort_LinearChain(t *testing.T) {
 		DependsOn: nil,
 	}, "/workspace"))
 	registry.Add(modules.NewModuleContract(domain.BaseContract{
-		Moniker:   "clie-cli",
+		Moniker:   "clie",
 		DependsOn: []string{"core"},
 	}, "/workspace"))
 
-	sorted, err := topologicalSort(registry, []string{"clie-cli", "core"})
+	sorted, err := topologicalSort(registry, []string{"clie", "core"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(sorted) != 2 {
 		t.Fatalf("expected 2 modules, got %d", len(sorted))
 	}
-	if sorted[0] != "core" || sorted[1] != "clie-cli" {
-		t.Errorf("expected [core, clie-cli], got %v", sorted)
+	if sorted[0] != "core" || sorted[1] != "clie" {
+		t.Errorf("expected [core, clie], got %v", sorted)
 	}
 }
 

@@ -33,7 +33,7 @@ func shouldOpenBrowser() bool {
 	}
 
 	// Check if running in container mode
-	if os.Getenv(environments.EnvCLIEContext) == "clie-cli" {
+	if os.Getenv(environments.EnvCLIEContext) == "clie" {
 		return false
 	}
 

@@ -1,18 +1,18 @@
-# tui-adapter
+# tui-eac
 
-The `tui-adapter` module implements the TUI port interface for parallel console rendering using Bubbletea.
+The `tui-eac` module implements the TUI port interface for parallel console rendering using Bubbletea.
 
 ## System Context
 
 Shows how the TUI adapter provides terminal UI to CLI commands.
 
-<!-- structurizr:tui-adapter:SystemContext -->
+<!-- structurizr:tui-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the TUI adapter packages.
 
-<!-- structurizr:tui-adapter:Containers -->
+<!-- structurizr:tui-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,12 +20,12 @@ High-level view of the TUI adapter packages.
 
 Bubbletea-based parallel console with phase tracking, tab rendering, and ring buffer output.
 
-<!-- structurizr:tui-adapter:ParallelConsoleComponents -->
+<!-- structurizr:tui-eac:ParallelConsoleComponents -->
 
 ## Design File
 
-- **Location**: `specs/tui-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module tui-adapter`
+- **Location**: `specs/tui-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module tui-eac`
 
 ## Key Responsibilities
 

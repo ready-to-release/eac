@@ -1,17 +1,14 @@
 #
-# Optimized Module CI Orchestrator which holds the m-o-no-repository change-trigger
-# This workflow implements incremental CI by only building modules that have changed
-# since the last successful CI run. It uses the repository's dependency graph to ensure
-# that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
+# CI Orchestrator - detects changed modules and dispatches CI workflows with
+# concurrency-limited scheduling. Dependencies are respected: a module is only
+# dispatched once all its CI dependencies have completed successfully.
 #
 # Pipeline stages:
 # 1. setup: Build commands binary (shared by all jobs)
 # 2. detect-changes: Determine which modules need CI workflows triggered
-# 3. execute-workflows: Dispatch ALL module CI workflows in parallel (including repository)
+# 3. dispatch: Schedule and dispatch CI workflows (concurrency-limited, dependency-aware)
 # 4. summary: Report results
-#
-# NOTE: All CI workflows run in parallel. Dependency verification happens at RELEASE time
-# via the `release await-deps` command, not during CI dispatch.
+# 5. dispatch-releases: Trigger release orchestration (push to main only)
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -227,213 +224,64 @@ jobs:
           fi
 
   # =========================================
-  # Execute Module Workflows (Layered by CI Artifact Dependencies)
+  # Schedule CI Workflows (concurrency-limited)
   # =========================================
-  execute-workflows:
-    name: Dispatch CI
+  dispatch:
+    name: Schedule CI
     needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
-        if: needs.detect-changes.outputs.has-changes == 'true'
         uses: ./.github/actions/setup-commands
         with:
           trigger-run-id: ${{ github.run_id }}
 
-      - name: Filter modules with valid CI
-        id: filter
+      - name: Schedule and dispatch CI workflows
         env:
           GH_TOKEN: ${{ github.token }}
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          # Early exit if no changes
-          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
-            echo "modules=" >> $GITHUB_OUTPUT
-            echo "skipped=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           DIRECTLY_CHANGED="${{ needs.detect-changes.outputs.directly_changed }}"
           INVALIDATED="${{ needs.detect-changes.outputs.invalidated }}"
 
-          echo "Filtering modules that already have valid CI..."
+          # Determine concurrency and dispatch ref
+          HEAD_REF="${{ github.head_ref }}"
+          DISPATCH_REF="${HEAD_REF:-${{ github.ref_name }}}"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            MAX_CONCURRENT=20  # PRs: effectively unlimited
+          else
+            MAX_CONCURRENT=6   # Push to main: respect runner limits
+          fi
+
+          echo "Scheduling CI workflows..."
           echo "  Directly changed: $DIRECTLY_CHANGED"
           echo "  Invalidated: $INVALIDATED"
+          echo "  Dispatch ref: $DISPATCH_REF"
+          echo "  Max concurrent: $MAX_CONCURRENT"
           echo ""
 
-          # Use Go command to filter modules
-          eval $(${COMMANDS:?COMMANDS not set} get ci-dispatch \
+          # Single command handles the full lifecycle:
+          # filter, dispatch, poll for completion, report results
+          ${COMMANDS:?COMMANDS not set} pipeline ci schedule \
             --directly-changed "$DIRECTLY_CHANGED" \
             --invalidated "$INVALIDATED" \
             --head-sha "${{ github.sha }}" \
-            --format shell)
-
-          # DISPATCH and SKIPPED variables are now set
-          echo "modules=$DISPATCH" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-
-      - name: Compute CI dispatch layers
-        id: layers
-        if: steps.filter.outputs.modules != ''
-        env:
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        run: |
-          MODULES="${{ steps.filter.outputs.modules }}"
-
-          echo "Computing CI dispatch layers for: $MODULES"
-          echo ""
-
-          # Get layers based on CI artifact dependencies
-          eval $(${COMMANDS:?COMMANDS not set} get ci-dispatch-layers --modules "$MODULES" --format shell)
-
-          # LAYER_COUNT, LAYER_0, LAYER_1, LAYERS_JSON are now set
-          echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
-          echo "layer_0=$LAYER_0" >> $GITHUB_OUTPUT
-          echo "layer_1=${LAYER_1:-}" >> $GITHUB_OUTPUT
-          echo "layers_json=$LAYERS_JSON" >> $GITHUB_OUTPUT
-
-      - name: Dispatch CI workflows in layers
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        run: |
-          # Early exit if no changes
-          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
-            echo "No modules require building - skipping execution"
-            echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "No module CI workflows to execute." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          MODULES="${{ steps.filter.outputs.modules }}"
-          SKIPPED="${{ steps.filter.outputs.skipped }}"
-
-          # Check if all modules were skipped
-          if [ -z "$MODULES" ]; then
-            echo "All modules have valid CI at current HEAD - nothing to dispatch"
-            echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**All modules skipped** - valid CI already exists at current HEAD." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Skipped modules: \`$SKIPPED\`" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          # Determine the correct ref for workflow_dispatch
-          HEAD_REF="${{ github.head_ref }}"
-          REF_NAME="${{ github.ref_name }}"
-          if [ -n "$HEAD_REF" ]; then
-            DISPATCH_REF="$HEAD_REF"
-          else
-            DISPATCH_REF="$REF_NAME"
-          fi
-
-          LAYER_COUNT="${{ steps.layers.outputs.layer_count }}"
-          LAYER_0="${{ steps.layers.outputs.layer_0 }}"
-          LAYER_1="${{ steps.layers.outputs.layer_1 }}"
-
-          echo "Event: ${{ github.event_name }}"
-          echo "DISPATCH_REF: $DISPATCH_REF"
-          echo "Layer count: $LAYER_COUNT"
-          echo ""
-
-          TOTAL_DISPATCHED=0
-          DISPATCHED_LIST=""
-
-          # Helper function to dispatch a layer
-          dispatch_layer() {
-            local layer_num=$1
-            local modules=$2
-
-            if [ -z "$modules" ]; then
-              return 0
-            fi
-
-            echo ""
-            echo "=============================================="
-            echo "Layer $layer_num: $modules"
-            echo "=============================================="
-
-            for module in $modules; do
-              if [ -f ".github/workflows/ci-${module}.yaml" ]; then
-                echo "  Dispatching: ci-${module}.yaml"
-                gh workflow run "ci-${module}.yaml" \
-                  --ref "$DISPATCH_REF" \
-                  -f ref=${{ github.ref }} \
-                  -f sha=${{ github.sha }} \
-                  -f trigger_run_id=${{ github.run_id }}
-                TOTAL_DISPATCHED=$((TOTAL_DISPATCHED + 1))
-                DISPATCHED_LIST="$DISPATCHED_LIST $module"
-                sleep 2
-              fi
-            done
-          }
-
-          # Dispatch Layer 0 (modules with no CI artifact dependencies)
-          dispatch_layer 0 "$LAYER_0"
-
-          # If there's a Layer 1, wait for Layer 0 deps then dispatch
-          if [ -n "$LAYER_1" ]; then
-            echo ""
-            echo "=============================================="
-            echo "Waiting for Layer 0 dependencies to complete..."
-            echo "=============================================="
-
-            # Layer 1 modules depend on clie-cli - wait for it if dispatched
-            if echo "$LAYER_0" | grep -qw "clie-cli"; then
-              echo "Waiting for clie-cli CI to complete..."
-              ${COMMANDS:?COMMANDS not set} pipeline await-ci --pattern "ci-clie-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
-                echo "::error::clie-cli CI did not complete successfully"
-                exit 1
-              }
-              echo "✅ clie-cli CI completed"
-            fi
-
-            # Dispatch Layer 1
-            dispatch_layer 1 "$LAYER_1"
-          fi
-
-          echo ""
-          echo "======================================================================"
-          echo "Dispatched $TOTAL_DISPATCHED workflow(s) in $LAYER_COUNT layer(s)"
-          echo "======================================================================"
-
-          # Generate step summary
-          echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Mode**: Layered execution (CI artifact dependencies)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Dispatched **$TOTAL_DISPATCHED** CI workflow(s) in **$LAYER_COUNT** layer(s):" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Layer 0 (no CI deps)" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$LAYER_0" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-          if [ -n "$LAYER_1" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Layer 1 (depends on clie-cli)" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "$LAYER_1" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ -n "$SKIPPED" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Skipped** (valid CI exists at HEAD): \`$SKIPPED\`" >> $GITHUB_STEP_SUMMARY
-          fi
+            --dispatch-ref "$DISPATCH_REF" \
+            --max-concurrent $MAX_CONCURRENT \
+            --timeout 3600 \
+            --trigger-run-id ${{ github.run_id }}
 
   # =========================================
   # Summary
   # =========================================
   summary:
     name: Summary
-    needs: [detect-changes, execute-workflows]
+    needs: [detect-changes, dispatch]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -486,34 +334,41 @@ jobs:
             exit 0
           fi
 
-          # Workflows dispatched successfully
+          # Workflows dispatched
           TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
           TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
-          EXECUTION="${{ needs.execute-workflows.result }}"
+          DISPATCH_RESULT="${{ needs.dispatch.result }}"
 
-          if [ "$EXECUTION" = "success" ]; then
-            echo "### ✅ CI Workflows Dispatched" >> $GITHUB_STEP_SUMMARY
+          if [ "$DISPATCH_RESULT" = "success" ]; then
+            echo "### CI Workflows Dispatched" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**$TOTAL_COUNT** module CI workflow(s) triggered in parallel." >> $GITHUB_STEP_SUMMARY
+            echo "**$TOTAL_COUNT** module CI workflow(s) scheduled with concurrency-limited dispatch." >> $GITHUB_STEP_SUMMARY
+          elif [ "$DISPATCH_RESULT" = "skipped" ]; then
+            echo "### No Dispatch Needed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected that require CI." >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ❌ Dispatch Failed" >> $GITHUB_STEP_SUMMARY
+            echo "### Dispatch Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Failed to dispatch module workflows. Check the execute-workflows job for details." >> $GITHUB_STEP_SUMMARY
+            echo "Failed to dispatch module workflows. Check the dispatch job for details." >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> **Note**: Module CI workflows report their own statuses as separate checks." >> $GITHUB_STEP_SUMMARY
+          echo "> Module CI workflows report their own statuses as separate checks." >> $GITHUB_STEP_SUMMARY
           echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
 
   # =========================================
   # Dispatch Release Trigger (push or workflow_dispatch to main)
   # =========================================
   # After CI completes, dispatch to release-trigger.yaml for release orchestration.
-  # The release-trigger workflow handles: CI await, release await, pending checks, layer execution.
+  # The release-trigger workflow handles: CI await, release await, pending checks, dispatch.
   dispatch-releases:
     name: Dispatch Releases
-    needs: [summary, detect-changes]
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.has-changes == 'true'
+    needs: [detect-changes, dispatch]
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      && github.ref == 'refs/heads/main'
+      && needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -524,17 +379,8 @@ jobs:
         with:
           trigger-run-id: ${{ github.run_id }}
 
-      # Wait for CI workflows to complete before triggering releases
-      - name: Await CI workflows
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        run: |
-          echo "Waiting for CI workflows to complete..."
-          ${COMMANDS:?COMMANDS not set} pipeline await-ci --timeout 1800
-          echo "✅ CI workflows complete"
-
-      # Dispatch release-trigger.yaml with modules that had CI dispatched
+      # CI scheduler already waited for all workflows to complete.
+      # Dispatch release-trigger.yaml with modules that had CI dispatched.
       - name: Dispatch release trigger
         env:
           GH_TOKEN: ${{ github.token }}
@@ -550,7 +396,7 @@ jobs:
             -f skip-ci-await=true \
             -f dispatched-modules="$DISPATCHED_MODULES"
 
-          echo "✅ Release trigger dispatched"
+          echo "Release trigger dispatched"
           echo ""
           echo "## Release Trigger" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

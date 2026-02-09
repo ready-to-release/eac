@@ -19,7 +19,7 @@ tags:
     description: "Requires specific module dependency from module contracts"
     type: module_dependency
     pattern: "^@depm:(?P<module_name>[a-z0-9-]+)$"
-    example: "@depm:clie-cli"
+    example: "@depm:clie"
     note: "Valid module names are loaded from module contracts at runtime"
 
   - tag: "@env:<env-moniker>"
@@ -156,7 +156,7 @@ types:
     description: "External system dependencies required for test execution (e.g., docker, git, go, linux, macos, windows)"
 
   - type: module_dependency
-    description: "Internal module dependencies required for test execution (e.g., clie-cli, eac-commands, eac-core)"
+    description: "Internal module dependencies required for test execution (e.g., clie, eac-commands, eac-core)"
 
   - type: environment
     description: "Test environment requirements (e.g., isolated test projects, specific configurations)"

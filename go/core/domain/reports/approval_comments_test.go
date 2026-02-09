@@ -30,29 +30,29 @@ type mockGitRepo struct {
 	tags    []string
 }
 
-func (m *mockGitRepo) RootPath() string                                   { return "" }
-func (m *mockGitRepo) RemoteURL(remoteName string) (string, error)        { return "", nil }
-func (m *mockGitRepo) AddRemote(name, url string) error                   { return nil }
-func (m *mockGitRepo) CurrentBranch() (string, error)                     { return "main", nil }
-func (m *mockGitRepo) HeadShortSHA() (string, error)                      { return "abc1234", nil }
-func (m *mockGitRepo) HeadCommit() (string, error)                        { return "abc1234567890", nil }
-func (m *mockGitRepo) UncommittedFiles() ([]string, error)                { return nil, nil }
-func (m *mockGitRepo) TrackedFiles() ([]string, error)                    { return nil, nil }
-func (m *mockGitRepo) StagedFiles() ([]string, error)                     { return nil, nil }
-func (m *mockGitRepo) IsFileTracked(relPath string) bool                  { return true }
-func (m *mockGitRepo) IsFileIgnored(relPath string) bool                  { return false }
-func (m *mockGitRepo) Add(path string) error                              { return nil }
-func (m *mockGitRepo) Commit(msg, name, email string) (string, error)     { return "abc1234", nil }
-func (m *mockGitRepo) StagedDiff() (string, error)                        { return "", nil }
-func (m *mockGitRepo) StagedDiffStats() (string, error)                   { return "", nil }
-func (m *mockGitRepo) ConfigSet(section, key, value string) error         { return nil }
-func (m *mockGitRepo) GoGitRepo() *gogit.Repository                       { return nil }
-func (m *mockGitRepo) CommitsSince(ref string) ([]git.CommitInfo, error)  { return m.commits, nil }
-func (m *mockGitRepo) TagsMatching(pattern string) ([]string, error)      { return m.tags, nil }
-func (m *mockGitRepo) LatestTag(pattern string) (string, error)           { return "", nil }
-func (m *mockGitRepo) TagCommit(tagName string) (string, error)           { return "", nil }
-func (m *mockGitRepo) TagDate(tagName string) (time.Time, error)          { return time.Time{}, nil }
-func (m *mockGitRepo) TagExists(tagName string) (bool, error)             { return false, nil }
+func (m *mockGitRepo) RootPath() string                                  { return "" }
+func (m *mockGitRepo) RemoteURL(remoteName string) (string, error)       { return "", nil }
+func (m *mockGitRepo) AddRemote(name, url string) error                  { return nil }
+func (m *mockGitRepo) CurrentBranch() (string, error)                    { return "main", nil }
+func (m *mockGitRepo) HeadShortSHA() (string, error)                     { return "abc1234", nil }
+func (m *mockGitRepo) HeadCommit() (string, error)                       { return "abc1234567890", nil }
+func (m *mockGitRepo) UncommittedFiles() ([]string, error)               { return nil, nil }
+func (m *mockGitRepo) TrackedFiles() ([]string, error)                   { return nil, nil }
+func (m *mockGitRepo) StagedFiles() ([]string, error)                    { return nil, nil }
+func (m *mockGitRepo) IsFileTracked(relPath string) bool                 { return true }
+func (m *mockGitRepo) IsFileIgnored(relPath string) bool                 { return false }
+func (m *mockGitRepo) Add(path string) error                             { return nil }
+func (m *mockGitRepo) Commit(msg, name, email string) (string, error)    { return "abc1234", nil }
+func (m *mockGitRepo) StagedDiff() (string, error)                       { return "", nil }
+func (m *mockGitRepo) StagedDiffStats() (string, error)                  { return "", nil }
+func (m *mockGitRepo) ConfigSet(section, key, value string) error        { return nil }
+func (m *mockGitRepo) GoGitRepo() *gogit.Repository                      { return nil }
+func (m *mockGitRepo) CommitsSince(ref string) ([]git.CommitInfo, error) { return m.commits, nil }
+func (m *mockGitRepo) TagsMatching(pattern string) ([]string, error)     { return m.tags, nil }
+func (m *mockGitRepo) LatestTag(pattern string) (string, error)          { return "", nil }
+func (m *mockGitRepo) TagCommit(tagName string) (string, error)          { return "", nil }
+func (m *mockGitRepo) TagDate(tagName string) (time.Time, error)         { return time.Time{}, nil }
+func (m *mockGitRepo) TagExists(tagName string) (bool, error)            { return false, nil }
 func (m *mockGitRepo) GetBranchCommits(base string) ([]git.CommitInfo, error) {
 	return m.commits, nil
 }
@@ -97,10 +97,10 @@ func TestGetApprovalComments(t *testing.T) {
 		},
 		{
 			name:           "regular module without dependencies",
-			module:         "eac-cli",
+			module:         "eac",
 			version:        "unreleased",
 			wantErr:        false,
-			expectedModule: "eac-cli",
+			expectedModule: "eac",
 		},
 		{
 			name:        "invalid module",
@@ -190,12 +190,12 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 		prs: map[int]*PRData{
 			123: {
 				Number:             123,
-				Title:              "Add new feature to eac-cli",
+				Title:              "Add new feature to eac",
 				Author:             "developer1",
-				Body:               "This PR adds a new feature to eac-cli module",
+				Body:               "This PR adds a new feature to eac module",
 				MergedAt:           time.Now(),
 				MergeCommitMessage: "Merge pull request #123\n\nAdded new feature implementation",
-				Files:              []string{"specs/eac-cli/new-feature.feature", "go/cli/eac/impl/test.go"},
+				Files:              []string{"specs/eac/new-feature.feature", "go/cli/eac/impl/test.go"},
 				Reviews: []ReviewData{
 					{Author: "reviewer1", State: "APPROVED", SubmittedAt: time.Now()},
 					{Author: "reviewer2", State: "APPROVED", SubmittedAt: time.Now()},
@@ -203,12 +203,12 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 			},
 			456: {
 				Number:             456,
-				Title:              "Update clie-cli spec",
+				Title:              "Update clie spec",
 				Author:             "developer2",
-				Body:               "Updates the clie-cli specification",
+				Body:               "Updates the clie specification",
 				MergedAt:           time.Now(),
-				MergeCommitMessage: "Merge pull request #456\n\nUpdated clie-cli spec",
-				Files:              []string{"specs/clie-cli/update.feature"},
+				MergeCommitMessage: "Merge pull request #456\n\nUpdated clie spec",
+				Files:              []string{"specs/clie/update.feature"},
 				Reviews: []ReviewData{
 					{Author: "reviewer3", State: "APPROVED", SubmittedAt: time.Now()},
 				},
@@ -240,7 +240,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 				Subject:  "feat: add new feature (#123)",
 				Author:   "developer1",
 				Date:     time.Now(),
-				Files:    []string{"specs/eac-cli/new-feature.feature"},
+				Files:    []string{"specs/eac/new-feature.feature"},
 			},
 			{
 				SHA:      "def456",
@@ -249,7 +249,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 				Subject:  "Merge pull request #456 from user/branch",
 				Author:   "developer2",
 				Date:     time.Now(),
-				Files:    []string{"specs/clie-cli/update.feature"},
+				Files:    []string{"specs/clie/update.feature"},
 			},
 		},
 		tags: []string{},
@@ -257,7 +257,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 	SetGitRepo(mockRepo)
 	defer SetGitRepo(nil)
 
-	// Test eac-ext bundle module (depends on eac-cli and clie-cli)
+	// Test eac-ext bundle module (depends on eac-cli and clie)
 	t.Run("eac-ext returns valid report structure", func(t *testing.T) {
 		bundleReport, err := GetApprovalComments(workspaceRoot, "eac-ext", "unreleased", false, "")
 		if err != nil {
@@ -286,7 +286,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 			// Verify spec files are from queried modules
 			for _, specFile := range approval.SpecFiles {
 				hasValidPrefix := false
-				for _, prefix := range []string{"specs/eac-cli/", "specs/clie-cli/", "specs/eac-ext/"} {
+				for _, prefix := range []string{"specs/eac/", "specs/clie/", "specs/eac-ext/"} {
 					if strings.HasPrefix(specFile, prefix) {
 						hasValidPrefix = true
 						break
@@ -301,16 +301,16 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 
 	// Test regular module (no dependencies)
 	t.Run("regular module only includes own approvals", func(t *testing.T) {
-		report, err := GetApprovalComments(workspaceRoot, "eac-cli", "unreleased", false, "")
+		report, err := GetApprovalComments(workspaceRoot, "eac", "unreleased", false, "")
 		if err != nil {
-			t.Fatalf("GetApprovalComments(eac-cli) failed: %v", err)
+			t.Fatalf("GetApprovalComments(eac) failed: %v", err)
 		}
 
-		// All spec files should be from eac-cli directory
+		// All spec files should be from eac directory
 		for _, approval := range report.Approvals {
 			for _, specFile := range approval.SpecFiles {
-				if !strings.HasPrefix(specFile, "specs/eac-cli/") {
-					t.Errorf("Regular module eac-cli should only include own approvals, found: %s",
+				if !strings.HasPrefix(specFile, "specs/eac/") {
+					t.Errorf("Regular module eac should only include own approvals, found: %s",
 						specFile)
 				}
 			}
@@ -343,9 +343,9 @@ func TestExtractPRNumbers(t *testing.T) {
 
 func TestFilterSpecFiles(t *testing.T) {
 	files := []string{
-		"specs/eac-cli/feature1.feature",
-		"specs/eac-cli/feature2.feature",
-		"specs/clie-cli/feature3.feature",
+		"specs/eac/feature1.feature",
+		"specs/eac/feature2.feature",
+		"specs/clie/feature3.feature",
 		"specs/other-module/feature4.feature",
 		"go/cli/eac/test.go",
 		"README.md",
@@ -358,12 +358,12 @@ func TestFilterSpecFiles(t *testing.T) {
 	}{
 		{
 			name:     "single module",
-			modules:  []string{"eac-cli"},
+			modules:  []string{"eac"},
 			expected: 2,
 		},
 		{
 			name:     "multiple modules",
-			modules:  []string{"eac-cli", "clie-cli"},
+			modules:  []string{"eac", "clie"},
 			expected: 3,
 		},
 		{

@@ -160,7 +160,7 @@ func TestTabWidgetRender(t *testing.T) {
 		{
 			name: "running active tab",
 			instance: TabInstance{
-				Moniker: "build:eac-cli:go:go", DisplayName: "eac-cli",
+				Moniker: "build:eac:go:go", DisplayName: "eac",
 				Status: UoWRunning, Weight: 8, IsActive: true,
 			},
 		},
@@ -258,7 +258,7 @@ func TestCatalogHelpTextForMoniker(t *testing.T) {
 	RegisterAllWidgets(catalog)
 
 	// Tab moniker should return tab widget help text
-	helpText, ok := catalog.HelpText("build:eac-cli:go:go")
+	helpText, ok := catalog.HelpText("build:eac:go:go")
 	if !ok {
 		t.Error("expected help text for moniker-like zone ID")
 	}
@@ -277,7 +277,7 @@ func TestCatalogElementNameForMoniker(t *testing.T) {
 	catalog := NewWidgetCatalog()
 	RegisterAllWidgets(catalog)
 
-	name := catalog.ElementName("build:eac-cli:go:go")
+	name := catalog.ElementName("build:eac:go:go")
 	if name != "Component" {
 		t.Errorf("ElementName for moniker = %q, want %q", name, "Component")
 	}

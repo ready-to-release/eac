@@ -70,7 +70,7 @@ type Widget struct {
 // TabInstance holds per-UoW data for the template tab widget.
 // One instance per UoW tab in the grid. Cheap value type.
 type TabInstance struct {
-	Moniker     string    // Full moniker (used as zone ID): "build:eac-cli:go:go"
+	Moniker     string    // Full moniker (used as zone ID): "build:eac:go:go"
 	DisplayName string    // Short display name for tab label
 	Status      UoWStatus // Current execution status
 	Weight      int       // Execution weight (shown in badge)

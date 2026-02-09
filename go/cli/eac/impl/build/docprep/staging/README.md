@@ -35,14 +35,14 @@ File staging infrastructure for the docprep pipeline, handling source file copyi
 
 ## Role in System
 
-The staging package provides the foundational file operations for the docprep pipeline in `eac-cli`. It handles the first three pipeline phases: scanning source markdown for asset references (phase 1), copying source files to the staging directory with lazy asset optimization (phase 2), and building the file index (phase 3).
+The staging package provides the foundational file operations for the docprep pipeline in `eac`. It handles the first three pipeline phases: scanning source markdown for asset references (phase 1), copying source files to the staging directory with lazy asset optimization (phase 2), and building the file index (phase 3).
 
 The `FileIndex` it produces is consumed by nearly every subsequent phase for efficient file iteration without repeated filesystem walks. The `FileMapper` tracks which files were copied, enabling orphan detection in this package and link translation in the linking package.
 
 ## Code Health
 
 ### Tech Debt
-- `assetref.go:11`: `assetRefPattern` duplicates the identical regex in `cleanup/assets.go:24`; share a single compiled pattern
+- ~~`assetref.go:11`: `assetRefPattern` duplicates the identical regex in `cleanup/assets.go:24`~~ (resolved: `AssetReferencePattern` is now the canonical source; cleanup imports it)
 - `orphan.go` has no corresponding test file
 
 ### Pain Points

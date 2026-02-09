@@ -27,8 +27,8 @@ type FeatureRule struct {
 // ParseFeatureFile extracts metadata from a .feature file.
 func ParseFeatureFile(path string) (*FeatureFile, error) {
 	// Extract module and feature from path
-	// Example: specs/clie-cli/verify-configuration/specification.feature
-	// -> Module: "clie-cli", Feature: "verify-configuration"
+	// Example: specs/clie/verify-configuration/specification.feature
+	// -> Module: "clie", Feature: "verify-configuration"
 	module, featureName := extractModuleAndFeatureFromPath(path)
 
 	file, err := os.Open(path)
@@ -143,9 +143,9 @@ func isStepKeyword(line string) bool {
 
 // extractModuleAndFeatureFromPath parses file path to extract module and feature names
 // Expected format: specs/<module>/<feature>/specification.feature
-// Example: specs/clie-cli/verify-configuration/specification.feature
-// OR absolute path: C:\projects\eac\specs\clie-cli\verify-configuration\specification.feature
-// Returns: "clie-cli", "verify-configuration".
+// Example: specs/clie/verify-configuration/specification.feature
+// OR absolute path: C:\projects\eac\specs\clie\verify-configuration\specification.feature
+// Returns: "clie", "verify-configuration".
 func extractModuleAndFeatureFromPath(path string) (module, feature string) {
 	// Normalize to forward slashes
 	path = filepath.ToSlash(path)
@@ -164,7 +164,7 @@ func extractModuleAndFeatureFromPath(path string) (module, feature string) {
 
 	// Expected format after "specs": <module>/<feature>/specification.feature
 	if specsIndex >= 0 && len(parts) > specsIndex+2 {
-		module = parts[specsIndex+1]  // e.g., "clie-cli"
+		module = parts[specsIndex+1]  // e.g., "clie"
 		feature = parts[specsIndex+2] // e.g., "verify-configuration"
 	} else {
 		module = "unknown"

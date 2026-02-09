@@ -67,21 +67,21 @@ permissions:
 
 | Workflow               | Module          | Release Type | Artifact Type           | Destination     | Versioning |
 | ---------------------- | --------------- | ------------ | ----------------------- | --------------- | ---------- |
-| `release-clie-cli.yaml` | clie-cli         | published    | Cross-platform binaries | GitHub Releases | SemVer     |
+| `release-clie.yaml` | clie         | published    | Cross-platform binaries | GitHub Releases | SemVer     |
 | `release-eac-ext.yaml` | eac-ext         | published    | Docker extension        | Docker Hub      | SemVer     |
 | `release-docs.yaml`    | docs            | published    | Static site             | GitHub Pages    | CalVer     |
 | `release-books.yaml`   | books           | published    | PDF documents           | GitHub Releases | CalVer     |
 | `release-bundle.yaml`  | clie-eac-bundle  | bundle       | Meta-release bundle     | GitHub Releases | SemVer     |
 
-**Note**: Internal modules (eac-cli, eac-mcp-server, clie-installer, vscode-commit) do not have release workflows because they are not released independently.
+**Note**: Internal modules (eac, eac-mcp-server, clie-installer, vscode-commit) do not have release workflows because they are not released independently.
 
-## Example: release-clie-cli.yaml
+## Example: release-clie.yaml
 
 Complete specification for the CLIE CLI binary release workflow.
 
-**File:** `.github/workflows/release-clie-cli.yaml`
+**File:** `.github/workflows/release-clie.yaml`
 
-**Module:** clie-cli
+**Module:** clie
 
 **Artifact:** Cross-platform binaries (Linux, macOS, Windows)
 
@@ -91,7 +91,7 @@ Complete specification for the CLIE CLI binary release workflow.
 on:
   push:
     tags:
-      - 'clie-cli/*'
+      - 'clie/*'
       - 'src-cli/*'  # Legacy tag format for backwards compatibility
   workflow_dispatch:
     inputs:
@@ -103,7 +103,7 @@ on:
 
 **Tag Format:**
 
-- Current: `clie-cli/1.0.0`
+- Current: `clie/1.0.0`
 - Legacy: `src-cli/1.0.0` (supported for backwards compatibility)
 
 ### Permissions
@@ -144,7 +144,7 @@ Verifies that CI has run successfully on the commit being released.
 - name: Check CI status
   run: |
     commands release check-ci \
-      --workflow ci-clie-cli.yaml \
+      --workflow ci-clie.yaml \
       --commit ⟪ github.sha ⟫ \
       --timeout 300
   env:
@@ -153,7 +153,7 @@ Verifies that CI has run successfully on the commit being released.
 
 **Behavior:**
 
-- Queries GitHub API for successful `ci-clie-cli.yaml` run on the commit
+- Queries GitHub API for successful `ci-clie.yaml` run on the commit
 - Waits up to 300 seconds for CI to complete if still running
 - Fails if no successful CI run found
 
@@ -166,7 +166,7 @@ Verifies that CI has run successfully on the commit being released.
   id: extract_version
   uses: ./.github/actions/extract-release-version
   with:
-    module-prefix: clie-cli
+    module-prefix: clie
     legacy-prefixes: src-cli
     commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
@@ -174,7 +174,7 @@ Verifies that CI has run successfully on the commit being released.
 **Outputs:**
 
 - `version` - Extracted version (e.g., `1.0.0`)
-- `tag_name` - Full tag name (e.g., `clie-cli/1.0.0`)
+- `tag_name` - Full tag name (e.g., `clie/1.0.0`)
 - `is_valid` - Boolean indicating valid semver format
 
 **Validation:**
@@ -221,7 +221,7 @@ Verifies that CI has run successfully on the commit being released.
   env:
     VERSION: ⟪ steps.extract_version.outputs.version ⟫
   run: |
-    commands build clie-cli --all --version "$VERSION" --no-tidy
+    commands build clie --all --version "$VERSION" --no-tidy
 ```
 
 **Build Targets:**
@@ -245,16 +245,16 @@ Verifies that CI has run successfully on the commit being released.
 ```yaml
 - name: Verify binaries
   run: |
-    ls -lh out/build/clie-cli/
+    ls -lh out/build/clie/
 
     REQUIRED_FILES=(
-      "out/build/clie-cli/clie-linux-amd64"
-      "out/build/clie-cli/clie-linux-amd64-upx"
-      "out/build/clie-cli/clie-linux-arm64"
-      "out/build/clie-cli/clie-darwin-amd64"
-      "out/build/clie-cli/clie-darwin-arm64"
-      "out/build/clie-cli/clie-windows-amd64.exe"
-      "out/build/clie-cli/clie-windows-amd64-upx.exe"
+      "out/build/clie/clie-linux-amd64"
+      "out/build/clie/clie-linux-amd64-upx"
+      "out/build/clie/clie-linux-arm64"
+      "out/build/clie/clie-darwin-amd64"
+      "out/build/clie/clie-darwin-arm64"
+      "out/build/clie/clie-windows-amd64.exe"
+      "out/build/clie/clie-windows-amd64-upx.exe"
     )
 
     for file in "${REQUIRED_FILES[@]}"; do
@@ -265,8 +265,8 @@ Verifies that CI has run successfully on the commit being released.
     done
 
     # Test binary execution
-    chmod +x out/build/clie-cli/clie-linux-amd64
-    ./out/build/clie-cli/clie-linux-amd64 version
+    chmod +x out/build/clie/clie-linux-amd64
+    ./out/build/clie/clie-linux-amd64 version
 ```
 
 #### Step 9: Generate Build Attestations
@@ -276,13 +276,13 @@ Verifies that CI has run successfully on the commit being released.
   uses: actions/attest-build-provenance@v3
   with:
     subject-path: |
-      out/build/clie-cli/clie-linux-amd64
-      out/build/clie-cli/clie-linux-amd64-upx
-      out/build/clie-cli/clie-linux-arm64
-      out/build/clie-cli/clie-darwin-amd64
-      out/build/clie-cli/clie-darwin-arm64
-      out/build/clie-cli/clie-windows-amd64.exe
-      out/build/clie-cli/clie-windows-amd64-upx.exe
+      out/build/clie/clie-linux-amd64
+      out/build/clie/clie-linux-amd64-upx
+      out/build/clie/clie-linux-arm64
+      out/build/clie/clie-darwin-amd64
+      out/build/clie/clie-darwin-arm64
+      out/build/clie/clie-windows-amd64.exe
+      out/build/clie/clie-windows-amd64-upx.exe
 ```
 
 **Purpose:** Supply chain security via Sigstore attestations
@@ -338,14 +338,14 @@ gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
         --title "clie CLI v$VERSION" \
         --notes-file release_notes.md \
         --target "⟪ github.sha ⟫" \
-        out/build/clie-cli/*
+        out/build/clie/*
     else
       # Tag trigger: use existing tag
       gh release create "$TAG_NAME" \
         --title "clie CLI v$VERSION" \
         --notes-file release_notes.md \
         --verify-tag \
-        out/build/clie-cli/*
+        out/build/clie/*
     fi
   env:
     GH_TOKEN: ⟪ github.token ⟫
@@ -409,7 +409,7 @@ Users can verify artifact authenticity:
 
 ```bash
 # Download binary and attestation
-gh release download clie-cli/1.0.0 -p 'clie-linux-amd64'
+gh release download clie/1.0.0 -p 'clie-linux-amd64'
 
 # Verify attestation
 gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
@@ -440,7 +440,7 @@ gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
 
 **Examples:**
 
-- `clie-cli/1.0.0`
+- `clie/1.0.0`
 - `eac-ext/0.1.0`
 - `docs/2025.12.01`
 - `books/2025.12.01`
@@ -466,11 +466,11 @@ gh attestation verify clie-linux-amd64 --repo <owner>/<repo>
 
 ```bash
 # Create and push tag (triggers release automatically)
-git tag clie-cli/1.0.0
-git push origin clie-cli/1.0.0
+git tag clie/1.0.0
+git push origin clie/1.0.0
 
 # Or trigger manually via workflow dispatch
-gh workflow run release-clie-cli.yaml -f version=1.0.0
+gh workflow run release-clie.yaml -f version=1.0.0
 ```
 
 ### Release Checklist
@@ -490,7 +490,7 @@ gh workflow run release-clie-cli.yaml -f version=1.0.0
 
 ```bash
 # List recent release runs
-gh run list --workflow release-clie-cli.yaml --limit 10
+gh run list --workflow release-clie.yaml --limit 10
 
 # View specific run
 gh run view <run-id>
@@ -504,7 +504,7 @@ gh run view <run-id> --log
 ```bash
 # Check if CI passed for a commit
 eac release check-ci \
-  --workflow ci-clie-cli.yaml \
+  --workflow ci-clie.yaml \
   --commit <sha>
 ```
 
@@ -519,11 +519,11 @@ eac validate release-version 1.0.0
 
 ```bash
 # Build release binaries locally
-eac build clie-cli --all --version 1.0.0
+eac build clie --all --version 1.0.0
 
 # Verify binaries
-ls -lh out/build/clie-cli/
-./out/build/clie-cli/clie-linux-amd64 version
+ls -lh out/build/clie/
+./out/build/clie/clie-linux-amd64 version
 ```
 
 ## References

@@ -40,6 +40,10 @@ type FileCache struct {
 	byExtension map[string][]string
 	bySuffix    map[string][]string
 
+	// githubAPI is the GitHub API implementation for CI Trees API access.
+	// Inject via field assignment; nil means GitHub path is unavailable.
+	githubAPI github.API
+
 	// testGitRepo is used for testing to inject a mock git repository
 	testGitRepo git.GitRepository
 }
@@ -106,19 +110,18 @@ func (c *FileCache) ensurePopulated() error {
 }
 
 // populateFromGitHub fetches file list using GitHub Trees API.
-// Requires GITHUB_SHA env var and github.Global() to be set.
+// Requires GITHUB_SHA env var and githubAPI to be set on the FileCache.
 func (c *FileCache) populateFromGitHub() ([]string, error) {
 	sha := os.Getenv(environments.EnvGitHubSHA)
 	if sha == "" {
 		return nil, &RepositoryError{Op: "github-trees", Message: "GITHUB_SHA not set"}
 	}
 
-	api := github.Global()
-	if api == nil {
+	if c.githubAPI == nil {
 		return nil, &RepositoryError{Op: "github-trees", Message: "GitHub API not initialized"}
 	}
 
-	return api.GetTreeFiles(sha)
+	return c.githubAPI.GetTreeFiles(sha)
 }
 
 // populateFromGit fetches file list using git ls-files.

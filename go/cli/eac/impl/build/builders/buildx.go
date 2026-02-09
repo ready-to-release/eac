@@ -15,7 +15,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/tool"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -74,7 +73,7 @@ func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, out
 	}
 
 	// Get docker_build config from module first, then fall back to module type
-	dockerBuild := getDockerBuildConfig(concrete, opts.Component, logWriter)
+	dockerBuild := getDockerBuildConfig(concrete, opts.Component)
 	if dockerBuild == nil {
 		Logln(logWriter, "❌ No docker_build configuration found for module %s", moniker)
 		return 1
@@ -344,50 +343,18 @@ func expandTemplate(template, moniker string) string {
 }
 
 // getDockerBuildConfig gets docker_build config from a named component, falling back to "dockerfile".
-func getDockerBuildConfig(module *modules.ModuleContract, componentName string, logWriter io.Writer) *config.DockerBuildConfig {
-	// Try the specific component name first (for multi-dockerfile modules like oci-tools)
+func getDockerBuildConfig(module *modules.ModuleContract, componentName string) *config.DockerBuildConfig {
+	// Try named component first
 	if componentName != "" {
-		if pkg := module.Components[componentName]; pkg != nil {
-			if pkg.DockerBuild != nil && len(pkg.DockerBuild) > 0 {
-				dockerCfg, err := convertDockerBuildConfig(pkg.DockerBuild)
-				if err != nil {
-					Logln(logWriter, "⚠️  Failed to parse docker_build config from component %s: %v", componentName, err)
-				} else {
-					return dockerCfg
-				}
-			}
+		if pkg, ok := module.Components[componentName]; ok && pkg != nil && pkg.DockerBuild != nil {
+			return pkg.DockerBuild
 		}
 	}
 
-	// Fall back to legacy "dockerfile" key (backward compatibility for single-container modules)
-	dockerfilePackage := module.Components["dockerfile"]
-	if dockerfilePackage == nil {
+	// Fall back to "dockerfile" key
+	dockerfilePackage, ok := module.Components["dockerfile"]
+	if !ok || dockerfilePackage == nil || dockerfilePackage.DockerBuild == nil {
 		return nil
 	}
-	if dockerfilePackage.DockerBuild == nil || len(dockerfilePackage.DockerBuild) == 0 {
-		return nil
-	}
-
-	dockerCfg, err := convertDockerBuildConfig(dockerfilePackage.DockerBuild)
-	if err != nil {
-		Logln(logWriter, "⚠️  Failed to parse dockerfile package docker_build config: %v", err)
-		return nil
-	}
-	return dockerCfg
-}
-
-// convertDockerBuildConfig converts map[string]interface{} to DockerBuildConfig via YAML.
-func convertDockerBuildConfig(m map[string]interface{}) (*config.DockerBuildConfig, error) {
-	// Marshal to YAML, then unmarshal to typed struct
-	data, err := yaml.Marshal(m)
-	if err != nil {
-		return nil, fmt.Errorf("marshal: %w", err)
-	}
-
-	var dockerCfg config.DockerBuildConfig
-	if err := yaml.Unmarshal(data, &dockerCfg); err != nil {
-		return nil, fmt.Errorf("unmarshal: %w", err)
-	}
-
-	return &dockerCfg, nil
+	return dockerfilePackage.DockerBuild
 }

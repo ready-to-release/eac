@@ -14,7 +14,7 @@ import (
 
 // StructurizrMarker represents a Structurizr diagram marker found in markdown.
 type StructurizrMarker struct {
-	Module    string // Module name (e.g., "eac-cli")
+	Module    string // Module name (e.g., "eac")
 	ViewKey   string // View key (e.g., "SystemContext")
 	StartPos  int    // Start position of the marker in the file
 	EndPos    int    // End position of the marker in the file

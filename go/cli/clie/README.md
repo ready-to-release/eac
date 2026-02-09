@@ -1,4 +1,4 @@
-# clie-cli
+# clie
 
 Command-line interface for running containerized development extensions. Parses CLI arguments, loads layered YAML configuration, manages Docker container lifecycles, and provides interactive TUI feedback.
 
@@ -17,10 +17,10 @@ Command-line interface for running containerized development extensions. Parses 
 
 ## Patterns
 
-- Layered config: Base `clie-cli.yml` merged with `.local.yml`, `.personal.yml`, `.dev.yml` overrides
+- Layered config: Base `clie.yml` merged with `.local.yml`, `.personal.yml`, `.dev.yml` overrides
 - Lazy Docker connectivity: `ContainerHost` defers Ping until first use via `sync.Once`
 - Argument boundary: Parser separates Viper-processed flags from container pass-through args
-- Embedded contracts: EBNF grammar and JSON schema loaded from `contracts/clie-cli` at init
+- Embedded contracts: EBNF grammar and JSON schema loaded from `contracts/clie` at init
 - Atomic file writes: Cache files written to `.tmp` then renamed for crash safety
 
 ## Internal Structure
@@ -45,8 +45,8 @@ Command-line interface for running containerized development extensions. Parses 
 
 ## Dependencies
 
-- `contracts/clie-cli/0.1.0` -- Embedded EBNF grammar and JSON schema
+- `contracts/clie/0.1.0` -- Embedded EBNF grammar and JSON schema
 
 ## Role in System
 
-The clie CLI is the primary user-facing binary that developers invoke to run containerized extensions (e.g., `clie run eac`). It reads `.clie/clie-cli.yml` configuration, resolves extension images from GHCR, and delegates execution to Docker. The CLI is architecturally isolated from the core EAC modules to remain lightweight and independently distributable.
+The clie CLI is the primary user-facing binary that developers invoke to run containerized extensions (e.g., `clie run eac`). It reads `.clie/clie.yml` configuration, resolves extension images from GHCR, and delegates execution to Docker. The CLI is architecturally isolated from the core EAC modules to remain lightweight and independently distributable.

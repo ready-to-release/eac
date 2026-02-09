@@ -96,7 +96,7 @@ Checks sufficient disk space for Docker images.
 
 ### Configuration Validity
 
-Checks `.clie/clie-cli.yml` is valid.
+Checks `.clie/clie.yml` is valid.
 
 ## See Also
 

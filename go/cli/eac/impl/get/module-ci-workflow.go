@@ -6,11 +6,11 @@
 // Long:   echo "$MODULES_JSON" | jq -r '.[] | select(.moniker == "X") | .files.workflows.ci'
 // Long:
 // Long: Exit codes:
-// Long:   0 - Workflow found, outputs filename (e.g., ci-clie-cli.yaml)
+// Long:   0 - Workflow found, outputs filename (e.g., ci-clie.yaml)
 // Long:   1 - Module not found or no CI workflow configured
 // Long:
 // Long: Example:
-// Long:   get module-ci-workflow clie-cli       # Outputs: ci-clie-cli.yaml
+// Long:   get module-ci-workflow clie       # Outputs: ci-clie.yaml
 // Long:   get module-ci-workflow core      # Outputs: ci-core.yaml
 // Flag.basename: type=bool, usage=Output only the basename (default true)
 package get

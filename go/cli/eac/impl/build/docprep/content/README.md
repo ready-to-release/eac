@@ -37,13 +37,13 @@ Content processing phases for the docprep pipeline, handling command execution, 
 
 ## Role in System
 
-The content package provides four phases in the docprep preprocessing pipeline within `eac-cli`. Phase 4 converts attr-list images to HTML. Phase 6 executes commands defined in `books.yml` and collects their output. Phase 8 inserts command output at marker positions in markdown files. Phase 9 expands command help markers into formatted documentation sections. These transformations prepare dynamic content before MkDocs rendering.
+The content package provides four phases in the docprep preprocessing pipeline within `eac`. Phase 4 converts attr-list images to HTML. Phase 6 executes commands defined in `books.yml` and collects their output. Phase 8 inserts command output at marker positions in markdown files. Phase 9 expands command help markers into formatted documentation sections. These transformations prepare dynamic content before MkDocs rendering.
 
 ## Code Health
 
 ### Tech Debt
-- `cmdhelp.go` is 819 lines with ~20 exported `Format*` functions; many share similar patterns (get commands, filter, format table/list) that could share a template-based approach
-- `cmdhelp.go:536`: `ParseHelpOutput` is ~121 lines with a state-machine parser that is hard to extend for new help sections
+- ~~`cmdhelp.go` is 819 lines~~ (resolved: split into `cmdhelp.go`, `cmdhelp_format.go`, `cmdhelp_parse.go`, `cmdhelp_helpers.go`); the ~20 exported `Format*` functions still share similar patterns that could use a template-based approach
+- `cmdhelp_parse.go`: `ParseHelpOutput` is ~121 lines with a state-machine parser that is hard to extend for new help sections
 
 ### Pain Points
 - Three compiled regex patterns in `images.go` (`imagePattern`, `imageWithAttrsPattern`, `drawioImagePattern`) overlap in what they match; adding a new image syntax requires updating multiple regexes

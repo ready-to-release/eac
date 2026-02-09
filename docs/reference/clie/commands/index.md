@@ -8,7 +8,7 @@ It provides framework commands for installing and running the EAC extension.
 
 | Command                       | Description                                   |
 | ----------------------------- | --------------------------------------------- |
-| [init](init.md)               | Initialize `.clie/clie-cli.yml` configuration   |
+| [init](init.md)               | Initialize `.clie/clie.yml` configuration   |
 | [install](install.md)         | Install the EAC extension                     |
 | [list](list.md)               | List available extensions                     |
 | [validate](validate.md)       | Validate configuration syntax                 |
@@ -39,11 +39,11 @@ clie eac test
 | **Purpose**  | Extension framework | Automation tools      |
 | **Commands** | init, install, list | build, test, validate |
 | **Runs**     | Host machine        | Docker container      |
-| **Config**   | `.clie/clie-cli.yml`  | `.eac/`           |
+| **Config**   | `.clie/clie.yml`  | `.eac/`           |
 
 ## Configuration File
 
-CLIE CLI uses `.clie/clie-cli.yml`:
+CLIE CLI uses `.clie/clie.yml`:
 
 ```yaml
 extensions:

@@ -149,7 +149,7 @@ func TestStripTagPrefixes(t *testing.T) {
 
 func TestExtractFeatureName(t *testing.T) {
 	assert.Equal(t, "login", ExtractFeatureName("specs/mymod/login/specification.feature"))
-	assert.Equal(t, "create-design", ExtractFeatureName("specs/eac-cli/create-design/specification.feature"))
+	assert.Equal(t, "create-design", ExtractFeatureName("specs/eac/create-design/specification.feature"))
 	assert.Equal(t, "", ExtractFeatureName(""))
 	assert.Equal(t, "", ExtractFeatureName("no/specs/here"))
 }

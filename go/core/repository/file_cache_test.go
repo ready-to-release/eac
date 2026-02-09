@@ -79,11 +79,10 @@ func TestFileCache_CI_UsesGitHubAPI(t *testing.T) {
 	// Setup GitHub mock
 	mockAPI := github.NewMockAPI().
 		AddTreeFiles("abc123def456", []string{"src/main.go", "src/util.go", "README.md"})
-	github.SetGlobal(mockAPI)
-	defer github.SetGlobal(nil)
 
-	// Create cache with useGitHubInCI=true
+	// Create cache with useGitHubInCI=true and inject mock API
 	cache := NewFileCache("/test/repo", true)
+	cache.githubAPI = mockAPI
 
 	// Act
 	files, err := cache.TrackedFiles()
@@ -116,15 +115,14 @@ func TestFileCache_CI_FallsBackToGit_WhenGitHubAPIFails(t *testing.T) {
 	// Setup GitHub mock to fail
 	mockAPI := github.NewMockAPI()
 	mockAPI.TreeError = errors.New("API rate limit exceeded")
-	github.SetGlobal(mockAPI)
-	defer github.SetGlobal(nil)
 
 	// Setup git mock as fallback
 	mockGit := git.NewMockRepository("/test/repo").
 		WithTrackedFiles([]string{"fallback1.go", "fallback2.go"})
 
-	// Create cache
+	// Create cache with injected mocks
 	cache := NewFileCache("/test/repo", true)
+	cache.githubAPI = mockAPI
 	cache.testGitRepo = mockGit
 
 	// Act
@@ -155,17 +153,16 @@ func TestFileCache_CI_FallsBackToGit_WhenGitHubSHAMissing(t *testing.T) {
 	os.Setenv("CI", "true")
 	os.Unsetenv("GITHUB_SHA")
 
-	// Setup GitHub mock (should not be called)
+	// Setup GitHub mock (should not be called since SHA is missing)
 	mockAPI := github.NewMockAPI()
-	github.SetGlobal(mockAPI)
-	defer github.SetGlobal(nil)
 
 	// Setup git mock as fallback
 	mockGit := git.NewMockRepository("/test/repo").
 		WithTrackedFiles([]string{"fallback.go"})
 
-	// Create cache
+	// Create cache with injected mocks
 	cache := NewFileCache("/test/repo", true)
+	cache.githubAPI = mockAPI
 	cache.testGitRepo = mockGit
 
 	// Act
@@ -193,14 +190,11 @@ func TestFileCache_CI_FallsBackToGit_WhenGitHubAPINotInitialized(t *testing.T) {
 	os.Setenv("CI", "true")
 	os.Setenv("GITHUB_SHA", "abc123")
 
-	// No GitHub API set (nil)
-	github.SetGlobal(nil)
-
-	// Setup git mock as fallback
+	// Setup git mock as fallback (no githubAPI set — nil)
 	mockGit := git.NewMockRepository("/test/repo").
 		WithTrackedFiles([]string{"fallback.go"})
 
-	// Create cache
+	// Create cache without githubAPI (simulates uninitialized)
 	cache := NewFileCache("/test/repo", true)
 	cache.testGitRepo = mockGit
 

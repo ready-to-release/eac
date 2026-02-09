@@ -183,7 +183,7 @@ Runs both commit and acceptance test suites (full validation)
 | `ci-eac-core.yaml`          | eac-core          | Go library        | Build, Test | commit, acceptance |
 | `ci-eac-mcp-commands.yaml`  | eac-mcp-commands  | Go MCP server     | Build, Test | commit, acceptance |
 | `ci-eac-ext.yaml`           | eac-ext           | Docker extension  | Build, Test | commit, acceptance |
-| `ci-clie-cli.yaml`           | clie-cli           | Go CLI            | Build, Test | commit, acceptance |
+| `ci-clie.yaml`           | clie           | Go CLI            | Build, Test | commit, acceptance |
 | `ci-vscode-commit.yaml`     | vscode-commit     | VSCode extension  | Build, Test | commit, acceptance |
 | `ci-books.yaml`             | books             | PDF documentation | Build, Test | commit, acceptance |
 | `ci-docs.yaml`              | docs              | MkDocs site       | Build, Test | commit, acceptance |
@@ -327,7 +327,7 @@ Each module CI workflow reports a status check to the commit:
 **Examples:**
 
 - `CI: eac-commands`
-- `CI: clie-cli`
+- `CI: clie`
 - `CI: docs`
 
 **Status Values:**

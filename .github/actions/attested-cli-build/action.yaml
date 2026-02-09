@@ -20,7 +20,7 @@
 #         - uses: ./.github/actions/attested-cli-build
 #           with:
 #             version: 1.0.0
-#             tag_name: clie-cli/1.0.0
+#             tag_name: clie/1.0.0
 
 name: Attested CLI Build
 description: Build, attest, and publish CLI binaries to GitHub Releases
@@ -30,7 +30,7 @@ inputs:
     description: 'Version to build (e.g., 1.0.0)'
     required: true
   tag_name:
-    description: 'Git tag name (e.g., clie-cli/1.0.0)'
+    description: 'Git tag name (e.g., clie/1.0.0)'
     required: true
   build-args:
     description: 'Extra build arguments'
@@ -48,8 +48,8 @@ runs:
     - name: Build Module
       uses: ./.github/actions/build-module
       with:
-        module: clie-cli
-        artifact-name: build-artifacts-clie-cli
+        module: clie
+        artifact-name: build-artifacts-clie
         upload-artifact: 'true'
         extra-args: ${{ inputs.build-args }}
 
@@ -57,13 +57,13 @@ runs:
       uses: actions/attest-build-provenance@v3
       with:
         subject-path: |
-          out/build/clie-cli/go/clie-linux-amd64
-          out/build/clie-cli/go/clie-linux-amd64-upx
-          out/build/clie-cli/go/clie-linux-arm64
-          out/build/clie-cli/go/clie-darwin-amd64
-          out/build/clie-cli/go/clie-darwin-arm64
-          out/build/clie-cli/go/clie-windows-amd64.exe
-          out/build/clie-cli/go/clie-windows-amd64-upx.exe
+          out/build/clie/go/clie-linux-amd64
+          out/build/clie/go/clie-linux-amd64-upx
+          out/build/clie/go/clie-linux-arm64
+          out/build/clie/go/clie-darwin-amd64
+          out/build/clie/go/clie-darwin-arm64
+          out/build/clie/go/clie-windows-amd64.exe
+          out/build/clie/go/clie-windows-amd64-upx.exe
 
     - name: Setup Commands Binary
       id: commands
@@ -74,13 +74,13 @@ runs:
       shell: bash
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        MODULE: clie-cli
+        MODULE: clie
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
         # Generate release notes using Go command
         ${COMMANDS:?COMMANDS not set} get cli-release-notes \
-          --module clie-cli \
+          --module clie \
           --binary-prefix clie \
           --version "$VERSION" \
           --tag "$TAG_NAME" \
@@ -95,7 +95,7 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        MODULE: clie-cli
+        MODULE: clie
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
@@ -107,31 +107,31 @@ runs:
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "Manual trigger: creating tag and release together"
           gh release create "$TAG_NAME" \
-            --title "clie-cli v$VERSION" \
+            --title "clie v$VERSION" \
             --notes-file release_notes.md \
             --target "${{ github.sha }}" \
             --latest=false \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/clie/go/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/clie/go/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/clie/go/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
         else
           echo "Tag trigger: using existing tag"
           gh release create "$TAG_NAME" \
-            --title "clie-cli v$VERSION" \
+            --title "clie v$VERSION" \
             --notes-file release_notes.md \
             --verify-tag \
             --latest=false \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/clie-cli/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/clie/go/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/clie/go/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/clie/go/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
         fi
 
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
@@ -159,7 +159,7 @@ runs:
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
 
         if [ "${{ job.status }}" = "success" ]; then
-          echo "## :package: clie-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+          echo "## :package: clie v$VERSION Released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -175,7 +175,7 @@ runs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo ":lock: All binaries have build attestations" >> $GITHUB_STEP_SUMMARY
         else
-          echo "### Build Failed: clie-cli v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Failed: clie v$VERSION" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Release build or publish failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
         fi

@@ -71,7 +71,7 @@ func (t *InMemoryTracker) RecordComplete(id workunit.UnitID, manifest *UoWManife
 	// Ensure UoW identity fields match the ID
 	manifest.Action = id.Action
 	manifest.Module = id.Module
-	manifest.Component = id.Component
+	manifest.Component = id.ComponentName
 	manifest.Tool = id.Tool
 	manifest.Extra = id.Extra
 

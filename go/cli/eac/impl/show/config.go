@@ -66,8 +66,8 @@ func ShowConfig() int {
 	}
 
 	// Component Types
-	if cfg.ComponentTypes != nil {
-		summaryTb.AddRow("component_types", "✓ loaded", len(cfg.ComponentTypes.ComponentTypes))
+	if cfg.ComponentKinds != nil {
+		summaryTb.AddRow("component_types", "✓ loaded", len(cfg.ComponentKinds.Kinds))
 	} else {
 		summaryTb.AddRow("component_types", "✗ not loaded", "-")
 	}
@@ -132,12 +132,12 @@ func ShowConfig() int {
 	}
 
 	// Package Types
-	if cfg.ComponentTypes != nil && len(cfg.ComponentTypes.ComponentTypes) > 0 {
+	if cfg.ComponentKinds != nil && len(cfg.ComponentKinds.Kinds) > 0 {
 		fmt.Println("## Package Types")
 		fmt.Println("")
 		typeTb := render.NewTableBuilder().
 			WithHeaders("Type", "Pool")
-		for name, t := range cfg.ComponentTypes.ComponentTypes {
+		for name, t := range cfg.ComponentKinds.Kinds {
 			pool := t.GetPool()
 			typeTb.AddRow(name, pool)
 		}

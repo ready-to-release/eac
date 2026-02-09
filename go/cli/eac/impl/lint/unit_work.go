@@ -1,6 +1,7 @@
 package lint
 
 import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/resolver"
@@ -67,8 +68,11 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			}
 
 			// Update with handler info
-			specs[i].Container = handler.IsContainer()
-			specs[i].HostInstalled = !handler.IsContainer()
+			weight := specs[i].Weight
+			if weight == 0 {
+				weight = 1
+			}
+			specs[i].PoolAllocation = core.AllocationForWeight(weight, handler.IsContainer())
 			specs[i].Index = globalIndex
 			globalIndex++
 

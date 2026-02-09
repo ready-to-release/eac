@@ -175,7 +175,7 @@ func (b *ScanBridge) GetScannersByCategory(category string) []*ToolDefinition {
 // GetScannersForModule returns all applicable scanner tool IDs for a module's components.
 // Uses component-types.yml to determine which scanners apply based on
 // the component types present in the module.
-func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []string {
+func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentKindsConfig) []string {
 	if module == nil || componentTypes == nil {
 		return nil
 	}
@@ -207,7 +207,7 @@ func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, compon
 }
 
 // GetScannerToolsForModule returns tool definitions for all applicable scanners.
-func (b *ScanBridge) GetScannerToolsForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []*ToolDefinition {
+func (b *ScanBridge) GetScannerToolsForModule(module *modules.ModuleContract, componentTypes *config.ComponentKindsConfig) []*ToolDefinition {
 	toolIDs := b.GetScannersForModule(module, componentTypes)
 	if len(toolIDs) == 0 {
 		return nil

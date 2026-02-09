@@ -88,21 +88,6 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 	return filepath.Join(StagingCachePath(repoRoot), moniker, bookName)
 }
 
-// StructurizrCachePath returns the path to the Structurizr cache directory in docs/assets/cache
-// This is the git-tracked cache location for CI optimization (pre-rendered Structurizr diagrams).
-func StructurizrCachePath(repoRoot string) string {
-	return filepath.Join(DocsCachePath(repoRoot), "structurizr")
-}
-
-// StructurizrDocsCachePath returns the path to a cached Structurizr SVG in docs/assets/cache
-// Filename format: {module}_{viewKey}_{dslHash}.svg
-// The dslHash is the first 8 characters of the SHA256 hash of the workspace.dsl content
-// This ensures all views from the same DSL file share the same hash for cache invalidation.
-func StructurizrDocsCachePath(repoRoot, module, viewKey, dslHash string) string {
-	filename := fmt.Sprintf("%s_%s_%s.svg", module, viewKey, dslHash)
-	return filepath.Join(StructurizrCachePath(repoRoot), filename)
-}
-
 // StructurizrModuleBuildOutputPath returns the path to a module's structurizr build output directory.
 // Each module with a structurizr component gets its own build output.
 // Path: out/build/{module}/structurizr-structurizr-render/structurizr/

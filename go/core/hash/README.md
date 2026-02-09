@@ -48,8 +48,7 @@ fast path that skips content reads when file modification times are unchanged.
 
 ### Pain Points
 - parallel.go: `FilesParallel` is ~108 lines with three separate context-cancellation checks; extracting the fan-out loop into a helper would improve readability
-- parallel.go: `hashSingleFile` loads the entire file into memory via `io.ReadAll`; for very large binaries this could spike RSS
 
 ### Optimization Opportunities
-- `hashSingleFile` could stream content directly into a per-file `sha256.Hash` instead of buffering, reducing peak memory for large files (moderate effort, measure with binary-heavy repos first)
+- ~~`hashSingleFile` could stream content directly into a per-file `sha256.Hash` instead of buffering~~ (resolved: now uses `io.Copy` streaming)
 - `mtimesUnchanged` stats files sequentially; for modules with thousands of source files, parallel stat calls would reduce the fast-path latency (low priority, profile first)

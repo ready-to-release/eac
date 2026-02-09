@@ -1,4 +1,4 @@
-// Package commitmessage contains godog step implementations for eac-cli.
+// Package commitmessage contains godog step implementations for eac.
 //
 // This file contains create commit-message command step definitions.
 package commitmessage

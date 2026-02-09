@@ -30,7 +30,7 @@ Ensure GitHub workflows:
 
 ## What I Need From You
 
-- Workflow name or file path (e.g., "ci-eac-cli")
+- Workflow name or file path (e.g., "ci-eac")
 - Specific run ID (for debugging, e.g., #12345)
 - What you want to analyze or optimize
 
@@ -94,7 +94,7 @@ Read .github/workflows/*.yaml
 I parse workflow names for stage information:
 
 - Pattern: `(stage X-Y)` or `(stage X)`
-- Example: "ci-eac-cli (stage 1-7)" → stages [1,2,3,4,5,6,7]
+- Example: "ci-eac (stage 1-7)" → stages [1,2,3,4,5,6,7]
 
 ### 4. Analyze Workflows
 
@@ -151,7 +151,7 @@ I analyze:
 ### 6. Generate Report
 
 ```markdown
-## Workflow Analysis: ci-eac-cli
+## Workflow Analysis: ci-eac
 
 ### Summary
 ✅ Stage naming correct
@@ -229,9 +229,9 @@ When analyzing multiple workflows:
 
 ```bash
 gh workflow list
-gh run list --workflow=ci-eac-cli
+gh run list --workflow=ci-eac
 gh run view <run-id> --log
-gh workflow view ci-eac-cli --yaml
+gh workflow view ci-eac --yaml
 ```
 
 ## CD Model Stage Validation
@@ -303,7 +303,7 @@ These stages MUST be fast to encourage frequent commits.
 
 ## Example Analysis Session
 
-**User**: Analyze the ci-eac-cli workflow
+**User**: Analyze the ci-eac workflow
 
 **Agent**:
 
@@ -317,14 +317,14 @@ Loading CD Model reference...
 Discovering workflows...
 ✅ Found 15 workflows in .github/workflows/
 
-Analyzing ci-eac-cli.yaml...
+Analyzing ci-eac.yaml...
 
-## Workflow Analysis: ci-eac-cli
+## Workflow Analysis: ci-eac
 
 ### Metadata
-- Name: ci-eac-cli (stage 1-7)
+- Name: ci-eac (stage 1-7)
 - Stages: 1, 2, 3, 4, 5, 6, 7
-- File: .github/workflows/ci-eac-cli.yaml
+- File: .github/workflows/ci-eac.yaml
 - Triggers: workflow_call, workflow_dispatch
 
 ### Recent Runs (Last 5)
@@ -363,7 +363,7 @@ Analyzing ci-eac-cli.yaml...
    - Code fix:
      ```yaml
      jobs:
-       ci-eac-cli:
+       ci-eac:
          timeout-minutes: 15
      ```
 

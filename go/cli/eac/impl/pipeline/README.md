@@ -14,7 +14,7 @@ Orchestrates CI/CD pipeline operations including workflow dispatch, status polli
 
 ## Patterns
 
-- Registry-based subcommand dispatch: each subcommand file calls `registry.Register` in `init()`
+- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
 - Dependency-ordered execution: processes modules sequentially in dependency order with per-module wait
 - Dual polling modes: wait by workflow pattern+SHA or by specific run ID
 - Mock injection via environment variables: `CLIE_MOCK_GITHUB_CLI` switches to mock implementation
@@ -54,7 +54,7 @@ Orchestrates CI/CD pipeline operations including workflow dispatch, status polli
 
 ## Role in System
 
-The `pipeline` package provides CI/CD orchestration commands for `eac-cli`, bridging local development with GitHub Actions workflows. It enables dependency-aware pipeline execution, CI status monitoring, and evidence artifact retrieval, serving as the primary interface for both interactive developer-triggered pipelines and automated CI/CD coordination flows.
+The `pipeline` package provides CI/CD orchestration commands for `eac`, bridging local development with GitHub Actions workflows. It enables dependency-aware pipeline execution, CI status monitoring, and evidence artifact retrieval, serving as the primary interface for both interactive developer-triggered pipelines and automated CI/CD coordination flows.
 
 ## Code Health
 
@@ -64,7 +64,7 @@ The `pipeline` package provides CI/CD orchestration commands for `eac-cli`, brid
 - download_evidence_artifacts.go (403 lines) is the largest file with no dedicated unit tests
 
 ### Pain Points
-- Many subcommand files (10+ .go files) each with their own `init()` registration follow the same boilerplate pattern as release/
+- ~~Many subcommand files each with their own `init()` registration follow the same boilerplate pattern~~ (resolved: table-driven `commands.go`)
 - No unit tests exist outside of BDD test files; all testing relies on integration-level BDD scenarios
 
 ### Optimization Opportunities

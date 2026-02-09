@@ -12,7 +12,7 @@
 // Long: Output: Run ID (empty if not found)
 // Long:
 // Long: Example:
-// Long:   pipeline find-run-id --workflow ci-clie-cli.yaml --sha abc123
+// Long:   pipeline find-run-id --workflow ci-clie.yaml --sha abc123
 // Long:   pipeline find-run-id --workflow ci-docs.yaml --sha abc123 --status success
 package pipeline
 
@@ -64,10 +64,7 @@ func PipelineFindRunID() int {
 	}
 
 	// Use GitHub API
-	api := github.Global()
-	if api == nil {
-		api = github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
-	}
+	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
 
 	// List runs and filter
 	runs, err := api.ListRuns(workflow, github.ListRunsOpts{

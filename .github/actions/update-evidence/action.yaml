@@ -6,8 +6,8 @@
 # Usage:
 #   - uses: ./.github/actions/update-evidence
 #     with:
-#       module: clie-cli
-#       tag_name: clie-cli/1.0.0
+#       module: clie
+#       tag_name: clie/1.0.0
 
 name: Update Evidence
 description: Download evidence PDFs from CI and upload to GitHub release

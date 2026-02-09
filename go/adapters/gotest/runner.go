@@ -60,9 +60,11 @@ func (r *GoTestRunner) IsBDD() bool {
 }
 
 // GetTestInfo extracts structured test metadata from a Go test reference.
-func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *testrunners.TestInfo {
+func (r *GoTestRunner) GetTestInfo(ref testing.TestReference, workspaceRoot string, cfg any) *testrunners.TestInfo {
+	eacCfg := cfg.(*config.EACConfig)
+
 	// Calculate relative path from workspace root
-	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+	relPath, err := filepath.Rel(workspaceRoot, ref.FilePath)
 	if err != nil {
 		return nil
 	}
@@ -70,9 +72,9 @@ func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot str
 
 	info := &testrunners.TestInfo{Language: "go"}
 
-	if test.Type == "godog" {
+	if ref.Type == "godog" {
 		// BDD test: extract from specs path
-		specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+		specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
 		specRelPath := strings.TrimPrefix(relPath, specsPrefix)
 		specRelPath = filepath.ToSlash(specRelPath)
 
@@ -84,7 +86,7 @@ func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot str
 		info.ModuleMoniker = parts[0]
 
 		// Verify module exists
-		if cfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
+		if eacCfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
 			return nil
 		}
 
@@ -100,7 +102,7 @@ func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot str
 		info.DisplayName = featureFolderName + ":" + info.TestRoot
 	} else {
 		// Unit test (gotest): extract module from path using module_mapping
-		absDir := filepath.Dir(test.FilePath)
+		absDir := filepath.Dir(ref.FilePath)
 		relDir, err := filepath.Rel(workspaceRoot, absDir)
 		if err != nil {
 			return nil
@@ -108,7 +110,7 @@ func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot str
 		relDir = filepath.ToSlash(relDir)
 
 		// Find the module this path belongs to
-		info.ModuleMoniker = findModuleForPath(relDir, cfg)
+		info.ModuleMoniker = findModuleForPath(relDir, eacCfg)
 		if info.ModuleMoniker == "" {
 			return nil
 		}
@@ -125,14 +127,16 @@ func (r *GoTestRunner) GetTestInfo(test testing.TestReference, workspaceRoot str
 // For gotest, returns empty string (tests are in the same directory as source).
 // For godog, returns the path to the directory containing godog_test.go.
 // Returns empty string if module not found or no godog_test.go exists - caller must handle.
-func (r *GoTestRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) string {
+func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
+	eacCfg := cfg.(*config.EACConfig)
+
 	// gotest doesn't need a separate test root
 	if !strings.HasSuffix(featurePath, ".feature") {
 		return ""
 	}
 
 	// Extract relative path from specs root
-	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+	specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
 	relPath := strings.TrimPrefix(filepath.ToSlash(featurePath), specsPrefix)
 	relPath = strings.TrimPrefix(relPath, strings.ReplaceAll(specsPrefix, "/", "\\"))
 	relPath = filepath.ToSlash(relPath)
@@ -148,21 +152,21 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) s
 	moniker := parts[0]
 
 	// Verify module exists - fail early if not
-	if cfg.Repository.GetByMoniker(moniker) == nil {
+	if eacCfg.Repository.GetByMoniker(moniker) == nil {
 		goRunnerLog.Debugf("FindTestRoot: unknown module %s for %s", moniker, featurePath)
 		return "" // Unknown module, no fallback guessing
 	}
 
 	// Get test impl path from module contract
-	basePath := cfg.Repository.TestImplPath(moniker)
+	basePath := eacCfg.Repository.TestImplPath(moniker)
 	if basePath == "" {
 		goRunnerLog.Debugf("FindTestRoot: no test-impl path for module %s", moniker)
 		return ""
 	}
 
 	// Check if godog test file exists at base path
-	workspaceRoot := cfg.RepoRoot
-	godogTestFile := cfg.Repository.Conventions.GodogTest
+	workspaceRoot := eacCfg.RepoRoot
+	godogTestFile := eacCfg.Repository.Conventions.GodogTest
 	baseCheck := filepath.Join(workspaceRoot, basePath, godogTestFile)
 	if fileExists(baseCheck) {
 		goRunnerLog.Debugf("FindTestRoot: found %s at basePath %s", godogTestFile, basePath)

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// CommandsBinaryPath returns the full path to the pre-built eac-cli binary.
+// CommandsBinaryPath returns the full path to the pre-built eac binary.
 // This is THE canonical way to locate the commands binary for execution.
 //
 // When running in a container (CLIE_CONTAINER_ROOT is set), uses the container's

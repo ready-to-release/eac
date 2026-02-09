@@ -12,68 +12,41 @@ import (
 // TestCountLintComponents tests the CountLintComponents function.
 func TestCountLintComponents(t *testing.T) {
 	tests := []struct {
-		name   string
-		layers [][]workunit.UnitSpec
-		want   int
+		name  string
+		units []workunit.UnitSpec
+		want  int
 	}{
 		{
-			name:   "nil layers returns 0",
-			layers: nil,
-			want:   0,
+			name:  "nil units returns 0",
+			units: nil,
+			want:  0,
 		},
 		{
-			name:   "empty layers returns 0",
-			layers: [][]workunit.UnitSpec{},
-			want:   0,
+			name:  "empty units returns 0",
+			units: []workunit.UnitSpec{},
+			want:  0,
 		},
 		{
-			name: "single layer with single component",
-			layers: [][]workunit.UnitSpec{
-				{
-					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
-				},
+			name: "single component",
+			units: []workunit.UnitSpec{
+				{ID: workunit.UnitID{Module: "mod-a", ComponentType: "go-lint", ComponentName: "go-lint"}},
 			},
 			want: 1,
 		},
 		{
-			name: "single layer with multiple components",
-			layers: [][]workunit.UnitSpec{
-				{
-					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
-					{ID: workunit.UnitID{Module: "mod-b", Component: "go-lint"}},
-					{ID: workunit.UnitID{Module: "mod-c", Component: "eslint"}},
-				},
+			name: "multiple components",
+			units: []workunit.UnitSpec{
+				{ID: workunit.UnitID{Module: "mod-a", ComponentType: "go-lint", ComponentName: "go-lint"}},
+				{ID: workunit.UnitID{Module: "mod-b", ComponentType: "go-lint", ComponentName: "go-lint"}},
+				{ID: workunit.UnitID{Module: "mod-c", ComponentType: "eslint", ComponentName: "eslint"}},
 			},
 			want: 3,
-		},
-		{
-			name: "multiple layers with multiple components",
-			layers: [][]workunit.UnitSpec{
-				{
-					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
-					{ID: workunit.UnitID{Module: "mod-b", Component: "go-lint"}},
-				},
-				{
-					{ID: workunit.UnitID{Module: "mod-c", Component: "eslint"}},
-				},
-			},
-			want: 3,
-		},
-		{
-			name: "empty inner layer",
-			layers: [][]workunit.UnitSpec{
-				{},
-				{
-					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
-				},
-			},
-			want: 1,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CountLintComponents(tt.layers)
+			got := CountLintComponents(tt.units)
 			if got != tt.want {
 				t.Errorf("CountLintComponents() = %d, want %d", got, tt.want)
 			}

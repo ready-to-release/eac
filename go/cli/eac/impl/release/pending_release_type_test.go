@@ -12,7 +12,7 @@ import (
 )
 
 // TestFindModulesWithChangelogsAll tests that findModulesWithChangelogsAll finds modules with changelogs.
-// SemVer modules with changelogs: clie-cli, eac-ext (published), clie-eac-bundle (bundle).
+// SemVer modules with changelogs: clie, eac-ext (published), clie-eac-bundle (bundle).
 // CalVer modules (docs) have no changelogs.
 func TestFindModulesWithChangelogsAll(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
@@ -23,10 +23,10 @@ func TestFindModulesWithChangelogsAll(t *testing.T) {
 	// Should find SemVer modules with changelogs
 	assert.NotEmpty(t, modules, "should find modules with changelogs")
 
-	// Check that we find SemVer published modules (clie-cli, eac-ext)
+	// Check that we find SemVer published modules (clie, eac-ext)
 	hasSemVerPublished := false
 	for _, mod := range modules {
-		if mod == "clie-cli" || mod == "eac-ext" {
+		if mod == "clie" || mod == "eac-ext" {
 			hasSemVerPublished = true
 			break
 		}
@@ -40,7 +40,7 @@ func TestFindModulesWithChangelogsAll(t *testing.T) {
 }
 
 // TestFilterModulesByReleaseType tests filtering modules by release type.
-// Only SemVer modules have changelogs: clie-cli, eac-ext (published).
+// Only SemVer modules have changelogs: clie, eac-ext (published).
 // CalVer modules (docs, clie-eac-bundle) have no changelogs, so they won't be in the input set.
 func TestFilterModulesByReleaseType(t *testing.T) {
 	workspaceRoot := getTestWorkspaceRoot(t)
@@ -54,19 +54,19 @@ func TestFilterModulesByReleaseType(t *testing.T) {
 		{
 			name:          "filter published only",
 			filterType:    "published",
-			shouldInclude: []string{"clie-cli", "eac-ext"},
+			shouldInclude: []string{"clie", "eac-ext"},
 			shouldExclude: []string{"clie-eac-bundle"},
 		},
 		{
 			name:          "filter bundle only",
 			filterType:    "bundle",
 			shouldInclude: []string{},
-			shouldExclude: []string{"clie-cli", "eac-ext"},
+			shouldExclude: []string{"clie", "eac-ext"},
 		},
 		{
 			name:          "no filter (all)",
 			filterType:    "",
-			shouldInclude: []string{"clie-cli", "eac-ext"},
+			shouldInclude: []string{"clie", "eac-ext"},
 			shouldExclude: []string{},
 		},
 	}
@@ -122,7 +122,7 @@ func TestGetModuleReleaseType(t *testing.T) {
 		module       string
 		expectedType string
 	}{
-		{"clie-cli", "published"},
+		{"clie", "published"},
 		{"eac-ext", "published"},
 		{"docs", "published"},
 		{"clie-eac-bundle", "bundle"},
@@ -141,7 +141,7 @@ func TestGetModuleReleaseType(t *testing.T) {
 func TestPendingReleaseIncludesReleaseType(t *testing.T) {
 	// Create a sample PendingRelease
 	pending := PendingRelease{
-		Module:         "clie-cli",
+		Module:         "clie",
 		HasChanges:     true,
 		CurrentVersion: "0.0.24",
 		NextVersion:    "0.0.25",
@@ -149,7 +149,7 @@ func TestPendingReleaseIncludesReleaseType(t *testing.T) {
 	}
 
 	assert.Equal(t, "published", pending.ReleaseType, "should include release type")
-	assert.Equal(t, "clie-cli", pending.Module)
+	assert.Equal(t, "clie", pending.Module)
 }
 
 // getTestWorkspaceRoot returns the workspace root for tests.

@@ -27,11 +27,11 @@ func TestParseConfig(t *testing.T) {
 	}{
 		{
 			name:    "valid module name",
-			args:    []string{"cmd", "design", "create", "clie-cli"},
+			args:    []string{"cmd", "design", "create", "clie"},
 			wantErr: false,
 			checkFunc: func(t *testing.T, config *DesignConfig) {
-				if config.Module != "clie-cli" {
-					t.Errorf("Module = %q, want %q", config.Module, "clie-cli")
+				if config.Module != "clie" {
+					t.Errorf("Module = %q, want %q", config.Module, "clie")
 				}
 				if config.Debug {
 					t.Error("Debug should be false by default")
@@ -43,7 +43,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:    "with debug flag",
-			args:    []string{"cmd", "design", "create", "clie-cli", "--debug"},
+			args:    []string{"cmd", "design", "create", "clie", "--debug"},
 			wantErr: false,
 			checkFunc: func(t *testing.T, config *DesignConfig) {
 				if !config.Debug {
@@ -53,7 +53,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:    "with force flag",
-			args:    []string{"cmd", "design", "create", "clie-cli", "--force"},
+			args:    []string{"cmd", "design", "create", "clie", "--force"},
 			wantErr: false,
 			checkFunc: func(t *testing.T, config *DesignConfig) {
 				if !config.Force {
@@ -63,7 +63,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:    "with output path",
-			args:    []string{"cmd", "design", "create", "clie-cli", "--output", "custom/path.dsl"},
+			args:    []string{"cmd", "design", "create", "clie", "--output", "custom/path.dsl"},
 			wantErr: false,
 			checkFunc: func(t *testing.T, config *DesignConfig) {
 				if config.OutputPath != "custom/path.dsl" {
@@ -73,7 +73,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:    "with all flags",
-			args:    []string{"cmd", "design", "create", "clie-cli", "-d", "-f", "-o", "out.dsl"},
+			args:    []string{"cmd", "design", "create", "clie", "-d", "-f", "-o", "out.dsl"},
 			wantErr: false,
 			checkFunc: func(t *testing.T, config *DesignConfig) {
 				if !config.Debug {
@@ -155,9 +155,9 @@ func TestValidateModuleExists(t *testing.T) {
 	}{
 		{
 			name:   "source code exists",
-			module: "clie-cli",
+			module: "clie",
 			setupFunc: func(root string) error {
-				sourcePath := filepath.Join(root, "src", "clie-cli")
+				sourcePath := filepath.Join(root, "src", "clie")
 				return os.MkdirAll(sourcePath, 0755)
 			},
 			wantErr: false,
@@ -217,8 +217,8 @@ func TestBuildContractBasedPrompt(t *testing.T) {
 		{
 			name: "builds prompt with module context",
 			config: &DesignConfig{
-				Module:     "clie-cli",
-				SourcePath: "/path/to/src/clie-cli",
+				Module:     "clie",
+				SourcePath: "/path/to/src/clie",
 			},
 			setupFunc: func(root string) error {
 				// Create contract files
@@ -286,7 +286,7 @@ agent_signatures: []
 				expectedSections := []string{
 					"Structurizr DSL",
 					"Target Module",
-					"clie-cli",
+					"clie",
 					"Analysis Instructions",
 					"Generation Requirements",
 					">>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<",
@@ -302,8 +302,8 @@ agent_signatures: []
 		{
 			name: "fails when contract files missing",
 			config: &DesignConfig{
-				Module:     "clie-cli",
-				SourcePath: "/path/to/src/clie-cli",
+				Module:     "clie",
+				SourcePath: "/path/to/src/clie",
 			},
 			setupFunc: func(root string) error {
 				// Don't create contract files

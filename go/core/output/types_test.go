@@ -117,7 +117,7 @@ func TestArtifact_TableDriven(t *testing.T) {
 			name: "binary artifact",
 			artifact: Artifact{
 				ID:     "eac-linux-amd64",
-				Path:   "out/build/eac-cli/go/eac-linux-amd64",
+				Path:   "out/build/eac/go/eac-linux-amd64",
 				SHA256: "sha256:abc123",
 				Size:   10485760,
 				Type:   "binary",
@@ -126,8 +126,8 @@ func TestArtifact_TableDriven(t *testing.T) {
 		{
 			name: "docker image artifact",
 			artifact: Artifact{
-				ID:     "eac-cli:latest",
-				Path:   "out/build/eac-cli/docker/image.tar",
+				ID:     "eac:latest",
+				Path:   "out/build/eac/docker/image.tar",
 				SHA256: "sha256:docker789",
 				Size:   52428800,
 				Type:   "docker-image",
@@ -351,7 +351,7 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 			name: "scan manifest with vulnerabilities",
 			manifest: UoWManifest{
 				Action:     core.ActionScan,
-				Module:     "eac-cli",
+				Module:     "eac",
 				Component:  "docker",
 				Tool:       "trivy-vuln",
 				ExitCode:   0,
@@ -359,8 +359,8 @@ func TestUoWManifest_TableDriven(t *testing.T) {
 				ExecutedAt: time.Date(2024, 1, 15, 13, 0, 0, 0, time.UTC),
 				Duration:   60 * time.Second,
 				Artifacts: []Artifact{
-					{ID: "trivy-report", Path: "out/scan/eac-cli/docker/trivy-vuln/results.json", SHA256: "sha256:scan1", Size: 8000, Type: "scan-report"},
-					{ID: "sbom", Path: "out/scan/eac-cli/docker/trivy-vuln/sbom.json", SHA256: "sha256:sbom1", Size: 12000, Type: "sbom"},
+					{ID: "trivy-report", Path: "out/scan/eac/docker/trivy-vuln/results.json", SHA256: "sha256:scan1", Size: 8000, Type: "scan-report"},
+					{ID: "sbom", Path: "out/scan/eac/docker/trivy-vuln/sbom.json", SHA256: "sha256:sbom1", Size: 12000, Type: "sbom"},
 				},
 				OutputHash: "sha256:scanout789",
 				Version:    "1.0.0",
@@ -658,13 +658,13 @@ func TestValidationResult_WithError(t *testing.T) {
 
 func TestValidationResult_TableDriven(t *testing.T) {
 	tests := []struct {
-		name                  string
-		result                ValidationResult
-		expectValid           bool
-		expectManifestExists  bool
-		expectArtifactsValid  bool
-		expectMissingCount    int
-		expectCorruptCount    int
+		name                 string
+		result               ValidationResult
+		expectValid          bool
+		expectManifestExists bool
+		expectArtifactsValid bool
+		expectMissingCount   int
+		expectCorruptCount   int
 	}{
 		{
 			name: "completely valid",
@@ -1025,37 +1025,37 @@ func TestStatusFromExitCode_MatchesTUIConvention(t *testing.T) {
 
 func TestTypeRelationships_ModuleContainsComponents(t *testing.T) {
 	module := ModuleView{
-		Module: "eac-cli",
+		Module: "eac",
 		Status: StatusCompleted,
 		Components: []ComponentView{
 			{
-				Module:    "eac-cli",
+				Module:    "eac",
 				Component: "go",
 				Status:    StatusCompleted,
 				UoWs: []UoWManifest{
-					{Action: core.ActionBuild, Module: "eac-cli", Component: "go", Tool: "go"},
+					{Action: core.ActionBuild, Module: "eac", Component: "go", Tool: "go"},
 				},
 			},
 			{
-				Module:    "eac-cli",
+				Module:    "eac",
 				Component: "docker",
 				Status:    StatusCompleted,
 				UoWs: []UoWManifest{
-					{Action: core.ActionBuild, Module: "eac-cli", Component: "docker", Tool: "docker"},
+					{Action: core.ActionBuild, Module: "eac", Component: "docker", Tool: "docker"},
 				},
 			},
 		},
 	}
 
-	assert.Equal(t, "eac-cli", module.Module)
+	assert.Equal(t, "eac", module.Module)
 	assert.Len(t, module.Components, 2)
 
 	for _, comp := range module.Components {
-		assert.Equal(t, "eac-cli", comp.Module, "Component should reference parent module")
+		assert.Equal(t, "eac", comp.Module, "Component should reference parent module")
 		assert.NotEmpty(t, comp.UoWs)
 
 		for _, uow := range comp.UoWs {
-			assert.Equal(t, "eac-cli", uow.Module, "UoW should reference parent module")
+			assert.Equal(t, "eac", uow.Module, "UoW should reference parent module")
 			assert.Equal(t, comp.Component, uow.Component, "UoW should reference parent component")
 		}
 	}

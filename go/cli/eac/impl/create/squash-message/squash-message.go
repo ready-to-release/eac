@@ -24,22 +24,17 @@
 package squashmessage
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
-	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -350,45 +345,15 @@ func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error
 
 	logDebugArtifact("SQUASH-PROMPT", prompt)
 
-	// Execute AI with two-phase generation and retry
-	executor := ai.NewExecutor(workspaceRoot)
-	providers.RegisterBuiltIn(executor)
-	executorAdapter := ai.NewExecutorAdapter(executor)
-
-	// Load AI config for retry strategy
-	aiConfig, err := coreai.LoadAIConfig(workspaceRoot)
+	// Execute AI with shared generation pipeline
+	retryResult, err := aiutil.ExecuteGeneration(aiutil.GenerationParams{
+		WorkspaceRoot:  workspaceRoot,
+		Prompt:         prompt,
+		TypeName:       coreai.TypeSquashMessage,
+		SchemaFilename: "squash-message.schema.json",
+	})
 	if err != nil {
-		logging.C().Warnf("Could not load AI config, using default retry strategy: %v", err)
-		aiConfig = nil
-	}
-
-	// Create JSON schema validator for Phase 1 JSON validation
-	// Phase 1 generates JSON output that matches squash-message.schema.json
-	// The formatter then converts JSON → plaintext squash message (no AI involved)
-	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), paths.SchemasDir, "squash-message.schema.json")
-	validator, err := domain.NewJSONSchemaValidator(schemaPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)
-	}
-
-	// Build retry configuration using factory
-	retryConfig, err := coreai.BuildRetryConfig(
-		coreai.TypeSquashMessage,
-		coreai.FormatJSON, // Generate structured JSON (commands format to text)
-		executorAdapter,
-		validator, // Use custom JSON schema validator
-		workspaceRoot,
-		aiConfig,
-		coreai.WithLogger(logging.C().Zap()),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to build retry config: %w", err)
-	}
-
-	ctx := context.Background()
-	retryResult, err := coreai.GenerateWithRetry(ctx, retryConfig, prompt)
-	if err != nil {
-		return "", fmt.Errorf("AI generation failed: %w", err)
+		return "", err
 	}
 
 	jsonResult := retryResult.Output

@@ -36,7 +36,7 @@ or container modes via the tool abstraction layer.
 
 ## Role in System
 
-The `eac-adapter` module allows the system to invoke EAC CLI commands as
+The `eac-to-eac` module allows the system to invoke EAC CLI commands as
 a first-class tool. It supports native execution (local binary) and
 container execution (eac-ext Docker image), selected automatically based
 on the tool registry configuration. This enables recursive EAC invocation

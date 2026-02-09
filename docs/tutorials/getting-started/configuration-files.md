@@ -22,14 +22,14 @@ CLIE uses two layers of configuration:
 
 | Layer         | File/Directory     | Purpose               | Created By     |
 | ------------- | ------------------ | --------------------- | -------------- |
-| **Framework** | `.clie/clie-cli.yml` | Extension management  | `clie init`     |
+| **Framework** | `.clie/clie.yml` | Extension management  | `clie init`     |
 | **Extension** | `.eac/`        | EAC-specific settings | `eac init` |
 
 ### CLIE CLI vs EAC Configuration
 
 Understanding the two configuration layers:
 
-**`.clie/clie-cli.yml`** (Framework Configuration)
+**`.clie/clie.yml`** (Framework Configuration)
 
 - Created by: `clie init`
 - Purpose: Manages which extensions are available
@@ -47,7 +47,7 @@ See [CLI vs Extensions](../../reference/eac/architecture/cli-integration.md) for
 
 ## CLIE CLI Configuration
 
-### The `.clie/clie-cli.yml` File
+### The `.clie/clie.yml` File
 
 This file is created by `clie init` and manages extension installation:
 

@@ -39,10 +39,11 @@ type UoWTracker interface {
 // createTestUnitID creates a UnitID for testing purposes.
 func createTestUnitID(ctx core.ActionType, module, component, tool string) workunit.UnitID {
 	return workunit.UnitID{
-		Action:    ctx,
-		Module:    module,
-		Component: component,
-		Tool:      tool,
+		Action:        ctx,
+		Module:        module,
+		ComponentType: component,
+		ComponentName: component,
+		Tool:          tool,
 	}
 }
 
@@ -349,7 +350,7 @@ func TestUoWTracker_RecordComplete_AllContexts(t *testing.T) {
 		{
 			name:      "build context",
 			context:   core.ActionBuild,
-			module:    "eac-cli",
+			module:    "eac",
 			component: "go",
 			tool:      "go",
 		},
@@ -370,7 +371,7 @@ func TestUoWTracker_RecordComplete_AllContexts(t *testing.T) {
 		{
 			name:      "scan context",
 			context:   core.ActionScan,
-			module:    "eac-cli",
+			module:    "eac",
 			component: "docker",
 			tool:      "trivy-vuln",
 		},
@@ -670,7 +671,7 @@ func TestUoWTracker_ConcurrentRecordComplete(t *testing.T) {
 		wg.Add(1)
 		go func(idx int, id workunit.UnitID) {
 			defer wg.Done()
-			manifest := createTestManifest(id.Action, id.Module, id.Component, id.Tool)
+			manifest := createTestManifest(id.Action, id.Module, id.ComponentName, id.Tool)
 			errors[idx] = tracker.RecordComplete(id, manifest)
 		}(i, id)
 	}
@@ -699,7 +700,7 @@ func TestUoWTracker_ConcurrentRecordCacheHit(t *testing.T) {
 
 	// Create manifests on disk for all IDs
 	for _, id := range ids {
-		manifest := createTestManifest(id.Action, id.Module, id.Component, id.Tool)
+		manifest := createTestManifest(id.Action, id.Module, id.ComponentName, id.Tool)
 		createManifestOnDisk(t, tmpDir, manifest)
 	}
 
@@ -988,7 +989,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 		{
 			name:      "successful build with artifacts",
 			context:   core.ActionBuild,
-			module:    "eac-cli",
+			module:    "eac",
 			component: "go",
 			tool:      "go",
 			exitCode:  0,
@@ -1019,7 +1020,7 @@ func TestUoWTracker_RecordComplete_TableDriven(t *testing.T) {
 		{
 			name:      "scan with multiple artifacts",
 			context:   core.ActionScan,
-			module:    "eac-cli",
+			module:    "eac",
 			component: "docker",
 			tool:      "trivy-vuln",
 			exitCode:  0,

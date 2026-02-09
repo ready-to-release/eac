@@ -3,7 +3,7 @@ package core
 import "time"
 
 // UnitIDPort uniquely identifies a unit of work.
-// Format: context:module:component:tool[:extra]
+// Format: action:module:componentType:componentName:tool[:extra...]
 type UnitIDPort interface {
 	// GetAction returns the operation type: "build", "test", "lint", "scan"
 	GetAction() string
@@ -11,7 +11,14 @@ type UnitIDPort interface {
 	// GetModule returns the module moniker (e.g., "eac-core")
 	GetModule() string
 
-	// GetComponent returns the component name (e.g., "go", "gherkin")
+	// GetComponentType returns the component type from component-types.yml (e.g., "go", "gherkin")
+	GetComponentType() string
+
+	// GetComponentName returns the component instance name (e.g., "go", "docker")
+	GetComponentName() string
+
+	// GetComponent returns the component name for backward compatibility.
+	// Deprecated: Use GetComponentName() instead.
 	GetComponent() string
 
 	// GetTool returns the handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
@@ -27,7 +34,7 @@ type UnitIDPort interface {
 	// Format by context: "spec: X", "unit: X", "go", "site: mkdocs", "lint:go:golangci-lint"
 	DisplayName() string
 
-	// Longname returns full ID: context:module:component:tool[:extra]
+	// Longname returns full ID: action:module:componentType:componentName:tool[:extra...]
 	Longname() string
 
 	// String returns the string representation (same as Longname)
@@ -45,14 +52,6 @@ type UnitSpecPort interface {
 
 	// GetComponentType returns the component type from component-types.yml
 	GetComponentType() string
-
-	// GetWeight returns the scheduling weight for resource allocation.
-	// Deprecated: Use GetPoolAllocation().GetHostWeight() for scheduling.
-	GetWeight() int
-
-	// IsContainer returns whether this runs in Docker.
-	// Deprecated: Use GetPoolAllocation().IsContainer() instead.
-	IsContainer() bool
 
 	// IsCached returns whether execution should be skipped
 	IsCached() bool

@@ -34,7 +34,7 @@ override, and optional **root**, **patterns**, and **build** configuration.
 
 ```yaml
 modules:
-  - moniker: eac-cli
+  - moniker: eac
     template: go-exe
     components:
       go:
@@ -110,12 +110,12 @@ determines what builder/runner/linter handles the component:
 For each component × tool combination, the resolver creates a UoW spec:
 
 ```text
-Module: eac-cli, Component: go, Action: build
-  → UoW: build:eac-cli:go:go
+Module: eac, Component: go, Action: build
+  → UoW: build:eac:go:go
 
-Module: eac-cli, Component: go, Action: test
-  → UoW: test:eac-cli:go:gotest
-  → UoW: test:eac-cli:go:godog  (if godog component exists)
+Module: eac, Component: go, Action: test
+  → UoW: test:eac:go:gotest
+  → UoW: test:eac:go:godog  (if godog component exists)
 ```
 
 **Source**: `go/core/resolver/tool_chain.go`
@@ -158,21 +158,21 @@ modules:
 ```yaml
 modules:
   - moniker: eac-ext
-    depends_on: [eac-cli]
+    depends_on: [eac]
 ```
 
-This means every UoW in `eac-ext` depends on every UoW in `eac-cli`.
+This means every UoW in `eac-ext` depends on every UoW in `eac`.
 Injected by `injectModuleDependencies()` in the command framework.
 
 ### Combined Ordering Example
 
 ```text
-Module: eac-cli
-  build:eac-cli:go:go              ← no dependencies (within module)
-  build:eac-cli:gherkin:gherkin    ← no dependencies
+Module: eac
+  build:eac:go:go              ← no dependencies (within module)
+  build:eac:gherkin:gherkin    ← no dependencies
 
-Module: eac-ext (depends_on: [eac-cli])
-  build:eac-ext:dockerfile:buildx  ← depends on ALL eac-cli UoWs
+Module: eac-ext (depends_on: [eac])
+  build:eac-ext:dockerfile:buildx  ← depends on ALL eac UoWs
 
 Module: docs (depends_on: [repository])
   build:docs:drawio:drawio         ← phase 1 (build_after: nothing)
@@ -224,4 +224,4 @@ The display order follows these rules:
 
 - [Build Execution System](./build-execution.md) — Orchestrator and UoW lifecycle
 - [Cache System](./cache-system.md) — Incremental change detection
-- [Component Types](./component-types.md) — Component type definitions
+- [Component Types](./component-kinds.md) — Component type definitions

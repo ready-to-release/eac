@@ -97,7 +97,7 @@ func TestBinarySize_NonExistent(t *testing.T) {
 
 func TestBinarySizesOutput_Struct(t *testing.T) {
 	output := BinarySizesOutput{
-		Module:   "clie-cli",
+		Module:   "clie",
 		Binaries: make(map[string]BinarySize),
 	}
 	output.Binaries["linux-amd64"] = BinarySize{
@@ -113,8 +113,8 @@ func TestBinarySizesOutput_Struct(t *testing.T) {
 		Exists:    true,
 	}
 
-	if output.Module != "clie-cli" {
-		t.Errorf("Module = %q, want %q", output.Module, "clie-cli")
+	if output.Module != "clie" {
+		t.Errorf("Module = %q, want %q", output.Module, "clie")
 	}
 	if len(output.Binaries) != 2 {
 		t.Errorf("len(Binaries) = %d, want 2", len(output.Binaries))

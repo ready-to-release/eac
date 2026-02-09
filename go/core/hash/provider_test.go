@@ -23,7 +23,7 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
-		hash, err := provider(workunit.UnitID{Module: "core", Component: "go", Tool: "go"})
+		hash, err := provider(workunit.UnitID{Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 		assert.NotEmpty(t, hash)
 		assert.Len(t, hash, 64) // SHA256 hex
@@ -37,7 +37,7 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
-		hash, err := provider(workunit.UnitID{Module: "unknown", Component: "go", Tool: "go"})
+		hash, err := provider(workunit.UnitID{Module: "unknown", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 		assert.Empty(t, hash, "unknown module should return empty string")
 	})
@@ -53,10 +53,10 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
 		// Different components in same module should get same hash (based on module files)
-		hash1, err := provider(workunit.UnitID{Module: "core", Component: "go", Tool: "go"})
+		hash1, err := provider(workunit.UnitID{Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 
-		hash2, err := provider(workunit.UnitID{Module: "core", Component: "ts", Tool: "tsc"})
+		hash2, err := provider(workunit.UnitID{Module: "core", ComponentType: "ts", ComponentName: "ts", Tool: "tsc"})
 		require.NoError(t, err)
 
 		assert.Equal(t, hash1, hash2, "same module should have same input hash regardless of component")
@@ -74,10 +74,10 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
-		hash1, err := provider(workunit.UnitID{Module: "core", Component: "go", Tool: "go"})
+		hash1, err := provider(workunit.UnitID{Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 
-		hash2, err := provider(workunit.UnitID{Module: "cli", Component: "go", Tool: "go"})
+		hash2, err := provider(workunit.UnitID{Module: "cli", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 
 		assert.NotEqual(t, hash1, hash2, "different modules should have different hashes")
@@ -91,7 +91,7 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
-		hash, err := provider(workunit.UnitID{Module: "core", Component: "go", Tool: "go"})
+		hash, err := provider(workunit.UnitID{Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		require.NoError(t, err)
 		assert.Empty(t, hash, "empty file list should return empty hash")
 	})
@@ -104,7 +104,7 @@ func TestNewModuleInputHashProvider(t *testing.T) {
 
 		provider := NewModuleInputHashProvider(tmpDir, moduleFiles)
 
-		_, err := provider(workunit.UnitID{Module: "core", Component: "go", Tool: "go"})
+		_, err := provider(workunit.UnitID{Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"})
 		assert.Error(t, err, "missing files should return error")
 	})
 }

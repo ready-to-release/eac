@@ -1,4 +1,4 @@
-// Package pipeline contains godog step implementations for eac-cli.
+// Package pipeline contains godog step implementations for eac.
 //
 // This file contains pipeline status command step definitions.
 package pipeline
@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/core/environments"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // registerStatusSteps registers step definitions for pipeline status command features.

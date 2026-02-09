@@ -601,7 +601,7 @@ func buildUserInputSection(config *SpecsConfig) string {
 	} else {
 		prompt.WriteString("## Module Inference\n\n")
 		prompt.WriteString("No specific module was provided. Please infer the most appropriate module based on the description.\n")
-		prompt.WriteString("Common modules include: eac-cli, core, clie-cli, eac-mcp-server\n\n")
+		prompt.WriteString("Common modules include: eac-cli, core, clie, eac-mcp-server\n\n")
 	}
 
 	// Final instruction

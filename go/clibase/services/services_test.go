@@ -510,7 +510,7 @@ func TestServices_Config_OptionalConfigs(t *testing.T) {
 		_ = suites.ListDefault()
 	}
 
-	componentTypes := cfg.GetComponentTypes()
+	componentTypes := cfg.GetComponentKinds()
 	if componentTypes != nil {
 		_ = componentTypes.List()
 	}

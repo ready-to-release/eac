@@ -24,7 +24,7 @@ var (
 
 func init() {
 	RootCmd.AddCommand(CleanupCmd)
-	CleanupCmd.Flags().BoolVarP(&cleanupAll, "all", "a", false, "Remove all unused images, not just clie-cli extensions")
+	CleanupCmd.Flags().BoolVarP(&cleanupAll, "all", "a", false, "Remove all unused images, not just clie extensions")
 	CleanupCmd.Flags().BoolVarP(&cleanupDryRun, "dry-run", "n", false, "Show what would be removed without actually removing")
 	CleanupCmd.Flags().IntVarP(&keepVersions, "keep", "k", 1, "Number of versions to keep per extension (default: 1)")
 	CleanupCmd.Flags().BoolVarP(&cleanupContainers, "containers", "c", false, "Also clean up stopped containers")

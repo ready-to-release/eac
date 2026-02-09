@@ -26,7 +26,7 @@ Select the appropriate type based on your module's purpose:
 | CLIE extension      | `clie-extension` | ✅ Docker buildx                        | Depends on container |
 | Configuration files | `configuration`  | ❌ No build                             | ❌ No tests          |
 
-See [Component Types Reference](../../../reference/eac/architecture/component-types.md) for all available types and configuration options.
+See [Component Kinds Reference](../../../reference/eac/architecture/component-kinds.md) for all available types and configuration options.
 
 ## Quick Start
 

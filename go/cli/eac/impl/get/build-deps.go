@@ -89,7 +89,7 @@ func GetBuildDeps() int {
 
 	// Get build deps from package types config
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
+	if cfg == nil || cfg.ComponentKinds == nil {
 		fmt.Fprintf(os.Stderr, "Error: package types configuration not loaded\n")
 		return 1
 	}
@@ -190,7 +190,7 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 	}
 
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
+	if cfg == nil || cfg.ComponentKinds == nil {
 		return "", fmt.Errorf("package types configuration not loaded")
 	}
 

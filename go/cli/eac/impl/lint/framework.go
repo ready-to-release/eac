@@ -18,14 +18,12 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/locking"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
-	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -180,8 +178,7 @@ func assertLintManifestsExist(ctx *cmdframework.ExecutionContext) error {
 
 // lintUnitWorker lints a single component with a specific provider.
 // This is called by the UnitScheduler for parallel component execution.
-// The component parameter is in "compName:providerName" format (e.g., "go:go-lint").
-func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.LintCmdConfig.(*LintConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
@@ -193,6 +190,12 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
+	// Extract identity from spec - no more string parsing
+	module := spec.ID.Module
+	compName := spec.ID.ComponentName
+	providerName := spec.ID.Tool
+	component := compName + ":" + providerName // For display/logging
+
 	// Create shared pipeline for cache, lock, and manifest orchestration
 	pipeline := &cmdframework.UnitPipeline{
 		CachedUoWs:             lctx.cachedUoWs,
@@ -203,13 +206,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		Tracker:                lctx.tracker,
 	}
 
-	compName, providerName := cmdframework.ParseComponent(component)
-	unitID := workunit.UnitID{
-		Action:    core.ActionLint,
-		Module:    module,
-		Component: compName,
-		Tool:      providerName,
-	}
+	unitID := spec.ID
 
 	log.Debugf("[LINT-UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
 	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
@@ -246,8 +243,8 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
-	// Acquire component-level lock via pipeline
-	componentDir := cmdframework.ComponentDir(compName, providerName)
+	// Acquire unit-level lock via pipeline
+	componentDir := cmdframework.UnitDir(compName, providerName)
 	release, err := pipeline.AcquireLock(ctx, module, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
@@ -256,7 +253,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 	defer release()
 
 	// Create output directory for this module+component+provider
-	outputDir := paths.ComponentLintOutputPath(ctx.WorkspaceRoot, module, componentDir)
+	outputDir := paths.UnitLintOutputPath(ctx.WorkspaceRoot, module, componentDir)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		output.Writeln(logWriter, "Error creating output directory: %v", err)
 		return 1
@@ -379,7 +376,7 @@ func computeLintInputHash(ctx *cmdframework.ExecutionContext, module string) str
 }
 
 // isProviderEnabledForModule checks if a lint provider should run for a module.
-func isProviderEnabledForModule(providerName string, linting *domain.ModuleLinting) bool {
+func isProviderEnabledForModule(providerName string, linting *config.ModuleLinting) bool {
 	if linting == nil {
 		return true // No overrides, use default behavior
 	}

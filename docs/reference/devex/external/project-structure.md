@@ -9,7 +9,7 @@ Minimal setup for any project:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie-cli.yml              # CLIE CLI configuration
+│   ├── clie.yml              # CLIE CLI configuration
 │   └── eac/
 │       └── repository.yml        # Module definitions
 ├── .gitignore                    # Include .clie/**/*.personal.yml
@@ -23,8 +23,8 @@ Complete setup with all features:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie-cli.yml              # CLIE CLI configuration
-│   ├── clie-cli.local.yml        # Local overrides (gitignored)
+│   ├── clie.yml              # CLIE CLI configuration
+│   ├── clie.local.yml        # Local overrides (gitignored)
 │   ├── cache/                   # Build cache (gitignored)
 │   └── eac/
 │       ├── repository.yml        # Module definitions
@@ -52,7 +52,7 @@ your-project/
 
 | File                   | Purpose                |
 | ---------------------- | ---------------------- |
-| `.clie/clie-cli.yml`     | Extension registry     |
+| `.clie/clie.yml`     | Extension registry     |
 | `.eac/repository.yml`  | Module definitions     |
 | `.eac/ai-provider.yml` | AI config (no secrets) |
 
@@ -62,7 +62,7 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 
 | File/Directory           | Purpose                       |
 | ------------------------ | ----------------------------- |
-| `.clie/clie-cli.local.yml` | Local CLI overrides           |
+| `.clie/clie.local.yml` | Local CLI overrides           |
 | `.eac/*.personal.yml`    | Personal configs with secrets |
 | `.clie/cache/`            | Build cache                   |
 
@@ -70,7 +70,7 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 
 ```gitignore
 # CLIE/EAC local configuration
-.clie/clie-cli.local.yml
+.clie/clie.local.yml
 .eac/*.personal.yml
 .clie/cache/
 ```

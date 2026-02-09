@@ -29,7 +29,7 @@ Clears incremental cache state files, rendered asset caches, ephemeral work dire
 
 ## Dependencies
 
-- `clibase/fileutil` -- retry-aware file removal for Windows lock handling
+- `core/fileutil` -- retry-aware file removal for Windows lock handling
 - `clibase/registry` -- command registration
 - `core/cache` -- cache taxonomy types (`Level`, `Type`, `Spec`), spec parsing, and default skip specs
 - `core/logging` -- structured logging

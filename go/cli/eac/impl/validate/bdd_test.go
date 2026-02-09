@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/create/spec" // register create spec
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	_ "github.com/ready-to-release/eac/go/cli/eac/impl/create/spec" // register create spec
 )
 
 func TestFeatures(t *testing.T) {
-	specsBase := "../../../../../specs/eac-cli"
+	specsBase := "../../../../../specs/eac"
 
 	cfg := eacgodog.RunnerConfig{
 		SpecsPath: specsBase + "/validate-specs," +

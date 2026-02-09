@@ -1,10 +1,68 @@
 # Cache System
 
-The cache system enables incremental builds by tracking what changed
-between invocations. It uses input hashing, UoW manifests, and timestamp
-comparison to skip work that has already been done.
+The cache system enables incremental builds and CI optimization by tracking
+what changed between invocations. It uses a **2D taxonomy** (Level x Type)
+to classify caches, input hashing and UoW manifests for local builds, and
+CI run status for remote build avoidance.
+
+## 2D Cache Taxonomy
+
+All caches in the system are classified along two dimensions:
+
+- **Level** — where the cache lives: `local` (on the developer machine) or `remote` (on the network)
+- **Type** — what kind of cache it is: `registry`, `state`, `asset`, `layer`, `work`, or `ci`
+
+```text
+           registry  state  asset  layer  work  ci
+  local       ✓        ✓      ✓      ✓     ✓
+  remote      ✓                      ✓           ✓
+```
+
+| Level:Type        | What It Caches                                         |
+|-------------------|--------------------------------------------------------|
+| `local:registry`  | Container/package registry images (Docker pull cache)  |
+| `local:state`     | Incremental build state (UoW manifests in `out/`)      |
+| `local:asset`     | Rendered assets (Mermaid SVGs, Structurizr PNGs)       |
+| `local:layer`     | Docker BuildKit layer cache                            |
+| `local:work`      | Ephemeral work directories                             |
+| `remote:registry` | Remote container registry (GHCR)                       |
+| `remote:layer`    | Remote BuildKit cache (GitHub Actions cache)           |
+| `remote:ci`       | CI build status — last successful GitHub Actions run   |
+
+The `--skip-cache` flag accepts any combination of these specs:
+
+```bash
+# Skip a specific cache
+eac build --skip-cache=local:state       # Force rebuild (ignore manifests)
+eac build --skip-cache=local:asset       # Re-render all diagrams
+eac get ci-dispatch --skip-cache=remote:ci  # Dispatch all modules regardless of CI status
+
+# Skip by level (all types at that level)
+eac build --skip-cache=local             # Skip all local caches
+eac build --skip-cache=remote            # Skip all remote caches
+
+# Skip by type (all levels for that type)
+eac build --skip-cache=registry          # Skip registry caches at both levels
+
+# Skip everything
+eac build --skip-cache=all
+
+# Combine multiple specs
+eac build --skip-cache=local:state,local:asset
+```
+
+**Source**: `go/core/cache/cache.go` (taxonomy), `go/core/cache/config.go` (skip logic)
+
+---
 
 ## Overview
+
+The cache system operates at two levels:
+
+1. **Local build cache** — input hashing and UoW manifests for `build`, `test`, `lint`, `scan`
+2. **CI cache** — GitHub Actions run status for CI dispatch optimization
+
+### Local Build Cache
 
 ```text
 Source Files → Input Hash → Compare with Manifest → Build or Skip
@@ -16,6 +74,21 @@ For each UoW, the cache system:
 2. Loads the existing **UoW manifest** (if any) from `out/`
 3. Compares the hashes — if identical, the UoW is **cached** (skipped)
 4. If different, the UoW executes and writes a new manifest
+
+### CI Cache
+
+```text
+Module → CICacheChecker.Check(module, headSHA) → Dispatch or Skip
+```
+
+For each module in CI dispatch, the checker:
+
+1. Queries GitHub Actions for the last successful run of `ci-{module}.yaml`
+2. Compares the run's HEAD SHA against the current HEAD SHA
+3. If they match, the module is **CI-cached** (skip dispatch)
+4. If they differ (or no run exists), the module needs CI dispatch
+
+**Source**: `go/core/cache/ci.go` (CICacheChecker, CIRunQuerier port)
 
 ---
 
@@ -150,6 +223,84 @@ state manager and skipped by the scheduler.
 
 ---
 
+## CI Cache Architecture
+
+The CI cache (`remote:ci`) determines whether a module's CI workflow
+needs to be dispatched or can be skipped because a successful build
+already exists at the current HEAD SHA.
+
+### Port/Adapter Pattern
+
+The cache package defines a **port interface** — it never imports
+GitHub or other infrastructure. Command code injects a concrete adapter.
+
+```text
+┌─────────────────────────────┐     ┌──────────────────────────┐
+│  go/core/cache              │     │  go/cli/eac/impl/get     │
+│                             │     │                          │
+│  CIRunQuerier (interface)   │◄────│  ghCIRunQuerier (adapter) │
+│  CICacheChecker (logic)     │     │  wraps github.API        │
+│  MockCIRunQuerier (testing) │     │                          │
+└─────────────────────────────┘     └──────────────────────────┘
+```
+
+**CIRunQuerier** is the port:
+
+```go
+type CIRunQuerier interface {
+    LastSuccessfulRunSHA(workflowName string) (sha string, err error)
+}
+```
+
+**CICacheChecker** owns the decision logic:
+
+```go
+checker := cache.NewCICacheChecker(querier, cacheConfig)
+result := checker.Check("core", headSHA)
+// result.Cached == true  → skip dispatch
+// result.Cached == false → dispatch CI workflow
+// result.Reason explains: "valid_ci_at_head", "no_ci_run",
+//     "ci_at_different_sha:abc1234", "query_failed: ...", "cache_bypassed"
+```
+
+### Decision Flow
+
+```text
+1. config.ShouldSkipCI() == true?  → uncached (bypass, reason: "cache_bypassed")
+2. Query LastSuccessfulRunSHA("ci-{module}.yaml")
+3. Error?                          → uncached (fail-open, reason: "query_failed: ...")
+4. No runs exist?                  → uncached (reason: "no_ci_run")
+5. Last run SHA == HEAD SHA?       → cached   (reason: "valid_ci_at_head")
+6. Different SHA?                  → uncached (reason: "ci_at_different_sha:{sha7}")
+```
+
+Fail-open semantics: on querier error, the module is dispatched for safety.
+
+### Bypass
+
+CI cache checking is bypassed when `--skip-cache` includes `remote:ci` or `all`:
+
+```bash
+# Force dispatch all modules regardless of CI status
+eac get ci-dispatch --skip-cache=remote:ci
+
+# Also bypasses CI cache (and everything else)
+eac get ci-dispatch --skip-cache=all
+```
+
+CI cache is **not** included in `DefaultSkipSpecs()` — it is never skipped by default.
+
+### Consumers
+
+The CI cache is consumed by two commands:
+
+- **`get ci-dispatch`** — uses `CICacheChecker` to filter which modules need CI dispatch
+- **`get changed-modules-ci`** — uses `CIRunQuerier` to check per-module CI status
+
+**Source**: `go/core/cache/ci.go`, `go/cli/eac/impl/get/ci_run_querier.go`
+
+---
+
 ## Cache File Locations
 
 | Path                                    | Content                           |
@@ -165,8 +316,17 @@ state manager and skipped by the scheduler.
 ## Cache Commands
 
 ```bash
-# Force rebuild (ignore cache)
+# Force rebuild (ignore local state cache)
 eac build --force
+eac build --skip-cache=local:state    # Equivalent
+
+# Skip specific cache types
+eac build --skip-cache=local:asset    # Re-render diagrams
+eac build --skip-cache=local:layer    # Docker --no-cache
+eac get ci-dispatch --skip-cache=remote:ci  # Force dispatch all
+
+# Skip all caches
+eac build --skip-cache=all
 
 # Clear all caches
 eac update cache-clear

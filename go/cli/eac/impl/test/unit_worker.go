@@ -81,9 +81,8 @@ func testWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, modul
 
 // testUnitWorker runs tests for a package path using component-level execution.
 // This is called by the UnitScheduler for parallel test component execution.
-// The component parameter is in "componentType:toolName:testname" format (e.g., "go:gotest:impl-build").
 // The orchestrator (UoW) creates the log file and output directory - worker just writes to logWriter.
-func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.TestCmdConfig.(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
@@ -95,31 +94,15 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		return 1
 	}
 
-	// Parse component:tool:testname format (e.g., "go:gotest:impl-build")
-	// Parts: [0]=componentType, [1]=tool, [2]=testname
-	parts := strings.Split(component, ":")
-	componentType := parts[0]
-	testType := ""
-	testname := ""
-	if len(parts) >= 2 {
-		testType = parts[1]
-	}
-	if len(parts) >= 3 {
-		testname = parts[2]
-	}
+	// Extract identity from spec - no more string parsing
+	module := spec.ID.Module
+	componentType := spec.ID.ComponentType
+	testType := spec.ID.Tool
+	testname := spec.ID.Extra["testname"]
+	component := componentType + ":" + testType + ":" + testname // For display/logging
 
-	// Build UnitID for UoW-level cache lookup
-	toolName := testType
-	if toolName == "" {
-		toolName = "none"
-	}
-	unitID := workunit.UnitID{
-		Action:    core.ActionTest,
-		Module:    module,
-		Component: componentType,
-		Tool:      toolName,
-		Extra:     map[string]string{"testname": testname},
-	}
+	// Use spec's UnitID directly for cache lookup
+	unitID := spec.ID
 
 	// Check UoW-level cache via shared pipeline
 	pipeline := &cmdframework.UnitPipeline{
@@ -143,6 +126,7 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 	tests := testCfg.ExecCtx.testsByPackage[pkgPath]
 	if len(tests) == 0 {
 		fmt.Fprintf(logWriter, "No tests: Success\n")
+		writeUoWTestManifest(ctx, testCfg, unitID, "", time.Now(), 0)
 		return 0
 	}
 
@@ -151,6 +135,7 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		tests = filterTestsByType(tests, testType)
 		if len(tests) == 0 {
 			fmt.Fprintf(logWriter, "No %s tests: Success\n", testType)
+			writeUoWTestManifest(ctx, testCfg, unitID, "", time.Now(), 0)
 			return 0
 		}
 	}
@@ -168,12 +153,17 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, m
 		}
 	}
 
+	// Compute the UoW output directory from spec.ID so runners can use it
+	// for isolated workspaces (e.g., npm isolation). This matches the directory
+	// the orchestrator creates: out/test/<module>/<dirname>
+	outputDir := filepath.Join(ctx.WorkspaceRoot, spec.ID.OutDir())
+
 	startTime := time.Now()
 
 	// Run tests - UoW manages log file, we just write to logWriter
 	// Use the testname as result key for aggregation (unique within module:componentType)
 	resultKey := testname
-	result := testCfg.ExecCtx.runPackageTestsDirect(goCtx, pkgPath, tests, logWriter)
+	result := testCfg.ExecCtx.runPackageTestsDirect(goCtx, pkgPath, tests, logWriter, outputDir)
 
 	testCfg.ExecCtx.mu.Lock()
 	testCfg.ExecCtx.results[resultKey] = result
@@ -312,7 +302,7 @@ func writeUoWTestManifest(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 	manifest := &coreoutput.UoWManifest{
 		Action:     core.ActionTest,
 		Module:     unitID.Module,
-		Component:  unitID.Component,
+		Component:  unitID.ComponentName,
 		Tool:       unitID.Tool,
 		Extra:      unitID.Extra, // Include testname for unique directory path
 		InputHash:  inputHash,

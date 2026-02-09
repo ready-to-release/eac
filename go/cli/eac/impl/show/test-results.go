@@ -9,7 +9,7 @@
 // Long: Example:
 // Long:   show test-results
 // Long:   show test-results eac-ext
-// Long:   show test-results eac-ext clie-cli
+// Long:   show test-results eac-ext clie
 // Args: [module...]
 package show
 
@@ -89,7 +89,7 @@ func ShowTestResults() int {
 			fmt.Println("\nExamples:")
 			fmt.Println("  show test-results")
 			fmt.Println("  show test-results eac-ext")
-			fmt.Println("  show test-results eac-ext clie-cli")
+			fmt.Println("  show test-results eac-ext clie")
 			return 0
 		}
 	}

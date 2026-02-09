@@ -67,10 +67,10 @@ func InitializeExtensionAliases() {
 	// This is best-effort - if it fails, we just won't have aliases
 	configFile := os.Getenv(envconsts.EnvCLIEConfig)
 	if configFile == "" {
-		// Config location: .clie/clie-cli.yml
+		// Config location: .clie/clie.yml
 		possibleConfigs := []string{
-			".clie/clie-cli.yml",
-			".clie/clie-cli.yaml",
+			".clie/clie.yml",
+			".clie/clie.yaml",
 		}
 
 		for _, cfg := range possibleConfigs {

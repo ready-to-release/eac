@@ -69,7 +69,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 	sc.Step(`^multiple modules have workspace files$`, func() error {
 		// Use real modules that exist in fixture repository.yml
-		for _, mod := range []string{"core", "docs", "clie-cli"} {
+		for _, mod := range []string{"core", "docs", "clie"} {
 			wsPath := fmt.Sprintf("specs/%s/.design/workspace.dsl", mod)
 			if err := eacgodog.CreateFile(ctx, wsPath, minimalWorkspaceDSL(mod)); err != nil {
 				return err

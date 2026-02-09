@@ -14,14 +14,14 @@ Any module can have a changelog. The changelog location is defined in the module
 
 ```bash
 # 1. Check if there are changes to release
-clie release pending clie-cli
+clie release pending clie
 
 # 2. Update the changelog with a new version
-clie release this clie-cli
+clie release this clie
 
 # 3. Commit and create a PR
-git add release/clie-cli/CHANGELOG.md
-git commit -m "release(clie-cli): 0.1.0"
+git add release/clie/CHANGELOG.md
+git commit -m "release(clie): 0.1.0"
 git push && gh pr create
 
 # 4. After PR is merged, release-auto workflow creates the tag
@@ -80,13 +80,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-clie release pending clie-cli
+clie release pending clie
 
 # Check all modules
 clie release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-clie release pending clie-cli --quiet
+clie release pending clie --quiet
 ```
 
 Output includes:
@@ -102,16 +102,16 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-clie release this clie-cli
+clie release this clie
 
 # Preview without writing
-clie release this clie-cli --dry-run
+clie release this clie --dry-run
 
 # Output as JSON
-clie release this clie-cli --json
+clie release this clie --json
 
 # Override release date
-clie release this clie-cli --date 2024-01-15
+clie release this clie --date 2024-01-15
 ```
 
 This command:
@@ -128,7 +128,7 @@ Check for changelog versions that don't have corresponding git tags. Used by CI.
 
 ```bash
 # Check single module
-clie release tag-pending clie-cli
+clie release tag-pending clie
 
 # Check all modules
 clie release tag-pending --all
@@ -140,13 +140,13 @@ Validate changelog format and structure.
 
 ```bash
 # Validate single module
-clie release validate clie-cli
+clie release validate clie
 
 # Validate all modules
 clie release validate --all
 
 # Output as JSON
-clie release validate clie-cli --json
+clie release validate clie --json
 ```
 
 Checks performed:
@@ -219,7 +219,7 @@ All notable changes to **module-name** will be documented in this file.
 
 ## Versioning
 
-### Semver (clie-cli, eac-ext)
+### Semver (clie, eac-ext)
 
 Semantic versioning: `MAJOR.MINOR.PATCH`
 
@@ -250,7 +250,7 @@ versioning:
 ```text
 release/
 ├── README.md           # This file
-├── clie-cli/
+├── clie/
 │   └── CHANGELOG.md    # CLI changelog (semver) - RELEASABLE
 ├── eac-ext/
 │   └── CHANGELOG.md    # Extension changelog (semver) - RELEASABLE
@@ -285,9 +285,9 @@ Triggers on push to main when `release/*/CHANGELOG.md` changes. Detects new vers
 
 **This workflow only watches `release/*/CHANGELOG.md`**. Changelogs in other locations are not monitored by this workflow.
 
-### `release-clie-cli.yml`
+### `release-clie.yml`
 
-Triggers on `clie-cli/*` tag push. Builds CLI binaries for multiple platforms and creates GitHub release.
+Triggers on `clie/*` tag push. Builds CLI binaries for multiple platforms and creates GitHub release.
 
 ### `release-eac-ext.yml`
 
@@ -301,7 +301,7 @@ Triggers on `docs/*` tag push. Deploys documentation.
 
 Tags follow the pattern `<module>/<version>`:
 
-- `clie-cli/0.1.0`
+- `clie/0.1.0`
 - `eac-ext/1.0.0`
 - `docs/2024.01.15`
 
@@ -311,16 +311,16 @@ If you need to release without the automated flow:
 
 ```bash
 # 1. Update changelog manually or with release this
-clie release this clie-cli
+clie release this clie
 
 # 2. Commit the changelog
-git add release/clie-cli/CHANGELOG.md
-git commit -m "release(clie-cli): 0.1.0"
+git add release/clie/CHANGELOG.md
+git commit -m "release(clie): 0.1.0"
 
 # 3. Create and push the tag manually
-git tag -a "clie-cli/0.1.0" -m "Release clie-cli v0.1.0"
+git tag -a "clie/0.1.0" -m "Release clie v0.1.0"
 git push origin main
-git push origin "clie-cli/0.1.0"
+git push origin "clie/0.1.0"
 ```
 
 ## Troubleshooting

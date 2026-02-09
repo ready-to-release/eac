@@ -16,7 +16,7 @@
 // Long: Example:
 // Long:   build                           # Build all modules
 // Long:   build eac-cli              # Build a single module
-// Long:   build core clie-cli          # Build specific modules
+// Long:   build core clie          # Build specific modules
 // Long:   build --tidy-first eac-cli # Build with go mod tidy first
 // Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
 // Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
@@ -600,9 +600,9 @@ func printBuildUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  build                                # Build all modules")
-	log.Info("  build clie-cli                        # Build CLI for current platform")
+	log.Info("  build clie                        # Build CLI for current platform")
 	log.Info("  build books                          # Build books (uses books.yml output config)")
-	log.Info("  build clie-cli --list-artifacts       # List artifacts without building")
+	log.Info("  build clie --list-artifacts       # List artifacts without building")
 }
 
 // hasExistingArtifacts checks if a module's build artifacts already exist AND

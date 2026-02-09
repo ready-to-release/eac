@@ -77,7 +77,6 @@ func TestGetLoadedFiles_EnumeratesAllConfigs(t *testing.T) {
 	// Verify we get all expected config names
 	expectedConfigs := []string{
 		"repository",
-		"component-types",
 		"environments",
 		"testing-tags",
 		"test-suites",
@@ -271,35 +270,6 @@ func TestGetLoadedFiles_ValueCounts(t *testing.T) {
 			}
 		}
 	})
-}
-
-// TestGetLoadedFiles_ComponentTypes verifies component-types config is tracked.
-func TestGetLoadedFiles_ComponentTypes(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	files := cfg.GetLoadedFiles()
-
-	var ctConfig *LoadedConfig
-	for i := range files {
-		if files[i].Name == "component-types" {
-			ctConfig = &files[i]
-			break
-		}
-	}
-	require.NotNil(t, ctConfig, "component-types config should be tracked")
-
-	// Contract defaults should exist
-	var contractFile *LoadedFile
-	for i := range ctConfig.Files {
-		if ctConfig.Files[i].Layer == LayerContract {
-			contractFile = &ctConfig.Files[i]
-			break
-		}
-	}
-	require.NotNil(t, contractFile)
-	assert.True(t, contractFile.Exists, "component-types contract defaults should exist")
-	assert.Greater(t, contractFile.Values, 0, "component-types should have values")
 }
 
 // TestGetLoadedFiles_EnvironmentsConfig verifies environments config is tracked.

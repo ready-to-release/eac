@@ -8,20 +8,10 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/core/workspace"
 )
-
-// InitialWorkingDir stores the working directory when the program started.
-var InitialWorkingDir string
-
-func init() {
-	var err error
-	InitialWorkingDir, err = workspace.WorkingDir()
-	if err != nil {
-		InitialWorkingDir = "."
-	}
-}
 
 // GetWorkspaceRoot returns the repository root directory.
 func GetWorkspaceRoot() (string, error) {
@@ -77,7 +67,11 @@ type CommandRegistration struct {
 }
 
 // commandRegistry maps command names (space-separated, e.g., "get files") to registrations.
-var commandRegistry = map[string]*CommandRegistration{}
+// Protected by registryMu for concurrent access safety.
+var (
+	commandRegistry = map[string]*CommandRegistration{}
+	registryMu      sync.RWMutex
+)
 
 // Register allows command files to register themselves by extracting metadata from source comments
 // The function automatically parses the calling file to extract:
@@ -161,6 +155,8 @@ func registerFromFile(fn CommandFunc, file string) {
 	}
 
 	// Store in registry (keyed by ActualCommand for dispatch)
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	commandRegistry[metadata.CommandName] = &CommandRegistration{
 		Func:          fn,
 		ActualCommand: metadata.CommandName,
@@ -448,6 +444,8 @@ func isValidAttributeKey(s string) bool {
 
 // GetCommands returns a map of command names to their functions (for dispatch).
 func GetCommands() map[string]CommandFunc {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	result := make(map[string]CommandFunc, len(commandRegistry))
 	for name, reg := range commandRegistry {
 		result[name] = reg.Func
@@ -455,9 +453,15 @@ func GetCommands() map[string]CommandFunc {
 	return result
 }
 
-// GetCommandRegistry returns the command registry.
+// GetCommandRegistry returns a snapshot copy of the command registry.
 func GetCommandRegistry() map[string]*CommandRegistration {
-	return commandRegistry
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	result := make(map[string]*CommandRegistration, len(commandRegistry))
+	for name, reg := range commandRegistry {
+		result[name] = reg
+	}
+	return result
 }
 
 // GetCanonicalName returns the kebab-case canonical name for a command.
@@ -467,11 +471,15 @@ func GetCanonicalName(commandName string) string {
 
 // GetCommand retrieves a command registration by its command name (space-separated).
 func GetCommand(commandName string) *CommandRegistration {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	return commandRegistry[commandName]
 }
 
 // GetCommandByCanonical retrieves a command registration by its canonical name (kebab-case).
 func GetCommandByCanonical(canonicalName string) *CommandRegistration {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	// Convert kebab-case to space-separated for lookup
 	actualName := strings.ReplaceAll(canonicalName, "-", " ")
 	return commandRegistry[actualName]
@@ -481,6 +489,8 @@ func GetCommandByCanonical(canonicalName string) *CommandRegistration {
 // For parent "get", returns registrations for "get modules", "get files", etc.
 // Excludes nested subcommands (e.g., "get foo bar" when parent is "get").
 func GetSubcommands(parentName string) []*CommandRegistration {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	prefix := parentName + " "
 	var result []*CommandRegistration
 
@@ -504,6 +514,8 @@ func GetSubcommands(parentName string) []*CommandRegistration {
 // IsValidSubcommand checks if a subcommand is registered under a parent.
 // Returns true if "get modules" is registered when parent="get" and sub="modules".
 func IsValidSubcommand(parentName, subcommandName string) bool {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	fullName := parentName + " " + subcommandName
 	_, exists := commandRegistry[fullName]
 	return exists
@@ -523,6 +535,8 @@ func GetSubcommandNames(parentName string) []string {
 // SetTestRegistry replaces the command registry for testing purposes.
 // The returned registry is the original, which should be restored after testing.
 func SetTestRegistry(reg map[string]*CommandRegistration) map[string]*CommandRegistration {
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	original := commandRegistry
 	commandRegistry = reg
 	return original

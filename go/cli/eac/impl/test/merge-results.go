@@ -21,7 +21,7 @@
 // Long:   - Exit code 0 on success, non-zero on error
 // Long:
 // Long: Example:
-// Long:   test merge-results --module eac-cli --version v1.2.0
+// Long:   test merge-results --module eac --version v1.2.0
 // Flag.module: type=string, usage=Module moniker to merge results for (required)
 // Flag.version: type=string, usage=Release version (required)
 package test
@@ -36,8 +36,8 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/fileutil"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 )
 
@@ -161,7 +161,7 @@ func MergeResults() int {
 	}
 
 	uowManifest := &coreoutput.UoWManifest{
-		Action:    core.ActionTest,
+		Action:     core.ActionTest,
 		Module:     moduleFlag,
 		Component:  "manual",
 		Tool:       "manual",
@@ -256,4 +256,3 @@ func extractScenarioName(scenarioID string) string {
 	}
 	return scenarioID
 }
-

@@ -16,7 +16,7 @@ Generates a comprehensive squash commit message from all branch commits compared
 - Three-tier prompt loading: command flag, team override (`.eac/templates/ai/`), system default (`templates/ai/`)
 - Branch analysis pipeline: current branch, commit history, cumulative diff, diff stats, changed files with module enrichment
 - Module-aware context: enriches changed files with module ownership for multi-module commit messages
-- Mock injection: supports file-based mock responses for testing and lazy-initialized git repository replacement
+- Dependency injection: `Deps` struct holds injectable git repo, exec command, and AI response
 
 ## Internal Structure
 
@@ -41,19 +41,18 @@ Generates a comprehensive squash commit message from all branch commits compared
 
 ## Role in System
 
-The `create squash-message` command generates publication-ready squash commit messages for `eac-cli`, analyzing the full branch history and diff to produce a conventional-commit-formatted message with auditor summary, change breakdown, and module attribution. It complements `create commit-message` (for individual commits) by synthesizing an entire branch's work into a single cohesive message for PR squash merges.
+The `create squash-message` command generates publication-ready squash commit messages for `eac`, analyzing the full branch history and diff to produce a conventional-commit-formatted message with auditor summary, change breakdown, and module attribution. It complements `create commit-message` (for individual commits) by synthesizing an entire branch's work into a single cohesive message for PR squash merges.
 
 ## Code Health
 
 ### Tech Debt
 - `CreateSquashMessage()` in squash-message.go is ~127 lines and handles parsing, git analysis, AI generation, and output in one function
-- Global mutable `gitRepoProvider` (squash-message.go:60) used for test injection mirrors the same pattern in commit-message
+- ~~Global mutable `gitRepoProvider` used for test injection~~ (resolved: replaced with `Deps` struct in deps.go)
 - No unit tests for formatter.go or validator.go; only BDD-level coverage exists
 
 ### Pain Points
-- squash-message.go (436 lines) concentrates the entire pipeline in a single file with no sub-package decomposition
-- Significant code overlap with commit-message package (prompt loading, mock injection, module extraction, debug artifact logging)
+- squash-message.go concentrates the entire pipeline in a single file with no sub-package decomposition
 
 ### Optimization Opportunities
-- Extract shared AI-commit utilities (prompt context building, mock injection, debug logging) into a common package used by both commit-message and squash-message (high feasibility, clear duplication)
+- ~~Extract shared AI-commit utilities (prompt context building, mock injection, debug logging) into a common package used by both commit-message and squash-message~~ (resolved: `aiutil.ExecuteGeneration()` now provides shared executor pipeline used by both packages)
 - Add focused unit tests for formatter.go and validator.go to catch regressions without running full BDD suite (high feasibility, small surface area)

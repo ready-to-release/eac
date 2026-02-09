@@ -6,7 +6,7 @@
 
 For **container/bundle modules** with dependencies, approvals are **aggregated from all dependent modules**.
 
-Example: When querying `eac-ext` (which depends on `eac-commands` and `clie-cli`):
+Example: When querying `eac-ext` (which depends on `eac-commands` and `clie`):
 
 ```bash
 eac show approval-comments eac-ext
@@ -15,7 +15,7 @@ eac show approval-comments eac-ext
 Shows approvals from PRs containing:
 
 - `specs/eac-commands/` (dependency)
-- `specs/clie-cli/` (dependency)
+- `specs/clie/` (dependency)
 - `specs/eac-ext/` (if any)
 
 **Regular modules** only show approvals from their own `specs/<module>/` directory.

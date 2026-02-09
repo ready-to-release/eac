@@ -139,10 +139,10 @@ func (p *UnitPipeline) RecordManifest(unitID workunit.UnitID, manifest *coreoutp
 	}
 }
 
-// ParseComponent splits a "compName:toolName" component string into its parts.
+// ParseUnit splits a "compName:toolName" unit string into its parts.
 // Returns the component name and tool/provider name (empty if no colon separator).
-func ParseComponent(component string) (compName, toolName string) {
-	parts := strings.SplitN(component, ":", 2)
+func ParseUnit(unit string) (compName, toolName string) {
+	parts := strings.SplitN(unit, ":", 2)
 	compName = parts[0]
 	if len(parts) == 2 {
 		toolName = parts[1]
@@ -150,9 +150,9 @@ func ParseComponent(component string) (compName, toolName string) {
 	return
 }
 
-// ComponentDir returns the directory name for a component+tool combination.
+// UnitDir returns the directory name for a component+tool unit combination.
 // Uses dash separator to match UnitID.DirName() for consistent manifest paths.
-func ComponentDir(compName, toolName string) string {
+func UnitDir(compName, toolName string) string {
 	if toolName == "" {
 		return compName
 	}

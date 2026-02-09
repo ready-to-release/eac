@@ -34,7 +34,7 @@ Post-preprocessing cleanup that fixes broken internal links and removes unrefere
 
 ## Role in System
 
-The cleanup package runs as the final two phases (13 and 14) of the docprep preprocessing pipeline in `eac-cli`. After all content transformation, link rewriting, and diagram processing are complete, `FixBrokenInternalLinks` converts any remaining dead internal links to absolute site URLs using the book's configured `site_url`. It handles multiple target resolution strategies, checking for exact file matches, `.md` suffix matches, and `index.md` directory matches before determining a link is broken.
+The cleanup package runs as the final two phases (13 and 14) of the docprep preprocessing pipeline in `eac`. After all content transformation, link rewriting, and diagram processing are complete, `FixBrokenInternalLinks` converts any remaining dead internal links to absolute site URLs using the book's configured `site_url`. It handles multiple target resolution strategies, checking for exact file matches, `.md` suffix matches, and `index.md` directory matches before determining a link is broken.
 
 Then `CleanupUnreferencedAssets` removes images, PDFs, and other asset files that no markdown file references, along with any empty directories left behind.
 
@@ -43,10 +43,10 @@ These phases are intentionally last in the pipeline because earlier phases (diag
 ## Code Health
 
 ### Tech Debt
-- `assets.go:24`: `assetReferencePattern` is an exact duplicate of `staging/assetref.go:11` `assetRefPattern`; consolidate into a shared constant
+- ~~`assets.go:24`: `assetReferencePattern` is an exact duplicate of `staging/assetref.go:11`~~ (resolved: `assets.go` now imports `staging.AssetReferencePattern`)
 
 ### Pain Points
 - None identified -- both files are small (304 lines total), focused, and have corresponding test files
 
 ### Optimization Opportunities
-- Extract the shared asset-reference regex into a common location to avoid divergence if the pattern is updated in one place but not the other -- trivial effort
+- ~~Extract the shared asset-reference regex into a common location~~ (resolved: canonical pattern in `staging/assetref.go`)

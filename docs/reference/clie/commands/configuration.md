@@ -1,10 +1,10 @@
 # CLIE CLI Configuration
 
-Complete reference for configuring CLIE via `.clie/clie-cli.yml`.
+Complete reference for configuring CLIE via `.clie/clie.yml`.
 
 ## Overview
 
-The CLIE CLI uses `.clie/clie-cli.yml` to define the EAC extension, registry settings, and runtime behavior.
+The CLIE CLI uses `.clie/clie.yml` to define the EAC extension, registry settings, and runtime behavior.
 
 **Key concepts:**
 
@@ -16,7 +16,7 @@ The CLIE CLI uses `.clie/clie-cli.yml` to define the EAC extension, registry set
 ## Configuration File Location
 
 ```text
-<repository-root>/.clie/clie-cli.yml
+<repository-root>/.clie/clie.yml
 ```
 
 The CLI discovers the repository root by walking up directories until it finds `.git`.
@@ -27,7 +27,7 @@ The CLI discovers the repository root by walking up directories until it finds `
 # Initialize configuration
 clie init
 
-# Result: Creates .clie/clie-cli.yml
+# Result: Creates .clie/clie.yml
 ```
 
 ## Minimal Configuration
@@ -53,19 +53,19 @@ Values resolved in priority order (highest to lowest):
 | Priority | Source                | Description                             |
 | -------- | --------------------- | --------------------------------------- |
 | 1        | Environment Variables | Runtime overrides via `CLIE_*` variables |
-| 2        | User-Specific Config  | `.clie/clie-cli.local.yml` (gitignored)   |
-| 3        | Repository Config     | `.clie/clie-cli.yml` (committed)          |
+| 2        | User-Specific Config  | `.clie/clie.local.yml` (gitignored)   |
+| 3        | Repository Config     | `.clie/clie.yml` (committed)          |
 | 4        | Built-in Defaults     | Programmed into CLI                     |
 
 ### Configuration Layering
 
 ```text
 .clie/
-├── clie-cli.yml           # Team configuration (committed)
-└── clie-cli.local.yml     # Personal overrides (gitignored)
+├── clie.yml           # Team configuration (committed)
+└── clie.local.yml     # Personal overrides (gitignored)
 ```
 
-**Team config** (`.clie/clie-cli.yml`):
+**Team config** (`.clie/clie.yml`):
 
 ```yaml
 extensions:
@@ -73,7 +73,7 @@ extensions:
     image: 'ghcr.io/ready-to-release/eac-ext:latest'
 ```
 
-**Personal overrides** (`.clie/clie-cli.local.yml`):
+**Personal overrides** (`.clie/clie.local.yml`):
 
 ```yaml
 extensions:
@@ -254,9 +254,9 @@ extensions:
 
 ### Local Development File
 
-Create `.clie/clie-cli.local.yml` (gitignored) for personal settings:
+Create `.clie/clie.local.yml` (gitignored) for personal settings:
 
-**Team config** (`.clie/clie-cli.yml`):
+**Team config** (`.clie/clie.yml`):
 
 ```yaml
 extensions:
@@ -264,7 +264,7 @@ extensions:
     image: "ghcr.io/ready-to-release/eac-ext:latest"
 ```
 
-**Your overrides** (`.clie/clie-cli.local.yml`):
+**Your overrides** (`.clie/clie.local.yml`):
 
 ```yaml
 extensions:

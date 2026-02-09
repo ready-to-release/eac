@@ -13,9 +13,6 @@ const (
 	// AssetsDir is the assets subdirectory under docs.
 	AssetsDir = "assets"
 
-	// DocsCacheDir is the cache subdirectory under docs/assets (git-tracked for CI optimization).
-	DocsCacheDir = "cache"
-
 	// BuildDir is the subdirectory under OutDir for build outputs.
 	BuildDir = "build"
 
@@ -113,7 +110,6 @@ const (
 	// EACCacheRoot is the root directory for all EAC caches.
 	// This is separate from out/ to clearly distinguish cache state from build outputs.
 	// Deleting .cache/eac/ is guaranteed safe — all ephemeral caches are here.
-	// Git-tracked assets in docs/assets/cache/ are NOT under this root.
 	//
 	// Structure:
 	//   - .cache/eac/build/           - Build acceleration caches (hashes, state)
@@ -156,5 +152,5 @@ const (
 	OutAISummaryRelPath = OutDir + "/" + AISummaryDir
 
 	// EACCommandsModule is the module name for the EAC commands binary.
-	EACCommandsModule = "eac-cli"
+	EACCommandsModule = "eac"
 )

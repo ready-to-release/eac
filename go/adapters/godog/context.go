@@ -25,7 +25,7 @@ type TestContext struct {
 	OriginalRepoRoot string
 
 	// AssetsPath is the path to the assets directory relative to the repository root.
-	// Example: "go/cli/eac/specs/assets" for eac-cli.
+	// Example: "go/cli/eac/specs/assets" for eac.
 	AssetsPath string
 
 	// IsolatedDir is the temp directory for isolated tests (main repository root)
@@ -423,7 +423,7 @@ func (c *TestContext) formatCommandExecutionError(cmd *exec.Cmd, cmdLine string,
 
 // createCommand creates an exec.Cmd for running commands.
 // Uses paths.CommandsBinaryPath() to locate the pre-built binary.
-// The binary must exist - tests should have @depm:eac-cli dependency.
+// The binary must exist - tests should have @depm:eac dependency.
 // The command is placed in its own process group so it can be killed cleanly on timeout.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 	binaryPath := paths.CommandsBinaryPath(c.OriginalRepoRoot)
@@ -479,8 +479,8 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 		fmt.Fprintf(os.Stderr, "  (error reading: %v)\n", err)
 	}
 
-	// Check build directory for eac-cli
-	buildDir := filepath.Join(c.OriginalRepoRoot, "out", "build", "eac-cli")
+	// Check build directory for eac
+	buildDir := filepath.Join(c.OriginalRepoRoot, "out", "build", "eac")
 	fmt.Fprintf(os.Stderr, "\nBuild directory contents (%s):\n", buildDir)
 	if entries, err := os.ReadDir(buildDir); err == nil {
 		if len(entries) == 0 {
@@ -502,8 +502,8 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "Troubleshooting:\n")
-	fmt.Fprintf(os.Stderr, "  1. Ensure eac-cli is built before running tests\n")
-	fmt.Fprintf(os.Stderr, "  2. Check that @depm:eac-cli tag is on the test\n")
+	fmt.Fprintf(os.Stderr, "  1. Ensure eac is built before running tests\n")
+	fmt.Fprintf(os.Stderr, "  2. Check that @depm:eac tag is on the test\n")
 	fmt.Fprintf(os.Stderr, "  3. In CI, verify the build artifact was downloaded\n")
 	fmt.Fprintf(os.Stderr, "\n")
 }

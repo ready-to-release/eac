@@ -8,21 +8,21 @@ import (
 
 func TestVersionInfo_Struct(t *testing.T) {
 	info := VersionInfo{
-		Module:      "clie-cli",
+		Module:      "clie",
 		Version:     "1.2.3",
-		Tag:         "clie-cli/1.2.3",
+		Tag:         "clie/1.2.3",
 		Date:        "2025-12-14",
 		VersionType: "semver",
 	}
 
-	if info.Module != "clie-cli" {
-		t.Errorf("Module = %q, want %q", info.Module, "clie-cli")
+	if info.Module != "clie" {
+		t.Errorf("Module = %q, want %q", info.Module, "clie")
 	}
 	if info.Version != "1.2.3" {
 		t.Errorf("Version = %q, want %q", info.Version, "1.2.3")
 	}
-	if info.Tag != "clie-cli/1.2.3" {
-		t.Errorf("Tag = %q, want %q", info.Tag, "clie-cli/1.2.3")
+	if info.Tag != "clie/1.2.3" {
+		t.Errorf("Tag = %q, want %q", info.Tag, "clie/1.2.3")
 	}
 	if info.VersionType != "semver" {
 		t.Errorf("VersionType = %q, want %q", info.VersionType, "semver")

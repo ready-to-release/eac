@@ -23,7 +23,7 @@ component-types:
     defaults:
       artifact_pattern: "{moniker}{ext}"
     files:
-      source: ["**/*.go", "**/*.go.txt"]
+      source: ["**/*.go", "**/*.go.txt", "**/*.json"]
       tests: ["**/*_test.go"]
       config: ["go.mod", "go.sum"]
 
@@ -38,7 +38,7 @@ component-types:
     files:
       source: ["src/**/*.ts", "features/**/*.ts"]
       tests: ["**/*.test.ts"]
-      config: ["package.json", "tsconfig.json", "*.config.js"]
+      config: ["package.json", "tsconfig.json", "*.config.js", "cucumber.js", ".mocharc.json", ".vscodeignore"]
 
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
@@ -55,6 +55,7 @@ component-types:
     linters: [hadolint]
     scanners: [sbom, vuln, secrets, iac]
     build_after: [go]
+    default_root: containers/{moniker}
     pool: docker
     files:
       source: ["Dockerfile"]
@@ -73,7 +74,7 @@ component-types:
   book:
     extensions: []
     builders: [mkdocs]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
     pool: docker
     resources:
       cpus: 4
@@ -82,12 +83,13 @@ component-types:
   docs-pdf:
     extensions: []
     builders: [pdf]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
     pool: docker
     resources:
       cpus: 4
       memory: 4g
     defaults:
+      book_from_name: true
       theme: dark
     cache:
       key_sources: [sources.hash, config.hash, theme, container.hash]
@@ -97,14 +99,54 @@ component-types:
   docs-site:
     extensions: []
     builders: [site]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    default_root: docs
     pool: docker
     resources:
       cpus: 4
       memory: 1g
+    defaults:
+      book_from_name: true
     cache:
       key_sources: [sources.hash, config.hash, container.hash]
       artifacts_cacheable: true
+
+  # Documentation assets - standard file patterns for MkDocs-based documentation sites.
+  # Covers markdown, navigation, images, stylesheets, diagrams, and license files.
+  # Auto-discovered by the docs-site template via the docs-assets-from-site rule.
+  docs-assets:
+    extensions: []
+    scanners: [secrets]
+    default_root: docs
+    files:
+      source:
+        - "**/*.md"
+        - "**/*.markdown"
+        - "**/.nav.yml"
+        - "mkdocs.yml"
+        - "assets/**/*.drawio.png"
+        - "assets/**/*.png"
+        - "assets/**/*.jpg"
+        - "assets/**/*.svg"
+        - "assets/**/*.css"
+        - "assets/**/*.scss"
+        - "assets/**/*.js"
+        - "assets/**/*.pdf"
+        - "assets/**/*.drawio"
+        - "assets/*.json"
+        - "assets/*.yml"
+        - "LICENSE"
+        - "LICENSE.*"
+
+  # Container assets - non-Dockerfile support files in container directories.
+  # Scripts, configs, templates, vendored packages, etc.
+  # Auto-discovered by container/container-multiarch templates.
+  container-assets:
+    extensions: []
+    scanners: [secrets]
+    default_root: containers/{moniker}
+    files:
+      source: ["**/*"]
 
   # Assets component - collects all loose asset files in a module
   # Linting is routed via lint providers' applies_to lists
@@ -150,6 +192,7 @@ component-types:
   docs-drawio:
     extensions: []
     builders: [drawio-render]
+    default_root: docs/assets
     pool: docker
     requirements: [docker]
     resources:
@@ -161,6 +204,7 @@ component-types:
   docs-mermaid:
     extensions: []
     builders: [mermaid-render]
+    default_root: docs
     pool: docker
     requirements: [docker]
     resources:
@@ -182,6 +226,7 @@ component-types:
   # Repository configuration
   repository:
     extensions: []
+    default_root: /
     files:
       config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
 

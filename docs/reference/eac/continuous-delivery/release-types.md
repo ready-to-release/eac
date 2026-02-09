@@ -26,7 +26,7 @@ This classification drives workflow automation, changelog location, and architec
 
 **Examples**:
 
-- `clie-cli` - CLI binary for end users
+- `clie` - CLI binary for end users
 - `eac-ext` - VS Code extension
 - `docs` - HTML documentation site
 - `books` - PDF/EPUB documentation books
@@ -36,7 +36,7 @@ This classification drives workflow automation, changelog location, and architec
 ```yaml
 versioning:
   scheme: SemVer
-  changelog: release/clie-cli/CHANGELOG.md
+  changelog: release/clie/CHANGELOG.md
   release_type: published
 ```
 
@@ -56,7 +56,7 @@ versioning:
 
 **Examples**:
 
-- `eac-cli` - Go command implementations
+- `eac` - Go command implementations
 - `eac-mcp-server` - MCP server command bindings
 - `clie-installer` - Installation scripts
 - `vscode-commit` - VS Code commit message extension
@@ -106,7 +106,7 @@ versioning:
   release_type: bundle
 dependencies:
   build_deps:
-    - clie-cli
+    - clie
     - eac-ext
 ```
 
@@ -156,7 +156,7 @@ The release type determines changelog location:
 
 | Release Type | Changelog Location              | Example                               |
 | ------------ | ------------------------------- | ------------------------------------- |
-| `published`  | `release/<module>/CHANGELOG.md` | `release/clie-cli/CHANGELOG.md`        |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/clie/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/clie-eac-bundle/CHANGELOG.md` |
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
@@ -174,13 +174,13 @@ The release type determines changelog location:
 Release workflows **automatically filter** by release type:
 
 ```yaml
-# .github/workflows/release-clie-cli.yaml
+# .github/workflows/release-clie.yaml
 jobs:
   approve:
     steps:
       - uses: ./.github/actions/approve-release
         with:
-          module: clie-cli
+          module: clie
           # Only proceeds if module.versioning.release_type == "published"
 ```
 
@@ -223,7 +223,7 @@ To promote an internal module to published status:
 3. **Create release workflow**:
 
    ```bash
-   cp .github/workflows/release-clie-cli.yaml .github/workflows/release-my-module.yaml
+   cp .github/workflows/release-clie.yaml .github/workflows/release-my-module.yaml
    # Update module references in the workflow
    ```
 

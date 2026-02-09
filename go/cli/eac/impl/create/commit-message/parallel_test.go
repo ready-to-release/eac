@@ -39,7 +39,7 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 	}{
 		{
 			name:            "three modules maintain order",
-			affectedModules: []string{"clie-cli", "core", "eac-cli"},
+			affectedModules: []string{"clie", "core", "eac-cli"},
 		},
 		{
 			name:            "five modules maintain order",
@@ -83,8 +83,8 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 // TestGenerateModuleSectionsParallel_SingleModule verifies that single-module
 // commits skip module section generation (returning empty slice).
 func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
-	cfg := createTestConfig([]string{"clie-cli"})
-	mockExecutor := createMockExecutor([]string{"clie-cli"})
+	cfg := createTestConfig([]string{"clie"})
+	mockExecutor := createMockExecutor([]string{"clie"})
 
 	sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, mockExecutor)
 

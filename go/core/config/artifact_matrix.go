@@ -44,7 +44,7 @@ func (am *ArtifactMatrix) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// ExpandArtifactMatrix expands a matrix reference into concrete ModuleArtifact entries.
+// ExpandArtifactMatrix expands a matrix reference into concrete ComponentArtifact entries.
 // Returns nil if the matrix name is not found.
 // Parameters:
 //   - matrixName: the name of the matrix to expand

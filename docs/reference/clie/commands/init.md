@@ -1,6 +1,6 @@
 # clie init
 
-Creates a minimal `.clie/clie-cli.yml` configuration file in the repository root.
+Creates a minimal `.clie/clie.yml` configuration file in the repository root.
 
 This is the first step in setting up CLIE for extension management.
 
@@ -12,14 +12,14 @@ clie init [flags]
 
 ## Description
 
-The `init` command creates the `.clie/clie-cli.yml` file in your project.
+The `init` command creates the `.clie/clie.yml` file in your project.
 
 This file manages extension registration and configuration.
 
 **What it does:**
 
 1. Creates the `.clie/` directory if needed
-2. Generates a minimal `clie-cli.yml` with empty extension list
+2. Generates a minimal `clie.yml` with empty extension list
 3. Ready for extension installation via `clie install`
 
 **What it creates:**
@@ -73,7 +73,7 @@ After `clie init`:
 ```text
 your-project/
 ├── .clie/
-│   └── clie-cli.yml      # Extension registry (empty)
+│   └── clie.yml      # Extension registry (empty)
 └── (your project files)
 ```
 
@@ -82,7 +82,7 @@ After `clie install eac`:
 ```text
 your-project/
 ├── .clie/
-│   └── clie-cli.yml      # Contains eac extension
+│   └── clie.yml      # Contains eac extension
 └── (your project files)
 ```
 
@@ -91,7 +91,7 @@ After `clie eac init`:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie-cli.yml          # Extension registry
+│   ├── clie.yml          # Extension registry
 │   └── eac/                 # EAC configuration
 │       ├── ai-provider.yml
 │       └── repository.yml

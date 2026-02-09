@@ -6,7 +6,7 @@
 // Long:
 // Long: Example:
 // Long:   get module-trigger-reason docs --json "$MODULE_STATUS"
-// Long:   # Output: "files_changed_since_abc1234" or "dependency eac-cli needs CI"
+// Long:   # Output: "files_changed_since_abc1234" or "dependency eac needs CI"
 // Flag.json: type=string, usage=MODULE_STATUS JSON (defaults to env var)
 package get
 
@@ -75,7 +75,7 @@ func GetModuleTriggerReason() int {
 func formatTriggerReason(reason string) string {
 	switch {
 	case strings.HasPrefix(reason, "dependency "):
-		// "dependency eac-cli needs CI" -> "eac-cli changed"
+		// "dependency eac needs CI" -> "eac changed"
 		parts := strings.SplitN(reason, " ", 3)
 		if len(parts) >= 2 {
 			return parts[1] + " changed"

@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"strings"
 
-	cliecli "github.com/ready-to-release/eac/contracts/clie-cli/0.1.0"
+	clie "github.com/ready-to-release/eac/contracts/clie/0.1.0"
 )
 
 // embeddedEBNFSchema is loaded from the contracts module at init time
 var embeddedEBNFSchema string
 
 func init() {
-	data, err := cliecli.FS.ReadFile("schemas/command.ebnf")
+	data, err := clie.FS.ReadFile("schemas/command.ebnf")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load embedded EBNF schema from contracts: %v", err))
 	}

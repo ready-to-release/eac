@@ -107,3 +107,51 @@ func TestScanAssetReferences(t *testing.T) {
 	// Should find asset references but not external URLs or non-asset links
 	assert.NotEmpty(t, refs)
 }
+
+func TestResolveSourceDir(t *testing.T) {
+	root := filepath.FromSlash("/workspace")
+
+	tests := []struct {
+		name    string
+		pattern string
+		want    string
+	}{
+		{
+			name:    "docs glob",
+			pattern: "docs/**",
+			want:    filepath.Join(root, "docs"),
+		},
+		{
+			name:    "nested glob",
+			pattern: "docs/explanation/**",
+			want:    filepath.Join(root, "docs", "explanation"),
+		},
+		{
+			name:    "glob with file pattern",
+			pattern: "docs/**/*.md",
+			want:    filepath.Join(root, "docs"),
+		},
+		{
+			name:    "just glob returns empty",
+			pattern: "**",
+			want:    "",
+		},
+		{
+			name:    "empty pattern returns empty",
+			pattern: "",
+			want:    "",
+		},
+		{
+			name:    "no glob returns empty",
+			pattern: "docs/file.md",
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ResolveSourceDir(tt.pattern, root)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -12,7 +12,7 @@
 // Long:   - No duplicate version numbers
 // Long:
 // Long: Examples:
-// Long:   validate release clie-cli           # Validate single module
+// Long:   validate release clie           # Validate single module
 // Long:   validate release --all             # Validate all modules with changelogs
 // Flag.all: type=bool, usage=Validate all modules with changelogs
 // Flag.json: type=bool, usage=Output result in JSON format

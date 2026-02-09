@@ -112,11 +112,11 @@ func TestTruncateComponentName(t *testing.T) {
 			want:      "very-long-...:config",
 		},
 		{
-			name:      "module truncated - longer component preserved",
-			module:    "eac-cli-module",
+			name:      "module not truncated - fits within maxWidth",
+			module:    "eac-module",
 			component: "toolchain",
 			maxWidth:  22,
-			want:      "eac-cli-mo...:toolchain",
+			want:      "eac-module:toolchain",
 		},
 		{
 			name:      "long module truncated significantly",
@@ -281,7 +281,7 @@ func TestTruncateComponentName_PreservesComponent(t *testing.T) {
 		maxWidth  int
 	}{
 		{"component preserved in output", "very-long-module-name", "config", 20},
-		{"short component preserved", "eac-cli-module", "cfg", 15},
+		{"short component preserved", "eac-module", "cfg", 15},
 	}
 
 	for _, tt := range tests {

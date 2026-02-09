@@ -14,7 +14,7 @@
 // Long:   - run_id: the GitHub Actions run ID to download artifacts from
 // Long:
 // Long: Example usage in CI:
-// Long:   CI_RUNS=$(commands get evidence-ci-runs clie-cli --format json)
+// Long:   CI_RUNS=$(commands get evidence-ci-runs clie --format json)
 // Long:   echo "$CI_RUNS" | jq -c '.[]' | while read entry; do
 // Long:     module=$(echo "$entry" | jq -r '.module')
 // Long:     run_id=$(echo "$entry" | jq -r '.run_id')

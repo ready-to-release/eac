@@ -36,7 +36,7 @@ clie version
 clie init
 ```
 
-This creates `.clie/clie-cli.yml` with extension registry settings.
+This creates `.clie/clie.yml` with extension registry settings.
 
 ## Step 3: Install EAC Extension
 
@@ -100,7 +100,7 @@ After setup, your project includes:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie-cli.yml          # CLIE CLI configuration
+│   ├── clie.yml          # CLIE CLI configuration
 │   └── eac/
 │       └── repository.yml    # Module definitions
 └── ... (your code)

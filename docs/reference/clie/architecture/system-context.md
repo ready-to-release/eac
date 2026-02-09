@@ -6,7 +6,7 @@ High-level architecture showing how CLIE CLI interacts with external systems.
 
 Shows how CLIE CLI interacts with developers, CI/CD systems, Docker Engine, and GitHub Container Registry.
 
-<!-- structurizr:clie-cli:SystemContext -->
+<!-- structurizr:clie:SystemContext -->
 
 **Key actors:**
 
@@ -23,7 +23,7 @@ Shows how CLIE CLI interacts with developers, CI/CD systems, Docker Engine, and 
 
 High-level view of CLIE CLI's major subsystems and how they interact.
 
-<!-- structurizr:clie-cli:Containers -->
+<!-- structurizr:clie:Containers -->
 
 **Major subsystems:**
 

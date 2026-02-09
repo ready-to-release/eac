@@ -59,11 +59,11 @@ func (a *configAdapter) GetTestSuites() core.TestSuitesConfigPort {
 	return &testSuitesAdapter{suites: a.cfg.TestSuites}
 }
 
-func (a *configAdapter) GetComponentTypes() core.ComponentTypesConfigPort {
-	if a.cfg.ComponentTypes == nil {
+func (a *configAdapter) GetComponentKinds() core.ComponentKindsConfigPort {
+	if a.cfg.ComponentKinds == nil {
 		return nil
 	}
-	return &componentTypesAdapter{types: a.cfg.ComponentTypes}
+	return &componentKindsAdapter{kinds: a.cfg.ComponentKinds}
 }
 
 // repositoryAdapter wraps config.RepositoryConfig
@@ -97,7 +97,7 @@ func (a *repositoryAdapter) GetTestOutputPath(workspaceRoot, moniker string) str
 }
 
 func (a *repositoryAdapter) GetScanOutputPath(workspaceRoot, moniker string) string {
-	return paths.ComponentScanOutputPath(workspaceRoot, moniker, "")
+	return paths.UnitScanOutputPath(workspaceRoot, moniker, "")
 }
 
 func (a *repositoryAdapter) GetLintOutputPath(workspaceRoot, moniker string) string {
@@ -148,6 +148,7 @@ type moduleAdapter struct {
 func (a *moduleAdapter) GetMoniker() string                       { return a.module.Moniker }
 func (a *moduleAdapter) GetName() string                          { return a.module.Name }
 func (a *moduleAdapter) GetDescription() string                   { return a.module.Description }
+func (a *moduleAdapter) GetModuleGroup() string                    { return a.module.ModuleGroup }
 func (a *moduleAdapter) HasComponent(compType string) bool        { return a.module.Components != nil && a.module.Components[compType] != nil }
 func (a *moduleAdapter) GetComponentRoot(compType string) string  {
 	if a.module.Components == nil {
@@ -171,6 +172,16 @@ func (a *moduleAdapter) GetComponentRoots() map[string]string {
 	return roots
 }
 func (a *moduleAdapter) GetComponentTypesDisplay() string { return "" }
+func (a *moduleAdapter) GetComponentGroup(componentName string) string {
+	if a.module.Components == nil {
+		return ""
+	}
+	entry := a.module.Components[componentName]
+	if entry == nil {
+		return ""
+	}
+	return entry.ComponentGroup
+}
 func (a *moduleAdapter) GetComponentAmp(compName, op string) float64 { return 1.0 }
 func (a *moduleAdapter) GetDependsOn() []string           { return a.module.DependsOn }
 func (a *moduleAdapter) GetVersioningScheme() string {
@@ -296,25 +307,25 @@ func (a *testSuiteDefAdapter) GetName() string   { return a.s.Name }
 func (a *testSuiteDefAdapter) GetTags() []string { return nil }                  // Tags are stored differently in selectors
 func (a *testSuiteDefAdapter) IsDefault() bool   { return !a.s.ExtendedSuite }   // ExtendedSuite=true means NOT default
 
-// componentTypesAdapter wraps config.ComponentTypesConfig
-type componentTypesAdapter struct {
-	types *config.ComponentTypesConfig
+// componentKindsAdapter wraps config.ComponentKindsConfig
+type componentKindsAdapter struct {
+	kinds *config.ComponentKindsConfig
 }
 
-func (a *componentTypesAdapter) Get(name string) core.ComponentTypePort {
-	ct := a.types.Get(name)
+func (a *componentKindsAdapter) Get(name string) core.ComponentTypePort {
+	ct := a.kinds.Get(name)
 	if ct == nil {
 		return nil
 	}
 	return &componentTypeAdapter{ct: ct, name: name}
 }
 
-func (a *componentTypesAdapter) List() []string {
-	if a.types == nil || a.types.ComponentTypes == nil {
+func (a *componentKindsAdapter) List() []string {
+	if a.kinds == nil || a.kinds.Kinds == nil {
 		return nil
 	}
-	result := make([]string, 0, len(a.types.ComponentTypes))
-	for name := range a.types.ComponentTypes {
+	result := make([]string, 0, len(a.kinds.Kinds))
+	for name := range a.kinds.Kinds {
 		result = append(result, name)
 	}
 	return result

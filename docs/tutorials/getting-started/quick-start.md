@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/s
 The script will:
 
 - Detect your platform (OS and architecture)
-- Download the latest clie-cli release
+- Download the latest clie release
 - Install to `~/.local/bin/clie` (or use `--system` for system-wide installation)
 - Verify the installation
 
@@ -51,7 +51,7 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 
 The script will:
 
-- Download the latest clie-cli release for Windows
+- Download the latest clie release for Windows
 - Install to `%LOCALAPPDATA%\clie` (or use `-System` for Program Files)
 - Add the installation directory to your PATH
 - Verify the installation
@@ -80,7 +80,7 @@ clie init
 This command:
 
 - Creates the `.clie/` directory
-- Generates `clie-cli.yml` for extension management
+- Generates `clie.yml` for extension management
 - Sets up the extension registry configuration
 
 ## Step 4: Install EAC Extension
@@ -241,7 +241,7 @@ Congratulations! You've successfully:
 ## Key Concepts Covered
 
 - **clie CLI installation** - Binary distribution for multiple platforms
-- **CLIE CLI initialization** - Creating `.clie/clie-cli.yml` for extension management
+- **CLIE CLI initialization** - Creating `.clie/clie.yml` for extension management
 - **Extension installation** - Installing containerized extensions like EAC
 - **EAC configuration** - Setting up `.eac/` with AI provider settings
 - **Configuration layering** - System defaults vs. user overrides

@@ -278,10 +278,10 @@ func populateComponentWeights(ctx *cmdframework.ExecutionContext, bctx *buildCon
 
 	for _, spec := range specs {
 		// Key format: "module:component" (without tool suffix)
-		key := spec.ID.Module + ":" + spec.ID.Component
+		key := spec.ID.Module + ":" + spec.ID.ComponentName
 		if spec.ID.Tool != "" {
 			// Include tool for unique identification when multiple tools per component
-			key = spec.ID.Module + ":" + spec.ID.Component + ":" + spec.ID.Tool
+			key = spec.ID.Module + ":" + spec.ID.ComponentName + ":" + spec.ID.Tool
 		}
 		bctx.componentWeights[key] = spec.Weight
 		log.Debugf("[WEIGHT] Stored weight for %s: %d", key, spec.Weight)
@@ -386,7 +386,7 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 		if compResult.Handler != "" {
 			componentDir = compResult.Component + "-" + compResult.Handler
 		}
-		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
+		componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
 		if exitCode := builders.ExecutePostBuildSteps(compResult.Module, compResult.Component, ctx.WorkspaceRoot, componentOutputDir, io.Discard); exitCode != 0 {
 			log.Warnf("Post-build steps warning for %s/%s: exit code %d", compResult.Module, compResult.Component, exitCode)
 			// Continue with other components

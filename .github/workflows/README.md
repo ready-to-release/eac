@@ -72,7 +72,7 @@ This repository implements a sophisticated CI/CD pipeline with:
 
 Standard Go Modules (8):
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ eac-core     │  │ eac-commands │  │ clie-cli      │
+│ eac-core     │  │ eac-commands │  │ clie      │
 │ Build → Test │  │ Build → Test │  │ Build → Test │
 └──────────────┘  └──────────────┘  └──────────────┘
 
@@ -88,7 +88,7 @@ Special Modules (3):
 └─────────────────────────────────────────────────────────────┘
 
 ┌──────────────────┐  ┌──────────────────┐
-│ release-clie-cli  │  │ release-eac-ext  │
+│ release-clie  │  │ release-eac-ext  │
 │ Build binaries   │  │ Retag container  │
 │ → GH Releases    │  │ → GHCR versioned │
 └──────────────────┘  └──────────────────┘
@@ -278,7 +278,7 @@ The workflow detects pending releases from two sources and processes them in dep
 
 | Type       | Detection                                    | Versioning     | Examples          |
 | ---------- | -------------------------------------------- | -------------- | ----------------- |
-| **Semver** | CHANGELOG version without corresponding tag  | Developer sets | clie-cli, eac-ext  |
+| **Semver** | CHANGELOG version without corresponding tag  | Developer sets | clie, eac-ext  |
 | **Calver** | Module had CI dispatched (auto-release)      | YYYY.MMDD.HHMM | docs, books       |
 
 ### Unified Release Flow
@@ -296,7 +296,7 @@ The workflow detects pending releases from two sources and processes them in dep
 
 ### Developer-Initiated (Semver)
 
-For modules with changelog-based releases (clie-cli, eac-ext):
+For modules with changelog-based releases (clie, eac-ext):
 
 1. Run `release this <module>` locally
 2. CHANGELOG updated, PR created
@@ -315,7 +315,7 @@ For modules that auto-release on every main push (docs, books):
 
 **Workflows:**
 
-- `release-clie-cli`: Builds binaries from source, uploads to GitHub Releases
+- `release-clie`: Builds binaries from source, uploads to GitHub Releases
 - `release-eac-ext`: Retags CI container image from `sha-{short}` to `{version}`
 - `release-docs`: Deploys site to GitHub Pages
 - `release-books`: Uploads PDFs to GitHub Releases
@@ -326,7 +326,7 @@ For modules that auto-release on every main push (docs, books):
 
 | Workflow        | Uses CI Artifacts | Strategy            | Reason                        |
 | --------------- | ----------------- | ------------------- | ----------------------------- |
-| release-clie-cli | ❌                | Build from source   | Reproducible builds           |
+| release-clie | ❌                | Build from source   | Reproducible builds           |
 | release-eac-ext | ✅                | Retag image         | Ensures tested image released |
 | release-docs    | ✅                | Download artifacts  | No rebuild, CI-tested assets  |
 
@@ -394,7 +394,7 @@ All workflows need the `commands` binary. Three modes:
 
 **Supply Chain:**
 
-- Build provenance attestations (Sigstore) for clie-cli
+- Build provenance attestations (Sigstore) for clie
 - SBOM generation
 - CI verification before release
 
@@ -421,7 +421,7 @@ All workflows need the `commands` binary. Three modes:
 
 - Merge to main → `change-trigger` auto-detects and releases with calver tag
 
-**For semver modules (clie-cli, eac-ext):**
+**For semver modules (clie, eac-ext):**
 
 ```bash
 # Update CHANGELOG
@@ -484,7 +484,7 @@ Commands binary is rebuilt on every `change-trigger` run. To force rebuild in a 
 
 ### Why Rebuild for Releases?
 
-**clie-cli:** Reproducible builds require fresh compilation
+**clie:** Reproducible builds require fresh compilation
 **books:** Release uses `--all` flag (different from CI subset)
 
 ### Why Retag for Containers?

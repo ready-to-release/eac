@@ -38,7 +38,7 @@ CLIE automatically detects git repositories and:
 Extensions are self-contained Docker images:
 
 - Single binary entrypoint
-- Declarative configuration (`.clie/clie-cli.yml`)
+- Declarative configuration (`.clie/clie.yml`)
 - Independent versioning and releases
 - Composable (extensions can invoke other extensions)
 
@@ -57,7 +57,7 @@ The CLIE binary provides:
 | Component            | Technology | Responsibility                                  |
 | -------------------- | ---------- | ----------------------------------------------- |
 | Command Parser       | Cobra      | Command routing and argument parsing            |
-| Configuration Loader | Viper      | Load `.clie/clie-cli.yml` and merge configs     |
+| Configuration Loader | Viper      | Load `.clie/clie.yml` and merge configs     |
 | Docker Orchestrator  | Docker SDK | Container lifecycle (pull, create, start, stop) |
 | Git Discovery        | go-git     | Find repository root and mount points           |
 
@@ -70,7 +70,7 @@ Extensions communicate via:
 - **Environment variables**: Configuration and secrets
 - **Exit codes**: Success (0) or failure (non-zero)
 
-**Configuration example** (`.clie/clie-cli.yml`):
+**Configuration example** (`.clie/clie.yml`):
 
 ```yaml
 extensions:
@@ -90,7 +90,7 @@ sequenceDiagram
 
     User->>CLI: clie eac build
     CLI->>CLI: Parse command (eac = extension, build = subcommand)
-    CLI->>CLI: Load .clie/clie-cli.yml
+    CLI->>CLI: Load .clie/clie.yml
     CLI->>CLI: Find git repository root
     CLI->>Docker: Pull/build eac-ext:latest
     Docker-->>CLI: Image ready
@@ -107,7 +107,7 @@ sequenceDiagram
 Extensions register commands dynamically:
 
 1. CLIE detects extension name from first argument (`clie eac ...`)
-2. Looks up extension in `.clie/clie-cli.yml`
+2. Looks up extension in `.clie/clie.yml`
 3. Passes remaining arguments to extension (`build ...`)
 4. Extension handles subcommand routing internally
 
@@ -119,7 +119,7 @@ CLIE loads configuration from multiple sources (precedence order):
 
 1. **Command-line flags** (highest priority)
 2. **Environment variables** (`CLIE_*`)
-3. **Project config** (`.clie/clie-cli.yml`)
+3. **Project config** (`.clie/clie.yml`)
 4. **User config** (`~/.clie/config.yml`)
 5. **System defaults** (hardcoded fallbacks)
 
@@ -237,7 +237,7 @@ Errors propagate from extension to CLI to user.
 To create an extension:
 
 1. Create Dockerfile with extension binary
-2. Add entry to `.clie/clie-cli.yml`
+2. Add entry to `.clie/clie.yml`
 3. Implement command handling
 4. Build and test locally
 5. Publish Docker image (optional)

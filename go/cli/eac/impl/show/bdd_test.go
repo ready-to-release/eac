@@ -10,7 +10,7 @@ import (
 
 func TestFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../specs/eac-cli/show-workspaces",
+		SpecsPath:         "../../../../../specs/eac/show-workspaces",
 		DefaultReportName: "cucumber-show",
 		RegisterSteps:     registerSteps,
 	}

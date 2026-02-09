@@ -26,8 +26,8 @@ type DisplayOrder struct {
 // computeDisplayOrder builds the display ordering from module dependencies,
 // baseline tracking, and component-level dependencies.
 // Must be called after expandModuleGroups (module deps resolved) and
-// LoadComponentTypes (build_after available).
-func (c *RepositoryConfig) computeDisplayOrder(compTypes *ComponentTypesConfig) {
+// LoadComponentKinds (build_after available).
+func (c *RepositoryConfig) computeDisplayOrder(compTypes *ComponentKindsConfig) {
 	order := &DisplayOrder{
 		Depth:      make(map[string]int),
 		IsBaseline: c.baselineModules,
@@ -101,7 +101,7 @@ func (c *RepositoryConfig) computeDisplayOrder(compTypes *ComponentTypesConfig) 
 
 // computeComponentOrder returns components in dependency-respecting order.
 // Priority: DependsOn > build_after > ComponentOrder (YAML declaration order).
-func computeComponentOrder(m *Module, compTypes *ComponentTypesConfig) []string {
+func computeComponentOrder(m *Module, compTypes *ComponentKindsConfig) []string {
 	if len(m.Components) == 0 {
 		return nil
 	}
@@ -120,7 +120,7 @@ func computeComponentOrder(m *Module, compTypes *ComponentTypesConfig) []string 
 			}
 		}
 
-		// 2. build_after from ComponentTypes.
+		// 2. build_after from ComponentKinds.
 		if compTypes != nil && entry != nil {
 			compType := name
 			if entry.Type != "" {

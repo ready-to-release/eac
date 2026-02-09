@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../contracts/clie/0.1.0/schemas/clie.schema.json
+extensions:
+  - name: 'eac'
+    image: 'eac-ext:dev'
+    load_local: true

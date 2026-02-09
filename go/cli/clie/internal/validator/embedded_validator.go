@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	cliecli "github.com/ready-to-release/eac/contracts/clie-cli/0.1.0"
+	clie "github.com/ready-to-release/eac/contracts/clie/0.1.0"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -13,7 +13,7 @@ import (
 var embeddedSchema string
 
 func init() {
-	data, err := cliecli.FS.ReadFile("schemas/clie-cli.schema.json")
+	data, err := clie.FS.ReadFile("schemas/clie.schema.json")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load embedded schema from contracts: %v", err))
 	}

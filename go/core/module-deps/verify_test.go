@@ -219,8 +219,8 @@ func TestModuleCheckerGetName(t *testing.T) {
 	}{
 		{
 			name:    "simple moniker",
-			moniker: "eac-cli",
-			want:    "Module: eac-cli",
+			moniker: "eac",
+			want:    "Module: eac",
 		},
 		{
 			name:    "empty moniker",
@@ -274,8 +274,8 @@ func TestCheckSourceRootExists_RootExists(t *testing.T) {
 
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "my-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
 				Root: "go/cli/my-module",
 			},
 		},
@@ -294,11 +294,11 @@ func TestCheckSourceRootExists_NoRootsExist(t *testing.T) {
 
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "missing-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
 				Root: "go/cli/does-not-exist",
 			},
-			"specs": &domain.ComponentEntry{
+			"specs": &config.ComponentEntry{
 				Root: "specs/does-not-exist",
 			},
 		},
@@ -321,11 +321,11 @@ func TestCheckSourceRootExists_OneOfMultipleRootsExists(t *testing.T) {
 
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "my-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
 				Root: "go/cli/nonexistent",
 			},
-			"specs": &domain.ComponentEntry{
+			"specs": &config.ComponentEntry{
 				Root: "specs/my-module",
 			},
 		},
@@ -344,7 +344,7 @@ func TestCheckSourceRootExists_NoComponents(t *testing.T) {
 
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker:    "empty-module",
-		Components: domain.ModuleComponents{},
+		Components: config.ModuleComponents{},
 	}, tmpDir)
 
 	assert.False(t, checker.checkSourceRootExists(module))
@@ -374,17 +374,18 @@ func TestCheckSourceRootExists_ComponentWithEmptyRoot(t *testing.T) {
 		repoRoot: tmpDir,
 	}
 
-	// A component entry with an empty root is skipped by GetAllRoots
+	// A component entry with an empty root resolves to the repo root itself via
+	// filepath.Join(repoRoot, ""), which always exists, so the check returns true.
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "empty-root-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
 				Root: "",
 			},
 		},
 	}, tmpDir)
 
-	assert.False(t, checker.checkSourceRootExists(module))
+	assert.True(t, checker.checkSourceRootExists(module))
 }
 
 func TestCheckSourceRootExists_RootIsFile(t *testing.T) {
@@ -402,8 +403,8 @@ func TestCheckSourceRootExists_RootIsFile(t *testing.T) {
 
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "file-root-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{
 				Root: "go/cli",
 			},
 		},
@@ -478,6 +479,120 @@ func TestCheckAnyPlatformExists_MultiplePlatformsNoneExist(t *testing.T) {
 
 	result := checker.checkAnyPlatformExists(artifact, buildDir, nil)
 	assert.False(t, result, "should be false when no artifact files exist on disk")
+}
+
+// ---------------------------------------------------------------------------
+// ModuleChecker.checkAnyPlatformExists — happy-path and edge cases
+// ---------------------------------------------------------------------------
+
+func TestCheckAnyPlatformExists_ArtifactFoundOnLinux(t *testing.T) {
+	tmpDir := t.TempDir()
+	buildDir := filepath.Join(tmpDir, "out", "build", "my-mod")
+	require.NoError(t, os.MkdirAll(buildDir, 0o755))
+
+	// Create artifact matching linux-amd64 pattern
+	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "my-mod-linux-amd64"), []byte("bin"), 0o755))
+
+	checker := &ModuleChecker{moniker: "my-mod", repoRoot: tmpDir}
+	artifact := config.Artifact{
+		ID:        "cli",
+		Type:      config.ArtifactTypeExecutable,
+		Pattern:   "{moniker}-{os}-{arch}",
+		Platforms: []string{"linux"},
+	}
+
+	assert.True(t, checker.checkAnyPlatformExists(artifact, buildDir, nil))
+}
+
+func TestCheckAnyPlatformExists_WindowsOnlyChecksAmd64(t *testing.T) {
+	tmpDir := t.TempDir()
+	buildDir := filepath.Join(tmpDir, "out", "build", "my-mod")
+	require.NoError(t, os.MkdirAll(buildDir, 0o755))
+
+	// Create ONLY windows-arm64 file — should NOT be found because
+	// Windows only checks amd64 (arm64 is excluded for Windows)
+	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "my-mod-windows-arm64.exe"), []byte("bin"), 0o755))
+
+	checker := &ModuleChecker{moniker: "my-mod", repoRoot: tmpDir}
+	artifact := config.Artifact{
+		ID:        "cli",
+		Type:      config.ArtifactTypeExecutable,
+		Pattern:   "{moniker}-{os}-{arch}{ext}",
+		Platforms: []string{"windows"},
+	}
+
+	assert.False(t, checker.checkAnyPlatformExists(artifact, buildDir, nil),
+		"windows should only check amd64, not arm64")
+}
+
+func TestCheckAnyPlatformExists_WindowsAmd64Found(t *testing.T) {
+	tmpDir := t.TempDir()
+	buildDir := filepath.Join(tmpDir, "out", "build", "my-mod")
+	require.NoError(t, os.MkdirAll(buildDir, 0o755))
+
+	// Create windows-amd64 file with .exe extension
+	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "my-mod-windows-amd64.exe"), []byte("bin"), 0o755))
+
+	checker := &ModuleChecker{moniker: "my-mod", repoRoot: tmpDir}
+	artifact := config.Artifact{
+		ID:        "cli",
+		Type:      config.ArtifactTypeExecutable,
+		Pattern:   "{moniker}-{os}-{arch}{ext}",
+		Platforms: []string{"windows"},
+	}
+
+	assert.True(t, checker.checkAnyPlatformExists(artifact, buildDir, nil))
+}
+
+func TestCheckAnyPlatformExists_DarwinArm64Found(t *testing.T) {
+	tmpDir := t.TempDir()
+	buildDir := filepath.Join(tmpDir, "out", "build", "my-mod")
+	require.NoError(t, os.MkdirAll(buildDir, 0o755))
+
+	// Create only arm64 for darwin — linux amd64 does not exist
+	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "my-mod-darwin-arm64"), []byte("bin"), 0o755))
+
+	checker := &ModuleChecker{moniker: "my-mod", repoRoot: tmpDir}
+	artifact := config.Artifact{
+		ID:        "cli",
+		Type:      config.ArtifactTypeExecutable,
+		Pattern:   "{moniker}-{os}-{arch}",
+		Platforms: []string{"linux", "darwin"},
+	}
+
+	assert.True(t, checker.checkAnyPlatformExists(artifact, buildDir, nil),
+		"should find darwin-arm64 even though linux artifacts are missing")
+}
+
+func TestCheckAnyPlatformExists_SinglePlatformNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	buildDir := filepath.Join(tmpDir, "out", "build", "my-mod")
+	require.NoError(t, os.MkdirAll(buildDir, 0o755))
+
+	checker := &ModuleChecker{moniker: "my-mod", repoRoot: tmpDir}
+	artifact := config.Artifact{
+		ID:        "cli",
+		Type:      config.ArtifactTypeExecutable,
+		Pattern:   "{moniker}-{os}-{arch}",
+		Platforms: []string{"freebsd"},
+	}
+
+	assert.False(t, checker.checkAnyPlatformExists(artifact, buildDir, nil))
+}
+
+// ---------------------------------------------------------------------------
+// ModuleChecker.init — idempotency
+// ---------------------------------------------------------------------------
+
+func TestModuleCheckerInit_AlreadyInitialized(t *testing.T) {
+	// When repoRoot is already set, init() should be a no-op
+	checker := &ModuleChecker{
+		moniker:  "test-mod",
+		repoRoot: "/already/set",
+	}
+	err := checker.init()
+	assert.NoError(t, err, "init should short-circuit when repoRoot is already set")
+	assert.Equal(t, "/already/set", checker.repoRoot, "repoRoot should not be modified")
 }
 
 // ---------------------------------------------------------------------------

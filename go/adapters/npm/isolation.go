@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/clibase/fileutil"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -49,12 +49,21 @@ func NewNpmIsolation(workspaceRoot string) *NpmIsolation {
 }
 
 // PrepareIsolatedEnv creates an isolated environment by:
-// 1. Creating .cache/npm/work/{moniker}/
+// 1. Creating .cache/npm/work/{key}/ where key is derived from outputDir
 // 2. Copying: package.json, package-lock.json, tsconfig*.json, .mocharc.json, cucumber.js
 // 3. Syncing directories: src/, test/, features/, steps/
 // 4. Setting NPM_CONFIG_CACHE environment variable
-func (n *NpmIsolation) PrepareIsolatedEnv(moduleRoot, moniker string) (*IsolatedEnv, error) {
-	workDir := filepath.Join(n.workRoot, moniker)
+//
+// outputDir is the unique per-UoW output directory (e.g., out/test/<module>/<dirname>).
+// Its basename is used as the isolation key. If empty, falls back to moduleRoot basename.
+func (n *NpmIsolation) PrepareIsolatedEnv(moduleRoot, outputDir string) (*IsolatedEnv, error) {
+	key := filepath.Base(outputDir)
+	if key == "" || key == "." {
+		// Derive a stable name from the module root to prevent all modules
+		// sharing a single work directory (which corrupts node_modules).
+		key = filepath.Base(moduleRoot)
+	}
+	workDir := filepath.Join(n.workRoot, key)
 
 	// Check if package.json changed - if so, we need a full reset
 	// to avoid stale files from previous configurations

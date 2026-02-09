@@ -218,7 +218,7 @@ func TestDeriveChangelogPath(t *testing.T) {
 		{
 			name: "explicit changelog takes precedence",
 			m: &Module{
-				Moniker: "clie-cli",
+				Moniker: "clie",
 				Versioning: &ModuleVersioning{
 					ReleaseType: "published",
 					Changelog:   "custom/path/CHANGELOG.md",
@@ -229,12 +229,12 @@ func TestDeriveChangelogPath(t *testing.T) {
 		{
 			name: "published release type derives from moniker",
 			m: &Module{
-				Moniker: "clie-cli",
+				Moniker: "clie",
 				Versioning: &ModuleVersioning{
 					ReleaseType: "published",
 				},
 			},
-			want: "release/clie-cli/CHANGELOG.md",
+			want: "release/clie/CHANGELOG.md",
 		},
 		{
 			name: "bundle release type derives from moniker",

@@ -1,7 +1,7 @@
 # ============================================================
 # RUNTIME STAGE - Final image with pre-built binary
 # ============================================================
-# The eac-cli module cross-compiles the binary during its own build phase.
+# The eac module cross-compiles the binary during its own build phase.
 # We consume the pre-built binary instead of recompiling from source,
 # eliminating ~60s of redundant Go compilation per architecture.
 FROM golang:1.25-alpine
@@ -29,34 +29,15 @@ ENV CGO_ENABLED=0
 
 WORKDIR /app
 
-# Note: CLIE_DOCKER_MODE is set by clie CLI at runtime, not here
-# This allows tests to find /app via .git while normal usage gets /var/task
 ENV TZ=UTC
 ENV CLIE_CONTAINER_ROOT=/app
 
-# Copy source code to /app (needed for go test in acceptance tests)
-COPY go/core/ ./go/core/
-COPY go/clibase/ ./go/clibase/
-COPY go/cli/eac/ ./go/cli/eac/
-COPY go/adapters/ ./go/adapters/
-COPY go/specs/ ./go/specs/
-COPY contracts/ ./contracts/
-COPY .clie/ ./.clie/
-COPY specs/ ./specs/
-COPY templates/ ./templates/
-
-# Copy pre-built binary from eac-cli build output.
+# Copy pre-built binary from eac build output.
 # TARGETARCH is set automatically by docker buildx (amd64 or arm64).
-# The binary was cross-compiled by the eac-cli module's go builder.
+# The binary was cross-compiled by the eac module's go builder.
+# The Docker build context is scoped to out/build/eac/go-go/.
 ARG TARGETARCH
-COPY out/build/eac-cli/go-go/eac-linux-${TARGETARCH} /app/out/tools/eac
-
-# Create fake .git so GetRepositoryRoot() finds /app when running tests
-# (tests run from /app, not /var/task which is for user repo mounts)
-RUN mkdir -p /app/.git
-
-# Copy test assets needed for godog tests (scripts for installer tests)
-COPY scripts/ ./scripts/
+COPY eac-linux-${TARGETARCH} /app/out/tools/eac
 
 # Add OCI labels
 LABEL org.opencontainers.image.title="EAC Extension"
@@ -67,21 +48,21 @@ LABEL org.opencontainers.image.vendor="Ready to Release"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Add CLIE CLI extension labels
-LABEL clie-cli.extension.name="eac"
-LABEL clie-cli.extension.category="tools"
-LABEL clie-cli.extension.type="commands"
-LABEL clie-cli.extension.maturity="stable"
-LABEL clie-cli.version.min="1.0.0"
-LABEL clie-cli.capabilities="repository-management,module-discovery,dependency-analysis,testing,documentation,specifications,architecture-design,git-worktree,build-automation,pipeline-execution"
-LABEL clie-cli.runtime="go"
-LABEL clie-cli.os.support="linux"
-LABEL clie-cli.resources.cpu.min="0.1"
-LABEL clie-cli.resources.memory.min="256Mi"
+LABEL clie.extension.name="eac"
+LABEL clie.extension.category="tools"
+LABEL clie.extension.type="commands"
+LABEL clie.extension.maturity="stable"
+LABEL clie.version.min="1.0.0"
+LABEL clie.capabilities="repository-management,module-discovery,dependency-analysis,testing,documentation,specifications,architecture-design,git-worktree,build-automation,pipeline-execution"
+LABEL clie.runtime="go"
+LABEL clie.os.support="linux"
+LABEL clie.resources.cpu.min="0.1"
+LABEL clie.resources.memory.min="256Mi"
 
 # Multi-platform support labels
-LABEL clie-cli.multi-arch="true"
-LABEL clie-cli.platforms="linux/amd64,linux/arm64"
-LABEL clie-cli.multi-platform.support="true"
+LABEL clie.multi-arch="true"
+LABEL clie.platforms="linux/amd64,linux/arm64"
+LABEL clie.multi-platform.support="true"
 
 # Set working directory for command execution (clie CLI mounts repo here)
 WORKDIR /var/task

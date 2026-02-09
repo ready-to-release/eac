@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,17 +21,17 @@ func buildMockRegistry(t *testing.T, modules map[string]mockModuleConfig) *Regis
 
 	registry := NewRegistry("1.0.0", "/mock/workspace")
 
-	for moniker, config := range modules {
+	for moniker, cfg := range modules {
 		base := domain.BaseContract{
 			Moniker:    moniker,
-			Components: make(domain.ModuleComponents),
+			Components: make(config.ModuleComponents),
 		}
 
-		if config.withVersioning {
-			base.Versioning = &domain.ModuleVersioning{
+		if cfg.withVersioning {
+			base.Versioning = &config.ModuleVersioning{
 				Scheme:      "CalVer",
-				Changelog:   config.changelog,
-				ReleaseType: config.releaseType,
+				Changelog:   cfg.changelog,
+				ReleaseType: cfg.releaseType,
 			}
 		}
 
@@ -61,7 +62,7 @@ func validateReleaseTypeConsistency(contract domain.BaseContract) bool {
 	// Determine if changelog is in release/{module}/ folder (published module pattern)
 	// Only paths like release/<module>/CHANGELOG.md are in release folder (must have subdirectory)
 	isInReleaseFolder := len(changelogPath) >= 8 && changelogPath[:8] == "release/" &&
-		strings.Count(changelogPath, "/") >= 2 // Must have subdirectory (e.g., release/clie-cli/CHANGELOG.md)
+		strings.Count(changelogPath, "/") >= 2 // Must have subdirectory (e.g., release/clie/CHANGELOG.md)
 
 	switch releaseType {
 	case "published", "bundle":
@@ -85,9 +86,9 @@ func TestLoadedModules_ReleaseTypeConsistency(t *testing.T) {
 	// Build mock registry with predictable test cases
 	moduleRegistry := buildMockRegistry(t, map[string]mockModuleConfig{
 		// Published modules (should be in release/ folder)
-		"clie-cli": {
+		"clie": {
 			withVersioning: true,
-			changelog:      "release/clie-cli/CHANGELOG.md",
+			changelog:      "release/clie/CHANGELOG.md",
 			releaseType:    "published",
 		},
 		"eac-ext": {
@@ -102,7 +103,7 @@ func TestLoadedModules_ReleaseTypeConsistency(t *testing.T) {
 			releaseType:    "bundle",
 		},
 		// Internal modules (should NOT be in release/ folder)
-		"eac-cli": {
+		"eac": {
 			withVersioning: true,
 			changelog:      "go/cli/eac/CHANGELOG.md",
 			releaseType:    "internal",
@@ -206,17 +207,17 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 	// Expected release types per the architecture plan
 	expectedReleaseTypes := map[string]string{
 		// Published
-		"clie-cli": "published",
+		"clie": "published",
 		"eac-ext": "published",
 		"docs":    "published",
 		"books":   "published",
 		// Bundle
 		"clie-eac-bundle": "bundle",
 		// Internal
-		"eac-cli":      "internal",
-		"eac-mcp-server":  "internal",
-		"clie-installer":     "internal",
-		"vscode-commit": "internal",
+		"eac":            "internal",
+		"eac-mcp-server": "internal",
+		"clie-installer": "internal",
+		"vscode-commit":  "internal",
 		// None
 		"core": "none",
 	}
@@ -235,7 +236,7 @@ func TestKnownModules_ReleaseTypeAssignment(t *testing.T) {
 		} else if releaseType == "internal" {
 			// Internal modules have changelogs in module roots
 			switch moniker {
-			case "eac-cli":
+			case "eac":
 				config.changelog = "go/cli/eac/CHANGELOG.md"
 			case "eac-mcp-server":
 				config.changelog = "go/eac/mcp/commands/CHANGELOG.md"

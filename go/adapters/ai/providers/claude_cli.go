@@ -73,7 +73,7 @@ func (p *ClaudeCLI) Execute(ctx context.Context, input string, opts ...ai.Option
 	cmd.Stdin = strings.NewReader(input)
 
 	// CRITICAL: Remove ANTHROPIC_API_KEY to force subscription auth
-	// See docs/reference/modules/eac-cli/claude-constraints.md for rationale
+	// See docs/reference/modules/eac/claude-constraints.md for rationale
 	cmd.Env = removeAPIKeyFromEnv(os.Environ())
 
 	// Capture output

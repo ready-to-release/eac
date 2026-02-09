@@ -9,6 +9,7 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -167,8 +168,8 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType core.ActionTyp
 	}
 
 	// Wrap worker to match orchestrator signature, forwarding cancellation context
-	orchWorker := func(goCtx context.Context, module, component string, logWriter io.Writer) int {
-		return worker(goCtx, ctx, module, component, logWriter)
+	orchWorker := func(goCtx context.Context, spec core.UnitSpec, logWriter io.Writer) int {
+		return worker(goCtx, ctx, spec, logWriter)
 	}
 
 	// Execute components with dependency-based parallel scheduling
@@ -214,9 +215,16 @@ func computeComponentCounts(units []workunit.UnitSpec) map[string]int {
 
 // injectModuleDependencies adds inter-module dependency edges to UnitSpecs.
 // For each UoW in a module that depends on another module, DependsOn entries
-// are added for ALL UoWs in the dependency module. This ensures:
-//  1. UoWs wait until all dependency module UoWs complete
-//  2. If any dependency module UoW fails, dependent UoWs see it via HasFailedDependency
+// are added based on how the dependency is declared:
+//
+//   - component_deps (narrowed): Only matching UoWs from the dep module are added.
+//     Matching uses ParsedComponentDep.MatchesUnitID for progressive field matching.
+//   - depends_on only (legacy all-to-all): ALL UoWs in the dep module are added.
+//
+// Narrowing is per source-module → dep-module pair. If ANY component in module A
+// has component_deps referencing module B, then ALL components in module A use
+// narrowed matching for B. Components without their own component_deps for B
+// simply get no deps from B.
 func injectModuleDependencies(work []workunit.UnitSpec, registry *modules.Registry) []workunit.UnitSpec {
 	if registry == nil || len(work) == 0 {
 		return work
@@ -228,9 +236,15 @@ func injectModuleDependencies(work []workunit.UnitSpec, registry *modules.Regist
 		moduleUnitIDs[w.ID.Module] = append(moduleUnitIDs[w.ID.Module], w.ID)
 	}
 
-	// For each UoW, add DependsOn entries for all UoWs in dependency modules
+	// Pre-build component_deps index:
+	// narrowDeps[srcModule][depModule] = true means srcModule uses narrowed matching for depModule
+	// parsedDeps[srcModule][componentName] = []ParsedComponentDep for that component
+	narrowDeps, parsedDeps := buildComponentDepsIndex(work, registry)
+
+	// For each UoW, add DependsOn entries for dependency modules
 	for i := range work {
-		module, exists := registry.Get(work[i].ID.Module)
+		srcModule := work[i].ID.Module
+		module, exists := registry.Get(srcModule)
 		if !exists {
 			continue
 		}
@@ -240,11 +254,78 @@ func injectModuleDependencies(work []workunit.UnitSpec, registry *modules.Regist
 			if !hasDeps {
 				continue // Dependency module not in current execution set
 			}
-			work[i].DependsOn = append(work[i].DependsOn, depUnitIDs...)
+
+			if narrowDeps[srcModule][depModule] {
+				// Narrowed: only add UoWs matching this component's parsed deps
+				compName := work[i].ID.ComponentName
+				for _, parsed := range parsedDeps[srcModule][compName] {
+					if parsed.Module != depModule {
+						continue
+					}
+					for _, depUID := range depUnitIDs {
+						if parsed.MatchesUnitID(depUID) {
+							work[i].DependsOn = append(work[i].DependsOn, depUID)
+						}
+					}
+				}
+			} else {
+				// Legacy all-to-all
+				work[i].DependsOn = append(work[i].DependsOn, depUnitIDs...)
+			}
 		}
 	}
 
 	return work
+}
+
+// buildComponentDepsIndex pre-parses component_deps from all modules in the work set.
+// Returns:
+//   - narrowDeps: map[srcModule][depModule] = true if narrowed matching applies
+//   - parsedDeps: map[srcModule][componentName] = parsed deps for that component
+func buildComponentDepsIndex(work []workunit.UnitSpec, registry *modules.Registry) (
+	map[string]map[string]bool,
+	map[string]map[string][]config.ParsedComponentDep,
+) {
+	narrowDeps := make(map[string]map[string]bool)
+	parsedDeps := make(map[string]map[string][]config.ParsedComponentDep)
+
+	// Collect unique source modules from work items
+	seenModules := make(map[string]bool)
+	for _, w := range work {
+		seenModules[w.ID.Module] = true
+	}
+
+	for srcModule := range seenModules {
+		module, exists := registry.Get(srcModule)
+		if !exists {
+			continue
+		}
+
+		for compName, entry := range module.Components {
+			if entry == nil || len(entry.ComponentDeps) == 0 {
+				continue
+			}
+
+			// Lazy-init maps for this source module
+			if narrowDeps[srcModule] == nil {
+				narrowDeps[srcModule] = make(map[string]bool)
+			}
+			if parsedDeps[srcModule] == nil {
+				parsedDeps[srcModule] = make(map[string][]config.ParsedComponentDep)
+			}
+
+			for _, dep := range entry.ComponentDeps {
+				parsed, err := config.ParseComponentDep(dep)
+				if err != nil {
+					continue // Validation errors caught at config load time
+				}
+				narrowDeps[srcModule][parsed.Module] = true
+				parsedDeps[srcModule][compName] = append(parsedDeps[srcModule][compName], parsed)
+			}
+		}
+	}
+
+	return narrowDeps, parsedDeps
 }
 
 // GetExitCode returns the overall exit code from results (0 if all succeeded).

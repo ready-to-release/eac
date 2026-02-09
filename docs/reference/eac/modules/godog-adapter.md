@@ -1,18 +1,18 @@
-# godog-adapter
+# godog-eac
 
-The `godog-adapter` module provides BDD test infrastructure for Godog integration, including test context, caching, and shared step definitions.
+The `godog-eac` module provides BDD test infrastructure for Godog integration, including test context, caching, and shared step definitions.
 
 ## System Context
 
-Shows how godog-adapter provides BDD infrastructure to test modules.
+Shows how godog-eac provides BDD infrastructure to test modules.
 
-<!-- structurizr:godog-adapter:SystemContext -->
+<!-- structurizr:godog-eac:SystemContext -->
 
 ## Container Architecture
 
-High-level view of the godog-adapter packages.
+High-level view of the godog-eac packages.
 
-<!-- structurizr:godog-adapter:Containers -->
+<!-- structurizr:godog-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,18 +20,18 @@ High-level view of the godog-adapter packages.
 
 Scenario initialization and mock configuration for BDD tests.
 
-<!-- structurizr:godog-adapter:TestContextComponents -->
+<!-- structurizr:godog-eac:TestContextComponents -->
 
 ### Test Cache Components
 
 Thread-safe test result caching with CI optimization.
 
-<!-- structurizr:godog-adapter:TestCacheComponents -->
+<!-- structurizr:godog-eac:TestCacheComponents -->
 
 ## Design File
 
-- **Location**: `specs/godog-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module godog-adapter`
+- **Location**: `specs/godog-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module godog-eac`
 
 ## Key Responsibilities
 

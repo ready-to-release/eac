@@ -158,7 +158,7 @@ Can be a library, service, command-line tool, or test suite. See [Modules](./ref
 
 A classification of modules (e.g., `go-library`, `go-cli`, `go-commands`).
 
-Determines build, test, and deployment behavior. See [Component Types](./reference/eac/architecture/component-types.md).
+Determines build, test, and deployment behavior. See [Component Types](./reference/eac/architecture/component-kinds.md).
 
 ### Moniker
 

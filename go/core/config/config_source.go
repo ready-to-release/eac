@@ -44,7 +44,7 @@ type LoadedFile struct {
 
 // LoadedConfig represents a configuration type with all its source files.
 type LoadedConfig struct {
-	// Name is the configuration name (e.g., "repository", "component-types").
+	// Name is the configuration name (e.g., "repository", "environments").
 	Name string
 
 	// Files contains all source files for this configuration, ordered by layer priority.
@@ -60,7 +60,6 @@ type configFileSpec struct {
 // allConfigSpecs lists all configuration files to track.
 var allConfigSpecs = []configFileSpec{
 	{name: "repository", filename: RepositoryFileName},
-	{name: "component-types", filename: ComponentTypesFileName},
 	{name: "environments", filename: EnvironmentsFileName},
 	{name: "testing-tags", filename: TestingTagsFileName},
 	{name: "test-suites", filename: TestSuitesFileName},

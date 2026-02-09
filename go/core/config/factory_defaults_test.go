@@ -57,33 +57,6 @@ func TestCloneRepositoryDefaults_MutationSafe(t *testing.T) {
 	assert.Equal(t, originalType, factory2.Repository.Type, "factory default should not be mutated")
 }
 
-func TestGetFactoryComponentTypesDefaults_Singleton(t *testing.T) {
-	t.Cleanup(ResetFactoryDefaultsForTesting)
-
-	cfg1, err := getFactoryComponentTypesDefaults()
-	require.NoError(t, err)
-	require.NotNil(t, cfg1)
-
-	cfg2, err := getFactoryComponentTypesDefaults()
-	require.NoError(t, err)
-
-	assert.Same(t, cfg1, cfg2)
-}
-
-func TestCloneComponentTypesDefaults_DeepCopy(t *testing.T) {
-	t.Cleanup(ResetFactoryDefaultsForTesting)
-
-	clone1, err := cloneComponentTypesDefaults()
-	require.NoError(t, err)
-	require.NotNil(t, clone1)
-
-	clone2, err := cloneComponentTypesDefaults()
-	require.NoError(t, err)
-
-	assert.NotSame(t, clone1, clone2)
-	assert.Equal(t, clone1, clone2)
-}
-
 func TestGetFactoryEnvironmentsDefaults_Singleton(t *testing.T) {
 	t.Cleanup(ResetFactoryDefaultsForTesting)
 

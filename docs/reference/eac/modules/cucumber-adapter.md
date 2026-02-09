@@ -1,23 +1,23 @@
-# cucumber-adapter
+# cucumber-eac
 
-The `cucumber-adapter` module provides Cucumber/Gherkin test runner integration for TypeScript BDD execution.
+The `cucumber-eac` module provides Cucumber/Gherkin test runner integration for TypeScript BDD execution.
 
 ## System Context
 
 Shows how the Cucumber adapter integrates with the test execution framework.
 
-<!-- structurizr:cucumber-adapter:SystemContext -->
+<!-- structurizr:cucumber-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Cucumber adapter packages.
 
-<!-- structurizr:cucumber-adapter:Containers -->
+<!-- structurizr:cucumber-eac:Containers -->
 
 ## Design File
 
-- **Location**: `specs/cucumber-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module cucumber-adapter`
+- **Location**: `specs/cucumber-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module cucumber-eac`
 
 ## Key Responsibilities
 

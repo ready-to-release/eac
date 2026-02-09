@@ -57,12 +57,12 @@ func DefaultConfig() LoggingConfig {
 
 // LoadConfig loads logging configuration from a config file.
 // It looks for logging config in the following order:
-// 1. .clie/clie-cli-logging.yml in workspace root
-// 2. logging section in .clie/clie-cli.yml
+// 1. .clie/clie-logging.yml in workspace root
+// 2. logging section in .clie/clie.yml
 // Falls back to defaults if no config found.
 func LoadConfig(workspaceRoot string) LoggingConfig {
 	// Try dedicated logging config first
-	loggingConfigPath := filepath.Join(workspaceRoot, ".clie", "clie-cli-logging.yml")
+	loggingConfigPath := filepath.Join(workspaceRoot, ".clie", "clie-logging.yml")
 	if data, err := os.ReadFile(loggingConfigPath); err == nil {
 		var cfg LoggingConfig
 		if err := yaml.Unmarshal(data, &cfg); err == nil {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	eactesting "github.com/ready-to-release/eac/go/core/testing"
@@ -57,20 +58,20 @@ func TestValidateChangelog_DefaultPath(t *testing.T) {
 	// Use mock registry with a SemVer module using default changelog path
 	// Note: Only SemVer modules get the default release/{moniker}/CHANGELOG.md path
 	moduleRegistry := eactesting.NewMockRegistry(
-		eactesting.WithModule("clie-cli",
+		eactesting.WithModule("clie",
 			eactesting.WithSemver(),
 			// No explicit changelog = uses default path for SemVer
 			eactesting.WithReleaseType("published"),
 		),
 	)
 
-	moduleContract, exists := moduleRegistry.Get("clie-cli")
+	moduleContract, exists := moduleRegistry.Get("clie")
 	require.True(t, exists, "mock module should always exist")
 
-	result := validateChangelog("clie-cli", moduleContract, workspaceRoot)
+	result := validateChangelog("clie", moduleContract, workspaceRoot)
 
-	assert.Equal(t, "clie-cli", result.Module)
-	expectedPath := "release/clie-cli/CHANGELOG.md"
+	assert.Equal(t, "clie", result.Module)
+	expectedPath := "release/clie/CHANGELOG.md"
 	assert.Equal(t, expectedPath, result.Path)
 }
 
@@ -82,7 +83,7 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 	mockContract := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "nonexistent-module",
-			Versioning: &domain.ModuleVersioning{
+			Versioning: &config.ModuleVersioning{
 				Scheme:    "SemVer",
 				Changelog: "nonexistent/path/CHANGELOG.md",
 			},
@@ -100,8 +101,8 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 func TestValidateRelease_PublishedModules(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	// Published SemVer modules with versioning: clie-cli, eac-ext (docs is CalVer, no changelog)
-	publishedModules := []string{"clie-cli", "eac-ext"}
+	// Published SemVer modules with versioning: clie, eac-ext (docs is CalVer, no changelog)
+	publishedModules := []string{"clie", "eac-ext"}
 
 	for _, moniker := range publishedModules {
 		t.Run(moniker, func(t *testing.T) {

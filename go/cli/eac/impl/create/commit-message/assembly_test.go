@@ -55,11 +55,11 @@ func TestCombineCommitSections_Deduplication(t *testing.T) {
 			name:     "no duplicates - passes through unchanged",
 			topLevel: "fix(multi-module): fix bugs",
 			moduleSections: []string{
-				"clie-cli\n--------\nclie-cli: fix: resolve issue",
+				"clie\n--------\nclie: fix: resolve issue",
 				"core\n---------\ncore: fix: fix bug",
 			},
 			wantModules: []string{
-				"clie-cli",
+				"clie",
 				"core",
 			},
 			wantSeparators: 1,

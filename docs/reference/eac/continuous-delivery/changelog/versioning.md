@@ -173,7 +173,7 @@ Version comparison rules:
 **Current status:**
 
 - Repository: `0.0.2` (pre-1.0 development)
-- clie-cli: May be 1.x (stable)
+- clie: May be 1.x (stable)
 
 ## Calendar Versioning
 
@@ -238,7 +238,7 @@ Version comparison rules:
 | Module            | Versioning      | Rationale                               |
 | ----------------- | --------------- | --------------------------------------- |
 | repository        | SemVer          | Repository infrastructure and contracts |
-| clie-cli           | SemVer          | CLI application with API                |
+| clie           | SemVer          | CLI application with API                |
 | eac-ext           | SemVer          | Docker extension with interface         |
 | vscode-commit     | SemVer          | VSCode extension with API               |
 | docs              | CalVer          | Documentation site (time-based)         |
@@ -306,9 +306,9 @@ repository/0.0.2
 **Modules (SemVer):**
 
 ```text
-clie-cli/1.0.0
-clie-cli/1.1.0
-clie-cli/2.0.0
+clie/1.0.0
+clie/1.1.0
+clie/2.0.0
 
 eac-ext/0.1.0
 eac-ext/0.2.0
@@ -334,8 +334,8 @@ git tag {moniker}/{version}
 git push origin {moniker}/{version}
 
 # Examples
-git tag clie-cli/1.3.0
-git push origin clie-cli/1.3.0
+git tag clie/1.3.0
+git push origin clie/1.3.0
 
 git tag docs/2025.12.15
 git push origin docs/2025.12.15
@@ -348,7 +348,7 @@ git push origin docs/2025.12.15
 git tag
 
 # List tags for specific module
-git tag -l 'clie-cli/*'
+git tag -l 'clie/*'
 
 # List tags with dates
 git tag -l --format='%(refname:short) %(creatordate:short)'
@@ -364,8 +364,8 @@ git tag -d {moniker}/{version}
 git push --delete origin {moniker}/{version}
 
 # Example
-git tag -d clie-cli/1.3.0
-git push --delete origin clie-cli/1.3.0
+git tag -d clie/1.3.0
+git push --delete origin clie/1.3.0
 ```
 
 ## Version Comparison

@@ -331,8 +331,8 @@ func TestExtractFeatureName_UnicodeNames(t *testing.T) {
 		},
 		{
 			name:        "Mixed scripts",
-			gherkin:     "Feature: clie-cli_función-中文-test\n",
-			wantModule:  "clie-cli",
+			gherkin:     "Feature: clie_función-中文-test\n",
+			wantModule:  "clie",
 			wantName:    "función-中文-test",
 			wantErr:     false,
 			description: "Should handle mixed scripts",
@@ -377,7 +377,7 @@ func TestExtractFeatureName_WindowsReservedNames(t *testing.T) {
 		},
 		{
 			name:       "PRN device",
-			gherkin:    "Feature: clie-cli_PRN\n",
+			gherkin:    "Feature: clie_PRN\n",
 			wantModule: "",
 			wantName:   "",
 			wantErr:    true, // ✅ NEW: Windows reserved names now rejected
@@ -391,8 +391,8 @@ func TestExtractFeatureName_WindowsReservedNames(t *testing.T) {
 		},
 		{
 			name:       "valid name that contains CON",
-			gherkin:    "Feature: clie-cli_console-app\n",
-			wantModule: "clie-cli",
+			gherkin:    "Feature: clie_console-app\n",
+			wantModule: "clie",
 			wantName:   "console-app",
 			wantErr:    false, // Should pass - "console" != "CON"
 		},

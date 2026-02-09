@@ -101,7 +101,7 @@ func (s *CacheFlagSet) Parse(args []string, env *environment.Env) ([]string, err
 
 		// --skip-cache without value: use default skip specs (state + work)
 		case arg == "--skip-cache":
-			for _, spec := range cache.DefaultSkipSpecs {
+			for _, spec := range cache.DefaultSkipSpecs() {
 				s.flags.CacheConfig.Skip(spec)
 			}
 			s.flags.CacheExplicit = true

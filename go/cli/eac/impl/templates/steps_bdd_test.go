@@ -1,10 +1,10 @@
-// Package templates contains godog step implementations for eac-cli.
+// Package templates contains godog step implementations for eac.
 package templates
 
 import (
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 // registryLookup adapts registry.GetCommand to the CommandLookupFunc signature.

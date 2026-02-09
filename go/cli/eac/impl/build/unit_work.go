@@ -14,7 +14,7 @@ import (
 // Returns nil if no buildable components are found.
 func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
+	if cfg == nil || cfg.ComponentKinds == nil {
 		return nil
 	}
 
@@ -56,16 +56,16 @@ func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpec {
 			// Module has no buildable components - create a placeholder
 			specs = append(specs, workunit.UnitSpec{
 				ID: workunit.UnitID{
-					Action:    core.ActionBuild,
-					Module:    moniker,
-					Component: "none",
-					Tool:      "",
+					Action:        core.ActionBuild,
+					Module:        moniker,
+					ComponentType: "none",
+					ComponentName: "none",
+					Tool:          "",
 				},
-				ComponentType: "none",
-				Weight:        1,
-				Container:     false,
-				HostInstalled: true,
-				DependsOn:     nil,
+				ComponentType:  "none",
+				Weight:         1,
+				PoolAllocation: core.HostOnlyAllocation(1),
+				DependsOn:      nil,
 				Cached:        isCached,
 				Metadata:      make(map[string]any),
 				Index:         globalIndex,
@@ -109,7 +109,7 @@ func filterByComponents(specs []workunit.UnitSpec, filter []string) []workunit.U
 	var filtered []workunit.UnitSpec
 	kept := make(map[string]bool)
 	for _, spec := range specs {
-		if allowed[spec.ID.Component] {
+		if allowed[spec.ID.ComponentName] {
 			filtered = append(filtered, spec)
 			kept[spec.ID.Longname()] = true
 		}

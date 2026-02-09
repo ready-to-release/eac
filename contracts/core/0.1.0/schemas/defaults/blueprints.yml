@@ -49,7 +49,7 @@ component-kinds:
     defaults:
       artifact_pattern: "{moniker}{ext}"
     files:
-      source: ["**/*.go", "**/*.go.txt"]
+      source: ["**/*.go", "**/*.go.txt", "**/*.json"]
       tests: ["**/*_test.go"]
       config: ["go.mod", "go.sum"]
 
@@ -63,7 +63,7 @@ component-kinds:
     files:
       source: ["src/**/*.ts", "features/**/*.ts"]
       tests: ["**/*.test.ts"]
-      config: ["package.json", "tsconfig.json", "*.config.js"]
+      config: ["package.json", "tsconfig.json", "*.config.js", "cucumber.js", ".mocharc.json", ".vscodeignore"]
 
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
@@ -79,15 +79,52 @@ component-kinds:
     linters: [hadolint]
     scanners: [sbom, vuln, secrets, iac]
     build_after: [go]
+    default_root: containers/{moniker}
     pool: docker
     files:
       source: ["Dockerfile"]
 
   assets:
     extensions: [".md", ".markdown", ".yml", ".yaml", ".json", ".ebnf", ".txt", ".go.txt", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
+    component_group: doc-assets
     scanners: [secrets]
     files:
       source: ["**/*"]
+
+  # Container assets - non-Dockerfile support files in container directories.
+  # Scripts, configs, templates, vendored packages, etc.
+  # Auto-discovered by container/container-multiarch templates.
+  container-assets:
+    extensions: []
+    scanners: [secrets]
+    default_root: containers/{moniker}
+    files:
+      source: ["**/*"]
+
+  docs-assets:
+    extensions: []
+    component_group: doc-assets
+    scanners: [secrets]
+    default_root: docs
+    files:
+      source:
+        - "**/*.md"
+        - "**/*.markdown"
+        - "**/.nav.yml"
+        - "mkdocs.yml"
+        - "assets/**/*.drawio.png"
+        - "assets/**/*.png"
+        - "assets/**/*.jpg"
+        - "assets/**/*.svg"
+        - "assets/**/*.css"
+        - "assets/**/*.scss"
+        - "assets/**/*.js"
+        - "assets/**/*.pdf"
+        - "assets/**/*.drawio"
+        - "assets/*.json"
+        - "assets/*.yml"
+        - "LICENSE"
+        - "LICENSE.*"
 
   gherkin:
     extensions: [".feature"]
@@ -99,6 +136,7 @@ component-kinds:
 
   structurizr:
     extensions: [".dsl"]
+    component_group: doc-assets
     builders: [structurizr-render]
     linters: [structurizr-lint]
     scanners: [secrets]
@@ -136,6 +174,7 @@ component-kinds:
 
   docs-markdown-commands:
     extensions: []
+    component_group: doc-assets
     builders: [markdown-commands]
     pool: host
     resources:
@@ -144,7 +183,8 @@ component-kinds:
   book:
     extensions: []
     builders: [mkdocs]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    depends_on: [doc-assets]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
     pool: docker
     resources:
       cpus: 4
@@ -152,12 +192,14 @@ component-kinds:
   docs-pdf:
     extensions: []
     builders: [pdf]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    depends_on: [doc-assets]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
     pool: docker
     resources:
       cpus: 4
       memory: 4g
     defaults:
+      book_from_name: true
       theme: dark
     cache:
       key_sources: [sources.hash, config.hash, theme, container.hash]
@@ -166,18 +208,24 @@ component-kinds:
   docs-site:
     extensions: []
     builders: [site]
-    build_after: [structurizr, assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    depends_on: [doc-assets]
+    build_after: [structurizr, assets, docs-assets, docs-drawio, docs-mermaid, docs-plantuml, docs-markdown-commands]
+    default_root: docs
     pool: docker
     resources:
       cpus: 4
       memory: 1g
+    defaults:
+      book_from_name: true
     cache:
       key_sources: [sources.hash, config.hash, container.hash]
       artifacts_cacheable: true
 
   docs-drawio:
     extensions: []
+    component_group: doc-assets
     builders: [drawio-render]
+    default_root: docs/assets
     pool: docker
     requirements: [docker]
     resources:
@@ -187,7 +235,9 @@ component-kinds:
 
   docs-mermaid:
     extensions: []
+    component_group: doc-assets
     builders: [mermaid-render]
+    default_root: docs
     pool: docker
     requirements: [docker]
     resources:
@@ -197,6 +247,7 @@ component-kinds:
 
   docs-plantuml:
     extensions: []
+    component_group: doc-assets
     builders: [plantuml-render]
     pool: docker
     requirements: [docker]
@@ -207,6 +258,7 @@ component-kinds:
 
   repository:
     extensions: []
+    default_root: /
     files:
       config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
 
@@ -332,10 +384,17 @@ discovery-rules:
     derive_from_type: [go, typescript, dockerfile]
     check: dir_exists
 
-  # Assets from container root
-  assets-from-container:
-    component: assets
-    path: "{containers_root}/{moniker}"
+  # Container assets from container root (non-Dockerfile support files)
+  container-assets-from-container:
+    component: container-assets
+    derive_from_type: [dockerfile]
+    check: dir_exists
+
+  # Documentation assets (derived from docs-site component root)
+  # Standard MkDocs file patterns: markdown, navigation, images, diagrams, stylesheets.
+  docs-assets-from-site:
+    component: docs-assets
+    derive_from_type: [docs-site]
     check: dir_exists
 
   # --- Specification Components ---
@@ -482,7 +541,7 @@ module-templates:
           cache:
             type: gha
     discover:
-      - assets-from-container
+      - container-assets-from-container
 
   # Container with multi-arch support
   # Use for: containers that need to run on both amd64 and arm64
@@ -502,7 +561,7 @@ module-templates:
           cache:
             type: gha
     discover:
-      - assets-from-container
+      - container-assets-from-container
       - structurizr-design
 
   # ==========================================================================
@@ -511,12 +570,13 @@ module-templates:
 
   # Documentation site module (MkDocs-based)
   # Use for: main documentation sites
-  # Primary components (site, assets) declared in repository.yml
+  # Auto-discovers docs-assets (standard MkDocs file patterns) and structurizr design.
   docs-site:
     versioning:
       scheme: CalVer
       release_type: published
     discover:
+      - docs-assets-from-site
       - structurizr-design
 
   # ==========================================================================
@@ -531,6 +591,7 @@ module-templates:
       scheme: Implicit
       release_type: internal
     discover:
+      - assets-from-go
       - gherkin-specs
       - structurizr-design
       - cucumberjs-from-ts
@@ -612,14 +673,18 @@ artifact-matrices:
 
 conventions:
   component_discovery:
-    # Assets: derive from primary component (go, typescript, dockerfile)
-    # or from container root. Collects all loose asset files.
+    # Assets: derive from primary component (go, typescript).
+    # Collects all loose asset files (markdown, yaml, json, images, etc).
     assets:
       derive_from:
         - go
         - typescript
+
+    # Container assets: derive from dockerfile component root.
+    # Collects non-Dockerfile support files (scripts, configs, templates).
+    container-assets:
+      derive_from:
         - dockerfile
-      container_path: "{containers_root}/{moniker}"
 
     # Gherkin specs: look in specs/{moniker}/
     gherkin:

@@ -38,7 +38,7 @@ These are tags created via the GitHub Releases API:
 
 ```text
 eac-ext/1.0.0      # Module release
-clie-cli/2.3.4      # CLI release
+clie/2.3.4      # CLI release
 clie-eac-bundle/2025.01.15  # Bundle release
 ```
 
@@ -105,18 +105,18 @@ Release bundles aggregate multiple module releases:
 - moniker: clie-eac-bundle
   release_bundle:
     headline:
-      clie: clie-cli
+      clie: clie
       eac: eac-ext
     categories:
       - name: Core Tools
-        modules: [clie-cli, eac-ext]
+        modules: [clie, eac-ext]
 ```
 
 When a bundle is released, its release notes list the included module versions:
 
 ```markdown
 ## Core Tools
-- clie-cli: v2.3.4
+- clie: v2.3.4
 - eac-ext: v1.0.0
 ```
 

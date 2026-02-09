@@ -64,7 +64,7 @@ type StructurizrExporter interface {
 
 // StructurizrExporterImpl is the concrete implementation.
 type StructurizrExporterImpl struct {
-	OutputDir string // Output directory for exported SVGs (defaults to docs/assets/cache/structurizr)
+	OutputDir string // Output directory for exported SVGs (defaults to .cache/eac/structurizr)
 }
 
 // NewExporter creates a new Structurizr exporter.
@@ -113,7 +113,7 @@ func (e *StructurizrExporterImpl) ExportModule(moduleName string) (*ExportResult
 	// Determine output directory
 	outputDir := e.OutputDir
 	if outputDir == "" {
-		outputDir = paths.StructurizrCachePath(repoRoot)
+		outputDir = paths.StructurizrAccelCachePath(repoRoot)
 	}
 
 	// Ensure output directory exists

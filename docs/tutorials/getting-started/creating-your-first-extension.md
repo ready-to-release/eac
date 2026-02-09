@@ -258,7 +258,7 @@ docker run --rm my-extension:dev greet
 
 ## Step 7: Configure for clie
 
-Create `.clie/clie-cli.local.yml`:
+Create `.clie/clie.local.yml`:
 
 ```yaml
 version: "1.0"

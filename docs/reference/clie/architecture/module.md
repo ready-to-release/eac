@@ -1,20 +1,20 @@
-# clie-cli
+# clie
 
-The `clie-cli` module is the Ready-to-Release command-line interface for executing containerized development workflows.
+The `clie` module is the Ready-to-Release command-line interface for executing containerized development workflows.
 
 It manages Docker-based extensions that provide isolated, reproducible development environments.
 
 ## System Context
 
-Shows how clie-cli interacts with developers, Docker, and GitHub Container Registry.
+Shows how clie interacts with developers, Docker, and GitHub Container Registry.
 
-<!-- structurizr:clie-cli:SystemContext -->
+<!-- structurizr:clie:SystemContext -->
 
 ## Container Architecture
 
-High-level view of clie-cli's major subsystems.
+High-level view of clie's major subsystems.
 
-<!-- structurizr:clie-cli:Containers -->
+<!-- structurizr:clie:Containers -->
 
 ## Subsystem Architecture
 
@@ -22,67 +22,67 @@ High-level view of clie-cli's major subsystems.
 
 Multi-layer configuration management (base, local, personal, dev configs).
 
-<!-- structurizr:clie-cli:ConfigurationSystem -->
+<!-- structurizr:clie:ConfigurationSystem -->
 
 ### Parser System
 
 EBNF-based command-line argument parsing.
 
-<!-- structurizr:clie-cli:ParserSystem -->
+<!-- structurizr:clie:ParserSystem -->
 
 ### Docker Orchestration
 
 Container lifecycle management and execution.
 
-<!-- structurizr:clie-cli:DockerOrchestration -->
+<!-- structurizr:clie:DockerOrchestration -->
 
 ### Extension Management
 
 Extension installation and lifecycle management.
 
-<!-- structurizr:clie-cli:ExtensionManagement -->
+<!-- structurizr:clie:ExtensionManagement -->
 
 ### Validation System
 
 Configuration and command validation.
 
-<!-- structurizr:clie-cli:ValidationSystem -->
+<!-- structurizr:clie:ValidationSystem -->
 
 ### Logging System
 
 Structured logging with context management.
 
-<!-- structurizr:clie-cli:LoggingSystem -->
+<!-- structurizr:clie:LoggingSystem -->
 
 ### Terminal System
 
 Cross-platform terminal handling (Unix/Windows).
 
-<!-- structurizr:clie-cli:TerminalSystem -->
+<!-- structurizr:clie:TerminalSystem -->
 
 ### GitHub Integration
 
 GitHub Container Registry integration for image management.
 
-<!-- structurizr:clie-cli:GitHubIntegration -->
+<!-- structurizr:clie:GitHubIntegration -->
 
 ### Cache System
 
 Registry response and metadata caching.
 
-<!-- structurizr:clie-cli:CacheSystem -->
+<!-- structurizr:clie:CacheSystem -->
 
 ### Session System
 
 CLI session state management.
 
-<!-- structurizr:clie-cli:SessionSystem -->
+<!-- structurizr:clie:SessionSystem -->
 
 ### TUI System
 
 Terminal UI components (spinners, progress bars).
 
-<!-- structurizr:clie-cli:TUISystem -->
+<!-- structurizr:clie:TUISystem -->
 
 ## Workflow Diagrams
 
@@ -90,18 +90,18 @@ Terminal UI components (spinners, progress bars).
 
 The flow when executing `clie run <extension> <command>`.
 
-<!-- structurizr:clie-cli:RunWorkflow -->
+<!-- structurizr:clie:RunWorkflow -->
 
 ### Install Workflow
 
 The flow when installing extensions.
 
-<!-- structurizr:clie-cli:InstallWorkflow -->
+<!-- structurizr:clie:InstallWorkflow -->
 
 ## Design File
 
-- **Location**: `specs/clie-cli/.design/workspace.dsl`
-- **Interactive**: `clie eac serve-design --module clie-cli`
+- **Location**: `specs/clie/.design/workspace.dsl`
+- **Interactive**: `clie eac serve-design --module clie`
 
 ## Key Features
 

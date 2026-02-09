@@ -10,7 +10,7 @@ workspace "CLIE Configuration" "Repository-specific CLIE CLI configuration and A
         clie_config = softwareSystem "CLIE Configuration" "Repository-specific configuration for CLIE CLI and AI prompts" {
 
             cli_config = container "CLI Configuration" "CLIE CLI settings" "YAML" {
-                clie_cli_yml = component "clie-cli.yml" "CLI behavior and extension settings" "YAML"
+                clie_cli_yml = component "clie.yml" "CLI behavior and extension settings" "YAML"
                 definitions_yml = component "definitions.yml" "Custom definitions and aliases" "YAML"
             }
 

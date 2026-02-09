@@ -1,4 +1,4 @@
-// Package riskassess contains godog step implementations for specs/eac-cli.
+// Package riskassess contains godog step implementations for specs/eac.
 //
 // This file contains step definitions for the OSCAL-based risk commands:
 // - create risk (OSCAL profile generation)
@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/core/paths"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 //go:embed assets/risk/profile-template.json

@@ -1,11 +1,10 @@
 // Command: update structurizr
 // Short: Update Structurizr diagram cache from workspace.dsl files
 // Long: Exports all Structurizr views from workspace.dsl files to SVG format
-// Long: and stores them in the docs/assets/cache/structurizr/ directory.
-// Long: This cache is git-tracked for fast CI builds without Docker.
+// Long: and stores them in the .cache/eac/structurizr/ acceleration cache.
 // Long:
 // Long: Expected Output:
-// Long:   - SVG files in docs/assets/cache/structurizr/
+// Long:   - SVG files in .cache/eac/structurizr/
 // Long:   - Cache status summary showing hits/misses
 // Flag.module: type=string, shorthand=m, usage=Export specific module only
 // Flag.force: type=bool, shorthand=f, default=false, usage=Force re-export even if cache is current
@@ -110,7 +109,7 @@ func UpdateStructurizr() int {
 	fmt.Printf("Found %d module(s) with workspace.dsl files\n", len(modulesToProcess))
 
 	// Ensure cache directory exists
-	cacheDir := paths.StructurizrCachePath(repoRoot)
+	cacheDir := paths.StructurizrAccelCachePath(repoRoot)
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		log.Errorf("Error creating cache directory: %v", err)
 		return 1

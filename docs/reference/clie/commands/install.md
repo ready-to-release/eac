@@ -18,13 +18,13 @@ It pulls Docker images from the container registry and registers them for use.
 
 **Without extension name:**
 
-1. Reads `.clie/clie-cli.yml` for configured extensions
+1. Reads `.clie/clie.yml` for configured extensions
 2. Pulls Docker images for all extensions
 3. Makes extension commands available
 
 **With extension name:**
 
-1. Adds the extension to `.clie/clie-cli.yml`
+1. Adds the extension to `.clie/clie.yml`
 2. Pulls the extension's Docker image
 3. Registers the extension for use via `clie <extension>` command
 
@@ -45,7 +45,7 @@ clie install eac
 
 **What happens:**
 
-1. Adds eac to `.clie/clie-cli.yml`:
+1. Adds eac to `.clie/clie.yml`:
 
    ```yaml
    extensions:
@@ -89,7 +89,7 @@ clie install eac --load-local
 
 ### Before Install
 
-`.clie/clie-cli.yml`:
+`.clie/clie.yml`:
 
 ```yaml
 extensions: []
@@ -97,7 +97,7 @@ extensions: []
 
 ### After `clie install eac`
 
-`.clie/clie-cli.yml`:
+`.clie/clie.yml`:
 
 ```yaml
 extensions:

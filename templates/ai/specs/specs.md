@@ -40,7 +40,7 @@ Generate ONLY valid Gherkin syntax directly - no JSON intermediate format.
 **name**: Pattern `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$`
 
 - Must follow pattern: lowercase module, underscore, lowercase feature name
-- Examples: `eac-commands_commit`, `clie-cli_init-command`
+- Examples: `eac-commands_commit`, `clie_init-command`
 
 **description**: Brief feature description (1-2 sentences)
 
@@ -86,7 +86,7 @@ Each scenario is a concrete example under a Rule.
   - `@ppv` - Production Performance Verification
 - **Optional tags**:
   - `@deps:<system>` - External system dependencies (e.g., `@deps:docker`)
-  - `@depm:<module>` - Internal module dependencies (e.g., `@depm:clie-cli`)
+  - `@depm:<module>` - Internal module dependencies (e.g., `@depm:clie`)
   - `@control:<control-id>` - OSCAL control evidence link (e.g., `@control:ac-2`)
   - `@controls:<id1>,<id2>` - Multiple controls (e.g., `@controls:ac-2,au-3`)
   - `@skip:<reason>` - Temporarily excluded (e.g., `@skip:wip`)

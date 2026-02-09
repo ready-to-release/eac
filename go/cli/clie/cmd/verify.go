@@ -110,7 +110,7 @@ func checkDockerService(cmd *cobra.Command) bool {
 }
 
 func checkConfigFile(cmd *cobra.Command) bool {
-	cmd.Println("📋 Checking clie-cli configuration...")
+	cmd.Println("📋 Checking clie configuration...")
 
 	// Configuration is already loaded and verified at startup
 	// If we got here, the config file exists and was parsed

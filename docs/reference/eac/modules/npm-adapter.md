@@ -1,18 +1,18 @@
-# npm-adapter
+# npm-eac
 
-The `npm-adapter` module provides NPM package manager integration for dependency isolation in containerized builds.
+The `npm-eac` module provides NPM package manager integration for dependency isolation in containerized builds.
 
 ## System Context
 
 Shows how the NPM adapter provides dependency isolation to build commands.
 
-<!-- structurizr:npm-adapter:SystemContext -->
+<!-- structurizr:npm-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the NPM adapter packages.
 
-<!-- structurizr:npm-adapter:Containers -->
+<!-- structurizr:npm-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,12 +20,12 @@ High-level view of the NPM adapter packages.
 
 NPM workspace isolation with directory sync, file copy, and install mutex.
 
-<!-- structurizr:npm-adapter:IsolationComponents -->
+<!-- structurizr:npm-eac:IsolationComponents -->
 
 ## Design File
 
-- **Location**: `specs/npm-adapter/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module npm-adapter`
+- **Location**: `specs/npm-eac/.design/workspace.dsl`
+- **Interactive**: `eac serve-design --module npm-eac`
 
 ## Key Responsibilities
 

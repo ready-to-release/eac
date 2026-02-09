@@ -19,7 +19,7 @@
 // Long: Example:
 // Long:   pipeline run                    # Run all modules
 // Long:   pipeline run --changed-only     # Run only changed modules
-// Long:   pipeline run core clie-cli   # Run specific modules
+// Long:   pipeline run core clie   # Run specific modules
 // Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
 // Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
 // Flag.wait: type=bool, usage=Wait for pipeline completion before returning

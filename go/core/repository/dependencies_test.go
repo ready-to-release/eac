@@ -126,7 +126,7 @@ func TestSanitizeMermaidID(t *testing.T) {
 		{"simple", "simple"},
 		{"mod-a", "mod_a"},
 		{"core", "core"},
-		{"clie-cli", "clie_cli"},
+		{"clie", "clie"},
 		{"test_module", "test_module"},
 		{"Module123", "Module123"},
 		{"a-b-c-d", "a_b_c_d"},
@@ -226,12 +226,12 @@ func TestAddTransitiveDependents(t *testing.T) {
 
 func TestModuleDependency_Struct(t *testing.T) {
 	dep := ModuleDependency{
-		From: "clie-cli",
+		From: "clie",
 		To:   "core",
 	}
 
-	if dep.From != "clie-cli" {
-		t.Errorf("From = %q, want %q", dep.From, "clie-cli")
+	if dep.From != "clie" {
+		t.Errorf("From = %q, want %q", dep.From, "clie")
 	}
 	if dep.To != "core" {
 		t.Errorf("To = %q, want %q", dep.To, "core")

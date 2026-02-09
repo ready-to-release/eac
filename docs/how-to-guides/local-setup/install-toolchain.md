@@ -52,7 +52,7 @@ clie version
 clie init
 ```
 
-This creates `.clie/clie-cli.yml` with default extension registry settings.
+This creates `.clie/clie.yml` with default extension registry settings.
 
 ### 2. Install EAC Extension
 
@@ -79,7 +79,7 @@ eac help
 
 | File               | Purpose                                           |
 | ------------------ | ------------------------------------------------- |
-| `.clie/clie-cli.yml` | Extension registry and CLI settings               |
+| `.clie/clie.yml` | Extension registry and CLI settings               |
 | `.eac/`        | EAC-specific configuration (created on first use) |
 
 ## Updating

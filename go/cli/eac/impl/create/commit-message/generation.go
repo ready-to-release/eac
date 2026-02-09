@@ -1,17 +1,12 @@
 package commitmessage
 
 import (
-	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
-	"github.com/ready-to-release/eac/go/core/domain"
-	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // GenerationResult holds the result of AI generation including metadata.
@@ -81,26 +76,9 @@ func generateWithPromptResult(deps *Deps, promptName, userPrompt, workspaceRoot 
 
 	model := extractModelFromAgent(promptTemplate)
 
-	// Use provided executor or create new one with real providers
-	var executor *ai.Executor
-	if testExecutor != nil {
-		executor = testExecutor
-	} else {
-		executor = ai.NewExecutor(workspaceRoot)
-		providers.RegisterBuiltIn(executor)
-	}
-
 	// Build full prompt: prompt template + user input (no template rendering needed)
 	fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
-	// Load AI config to get retry strategy
-	aiConfig, err := aimock.LoadAIConfig(workspaceRoot)
-	if err != nil {
-		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
-		aiConfig = nil // Will use defaults
-	}
-
-	// Create JSON schema validator for Phase 1 JSON validation
 	// Choose schema based on prompt type:
 	// - "module" prompts use commit-message-module.schema.json
 	// - other prompts use commit-message.schema.json
@@ -108,35 +86,19 @@ func generateWithPromptResult(deps *Deps, promptName, userPrompt, workspaceRoot 
 	if promptName == "module" {
 		schemaFilename = "commit-message-module.schema.json"
 	}
-	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), paths.SchemasDir, schemaFilename)
-	validator, err := domain.NewJSONSchemaValidator(schemaPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create JSON schema validator: %w", err)
-	}
 
-	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapterWithModel(executor, model)
-
-	// Configure retry behavior using factory
-	retryConfig, err := aimock.BuildRetryConfig(
-		aimock.TypeCommitMessage,
-		aimock.FormatJSON,
-		executorAdapter,
-		validator,
-		workspaceRoot,
-		aiConfig,
-		aimock.WithDebug(debugEnabled),
-		aimock.WithLogger(logging.C().Zap()),
-	)
+	// Execute AI generation using shared pipeline
+	result, err := aiutil.ExecuteGeneration(aiutil.GenerationParams{
+		WorkspaceRoot:  workspaceRoot,
+		Prompt:         fullPrompt,
+		TypeName:       aimock.TypeCommitMessage,
+		SchemaFilename: schemaFilename,
+		Model:          model,
+		Debug:          debugEnabled,
+		TestExecutor:   testExecutor,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to build retry config: %w", err)
-	}
-
-	// Generate with retry (Phase 1: JSON generation)
-	ctx := context.Background()
-	result, err := aimock.GenerateWithRetry(ctx, retryConfig, fullPrompt)
-	if err != nil {
-		return nil, fmt.Errorf("AI generation failed: %w", err)
+		return nil, err
 	}
 
 	// Report validation errors if any

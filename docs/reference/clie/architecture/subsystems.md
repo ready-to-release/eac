@@ -6,11 +6,11 @@ Detailed component architecture for each CLIE CLI subsystem.
 
 Multi-layer configuration management supporting base, local, personal, and dev configs.
 
-<!-- structurizr:clie-cli:ConfigurationSystem -->
+<!-- structurizr:clie:ConfigurationSystem -->
 
 **Components:**
 
-- **Config Loader** - Loads `.clie/clie-cli.yml` configuration
+- **Config Loader** - Loads `.clie/clie.yml` configuration
 - **Repository Finder** - Locates git repository root
 - **Extension Validator** - Validates pinned SHA tags
 - **Config Merger** - Merges base + local + personal + dev configs
@@ -21,7 +21,7 @@ Multi-layer configuration management supporting base, local, personal, and dev c
 
 EBNF-based command-line argument parsing with boundary detection.
 
-<!-- structurizr:clie-cli:ParserSystem -->
+<!-- structurizr:clie:ParserSystem -->
 
 **Components:**
 
@@ -36,7 +36,7 @@ EBNF-based command-line argument parsing with boundary detection.
 
 Container lifecycle management and execution with TTY support.
 
-<!-- structurizr:clie-cli:DockerOrchestration -->
+<!-- structurizr:clie:DockerOrchestration -->
 
 **Components:**
 
@@ -57,7 +57,7 @@ Container lifecycle management and execution with TTY support.
 
 Extension installation and lifecycle management with pull policies.
 
-<!-- structurizr:clie-cli:ExtensionManagement -->
+<!-- structurizr:clie:ExtensionManagement -->
 
 **Components:**
 
@@ -73,12 +73,12 @@ Extension installation and lifecycle management with pull policies.
 
 Configuration and command validation against schemas and contracts.
 
-<!-- structurizr:clie-cli:ValidationSystem -->
+<!-- structurizr:clie:ValidationSystem -->
 
 **Components:**
 
 - **Command Validator** - Validates commands against EBNF
-- **Schema Validator** - Validates `.clie/clie-cli.yml` against JSON schema
+- **Schema Validator** - Validates `.clie/clie.yml` against JSON schema
 - **Contract Validator** - Validates against contracts
 
 ---
@@ -87,7 +87,7 @@ Configuration and command validation against schemas and contracts.
 
 Structured logging with context management using Zerolog.
 
-<!-- structurizr:clie-cli:LoggingSystem -->
+<!-- structurizr:clie:LoggingSystem -->
 
 **Components:**
 
@@ -102,7 +102,7 @@ Structured logging with context management using Zerolog.
 
 Cross-platform terminal handling for Unix and Windows.
 
-<!-- structurizr:clie-cli:TerminalSystem -->
+<!-- structurizr:clie:TerminalSystem -->
 
 **Components:**
 
@@ -118,7 +118,7 @@ Cross-platform terminal handling for Unix and Windows.
 
 GitHub Container Registry integration for image management.
 
-<!-- structurizr:clie-cli:GitHubIntegration -->
+<!-- structurizr:clie:GitHubIntegration -->
 
 **Components:**
 
@@ -133,7 +133,7 @@ GitHub Container Registry integration for image management.
 
 Caching for registry responses and extension metadata.
 
-<!-- structurizr:clie-cli:CacheSystem -->
+<!-- structurizr:clie:CacheSystem -->
 
 **Components:**
 
@@ -146,7 +146,7 @@ Caching for registry responses and extension metadata.
 
 CLI session state management across commands.
 
-<!-- structurizr:clie-cli:SessionSystem -->
+<!-- structurizr:clie:SessionSystem -->
 
 **Components:**
 
@@ -158,7 +158,7 @@ CLI session state management across commands.
 
 Terminal UI components for visual feedback.
 
-<!-- structurizr:clie-cli:TUISystem -->
+<!-- structurizr:clie:TUISystem -->
 
 **Components:**
 

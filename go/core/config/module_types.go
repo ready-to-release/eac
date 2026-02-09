@@ -1,6 +1,6 @@
 package config
 
-// This file contains build-related types used in component-types.yml configuration.
+// This file contains build-related types used in blueprints component-kinds configuration.
 // These define component-type-level defaults for artifacts and Docker builds.
 
 // BuildConfig contains build output configuration for a component type.

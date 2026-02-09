@@ -63,19 +63,19 @@ function Write-ColorOutput {
 function Get-LatestVersion {
     # Skip API call in test mode
     if ($env:__CLIE_TEST_MOCK -eq "1") {
-        Write-ColorOutput "Test mode: Using mock version clie-cli/v0.0.0-test" "Gray"
-        return "clie-cli/v0.0.0-test"
+        Write-ColorOutput "Test mode: Using mock version clie/v0.0.0-test" "Gray"
+        return "clie/v0.0.0-test"
     }
 
     try {
-        # Fetch releases and find the latest clie-cli/* release (monorepo has multiple release tags)
+        # Fetch releases and find the latest clie/* release (monorepo has multiple release tags)
         $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=20" -UseBasicParsing
         foreach ($release in $releases) {
-            if ($release.tag_name -like "clie-cli/*") {
+            if ($release.tag_name -like "clie/*") {
                 return $release.tag_name
             }
         }
-        Write-ColorOutput "No clie-cli release found" "Red"
+        Write-ColorOutput "No clie release found" "Red"
         exit 1
     }
     catch {
@@ -126,15 +126,15 @@ function Install-Binary {
 
             Write-ColorOutput "Test mode: Using pre-built binary from out/build (skipping download)" "Gray"
 
-            # Use the actual built clie-cli binary from the build output
-            # This is available because clie-installer depends on clie-cli module
+            # Use the actual built clie binary from the build output
+            # This is available because clie-installer depends on clie module
             # When running from build output: out/build/clie-installer/pwsh-scripts/
-            # Go up 2 levels to out/build, then access clie-cli/go-go/
-            $builtBinary = Join-Path $PSScriptRoot "..\..\clie-cli\go-go\clie-windows-amd64.exe"
+            # Go up 2 levels to out/build, then access clie/go-go/
+            $builtBinary = Join-Path $PSScriptRoot "..\..\clie\go-go\clie-windows-amd64.exe"
 
             if (-not (Test-Path $builtBinary)) {
                 Write-ColorOutput "Test mode: Pre-built binary not found at $builtBinary" "Red"
-                Write-ColorOutput "Ensure clie-cli module is built before running installer tests" "Yellow"
+                Write-ColorOutput "Ensure clie module is built before running installer tests" "Yellow"
                 exit 1
             }
 

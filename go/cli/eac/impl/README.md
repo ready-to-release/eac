@@ -1,9 +1,9 @@
-# eac-cli Command Implementations
+# eac Command Implementations
 
 All CLI command implementations for the `eac` binary. Each subdirectory corresponds to a
 top-level command or command group registered with the CLI framework.
 
-Module moniker: `eac-cli` | Dependencies: `clibase`, `core`, adapters
+Module moniker: `eac` | Dependencies: `clibase`, `core`, adapters
 
 ## Command Index
 

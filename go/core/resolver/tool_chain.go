@@ -8,9 +8,10 @@ import (
 // toolChainDep represents an external dependency for a tool chain.
 // This is used to pass build_after or depends_on dependencies to the first tool.
 type toolChainDep struct {
-	Module    string
-	Component string
-	Tool      string
+	Module        string
+	ComponentType string
+	Component     string
+	Tool          string
 }
 
 // toolChainSpec is an intermediate representation for a tool in a chain.
@@ -53,20 +54,22 @@ func expandToolChain(module, component, compType string, tools []string, externa
 			// First tool gets external dependencies (build_after, component depends_on)
 			for _, dep := range externalDeps {
 				spec.DependsOn = append(spec.DependsOn, workunit.UnitID{
-					Action:    core.ActionBuild,
-					Module:    dep.Module,
-					Component: dep.Component,
-					Tool:      dep.Tool,
+					Action:        core.ActionBuild,
+					Module:        dep.Module,
+					ComponentType: dep.ComponentType,
+					ComponentName: dep.Component,
+					Tool:          dep.Tool,
 				})
 			}
 		} else {
 			// Subsequent tools depend on the previous tool in the chain
 			prevTool := tools[i-1]
 			spec.DependsOn = append(spec.DependsOn, workunit.UnitID{
-				Action:    core.ActionBuild,
-				Module:    module,
-				Component: component,
-				Tool:      prevTool,
+				Action:        core.ActionBuild,
+				Module:        module,
+				ComponentType: compType,
+				ComponentName: component,
+				Tool:          prevTool,
 			})
 		}
 

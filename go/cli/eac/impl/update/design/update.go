@@ -120,7 +120,7 @@ func UpdateDesign() int {
 
 // UpdateConfig holds configuration for design update command.
 type UpdateConfig struct {
-	Module       string // Module name (e.g., "clie-cli", "commands")
+	Module       string // Module name (e.g., "clie", "commands")
 	SourcePath   string // Path to source code (e.g., "go/cli/eac")
 	OutputPath   string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath   string // Custom AI prompt file path (empty = default prompt)
@@ -252,7 +252,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 
 	// Validate we have a module name
 	if len(positionalArgs) == 0 {
-		return "", nil, fmt.Errorf("module name required\n\nUsage: design update <module>\nExample: design update clie-cli")
+		return "", nil, fmt.Errorf("module name required\n\nUsage: design update <module>\nExample: design update clie")
 	}
 
 	return positionalArgs[0], updateFlags, nil
@@ -279,7 +279,7 @@ func validateModuleAndWorkspace(config *UpdateConfig, out *designHelper.Output) 
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
-		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design update <module>\nExample: design update clie-cli",
+		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design update <module>\nExample: design update clie",
 			config.Module, config.SourcePath)
 	}
 

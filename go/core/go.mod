@@ -11,8 +11,10 @@ require (
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/defenseunicorns/go-oscal v0.7.0
 	github.com/go-git/go-git/v5 v5.16.4
+	github.com/gofrs/flock v0.13.0
 	github.com/huandu/go-clone/generic v1.7.3
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0-00010101000000-000000000000
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
@@ -74,3 +76,5 @@ replace github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../
 replace github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../contracts/tui/0.1.0
 
 replace github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../contracts/scanner/0.1.0
+
+replace github.com/ready-to-release/eac/contracts/runner/0.1.0 => ../../contracts/runner/0.1.0

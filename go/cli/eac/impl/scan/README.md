@@ -61,19 +61,19 @@ Runs security scanners (SBOM, vulnerability, secrets, IaC, compliance, SAST, DAS
 
 ## Role in System
 
-The `scan` package provides the security scanning command for `eac-cli`, orchestrating multiple industry-standard tools (Trivy, Semgrep, OWASP ZAP) across all modules with parallel execution and incremental caching. It produces timestamped evidence files for audit compliance, integrating with the `cmdframework` to share execution infrastructure with build, test, and lint commands while maintaining security-specific behavior like Docker image resolution and evidence integrity verification.
+The `scan` package provides the security scanning command for `eac`, orchestrating multiple industry-standard tools (Trivy, Semgrep, OWASP ZAP) across all modules with parallel execution and incremental caching. It produces timestamped evidence files for audit compliance, integrating with the `cmdframework` to share execution infrastructure with build, test, and lint commands while maintaining security-specific behavior like Docker image resolution and evidence integrity verification.
 
 ## Code Health
 
 ### Tech Debt
-- No unit tests exist for any file in the scan package; testing.go only provides mock helpers for external consumers
+- ~~No unit tests exist~~ (resolved: `scan_test.go` covers `parseScannerList`/`parseSeverityList`; `unit_worker_test.go` covers `recordScanResult`, `getScannerEmoji`, `logScannerConfig`)
 - unit_worker.go (537 lines) contains 15 functions spanning scanner execution, evidence writing, manifest tracking, and result handling
 - `scanUnitWorker` (unit_worker.go:47, ~129 lines) orchestrates too many concerns in a single function
 
 ### Pain Points
-- Zero test coverage for security-critical scanning logic makes refactoring risky
 - Docker image resolution in framework.go uses per-scanner helper functions (`getTrivyImage`, `getSemgrepImage`, `getZAPImage`) that duplicate the same config-lookup pattern
+- `scanUnitWorker` still lacks direct unit tests (requires Docker/framework mocks); tested indirectly at BDD level
 
 ### Optimization Opportunities
-- Add unit tests for `parseScannerList`, `parseSeverityList`, and `computeScanInputHash` as a starting point for test coverage (high feasibility, pure functions)
+- ~~Add unit tests for `parseScannerList`, `parseSeverityList`, and `computeScanInputHash` as a starting point for test coverage~~ (resolved: covered in scan_test.go and unit_worker_test.go)
 - Consolidate per-scanner image helpers into a single `getScannerImage` lookup with a scanner-type-to-config-key map (high feasibility, mechanical deduplication)

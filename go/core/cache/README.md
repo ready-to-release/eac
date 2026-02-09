@@ -42,7 +42,7 @@ taxonomy into concrete build decisions.
 ## Code Health
 
 ### Tech Debt
-- defaults.go:15 -- `DefaultSkipSpecs` is a package-level `var` (mutable slice); any caller could accidentally append to or mutate it; consider returning a copy from a function or using a frozen pattern
+- ~~defaults.go:15 -- `DefaultSkipSpecs` is a package-level `var` (mutable slice)~~ (resolved: converted to function returning fresh copy)
 - config.go: `ShouldForcePull` and `ShouldForceNoCacheDocker` are thin wrappers that obscure the underlying `ShouldSkip` call; document or inline them to reduce indirection
 
 ### Pain Points

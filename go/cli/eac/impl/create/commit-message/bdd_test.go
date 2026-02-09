@@ -10,7 +10,7 @@ import (
 
 func TestFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../../specs/eac-cli/create-commit-message",
+		SpecsPath:         "../../../../../../specs/eac/create-commit-message",
 		DefaultReportName: "cucumber-commit-message",
 		AssetsPath:        "go/cli/eac/impl/create/commit-message/assets",
 		RegisterSteps:     registerSteps,

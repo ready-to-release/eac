@@ -10,7 +10,7 @@ import (
 
 func TestFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../../../specs/eac-cli/serve-docs",
+		SpecsPath:         "../../../../../../specs/eac/serve-docs",
 		DefaultReportName: "cucumber-docs",
 		RegisterSteps:     registerSteps,
 	}

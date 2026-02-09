@@ -20,7 +20,6 @@ ignores:
   - ".idea/**"
   - ".cache/**"
   - ".claude/**"
-  - "docs/assets/cache/**"
   - "templates/**"
   - ".clie/templates/**"
   - "test.md"

@@ -21,8 +21,8 @@
 // Long:     - change_counts: breakdown by change type (added, fixed, changed, etc.)
 // Long:
 // Long: Examples:
-// Long:   release pending clie-cli            # Check clie-cli for pending changes
-// Long:   release pending clie-cli --quiet    # Exit code only (0=changes, 1=no changes)
+// Long:   release pending clie            # Check clie for pending changes
+// Long:   release pending clie --quiet    # Exit code only (0=changes, 1=no changes)
 // Long:   release pending --all              # Check all releasable modules
 // Long:   release pending --published        # Check only published modules
 // Long:   release pending --internal         # Check only internal modules

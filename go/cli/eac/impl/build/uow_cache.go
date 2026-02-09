@@ -80,7 +80,7 @@ func detectUoWIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *build
 	}
 
 	// Create dependency resolver from module registry for cross-module
-	// build cache invalidation (e.g., eac-ext depends on eac-cli binary).
+	// build cache invalidation (e.g., eac-ext depends on eac binary).
 	var depResolver coreoutput.DependencyResolver
 	if ctx.ModuleRegistry != nil {
 		depResolver = func(module string) []string {

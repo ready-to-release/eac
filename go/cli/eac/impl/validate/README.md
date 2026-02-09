@@ -14,7 +14,7 @@ Parent command that validates repository contracts, configuration, dependencies,
 
 ## Patterns
 
-- Registry-based subcommand dispatch: each subcommand file calls `registry.Register` in `init()`
+- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
 - TUI selector fallback: interactive subcommand picker when run without arguments
 - Multi-phase validation: file checks, schema validation, cross-reference validation
 - Multi-format output: text (human-readable), JSON (machine), GitHub Actions annotations
@@ -57,12 +57,12 @@ Parent command that validates repository contracts, configuration, dependencies,
 
 ## Role in System
 
-The `validate` package serves as the quality gate in `eac-cli`, ensuring repository contracts, configuration, and specifications conform to their schemas and structural rules. It is invoked both interactively during development and automatically in CI pipelines, with GitHub Actions annotation output enabling inline error reporting on pull requests.
+The `validate` package serves as the quality gate in `eac`, ensuring repository contracts, configuration, and specifications conform to their schemas and structural rules. It is invoked both interactively during development and automatically in CI pipelines, with GitHub Actions annotation output enabling inline error reporting on pull requests.
 
 ## Code Health
 
 ### Tech Debt
-- `specs.go` is 817 lines with `ValidateSpecs` at ~136 lines (68-203); the fix logic (`fixGherkinFile`, 620-700) could be extracted to a separate file
+- ~~`specs.go` is 817 lines; the fix logic could be extracted to a separate file~~ (resolved: split into `specs.go`, `specs_validate.go`, `specs_format.go`, `specs_fix.go`)
 - `test-tags.go:40`: `eacConfig` is a mutable package-level var caching the loaded config; prefer passing it as a parameter
 - `specs.go:48`: `gitRepoProvider` is a mutable package-level var for test stubbing; prefer an interface parameter
 - No test files for `config.go` (427 lines), `contracts.go`, `dependencies.go`, `module-hierarchy.go`, `module-files.go`, `test-tags.go`, or `design.go`
@@ -72,4 +72,4 @@ The `validate` package serves as the quality gate in `eac-cli`, ensuring reposit
 
 ### Optimization Opportunities
 - Extract a shared `ValidationOutput` formatter used by both spec and config validation to reduce format-handling duplication -- moderate effort
-- Move Gherkin fix logic from `specs.go` into a dedicated `fix.go` to reduce file size below 500 lines -- low effort
+- ~~Move Gherkin fix logic from `specs.go` into a dedicated `fix.go`~~ (resolved: extracted to `specs_fix.go`)

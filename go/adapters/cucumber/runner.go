@@ -45,9 +45,11 @@ func (r *TsCucumberRunner) IsBDD() bool {
 }
 
 // GetTestInfo extracts structured test metadata from a TypeScript cucumber test reference.
-func (r *TsCucumberRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *testrunners.TestInfo {
+func (r *TsCucumberRunner) GetTestInfo(ref testing.TestReference, workspaceRoot string, cfg any) *testrunners.TestInfo {
+	eacCfg := cfg.(*config.EACConfig)
+
 	// Calculate relative path from workspace root
-	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+	relPath, err := filepath.Rel(workspaceRoot, ref.FilePath)
 	if err != nil {
 		return nil
 	}
@@ -56,7 +58,7 @@ func (r *TsCucumberRunner) GetTestInfo(test testing.TestReference, workspaceRoot
 	info := &testrunners.TestInfo{Language: "ts"}
 
 	// Extract module moniker from specs path
-	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+	specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
 	specRelPath := strings.TrimPrefix(relPath, specsPrefix)
 	specRelPath = filepath.ToSlash(specRelPath)
 
@@ -68,7 +70,7 @@ func (r *TsCucumberRunner) GetTestInfo(test testing.TestReference, workspaceRoot
 	info.ModuleMoniker = parts[0]
 
 	// Verify module exists
-	if cfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
+	if eacCfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
 		return nil
 	}
 
@@ -88,9 +90,11 @@ func (r *TsCucumberRunner) GetTestInfo(test testing.TestReference, workspaceRoot
 
 // FindTestRoot finds the module root for a TypeScript cucumber feature file.
 // The test runner (cucumber-js) is located in the module's root directory.
-func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) string {
+func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg any) string {
+	eacCfg := cfg.(*config.EACConfig)
+
 	// Extract module moniker from specs path
-	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+	specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
 	relPath := strings.TrimPrefix(filepath.ToSlash(featurePath), specsPrefix)
 	relPath = strings.TrimPrefix(relPath, strings.ReplaceAll(specsPrefix, "/", "\\"))
 	relPath = filepath.ToSlash(relPath)
@@ -103,7 +107,7 @@ func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfi
 	moniker := parts[0]
 
 	// Look up the module by moniker
-	module, ok := cfg.Repository.GetModule(moniker)
+	module, ok := eacCfg.Repository.GetModule(moniker)
 	if !ok {
 		return ""
 	}
@@ -170,9 +174,9 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		return result
 	}
 
-	// Prepare isolated npm environment
+	// Prepare isolated npm environment keyed by UoW output dir
 	isolation := npm.NewNpmIsolation(cfg.WorkspaceRoot)
-	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.ModuleMoniker)
+	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.OutputDir)
 	if err != nil {
 		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
 		result.PackageFailed = true
@@ -210,7 +214,11 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	}
 
 	// Build cucumber-js command
-	args := []string{"cucumber-js"}
+	// Use --no-install to prevent npx from fetching packages from the registry.
+	// The @cucumber/cucumber package installs a "cucumber-js" binary locally;
+	// without --no-install, npx falls through to the npm registry and resolves
+	// a dependency-confusion placeholder package that exits 0 (false pass).
+	args := []string{"--no-install", "cucumber-js"}
 
 	// Add cucumber.json output format
 	if cfg.OutputDir != "" {
@@ -252,7 +260,16 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		fmt.Fprintf(logWriter, "%s%s\n", execResult.Stdout, execResult.Stderr)
 	}
 
-	if runErr != nil || (execResult != nil && execResult.ExitCode != 0) {
+	failed := runErr != nil || (execResult != nil && execResult.ExitCode != 0)
+	// Guard against dependency confusion: if stderr mentions a placeholder or
+	// npx could not find the local binary, treat as failure even if exit code is 0.
+	if !failed && execResult != nil && (strings.Contains(string(execResult.Stderr), "placeholder") ||
+		strings.Contains(string(execResult.Stderr), "dependency confusion") ||
+		strings.Contains(string(execResult.Stderr), "not found and will be installed")) {
+		failed = true
+		fmt.Fprintf(logWriter, "cucumber-js: detected unexpected package resolution (possible dependency confusion)\n")
+	}
+	if failed {
 		result.PackageFailed = true
 		result.TestsFailed = len(tests)
 		fmt.Fprintf(logWriter, "cucumber-js failed\n")

@@ -1,0 +1,534 @@
+# Module Release - Reusable Workflow (internal)
+#
+# Standard release pipeline for ALL releasable module types. Config-driven:
+# the module moniker is the sole input; release type, version type, and
+# behavior are derived from core config via `eac get release-config`.
+#
+#   ┌────────┐
+#   │ Config │  ← eac get release-config --module <moniker>
+#   └───┬────┘
+#       │
+#   ┌───┴─────┐
+#   │ Approve │
+#   └───┬─────┘
+#       │
+#   ┌───┼─────────────┬─────────────┬────────────────┐
+#   ▼   ▼             ▼             ▼                ▼
+# ┌────┐ ┌──────────┐ ┌───────────┐ ┌──────────────┐
+# │CLI │ │Container │ │ Docs Site │ │    Bundle    │
+# └────┘ └──────────┘ └───────────┘ └──────────────┘
+#       │
+#   ┌───┴────────┐    ┌─────────┐    ┌─────────┐
+#   │  Evidence  │───>│ Cleanup │───>│ Summary │
+#   └────────────┘    └─────────┘    └─────────┘
+#
+# Release types (derived from repository.yml + blueprints.yml):
+#   - cli-binary: Build attested binaries (clie)
+#   - container: Retag and attest container image (eac-ext)
+#   - docs-site: Deploy to GitHub Pages (docs)
+#   - bundle: Aggregate release links (clie-eac-bundle)
+
+name: Module Release
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: 'Module moniker'
+        required: true
+        type: string
+      version:
+        description: 'Version to release (semver only, calver auto-generates)'
+        required: false
+        type: string
+        default: ''
+      skip-ci-check:
+        description: 'Skip CI verification'
+        required: false
+        type: boolean
+        default: false
+      ci_run_id:
+        description: 'CI workflow run ID (for artifact download)'
+        required: false
+        type: string
+        default: ''
+      approve-timeout:
+        description: 'Maximum time to wait for CI verification (seconds)'
+        required: false
+        type: string
+        default: '600'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+  pages: write
+  id-token: write
+  attestations: write
+  actions: read
+
+jobs:
+  # =======================================================================
+  # Config - derive release configuration from core config
+  # =======================================================================
+  config:
+    name: Config
+    runs-on: ubuntu-latest
+    outputs:
+      release-type: ${{ steps.release-config.outputs.release-type }}
+      version-type: ${{ steps.release-config.outputs.version-type }}
+      has-evidence: ${{ steps.release-config.outputs.has-evidence }}
+      await-module-releases: ${{ steps.release-config.outputs.await-module-releases }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Derive Release Config
+        id: release-config
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} get release-config \
+            --module "${{ inputs.module }}" \
+            --format github-output >> $GITHUB_OUTPUT
+
+  # =======================================================================
+  # Approve Release
+  # =======================================================================
+  approve:
+    name: Approve Release
+    needs: config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      tag_name: ${{ steps.gate.outputs.tag_name }}
+      ci_sha: ${{ steps.gate.outputs.ci_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      releases: ${{ steps.await.outputs.releases }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Approve release
+        id: gate
+        uses: ./.github/actions/approve-release
+        with:
+          module: ${{ inputs.module }}
+          version-type: ${{ needs.config.outputs.version-type }}
+          skip-ci-check: ${{ inputs.skip-ci-check || inputs.ci_run_id != '' }}
+          timeout: ${{ inputs.approve-timeout }}
+
+      - name: Await module releases
+        id: await
+        if: needs.config.outputs.await-module-releases == 'true'
+        uses: ./.github/actions/await-module-releases
+        with:
+          timeout: '600'
+
+  # =======================================================================
+  # Release: CLI Binary (attested build)
+  # =======================================================================
+  release-cli-binary:
+    name: Build & Publish
+    needs: [config, approve]
+    if: needs.config.outputs.release-type == 'cli-binary'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build and release
+        uses: ./.github/actions/attested-cli-build
+        with:
+          version: ${{ needs.approve.outputs.version }}
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  # =======================================================================
+  # Release: Container (attested publish)
+  # =======================================================================
+  release-container:
+    name: Publish Container
+    needs: [config, approve]
+    if: needs.config.outputs.release-type == 'container'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Publish container
+        uses: ./.github/actions/attested-container-publish
+        with:
+          module: ${{ inputs.module }}
+          version: ${{ needs.approve.outputs.version }}
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+          ci_sha: ${{ needs.approve.outputs.ci_sha }}
+
+  # =======================================================================
+  # Release: Documentation Site (GitHub Pages)
+  # =======================================================================
+  release-docs-site:
+    name: Deploy Site
+    needs: [config, approve]
+    if: needs.config.outputs.release-type == 'docs-site'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      actions: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download CI Artifacts
+        uses: ./.github/actions/download-ci-artifacts
+        with:
+          module: ${{ inputs.module }}
+          ci-run-id: ${{ needs.approve.outputs.ci_run_id }}
+          ci-sha: ${{ needs.approve.outputs.ci_sha }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Validate artifacts
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          ${COMMANDS:?COMMANDS not set} validate artifacts ${{ inputs.module }} --skip-depm
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: out/build/${{ inputs.module }}/site/site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Create release notes
+        id: release_notes
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          cat > release_notes.md << 'HEADER'
+          ## Documentation Site Release
+
+          The HTML documentation site has been deployed to GitHub Pages.
+
+          HEADER
+
+          # Add PDF books section if PDFs exist
+          PDF_COUNT=$(find out/build/${{ inputs.module }} -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | wc -l)
+          if [ "$PDF_COUNT" -gt 0 ]; then
+            cat >> release_notes.md << 'PDF_HEADER'
+          ### PDF Books
+
+          PDF documentation books for offline reading:
+
+          PDF_HEADER
+
+            for pdf in $(find out/build/${{ inputs.module }} -maxdepth 2 -name "*.pdf" -type f); do
+              FILENAME=$(basename "$pdf")
+              SIZE=$(du -h "$pdf" | cut -f1)
+              DESC=$(${COMMANDS:?COMMANDS not set} get book-description "$FILENAME" --default "Documentation")
+              DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${FILENAME}"
+              echo "- **${FILENAME}** - ${DESC} (${SIZE}) - [Download](${DOWNLOAD_URL})" >> release_notes.md
+            done
+
+            echo "" >> release_notes.md
+          fi
+
+          cat >> release_notes.md << EOF
+          ### Release Information
+
+          - **Version**: ${{ needs.approve.outputs.version }}
+          - **Commit**: ${{ github.sha }}
+          - **Site URL**: ${{ steps.deployment.outputs.page_url }}
+
+          ---
+          Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})
+          EOF
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          VERSION="${{ needs.approve.outputs.version }}"
+
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "Release $TAG_NAME already exists - skipping"
+            exit 0
+          fi
+
+          PDF_FILES=$(find out/build/${{ inputs.module }} -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
+
+          if [ -n "$PDF_FILES" ]; then
+            gh release create "$TAG_NAME" \
+              --title "Documentation Site $VERSION" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest=false \
+              $PDF_FILES
+          else
+            gh release create "$TAG_NAME" \
+              --title "Documentation Site $VERSION" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest=false
+          fi
+
+  # =======================================================================
+  # Release: Bundle (aggregated release)
+  # =======================================================================
+  release-bundle:
+    name: Create Release Bundle
+    needs: [config, approve]
+    if: needs.config.outputs.release-type == 'bundle'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Gather module versions and create release
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          TITLE=$(${COMMANDS:?COMMANDS not set} get release-bundle --title-only)
+          ${COMMANDS:?COMMANDS not set} get release-bundle --format markdown > release_notes.md
+
+          {
+            echo ""
+            echo "### Quick Install"
+            echo ""
+            echo '```bash'
+            echo "# Linux/macOS"
+            echo "curl -fsSL https://raw.githubusercontent.com/${REPO}/main/scripts/sh/cli/install.sh | bash"
+            echo ""
+            echo "# Windows PowerShell"
+            echo "iwr -useb https://raw.githubusercontent.com/${REPO}/main/scripts/pwsh/cli/install.ps1 | iex"
+            echo '```'
+            echo ""
+            echo "---"
+            echo "Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})"
+          } >> release_notes.md
+
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "Release $TAG_NAME already exists - skipping"
+            exit 0
+          fi
+
+          gh release create "$TAG_NAME" \
+            --title "$TITLE" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}" \
+            --latest
+
+  # =======================================================================
+  # Evidence
+  # =======================================================================
+  evidence:
+    name: Update Evidence
+    needs: [config, approve, release-cli-binary, release-container, release-docs-site, release-bundle]
+    if: >-
+      always() &&
+      !contains(needs.approve.result, 'failure') &&
+      (needs.release-cli-binary.result == 'success' ||
+       needs.release-container.result == 'success' ||
+       needs.release-docs-site.result == 'success' ||
+       needs.release-bundle.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      evidence-count: ${{ steps.evidence.outputs.evidence-count }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Update evidence
+        id: evidence
+        uses: ./.github/actions/update-evidence
+        with:
+          module: ${{ inputs.module }}
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+          ci-run-id: ${{ needs.approve.outputs.ci_run_id }}
+          ci-sha: ${{ needs.approve.outputs.ci_sha || github.sha }}
+
+  # =======================================================================
+  # Cleanup on Failure
+  # =======================================================================
+  cleanup-failed:
+    name: Cleanup on Failure
+    needs: [config, approve, release-cli-binary, release-container, release-docs-site, release-bundle, evidence]
+    if: >-
+      failure() && needs.config.outputs.release-type != 'bundle'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cleanup failed release
+        uses: ./.github/actions/cleanup-failed-release
+        with:
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  # =======================================================================
+  # Cleanup Old Releases (calver only)
+  # =======================================================================
+  cleanup-old:
+    name: Cleanup Old Releases
+    needs: [config, approve, release-cli-binary, release-container, release-docs-site, release-bundle, evidence]
+    if: >-
+      always() &&
+      needs.config.outputs.version-type == 'calver' &&
+      !contains(needs.evidence.result, 'failure') &&
+      (needs.release-docs-site.result == 'success' || needs.release-bundle.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cleanup old releases
+        uses: ./.github/actions/cleanup-pre-releases
+        with:
+          module: ${{ inputs.module }}
+
+  # =======================================================================
+  # Summary
+  # =======================================================================
+  summary:
+    name: Summary
+    needs: [config, approve, release-cli-binary, release-container, release-docs-site, release-bundle, evidence, cleanup-failed, cleanup-old]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MODULE="${{ inputs.module }}"
+          VERSION="${{ needs.approve.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          RELEASE_TYPE="${{ needs.config.outputs.release-type }}"
+          APPROVE_RESULT="${{ needs.approve.result }}"
+          EVIDENCE_RESULT="${{ needs.evidence.result }}"
+          EVIDENCE_COUNT="${{ needs.evidence.outputs.evidence-count }}"
+          RUN_ID="${{ github.run_id }}"
+          COMMIT="${{ github.sha }}"
+
+          # Determine which release job ran
+          case "$RELEASE_TYPE" in
+            cli-binary)    RELEASE_RESULT="${{ needs.release-cli-binary.result }}" ;;
+            container)     RELEASE_RESULT="${{ needs.release-container.result }}" ;;
+            docs-site)     RELEASE_RESULT="${{ needs.release-docs-site.result }}" ;;
+            bundle)        RELEASE_RESULT="${{ needs.release-bundle.result }}" ;;
+          esac
+
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+          CI_WORKFLOW="ci-${MODULE}.yaml"
+
+          if [ "$APPROVE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Approval" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release preconditions not met." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow "$CI_WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Build/Publish" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release build or publish step failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow "$CI_WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$EVIDENCE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Evidence" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release published but evidence generation failed." >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "success" ]; then
+            echo "## :white_check_mark: $MODULE v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$EVIDENCE_COUNT" ] && [ "$EVIDENCE_COUNT" != "0" ]; then
+              echo "**Evidence**: $EVIDENCE_COUNT file(s) attached" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            # Type-specific details
+            case "$RELEASE_TYPE" in
+              container)
+                IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$MODULE"
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo '```bash' >> $GITHUB_STEP_SUMMARY
+                echo "docker pull $IMAGE_NAME:$VERSION" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                ;;
+              docs-site)
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "[View Documentation Site](https://ready-to-release.github.io/eac/)" >> $GITHUB_STEP_SUMMARY
+                ;;
+              bundle)
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "This release is now marked as **Latest** on GitHub." >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+          else
+            echo "## :grey_question: Release Status Unknown" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Approve: $APPROVE_RESULT | Release: $RELEASE_RESULT | Evidence: $EVIDENCE_RESULT" >> $GITHUB_STEP_SUMMARY
+          fi

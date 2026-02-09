@@ -50,7 +50,7 @@ specifications.
 
 ## Role in System
 
-The `godog-adapter` module provides the shared BDD test infrastructure that
+The `godog-eac` module provides the shared BDD test infrastructure that
 all module-specific spec implementations depend on. It sits between
 `core/testing` (shared test primitives) and module specs, providing
 godog-specific wiring including scenario initialization, test isolation,

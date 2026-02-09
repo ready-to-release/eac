@@ -33,9 +33,9 @@ Auditor-Summary: Multi-module changes.
 
 Top level text.
 
-eac-cli
+eac
 ------------
-eac-cli: feat: add validation.
+eac: feat: add validation.
 
 Module body text.`,
 			checkSubject: true,
@@ -91,9 +91,9 @@ Auditor-Summary: Added feature.
 
 Top level body.
 
-eac-cli
+eac
 ------------
-eac-cli: feat: add a really long feature description that exceeds the maximum allowed length
+eac: feat: add a really long feature description that exceeds the maximum allowed length
 
 Module body.`,
 			maxLength: MaxSubjectLength,
@@ -516,16 +516,16 @@ func TestWrapSemanticCommitLine(t *testing.T) {
 	}{
 		{
 			name: "wrap long subject line",
-			line: "eac-cli: feat: add a really long feature description that definitely exceeds the maximum allowed length",
+			line: "eac: feat: add a really long feature description that definitely exceeds the maximum allowed length",
 			want: []string{
-				"eac-cli: feat: add a really long feature description that",
+				"eac: feat: add a really long feature description that",
 				"definitely exceeds the maximum allowed length",
 			},
 		},
 		{
 			name: "preserve short subject line",
-			line: "eac-cli: feat: add validation",
-			want: []string{"eac-cli: feat: add validation"},
+			line: "eac: feat: add validation",
+			want: []string{"eac: feat: add validation"},
 		},
 	}
 
@@ -624,9 +624,9 @@ This is a very long body text paragraph that exceeds the maximum line length and
 
 
 
-eac-cli
+eac
 ------------
-eac-cli: feat: add commit message validation logic with contract checking.
+eac: feat: add commit message validation logic with contract checking.
 
 This module now validates commit messages against the contract and ensures they follow all the required formatting rules.
 

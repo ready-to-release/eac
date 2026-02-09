@@ -116,7 +116,7 @@ func NewYAMLUnmarshalError(filePath string, underlying error) *ConfigError {
 		Message:    "Failed to process configuration structure",
 		FilePath:   filePath,
 		Underlying: underlying,
-		Suggestion: "Verify that the YAML structure matches the expected clie-cli.yml schema",
+		Suggestion: "Verify that the YAML structure matches the expected clie.yml schema",
 	}
 }
 

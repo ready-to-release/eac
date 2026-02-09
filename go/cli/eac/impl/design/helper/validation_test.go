@@ -15,7 +15,7 @@ func TestValidateModuleName_Valid(t *testing.T) {
 		name   string
 		module string
 	}{
-		{"simple name", "clie-cli"},
+		{"simple name", "clie"},
 		{"with dash", "my-module"},
 		{"with underscore", "my_module"},
 		{"with numbers", "module123"},
@@ -79,13 +79,13 @@ func TestCleanModuleName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"no change", "clie-cli", "clie-cli"},
-		{"remove specs prefix", "specs/clie-cli", "clie-cli"},
-		{"remove specs prefix windows", "specs\\clie-cli", "clie-cli"},
-		{"remove design suffix", "clie-cli/design", "clie-cli"},
-		{"remove design suffix windows", "clie-cli\\design", "clie-cli"},
-		{"remove both", "specs/clie-cli/.design", "clie-cli"},
-		{"remove both windows", "specs\\clie-cli\\.design", "clie-cli"},
+		{"no change", "clie", "clie"},
+		{"remove specs prefix", "specs/clie", "clie"},
+		{"remove specs prefix windows", "specs\\clie", "clie"},
+		{"remove design suffix", "clie/design", "clie"},
+		{"remove design suffix windows", "clie\\design", "clie"},
+		{"remove both", "specs/clie/.design", "clie"},
+		{"remove both windows", "specs\\clie\\.design", "clie"},
 		{"remove go prefix", "go/cli/eac", "commands"},
 		{"remove go prefix windows", "go\\eac\\commands", "commands"},
 		{"complex", "specs/go/cli/eac/.design", "commands"},

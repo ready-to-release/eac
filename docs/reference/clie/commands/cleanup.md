@@ -21,7 +21,7 @@ The `cleanup` command removes old Docker images and stopped containers from exte
 
 **What it preserves:**
 
-- Currently configured images in `.clie/clie-cli.yml`
+- Currently configured images in `.clie/clie.yml`
 - Running containers
 - Recent images
 
@@ -82,7 +82,7 @@ docker images | grep ready-to-release
 
 **Extension images:**
 
-- Images not in current `.clie/clie-cli.yml`
+- Images not in current `.clie/clie.yml`
 - Old versions
 - Untagged images
 

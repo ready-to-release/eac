@@ -191,9 +191,9 @@ func TestCalverVersionFormat(t *testing.T) {
 // TestSemverVersionFormat verifies the SemVer tag format.
 func TestSemverVersionFormat(t *testing.T) {
 	pm := PendingModule{
-		Module:   "clie-cli",
+		Module:   "clie",
 		Version:  "1.2.3",
-		Tag:      "clie-cli/1.2.3",
+		Tag:      "clie/1.2.3",
 		Type:     "semver",
 		NeedsTag: true,
 	}
@@ -222,7 +222,7 @@ func TestLayerOrdering(t *testing.T) {
 			{Module: "eac-cli", Version: "1.1.0", Type: "semver"},
 		},
 		{
-			{Module: "clie-cli", Version: "2.0.0", Type: "semver"},
+			{Module: "clie", Version: "2.0.0", Type: "semver"},
 		},
 	}
 
@@ -236,7 +236,7 @@ func TestLayerOrdering(t *testing.T) {
 	}
 
 	// Verify last layer contains the top-level module
-	if layers[2][0].Module != "clie-cli" {
-		t.Errorf("expected clie-cli in layer 2, got %s", layers[2][0].Module)
+	if layers[2][0].Module != "clie" {
+		t.Errorf("expected clie in layer 2, got %s", layers[2][0].Module)
 	}
 }

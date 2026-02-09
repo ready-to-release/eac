@@ -9,7 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 <!-- Release Highlights (since 2026.0115.2045)
 
   Bundle:
-  - Includes first eac-cli release (see release/eac-cli/CHANGELOG.md)
+  - Includes first eac release (see release/eac/CHANGELOG.md)
   - EAC Installer Scripts: install.ps1 (PowerShell) + install.sh (Bash) with BDD specs
   - Aggregate release with all module releases included
 
@@ -19,6 +19,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 - Initial release bundle configuration
 - Aggregated release with links to all module releases
-- Headline modules: clie-cli, eac-ext, eac-cli
-- Core Tools category: clie-cli, eac-ext, eac-cli
+- Headline modules: clie, eac-ext, eac
+- Core Tools category: clie, eac-ext, eac
 - Documentation category: docs, books

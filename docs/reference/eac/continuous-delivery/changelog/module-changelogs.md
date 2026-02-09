@@ -22,7 +22,7 @@ See [Understanding Release Types](../release-types.md) for complete details.
 
 | Release Type | Changelog Location              | Example                               |
 | ------------ | ------------------------------- | ------------------------------------- |
-| `published`  | `release/<module>/CHANGELOG.md` | `release/clie-cli/CHANGELOG.md`        |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/clie/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/clie-eac-bundle/CHANGELOG.md` |
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
@@ -33,20 +33,20 @@ Changelog in dedicated release directory for public-facing releases:
 
 ```yaml
 modules:
-  - moniker: clie-cli
+  - moniker: clie
     versioning:
       scheme: SemVer
-      changelog: release/clie-cli/CHANGELOG.md
+      changelog: release/clie/CHANGELOG.md
       release_type: published
 ```
 
-**Full path:** `release/clie-cli/CHANGELOG.md`
+**Full path:** `release/clie/CHANGELOG.md`
 
 **Usage:** Published modules and bundles
 
 **Examples:**
 
-- `release/clie-cli/CHANGELOG.md` (published)
+- `release/clie/CHANGELOG.md` (published)
 - `release/eac-ext/CHANGELOG.md` (published)
 - `release/docs/CHANGELOG.md` (published)
 - `release/books/CHANGELOG.md` (published)
@@ -236,7 +236,7 @@ Modules use either Semantic Versioning or Calendar Versioning:
 
 **Modules using SemVer:**
 
-- `clie-cli` - CLI application
+- `clie` - CLI application
 - `eac-ext` - Docker extension
 - `eac-commands` - Go library (not independently versioned)
 - `eac-core` - Go library (not independently versioned)
@@ -270,7 +270,7 @@ Each module versions independently:
 
 ```text
 Repository: 0.0.2
-clie-cli: 1.2.0
+clie: 1.2.0
 eac-commands: (not versioned - library)
 docs: 2025.12.01
 eac-ext: 0.3.0
@@ -285,17 +285,17 @@ Footer links use module-specific tag format:
 ### SemVer Modules
 
 ```markdown
-[Unreleased]: https://github.com/ready-to-release/eac/compare/clie-cli/1.2.0...HEAD
-[1.2.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.1.0...clie-cli/1.2.0
-[1.1.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.0.0...clie-cli/1.1.0
-[1.0.0]: https://github.com/ready-to-release/eac/releases/tag/clie-cli/1.0.0
+[Unreleased]: https://github.com/ready-to-release/eac/compare/clie/1.2.0...HEAD
+[1.2.0]: https://github.com/ready-to-release/eac/compare/clie/1.1.0...clie/1.2.0
+[1.1.0]: https://github.com/ready-to-release/eac/compare/clie/1.0.0...clie/1.1.0
+[1.0.0]: https://github.com/ready-to-release/eac/releases/tag/clie/1.0.0
 ```
 
 **Tag format:** `{moniker}/{version}`
 
 **Examples:**
 
-- `clie-cli/1.2.0`
+- `clie/1.2.0`
 - `eac-ext/0.3.0`
 
 ### CalVer Modules
@@ -351,8 +351,8 @@ Add changes to Unreleased section as you work:
 2. **Update footer links:**
 
    ```markdown
-   [Unreleased]: https://github.com/ready-to-release/eac/compare/clie-cli/1.3.0...HEAD
-   [1.3.0]: https://github.com/ready-to-release/eac/compare/clie-cli/1.2.0...clie-cli/1.3.0
+   [Unreleased]: https://github.com/ready-to-release/eac/compare/clie/1.3.0...HEAD
+   [1.3.0]: https://github.com/ready-to-release/eac/compare/clie/1.2.0...clie/1.3.0
    ```
 
 ### Automated Generation
@@ -361,13 +361,13 @@ Generate module changelog from commits:
 
 ```bash
 # Generate changelog for a module
-eac release changelog clie-cli
+eac release changelog clie
 
 # Update existing changelog
-eac release changelog clie-cli --update
+eac release changelog clie --update
 
 # Preview without writing
-eac release changelog clie-cli --dry-run
+eac release changelog clie --dry-run
 ```
 
 **Filtering:**
@@ -385,7 +385,7 @@ When releasing a module version:
 
 ```bash
 # Review and finalize changelog
-eac release this clie-cli
+eac release this clie
 ```
 
 **Actions:**
@@ -398,15 +398,15 @@ eac release this clie-cli
 ### Step 2: Commit Changes
 
 ```bash
-git add release/clie-cli/CHANGELOG.md
-git commit -m "docs(clie-cli): update changelog for v1.3.0"
+git add release/clie/CHANGELOG.md
+git commit -m "docs(clie): update changelog for v1.3.0"
 ```
 
 ### Step 3: Create Tag
 
 ```bash
-git tag clie-cli/1.3.0
-git push origin clie-cli/1.3.0
+git tag clie/1.3.0
+git push origin clie/1.3.0
 ```
 
 ### Step 4: Release Workflow
@@ -414,11 +414,11 @@ git push origin clie-cli/1.3.0
 Tag push triggers release workflow:
 
 ```yaml
-# .github/workflows/release-clie-cli.yaml
+# .github/workflows/release-clie.yaml
 on:
   push:
     tags:
-      - "clie-cli/*"
+      - "clie/*"
 ```
 
 **Actions:**
@@ -433,7 +433,7 @@ on:
 
 | Module            | Changelog Location                          | Versioning | Current Version |
 | ----------------- | ------------------------------------------- | ---------- | --------------- |
-| clie-cli           | `release/clie-cli/CHANGELOG.md`              | SemVer     | (varies)        |
+| clie           | `release/clie/CHANGELOG.md`              | SemVer     | (varies)        |
 | eac-ext           | `release/eac-ext/CHANGELOG.md`              | SemVer     | (varies)        |
 | docs              | `release/docs/CHANGELOG.md`                 | CalVer     | (varies)        |
 | books             | `release/books/CHANGELOG.md`                | CalVer     | (varies)        |
@@ -459,7 +459,7 @@ Supporting modules don't maintain separate changelogs as they're not independent
 
 ```bash
 # Get latest version from module changelog
-eac release get-version clie-cli
+eac release get-version clie
 ```
 
 **Output:** `1.3.0` (latest version from CHANGELOG.md)
@@ -468,7 +468,7 @@ eac release get-version clie-cli
 
 ```bash
 # Check if module has unreleased changes
-eac release pending clie-cli
+eac release pending clie
 ```
 
 **Output:**
@@ -480,7 +480,7 @@ eac release pending clie-cli
 
 ```bash
 # Validate changelog format and structure
-eac validate release clie-cli
+eac validate release clie
 ```
 
 **Checks:**

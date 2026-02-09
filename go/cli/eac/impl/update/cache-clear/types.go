@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/clibase/fileutil"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
@@ -145,21 +145,21 @@ func GetAllClearDirs() []ClearDir {
 
 		// Asset directories (ClearContents mode - delete everything)
 		{
-			RelPath:     filepath.Join("docs", "assets", "cache", "mermaid"),
-			Description: "mermaid cache",
+			RelPath:     filepath.Join(paths.EACCacheRoot, "mermaid"),
+			Description: "mermaid acceleration cache",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeAsset,
 		},
 		{
-			RelPath:     filepath.Join("docs", "assets", "cache", "drawio"),
-			Description: "drawio cache",
+			RelPath:     filepath.Join(paths.EACCacheRoot, "drawio"),
+			Description: "drawio acceleration cache",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
 			Type:        cache.TypeAsset,
 		},
 		{
-			RelPath:     filepath.Join(".cache", "eac", "structurizr"),
+			RelPath:     filepath.Join(paths.EACCacheRoot, "structurizr"),
 			Description: "structurizr acceleration cache",
 			Mode:        ClearContents,
 			Level:       cache.LevelLocal,
@@ -199,7 +199,7 @@ func GetAllClearDirs() []ClearDir {
 func ParseTypeFlag(s string) ([]cache.Spec, error) {
 	if s == "" {
 		// Default: same as --skip-cache (state + work)
-		return cache.DefaultSkipSpecs, nil
+		return cache.DefaultSkipSpecs(), nil
 	}
 	if s == "all" {
 		return []cache.Spec{{Level: cache.LevelAll, Type: cache.TypeAll}}, nil

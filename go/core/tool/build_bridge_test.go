@@ -4,6 +4,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -176,8 +177,8 @@ func TestBuildBridge_GetHandlersForModule(t *testing.T) {
 	// Create module
 	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: domain.ModuleComponents{
-			"go": &domain.ComponentEntry{Root: "."},
+		Components: config.ModuleComponents{
+			"go": &config.ComponentEntry{Root: "."},
 		},
 	}, "/workspace")
 

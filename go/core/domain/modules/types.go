@@ -301,9 +301,15 @@ func matchWithFallback(path, pattern string) bool {
 }
 
 // matchGlobPattern performs glob pattern matching using doublestar.
+// Supports shorthand like "**.go" which is expanded to "**/*.go".
 func matchGlobPattern(path, pattern string) bool {
 	path = normalizePathSeparators(path)
 	pattern = normalizePathSeparators(pattern)
+
+	// Convert shorthand "**.ext" to "**/*.ext" for doublestar compatibility
+	if strings.HasPrefix(pattern, "**") && !strings.HasPrefix(pattern, "**/") && len(pattern) > 2 {
+		pattern = "**/*" + pattern[2:]
+	}
 
 	matched, err := doublestar.Match(pattern, path)
 	if err != nil {

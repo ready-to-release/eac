@@ -1,6 +1,6 @@
 // Package docs provides cache pruning tests for the update docs command.
 // These tests verify that the cache pruning logic correctly identifies orphaned
-// cache files by computing hashes that exactly match the caching.AssetCache implementation.
+// cache files by computing hashes that exactly match the caching hash functions.
 package docs
 
 import (
@@ -15,7 +15,7 @@ import (
 )
 
 // =============================================================================
-// Hash Computation Tests - Verify exact match with caching.AssetCache
+// Hash Computation Tests - Verify exact match with caching hash functions
 // =============================================================================
 
 // TestComputeMermaidCacheHash_ProducesValidHash verifies that the prune module's
@@ -72,7 +72,7 @@ func TestComputeMermaidCacheHash_ProducesValidHash(t *testing.T) {
 }
 
 // TestComputeMermaidCacheHash_WithSizeDirective verifies that size directives
-// are properly stripped before hashing, matching the AssetCache behavior.
+// are properly stripped before hashing, matching the hash function behavior.
 func TestComputeMermaidCacheHash_WithSizeDirective(t *testing.T) {
 	// Content WITH size directive
 	contentWithDirective := `%%{size:medium}%%
@@ -156,7 +156,7 @@ func TestPruneCache_IdentifiesMermaidOrphans(t *testing.T) {
 	// Setup temp directory structure
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	cacheDir := filepath.Join(docsDir, "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	// Create directories
@@ -166,6 +166,9 @@ func TestPruneCache_IdentifiesMermaidOrphans(t *testing.T) {
 
 	// Create markdown with one mermaid block
 	mdPath := filepath.Join(docsDir, "test.md")
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
+	}
 	mdContent := `# Test Document
 
 Here is a diagram:
@@ -223,12 +226,15 @@ func TestPruneCache_IdentifiesDrawioOrphans(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
 	assetsDir := filepath.Join(docsDir, "assets")
-	cacheDir := filepath.Join(assetsDir, "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
 
 	// Create directories
 	if err := os.MkdirAll(drawioCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create drawio cache dir: %v", err)
+	}
+	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create assets dir: %v", err)
 	}
 
 	// Create a drawio.png source file with known content
@@ -286,11 +292,14 @@ func TestPruneCache_IdentifiesDrawioOrphans(t *testing.T) {
 func TestPruneCache_MultipleMermaidBlocks(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	cacheDir := filepath.Join(docsDir, "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create markdown with multiple mermaid blocks
@@ -350,8 +359,8 @@ More text.
 func TestPruneCache_EmptyCache(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	mermaidCacheDir := filepath.Join(docsDir, "assets", "cache", "mermaid")
-	drawioCacheDir := filepath.Join(docsDir, "assets", "cache", "drawio")
+	mermaidCacheDir := filepath.Join(tmpDir, ".cache", "eac", "mermaid")
+	drawioCacheDir := filepath.Join(tmpDir, ".cache", "eac", "drawio")
 
 	// Create directories but leave them empty
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
@@ -359,6 +368,9 @@ func TestPruneCache_EmptyCache(t *testing.T) {
 	}
 	if err := os.MkdirAll(drawioCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create drawio cache dir: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create a markdown file with mermaid
@@ -387,10 +399,13 @@ func TestPruneCache_EmptyCache(t *testing.T) {
 func TestPruneCache_NoMarkdownFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	mermaidCacheDir := filepath.Join(docsDir, "assets", "cache", "mermaid")
+	mermaidCacheDir := filepath.Join(tmpDir, ".cache", "eac", "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create cache files but no markdown
@@ -453,10 +468,13 @@ func TestPruneCache_NoCacheDirectories(t *testing.T) {
 func TestPruneCache_IgnoresNonCacheFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	mermaidCacheDir := filepath.Join(docsDir, "assets", "cache", "mermaid")
+	mermaidCacheDir := filepath.Join(tmpDir, ".cache", "eac", "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create various non-SVG files that should be ignored
@@ -494,10 +512,13 @@ func TestPruneCache_IgnoresNonCacheFiles(t *testing.T) {
 func TestPruneCache_BytesRecovered(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	mermaidCacheDir := filepath.Join(docsDir, "assets", "cache", "mermaid")
+	mermaidCacheDir := filepath.Join(tmpDir, ".cache", "eac", "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create orphan files with known sizes
@@ -531,7 +552,7 @@ func TestPruneCache_BytesRecovered(t *testing.T) {
 // the orphaned files.
 func TestDeleteOrphans_RemovesFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	cacheDir := filepath.Join(tmpDir, "docs", "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
 
@@ -602,7 +623,7 @@ func TestDeleteOrphans_EmptyResult(t *testing.T) {
 // even if some files are already gone (e.g., deleted manually).
 func TestDeleteOrphans_ContinuesOnMissingFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	cacheDir := filepath.Join(tmpDir, "docs", "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
@@ -703,15 +724,17 @@ func TestFormatBytes(t *testing.T) {
 
 // TestPruneCache_SameContentDifferentFiles verifies that the same mermaid block
 // appearing in multiple files produces different cache entries (traceable naming).
-// With traceable naming, each file produces its own cache entry even with same content.
 func TestPruneCache_SameContentDifferentFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	cacheDir := filepath.Join(docsDir, "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create docs dir: %v", err)
 	}
 
 	// Create two markdown files with the exact same mermaid block
@@ -727,10 +750,8 @@ func TestPruneCache_SameContentDifferentFiles(t *testing.T) {
 	}
 
 	// With traceable naming, each file gets its own cache entry
-	// Compute the content hash
 	contentHash := computeMermaidCacheHash("flowchart TD\n    SHARED")
 
-	// Generate expected filenames using the paths module
 	cache1Path := paths.MermaidCachePath(cacheDir, doc1Path, 0, contentHash)
 	cache2Path := paths.MermaidCachePath(cacheDir, doc2Path, 0, contentHash)
 	cache1Filename := filepath.Base(cache1Path)
@@ -766,7 +787,7 @@ func TestPruneCache_SameContentDifferentFiles(t *testing.T) {
 func TestPruneCache_NestedDocsDirectories(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
-	cacheDir := filepath.Join(docsDir, "assets", "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	// Create nested structure
@@ -821,7 +842,7 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 	tmpDir := t.TempDir()
 	docsDir := filepath.Join(tmpDir, "docs")
 	assetsDir := filepath.Join(docsDir, "assets")
-	cacheDir := filepath.Join(assetsDir, "cache")
+	cacheDir := filepath.Join(tmpDir, ".cache", "eac")
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
 
@@ -830,6 +851,9 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 	}
 	if err := os.MkdirAll(drawioCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create drawio cache: %v", err)
+	}
+	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create assets dir: %v", err)
 	}
 
 	// Create markdown with mermaid
@@ -899,14 +923,3 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 		t.Errorf("Expected 2 total orphans, got %d", result.TotalOrphans())
 	}
 }
-
-// =============================================================================
-// Note: Implementation is in prune.go
-// =============================================================================
-// The following functions and types are defined in prune.go:
-// - PruneResult struct
-// - PruneCache()
-// - DeleteOrphans()
-// - computeMermaidCacheHash()
-// - computeDrawioCacheHash()
-// - formatBytes()

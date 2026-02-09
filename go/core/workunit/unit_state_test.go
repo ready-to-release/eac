@@ -17,7 +17,7 @@ import (
 func TestUnitState_FieldsExist(t *testing.T) {
 	now := time.Now()
 	state := UnitState{
-		ID:             UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:             UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		SourceHash:     "abc123",
 		BuildID:        "build-456",
 		DependencyHash: "dep789",
@@ -41,7 +41,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "build state with all fields",
 			state: UnitState{
-				ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+				ID:         UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 				SourceHash: "sha256:abc123def456",
 				Passed:     true,
 				ExecutedAt: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
@@ -50,7 +50,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "test state with build dependency",
 			state: UnitState{
-				ID:         UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
+				ID:         UnitID{Action: ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
 				SourceHash: "sha256:source123",
 				BuildID:    "build-20240115-001",
 				Passed:     true,
@@ -60,7 +60,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "integration test state with dependency hash",
 			state: UnitState{
-				ID:             UnitID{Action: ActionTest, Module: "eac-cli", Component: "gherkin", Tool: "godog", Extra: map[string]string{"testset": "integration"}},
+				ID:             UnitID{Action: ActionTest, Module: "eac", ComponentType: "gherkin", ComponentName: "gherkin", Tool: "godog", Extra: map[string]string{"testset": "integration"}},
 				SourceHash:     "sha256:source456",
 				BuildID:        "build-20240115-002",
 				DependencyHash: "sha256:deps789",
@@ -71,7 +71,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 		{
 			name: "failed scan state",
 			state: UnitState{
-				ID:         UnitID{Action: ActionScan, Module: "web-app", Component: "docker", Tool: "trivy-vuln"},
+				ID:         UnitID{Action: ActionScan, Module: "web-app", ComponentType: "docker", ComponentName: "docker", Tool: "trivy-vuln"},
 				SourceHash: "sha256:scan123",
 				BuildID:    "build-20240115-003",
 				Passed:     false,
@@ -99,7 +99,7 @@ func TestUnitState_FieldsAreAccessible(t *testing.T) {
 
 func TestUnitState_MarshalJSON(t *testing.T) {
 	state := UnitState{
-		ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:         UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		SourceHash: "sha256:abc123",
 		Passed:     true,
 		ExecutedAt: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
@@ -138,7 +138,7 @@ func TestUnitState_UnmarshalJSON(t *testing.T) {
 
 func TestUnitState_MarshalUnmarshalRoundTrip(t *testing.T) {
 	original := UnitState{
-		ID:             UnitID{Action: ActionTest, Module: "core", Component: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
+		ID:             UnitID{Action: ActionTest, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "gotest", Extra: map[string]string{"testset": "unit"}},
 		SourceHash:     "sha256:source123",
 		BuildID:        "build-001",
 		DependencyHash: "sha256:deps456",
@@ -165,7 +165,7 @@ func TestUnitState_MarshalUnmarshalRoundTrip(t *testing.T) {
 
 func TestUnitState_JSONOmitsEmptyBuildID(t *testing.T) {
 	state := UnitState{
-		ID:         UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:         UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		SourceHash: "sha256:abc123",
 		BuildID:    "", // Empty - should be omitted
 		Passed:     true,
@@ -181,7 +181,7 @@ func TestUnitState_JSONOmitsEmptyBuildID(t *testing.T) {
 
 func TestUnitState_JSONOmitsEmptyDependencyHash(t *testing.T) {
 	state := UnitState{
-		ID:             UnitID{Action: ActionBuild, Module: "core", Component: "go", Tool: "go"},
+		ID:             UnitID{Action: ActionBuild, Module: "core", ComponentType: "go", ComponentName: "go", Tool: "go"},
 		SourceHash:     "sha256:abc123",
 		DependencyHash: "", // Empty - should be omitted
 		Passed:         true,
@@ -410,7 +410,7 @@ func TestUnitState_ZeroValueIsValid(t *testing.T) {
 func TestUnitState_ExecutedAtPreservesTimezone(t *testing.T) {
 	utcTime := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 	state := UnitState{
-		ID:         UnitID{Action: ActionBuild, Module: "mod", Component: "comp", Tool: "tool"},
+		ID:         UnitID{Action: ActionBuild, Module: "mod", ComponentType: "comp", ComponentName: "comp", Tool: "tool"},
 		SourceHash: "hash",
 		Passed:     true,
 		ExecutedAt: utcTime,
@@ -581,9 +581,9 @@ func TestComputeDependencyBuildHash_SingleDependency(t *testing.T) {
 
 func TestComputeDependencyBuildHash_MultipleDependencies(t *testing.T) {
 	deps := map[string]string{
-		"core": "build-123",
-		"eac-cli":  "build-456",
-		"eac-web":  "build-789",
+		"core":    "build-123",
+		"eac":     "build-456",
+		"eac-web": "build-789",
 	}
 	result := ComputeDependencyBuildHash(deps)
 
@@ -594,7 +594,7 @@ func TestComputeDependencyBuildHash_MultipleDependencies(t *testing.T) {
 func TestComputeDependencyBuildHash_IsDeterministic(t *testing.T) {
 	deps := map[string]string{
 		"core": "build-123",
-		"eac-cli":  "build-456",
+		"eac":  "build-456",
 	}
 
 	result1 := ComputeDependencyBuildHash(deps)
@@ -634,7 +634,7 @@ func TestComputeDependencyBuildHash_DifferentValuesProduceDifferentHashes(t *tes
 
 func TestComputeDependencyBuildHash_DifferentKeysProduceDifferentHashes(t *testing.T) {
 	deps1 := map[string]string{"core": "build-123"}
-	deps2 := map[string]string{"eac-cli": "build-123"}
+	deps2 := map[string]string{"eac": "build-123"}
 
 	result1 := ComputeDependencyBuildHash(deps1)
 	result2 := ComputeDependencyBuildHash(deps2)

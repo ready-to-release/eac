@@ -256,10 +256,10 @@ Commands automatically discover files through module contracts in `.eac/reposito
 - **Changelog:** `release/<module>/CHANGELOG.md`
 - **Release Notes:** `release/<module>/RELEASE-NOTES.md`
 
-**Example:** For module `clie-cli`:
+**Example:** For module `clie`:
 
-- Changelog: `release/clie-cli/CHANGELOG.md`
-- Release Notes: `release/clie-cli/RELEASE-NOTES.md`
+- Changelog: `release/clie/CHANGELOG.md`
+- Release Notes: `release/clie/RELEASE-NOTES.md`
 
 **Why centralized?** The `release/` folder keeps all release artifacts in one discoverable location. See [Understanding the Release Folder](./understanding-release-folder.md) for details on folder structure and how module contracts link to changelog files.
 

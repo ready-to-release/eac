@@ -15,7 +15,7 @@ Release management and version control for changelogs and tagging.
 | [release tag-pending](./tag-pending.md)                       | Check for missing git tags                        |
 | [release generate-module-calver](./generate-module-calver.md) | Generate calver tag for module                    |
 | [release prune-packages](./prune-packages.md)                 | Clean up old container images from GHCR           |
-| [release clie-cli](./clie-cli.md)                               | Release clie-cli with semver                       |
+| [release clie](./clie.md)                               | Release clie with semver                       |
 | [validate release](./../validate/release.md)                  | Validate changelog format                         |
 | [validate release-version](../validate/release-version.md)    | Validate version format                           |
 

@@ -1,7 +1,7 @@
-// Package installer contains godog step implementations for specs/clie-cli/installer.
+// Package installer contains godog step implementations for specs/clie/installer.
 //
 // Features:
-// - specs/clie-cli/installer/cli-installation/
+// - specs/clie/installer/cli-installation/
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
@@ -22,14 +22,14 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/paths"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
 // installerContext holds state between steps for installer tests.
 type installerContext struct {
 	sharedCtx      *eacgodog.TestContext
-	scriptsRoot    string
+	pwshScript     string // Full path to PowerShell install script
+	bashScript     string // Full path to bash install script
 	tempInstallDir string
 }
 
@@ -66,11 +66,12 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 }
 
 func initializeInstallerContext() {
-	// Find scripts from build output using repository path conventions
-	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
-	// and doesn't need to be copied to isolated test environments
+	// Find installer scripts from source tree using repository path conventions.
+	// Use OriginalRepoRoot (not IsolatedDir) because source scripts are read-only
+	// and don't need to be copied to isolated test environments.
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "clie-installer")
+	instCtx.pwshScript = filepath.Join(repoRoot, "scripts", "pwsh", "cli", "install.ps1")
+	instCtx.bashScript = filepath.Join(repoRoot, "scripts", "sh", "cli", "install.sh")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "clie-installer-test-*")
@@ -150,7 +151,7 @@ var (
 	binaryCheckDone = false
 )
 
-// checkLatestReleaseHasBinary checks if the latest clie-cli release has the expected binary.
+// checkLatestReleaseHasBinary checks if the latest clie release has the expected binary.
 // Sets binaryAvailable flag - if false, subsequent steps should pass without doing real work.
 // Tests use UPX-compressed binaries for faster downloads where available.
 // In mock mode (__CLIE_TEST_MOCK=1), skips GitHub API call and assumes binary is available.
@@ -221,23 +222,23 @@ func checkLatestReleaseHasBinary() {
 		return
 	}
 
-	// Find latest clie-cli release
+	// Find latest clie release
 	for _, release := range releases {
-		if strings.HasPrefix(release.TagName, "clie-cli/") {
+		if strings.HasPrefix(release.TagName, "clie/") {
 			// Check if expected binary exists in assets
 			for _, asset := range release.Assets {
 				if asset.Name == expectedBinary {
 					return // Binary exists - test can proceed
 				}
 			}
-			// Found clie-cli release but binary not present
+			// Found clie release but binary not present
 			fmt.Printf("[SKIP] Release %s missing binary %s - release needs rebuild\n", release.TagName, expectedBinary)
 			binaryAvailable = false
 			return
 		}
 	}
 
-	fmt.Printf("[SKIP] No clie-cli release found on GitHub\n")
+	fmt.Printf("[SKIP] No clie release found on GitHub\n")
 	binaryAvailable = false
 }
 
@@ -253,7 +254,7 @@ func iRunThePowerShellInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-scripts", "install.ps1")
+	scriptPath := instCtx.pwshScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -296,7 +297,7 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-scripts", "install.ps1")
+	scriptPath := instCtx.pwshScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -342,7 +343,7 @@ func iRunTheBashInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-scripts", "install.sh")
+	scriptPath := instCtx.bashScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -384,7 +385,7 @@ func iRunTheBashInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-scripts", "install.sh")
+	scriptPath := instCtx.bashScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

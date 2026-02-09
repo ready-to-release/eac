@@ -1,4 +1,4 @@
-// Package drawio contains godog step implementations for eac-cli.
+// Package drawio contains godog step implementations for eac.
 //
 // This file contains DrawIO diagram command step definitions.
 // These specs require Docker for the drawio-oci container.
@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/core/paths"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // drawioContext holds state for drawio tests.

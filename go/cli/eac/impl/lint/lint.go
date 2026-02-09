@@ -15,7 +15,7 @@
 // Long:
 // Long: Example:
 // Long:   lint                           # Lint all modules
-// Long:   lint eac-cli              # Lint a single module
+// Long:   lint eac              # Lint a single module
 // Long:   lint --fix                     # Lint with auto-fix
 // Long:   lint --skip-cache              # Force full lint, ignore incremental state
 // Flag.fix: type=bool, usage=Auto-fix issues where possible
@@ -42,10 +42,10 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 
+	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -162,7 +162,7 @@ func printLintUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  lint                      # Lint all modules")
-	log.Info("  lint eac-cli         # Lint a single module")
+	log.Info("  lint eac         # Lint a single module")
 	log.Info("  lint --fix                # Lint with auto-fix")
 	log.Info("  lint --skip-cache         # Force full lint")
 }
