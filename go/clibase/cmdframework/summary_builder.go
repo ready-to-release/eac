@@ -242,7 +242,7 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
 	default: // core.ActionBuild
 		tb = render.NewTableBuilder().
-			WithHeaders("Module", "Components", "Time", "Stat")
+			WithHeaders("Module", "Component", "Wait", "Cycle", "Stat")
 	}
 
 	// Build rows for each module
@@ -254,31 +254,26 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData
 			return cache.components[i].Component < cache.components[j].Component
 		})
 
-		// Derive status
-		status := sb.deriveModuleStatus(cache)
-
-		// Build component names string
-		components := sb.buildComponentString(cache.components)
-
-		// Status icon
-		statusIcon := " ✓"
-		if status == orchestrator.ModuleStatusFailed {
-			statusIcon = " ✗"
-		} else if cache.warnCount > 0 {
-			statusIcon = " ⚠"
-		}
-
 		moduleName := output.PackageDisplayName(module)
-		duration := formatDuration(cache.moduleDuration)
 
 		// Add row based on command type
 		switch sb.commandType {
 		case core.ActionTest:
 			addTestTypeRows(tb, moduleName, cache.byHandler)
 		case core.ActionLint, core.ActionScan:
+			// Derive status
+			status := sb.deriveModuleStatus(cache)
+			components := sb.buildComponentString(cache.components)
+			statusIcon := " ✓"
+			if status == orchestrator.ModuleStatusFailed {
+				statusIcon = " ✗"
+			} else if cache.warnCount > 0 {
+				statusIcon = " ⚠"
+			}
+			duration := formatDuration(cache.moduleDuration)
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
 		default: // core.ActionBuild
-			tb.AddRow(moduleName, components, duration, statusIcon)
+			addBuildComponentRows(tb, moduleName, cache.components, sb.startTime)
 		}
 	}
 

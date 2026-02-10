@@ -193,7 +193,7 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 	// Generate container name if not specified
 	containerName := config.ContainerName
 	if containerName == "" {
-		containerName = fmt.Sprintf("eac-run-%d", time.Now().UnixNano())
+		containerName = GenerateContainerName()
 	}
 
 	// Remove any existing container with the same name

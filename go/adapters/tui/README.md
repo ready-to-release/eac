@@ -25,23 +25,23 @@ subcommand selection.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
-| --- | --- |
-| interfaces.go | Re-exported contract types and constants |
-| console.go | `ParallelConsole` implementation with bubbletea |
-| adapter.go | `consoleAdapter` bridging contracts to display |
-| bootstrap.go | `init()` wiring TUI factories into clibase/display |
-| registry.go | Command-to-TUI registry with pattern matching |
-| selector.go | `SelectorConsole` interface and factory registry |
-| observer.go | `TUIObserver` translating events to TUI calls |
-| hooks.go | `TUIHooksImpl` for command selection and UoW data |
-| env.go | `IsInteractive()` and `ShouldUseTUI()` detection |
-| exit_hold.go | `ExitHoldController` for delayed exit on interaction |
-| console/ | Bubbletea model, update, view, and widget rendering |
-| stream/ | Output stream filtering and multi-writer utilities |
-| parallel/ | Parallel task TUI factory and registration |
-| selector/ | Bubbletea-based selector implementation |
-| demo/ | Experimental tui3 layout prototype |
+| File/Sub-package | Responsibility                                       |
+| ---------------- | ---------------------------------------------------- |
+| interfaces.go    | Re-exported contract types and constants             |
+| console.go       | `ParallelConsole` implementation with bubbletea      |
+| adapter.go       | `consoleAdapter` bridging contracts to display       |
+| bootstrap.go     | `init()` wiring TUI factories into clibase/display   |
+| registry.go      | Command-to-TUI registry with pattern matching        |
+| selector.go      | `SelectorConsole` interface and factory registry     |
+| observer.go      | `TUIObserver` translating events to TUI calls        |
+| hooks.go         | `TUIHooksImpl` for command selection and UoW data    |
+| env.go           | `IsInteractive()` and `ShouldUseTUI()` detection     |
+| exit_hold.go     | `ExitHoldController` for delayed exit on interaction |
+| console/         | Bubbletea model, update, view, and widget rendering  |
+| stream/          | Output stream filtering and multi-writer utilities   |
+| parallel/        | Parallel task TUI factory and registration           |
+| selector/        | Bubbletea-based selector implementation              |
+| demo/            | Experimental tui3 layout prototype                   |
 
 ## Dependencies
 
@@ -63,14 +63,17 @@ dependency graph.
 ## Code Health
 
 ### Tech Debt
+
 - `ParallelConsole.Start()` in console.go (~200 lines) handles signal setup, channel wiring, model creation, and the message pump in one method
 - `SetInitSummary()` and `UpdateStatus()` in console.go perform verbose field-by-field struct mapping (~30 fields each); a code-gen or reflection approach could reduce boilerplate
 - `bootstrap.go` uses `init()` for factory registration, creating implicit import-order coupling with `clibase/display`
 
 ### Pain Points
+
 - `globalRegistry` in registry.go is package-level mutable state; tests must be careful about cross-test leakage
 - `observer.go` duplicates the struct-mapping pattern (contract types to TUI types) seen in console.go
 
 ### Optimization Opportunities
+
 - Extract the async message pump goroutine in `Start()` into a dedicated `messagePump` type for testability; low risk, structural refactor
 - The demo/tui3 code path shares branching logic throughout console.go; extracting a `demoConsole` implementing `Console` would isolate experimental code

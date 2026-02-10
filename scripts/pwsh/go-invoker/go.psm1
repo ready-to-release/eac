@@ -170,22 +170,41 @@ function Invoke-GoSrcCommand {
     }
 
     $commandsPath = Join-Path $Script:RepoRoot "go/cli/eac"
+    $commandsBinary = Join-Path $Script:RepoRoot "out/tools/eac.exe"
+
+    # Build the binary to a stable location instead of using go run.
+    # go run compiles to a temp dir every invocation and can touch go.sum/go.work.sum
+    # timestamps, which invalidates the mtime-based hash cache and forces downstream
+    # modules to rebuild. Building to out/tools/ is cache-neutral: Go's build cache
+    # makes it near-instant when sources are unchanged, and the output location is
+    # outside any module's glob patterns.
+    $toolsDir = Split-Path $commandsBinary -Parent
+    if (-not (Test-Path $toolsDir)) {
+        New-Item -Path $toolsDir -ItemType Directory -Force | Out-Null
+    }
+    Push-Location $commandsPath
+    try {
+        & go build -o $commandsBinary .
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to build eac binary (exit code $LASTEXITCODE)"
+        }
+    } finally {
+        Pop-Location
+    }
 
     # Save the original working directory as an environment variable
     # so Go commands can resolve relative paths correctly
     $env:CLIE_PWD = (Get-Location).Path
 
-    # Run the command via dispatcher
-    Push-Location $commandsPath
+    # Run the pre-built binary
     try {
-        & go run . @CommandParts
+        & $commandsBinary @CommandParts
 
         # Propagate exit code
         if ($LASTEXITCODE -ne 0) {
             throw "Command failed with exit code $LASTEXITCODE"
         }
     } finally {
-        Pop-Location
         # Clean up
         Remove-Item Env:\CLIE_PWD -ErrorAction SilentlyContinue
     }

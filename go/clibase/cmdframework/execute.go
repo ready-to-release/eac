@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"sync"
 	"time"
 
@@ -146,6 +147,14 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType core.ActionTyp
 	// inter-module ordering and propagate failures across module boundaries.
 	allWork = injectModuleDependencies(allWork, ctx.ModuleRegistry)
 
+	// Sort work by display order for consistent TUI tab ordering.
+	// Falls back to alphabetical when display order is unavailable.
+	var displayOrder *config.DisplayOrder
+	if ctx.EACConfig != nil {
+		displayOrder = ctx.EACConfig.Repository.DisplayOrder
+	}
+	sortWorkByDisplayOrder(allWork, displayOrder)
+
 	// Create incremental summary builder with component counts per module
 	componentCounts := computeComponentCounts(allWork)
 	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
@@ -205,6 +214,64 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType core.ActionTyp
 	}
 
 	return nil
+}
+
+// sortWorkByDisplayOrder sorts work units by display order for consistent TUI tab ordering.
+// Uses module ordering from DisplayOrder.Modules, then component ordering from DisplayOrder.Components.
+func sortWorkByDisplayOrder(work []workunit.UnitSpec, displayOrder *config.DisplayOrder) {
+	// Build module rank map (empty if no display order)
+	moduleRank := make(map[string]int)
+	if displayOrder != nil {
+		for i, m := range displayOrder.Modules {
+			moduleRank[m] = i
+		}
+	}
+
+	// Build component rank maps per module (empty if no display order)
+	compRank := make(map[string]map[string]int)
+	if displayOrder != nil {
+		for mod, comps := range displayOrder.Components {
+			rank := make(map[string]int, len(comps))
+			for i, c := range comps {
+				rank[c] = i
+			}
+			compRank[mod] = rank
+		}
+	}
+
+	sort.SliceStable(work, func(i, j int) bool {
+		mi, mj := work[i].ID.Module, work[j].ID.Module
+		if mi != mj {
+			ri, oki := moduleRank[mi]
+			rj, okj := moduleRank[mj]
+			if oki && okj {
+				return ri < rj
+			}
+			if oki != okj {
+				return oki
+			}
+			return mi < mj
+		}
+
+		// Same module — sort by component order, fallback alphabetical
+		ci, cj := work[i].ID.ComponentName, work[j].ID.ComponentName
+		if ci != cj {
+			if cr, ok := compRank[mi]; ok {
+				ri, oki := cr[ci]
+				rj, okj := cr[cj]
+				if oki && okj {
+					return ri < rj
+				}
+				if oki != okj {
+					return oki
+				}
+			}
+			return ci < cj
+		}
+
+		// Same component — sort by tool name for stability
+		return work[i].ID.Tool < work[j].ID.Tool
+	})
 }
 
 // computeComponentCounts computes the number of components per module.

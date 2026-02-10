@@ -175,6 +175,32 @@ func addTestTypeRows(tb *render.TableBuilder, moduleName string, byHandler map[s
 	}
 }
 
+// addBuildComponentRows adds per-component rows to the table builder.
+// The module name appears on the first row only; subsequent rows leave it blank.
+// cmdStartTime is used to compute wait time.
+func addBuildComponentRows(tb *render.TableBuilder, moduleName string, comps []orchestrator.UnitResult, cmdStartTime time.Time) {
+	for i, comp := range comps {
+		statusIcon := " ✓"
+		if comp.ExitCode > 0 {
+			statusIcon = " ✗"
+		} else if len(comp.Warnings) > 0 {
+			statusIcon = " ⚠"
+		}
+		var wait, cycle string
+		if !comp.StartedAt.IsZero() && !cmdStartTime.IsZero() {
+			wait = formatDuration(comp.StartedAt.Sub(cmdStartTime))
+		} else {
+			wait = "-"
+		}
+		cycle = formatDuration(comp.Duration)
+		rowModule := ""
+		if i == 0 {
+			rowModule = moduleName
+		}
+		tb.AddRow(rowModule, comp.Component, wait, cycle, statusIcon)
+	}
+}
+
 // moduleCache holds precomputed data for a module to avoid repeated calculations.
 type moduleCache struct {
 	status         orchestrator.ModuleStatus
@@ -295,61 +321,55 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
 	default: // core.ActionBuild
 		tb = render.NewTableBuilder().
-			WithHeaders("Module", "Components", "Time", "Stat")
+			WithHeaders("Module", "Component", "Wait", "Cycle", "Stat")
 	}
 
 	for _, idx := range sortedIndices {
 		rs := &resultSets[idx]
 		cache := &caches[idx]
 
-		// Build component names string from cached sorted components
-		var components string
-		if len(cache.sortedComps) <= 3 {
-			// Fast path: few components, direct concatenation
-			compNames := make([]string, len(cache.sortedComps))
-			for i, comp := range cache.sortedComps {
-				compNames[i] = comp.Component
-			}
-			components = strings.Join(compNames, ", ")
-		} else {
-			// Use strings.Builder for many components
-			var sb strings.Builder
-			for i, comp := range cache.sortedComps {
-				if i > 0 {
-					sb.WriteString(", ")
-				}
-				if sb.Len()+len(comp.Component) > 57 {
-					sb.WriteString("...")
-					break
-				}
-				sb.WriteString(comp.Component)
-			}
-			components = sb.String()
-		}
-		// Truncate if too long (max 60 chars)
-		if len(components) > 60 {
-			components = components[:57] + "..."
-		}
-
-		// Use cached status
-		statusIcon := " ✓"
-		if cache.status == orchestrator.ModuleStatusFailed {
-			statusIcon = " ✗"
-		} else if cache.warnCount > 0 {
-			statusIcon = " ⚠"
-		}
-
 		moduleName := output.PackageDisplayName(rs.Module)
-		duration := formatDuration(cache.moduleDuration)
 
 		// Add row based on command type
 		switch ctx.Config.Type {
 		case core.ActionTest:
 			addTestTypeRows(tb, moduleName, cache.byHandler)
 		case core.ActionLint, core.ActionScan:
+			// Build component names string from cached sorted components
+			var components string
+			if len(cache.sortedComps) <= 3 {
+				compNames := make([]string, len(cache.sortedComps))
+				for i, comp := range cache.sortedComps {
+					compNames[i] = comp.Component
+				}
+				components = strings.Join(compNames, ", ")
+			} else {
+				var sb strings.Builder
+				for i, comp := range cache.sortedComps {
+					if i > 0 {
+						sb.WriteString(", ")
+					}
+					if sb.Len()+len(comp.Component) > 57 {
+						sb.WriteString("...")
+						break
+					}
+					sb.WriteString(comp.Component)
+				}
+				components = sb.String()
+			}
+			if len(components) > 60 {
+				components = components[:57] + "..."
+			}
+			statusIcon := " ✓"
+			if cache.status == orchestrator.ModuleStatusFailed {
+				statusIcon = " ✗"
+			} else if cache.warnCount > 0 {
+				statusIcon = " ⚠"
+			}
+			duration := formatDuration(cache.moduleDuration)
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
 		default: // core.ActionBuild
-			tb.AddRow(moduleName, components, duration, statusIcon)
+			addBuildComponentRows(tb, moduleName, cache.sortedComps, ctx.StartTime)
 		}
 	}
 

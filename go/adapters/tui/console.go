@@ -764,24 +764,22 @@ func (c *ParallelConsole) MarkUoWComplete(moniker string, exitCode int) {
 
 // MarkUoWCompleteWithCacheInfo marks a module as complete with optional cache info.
 // For cached modules, cacheTime is when the artifact was built, logPath is the build log location.
-// Uses sendAsync (regular channel) instead of sendCritical so that completion events
-// queue behind pending output lines. This prevents the tab from turning green/red
-// before the final output lines are displayed. The regular channel has sufficient
-// capacity (500) and finalizeAllTabs() handles any missed completions at exit.
+// Uses sendCritical (priority channel) so completion events are processed immediately.
+// This ensures the tab turns green/red as soon as the worker finishes.
 func (c *ParallelConsole) MarkUoWCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string) {
 	c.mu.Lock()
 	demoMode := c.demoMode
 	c.mu.Unlock()
 
 	if demoMode {
-		c.sendAsync(demo.UnitCompleteMsg{
+		c.sendCritical(demo.UnitCompleteMsg{
 			Moniker:  moniker,
 			ExitCode: exitCode,
 		})
 		return
 	}
 
-	c.sendAsync(console.UoWCompleteMsg{
+	c.sendCritical(console.UoWCompleteMsg{
 		Moniker:   moniker,
 		ExitCode:  exitCode,
 		CacheTime: cacheTime,
@@ -790,14 +788,16 @@ func (c *ParallelConsole) MarkUoWCompleteWithCacheInfo(moniker string, exitCode 
 }
 
 // SendSummary sends summary data and activates the Summary pane.
-// NOTE: This intentionally uses blocking program.Send() (not sendAsync).
-// The final summary must be delivered before TUI exits - it's only called
-// once at the end and we need to guarantee it's displayed.
+// Routes through criticalChan so the summary queues behind any pending
+// completion events — this prevents tabs from appearing "running" when
+// the summary arrives (completion events turn them green/red first).
+// The critical channel has 10,000 capacity; blocking send guarantees delivery.
 func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
-	program := c.program
 	demoMode := c.demoMode
+	critChan := c.criticalChan
+	program := c.program
 	c.mu.Unlock()
 
 	if stopped || program == nil {
@@ -805,9 +805,8 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	}
 
 	if demoMode {
-		// Send summary - counts will be derived from model.units[] in updateCells()
-		// The SummaryData here just signals that we're done and provides duration
-		program.Send(demo.SummaryMsg{
+		// Send summary through critical channel for ordering
+		c.sendCritical(demo.SummaryMsg{
 			Data: &cells.SummaryData{
 				Duration: data.TotalTime,
 			},
@@ -825,9 +824,18 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 		return
 	}
 
-	program.Send(console.SummaryDataMsg{
-		Data: (*console.SummaryData)(data),
-	})
+	// Blocking send to critical channel — guarantees delivery AND ordering
+	// after all preceding completion events already in the channel.
+	if critChan != nil {
+		critChan <- console.SummaryDataMsg{
+			Data: (*console.SummaryData)(data),
+		}
+	} else {
+		// Fallback: direct send if channels not initialized
+		program.Send(console.SummaryDataMsg{
+			Data: (*console.SummaryData)(data),
+		})
+	}
 
 	// Signal listeners to stop AFTER sending summary so remaining lines
 	// in lineChan can be drained by listenForLines before it exits.

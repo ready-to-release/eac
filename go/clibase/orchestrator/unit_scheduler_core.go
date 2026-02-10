@@ -442,16 +442,20 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 }
 
 // markUnitComplete marks a component as done, updates summary and TUI.
+// TUI is updated BEFORE summary builder because AddResult may trigger the
+// OnComplete callback (on the last UoW), which sends the summary and starts
+// TUI exit. The tab must be green/red before that happens.
 func (us *UnitScheduler) markUnitComplete(spec workunit.UnitSpec, result *UnitResult) {
+	// Update TUI with exit code first — must happen before AddResult
+	// which may trigger OnComplete → SendSummary → TUI exit.
+	// Use Longname() to match the ID format used in SetInitSummary
+	moniker := spec.ID.Longname()
+	us.tuiMarkCompleted(moniker, result.ExitCode)
+
 	// Send result to summary builder for incremental summary computation
 	if us.summaryBuilder != nil {
 		us.summaryBuilder.AddResult(*result)
 	}
-
-	// Update TUI with exit code
-	// Use Longname() to match the ID format used in SetInitSummary
-	moniker := spec.ID.Longname()
-	us.tuiMarkCompleted(moniker, result.ExitCode)
 }
 
 // SetUnitExtras stores additional data for a component result.

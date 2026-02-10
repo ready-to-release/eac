@@ -7,6 +7,7 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
@@ -282,8 +283,9 @@ func ExtractPlannedTools(ctx *ExecutionContext) []display.PlannedTool {
 
 // buildExecutionTreeFromUnits builds a flat list of modules with their UoWs.
 // Uses UnitProvider to get proper IDs with Longname() for globally unique identification.
+// Units are sorted by display order for consistent TUI tab ordering.
 func buildExecutionTreeFromUnits(ctx *ExecutionContext) []display.ExecutionModule {
-	// Check if UnitSpecs are cached
+	// Check if UnitSpecs are cached (already sorted)
 	if len(ctx.Config.UnitSpecsCache) > 0 {
 		return buildModulesFromUnitSpecs(ctx.Config.UnitSpecsCache)
 	}
@@ -293,7 +295,14 @@ func buildExecutionTreeFromUnits(ctx *ExecutionContext) []display.ExecutionModul
 	if provider != nil {
 		units := provider(ctx)
 		if len(units) > 0 {
-			// Cache for subsequent calls
+			// Sort by display order for consistent TUI tab ordering
+			var displayOrder *config.DisplayOrder
+			if ctx.EACConfig != nil {
+				displayOrder = ctx.EACConfig.Repository.DisplayOrder
+			}
+			sortWorkByDisplayOrder(units, displayOrder)
+
+			// Cache sorted specs for subsequent calls
 			ctx.Config.UnitSpecsCache = units
 			return buildModulesFromUnitSpecs(units)
 		}
