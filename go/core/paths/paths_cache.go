@@ -74,6 +74,36 @@ func NpmDownloadCachePath(repoRoot string) string {
 	return filepath.Join(CacheRootPath(repoRoot), "npm", "cache")
 }
 
+// NuGetWorkCachePath returns the path to NuGet isolation work directories.
+// Path: .cache/eac/nuget/work/
+func NuGetWorkCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "nuget", "work")
+}
+
+// NuGetPackageCachePath returns the path for NUGET_PACKAGES.
+// Path: .cache/eac/nuget/packages/
+func NuGetPackageCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "nuget", "packages")
+}
+
+// PipWorkCachePath returns the path to Python/pip isolation work directories.
+// Path: .cache/eac/python/work/
+func PipWorkCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "python", "work")
+}
+
+// PipVenvCachePath returns the path to Python virtual environment cache.
+// Path: .cache/eac/python/venv/
+func PipVenvCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "python", "venv")
+}
+
+// PipDownloadCachePath returns the path for PIP_CACHE_DIR.
+// Path: .cache/eac/python/pip-cache/
+func PipDownloadCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "python", "pip-cache")
+}
+
 // StagingCachePath returns the path to the staging cache directory.
 // Used for persistent staging areas that survive across builds.
 // Path: .cache/eac/staging/

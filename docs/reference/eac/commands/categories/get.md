@@ -94,12 +94,9 @@ Most get commands have corresponding `show` commands that provide the same infor
 # Get changed modules
 CHANGED=$(eac get changed-modules-ci | jq -r '.changed_modules[]')
 
-# Build in dependency order
+# Build changed modules
 for module in $CHANGED; do
-  ORDER=$(eac get execution order $module | jq -r '.execution_order[]')
-  for dep in $ORDER; do
-    eac build $dep
-  done
+  eac build $module
 done
 ```
 
@@ -132,9 +129,6 @@ eac get dependencies | jq 'to_entries[] | select(.value | length == 0) | .key'
 ### Build Optimization
 
 ```bash
-# Get execution order for parallel builds
-eac get execution order clie | jq -r '.execution_order[]'
-
 # Get build dependencies
 eac get build-deps src-api | jq '.dependencies[]'
 
@@ -153,7 +147,6 @@ Execute quickly (< 1s):
 - `get config`
 - `get environments`
 - `get changed-modules`
-- `get execution order`
 
 ### Moderate Commands
 
@@ -298,14 +291,10 @@ if [ -z "$CHANGED" ]; then
   exit 0
 fi
 
-# Build each in dependency order
+# Build each changed module
 for module in $CHANGED; do
-  ORDER=$(eac get execution order $module | jq -r '.execution_order[]')
-
-  for dep in $ORDER; do
-    echo "Building $dep..."
-    eac build $dep || exit 1
-  done
+  echo "Building $module..."
+  eac build $module || exit 1
 done
 ```
 

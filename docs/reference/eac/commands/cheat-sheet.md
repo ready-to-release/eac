@@ -64,8 +64,8 @@ eac build src-auth
 # Build multiple modules
 eac build src-auth src-api
 
-# Build with dependencies in order
-eac get execution order src-auth | xargs -L1 eac build
+# Build multiple modules
+eac build src-auth src-api
 ```
 
 ### Test Commands
@@ -168,16 +168,6 @@ eac pipeline wait
 
 # Orchestrate CI build
 eac pipeline ci
-```
-
-### Build Order
-
-```bash
-# Get execution order for dependencies
-eac get execution order src-api
-
-# Build modules in order
-eac get execution order src-api | xargs -L1 eac build
 ```
 
 ---

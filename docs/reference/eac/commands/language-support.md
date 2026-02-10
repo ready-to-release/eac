@@ -117,7 +117,6 @@ Security tools detect languages automatically.
 - [`show-files`](./show/files.md) - Shows file ownership
 - [`get-modules`](./get/modules.md) - Returns module data as JSON
 - [`get-dependencies`](./get/dependencies.md) - Returns dependencies as JSON
-- [`get-execution-order`](./get/execution-order.md) - Calculates build order
 
 ---
 

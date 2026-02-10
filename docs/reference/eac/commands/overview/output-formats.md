@@ -296,14 +296,6 @@ Most JSON commands wrap results in a top-level object:
 }
 ```
 
-#### get execution order
-
-```json
-{
-  "execution_order": ["module1", "module2", "module3"]
-}
-```
-
 #### get changed-modules
 
 ```json

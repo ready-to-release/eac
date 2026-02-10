@@ -59,7 +59,6 @@ Complete technical reference for all EAC extension commands (invoked as `eac <co
 ### CI/CD
 
 - [get changed-modules-ci](./get/changed-modules-ci.md) - Find changed modules
-- [get execution order](./get/execution-order.md) - Get build order
 - [pipeline run](./pipeline/run.md) - Execute pipelines
 - [show build-summary](./show/build-summary.md) - Display results
 

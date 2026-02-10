@@ -1,0 +1,6 @@
+modules:
+  - moniker: inventory
+    name: Inventory Service
+    components:
+      dotnet: src/Inventory
+      gherkin: specs/inventory

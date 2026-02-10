@@ -23,7 +23,6 @@ nav:
   - documented-commands.md
   - environments.md
   - evidence-ci-runs.md
-  - execution-order.md
   - files.md
   - files-by-module.md
   - module-ci-workflow.md

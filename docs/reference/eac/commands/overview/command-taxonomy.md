@@ -58,7 +58,6 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 - `get artifacts` - Resolved artifacts
 - `get build-deps` - Build dependencies
 - `get build-times` - Build performance data
-- `get execution order` - Dependency-based build order
 - `get suite` - Test suite information
 - `get tests` - All tests in repository
 - `get test-timings` - Test performance data

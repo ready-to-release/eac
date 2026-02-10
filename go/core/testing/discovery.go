@@ -320,6 +320,8 @@ func getTestFrameworkForPackage(packageType string) string {
 func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
 	hasTS := module.HasComponent("typescript")
 	hasGo := module.HasComponent("go")
-	log.Debugf("getFeatureTestTypeForModule: %s hasTypescript=%v hasGo=%v", module.Moniker, hasTS, hasGo)
-	return resolveFeatureTestType(hasTS, hasGo)
+	hasPython := module.HasComponent("python")
+	hasDotnet := module.HasComponent("dotnet")
+	log.Debugf("getFeatureTestTypeForModule: %s hasTypescript=%v hasGo=%v hasPython=%v hasDotnet=%v", module.Moniker, hasTS, hasGo, hasPython, hasDotnet)
+	return resolveFeatureTestType(hasTS, hasGo, hasPython, hasDotnet)
 }

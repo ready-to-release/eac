@@ -1,0 +1,6 @@
+modules:
+  - moniker: data-store
+    name: Data Store
+    components:
+      python: python/data-store
+      specs: specs/data-store

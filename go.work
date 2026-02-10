@@ -17,6 +17,12 @@ use (
 	./go/adapters/gotest
 	./go/adapters/mocha
 	./go/adapters/npm
+	./go/adapters/nuget
+	./go/adapters/dotnet
+	./go/adapters/reqnroll
+	./go/adapters/pip
+	./go/adapters/pytest
+	./go/adapters/behave
 	./go/adapters/tui
 	./go/cli/clie
 	./go/cli/eac

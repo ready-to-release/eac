@@ -110,7 +110,7 @@ Runs repository commit test suite.
 
 ### Flow B: Module CI Orchestration (Parallel)
 
-Detects changes, calculates execution order, and dispatches module CI workflows.
+Detects changes and dispatches module CI workflows.
 
 #### Job: `detect-changes`
 
@@ -178,30 +178,6 @@ RESULT=$(commands get changed-modules-ci --as-json)
 - When a module changes, all modules that depend on it are also marked for rebuild
 - Ensures dependent modules are rebuilt when their dependencies change (cache invalidation)
 
-#### Job: `calculate-order`
-
-Computes dependency-based execution order for changed modules.
-
-**Dependencies:** `detect-changes`
-
-**Steps:**
-
-1. Checkout repository
-2. Download commands binary artifact
-3. Calculate execution order using dependency graph
-4. Generate execution plan (modules grouped into layers)
-5. Generate step summary showing layer structure
-
-**Command:**
-
-```bash
-PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
-```
-
-**Outputs:**
-
-- `execution-plan` - JSON object with layered execution plan
-- `layer-count` - Number of dependency layers
 
 **Execution Plan Structure:**
 

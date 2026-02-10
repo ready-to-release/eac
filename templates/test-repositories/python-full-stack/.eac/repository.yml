@@ -1,0 +1,13 @@
+modules:
+  - moniker: mathlib
+    name: Math Library
+    components:
+      python: python/mathlib
+      specs: specs/mathlib
+
+  - moniker: report-cli
+    name: Report CLI
+    depends_on: [mathlib]
+    components:
+      python: python/report-cli
+      specs: specs/report-cli

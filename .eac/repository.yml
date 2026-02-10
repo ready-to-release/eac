@@ -288,6 +288,7 @@ modules:
     description: BDD test infrastructure adapter for Godog integration
     template: go-library
     depends_on: [core]
+    module_group: adapters
     components:
       go: go/adapters/godog
 
@@ -310,6 +311,7 @@ modules:
     description: AI service integration adapter
     template: go-library
     depends_on: [contracts-ai, core]
+    module_group: adapters
     components:
       go: go/adapters/ai
 
@@ -318,6 +320,7 @@ modules:
     description: Docker container runtime adapter
     template: go-library
     depends_on: [contracts-runtime, core]
+    module_group: adapters
     components:
       go: go/adapters/docker
 
@@ -326,6 +329,7 @@ modules:
     description: EAC command execution adapter
     template: go-library
     depends_on: [contracts-runtime, core]
+    module_group: adapters
     components:
       go: go/adapters/eac
 
@@ -334,6 +338,7 @@ modules:
     description: Terminal UI adapter for console rendering
     template: go-library
     depends_on: [contracts-tui, core, clibase]
+    module_group: adapters
     components:
       go: go/adapters/tui
 
@@ -342,6 +347,7 @@ modules:
     description: Cucumber/Gherkin test runner adapter for TypeScript BDD execution
     template: go-library
     depends_on: [core, clibase]
+    module_group: adapters
     components:
       go: go/adapters/cucumber
 
@@ -350,6 +356,7 @@ modules:
     description: Go test runner adapter for unit and integration test execution
     template: go-library
     depends_on: [core, clibase]
+    module_group: adapters
     components:
       go: go/adapters/gotest
 
@@ -358,6 +365,7 @@ modules:
     description: Mocha test runner adapter for TypeScript unit test execution
     template: go-library
     depends_on: [core, clibase]
+    module_group: adapters
     components:
       go: go/adapters/mocha
 
@@ -366,8 +374,72 @@ modules:
     description: NPM package manager adapter for dependency isolation
     template: go-library
     depends_on: [core, clibase]
+    module_group: adapters
     components:
       go: go/adapters/npm
+
+  - moniker: pip-eac
+    name: Pip Adapter
+    description: Python pip/venv isolation adapter for dependency management
+    template: go-library
+    depends_on: [core]
+    module_group: adapters
+    components:
+      go: go/adapters/pip
+
+  - moniker: pytest-eac
+    name: Pytest Test Runner
+    description: Python pytest test runner adapter for unit test execution
+    template: go-library
+    depends_on: [core, clibase, pip-eac]
+    module_group: adapters
+    components:
+      go: go/adapters/pytest
+
+  - moniker: behave-eac
+    name: Behave Test Runner
+    description: Python behave test runner adapter for BDD test execution
+    template: go-library
+    depends_on: [core, clibase, pip-eac]
+    module_group: adapters
+    components:
+      go: go/adapters/behave
+
+  - moniker: nuget-eac
+    name: NuGet Adapter
+    description: NuGet package manager adapter for .NET dependency isolation
+    template: go-library
+    depends_on: [core]
+    module_group: adapters
+    components:
+      go: go/adapters/nuget
+
+  - moniker: dotnet-eac
+    name: Dotnet Test Runner
+    description: .NET xUnit test runner adapter with TRX report parsing
+    template: go-library
+    depends_on: [core, clibase, nuget-eac]
+    module_group: adapters
+    components:
+      go: go/adapters/dotnet
+
+  - moniker: reqnroll-eac
+    name: Reqnroll Test Runner
+    description: .NET Reqnroll BDD test runner adapter for Gherkin feature execution
+    template: go-library
+    depends_on: [core, clibase, nuget-eac, dotnet-eac]
+    module_group: adapters
+    components:
+      go: go/adapters/reqnroll
+
+  - moniker: dotnet-oci
+    name: Dotnet SDK Container
+    description: .NET SDK container for builds, tests, and toolchain operations
+    template: container
+    module_group: oci-tools
+    depends_on: [root]
+    components:
+      dockerfile:
 
   - moniker: docs
     name: Documentation Site
@@ -400,7 +472,7 @@ modules:
     name: Go Commands Library
     description: Go library containing CLI command implementations
     template: go-exe
-    depends_on: [core, clibase, godog-eac, ai-eac, docker-eac, eac-to-eac, tui-eac, cucumber-eac, gotest-eac, mocha-eac, npm-eac, oci-tools]
+    depends_on: [core, clibase, adapters, oci-tools]
     artifact_matrix: cross-platform-upx
     components:
       go:

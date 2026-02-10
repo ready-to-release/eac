@@ -1,0 +1,21 @@
+modules:
+  - moniker: core
+    name: Core Library
+    components:
+      dotnet: src/Core
+
+  - moniker: web-api
+    name: Web API
+    depends_on:
+      - core
+    components:
+      dotnet: src/WebApi
+      gherkin: specs/web-api
+    build:
+      artifacts:
+        - id: linux-x64
+          type: executable
+          pattern: web-api-linux-x64
+        - id: win-x64
+          type: executable
+          pattern: web-api-win-x64.exe

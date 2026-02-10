@@ -391,7 +391,6 @@ get modules                # Module information (JSON)
 get dependencies           # Dependency graph (JSON)
 get files                  # File mappings (JSON)
 get changed-modules        # Changed modules (JSON)
-get execution order <m>    # Build order (JSON)
 ```
 
 ### show commands

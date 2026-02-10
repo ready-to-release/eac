@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calculator"
+version = "1.0.0"
+description = "Test calculator library"
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-json-report>=1.5"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

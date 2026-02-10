@@ -101,6 +101,38 @@ Feature: Tool Resolution for Component Types
       And the module "containers" has component "dockerfile"
 
   # ===========================================================================
+  # Category B2: .NET Template Variants
+  # ===========================================================================
+
+  Rule: .NET template repositories resolve correct modules and tools
+
+    Scenario: B5 - .NET with unit tests resolves dotnet builder and tester
+      Given I copy the test layout "dotnet-with-tests"
+      When I load the EAC configuration
+      Then the configuration has 1 modules
+      And the module "my-library" has component "dotnet"
+      And the builder for component type "dotnet" is "dotnet"
+      And the tester for component type "dotnet" is "dotnet"
+
+    Scenario: B6 - .NET with BDD resolves dotnet builder and gherkin component
+      Given I copy the test layout "dotnet-with-bdd"
+      When I load the EAC configuration
+      Then the configuration has 1 modules
+      And the module "inventory" has component "dotnet"
+      And the module "inventory" has component "gherkin"
+      And the builder for component type "dotnet" is "dotnet"
+
+    Scenario: B7 - .NET full stack resolves multi-module with dependencies
+      Given I copy the test layout "dotnet-full-stack"
+      When I load the EAC configuration
+      Then the configuration has 2 modules
+      And the module "core" has component "dotnet"
+      And the module "web-api" has component "dotnet"
+      And the module "web-api" has component "gherkin"
+      And the builder for component type "dotnet" is "dotnet"
+      And the tester for component type "dotnet" is "dotnet"
+
+  # ===========================================================================
   # Category C: Tester Tool Resolution
   # ===========================================================================
 

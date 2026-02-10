@@ -132,6 +132,21 @@ lint-providers:
     options:
       auto_fix: false
 
+  # .NET Linter - dotnet format
+  # Built into the .NET SDK, no additional installation needed
+  dotnet-format:
+    description: ".NET code style and formatting linter (built into SDK)"
+    command: dotnet
+    input_mode: directory
+    config_files:
+      - .editorconfig
+      - Directory.Build.props
+    system_dependency: dotnet
+    applies_to: [dotnet]
+    options:
+      allow_parallel: true
+      auto_fix: true
+
   # Structurizr DSL Linter - validates architecture diagrams
   structurizr-cli:
     description: Structurizr DSL syntax validator

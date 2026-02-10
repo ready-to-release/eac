@@ -19,6 +19,7 @@ namespaces:
   go: [golangci-lint, gcc, go-build, go-test-race]
   docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, plantuml, markdownlint, mermaid-render]
   node: [npm, tsc, npm-build, npm-test, eslint]
+  python: [python, ruff, pytest]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
 
 #---------------------------------------------------------------------------
@@ -388,6 +389,19 @@ container-tools:
     mounts:
       - source: "{module}"
         target: /app
+    workdir: /app
+    requirements: [docker]
+
+  python:
+    description: "Python interpreter for builds and venv creation"
+    image: python
+    tag: "3.12-slim"
+    command: ["python"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{output}"
+        target: /output
     workdir: /app
     requirements: [docker]
 
@@ -802,6 +816,8 @@ test-type-mapping:
   pytest: python
   cargo: rust
   dotnet: dotnet
+  reqnroll: gherkin
+  behave: gherkin
 
 #---------------------------------------------------------------------------
 # Environment Overrides
@@ -831,6 +847,10 @@ caches:
   npm:
     path: ".cache/npm"
     description: "NPM download cache and isolated work directories (work/{moniker})"
+
+  nuget:
+    path: ".cache/eac/nuget"
+    description: "NuGet package cache and isolated work directories (work/{moniker})"
 
   lint:
     path: ".cache/lint"

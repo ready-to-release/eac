@@ -10,12 +10,16 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/ready-to-release/eac/go/adapters/ai v0.0.0
+	github.com/ready-to-release/eac/go/adapters/behave v0.0.0
 	github.com/ready-to-release/eac/go/adapters/cucumber v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
+	github.com/ready-to-release/eac/go/adapters/dotnet v0.0.0
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
 	github.com/ready-to-release/eac/go/adapters/mocha v0.0.0
+	github.com/ready-to-release/eac/go/adapters/pytest v0.0.0
+	github.com/ready-to-release/eac/go/adapters/reqnroll v0.0.0
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
@@ -33,6 +37,8 @@ require (
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/npm v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/adapters/nuget v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/adapters/pip v0.0.0 // indirect
 )
 
 require (
@@ -161,13 +167,19 @@ require (
 
 replace (
 	github.com/ready-to-release/eac/go/adapters/ai => ../../adapters/ai
+	github.com/ready-to-release/eac/go/adapters/behave => ../../adapters/behave
 	github.com/ready-to-release/eac/go/adapters/cucumber => ../../adapters/cucumber
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker
+	github.com/ready-to-release/eac/go/adapters/dotnet => ../../adapters/dotnet
 	github.com/ready-to-release/eac/go/adapters/eac => ../../adapters/eac
 	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
 	github.com/ready-to-release/eac/go/adapters/gotest => ../../adapters/gotest
 	github.com/ready-to-release/eac/go/adapters/mocha => ../../adapters/mocha
 	github.com/ready-to-release/eac/go/adapters/npm => ../../adapters/npm
+	github.com/ready-to-release/eac/go/adapters/nuget => ../../adapters/nuget
+	github.com/ready-to-release/eac/go/adapters/pip => ../../adapters/pip
+	github.com/ready-to-release/eac/go/adapters/pytest => ../../adapters/pytest
+	github.com/ready-to-release/eac/go/adapters/reqnroll => ../../adapters/reqnroll
 	github.com/ready-to-release/eac/go/adapters/tui => ../../adapters/tui
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/core => ../../core

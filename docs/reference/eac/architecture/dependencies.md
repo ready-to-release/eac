@@ -52,7 +52,7 @@ Registry (holds all ModuleContract)
 | --------------------------------------------------- | --------------------------------------------- |
 | `go/core/domain/modules/types.go`               | `BaseContract.DependsOn` - YAML parsing       |
 | `go/core/domain/modules/types.go`               | `ModuleContract.GetDependencies()` - accessor |
-| `go/core/repository/dependencies.go`            | Graph operations, execution order             |
+| `go/core/repository/dependencies.go`            | Graph operations                              |
 | `go/cli/eac/impl/validate/`                     | Cycle detection and hierarchy validation      |
 | `go/cli/eac/impl/release/await-deps.go`        | Release-time CI verification                  |
 

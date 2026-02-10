@@ -122,7 +122,6 @@ It is also a full automation platform to manage everything as code software deli
 
 The sequence in which modules should be built or tested based on their dependencies.
 
-Command: [get execution order](./reference/eac/commands/get/execution-order.md).
 
 ### Extension
 

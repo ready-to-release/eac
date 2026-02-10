@@ -34,7 +34,6 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...run tests**: [test](../test/test.md)
 - **...run a test suite**: [test suite](../test/suite.md)
 - **...see test results**: [show test-summary](../show/test-summary.md)
-- **...get build order**: [get execution order](../get/execution-order.md)
 
 ### Committing and PRs
 

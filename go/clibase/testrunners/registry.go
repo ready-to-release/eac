@@ -224,10 +224,12 @@ func init() {
 	testing.SetComponentTypeProvider(GetComponentType)
 	testing.SetMonikerStyleProvider(GetMonikerStyle)
 	testing.SetRunnerFileConventionsProvider(GetRunnerFileConventions)
-	testing.SetFeatureTestTypeProvider(func(hasTypeScript, hasGo bool) string {
+	testing.SetFeatureTestTypeProvider(func(hasTypeScript, hasGo, hasPython, hasDotnet bool) string {
 		return ResolveFeatureTestType(FeatureModuleInfo{
 			HasTypeScript: hasTypeScript,
 			HasGo:         hasGo,
+			HasPython:     hasPython,
+			HasDotnet:     hasDotnet,
 		})
 	})
 	testing.SetInferenceProvider(func() []testing.Inference {

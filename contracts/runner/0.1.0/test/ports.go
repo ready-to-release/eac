@@ -173,6 +173,8 @@ type TestTypeDescriptor struct {
 type FeatureModuleInfo struct {
 	HasTypeScript bool
 	HasGo         bool
+	HasPython     bool
+	HasDotnet     bool
 }
 
 // Inference represents a tag inference rule contributed by an adapter.

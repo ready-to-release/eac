@@ -24,7 +24,6 @@ eac build clie
 
 ## See Also
 
-- [get execution-order](../get/execution-order.md) - Build order
 - [get build-deps](../get/build-deps.md) - Build dependencies
 - [show artifacts](../show/artifacts.md) - Verify artifacts
 - [build Commands](../categories/build.md)

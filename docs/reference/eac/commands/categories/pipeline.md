@@ -32,7 +32,6 @@ eac pipeline ci-dispatch-and-wait
 ## Key Features
 
 - Module-aware build orchestration
-- Dependency-based execution order
 - GitHub Actions integration
 - CI status monitoring
 - Workflow diagnostics
@@ -41,4 +40,3 @@ eac pipeline ci-dispatch-and-wait
 
 - [build](../build/build.md)
 - [test Commands](./test.md)
-- [get execution-order](../get/execution-order.md)

@@ -264,6 +264,9 @@ const (
 	// NSNode contains Node.js development tools (npm, tsc, npm-build).
 	NSNode Namespace = "node"
 
+	// NSPython contains Python development tools (python, ruff, pytest).
+	NSPython Namespace = "python"
+
 	// NSSecurity contains security scanning tools (trivy, semgrep, zap).
 	NSSecurity Namespace = "security"
 )
@@ -358,6 +361,8 @@ func ComponentToNamespace(componentType string) Namespace {
 		return NSGo
 	case "node", "typescript", "javascript":
 		return NSNode
+	case "python":
+		return NSPython
 	case "book", "base-site", "pdf-render", "structurizr", "design":
 		return NSDocs
 	default:

@@ -23,7 +23,7 @@ var (
 	runnerFileConventionsProvider func() map[string]bool
 
 	// featureTestTypeProvider resolves which BDD test type owns features for a module.
-	featureTestTypeProvider func(hasTypeScript, hasGo bool) string
+	featureTestTypeProvider func(hasTypeScript, hasGo, hasPython, hasDotnet bool) string
 
 	// inferenceProvider collects inference rules from all registered adapters.
 	inferenceProvider func() []Inference
@@ -61,7 +61,7 @@ func SetRunnerFileConventionsProvider(fn func() map[string]bool) {
 }
 
 // SetFeatureTestTypeProvider sets the provider for BDD test type resolution.
-func SetFeatureTestTypeProvider(fn func(hasTypeScript, hasGo bool) string) {
+func SetFeatureTestTypeProvider(fn func(hasTypeScript, hasGo, hasPython, hasDotnet bool) string) {
 	providerMu.Lock()
 	defer providerMu.Unlock()
 	featureTestTypeProvider = fn
@@ -141,12 +141,18 @@ func getRunnerFileConventions() map[string]bool {
 
 // resolveFeatureTestType determines which BDD test type owns features.
 // Falls back to hardcoded logic if no provider is set.
-func resolveFeatureTestType(hasTypeScript, hasGo bool) string {
+func resolveFeatureTestType(hasTypeScript, hasGo, hasPython, hasDotnet bool) string {
 	providerMu.RLock()
 	fn := featureTestTypeProvider
 	providerMu.RUnlock()
 	if fn != nil {
-		return fn(hasTypeScript, hasGo)
+		return fn(hasTypeScript, hasGo, hasPython, hasDotnet)
+	}
+	if hasDotnet {
+		return "reqnroll"
+	}
+	if hasPython {
+		return "behave"
 	}
 	if hasTypeScript {
 		return "tscucumber"

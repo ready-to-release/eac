@@ -144,9 +144,6 @@ modules:
 # Show dependency graph
 eac show-dependencies
 
-# Get execution order for specific modules
-eac get-execution-order eac-commands
-
 # Validate dependencies
 eac validate-dependencies
 
