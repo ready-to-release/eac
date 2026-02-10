@@ -20,10 +20,12 @@ Implements the `test` command, which discovers, filters, and executes tests acro
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | test.go | Entry point, CLI flag parsing, test configuration, `Test()` function |
-| framework.go | Framework hooks (`AfterInit`, `AfterResolve`, `AfterExecute`), result collection |
+| framework.go | Framework hooks setup and test execution orchestration |
+| framework_hooks.go | `AfterInit`, `AfterResolve`, `AfterExecute` hook implementations |
+| framework_selection.go | Suite-based test selection and filtering logic |
 | testflags.go | `ParseTestSpecificFlags` for test-only flags |
 | unit_work.go | `ResolveTestUnitSpecs` converts test packages to work unit specs |
 | unit_worker.go | `testUnitWorker` executes a single test package, `TestCacheVerifier` |
@@ -32,8 +34,6 @@ Implements the `test` command, which discovers, filters, and executes tests acro
 | incremental.go | `buildModuleTestInfo` for UoW-level change detection |
 | summary.go | Test summary markdown generation from cucumber results |
 | merge-results.go | `MergeResults` aggregates per-module test outputs |
-| internal/ | CTRF, cucumber parsing, test-json parsing, and report types |
-| testers/ | Test handler registry delegating to the tool system |
 
 ## Dependencies
 
@@ -53,14 +53,11 @@ The test package is the second-largest command implementation in `eac`, parallel
 ## Code Health
 
 ### Tech Debt
-- `framework.go`: `testAfterResolve` is ~231 lines (173-403) -- the largest single function in the CLI; it handles suite filtering, test discovery, module mapping, hash pre-computation, and incremental detection all inline
-- ~~`framework.go` is 812 lines~~ (resolved: split into `framework.go`, `framework_hooks.go`, `framework_selection.go`); `test.go` is still 673 lines
-- ~~`test.go:372`: `newCommand` is a mutable package-level `var` function used to enable test stubbing; prefer an interface~~ (resolved: dead code removed)
+- `testAfterResolve` is ~231 lines -- the largest single function in the CLI; it handles suite filtering, test discovery, module mapping, hash pre-computation, and incremental detection all inline
+- `test.go` is still 673 lines combining entry point, configuration, and usage display
 
 ### Pain Points
 - No test file for `framework.go`, `unit_worker.go`, `discovery.go`, `incremental.go`, `module_mapping.go`, or `summary.go`
-- ~~Three separate logger globals (`log`, `discoveryLog`, `componentWorkLog`) across different files in the same package~~ (resolved: consolidated into single `log` in test.go)
 
 ### Optimization Opportunities
 - Break `testAfterResolve` into focused sub-functions (discover, filter-suite, map-modules, detect-incremental) -- high impact on maintainability
-- ~~Consolidate logger instances into a single package-level logger or use a context-carried logger -- low effort~~ (resolved)

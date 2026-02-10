@@ -17,7 +17,7 @@ tests, with npm isolation and tag filter translation.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | runner.go | `TsCucumberRunner` implementing `TestTypeRunner` |
 | tag_translator.go | `CucumberTagTranslator` for cucumber-js tag syntax |

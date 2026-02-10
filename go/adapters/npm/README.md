@@ -20,7 +20,7 @@ directories.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | isolation.go | `NpmIsolation`, `IsolatedEnv`, file sync, and cache management |
 

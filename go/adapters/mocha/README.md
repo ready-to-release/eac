@@ -16,7 +16,7 @@ with npm isolation and CTRF report generation.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | runner.go | `MochaRunner` implementing `TestTypeRunner` with CTRF conversion |
 

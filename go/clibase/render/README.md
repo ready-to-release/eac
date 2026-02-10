@@ -6,8 +6,8 @@ renderer registry for extensible output formats.
 
 ## Key Types
 
-- **`TableBuilder`** -- Fluent builder for markdown and console tables
-- **`ConsoleTableBuilder`** -- Builder for terminal-width-aware tables
+- **`TableBuilder`** -- Fluent builder for markdown tables
+- **`ConsoleTableBuilder`** -- Builder for terminal-width-aware console tables
 - **`MarkdownTableConfig`** -- Configuration struct for markdown tables
 - **`ConsoleTableConfig`** -- Configuration struct for console tables
 - **`AlignedTable`** -- Table with explicit column alignment control
@@ -28,21 +28,16 @@ renderer registry for extensible output formats.
 
 | File               | Responsibility                                     |
 | ---                | ---                                                |
-| markdown_table.go  | `MarkdownTableConfig`, `TableBuilder`, `SimpleMarkdownTable` |
-| console_table.go   | `ConsoleTableConfig`, `ConsoleTableBuilder`, terminal width  |
-| formatter.go       | `FormatMarkdownTable` post-processor for alignment  |
-| struct_renderer.go | Struct-to-YAML-code-block rendering                 |
-| json.go            | `RenderAsJSON` with order-preserving `OrderedMap`   |
-| toml.go            | `RenderAsTOML` via YAML intermediate                |
-| custom.go          | Bridge to `render/custom` registry                  |
+| `markdown_table.go`  | `MarkdownTableConfig`, `TableBuilder`, `SimpleMarkdownTable` |
+| `console_table.go`   | `ConsoleTableConfig`, `ConsoleTableBuilder`, terminal width  |
+| `formatter.go`       | `FormatMarkdownTable` post-processor for alignment  |
+| `struct_renderer.go` | Struct-to-YAML-code-block rendering                 |
+| `json.go`            | `RenderAsJSON` with order-preserving `OrderedMap`   |
+| `toml.go`            | `RenderAsTOML` via YAML intermediate                |
+| `custom.go`          | Bridge to `render/custom` registry                  |
 
 ## Dependencies
 
-- `jedib0t/go-pretty/v6/table` -- table rendering engine
-- `mattn/go-runewidth` -- Unicode-aware column width calculation
-- `gopkg.in/yaml.v3` -- YAML marshaling (source of truth)
-- `pelletier/go-toml/v2` -- TOML marshaling
-- `golang.org/x/term` -- terminal width detection
 - `render/custom` -- pluggable renderer registry sub-package
 
 ## Role in System

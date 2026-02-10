@@ -8,10 +8,23 @@ MCP (Model Context Protocol) server that exposes EAC commands as tools for AI as
 - **`MCPResponse`** -- Outbound JSON-RPC 2.0 response envelope
 - **`MCPError`** -- JSON-RPC error with code and message
 - **`Tool`** -- MCP tool definition with name, description, input schema
+- **`InputSchema`** -- JSON Schema describing tool input parameters
+- **`Property`** -- Single property definition within an input schema
 - **`CallToolParams`** -- Parsed arguments for a `tools/call` invocation
 - **`ToolResult`** -- Structured content array returned from tool execution
+- **`Content`** -- Single content entry (type + text) within a tool result
 - **`CommandInfo`** -- Metadata for a single discovered EAC command
 - **`CommandTree`** -- Full command hierarchy returned by `get commands`
+
+## Key Functions
+
+- `processRequests` -- Main loop reading JSON-RPC from scanner and dispatching
+- `handleRequest` -- Routes requests by method to initialize, tools/list, or tools/call handlers
+- `getCommandTools` -- Discovers commands and converts to MCP tool definitions
+- `commandToTool` -- Converts a single CommandInfo to an MCP Tool (filters out get-commands)
+- `callTool` -- Executes a named tool by translating back to EAC command invocation
+- `execCommand` -- Runs a command via the EAC adapter and formats output
+- `findRepoRoot` -- Locates repository root via `repository.GetRepositoryRoot`
 
 ## Patterns
 
@@ -24,18 +37,9 @@ MCP (Model Context Protocol) server that exposes EAC commands as tools for AI as
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| main.go | JSON-RPC loop, request dispatch, command discovery, tool execution |
-| main_test.go | Protocol conformance and round-trip tests |
-
-## Supported Methods
-
-| Method | Behavior |
-| --- | --- |
-| `initialize` | Returns server info and capabilities |
-| `tools/list` | Discovers commands and returns as MCP tools |
-| `tools/call` | Executes a named command with optional args |
+| File    | Responsibility                                                                       |
+| ------- | ------------------------------------------------------------------------------------ |
+| main.go | Type definitions, JSON-RPC loop, request dispatch, command discovery, tool execution |
 
 ## Dependencies
 
@@ -49,13 +53,15 @@ The MCP server is the bridge between AI assistants (such as Claude Code) and the
 ## Code Health
 
 ### Tech Debt
-- All production code in a single main.go (321 lines) with 25+ functions; type definitions, request handling, command discovery, and execution are intermixed
-- Protocol version `2024-11-05` is hardcoded inline in `initializeResponse`; updating requires editing function internals
+
+- All production code in a single main.go (322 lines) with 25+ functions; type definitions, request handling, command discovery, and execution are intermixed
+- main.go:135 protocol version `2024-11-05` is hardcoded inline in `initializeResponse`; updating requires editing function internals
 
 ### Pain Points
+
 - `getCommands()` shells out to the EAC adapter on every `tools/list` call with no caching; repeated tool-list requests re-discover commands each time
-- Error logging goes to stderr via `fmt.Fprintf` without structured logging (no `core/logging` integration)
+- Error logging goes to stderr via `fmt.Fprintf` without structured logging
 
 ### Optimization Opportunities
-- Cache command discovery results after first `tools/list` call since the command set does not change during a server session (high feasibility, simple in-memory cache)
-- Split main.go into protocol handling, command discovery, and tool execution files for maintainability (moderate feasibility, small enough to be optional)
+
+- Cache command discovery results after first `tools/list` call since the command set does not change during a server session

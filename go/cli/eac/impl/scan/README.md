@@ -31,7 +31,6 @@ Runs security scanners (SBOM, vulnerability, secrets, IaC, compliance, SAST, DAS
 | unit_work.go | Component resolution: maps modules to scannable `UnitSpec` work items |
 | unit_worker.go | Unit worker: runs scanners per component, handles caching, evidence writing, manifests |
 | testing.go | Test helpers: `Evidence` type alias, mock setup stubs (Docker-level mocking) |
-| zap/ | OWASP ZAP DAST sub-command for scanning running web applications by URL |
 
 ## Dependencies
 
@@ -47,14 +46,12 @@ Runs security scanners (SBOM, vulnerability, secrets, IaC, compliance, SAST, DAS
 - `clibase/registry` -- command registration
 - `core/config` -- global config and security scanner lookup
 - `core/domain/modules` -- module contract for component roots and types
-- `core/domain/reports` -- module contract loading (zap sub-package)
 - `core/environments` -- CI detection for cache behavior
 - `core/evidence` -- evidence file writing, reading, and scanner type constants
 - `core/hash` -- input file hashing for cache keys
 - `core/logging` -- structured logging
 - `core/output` -- UoW manifest tracker for cache validation
 - `core/paths` -- security output path constants
-- `core/repository` -- repository root discovery (zap sub-package)
 - `core/resolver` -- component-to-scanner resolution
 - `core/tool` -- scanner bridge, tool registry, and platform filtering
 - `core/workunit` -- `UnitID`, `UnitSpec`, and state management
@@ -66,14 +63,12 @@ The `scan` package provides the security scanning command for `eac`, orchestrati
 ## Code Health
 
 ### Tech Debt
-- ~~No unit tests exist~~ (resolved: `scan_test.go` covers `parseScannerList`/`parseSeverityList`; `unit_worker_test.go` covers `recordScanResult`, `getScannerEmoji`, `logScannerConfig`)
 - unit_worker.go (537 lines) contains 15 functions spanning scanner execution, evidence writing, manifest tracking, and result handling
-- `scanUnitWorker` (unit_worker.go:47, ~129 lines) orchestrates too many concerns in a single function
+- `scanUnitWorker` (unit_worker.go, ~129 lines) orchestrates too many concerns in a single function
 
 ### Pain Points
 - Docker image resolution in framework.go uses per-scanner helper functions (`getTrivyImage`, `getSemgrepImage`, `getZAPImage`) that duplicate the same config-lookup pattern
-- `scanUnitWorker` still lacks direct unit tests (requires Docker/framework mocks); tested indirectly at BDD level
+- `scanUnitWorker` lacks direct unit tests (requires Docker/framework mocks); tested indirectly at BDD level
 
 ### Optimization Opportunities
-- ~~Add unit tests for `parseScannerList`, `parseSeverityList`, and `computeScanInputHash` as a starting point for test coverage~~ (resolved: covered in scan_test.go and unit_worker_test.go)
 - Consolidate per-scanner image helpers into a single `getScannerImage` lookup with a scanner-type-to-config-key map (high feasibility, mechanical deduplication)

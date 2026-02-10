@@ -60,7 +60,6 @@ Provides the flag parsing and composition layer used by all CLI commands. Each c
 ## Code Health
 
 ### Tech Debt
-- `sets.go:12` `FlagSet` interface has 6 methods; consider splitting `ApplyDefaults` out into a separate interface to reduce coupling for simple flag sets
 - `registry.go:15` mutable package-level `GlobalFlags` slice; safer as a function returning a copy
 - `registry.go:39` `ValidateFlagsFromRegistry` uses `runtime.Caller()` to auto-detect calling command; this is fragile across refactors
 

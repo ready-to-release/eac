@@ -17,6 +17,7 @@ Provides cross-process mutual exclusion for operations that must not run concurr
 - `BuildConfig` -- convenience config for build locks
 - `TestConfig` -- convenience config for test locks
 - `ScanConfig` -- convenience config for scan locks
+- `LintConfig` -- convenience config for lint locks
 
 ## Patterns
 

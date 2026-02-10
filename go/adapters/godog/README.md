@@ -23,7 +23,7 @@ specifications.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | runner.go | `RunnerConfig`, `CreateScenarioInitializer`, `BuildOptions` |
 | context.go | `TestContext` with isolation, command execution, mocking |
@@ -35,6 +35,7 @@ specifications.
 | dispatcher.go | In-process command dispatch for fast BDD execution |
 | tag_translator.go | `GodogTagTranslator` for godog tag expression syntax |
 | descriptor.go | Test type descriptor registration for godog |
+| doc.go | Package documentation |
 
 ## Dependencies
 

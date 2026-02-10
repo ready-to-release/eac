@@ -8,9 +8,7 @@ Risk scoring subsystem that collects security and test evidence, manages OSCAL c
 - **`SecurityResults`** -- Paths to scan result files for a module
 - **`RiskScore`** -- Computed risk with likelihood, impact, and band
 - **`AIScorer`** -- Performs AI-powered risk likelihood analysis
-- **`ControlInfo`** -- Catalog control metadata for profile generation
 - **`ControlTestEvidence`** -- Test pass/fail evidence for a specific control
-- **`BehaviorGroup`** -- Groups enable/disable flag pairs for behavior
 
 ## Patterns
 
@@ -43,13 +41,12 @@ The risk sub-packages provide the domain logic behind the `validate risk-profile
 ## Code Health
 
 ### Tech Debt
-- `scoring/ai_scorer.go:22`: `mockAIResponse` is package-level mutable global state used for testing; prefer dependency injection or test doubles
+- `scoring/ai_scorer.go`: test mock injection uses `Deps.AIResponse` package-level state rather than interface-based dependency injection
 - `oscal/oscal_helpers.go` `GetProfileControlIDs` and `oscal/profile_helpers.go` `GetControlIDsFromProfile` duplicate control-ID extraction logic with nearly identical implementations
-- `oscal/catalog_helpers.go:17`: `catalogLog` is a package-level global logger instance
 
 ### Pain Points
 - `scoring/ai_scorer.go`: `parseAIResponse` silently falls back to a default likelihood of 3 when JSON parsing fails, which may mask malformed AI responses
 
 ### Optimization Opportunities
-- Consolidate the two profile control-ID extraction functions into one, removing the duplicate -- low effort
-- Replace global mock state in `ai_scorer.go` with an interface-based AI provider to improve testability -- moderate effort
+- Consolidate the two profile control-ID extraction functions into one, removing the duplicate (low effort)
+- Replace `Deps.AIResponse` test injection with an interface-based AI provider to improve testability (moderate effort)

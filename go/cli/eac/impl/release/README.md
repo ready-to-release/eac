@@ -12,9 +12,30 @@ Manages the full release lifecycle including changelog generation, version calcu
 - **`LayerRun`** -- Tracks a dispatched workflow run
 - **`DepCIStatus`** -- CI verification status for a dependency
 
+## Key Functions
+
+- **`ReleaseThis()`** -- Finalize changelog, calculate version, and prepare release
+- **`ReleasePending()`** -- Check if module has unreleased changes for CI/CD decision making
+- **`ReleaseExecuteLayers()`** -- Execute releases layer by layer in dependency order
+- **`ReleaseAwaitDeps()`** -- Wait for dependency CI to pass before release
+- **`ReleaseCheckCI()`** -- Verify CI status for a module release
+- **`ReleaseCheckExists()`** -- Check if a release tag already exists
+- **`ReleaseCheckPending()`** -- Determine pending release layers
+- **`ReleaseValidate()`** -- Validate release configuration
+- **`ReleaseChangelog()`** -- Generate and format changelog entries
+- **`ReleaseCalver()`** -- Generate CalVer version string
+- **`ReleaseGetVersion()`** -- Retrieve current module version
+- **`ExtractVersion()`** -- Extract version from tag or changelog
+- **`ReleaseTagPending()`** -- Create git tags for pending releases
+- **`ReleaseCleanup()`** -- Release cleanup operations
+- **`ReleasePrune()`** -- Prune old release artifacts
+- **`ReleasePrunePackages()`** -- Prune old container packages
+- **`ReleaseExtEac()`** -- EAC extension release handling
+- **`ReleaseSrcCli()`** -- CLI-specific release handling
+
 ## Patterns
 
-- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
+- Table-driven command registration: `commands.go` registers all 18 subcommands via `RegisterAll()`
 - Idempotent release: detects already-pending versions to avoid double bumps
 - Layered execution: processes releases in dependency order, awaiting each layer
 - GitHub CLI integration: dispatches workflows and polls run status via `gh`
@@ -24,6 +45,7 @@ Manages the full release lifecycle including changelog generation, version calcu
 
 | File | Responsibility |
 | --- | --- |
+| commands.go | Table-driven registration of all 18 release subcommands via `RegisterAll()` |
 | this.go | Finalize changelog, calculate version, prepare release |
 | pending.go | Check if module has unreleased changes for CI/CD |
 | execute-layers.go | Execute releases layer by layer in dependency order |
@@ -63,7 +85,6 @@ The `release` package orchestrates the entire release pipeline in `eac`, from de
 ## Code Health
 
 ### Tech Debt
-- ~~18 files each declare `func init()` with near-identical registry-registration boilerplate~~ (resolved: table-driven `commands.go` with `RegisterAll()`)
 - Several oversized functions: `ReleaseCheckCI` (~213 lines in check-ci.go), `ReleaseAwaitDeps` (~214 lines in await-deps.go), `performRelease` (~292 lines in this.go), `ReleaseChangelog` (~286 lines in changelog.go)
 - No tests for execute-layers.go, cleanup.go, tag-pending.go, or clie.go
 
@@ -72,5 +93,5 @@ The `release` package orchestrates the entire release pipeline in `eac`, from de
 - CI-polling logic in check-ci.go and await-deps.go overlaps significantly (both query workflow runs, check ancestors, inherit previous CI)
 
 ### Optimization Opportunities
-- Extract a generic command-scaffold helper to eliminate per-file init/flag/usage boilerplate (high feasibility, mechanical refactor)
+- Extract a generic command-scaffold helper to eliminate per-file flag/usage boilerplate (high feasibility, mechanical refactor)
 - Split check-ci.go and await-deps.go into smaller focused functions and share CI-query utilities (moderate feasibility, needs careful integration testing)

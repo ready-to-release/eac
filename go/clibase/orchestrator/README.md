@@ -6,17 +6,23 @@ serialized console output to prevent interleaved terminal writes.
 
 ## Key Types
 
-- **`Orchestrator`** -- Top-level coordinator for parallel module execution
-- **`UnitScheduler`** -- Component-level scheduler with weighted semaphore
-- **`WeightedSemaphore`** -- Capacity-based concurrency primitive
-- **`Config`** -- Execution settings (concurrency, turbo, TUI, dry-run)
+- **`Orchestrator`** -- Top-level coordinator for parallel module execution; manages observers, TUI console, and delegates to `UnitScheduler`
+- **`UnitScheduler`** -- Component-level scheduler with dual-pool weighted semaphore, LPT dispatch, background cache detection, and tool tracking
+- **`WeightedSemaphore`** -- Capacity-based concurrency primitive with lock-tracker integration
+- **`Config`** -- Execution settings (concurrency, turbo, TUI, dry-run, action type)
+- **`ConfigUpdate`** -- Partial config update for deferred configuration after orchestrator creation
 - **`WorkerFunc`** -- Signature for module-level workers
 - **`UnitWorkerFunc`** -- Signature for component-level workers
-- **`WorkResult`** -- Module-level execution outcome
-- **`UnitResult`** -- Component-level execution outcome
-- **`ModuleResultSet`** -- Aggregated unit results per module
+- **`WorkItem`** -- Module-level work item with moniker and index
+- **`WorkResult`** -- Module-level execution outcome with exit code, duration, warnings, errors
+- **`UnitResult`** -- Component-level execution outcome with test-specific fields
+- **`UnitExtras`** -- Additional data (test counts) passed from workers to unit results
+- **`ModuleResultSet`** -- Aggregated unit results per module with derived status
+- **`ModuleStatus`** -- Execution status enumeration (Pending, Running, Success, Skipped, Failed)
 - **`SummaryBuilder`** -- Interface for incremental summary computation
-- **`CapacityDetector`** -- Interface abstracting CPU/RAM detection
+- **`CacheVerifier`** -- Alias for `execution.CacheVerifier` for background cache detection
+- **`EarlyCacheInfo`** -- Cache verification result stored for worker short-circuit
+- **`LogEvent`** -- Structured log event compatible with `go test -json`
 - **`JSONLogWriter`** -- Structured JSON log output for non-test workers
 
 ## Patterns
@@ -33,31 +39,33 @@ serialized console output to prevent interleaved terminal writes.
   `capacity.DualPoolSemaphore` for cross-process coordination
 - Background cache detection: parallel goroutines verify cache status and
   short-circuit workers that find early-cached items
+- Cascade failure: when a unit fails, all transitive dependents are immediately
+  marked as failed without execution
 
 ## Internal Structure
 
 | File                        | Responsibility                                   |
 | ---                         | ---                                              |
-| types.go                    | Core type definitions and status enum             |
-| orchestrator_core.go        | `Orchestrator` struct, `Run`, `RunLayered`, `RunUnitsParallel` |
-| orchestrator_display.go     | TUI lifecycle, observer dispatch, phase writers   |
-| orchestrator_phases.go      | Phase start/complete/write event emission         |
-| display.go                  | `displayManager` single-writer console loop       |
-| unit_scheduler_core.go      | `UnitScheduler`, worker pool, LPT dispatch        |
-| unit_scheduler_capacity.go  | Dynamic capacity calculation and ticker           |
-| unit_scheduler_display.go   | TUI status tracking, tool/container lamp state    |
-| unit_scheduler_execution.go | `executeWorker`, background cache detection       |
-| weighted_semaphore.go       | `WeightedSemaphore` with lock-tracker integration |
-| memory_detection.go         | Docker/WSL/host memory and CPU detection          |
-| parser.go                   | Log parsing (JSON events, Cucumber, CTRF)         |
-| newline_unix.go             | Platform line-ending constant for Unix            |
-| newline_windows.go          | Platform line-ending constant for Windows         |
+| `types.go`                  | Core type definitions, status enum, `ModuleResultSet`, `WorkResult` |
+| `orchestrator_core.go`      | `Orchestrator` struct, `New`, `Run`, `RunLayered`, `RunUnitsParallel`, result aggregation |
+| `orchestrator_display.go`   | TUI lifecycle, observer dispatch, `SetConsole`, `StartTUI`, `StopTUI`, `AddObserver` |
+| `orchestrator_phases.go`    | Phase start/complete/write event emission         |
+| `display.go`                | `displayManager` single-writer console loop, status formatting |
+| `unit_scheduler_core.go`    | `UnitScheduler`, worker pool, LPT dispatch, `RunUnits`, result aggregation helpers |
+| `unit_scheduler_capacity.go`| Dynamic capacity calculation ticker               |
+| `unit_scheduler_display.go` | TUI status tracking, tool/container lamp state, resource status emission |
+| `unit_scheduler_execution.go`| `executeWorker`, background cache detection, log file management |
+| `weighted_semaphore.go`     | `WeightedSemaphore` with lock-tracker integration |
+| `memory_detection.go`       | Docker/WSL/host memory and CPU detection          |
+| `parser.go`                 | Log parsing (JSON events, Cucumber, CTRF)         |
+| `newline_unix.go`           | Platform line-ending constant for Unix            |
+| `newline_windows.go`        | Platform line-ending constant for Windows         |
 
 ## Dependencies
 
-- `contracts/core` -- `ExecutionObserver`, `ExecutionEvent`, `ActionType`
+- `contracts/core` -- `ExecutionObserver`, `ExecutionEvent`, `ActionType`, `WriterFactory`
 - `clibase/capacity` -- `DualPoolSemaphore` for cross-process scheduling
-- `clibase/display` -- `Console` interface, `Phase` enum, `SummaryData`
+- `clibase/display` -- `Console` interface, `Phase` enum, `SummaryData`, `PlannedWorkItem`
 - `clibase/locktracker` -- `Registry` for semaphore visualization in TUI
 - `clibase/output` -- Display-name formatting and section headers
 - `clibase/ansi` -- Bad-ANSI filter for log file sanitization
@@ -86,7 +94,7 @@ scheduling and resource concerns out of both layers.
 
 ### Pain Points
 - Dual-pool semaphore logic mixed with cascade-failure bookkeeping makes `RunUnits` hard to follow
-- No TODO/FIXME markers remain, but the defensive `BUG:` warn at `unit_scheduler_core.go:434` suggests scheduler drain is not fully trusted
+- The defensive `BUG:` warn at `unit_scheduler_core.go:434` suggests scheduler drain is not fully trusted
 
 ### Optimization Opportunities
 - Break `RunUnits` worker-pool loop into a `dispatchLoop` method to improve testability (low effort)

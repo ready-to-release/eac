@@ -6,8 +6,8 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 
 - **`Worktree`** -- Represents a git worktree with path, branch, SHA, and clean status
 - **`BaseConfig`** -- Shared config for all work commands (debug, repo root, logger, git ops)
+- **`WorkGitOperations`** -- Interface for git operations covering worktree, branch, status, remote, merge/rebase, stash, and commit operations
 - **`createConfig`** -- Configuration for workspace creation (branch, base, path)
-- **`WorkGitOperations`** -- Interface for git operations (internal)
 
 ## Patterns
 
@@ -19,7 +19,7 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | work.go | Parent command entry point with TUI and subcommand dispatch |
 | create.go | Create new worktree for parallel development |
@@ -29,13 +29,11 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 | pr.go | Create pull request from worktree branch |
 | list.go | List all active worktrees with status |
 | remove.go | Remove a worktree and clean up branch |
-| internal/config.go | Shared base configuration parsing |
-| internal/worktree.go | Worktree discovery, lookup, and path utilities |
-| internal/git_ops.go | Git operation interface and implementation |
 
 ## Dependencies
 
 - `cli/eac/help` -- help text rendering for parent command
+- `cli/eac/impl/work/internal` -- shared config, git operations interface, and worktree utilities
 - `clibase/registry` -- command registration and subcommand discovery
 - `clibase/flags` -- flag validation and parsing
 - `clibase/gitexec` -- low-level git command execution

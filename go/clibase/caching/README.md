@@ -6,11 +6,11 @@ provides a general-purpose build cache for individual work items.
 
 ## Key Types
 
-- `IncrementalResult` -- outcome of change detection: lists of changed, unchanged, and skipped modules with cache hit ratio
+- `IncrementalResult` -- outcome of change detection: lists of changed, unchanged, and skipped modules with cache hit ratio and pre-computed module input hashes
 
 ## Key Functions
 
-- `DetectIncrementalChanges` -- compares current module state against cached results to identify which modules need re-execution
+- `DetectIncrementalChanges` -- compares current module state against cached results to identify which modules need re-execution; pre-computes module input hashes for worker reuse
 
 ### Sub-package: itemcache
 
@@ -26,6 +26,7 @@ provides a general-purpose build cache for individual work items.
 - **Content-addressable caching**: items are keyed by a hash of their inputs; if the hash matches a previous run, the cached result is reused
 - **Module-level change detection**: `DetectIncrementalChanges` checks file hashes, dependency changes, and config changes to determine rebuild scope
 - **Manifest persistence**: `Manifest` is stored as JSON alongside build outputs, surviving across CLI invocations
+- **Pre-computed hashes**: module input hashes are computed once during detection and stored in `IncrementalResult` for workers to reuse, ensuring consistency
 
 ## Internal Structure
 
@@ -43,8 +44,8 @@ provides a general-purpose build cache for individual work items.
 - `clibase/initsummary` -- incremental info types for summary reporting
 - `core/hash` -- file and directory hashing
 - `core/logging` -- structured logging
-- `core/output` -- output directory management
-- `core/workunit` -- unit spec definitions
+- `core/output` -- output directory management and UoW change aggregation
+- `core/workunit` -- unit spec and UoW aggregator definitions
 
 ## Role in System
 

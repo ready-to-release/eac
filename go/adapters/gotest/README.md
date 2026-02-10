@@ -18,7 +18,7 @@ and godog BDD tests, with JSON event streaming and CTRF report generation.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | runner.go | `GoTestRunner` implementing `TestTypeRunner` |
 | runner_helpers.go | Module lookup, feature extraction, `go generate` |

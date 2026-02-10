@@ -11,7 +11,7 @@ Installs project template files for documentation, AI prompts, specifications, r
 
 ## Patterns
 
-- Registry-based subcommand dispatch: parent command, `templates install`, and each template type register independently via `init()`
+- Hybrid registration: `commands.go` uses `RegisterAll()` for parent and install commands; each install sub-package registers independently via `init()` with `registry.Register()`
 - Dual mode rendering: `Renderer` either applies Go `text/template` substitution when values are provided, or copies files byte-for-byte preserving all `{{ .Variable }}` placeholders
 - Path traversal prevention: `ValidatePath` rejects absolute paths, `..` escapes, and any resolved path outside the output directory
 - Container-aware root resolution: checks `GetContainerRoot()` for Docker execution, falls back to workspace root
@@ -22,6 +22,7 @@ Installs project template files for documentation, AI prompts, specifications, r
 
 | File | Responsibility |
 | --- | --- |
+| commands.go | `RegisterAll()` registration for parent `Templates` and `TemplatesInstall` commands |
 | templates.go | Parent command entry point, help display, subcommand dispatch |
 | install.go | `templates install` base handler, unknown template detection, available template listing |
 | config.go | `BaseConfig` with shared flag parsing, logger initialization, workspace root resolution |

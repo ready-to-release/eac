@@ -15,6 +15,7 @@ Extracts common execution patterns into reusable phases: init, resolve, verify, 
 - `UnitRegistry` -- maps unit keys to their `UnitSpec` for dependency injection during execution
 - `ErrInformationalExit` -- signals exit code 1 without additional error logging (for expected validation failures)
 - `InitTimings` -- tracks duration of initialization phases for boot-style output
+- `UnitPipeline` -- configures per-unit execution steps: lock style, cache check, manifest recording, parsing
 
 ## Patterns
 
@@ -33,8 +34,9 @@ Extracts common execution patterns into reusable phases: init, resolve, verify, 
 | `framework.go` | Entry points `Run()` and `RunSimple()` that orchestrate the five phases |
 | `init.go` | `phaseInitEarly()` and `phaseInitDeferred()`: config loading, orchestrator setup, TUI bootstrap |
 | `resolve.go` | `phaseResolve()`: module discovery, moniker resolution, skip filters, scope expansion |
-| `verify.go` | `phaseVerify()`: dependency verification, artifact validation, incremental detection |
+| `pipeline.go` | `UnitPipeline`, `LockStyle`, `CheckCache`, `AcquireLock`, `RecordManifest`, `ParseUnit`, `UnitDir` |
 | `execute.go` | `phaseExecute()`: work unit creation, dependency injection, orchestrator dispatch |
+| `verify.go` | `phaseVerify()`: dependency verification, artifact validation, incremental detection |
 | `summary.go` | `phaseSummary()`: TUI and console summary generation, exit code calculation |
 | `summary_builder.go` | `SummaryBuilder`: incremental summary accumulation during execution |
 | `manifest_assert.go` | `AssertManifestsExist()`: validates that required manifest files exist |
@@ -61,7 +63,6 @@ Acts as the central execution engine for all orchestrated CLI commands. Commands
 ### Tech Debt
 - `framework.go:28` `Run()` is ~218 lines; the phased orchestration would benefit from extracting each phase dispatch into named helpers
 - `summary.go:105` `generateComponentTUISummary` is ~258 lines and `printComponentConsoleSummary` ~144 lines; both duplicate `moduleCache` iteration logic
-- ~~`execute.go:76` package-level mutable `registry` var; could race if multiple commands register concurrently~~ (resolved: `sync.RWMutex` already protects all reads/writes; `Register()`, `Get()`, `GetAll()`, `Reset()`, and `Len()` all properly lock/unlock)
 - `framework.go:16` package-level `log` var initialized at import time
 
 ### Pain Points

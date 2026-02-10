@@ -5,42 +5,40 @@ Runtime environment detection for CLI commands. Determines the execution context
 
 ## Key Types
 
-- `Env` -- detected runtime environment with CI provider, terminal capabilities, and context metadata
+- `Env` -- detected environment state: CI provider, Docker presence, terminal type, and TUI eligibility
 
 ## Key Functions
 
-- `Detect` -- probes the environment and returns a populated `Env` with CI detection, terminal type, and color support
-- `ShouldUseTUI` -- determines whether TUI mode should be enabled based on terminal capabilities and environment
-- `ValidateTUI` -- validates that the current environment supports TUI rendering (terminal size, type)
-- `ContextName` -- returns a human-readable name for the current execution context
+- `Detect` -- inspects environment variables and OS state to produce an `Env` instance
+- `ShouldUseTUI` -- returns whether TUI mode should be enabled based on detected environment
+- `ValidateTUI` -- checks terminal capabilities against TUI requirements and returns a reason string if TUI cannot be used
 
 ## Patterns
 
-- **Probe-based detection**: `Detect` checks environment variables, terminal properties, and OS signals to build a comprehensive environment snapshot
-- **TUI eligibility**: separates "should use TUI" (preference) from "can use TUI" (capability), allowing graceful fallback to console mode
+- **Environment sniffing**: `Detect` reads well-known environment variables (CI, GITHUB_ACTIONS, TERM, etc.) to determine the execution context
+- **Defensive TUI activation**: TUI is only enabled when terminal capabilities are confirmed, preventing broken rendering in CI or piped output
 
 ## Internal Structure
 
 | File | Purpose |
 |---|---|
-| `environment.go` | `Env` struct, `Detect()`, TUI eligibility and validation functions |
+| `environment.go` | `Env` struct, `Detect()`, `ShouldUseTUI()`, and `ValidateTUI()` |
 
 ## Dependencies
 
-- `core/environments` -- environment type constants and CI provider detection
-- `core/logging` -- structured logging for detection diagnostics
+None (leaf package within clibase).
 
 ## Role in System
 
-Called early in command initialization to determine how the CLI should behave. The detected environment influences TUI mode selection, color output, concurrency defaults, and CI-specific behaviors like artifact paths.
+Called early in command initialization to determine how the CLI should behave. CI environments get plain-text output, local terminals with sufficient capabilities get TUI mode, and Docker contexts adjust path handling. The detected environment flows into `display.Config` and flag defaults.
 
 ## Code Health
 
 ### Tech Debt
-- None identified; no TODO/FIXME markers, no mutable global state
+- None identified; clean 85-line file with no mutable global state
 
 ### Pain Points
-- None identified; single-file package (84 lines) with good test coverage (140 lines)
+- None identified
 
 ### Optimization Opportunities
-- None identified; the package is minimal and focused
+- None identified; compact leaf package

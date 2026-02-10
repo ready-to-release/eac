@@ -1,15 +1,22 @@
 # cache
 
 Two-dimensional taxonomy (Level x Type) for fine-grained cache control via the
-`--skip-cache` CLI flag.
+`--skip-cache` CLI flag, plus CI cache checking to skip module builds when a
+successful CI run already exists at HEAD.
 
 ## Key Types
 
-- **`Config`** -- Parsed cache control configuration with skip specs
-- **`Spec`** -- Cache specification as a level:type pair
-- **`Level`** -- Where a cache lives (local, remote, all)
-- **`Type`** -- What kind of cache (registry, state, asset, layer, work, all)
-- **`DefaultSkipSpecs`** -- Pre-defined specs for bare `--skip-cache` flag
+| Type | Purpose |
+|------|---------|
+| `Config` | Parsed cache control configuration with skip specs |
+| `Spec` | Cache specification as a level:type pair |
+| `Level` | Where a cache lives (local, remote, all) |
+| `Type` | What kind of cache (registry, state, asset, layer, work, all) |
+| `DefaultSkipSpecs` | Pre-defined specs for bare `--skip-cache` flag |
+| `CICacheChecker` | Checks whether a module's CI build can be skipped because a successful build exists at HEAD |
+| `CICacheResult` | Result of a CI cache check with module, cached flag, reason, and last run SHA |
+| `CIRunQuerier` | Port interface for querying CI workflow run status from an external system |
+| `MockCIRunQuerier` | Test double for `CIRunQuerier` with configurable workflow-to-SHA mappings |
 
 ## Patterns
 
@@ -17,14 +24,16 @@ Two-dimensional taxonomy (Level x Type) for fine-grained cache control via the
 - Parse and match: `ParseSpec` parses user input; `Spec.Matches` checks against concrete level/type pairs
 - Safe defaults: `DefaultSkipSpecs` skips state and work caches while preserving expensive assets
 - Validation: `Spec.Validate` rejects invalid combinations like `remote:work`
+- Port interface: `CIRunQuerier` decouples CI cache checking from GitHub API; callers inject implementations
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| cache.go | `Level`, `Type`, `Spec` types with parsing and matching |
-| config.go | `Config` with `ShouldSkip` and convenience methods |
-| defaults.go | `DefaultSkipSpecs` for bare `--skip-cache` flag |
+| File | Purpose |
+|------|---------|
+| `cache.go` | `Level`, `Type`, `Spec` types with parsing and matching |
+| `config.go` | `Config` with `ShouldSkip` and convenience methods |
+| `defaults.go` | `DefaultSkipSpecs` for bare `--skip-cache` flag |
+| `ci.go` | `CICacheChecker`, `CICacheResult`, `CIRunQuerier` interface, `MockCIRunQuerier` |
 
 ## Dependencies
 
@@ -37,17 +46,12 @@ parse `--skip-cache=<spec>` into a `Config`, which build/test orchestrators
 query to decide which caches to invalidate or bypass during execution. The
 `Config` type exposes convenience methods like `ShouldSkipState`,
 `ShouldForcePull`, and `ShouldForceNoCacheDocker` that translate the abstract
-taxonomy into concrete build decisions.
+taxonomy into concrete build decisions. The `CICacheChecker` is used by CI
+pipeline commands to skip module builds when the last successful CI run matches
+the current HEAD SHA.
 
 ## Code Health
 
-### Tech Debt
-- ~~defaults.go:15 -- `DefaultSkipSpecs` is a package-level `var` (mutable slice)~~ (resolved: converted to function returning fresh copy)
-- config.go: `ShouldForcePull` and `ShouldForceNoCacheDocker` are thin wrappers that obscure the underlying `ShouldSkip` call; document or inline them to reduce indirection
-
-### Pain Points
-- None identified
-
-### Optimization Opportunities
-- `ShouldSkip` iterates the full `SkipSpecs` slice on every call; for the current small spec counts this is fine, but if specs grow, a pre-computed `map[Level]map[Type]bool` at parse time would be O(1) (low priority, current usage is well under threshold)
-- None of the convenience methods on `Config` are generated; a code-generation approach could keep them in sync with new `Type` values automatically (deferred unless the taxonomy expands significantly)
+- **Tech Debt**: `config.go`: `ShouldForcePull` and `ShouldForceNoCacheDocker` are thin wrappers that obscure the underlying `ShouldSkip` call; document or inline them to reduce indirection.
+- **Pain Points**: None identified.
+- **Optimization Opportunities**: `ShouldSkip` iterates the full `SkipSpecs` slice on every call; for the current small spec counts this is fine, but if specs grow, a pre-computed `map[Level]map[Type]bool` at parse time would be O(1) (low priority, current usage is well under threshold).

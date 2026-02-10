@@ -24,13 +24,6 @@ Starts Docker-based servers for module build output, supporting static site serv
 | --- | --- |
 | serve.go | Command entry point, flag parsing, module config resolution, dev/build mode dispatch |
 | docker.go | `DockerClient` wrapper for container lifecycle, staleness checks, and log streaming |
-| design/ | `serve design` sub-command: Structurizr Lite viewer for architecture diagrams |
-| gource/ | `serve gource` sub-command: Gource git history visualization with video rendering |
-| servers/registry.go | Convenience functions delegating to `tool.GlobalServeBridge` for server lookup |
-| servers/context.go | `ServeContext` with Docker image defaults and execution-time configuration |
-| servers/mkdocs_live.go | MkDocs live-reload server registration |
-| servers/structurizr.go | Structurizr Lite server registration |
-| servers/static_site.go | Static site (nginx) server registration |
 
 ## Dependencies
 
@@ -42,7 +35,6 @@ Starts Docker-based servers for module build output, supporting static site serv
 - `clibase/registry` -- command registration
 - `clibase/services` -- service initialization (workspace, config, tools, logging)
 - `core/config` -- EAC configuration and module lookup
-- `core/domain/reports` -- module contract loading for serve design
 - `core/environments` -- environment variable constants
 - `core/logging` -- structured logging
 - `core/output` -- UoW manifest reader for build staleness detection
@@ -58,12 +50,12 @@ The `serve` package provides local server capabilities for `eac`, enabling devel
 
 ### Tech Debt
 - serve.go (683 lines) with `Serve()` spanning ~223 lines handles flag parsing, module resolution, build, staleness checks, dev mode, and container lifecycle
-- Global mutable `var GlobalServeContext` in servers/context.go:56 acts as a package-level singleton for server configuration
-- No tests for docker.go (219 lines), design/serve.go (183 lines), or gource/serve.go (454 lines)
+- Global mutable `var GlobalServeContext` in servers/context.go acts as a package-level singleton for server configuration
+- No tests for docker.go (219 lines), design/serve.go, or gource/serve.go (455 lines)
 
 ### Pain Points
 - `Serve()` function orchestrates too many phases (parse, resolve, build, serve, browser) making it difficult to test individual steps
-- gource/serve.go (454 lines) is a large self-contained sub-command with no test coverage
+- gource/serve.go (455 lines) is a large self-contained sub-command with no test coverage
 
 ### Optimization Opportunities
 - Split serve.go into entry-point, module-resolution, and build-management files (high feasibility, natural boundaries at `resolveModuleConfigFromEAC` and `rebuildIfNeeded`)

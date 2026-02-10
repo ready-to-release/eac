@@ -30,6 +30,7 @@ Parses CLI arguments, loads layered YAML configuration, manages Docker container
 | File/Sub-package         | Responsibility                                                |
 | ------------------------ | ------------------------------------------------------------- |
 | main.go                  | Entry point; filters spurious shell redirect arguments        |
+| doc.go                   | Package documentation comment                                 |
 | cmd/                     | Cobra command tree (root, run, init, install, version, etc.)  |
 | internal/cache/          | Registry and metadata caching with TTL expiration             |
 | internal/command-parser/ | EBNF-based CLI argument parsing and boundary detection        |
@@ -52,3 +53,17 @@ Parses CLI arguments, loads layered YAML configuration, manages Docker container
 ## Role in System
 
 The clie CLI is the primary user-facing binary that developers invoke to run containerized extensions (e.g., `clie run eac`). It reads `.clie/clie.yml` configuration, resolves extension images from GHCR, and delegates execution to Docker. The CLI is architecturally isolated from the core EAC modules to remain lightweight and independently distributable.
+
+## Code Health
+
+### Tech Debt
+
+_None identified._
+
+### Pain Points
+
+_None identified._
+
+### Optimization Opportunities
+
+_None identified._

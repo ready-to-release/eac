@@ -11,8 +11,13 @@ Provides a plain-text observer for execution events and formatting utilities for
 
 - `ResultLine` -- formats a single execution result as a status line with pass/fail indicator, duration, and module name
 - `PackageDisplayName` -- extracts a human-readable display name from a full package path
+- `PackageDisplayNames` -- batch version of `PackageDisplayName` for multiple monikers
 - `FormatComponentName` -- formats a component type for display (e.g., shortening long names)
 - `ListFormat` -- formats a list of items with configurable separators and truncation
+- `SectionHeader` -- formats a section header string for console output
+- `SummaryCount` -- formats a summary count line (e.g., "Modules: 10 passed, 2 failed")
+- `TimingLine` -- formats a timing entry for the timing summary
+- `TimingTotal` -- formats the total timing line
 
 ## Patterns
 
@@ -21,10 +26,10 @@ Provides a plain-text observer for execution events and formatting utilities for
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `console_observer.go` | `ConsoleObserver` implementing plain-text event observation |
-| `format.go` | Formatting utilities for result lines, package names, and list display |
+| File                  | Purpose                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `console_observer.go` | `ConsoleObserver` implementing plain-text event observation                             |
+| `format.go`           | Formatting utilities for result lines, package names, section headers, and list display |
 
 ## Dependencies
 
@@ -38,11 +43,14 @@ Provides the non-TUI output path for command execution. When TUI mode is disable
 ## Code Health
 
 ### Tech Debt
+
 - None identified
 
 ### Pain Points
+
 - `format.go` (342 lines) mixes display-name extraction, result-line formatting, and list formatting; these are logically separate concerns
 
 ### Optimization Opportunities
+
 - Split `format.go` into `display_name.go` and `result_line.go` for easier navigation (low effort)
 - Good test coverage exists (`format_test.go` 307 lines, `console_observer_test.go` 245 lines); no urgent gaps

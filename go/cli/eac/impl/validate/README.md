@@ -22,22 +22,29 @@ Parent command that validates repository contracts, configuration, dependencies,
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
+| commands.go | Table-driven registration of all validate subcommands via `RegisterAll()` |
 | validate.go | Parent command entry point with TUI and subcommand dispatch |
 | config.go | Multi-phase config validation (files, schemas, cross-references) |
 | contracts.go | Schema validation of repository YAML contracts |
-| specs.go | Gherkin specification validation with fix support |
+| specs.go | Gherkin specification validation entry point |
+| specs_validate.go | Gherkin specification validation logic |
+| specs_format.go | Gherkin specification output formatting |
+| specs_fix.go | Gherkin specification auto-fix logic |
 | dependencies.go | Module dependency graph validation |
 | module-hierarchy.go | Module hierarchy structure validation |
 | module-files.go | Module file ownership validation |
 | test-tags.go | Test tag definition validation |
-| risk-catalog/ | OSCAL catalog validation against NIST 1.1.3 schema |
-| risk-profile/ | OSCAL profile validation against NIST 1.1.2 schema |
 | design.go | Design document validation |
 | artifacts.go | Build artifact validation |
 | books.go | Books configuration validation |
 | release-version.go | Semver release version format validation |
+| markdown.go | Markdown file validation |
+| go-tidy.go | Go module tidiness validation |
+| release.go | Release configuration validation |
+| version.go | Version format validation |
+| control-tags.go | Security control tag validation |
 
 ## Dependencies
 
@@ -52,7 +59,6 @@ Parent command that validates repository contracts, configuration, dependencies,
 - `core/validation/formats/gherkin` -- Gherkin specification validator
 - `core/domain` -- validation error formatting
 - `core/repository` -- repository root discovery
-- `core/ai` -- contract loader for spec validation
 - `core/paths` -- default version paths
 
 ## Role in System
@@ -62,14 +68,12 @@ The `validate` package serves as the quality gate in `eac`, ensuring repository 
 ## Code Health
 
 ### Tech Debt
-- ~~`specs.go` is 817 lines; the fix logic could be extracted to a separate file~~ (resolved: split into `specs.go`, `specs_validate.go`, `specs_format.go`, `specs_fix.go`)
-- `test-tags.go:40`: `eacConfig` is a mutable package-level var caching the loaded config; prefer passing it as a parameter
-- `specs.go:48`: `gitRepoProvider` is a mutable package-level var for test stubbing; prefer an interface parameter
+- `test-tags.go`: `eacConfig` is a mutable package-level var caching the loaded config; prefer passing it as a parameter
+- `specs.go`: `gitRepoProvider` is a mutable package-level var for test stubbing; prefer an interface parameter
 - No test files for `config.go` (427 lines), `contracts.go`, `dependencies.go`, `module-hierarchy.go`, `module-files.go`, `test-tags.go`, or `design.go`
 
 ### Pain Points
 - Three separate output formatters (`outputText`, `outputJSON`, `configOutputGitHub`) duplicated across `specs.go` and `config.go`; no shared validation output abstraction
 
 ### Optimization Opportunities
-- Extract a shared `ValidationOutput` formatter used by both spec and config validation to reduce format-handling duplication -- moderate effort
-- ~~Move Gherkin fix logic from `specs.go` into a dedicated `fix.go`~~ (resolved: extracted to `specs_fix.go`)
+- Extract a shared `ValidationOutput` formatter used by both spec and config validation to reduce format-handling duplication (moderate effort)

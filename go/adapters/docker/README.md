@@ -25,7 +25,7 @@ serving capabilities.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | client.go | `DockerClient` interface and client factory |
 | container.go | `ContainerAdapter` implementing `ContainerPort` |
@@ -38,6 +38,7 @@ serving capabilities.
 | browser.go | Platform-aware browser launch for served content |
 | global.go | Global `ContainerPort` singleton management |
 | simple_mock_client.go | Mock Docker client with JSON state persistence |
+| doc.go | Package documentation |
 | mocks/ | Testify-based mock client for unit tests |
 | util/ | DinD path translation and volume formatting |
 

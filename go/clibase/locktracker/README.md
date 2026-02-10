@@ -5,7 +5,7 @@ semaphores, and capacity allocations across the system.
 
 ## Key Types
 
-- `Registry` -- thread-safe registry that tracks active locks with pub/sub event notification
+- `Registry` -- thread-safe registry that tracks active locks with pub/sub event notification; global singleton via `sync.Once`
 - `TrackedSemaphore` -- channel-based counting semaphore with automatic lock tracking registration
 - `LockType` -- categorizes locks: file lock, semaphore, capacity slot
 - `LockInfo` -- describes an active lock: type, name, holder, acquired time, metadata
@@ -17,14 +17,15 @@ semaphores, and capacity allocations across the system.
 
 - **Pub/sub events**: `Registry` publishes `LockEvent` values to subscribers, enabling real-time lock visualization in the TUI
 - **Automatic registration**: `TrackedSemaphore` acquires and releases are automatically registered with the `Registry`
-- **Thread-safe snapshots**: `Summary()` returns a consistent point-in-time view of all active locks
+- **Thread-safe snapshots**: `Summary()` and `Snapshot()` return consistent point-in-time views of all active locks
+- **Global singleton**: `Get()` returns the shared `Registry` instance, initialized once via `sync.Once`
 
 ## Internal Structure
 
 | File | Purpose |
 |---|---|
 | `types.go` | Type definitions: `LockType`, `EventType`, `LockInfo`, `LockEvent`, `LockSummary` |
-| `registry.go` | `Registry` with add/remove, subscribe/unsubscribe, and summary operations |
+| `registry.go` | `Registry` with add/remove, subscribe/unsubscribe, summary, and snapshot operations |
 | `semaphore.go` | `TrackedSemaphore` wrapping channel-based semaphore with registry integration |
 
 ## Dependencies
@@ -38,7 +39,7 @@ Provides the observability layer for concurrent resource management. The capacit
 ## Code Health
 
 ### Tech Debt
-- None identified; no TODO/FIXME markers, no mutable package-level state, no oversized functions
+- None identified; no TODO/FIXME markers, no oversized functions
 
 ### Pain Points
 - None identified; leaf package with zero dependencies, strong test coverage (2380 test lines vs 376 source lines)

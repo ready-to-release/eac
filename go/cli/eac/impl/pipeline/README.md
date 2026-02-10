@@ -9,48 +9,66 @@ Orchestrates CI/CD pipeline operations including workflow dispatch, status polli
 - **`GitHubCLIImpl`** -- Production implementation of `GitHubCLI` using the `gh` CLI tool
 - **`MockGitHubCLI`** -- Mock implementation controlled by environment variables for testing
 - **`WorkflowRunSummary`** -- Status and conclusion of a single GitHub Actions workflow run
+- **`WorkflowRun`** -- Represents a GitHub Actions workflow run with status, conclusion, and timing
+- **`ArtifactInfo`** -- Artifact metadata from GitHub API (ID and name)
+- **`ArtifactsResponse`** -- GitHub API response containing a list of artifacts
+- **`DownloadResult`** -- Tracks what was downloaded per module (test and scan artifacts)
 - **`runInfo`** -- Workflow run status from GitHub for SHA-based polling
 - **`runByIDInfo`** -- Workflow run info for run-ID-based polling
 
+## Key Functions
+
+- **`PipelineRun()`** -- Execute module pipelines with dependency ordering and changed-only filtering
+- **`PipelineStatus()`** -- Show CI pipeline status for commits by ref or SHA
+- **`PipelineAwaitCI()`** -- Wait for CI workflows to complete by pattern+SHA or run ID with timeout
+- **`PipelineAwaitRelease()`** -- Wait for release workflows to complete
+- **`PipelineWait()`** -- General workflow wait with live progress display
+- **`PipelineFindRunID()`** -- Find workflow run ID for a given workflow and commit
+- **`PipelineCheckRecentRun()`** -- Check for recent successful workflow runs to skip redundant CI
+- **`PipelineGetArtifactID()`** -- Retrieve artifact IDs from workflow runs via GitHub API
+- **`PipelineGetTreeFiles()`** -- Get file tree from a specific commit using GitHub Trees API
+- **`PipelineDownloadEvidenceArtifacts()`** -- Download test/scan evidence artifacts from CI runs
+- **`awaitWorkflows()`** -- Poll GitHub for active workflows matching a pattern and SHA
+- **`getTransitiveDeps()`** -- Recursively collect module and all transitive dependencies
+- **`flattenArtifactDirs()`** -- Flatten gh-created artifact directory structure for evidence loading
+- **`mergeDirectories()`** -- Recursively merge source directory contents into destination
+
 ## Patterns
 
-- Table-driven command registration: `commands.go` registers all subcommands via `RegisterAll()`
+- Table-driven command registration: `commands.go` registers all 10 subcommands via `RegisterAll()`
 - Dependency-ordered execution: processes modules sequentially in dependency order with per-module wait
 - Dual polling modes: wait by workflow pattern+SHA or by specific run ID
 - Mock injection via environment variables: `CLIE_MOCK_GITHUB_CLI` switches to mock implementation
 - Changed-module detection: uses git diff to identify modules needing pipeline execution
+- Most-recent-run-wins: for re-runs, only the latest completed run determines success/failure
 
 ## Internal Structure
 
 | File | Responsibility |
 | --- | --- |
+| commands.go | Table-driven registration of all 10 pipeline subcommands via `RegisterAll()` |
 | run.go | Execute module pipelines with dependency ordering and changed-only filtering |
 | status.go | Show CI pipeline status for commits by ref or SHA |
 | await_ci.go | Wait for CI workflows to complete by pattern+SHA or run ID with timeout |
 | await_release.go | Wait for release workflows to complete |
-| wait.go | General workflow wait operations |
-| find_run_id.go | Find workflow run ID for a given workflow and commit |
-| check_recent_run.go | Check for recent workflow runs |
-| get_artifact_id.go | Retrieve artifact IDs from workflow runs |
-| get_tree_files.go | Get file tree from a specific commit |
-| download_evidence_artifacts.go | Download evidence artifacts from CI runs |
-| ci/ | CI orchestration sub-commands (dispatch-and-wait, get-run-id, summary-link) |
-| helper/github.go | `GitHubCLI` interface and implementations (production and mock) |
-| helper/runner.go | `PipelineRunner` with sequential execution and workflow file filtering |
+| wait.go | General workflow wait with live progress display and status icons |
+| find_run_id.go | Find workflow run ID for a given workflow and commit SHA |
+| check_recent_run.go | Check for recent successful workflow runs within a time window |
+| get_artifact_id.go | Retrieve artifact IDs from workflow runs via GitHub API |
+| get_tree_files.go | Get file tree from a specific commit using GitHub Trees API |
+| download_evidence_artifacts.go | Download test/scan evidence artifacts from CI runs with directory flattening |
 
 ## Dependencies
 
-- `cli/eac/impl/get` -- SHA detection for await-ci command
+- `cli/eac/impl/get` -- SHA detection for await-ci and await-release commands
+- `cli/eac/impl/pipeline/helper` -- PipelineRunner and GitHubCLI implementations
 - `clibase/flags` -- flag validation from registry metadata
 - `clibase/ghexec` -- GitHub CLI command execution
 - `clibase/gitexec` -- git command execution
 - `clibase/registry` -- command registration
-- `core/config` -- CI dispatch settle time configuration
-- `core/domain/modules` -- module registry loading for pipeline validation
-- `core/environments` -- environment variable constants for mock control
+- `core/domain/modules` -- module registry loading for dependency resolution
 - `core/logging` -- structured logging
-- `core/paths` -- workflow directory and file path resolution
-- `core/repository` -- repository root discovery and changed module detection
+- `core/repository` -- repository root discovery
 
 ## Role in System
 
@@ -59,14 +77,10 @@ The `pipeline` package provides CI/CD orchestration commands for `eac`, bridging
 ## Code Health
 
 ### Tech Debt
-- TODO stubs in steps_helper_test.go:32 and :42 for module creation and changed-module marking remain unimplemented
-- `PipelineDownloadEvidenceArtifacts` (download_evidence_artifacts.go:48, ~122 lines) handles argument parsing, evidence lookup, artifact download, and directory flattening
-- download_evidence_artifacts.go (403 lines) is the largest file with no dedicated unit tests
+- `download_evidence_artifacts.go` (399 lines) handles argument parsing, evidence lookup, artifact download, directory flattening, and directory merging in a single file
 
 ### Pain Points
-- ~~Many subcommand files each with their own `init()` registration follow the same boilerplate pattern~~ (resolved: table-driven `commands.go`)
 - No unit tests exist outside of BDD test files; all testing relies on integration-level BDD scenarios
 
 ### Optimization Opportunities
-- Implement the TODO stubs in steps_helper_test.go to complete BDD test coverage for module-level scenarios (high feasibility, test infrastructure exists)
-- Extract artifact download and directory flattening from download_evidence_artifacts.go into a reusable helper (moderate feasibility, would also benefit CI artifact workflows)
+- Extract artifact download and directory flattening from `download_evidence_artifacts.go` into a reusable helper (moderate feasibility, would also benefit CI artifact workflows)

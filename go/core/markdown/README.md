@@ -5,13 +5,15 @@ syntax validation, and heading hierarchy enforcement.
 
 ## Key Types
 
-- **`Validator`** -- Configurable markdown file and directory validator
-- **`ValidatorOptions`** -- Controls which validations are applied
-- **`ValidationResult`** -- Per-file validation outcome with errors and warnings
-- **`ValidationError`** -- Structured error with line number and message
-- **`ValidationWarning`** -- Structured warning with line number and message
-- **`CodeBlock`** -- Extracted fenced code block with language and content
-- **`Section`** -- Extracted heading section with level and content
+| Type | Purpose |
+|------|---------|
+| `Validator` | Configurable markdown file and directory validator |
+| `ValidatorOptions` | Controls which validations are applied |
+| `ValidationResult` | Per-file validation outcome with errors and warnings |
+| `ValidationError` | Structured error with line number and message |
+| `ValidationWarning` | Structured warning with line number and message |
+| `CodeBlock` | Extracted fenced code block with language and content |
+| `Section` | Extracted heading section with level and content |
 
 ## Patterns
 
@@ -22,9 +24,9 @@ syntax validation, and heading hierarchy enforcement.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| validator.go | Validator implementation, AST extraction, result printing |
+| File | Purpose |
+|------|---------|
+| `validator.go` | Validator implementation, AST extraction, result printing |
 
 ## Dependencies
 
@@ -42,14 +44,6 @@ produces human-readable validation summaries for CLI output.
 
 ## Code Health
 
-### Tech Debt
-- ~~validator.go:306-307 -- commented-out `case "go"` block~~ (resolved: removed)
-- `extractCodeBlocks` and `extractSections` share near-identical AST walk boilerplate; a generic walk-and-collect helper would reduce duplication
-
-### Pain Points
-- Only JSON and YAML code blocks are validated; other common languages (TOML, HCL) silently pass, which may surprise users expecting comprehensive checks
-- `sanitizeMessage` collapses spaces with a loop (`for strings.Contains`); a single `strings.Join(strings.Fields(...))` call would be clearer
-
-### Optimization Opportunities
-- `ValidateDirectory` uses `filepath.Walk` (deprecated in favor of `filepath.WalkDir`); migrating avoids an extra `os.Stat` per entry (trivial, mechanical change)
-- Code block extraction allocates intermediate `bytes.Buffer` per block; pre-sizing the buffer from `Lines().Len()` would reduce small allocations in large files (low priority)
+- **Tech Debt**: `extractCodeBlocks` and `extractSections` share near-identical AST walk boilerplate; a generic walk-and-collect helper would reduce duplication.
+- **Pain Points**: Only JSON and YAML code blocks are validated; other common languages (TOML, HCL) silently pass, which may surprise users expecting comprehensive checks. `sanitizeMessage` collapses spaces with a loop (`for strings.Contains`); a single `strings.Join(strings.Fields(...))` call would be clearer.
+- **Optimization Opportunities**: `ValidateDirectory` uses `filepath.Walk` (deprecated in favor of `filepath.WalkDir`); migrating avoids an extra `os.Stat` per entry (trivial, mechanical change). Code block extraction allocates intermediate `bytes.Buffer` per block; pre-sizing the buffer from `Lines().Len()` would reduce small allocations in large files (low priority).

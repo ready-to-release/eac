@@ -15,7 +15,7 @@ commands register themselves with metadata, flags, and handler functions.
 
 - `Register` -- registers a command with its handler and metadata
 - `Get` -- retrieves a command registration by name
-- `All` -- returns all registered commands
+- `All` -- returns all registered commands (snapshot copy)
 - `BuildDeclarativeMetadata` -- converts declarative flag definitions into `FlagMetadata` for registry storage
 
 ## Patterns
@@ -23,6 +23,7 @@ commands register themselves with metadata, flags, and handler functions.
 - **Self-registration**: commands call `Register()` from their `init()` functions, populating the registry at startup
 - **Metadata-driven validation**: flag metadata enables runtime validation without coupling to specific flag implementations
 - **Subcommand grouping**: `SubcommandGroup` supports hierarchical command structures (e.g., `work create`, `work merge`)
+- **Thread-safe access**: `sync.RWMutex` protects all reads and writes; `GetCommandRegistry()` returns a snapshot copy
 
 ## Internal Structure
 
@@ -42,12 +43,10 @@ Acts as the command dispatch layer between the CLI entry point and individual co
 ## Code Health
 
 ### Tech Debt
-- ~~`registry.go:79` mutable package-level `commandRegistry` map; test-time mutations could race~~ (resolved: `sync.RWMutex` protects all reads/writes; `GetCommandRegistry()` returns snapshot copy)
-- ~~`registry.go:15` exported mutable `InitialWorkingDir` package-level var~~ (resolved: removed dead variable; eac main.go has its own)
+- None remaining; previous tech debt items (unprotected registry map, exported mutable var) have been resolved
 
 ### Pain Points
-- `registry.go` (530 lines) combines type definitions, registration logic, and dispatch in a single file; splitting would improve readability
+- `registry.go` (544 lines) combines type definitions, registration logic, and dispatch in a single file; splitting would improve readability
 
 ### Optimization Opportunities
-- ~~Protect `commandRegistry` with `sync.RWMutex` for safe concurrent test access~~ (resolved)
 - Split `registry.go` into `types.go`, `register.go`, and `dispatch.go` for clarity (low effort)

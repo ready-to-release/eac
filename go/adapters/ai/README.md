@@ -25,16 +25,17 @@ validation.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
-| --- | --- |
-| provider.go | `Provider` interface and functional options |
-| executor.go | `Executor` orchestrating provider lifecycle |
-| executor_adapter.go | `ExecutorAdapter` bridging to domain interface |
-| config.go | `Config`, `AIConfig`, and `GitConfig` types |
-| config_loader.go | Config loading, merging, and env var substitution |
-| mock.go | `MockProvider` for testing |
-| providers/ | Concrete provider implementations (Anthropic, OpenAI, Gemini) |
-| toolhandler/ | AI tool call handler integration |
+| File                | Responsibility                                                |
+| ------------------- | ------------------------------------------------------------- |
+| provider.go         | `Provider` interface and functional options                   |
+| executor.go         | `Executor` orchestrating provider lifecycle                   |
+| executor_adapter.go | `ExecutorAdapter` bridging to domain interface                |
+| config.go           | `Config`, `AIConfig`, and `GitConfig` types                   |
+| config_loader.go    | Config loading, merging, and env var substitution             |
+| mock.go             | `MockProvider` for testing                                    |
+| doc.go              | Package documentation                                         |
+| providers/          | Concrete provider implementations (Anthropic, OpenAI, Gemini) |
+| toolhandler/        | AI tool call handler integration                              |
 
 ## Dependencies
 
@@ -54,11 +55,13 @@ interface.
 ## Code Health
 
 ### Tech Debt
-- ~~`substituteEnvVars` in config_loader.go compiles a new `regexp.MustCompile` on every call~~ (resolved: hoisted to package level)
+
 - Package-level `schemaValidator` and `schemaValidatorOnce` in config_loader.go are global mutable state coupled to the workspace root of the first caller
 
 ### Pain Points
+
 - `Executor.loadConfig()` reads from disk on every `Execute()` call; caching the config with file-mtime invalidation would reduce I/O for repeated invocations
 
 ### Optimization Opportunities
+
 - None identified

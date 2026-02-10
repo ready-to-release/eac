@@ -20,14 +20,15 @@ or container modes via the tool abstraction layer.
 
 ## Internal Structure
 
-| File/Sub-package    | Responsibility                                         |
-| ------------------- | ------------------------------------------------------ |
-| port.go             | `EACPort` interface, `ExecConfig`, and `Result` types  |
-| factory.go          | `New()` factory routing to native or container adapter |
-| native.go           | `nativeAdapter` executing via local binary             |
-| container.go        | `containerAdapter` executing via eac-ext container     |
-| command_executor.go | `CommandExecutorAdapter` and `RunCommand` convenience  |
-| mock.go             | `MockEAC` for unit testing                             |
+| File | Responsibility |
+| --- | --- |
+| port.go | `EACPort` interface, `ExecConfig`, and `Result` types |
+| factory.go | `New()` factory routing to native or container adapter |
+| native.go | `nativeAdapter` executing via local binary |
+| container.go | `containerAdapter` executing via eac-ext container |
+| command_executor.go | `CommandExecutorAdapter` and `RunCommand` convenience |
+| mock.go | `MockEAC` for unit testing |
+| doc.go | Package documentation |
 
 ## Dependencies
 
@@ -45,13 +46,10 @@ within build pipelines and test infrastructure.
 ## Code Health
 
 ### Tech Debt
-
 - `New()` in factory.go calls `tool.GlobalRegistry()` and `tool.GlobalExecutor()` directly; accepting these as parameters would improve testability and remove hidden coupling
 
 ### Pain Points
-
 - `nativeAdapter` and `containerAdapter` have nearly identical `Execute` methods (native.go:32, container.go:25); shared logic could be extracted to reduce duplication
 
 ### Optimization Opportunities
-
 - None identified

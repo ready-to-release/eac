@@ -23,7 +23,7 @@ phase-based layout, tabbed output panes, and status visualization.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
+| File | Responsibility |
 | --- | --- |
 | model.go | `Model` struct, `NewModel`, and `Init` method |
 | update.go | `Update` method handling all message types |
@@ -42,6 +42,7 @@ phase-based layout, tabbed output panes, and status visualization.
 | catalog_widgets.go | Individual widget implementations |
 | derived.go | Derived/computed view state from model |
 | widget.go | Base widget types and interfaces |
+| render/ | Shared rendering utilities (icons, lamps, styles, text, layout) |
 
 ## Dependencies
 
