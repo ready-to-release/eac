@@ -17,6 +17,7 @@ func init() {
 		GetChangelog,
 		GetCIConfig,
 		GetCIDispatch,
+		GetCIResults,
 		GetCIWorkflows,
 		GetCLIReleaseNotes,
 		GetComponents,

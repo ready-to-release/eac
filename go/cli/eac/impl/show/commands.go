@@ -11,6 +11,7 @@ func init() {
 		ShowBooks,
 		ShowBuildSummary,
 		ShowBuildTimes,
+		ShowCIResults,
 		ShowCISummary,
 		ShowChangelog,
 		ShowComponentTypes,
