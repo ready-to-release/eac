@@ -150,6 +150,9 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType core.ActionTyp
 	componentCounts := computeComponentCounts(allWork)
 	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
 	ctx.SummaryBuilder.SetStartTime(ctx.StartTime)
+	if ctx.EACConfig != nil && ctx.EACConfig.Repository.DisplayOrder != nil {
+		ctx.SummaryBuilder.SetDisplayOrder(ctx.EACConfig.Repository.DisplayOrder)
+	}
 	ctx.Orchestrator.SetSummaryBuilder(ctx.SummaryBuilder)
 
 	// Set completion callback to send summary immediately when all components finish.

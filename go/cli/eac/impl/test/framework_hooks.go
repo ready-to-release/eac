@@ -374,10 +374,10 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 
 	// Aggregate reports
 	if path := testresults.AggregateCucumberReports(testCfg.TestRunDir); path != "" {
-		log.Infof("Aggregated cucumber report: %s", path)
+		log.Debugf("Aggregated cucumber report: %s", path)
 	}
 	if path := testresults.AggregateCTRFReports(testCfg.TestRunDir); path != "" {
-		log.Infof("Aggregated CTRF report: %s", path)
+		log.Debugf("Aggregated CTRF report: %s", path)
 	}
 
 	// Show timing analysis if requested

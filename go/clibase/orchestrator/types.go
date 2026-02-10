@@ -131,6 +131,8 @@ type UnitResult struct {
 	ExitCode int
 	// Duration is the time taken to build this component
 	Duration time.Duration
+	// StartedAt is when the worker started executing (for wait-time calculation)
+	StartedAt time.Time
 	// Errors are any error messages collected during the build
 	Errors []string
 	// Warnings are any warning messages collected during the build

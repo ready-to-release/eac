@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/render"
+	"github.com/ready-to-release/eac/go/core/config"
 )
 
 // SummaryBuilder incrementally builds summary data as components complete.
@@ -40,7 +41,8 @@ type SummaryBuilder struct {
 	summarySent bool                  // True if summary was already sent via callback
 
 	// Command context
-	commandType core.ActionType
+	commandType  core.ActionType
+	displayOrder *config.DisplayOrder // Module display ordering (nil = alphabetical)
 }
 
 // incrementalModuleCache holds pre-computed data for a module, updated incrementally.
@@ -52,6 +54,9 @@ type incrementalModuleCache struct {
 	testsTotal     int
 	testsPassed    int
 	testsFailed    int
+
+	// Per-handler aggregates for test summary
+	byHandler map[string]*handlerStats
 
 	// Status tracking
 	hasFailure bool // Any component failed (exit > 0)
@@ -74,6 +79,7 @@ func NewSummaryBuilder(cmdType core.ActionType, componentCounts map[string]int) 
 	for module, count := range componentCounts {
 		sb.moduleCaches[module] = &incrementalModuleCache{
 			components: make([]orchestrator.UnitResult, 0, count),
+			byHandler:  make(map[string]*handlerStats, 4),
 			allSkipped: true, // Assume skipped until we see a non-skipped component
 		}
 		sb.moduleCompCount[module] = count
@@ -96,6 +102,13 @@ func (sb *SummaryBuilder) SetStartTime(t time.Time) {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 	sb.startTime = t
+}
+
+// SetDisplayOrder sets the module display ordering for summary output.
+func (sb *SummaryBuilder) SetDisplayOrder(order *config.DisplayOrder) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.displayOrder = order
 }
 
 // MarkSummarySent marks that the summary has been sent via callback.
@@ -124,6 +137,7 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.UnitResult) {
 	if !exists {
 		cache = &incrementalModuleCache{
 			components: make([]orchestrator.UnitResult, 0, 4),
+			byHandler:  make(map[string]*handlerStats, 4),
 			allSkipped: true,
 		}
 		sb.moduleCaches[result.Module] = cache
@@ -143,6 +157,8 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.UnitResult) {
 	cache.testsTotal += result.TestsTotal
 	cache.testsPassed += result.TestsPassed
 	cache.testsFailed += result.TestsFailed
+
+	accumulateHandlerStats(cache.byHandler, result, sb.startTime)
 
 	// Track status
 	if result.ExitCode > 0 {
@@ -200,12 +216,12 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 
-	// Get sorted module names for consistent output
+	// Get module names in display order
 	modules := make([]string, 0, len(sb.moduleCaches))
 	for module := range sb.moduleCaches {
 		modules = append(modules, module)
 	}
-	sort.Strings(modules)
+	sortModulesByDisplayOrder(modules, sb.displayOrder)
 
 	// Build run summary line
 	runSummary := sb.buildRunSummary()
@@ -217,7 +233,7 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData
 	switch sb.commandType {
 	case core.ActionTest:
 		tb = render.NewTableBuilder().
-			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
+			WithHeaders("Module", "Type", "#Test", "Wait", "Cycle", "Stat")
 	case core.ActionLint:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
@@ -258,18 +274,7 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *display.SummaryData
 		// Add row based on command type
 		switch sb.commandType {
 		case core.ActionTest:
-			testTypes := sb.extractUniqueTestTypes(cache.components)
-			var testCount string
-			if cache.testsTotal > 0 {
-				if cache.testsFailed > 0 {
-					testCount = fmt.Sprintf("%d/%d", cache.testsPassed, cache.testsTotal)
-				} else {
-					testCount = fmt.Sprintf("%d", cache.testsTotal)
-				}
-			} else {
-				testCount = "-"
-			}
-			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
+			addTestTypeRows(tb, moduleName, cache.byHandler)
 		case core.ActionLint, core.ActionScan:
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
 		default: // core.ActionBuild
@@ -377,44 +382,6 @@ func (sb *SummaryBuilder) buildComponentString(components []orchestrator.UnitRes
 	return result
 }
 
-// extractUniqueTestTypes extracts unique test types from component results.
-// Uses the Handler field which contains the test type (e.g., "gotest", "godog").
-func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.UnitResult) string {
-	if len(components) == 0 {
-		return "-"
-	}
-
-	seen := make(map[string]struct{}, 4)
-	types := make([]string, 0, 4)
-
-	for _, comp := range components {
-		// Use Handler field which contains the test type
-		testType := comp.Handler
-		if testType == "" {
-			// Fallback: extract test type from component name
-			// Component format: "name/testType" (e.g., "config/gotest", "docs-drawio-cache/godog")
-			testType = comp.Component
-			if slashIdx := strings.LastIndex(comp.Component, "/"); slashIdx >= 0 {
-				testType = comp.Component[slashIdx+1:]
-			}
-		}
-
-		if testType != "" {
-			if _, exists := seen[testType]; !exists {
-				seen[testType] = struct{}{}
-				types = append(types, testType)
-			}
-		}
-	}
-
-	if len(types) == 0 {
-		return "-"
-	}
-
-	sort.Strings(types)
-	return strings.Join(types, ", ")
-}
-
 // hasRootFailure returns true if the module has at least one component that
 // actually ran and failed (has a log path), not just dependency-skipped.
 func (sb *SummaryBuilder) hasRootFailure(cache *incrementalModuleCache) bool {
@@ -517,12 +484,12 @@ func (sb *SummaryBuilder) GetResultSets() []orchestrator.ModuleResultSet {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 
-	// Get sorted module names
+	// Get module names in display order
 	modules := make([]string, 0, len(sb.moduleCaches))
 	for module := range sb.moduleCaches {
 		modules = append(modules, module)
 	}
-	sort.Strings(modules)
+	sortModulesByDisplayOrder(modules, sb.displayOrder)
 
 	// Build result sets
 	resultSets := make([]orchestrator.ModuleResultSet, 0, len(modules))

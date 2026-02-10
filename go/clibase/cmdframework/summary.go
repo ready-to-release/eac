@@ -13,6 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/clibase/render"
+	"github.com/ready-to-release/eac/go/core/config"
 )
 
 const (
@@ -88,6 +89,92 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *display
 	return generateComponentTUISummary(ctx, totalTime)
 }
 
+// handlerStats holds per-handler aggregate statistics for test summary.
+type handlerStats struct {
+	testCount   int
+	passed      int
+	failed      int
+	maxWait     time.Duration // max queue time before execution started
+	minStartedAt time.Time   // earliest UoW start (for cycle span)
+	maxEndedAt   time.Time   // latest UoW end (for cycle span)
+	hasFail     bool
+}
+
+// accumulateHandlerStats updates the handler stats map with a single UnitResult.
+// cmdStartTime is the command start time for wait-time calculation.
+func accumulateHandlerStats(byHandler map[string]*handlerStats, comp orchestrator.UnitResult, cmdStartTime time.Time) {
+	handler := comp.Handler
+	if handler == "" {
+		handler = comp.Component
+		if slashIdx := strings.LastIndex(comp.Component, "/"); slashIdx >= 0 {
+			handler = comp.Component[slashIdx+1:]
+		}
+	}
+	hs, ok := byHandler[handler]
+	if !ok {
+		hs = &handlerStats{}
+		byHandler[handler] = hs
+	}
+	hs.testCount += comp.TestsTotal
+	hs.passed += comp.TestsPassed
+	hs.failed += comp.TestsFailed
+	if comp.ExitCode > 0 {
+		hs.hasFail = true
+	}
+	if !comp.StartedAt.IsZero() {
+		endedAt := comp.StartedAt.Add(comp.Duration)
+		if hs.minStartedAt.IsZero() || comp.StartedAt.Before(hs.minStartedAt) {
+			hs.minStartedAt = comp.StartedAt
+		}
+		if endedAt.After(hs.maxEndedAt) {
+			hs.maxEndedAt = endedAt
+		}
+		if !cmdStartTime.IsZero() {
+			waitTime := comp.StartedAt.Sub(cmdStartTime)
+			if waitTime > hs.maxWait {
+				hs.maxWait = waitTime
+			}
+		}
+	}
+}
+
+// addTestTypeRows adds per-handler-type rows to the table builder.
+// The module name appears on the first row only; subsequent rows leave it blank.
+func addTestTypeRows(tb *render.TableBuilder, moduleName string, byHandler map[string]*handlerStats) {
+	handlerNames := make([]string, 0, len(byHandler))
+	for h := range byHandler {
+		handlerNames = append(handlerNames, h)
+	}
+	sort.Strings(handlerNames)
+
+	for i, handler := range handlerNames {
+		hs := byHandler[handler]
+		var testCount string
+		if hs.testCount > 0 {
+			if hs.failed > 0 {
+				testCount = fmt.Sprintf("%d/%d", hs.passed, hs.testCount)
+			} else {
+				testCount = fmt.Sprintf("%d", hs.testCount)
+			}
+		} else if !hs.minStartedAt.IsZero() {
+			testCount = "0"
+		} else {
+			testCount = "-"
+		}
+		wait := formatDuration(hs.maxWait)
+		cycle := formatDuration(hs.maxEndedAt.Sub(hs.minStartedAt))
+		typeStatus := " ✓"
+		if hs.hasFail {
+			typeStatus = " ✗"
+		}
+		rowModule := ""
+		if i == 0 {
+			rowModule = moduleName
+		}
+		tb.AddRow(rowModule, handler, testCount, wait, cycle, typeStatus)
+	}
+}
+
 // moduleCache holds precomputed data for a module to avoid repeated calculations.
 type moduleCache struct {
 	status         orchestrator.ModuleStatus
@@ -98,6 +185,7 @@ type moduleCache struct {
 	testsTotal     int
 	testsPassed    int
 	testsFailed    int
+	byHandler      map[string]*handlerStats // per-handler aggregates (for test summary)
 }
 
 // generateComponentTUISummary creates TUI summary showing module-level aggregated results.
@@ -128,6 +216,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		cache.sortedComps = rs.GetSortedUnits()
 
 		// Aggregate stats in single pass
+		cache.byHandler = make(map[string]*handlerStats, 4)
 		for _, comp := range rs.Units {
 			if comp.Duration > cache.moduleDuration {
 				cache.moduleDuration = comp.Duration
@@ -137,6 +226,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 			cache.testsTotal += comp.TestsTotal
 			cache.testsPassed += comp.TestsPassed
 			cache.testsFailed += comp.TestsFailed
+			accumulateHandlerStats(cache.byHandler, comp, ctx.StartTime)
 		}
 	}
 
@@ -166,14 +256,28 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		runSummary = "0 modules"
 	}
 
-	// Create sorted indices by module name (avoid copying entire structs)
+	// Sort modules by display order
+	var displayOrder *config.DisplayOrder
+	if ctx.EACConfig != nil {
+		displayOrder = ctx.EACConfig.Repository.DisplayOrder
+	}
 	sortedIndices := make([]int, len(resultSets))
 	for i := range sortedIndices {
 		sortedIndices[i] = i
 	}
-	sort.Slice(sortedIndices, func(i, j int) bool {
-		return resultSets[sortedIndices[i]].Module < resultSets[sortedIndices[j]].Module
-	})
+	moduleNames := make([]string, len(resultSets))
+	for i := range resultSets {
+		moduleNames[i] = resultSets[i].Module
+	}
+	sortModulesByDisplayOrder(moduleNames, displayOrder)
+	// Build name->index map for reordering
+	nameToIdx := make(map[string]int, len(resultSets))
+	for i := range resultSets {
+		nameToIdx[resultSets[i].Module] = i
+	}
+	for i, name := range moduleNames {
+		sortedIndices[i] = nameToIdx[name]
+	}
 
 	// Build table based on command type
 	var details []string
@@ -182,7 +286,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 	switch ctx.Config.Type {
 	case core.ActionTest:
 		tb = render.NewTableBuilder().
-			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
+			WithHeaders("Module", "Type", "#Test", "Wait", "Cycle", "Stat")
 	case core.ActionLint:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
@@ -241,21 +345,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		// Add row based on command type
 		switch ctx.Config.Type {
 		case core.ActionTest:
-			// Extract unique test types from component names (format: "subpath:testType")
-			testTypes := extractUniqueTestTypes(cache.sortedComps)
-
-			// Format test count: "passed/total" if failures, else "total"
-			var testCount string
-			if cache.testsTotal > 0 {
-				if cache.testsFailed > 0 {
-					testCount = fmt.Sprintf("%d/%d", cache.testsPassed, cache.testsTotal)
-				} else {
-					testCount = fmt.Sprintf("%d", cache.testsTotal)
-				}
-			} else {
-				testCount = "-"
-			}
-			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
+			addTestTypeRows(tb, moduleName, cache.byHandler)
 		case core.ActionLint, core.ActionScan:
 			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
 		default: // core.ActionBuild
@@ -387,6 +477,7 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 
 		cache.sortedComps = rs.GetSortedUnits()
 
+		cache.byHandler = make(map[string]*handlerStats, 4)
 		for _, comp := range rs.Units {
 			if comp.Duration > cache.moduleDuration {
 				cache.moduleDuration = comp.Duration
@@ -394,49 +485,42 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 			cache.testsTotal += comp.TestsTotal
 			cache.testsPassed += comp.TestsPassed
 			cache.testsFailed += comp.TestsFailed
+			accumulateHandlerStats(cache.byHandler, comp, ctx.StartTime)
 		}
 	}
 
-	// Create sorted indices by module name
+	// Sort modules by display order
+	var displayOrder *config.DisplayOrder
+	if ctx.EACConfig != nil {
+		displayOrder = ctx.EACConfig.Repository.DisplayOrder
+	}
 	sortedIndices := make([]int, len(resultSets))
 	for i := range sortedIndices {
 		sortedIndices[i] = i
 	}
-	sort.Slice(sortedIndices, func(i, j int) bool {
-		return resultSets[sortedIndices[i]].Module < resultSets[sortedIndices[j]].Module
-	})
+	moduleNames := make([]string, len(resultSets))
+	for i := range resultSets {
+		moduleNames[i] = resultSets[i].Module
+	}
+	sortModulesByDisplayOrder(moduleNames, displayOrder)
+	nameToIdx := make(map[string]int, len(resultSets))
+	for i := range resultSets {
+		nameToIdx[resultSets[i].Module] = i
+	}
+	for i, name := range moduleNames {
+		sortedIndices[i] = nameToIdx[name]
+	}
 
 	// Build module-level table for test commands
 	if ctx.Config.Type == core.ActionTest && len(resultSets) > 0 {
 		tb := render.NewTableBuilder().
-			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
+			WithHeaders("Module", "Type", "#Test", "Wait", "Cycle", "Stat")
 
 		for _, idx := range sortedIndices {
 			rs := &resultSets[idx]
 			cache := &caches[idx]
-
-			statusIcon := " ✓"
-			if cache.status == orchestrator.ModuleStatusFailed {
-				statusIcon = " ✗"
-			}
-
 			moduleName := output.PackageDisplayName(rs.Module)
-			duration := formatDuration(cache.moduleDuration)
-			testTypes := extractUniqueTestTypes(cache.sortedComps)
-
-			// Format test count
-			var testCount string
-			if cache.testsTotal > 0 {
-				if cache.testsFailed > 0 {
-					testCount = fmt.Sprintf("%d/%d", cache.testsPassed, cache.testsTotal)
-				} else {
-					testCount = fmt.Sprintf("%d", cache.testsTotal)
-				}
-			} else {
-				testCount = "-"
-			}
-
-			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
+			addTestTypeRows(tb, moduleName, cache.byHandler)
 		}
 
 		log.Info("")
@@ -565,6 +649,30 @@ func formatErrorLines(prefix, errMsg string) []string {
 	return result
 }
 
+// sortModulesByDisplayOrder sorts module names using DisplayOrder.
+// Falls back to alphabetical if displayOrder is nil or empty.
+func sortModulesByDisplayOrder(modules []string, displayOrder *config.DisplayOrder) {
+	if displayOrder == nil || len(displayOrder.Modules) == 0 {
+		sort.Strings(modules)
+		return
+	}
+	rank := make(map[string]int, len(displayOrder.Modules))
+	for i, m := range displayOrder.Modules {
+		rank[m] = i
+	}
+	sort.SliceStable(modules, func(i, j int) bool {
+		ri, oki := rank[modules[i]]
+		rj, okj := rank[modules[j]]
+		if oki && okj {
+			return ri < rj
+		}
+		if oki != okj {
+			return oki // known modules before unknown
+		}
+		return modules[i] < modules[j]
+	})
+}
+
 // hasRootFailure returns true if the module has at least one component that
 // actually ran and failed (has a log path), as opposed to only having
 // dependency-skipped failures (no log path).
@@ -577,43 +685,3 @@ func hasRootFailure(comps []orchestrator.UnitResult) bool {
 	return false
 }
 
-// extractUniqueTestTypes extracts unique test types from component results.
-// Uses the Handler field which contains the test type (e.g., "gotest", "godog").
-// Returns a comma-separated string of unique test types.
-func extractUniqueTestTypes(components []orchestrator.UnitResult) string {
-	if len(components) == 0 {
-		return "-"
-	}
-
-	// Pre-size map based on typical test type count (usually 1-3)
-	seen := make(map[string]struct{}, 4)
-	types := make([]string, 0, 4)
-
-	for _, comp := range components {
-		// Use Handler field which contains the test type
-		testType := comp.Handler
-		if testType == "" {
-			// Fallback: extract test type from component name
-			// Component format: "name/testType" (e.g., "config/gotest", "docs-drawio-cache/godog")
-			testType = comp.Component
-			if slashIdx := strings.LastIndex(comp.Component, "/"); slashIdx >= 0 {
-				testType = comp.Component[slashIdx+1:]
-			}
-		}
-
-		if testType != "" {
-			if _, exists := seen[testType]; !exists {
-				seen[testType] = struct{}{}
-				types = append(types, testType)
-			}
-		}
-	}
-
-	if len(types) == 0 {
-		return "-"
-	}
-
-	// Sort for consistent output
-	sort.Strings(types)
-	return strings.Join(types, ", ")
-}

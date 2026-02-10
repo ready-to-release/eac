@@ -144,6 +144,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 
 	// Start timing - duration measures actual execution time
 	startTime := time.Now()
+	result.StartedAt = startTime
 
 	// Track active tool usage
 	isContainer := spec.GetPoolAllocation().IsContainer()
