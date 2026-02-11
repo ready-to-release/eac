@@ -1,38 +1,52 @@
-// Command: create commit-message
-// Short: Generate AI-powered commit messages from staged changes
-// Long: The create commit-message command uses AI to analyze your staged git changes and generate a structured,
-// Long: conventional commit message that follows project standards and includes module-specific details.
-// Long: The generated message includes a top-level summary and per-module sections describing changes.
-// Long: All output is validated against the commit message contract to ensure consistency and quality.
-// Long: By default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.
-// Long: Use --commit to automatically create a git commit with the generated message.
-// Long:
-// Long: Expected Output:
-// Long: - Structured conventional commit message to stdout
-// Long: - Top-level summary and per-module sections
-// Long: - Validated against commit message contract
-// Long: - Debug outputs in out/ if --debug enabled
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
-// Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
 package commitmessage
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	commitmessageinternal "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
+
+type createCommitMessageCommand struct{}
+
+var _ core.SimpleCommandPort = (*createCommitMessageCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&createCommitMessageCommand{},
+	}
+}
+
+func (c *createCommitMessageCommand) Name() string { return "create commit-message" }
+
+func (c *createCommitMessageCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-commit-message",
+		Short:         "Generate AI-powered commit messages from staged changes",
+		Long:          "The create commit-message command uses AI to analyze your staged git changes and generate a structured,\nconventional commit message that follows project standards and includes module-specific details.\nThe generated message includes a top-level summary and per-module sections describing changes.\nAll output is validated against the commit message contract to ensure consistency and quality.\nBy default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.\nUse --commit to automatically create a git commit with the generated message.\n\nExpected Output:\n- Structured conventional commit message to stdout\n- Top-level summary and per-module sections\n- Validated against commit message contract\n- Debug outputs in out/ if --debug enabled",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis"},
+			{Name: "commit", Shorthand: "c", Type: "bool", DefaultValue: "false", Usage: "Automatically create git commit with generated message"},
+		},
+	}
+}
+
+func (c *createCommitMessageCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreateCommitMessage()
+}
 
 var log = logging.C()
 
@@ -61,11 +75,6 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 func AutoCleanup(commitMessage string) string {
 	return commitmessageinternal.AutoCleanup(commitMessage)
 }
-
-func init() {
-	registry.Register(CreateCommitMessage)
-}
-
 // executionConfig holds configuration for the commit AI command.
 type executionConfig struct {
 	workspaceRoot   string

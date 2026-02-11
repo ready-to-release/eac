@@ -1,32 +1,3 @@
-// Command: release execute-layers
-// Short: Execute releases layer by layer in dependency order
-// Long: Executes pending releases in dependency order, processing one layer at a time.
-// Long:
-// Long: This command takes a JSON array of release layers (from check-pending-releases)
-// Long: and processes them in order:
-// Long:   1. For each module in the current layer:
-// Long:      - Dispatches the release workflow with version info
-// Long:   2. Waits for all workflows in the layer to complete
-// Long:   3. Moves to the next layer
-// Long:
-// Long: The release workflow is responsible for creating the git tag on success
-// Long: (via gh release create). This ensures tags only exist for successful releases.
-// Long:
-// Long: The layers JSON format is:
-// Long:   [[{module, version, tag, type}, ...], [...], ...]
-// Long:
-// Long: Expected Output:
-// Long:   - Progress messages for each release
-// Long:   - Exit code 0 if all releases succeed
-// Long:   - Exit code 1 if any release fails
-// Long:
-// Long: Example:
-// Long:   release execute-layers --layers '[[{"module":"docs","version":"2025.0116.1430","tag":"docs/2025.0116.1430","type":"calver"}]]'
-// Long:   release execute-layers --layers-file layers.json
-// Flag.layers: type=string, usage=JSON array of release layers
-// Flag.layers-file: type=string, usage=File containing JSON array of release layers
-// Flag.timeout: type=int, default=900, usage=Timeout per release in seconds (default: 900)
-// Flag.dry-run: type=bool, usage=Preview without dispatching workflows
 package release
 
 import (
@@ -39,9 +10,34 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseExecuteLayersCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseExecuteLayersCommand)(nil)
+
+func (c *releaseExecuteLayersCommand) Name() string { return "release execute-layers" }
+
+func (c *releaseExecuteLayersCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-execute-layers",
+		Short:         "Execute releases layer by layer in dependency order",
+		Long:          "Executes pending releases in dependency order, processing one layer at a time.\n\nThis command takes a JSON array of release layers (from check-pending-releases)\nand processes them in order:\n  1. For each module in the current layer:\n     - Dispatches the release workflow with version info\n  2. Waits for all workflows in the layer to complete\n  3. Moves to the next layer\n\nThe release workflow is responsible for creating the git tag on success\n(via gh release create). This ensures tags only exist for successful releases.\n\nThe layers JSON format is:\n  [[{module, version, tag, type}, ...], [...], ...]\n\nExpected Output:\n  - Progress messages for each release\n  - Exit code 0 if all releases succeed\n  - Exit code 1 if any release fails\n\nExample:\n  release execute-layers --layers '[[{\"module\":\"docs\",\"version\":\"2025.0116.1430\",\"tag\":\"docs/2025.0116.1430\",\"type\":\"calver\"}]]'\n  release execute-layers --layers-file layers.json",
+		Flags: []core.FlagSpec{
+			{Name: "layers", Type: "string", Usage: "JSON array of release layers"},
+			{Name: "layers-file", Type: "string", Usage: "File containing JSON array of release layers"},
+			{Name: "timeout", Type: "int", DefaultValue: "900", Usage: "Timeout per release in seconds (default: 900)"},
+			{Name: "dry-run", Type: "bool", Usage: "Preview without dispatching workflows"},
+		},
+	}
+}
+
+func (c *releaseExecuteLayersCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseExecuteLayers()
+}
 
 // LayerModule represents a module in a release layer.
 type LayerModule struct {

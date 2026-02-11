@@ -1,28 +1,47 @@
-// Command: get book-description
-// Short: Get description for a book by filename
-// Long: Returns the description for a book PDF by matching its filename.
-// Long:
-// Long: This replaces the jq pattern:
-// Long:   echo "$BOOKS_JSON" | jq -r --arg filename "X" '.[] | select(.filename == $filename) | .description'
-// Long:
-// Long: Exit codes:
-// Long:   0 - Book found, outputs description
-// Long:   1 - Book not found or error
-// Long:
-// Long: Example:
-// Long:   get book-description user-guide-dark.pdf    # Outputs: User Guide
-// Long:   get book-description --default "Docs" X.pdf # Outputs default if not found
-// Flag.default: type=string, usage=Default value if book not found
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getBookDescriptionCommand struct{}
+
+var _ core.SimpleCommandPort = (*getBookDescriptionCommand)(nil)
+
+func (c *getBookDescriptionCommand) Name() string { return "get book-description" }
+
+func (c *getBookDescriptionCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-book-description",
+		Short:         "Get description for a book by filename",
+		Long: "Returns the description for a book PDF by matching its filename.\n" +
+			"\n" +
+			"This replaces the jq pattern:\n" +
+			"  echo \"$BOOKS_JSON\" | jq -r --arg filename \"X\" '.[] | select(.filename == $filename) | .description'\n" +
+			"\n" +
+			"Exit codes:\n" +
+			"  0 - Book found, outputs description\n" +
+			"  1 - Book not found or error\n" +
+			"\n" +
+			"Example:\n" +
+			"  get book-description user-guide-dark.pdf    # Outputs: User Guide\n" +
+			"  get book-description --default \"Docs\" X.pdf # Outputs default if not found",
+		Flags: []core.FlagSpec{
+			{Name: "default", Type: "string", Usage: "Default value if book not found"},
+		},
+	}
+}
+
+func (c *getBookDescriptionCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetBookDescription()
+}
 
 func GetBookDescription() int {
 	// Parse arguments

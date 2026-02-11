@@ -1,38 +1,39 @@
-// Command: pipeline ci summary-link
-// Short: Generate diagnostic markdown for CI summaries
-// Long: Generate a markdown code block with gh CLI commands for diagnosing CI failures.
-// Long:
-// Long: This command outputs markdown that can be piped directly into $GITHUB_STEP_SUMMARY.
-// Long: The generated commands use the actual run ID and repository so they can be
-// Long: copy-pasted directly.
-// Long:
-// Long: Expected Output:
-// Long:   - Markdown code block with gh CLI diagnostic commands
-// Long:   - Commands use actual run ID and repository
-// Long:   - Suitable for piping to $GITHUB_STEP_SUMMARY
-// Long:
-// Long: Example:
-// Long:   pipeline ci summary-link 12345678                    # Basic diagnostic link
-// Long:   pipeline ci summary-link 12345678 --type test       # Include artifact download
-// Long:   pipeline ci summary-link 12345678 --artifact results # Specific artifact name
-// Long:   pipeline ci summary-link 12345678 --type container   # Container-specific diagnostics
-// Long:
-// Long: In a workflow:
-// Long:   go run ./go/cli/eac pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY
-// Flag.type: type=string, usage=Failure type: build, test, container, release, docs (default: build)
-// Flag.artifact: type=string, usage=Artifact name to include in download command
-// Flag.image: type=string, usage=Container image for container-type diagnostics
-// Flag.workflow: type=string, usage=CI workflow name for release-type diagnostics
-// Flag.commit: type=string, usage=Commit SHA for release-type diagnostics
 package ci
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type pipelineCISummaryLinkCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCISummaryLinkCommand)(nil)
+
+func (c *pipelineCISummaryLinkCommand) Name() string { return "pipeline ci summary-link" }
+
+func (c *pipelineCISummaryLinkCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-ci-summary-link",
+		Short:         "Generate diagnostic markdown for CI summaries",
+		Long:          "Generate a markdown code block with gh CLI commands for diagnosing CI failures.\n\nThis command outputs markdown that can be piped directly into $GITHUB_STEP_SUMMARY.\nThe generated commands use the actual run ID and repository so they can be\ncopy-pasted directly.\n\nExpected Output:\n  - Markdown code block with gh CLI diagnostic commands\n  - Commands use actual run ID and repository\n  - Suitable for piping to $GITHUB_STEP_SUMMARY\n\nExample:\n  pipeline ci summary-link 12345678                    # Basic diagnostic link\n  pipeline ci summary-link 12345678 --type test       # Include artifact download\n  pipeline ci summary-link 12345678 --artifact results # Specific artifact name\n  pipeline ci summary-link 12345678 --type container   # Container-specific diagnostics\n\nIn a workflow:\n  go run ./go/cli/eac pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY",
+		Flags: []core.FlagSpec{
+			{Name: "type", Type: "string", Usage: "Failure type: build, test, container, release, docs (default: build)"},
+			{Name: "artifact", Type: "string", Usage: "Artifact name to include in download command"},
+			{Name: "image", Type: "string", Usage: "Container image for container-type diagnostics"},
+			{Name: "workflow", Type: "string", Usage: "CI workflow name for release-type diagnostics"},
+			{Name: "commit", Type: "string", Usage: "Commit SHA for release-type diagnostics"},
+		},
+	}
+}
+
+func (c *pipelineCISummaryLinkCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCISummaryLink()
+}
 
 func PipelineCISummaryLink() int {
 	// Validate flags before parsing (args start at index 5 for "pipeline ci summary-link <run-id>")

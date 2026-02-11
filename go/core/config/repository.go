@@ -45,6 +45,10 @@ type RepositoryConfig struct {
 	// Populated during config loading after module groups and component types are resolved.
 	DisplayOrder *DisplayOrder `yaml:"-"`
 
+	// monikerIndex maps moniker to index in the Modules slice for O(1) lookup.
+	// Built once after modules are fully loaded via buildMonikerIndex.
+	monikerIndex map[string]int `yaml:"-"`
+
 	// baselineModules records modules that declared depends_on: [root] before stripping.
 	// Used internally by computeDisplayOrder to assign depth -1.
 	baselineModules map[string]bool `yaml:"-"`
@@ -596,7 +600,15 @@ func (c *RepositoryConfig) SpecsFeaturePathAbs(workspaceRoot, moduleName, featur
 }
 
 // GetModule returns a module by moniker.
+// Uses a pre-built index for O(1) lookup when available.
 func (c *RepositoryConfig) GetModule(moniker string) (*Module, bool) {
+	if c.monikerIndex != nil {
+		if idx, ok := c.monikerIndex[moniker]; ok {
+			return &c.Modules[idx], true
+		}
+		return nil, false
+	}
+	// Fallback to linear scan if index not yet built (e.g., during loading)
 	for i := range c.Modules {
 		if c.Modules[i].Moniker == moniker {
 			return &c.Modules[i], true
@@ -621,6 +633,16 @@ func (c *RepositoryConfig) AllMonikers() []string {
 		monikers[i] = m.Moniker
 	}
 	return monikers
+}
+
+// buildMonikerIndex builds the moniker-to-index map for O(1) lookup.
+// Must be called after all modules are finalized (after template expansion,
+// container discovery, and group expansion).
+func (c *RepositoryConfig) buildMonikerIndex() {
+	c.monikerIndex = make(map[string]int, len(c.Modules))
+	for i, m := range c.Modules {
+		c.monikerIndex[m.Moniker] = i
+	}
 }
 
 // ExpandModuleTemplates expands module templates for all modules that reference them.

@@ -12,13 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGetExtensions verifies GetExtensions returns empty list
-func TestGetExtensions(t *testing.T) {
-	c := &Config{}
-	extensions := c.GetExtensions()
-	assert.Empty(t, extensions, "GetExtensions should return empty list")
-}
-
 // TestResetConfigLoaded verifies ResetConfigLoaded resets flag
 func TestResetConfigLoaded(t *testing.T) {
 	// Set configLoaded to true

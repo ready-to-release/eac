@@ -1,48 +1,49 @@
-// Command: templates install claude
-// Short: Install Claude Code configuration templates without value replacements
-// Long: Install Claude Code templates by copying files as-is (no variable substitution).
-// Long: Templates preserve workflow configurations for Claude Code integration.
-// Long:
-// Long: Template Source and Destination:
-// Long:   Source: templates/claude/ (fixed)
-// Long:   Destination: .claude/ (fixed)
-// Long:
-// Long: Installed Files:
-// Long:   agents/architect.md, agents/debugger.md, agents/test-engineer.md
-// Long:   commands/plan.md, commands/implement.md, commands/test.md, commands/review.md
-// Long:   skills/feature-workflow.md, skills/refactor-safe.md
-// Long:   setup/mcp-setup.md, setup/.mcp.json.template
-// Long:
-// Long: Use Case:
-// Long:   Install Claude Code workflow templates that demonstrate MCP command usage.
-// Long:   Templates are language-agnostic and showcase auto-discovery workflows.
-// Long:
-// Long: Examples:
-// Long:   templates install claude
-// Long:   templates install claude --debug
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/commands.log
 package claude
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type templatesInstallClaudeCommand struct{}
 
-func init() {
-	registry.Register(TemplatesInstallClaude)
+var _ core.SimpleCommandPort = (*templatesInstallClaudeCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&templatesInstallClaudeCommand{},
+	}
 }
 
+func (c *templatesInstallClaudeCommand) Name() string { return "templates install claude" }
+
+func (c *templatesInstallClaudeCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "templates-install-claude",
+		Short:         "Install Claude Code configuration templates without value replacements",
+		Long:          "Install Claude Code templates by copying files as-is (no variable substitution).\nTemplates preserve workflow configurations for Claude Code integration.\n\nTemplate Source and Destination:\n  Source: templates/claude/ (fixed)\n  Destination: .claude/ (fixed)\n\nInstalled Files:\n  agents/architect.md, agents/debugger.md, agents/test-engineer.md\n  commands/plan.md, commands/implement.md, commands/test.md, commands/review.md\n  skills/feature-workflow.md, skills/refactor-safe.md\n  setup/mcp-setup.md, setup/.mcp.json.template\n\nUse Case:\n  Install Claude Code workflow templates that demonstrate MCP command usage.\n  Templates are language-agnostic and showcase auto-discovery workflows.\n\nExamples:\n  templates install claude\n  templates install claude --debug",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save detailed logs to out/commands.log"},
+		},
+	}
+}
+
+func (c *templatesInstallClaudeCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return TemplatesInstallClaude()
+}
+
+var log = logging.C()
 // Config holds configuration for the claude install command.
 type Config struct {
 	Destination   string

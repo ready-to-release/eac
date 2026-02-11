@@ -1,26 +1,37 @@
-// Command: show test-timings
-// Short: Display test timing metrics in tables
-// Long: The show test-timings command displays test timing analysis parsed from test logs.
-// Long: Shows overall statistics, breakdown by module, and the slowest individual test scenarios.
-// Long:
-// Long: Expected Output:
-// Long: - Table with overall metrics: total tests, passed/failed counts, test duration, average duration
-// Long: - Summary by module table: modules with test counts, pass/fail, total and average times
-// Long: - Top N slowest tests table showing duration, status, module name, and scenario
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type showTestTimingsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showTestTimingsCommand)(nil)
+
+func (c *showTestTimingsCommand) Name() string { return "show test-timings" }
+
+func (c *showTestTimingsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-test-timings",
+		Short:         "Display test timing metrics in tables",
+		Long:          "The show test-timings command displays test timing analysis parsed from test logs.\nShows overall statistics, breakdown by module, and the slowest individual test scenarios.\n\nExpected Output:\n- Table with overall metrics: total tests, passed/failed counts, test duration, average duration\n- Summary by module table: modules with test counts, pass/fail, total and average times\n- Top N slowest tests table showing duration, status, module name, and scenario",
+	}
+}
+
+func (c *showTestTimingsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowTestTimings()
+}
 
 func ShowTestTimings() int {
 	// Validate flags against registry metadata

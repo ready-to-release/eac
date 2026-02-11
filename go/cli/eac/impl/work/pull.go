@@ -1,42 +1,42 @@
-// Command: work pull
-// Short: Sync workspace with latest main via rebase
-// Long: Fetches the latest changes from the target branch (default: main) and rebases
-// Long: the current branch onto it, keeping your commit history linear.
-// Long:
-// Long: This command:
-// Long:   1. Fetches latest changes from origin/main
-// Long:   2. Rebases your commits on top of the fetched changes
-// Long:   3. Handles conflicts with clear instructions
-// Long:
-// Long: Use --autostash to automatically stash uncommitted changes before rebasing.
-// Long: Use --debug to enable detailed logging to out/logs/work/.
-// Long:
-// Long: Expected Output:
-// Long:   - Branch rebased onto latest target
-// Long:   - Conflict instructions if conflicts occur
-// Long:
-// Long: Example:
-// Long:   work pull
-// Long:   work pull --target=develop
-// Long:   work pull --autostash
-// Long:   work pull --debug
-// Flag.target: type=string, default=main, usage=Target branch to rebase onto
-// Flag.autostash: type=bool, default=false, usage=Automatically stash and unstash uncommitted changes
-// Flag.no-fetch: type=bool, default=false, usage=Skip fetching from remote (use local target branch)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type workPullCommand struct{}
+
+var _ core.SimpleCommandPort = (*workPullCommand)(nil)
+
+func (c *workPullCommand) Name() string { return "work pull" }
+
+func (c *workPullCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work-pull",
+		Short:         "Sync workspace with latest main via rebase",
+		Long:          "Fetches the latest changes from the target branch (default: main) and rebases\nthe current branch onto it, keeping your commit history linear.\n\nThis command:\n  1. Fetches latest changes from origin/main\n  2. Rebases your commits on top of the fetched changes\n  3. Handles conflicts with clear instructions\n\nUse --autostash to automatically stash uncommitted changes before rebasing.\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - Branch rebased onto latest target\n  - Conflict instructions if conflicts occur\n\nExample:\n  work pull\n  work pull --target=develop\n  work pull --autostash\n  work pull --debug",
+		Flags: []core.FlagSpec{
+			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch to rebase onto"},
+			{Name: "autostash", Type: "bool", DefaultValue: "false", Usage: "Automatically stash and unstash uncommitted changes"},
+			{Name: "no-fetch", Type: "bool", DefaultValue: "false", Usage: "Skip fetching from remote (use local target branch)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *workPullCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Pull()
+}
 
 // Pull syncs the current branch with target branch via rebase.
 func Pull() int {

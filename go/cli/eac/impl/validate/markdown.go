@@ -1,20 +1,32 @@
-// Command: validate markdown
-// Short: Validate markdown file syntax
-// Long: Validates markdown files for proper syntax, heading hierarchy, and code block formatting.
-// Long:
-// Long: Expected Output:
-// Long:   Displays markdown syntax validation results for all markdown files in repository.
-// Long:   Shows errors for invalid syntax, heading issues, and malformed code blocks.
-// Long:   Exit code 0 if all valid, 1 if validation errors found.
 package validate
 
 import (
+	"context"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/markdown"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateMarkdownCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateMarkdownCommand)(nil)
+
+func (c *validateMarkdownCommand) Name() string { return "validate markdown" }
+
+func (c *validateMarkdownCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-markdown",
+		Short:         "Validate markdown file syntax",
+		Long:          "Validates markdown files for proper syntax, heading hierarchy, and code block formatting.\n\nExpected Output:\n  Displays markdown syntax validation results for all markdown files in repository.\n  Shows errors for invalid syntax, heading issues, and malformed code blocks.\n  Exit code 0 if all valid, 1 if validation errors found.",
+	}
+}
+
+func (c *validateMarkdownCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateMarkdown()
+}
 
 // ValidateMarkdown validates all markdown files in the repository.
 func ValidateMarkdown() int {

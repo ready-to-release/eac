@@ -1,42 +1,59 @@
-// Command: get evidence-ci-runs
-// Short: Get CI run IDs for a module and its dependencies (for evidence building)
-// Args: module (required) - Module moniker to get evidence CI runs for
-// Flag.format: type=string, usage=Output format (json outputs JSON array for shell parsing; otherwise uses standard get command formats)
-// Long:
-// Long: Returns a list of {module, workflow, run_id} for downloading test/scan artifacts.
-// Long: Uses per-module change detection to find the appropriate CI run for each dependency.
-// Long: Fails if any dependency with a ci-{module}.yaml workflow has no successful CI.
-// Long:
-// Long: Expected Output:
-// Long: YAML/JSON list of CI runs containing:
-// Long:   - module: the dependency module moniker
-// Long:   - workflow: the ci-{module}.yaml workflow name
-// Long:   - run_id: the GitHub Actions run ID to download artifacts from
-// Long:
-// Long: Example usage in CI:
-// Long:   CI_RUNS=$(commands get evidence-ci-runs clie --format json)
-// Long:   echo "$CI_RUNS" | jq -c '.[]' | while read entry; do
-// Long:     module=$(echo "$entry" | jq -r '.module')
-// Long:     run_id=$(echo "$entry" | jq -r '.run_id')
-// Long:     gh run download "$run_id" --pattern "test-results-${module}*"
-// Long:   done
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
-
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
+
+type getEvidenceCIRunsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getEvidenceCIRunsCommand)(nil)
+
+func (c *getEvidenceCIRunsCommand) Name() string { return "get evidence-ci-runs" }
+
+func (c *getEvidenceCIRunsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-evidence-ci-runs",
+		Short:         "Get CI run IDs for a module and its dependencies (for evidence building)",
+		Long: "Returns a list of {module, workflow, run_id} for downloading test/scan artifacts.\n" +
+			"Uses per-module change detection to find the appropriate CI run for each dependency.\n" +
+			"Fails if any dependency with a ci-{module}.yaml workflow has no successful CI.\n" +
+			"\n" +
+			"Expected Output:\n" +
+			"YAML/JSON list of CI runs containing:\n" +
+			"  - module: the dependency module moniker\n" +
+			"  - workflow: the ci-{module}.yaml workflow name\n" +
+			"  - run_id: the GitHub Actions run ID to download artifacts from\n" +
+			"\n" +
+			"Example usage in CI:\n" +
+			"  CI_RUNS=$(commands get evidence-ci-runs clie --format json)\n" +
+			"  echo \"$CI_RUNS\" | jq -c '.[]' | while read entry; do\n" +
+			"    module=$(echo \"$entry\" | jq -r '.module')\n" +
+			"    run_id=$(echo \"$entry\" | jq -r '.run_id')\n" +
+			"    gh run download \"$run_id\" --pattern \"test-results-${module}*\"\n" +
+			"  done",
+		Args: "module (required) - Module moniker to get evidence CI runs for",
+		Flags: []core.FlagSpec{
+			{Name: "format", Type: "string", Usage: "Output format (json outputs JSON array for shell parsing; otherwise uses standard get command formats)"},
+		},
+	}
+}
+
+func (c *getEvidenceCIRunsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetEvidenceCIRuns()
+}
 
 // EvidenceCIRun represents a CI run to download artifacts from.
 type EvidenceCIRun struct {

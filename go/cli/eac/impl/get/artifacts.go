@@ -1,29 +1,36 @@
-// Command: get artifacts
-// Short: Get resolved artifacts for a module
-// Long: The get artifacts command returns all build artifacts for a module with metadata overrides applied.
-// Long: Output includes resolved names, paths, existence status, and which overrides were used.
-// Long: By default, shows artifacts for the current platform. Use --all-platforms to see all platforms.
-// Long:
-// Long: Expected Output:
-// Long: YAML list of build artifacts with metadata, including:
-// Long:   - Resolved artifact names and paths
-// Long:   - Artifact existence status (exists/missing)
-// Long:   - Metadata override information showing which overrides were applied
-// Long:   - Build modes (default and all)
-// Long:   - Summary statistics (total, exists, missing, overrides)
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getinternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getArtifactsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getArtifactsCommand)(nil)
+
+func (c *getArtifactsCommand) Name() string { return "get artifacts" }
+
+func (c *getArtifactsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-artifacts",
+		Short:         "Get resolved artifacts for a module",
+		Long:          "The get artifacts command returns all build artifacts for a module with metadata overrides applied.\nOutput includes resolved names, paths, existence status, and which overrides were used.\nBy default, shows artifacts for the current platform. Use --all-platforms to see all platforms.\n\nExpected Output:\nYAML list of build artifacts with metadata, including:\n  - Resolved artifact names and paths\n  - Artifact existence status (exists/missing)\n  - Metadata override information showing which overrides were applied\n  - Build modes (default and all)\n  - Summary statistics (total, exists, missing, overrides)",
+	}
+}
+
+func (c *getArtifactsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetArtifacts()
+}
 
 // artifactsFlags defines valid flags for the get artifacts command
 

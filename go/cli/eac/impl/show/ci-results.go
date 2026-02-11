@@ -1,34 +1,38 @@
-// Command: show ci-results
-// Short: Show CI workflow run results with job details and download links
-// Long: Shows a pretty-formatted summary of CI workflow run results with
-// Long: per-module job status tables, artifact listings, and copy-pasteable
-// Long: diagnostic commands for investigating failures.
-// Long:
-// Long: Input Detection:
-// Long:   - 40-char hex or 7+ hex prefix: treated as commit SHA
-// Long:   - Numeric value: treated as a specific run ID
-// Long:   - Omitted: auto-detects SHA (GITHUB_SHA → origin/main → git HEAD)
-// Long:
-// Long: Example:
-// Long:   show ci-results                           # Current HEAD
-// Long:   show ci-results abc1234                    # Specific commit
-// Long:   show ci-results abc1234 core clibase       # Specific modules
-// Long:   show ci-results 12345678                    # Specific run ID
-// Args: [sha-or-run-id] [module...]
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showCIResultsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showCIResultsCommand)(nil)
+
+func (c *showCIResultsCommand) Name() string { return "show ci-results" }
+
+func (c *showCIResultsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-ci-results",
+		Short:         "Show CI workflow run results with job details and download links",
+		Long:          "Shows a pretty-formatted summary of CI workflow run results with\nper-module job status tables, artifact listings, and copy-pasteable\ndiagnostic commands for investigating failures.\n\nInput Detection:\n  - 40-char hex or 7+ hex prefix: treated as commit SHA\n  - Numeric value: treated as a specific run ID\n  - Omitted: auto-detects SHA (GITHUB_SHA -> origin/main -> git HEAD)\n\nExample:\n  show ci-results                           # Current HEAD\n  show ci-results abc1234                    # Specific commit\n  show ci-results abc1234 core clibase       # Specific modules\n  show ci-results 12345678                    # Specific run ID",
+		Args:          "[sha-or-run-id] [module...]",
+	}
+}
+
+func (c *showCIResultsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowCIResults()
+}
 
 func ShowCIResults() int {
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

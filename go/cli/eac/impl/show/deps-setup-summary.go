@@ -1,30 +1,42 @@
-// Command: show deps-setup-summary
-// Short: Generate dependencies setup summary
-// Flag.module: type=string, usage=Module name (required)
-// Flag.deps: type=string, usage=Comma-separated list of dependencies (go,node,docker,buildx,upx)
-// Flag.go-available: type=bool, usage=Whether Go was already available
-// Flag.node-available: type=bool, usage=Whether Node was already available
-// Flag.buildx-available: type=bool, usage=Whether Docker Buildx was already available
-// Flag.qemu-available: type=bool, usage=Whether QEMU was already available
-// Flag.upx-available: type=bool, usage=Whether UPX was already available
-// Long: The show deps-setup-summary command generates a formatted summary of dependency setup results.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent setup summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted setup summary with dependencies table
-// Long: - Shows which dependencies were installed or already available
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showDepsSetupSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showDepsSetupSummaryCommand)(nil)
+
+func (c *showDepsSetupSummaryCommand) Name() string { return "show deps-setup-summary" }
+
+func (c *showDepsSetupSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-deps-setup-summary",
+		Short:         "Generate dependencies setup summary",
+		Long:          "The show deps-setup-summary command generates a formatted summary of dependency setup results.\nThis command is designed to be used in GitHub Actions workflows to create consistent setup summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted setup summary with dependencies table\n- Shows which dependencies were installed or already available",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module name (required)"},
+			{Name: "deps", Type: "string", Usage: "Comma-separated list of dependencies (go,node,docker,buildx,upx)"},
+			{Name: "go-available", Type: "bool", Usage: "Whether Go was already available"},
+			{Name: "node-available", Type: "bool", Usage: "Whether Node was already available"},
+			{Name: "buildx-available", Type: "bool", Usage: "Whether Docker Buildx was already available"},
+			{Name: "qemu-available", Type: "bool", Usage: "Whether QEMU was already available"},
+			{Name: "upx-available", Type: "bool", Usage: "Whether UPX was already available"},
+		},
+	}
+}
+
+func (c *showDepsSetupSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowDepsSetupSummary()
+}
 
 // ShowDepsSetupSummary generates a dependencies setup summary.
 func ShowDepsSetupSummary() int {

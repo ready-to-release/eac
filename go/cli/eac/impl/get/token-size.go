@@ -1,33 +1,41 @@
-// Command: get token-size
-// Short: Estimate token counts for source files
-// Long: Estimate token counts for source files using low-cost heuristics.
-// Long:
-// Long: This command helps identify files that may exceed Claude's token limits
-// Long: (typically 25,000 tokens). It uses a characters/4 heuristic which provides
-// Long: a reasonable approximation for code files.
-// Long:
-// Long: Supports glob patterns for processing multiple files at once.
-// Long:
-// Long: Examples:
-// Long:   eac get token-size main.go
-// Long:   eac get token-size "go/**/*.go" --threshold 20000
-// Long:   eac get token-size main.go --as-json
-// Flag.threshold: type=int, usage=Only show files exceeding this token limit
-// Flag.as-json: type=bool, usage=Output as JSON
-// Args: files
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tokensize"
 )
+
+type getTokenSizeCommand struct{}
+
+var _ core.SimpleCommandPort = (*getTokenSizeCommand)(nil)
+
+func (c *getTokenSizeCommand) Name() string { return "get token-size" }
+
+func (c *getTokenSizeCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-token-size",
+		Short:         "Estimate token counts for source files",
+		Long:          "Estimate token counts for source files using low-cost heuristics.\n\nThis command helps identify files that may exceed Claude's token limits\n(typically 25,000 tokens). It uses a characters/4 heuristic which provides\na reasonable approximation for code files.\n\nSupports glob patterns for processing multiple files at once.\n\nExamples:\n  eac get token-size main.go\n  eac get token-size \"go/**/*.go\" --threshold 20000\n  eac get token-size main.go --as-json",
+		Args:          "files",
+		Flags: []core.FlagSpec{
+			{Name: "threshold", Type: "int", DefaultValue: "", Usage: "Only show files exceeding this token limit"},
+			{Name: "as-json", Type: "bool", DefaultValue: "", Usage: "Output as JSON"},
+		},
+	}
+}
+
+func (c *getTokenSizeCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetTokenSize()
+}
 
 type tokenSizeOptions struct {
 	Threshold    int
@@ -56,7 +64,7 @@ func GetTokenSize() int {
 	}
 
 	// Get workspace root for glob expansion
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		workspaceRoot, err = os.Getwd()
 		if err != nil {

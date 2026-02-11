@@ -1,46 +1,3 @@
-// Command: build
-// Short: Build one or more modules by moniker
-// Long: Build one or more modules by moniker.
-// Long:
-// Long: This command builds modules respecting their dependency order.
-// Long: If no monikers are specified, all modules in the repository are built.
-// Long:
-// Long: Expected Output:
-// Long:   - Build logs written to 'out/build/<module>/build.log' (one per module)
-// Long:   - Build manifest at 'out/build/<module>/<component>/uow.manifest.json' (with timing data)
-// Long:   - Failed builds are clearly marked with error details
-// Long:   - Failed builds do not stop execution of remaining modules
-// Long:   - Exit code 0 indicates all builds succeeded
-// Long:   - Non-zero exit code indicates one or more builds failed
-// Long:
-// Long: Example:
-// Long:   build                           # Build all modules
-// Long:   build eac-cli              # Build a single module
-// Long:   build core clie          # Build specific modules
-// Long:   build --tidy-first eac-cli # Build with go mod tidy first
-// Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
-// Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
-// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full rebuild
-// Flag.skip-depm: type=bool, usage=Only build specified modules, no dependency resolution (CI isolation)
-// Flag.no-deps: type=bool, usage=Alias for --skip-depm
-// Flag.use-existing-depm: type=bool, usage=Skip building module dependencies if artifacts exist (for CI incremental builds)
-// Flag.skip-deps: type=bool, usage=Skip system dependency verification (go, docker, etc.)
-// Flag.timings: type=bool, usage=Show detailed timing summary
-// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
-// Flag.tui: type=bool, usage=Enable TUI console (default for local, errors in CI/container)
-// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
-// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
-// Flag.ascii: type=bool, usage=Use ASCII-only characters in TUI (for terminals with poor Unicode support)
-// Flag.skip-tui-delay: type=bool, usage=Skip TUI exit delay (exit immediately when done)
-// Flag.version: type=string, usage=Inject version string into binary (Go modules with executable artifacts)
-// Flag.accept-warnings: type=bool, usage=Don't fail on MkDocs warnings (non-strict mode)
-// Flag.reproducible: type=string, usage=MkDocs reproducibility mode (auto/true/false, default: auto)
-// Flag.all: type=bool, usage=Include non-default books (those with default: false)
-// Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
-// Flag.dry-run: type=bool, usage=Simulate build without running actual commands
-// Flag.turbo: type=bool, usage=Enable turbo mode for faster builds (increases parallelism)
-// Flag.component: type=string, usage=Only build specific component(s) within each module (repeatable)
-// Args: modules
 package build
 
 import (
@@ -63,7 +20,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/output"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
@@ -83,8 +39,54 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format+"\n", args...)
 }
 
-func init() {
-	registry.Register(Build)
+type buildCommand struct{}
+
+var _ core.SimpleCommandPort = (*buildCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&buildCommand{},
+	}
+}
+
+func (c *buildCommand) Name() string { return "build" }
+
+func (c *buildCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "build",
+		Short:         "Build one or more modules by moniker",
+		Long:          "Build one or more modules by moniker.\n\nThis command builds modules respecting their dependency order.\nIf no monikers are specified, all modules in the repository are built.\n\nExpected Output:\n  - Build logs written to 'out/build/<module>/build.log' (one per module)\n  - Build manifest at 'out/build/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed builds are clearly marked with error details\n  - Failed builds do not stop execution of remaining modules\n  - Exit code 0 indicates all builds succeeded\n  - Non-zero exit code indicates one or more builds failed\n\nExample:\n  build                           # Build all modules\n  build eac-cli              # Build a single module\n  build core clie          # Build specific modules\n  build --tidy-first eac-cli # Build with go mod tidy first",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "tidy-first", Type: "bool", Usage: "Run 'go mod tidy' before building (default for local)"},
+			{Name: "no-tidy", Type: "bool", Usage: "Skip 'go mod tidy' (default for CI)"},
+			{Name: "skip-cache", Type: "bool", Usage: "Skip incremental cache, force full rebuild"},
+			{Name: "skip-depm", Type: "bool", Usage: "Only build specified modules, no dependency resolution (CI isolation)"},
+			{Name: "no-deps", Type: "bool", Usage: "Alias for --skip-depm"},
+			{Name: "use-existing-depm", Type: "bool", Usage: "Skip building module dependencies if artifacts exist (for CI incremental builds)"},
+			{Name: "skip-deps", Type: "bool", Usage: "Skip system dependency verification (go, docker, etc.)"},
+			{Name: "timings", Type: "bool", Usage: "Show detailed timing summary"},
+			{Name: "debug", Type: "bool", Usage: "Enable debug logs to console (file logging always enabled)"},
+			{Name: "tui", Type: "bool", Usage: "Enable TUI console (default for local, errors in CI/container)"},
+			{Name: "no-tui", Type: "bool", Usage: "Disable TUI console (use plain output)"},
+			{Name: "tui-height", Type: "int", Usage: "Set TUI console height (3-20, default: 6)"},
+			{Name: "ascii", Type: "bool", Usage: "Use ASCII-only characters in TUI (for terminals with poor Unicode support)"},
+			{Name: "skip-tui-delay", Type: "bool", Usage: "Skip TUI exit delay (exit immediately when done)"},
+			{Name: "version", Type: "string", Usage: "Inject version string into binary (Go modules with executable artifacts)"},
+			{Name: "accept-warnings", Type: "bool", Usage: "Don't fail on MkDocs warnings (non-strict mode)"},
+			{Name: "reproducible", Type: "string", Usage: "MkDocs reproducibility mode (auto/true/false, default: auto)"},
+			{Name: "all", Type: "bool", Usage: "Include non-default books (those with default: false)"},
+			{Name: "list-artifacts", Type: "bool", Usage: "List artifacts that would be produced (no build)"},
+			{Name: "dry-run", Type: "bool", Usage: "Simulate build without running actual commands"},
+			{Name: "turbo", Type: "bool", Usage: "Enable turbo mode for faster builds (increases parallelism)"},
+			{Name: "component", Type: "string", Usage: "Only build specific component(s) within each module (repeatable)"},
+		},
+	}
+}
+
+func (c *buildCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Build()
 }
 
 // BuildResult captures the outcome of a module build.

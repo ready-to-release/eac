@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -23,7 +25,7 @@ func IsRunningInContainer() bool {
 		if len(data) > 0 {
 			content := string(data)
 			// Look for Docker or containerd indicators in cgroup
-			if contains(content, "docker") || contains(content, "containerd") {
+			if strings.Contains(content, "docker") || strings.Contains(content, "containerd") {
 				return true
 			}
 		}
@@ -77,7 +79,7 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 		// Check if this container was started by clie (look for specific labels or naming patterns)
 		// Containers started by Show-Documentation use pattern "mkdocs-show-*"
 		for _, name := range cont.Names {
-			if contains(name, "mkdocs-show-") || contains(name, "clie-") {
+			if strings.Contains(name, "mkdocs-show-") || strings.Contains(name, "clie-") {
 				containersToStop = append(containersToStop, cont.ID)
 				logging.Debugf("Found child container to clean up: container_id=%s container_name=%s", cont.ID[:12], name)
 				break
@@ -86,7 +88,7 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 
 		// Also check labels for clie managed containers
 		if _, ok := cont.Labels["clie"]; ok {
-			if !containsString(containersToStop, cont.ID) {
+			if !slices.Contains(containersToStop, cont.ID) {
 				containersToStop = append(containersToStop, cont.ID)
 				logging.Debugf("Found labeled container to clean up: container_id=%s", cont.ID[:12])
 			}
@@ -163,41 +165,18 @@ func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	return nil
 }
 
-// Helper function to check if a string contains a substring.
-func contains(s, substr string) bool {
-	return s != "" && substr != "" && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 // extractContainerID attempts to extract container ID from cgroup content.
 func extractContainerID(cgroupContent string) string {
 	// Look for patterns like: /docker/<container-id> or /containerd/<container-id>
-	lines := splitLines(cgroupContent)
+	lines := strings.Split(cgroupContent, "\n")
 	for _, line := range lines {
-		if idx := lastIndex(line, "/docker/"); idx >= 0 {
+		if idx := strings.LastIndex(line, "/docker/"); idx >= 0 {
 			id := line[idx+8:] // Skip "/docker/"
 			if len(id) >= 12 {
 				return id[:12] // Return first 12 chars of container ID
 			}
 		}
-		if idx := lastIndex(line, "/containerd/"); idx >= 0 {
+		if idx := strings.LastIndex(line, "/containerd/"); idx >= 0 {
 			id := line[idx+12:] // Skip "/containerd/"
 			if len(id) >= 12 {
 				return id[:12]
@@ -205,31 +184,4 @@ func extractContainerID(cgroupContent string) string {
 		}
 	}
 	return ""
-}
-
-func splitLines(s string) []string {
-	var lines []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			lines = append(lines, s[start:i])
-			start = i + 1
-		}
-	}
-	if start < len(s) {
-		lines = append(lines, s[start:])
-	}
-	return lines
-}
-
-func lastIndex(s, substr string) int {
-	if substr == "" || len(substr) > len(s) {
-		return -1
-	}
-	for i := len(s) - len(substr); i >= 0; i-- {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

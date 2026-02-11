@@ -1,40 +1,51 @@
-// Command: update docs
-// Short: Sync documentation assets and command references
-// Long: Updates documentation by:
-// Long:   - Rendering mermaid diagrams to cache
-// Long:   - Optimizing drawio images to cache
-// Long:   - Syncing command reference docs (creates missing, removes orphans)
-// Long:
-// Long: Use --area to run specific areas (for testing).
-// Long: Use --dry-run to preview changes without applying them.
-// Long:
-// Long: Cache Pruning:
-// Long:   Use --prune-cache to remove orphaned mermaid/drawio cache files.
-// Flag.area: type=string, default="", usage=Area to update (mermaid, drawio, command-refs, all). Repeatable.
-// Flag.dry-run: type=bool, default=false, usage=Preview changes without applying them
-// Flag.force: type=bool, default=false, usage=Force re-render/re-optimize all assets even if cached
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress
-// Flag.prune-cache: type=bool, default=false, usage=Remove orphaned cache files (mermaid/drawio)
 package docs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateDocsCommand struct{}
 
-func init() {
-	registry.Register(UpdateDocs)
+var _ core.SimpleCommandPort = (*updateDocsCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateDocsCommand{},
+	}
 }
 
+func (c *updateDocsCommand) Name() string { return "update docs" }
+
+func (c *updateDocsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-docs",
+		Short:         "Sync documentation assets and command references",
+		Long:          "Updates documentation by:\n  - Rendering mermaid diagrams to cache\n  - Optimizing drawio images to cache\n  - Syncing command reference docs (creates missing, removes orphans)\n\nUse --area to run specific areas (for testing).\nUse --dry-run to preview changes without applying them.\n\nCache Pruning:\n  Use --prune-cache to remove orphaned mermaid/drawio cache files.",
+		Flags: []core.FlagSpec{
+			{Name: "area", Type: "string", Usage: "Area to update (mermaid, drawio, command-refs, all). Repeatable."},
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Preview changes without applying them"},
+			{Name: "force", Type: "bool", DefaultValue: "false", Usage: "Force re-render/re-optimize all assets even if cached"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress"},
+			{Name: "prune-cache", Type: "bool", DefaultValue: "false", Usage: "Remove orphaned cache files (mermaid/drawio)"},
+		},
+	}
+}
+
+func (c *updateDocsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateDocs()
+}
+
+var log = logging.C()
 // UpdateDocs syncs documentation assets and command references.
 func UpdateDocs() int {
 	args := os.Args[2:]

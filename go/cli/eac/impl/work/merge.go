@@ -1,31 +1,7 @@
-// Command: work merge
-// Short: Merge workspace changes back to main (squash by default)
-// Long: Merges the current workspace branch back into the target branch (default: main)
-// Long: using squash merge to create a single, well-documented commit.
-// Long:
-// Long: By default, this command:
-// Long:   1. Validates workspace is clean and up to date
-// Long:   2. Switches to target branch and updates it
-// Long:   3. Squash merges all workspace commits into a single commit
-// Long:   4. Uses commit to generate a comprehensive commit message
-// Long:   5. Removes the workspace after successful merge
-// Long:
-// Long: Expected Output:
-// Long:   - Squash merge commit on target branch
-// Long:   - Workspace removed (unless --keep-worktree)
-// Long:
-// Long: Example:
-// Long:   work merge
-// Long:   work merge --target=develop
-// Long:   work merge --no-squash
-// Long:   work merge --keep-worktree
-// Flag.target: type=string, default=main, usage=Target branch to merge into
-// Flag.no-squash: type=bool, default=false, usage=Use regular merge instead of squash merge
-// Flag.keep-worktree: type=bool, default=false, usage=Keep workspace after merge (don't remove)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -33,12 +9,37 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type workMergeCommand struct{}
+
+var _ core.SimpleCommandPort = (*workMergeCommand)(nil)
+
+func (c *workMergeCommand) Name() string { return "work merge" }
+
+func (c *workMergeCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work-merge",
+		Short:         "Merge workspace changes back to main (squash by default)",
+		Long:          "Merges the current workspace branch back into the target branch (default: main)\nusing squash merge to create a single, well-documented commit.\n\nBy default, this command:\n  1. Validates workspace is clean and up to date\n  2. Switches to target branch and updates it\n  3. Squash merges all workspace commits into a single commit\n  4. Uses commit to generate a comprehensive commit message\n  5. Removes the workspace after successful merge\n\nExpected Output:\n  - Squash merge commit on target branch\n  - Workspace removed (unless --keep-worktree)\n\nExample:\n  work merge\n  work merge --target=develop\n  work merge --no-squash\n  work merge --keep-worktree",
+		Flags: []core.FlagSpec{
+			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch to merge into"},
+			{Name: "no-squash", Type: "bool", DefaultValue: "false", Usage: "Use regular merge instead of squash merge"},
+			{Name: "keep-worktree", Type: "bool", DefaultValue: "false", Usage: "Keep workspace after merge (don't remove)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug mode (pass through to commit)"},
+		},
+	}
+}
+
+func (c *workMergeCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Merge()
+}
 
 // Merge merges the current workspace into the target branch.
 func Merge() int {

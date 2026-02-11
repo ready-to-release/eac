@@ -5,34 +5,56 @@ import (
 	"strings"
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
+// mockCommand implements core.CommandPort for testing.
+type mockCommand struct {
+	name     string
+	metadata core.CommandMetadata
+}
+
+func (m *mockCommand) Name() string              { return m.name }
+func (m *mockCommand) Metadata() core.CommandMetadata { return m.metadata }
+
+// mockRegistry creates a registry with the given commands for testing.
+func mockRegistry(cmds ...core.CommandPort) core.CommandRegistryPort {
+	reg := registry.NewCommandRegistry()
+	for _, cmd := range cmds {
+		reg.MustRegister(cmd)
+	}
+	return reg
+}
+
 // TestPrintParentHelp tests help output for a parent command.
 func TestPrintParentHelp(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "get",
-		Short:         "Retrieve repository data in structured format",
-		IsParent:      true,
-		Subcommands: []registry.SubcommandGroup{
-			{Name: "Configuration", Subcommands: []string{"config"}},
-			{Name: "Repository Structure", Subcommands: []string{"modules", "dependencies"}},
-		},
-		Examples: []string{
-			"clie get modules",
-			"clie get dependencies --format=yaml",
+	cmd := &mockCommand{
+		name: "get",
+		metadata: core.CommandMetadata{
+			CanonicalName: "get",
+			Short:         "Retrieve repository data in structured format",
+			IsParent:      true,
+			SubcommandGroups: []core.SubcommandGroup{
+				{Name: "Configuration", Subcommands: []string{"config"}},
+				{Name: "Repository Structure", Subcommands: []string{"modules", "dependencies"}},
+			},
+			Examples: []string{
+				"clie get modules",
+				"clie get dependencies --format=yaml",
+			},
 		},
 	}
 
 	// Create mock subcommand registrations
-	subRegs := map[string]*registry.CommandRegistration{
-		"get config":       {Short: "Get all EAC configuration"},
-		"get modules":      {Short: "Get all module contracts"},
-		"get dependencies": {Short: "Get module dependency graph"},
-	}
+	subCmds := mockRegistry(
+		&mockCommand{name: "get config", metadata: core.CommandMetadata{Short: "Get all EAC configuration"}},
+		&mockCommand{name: "get modules", metadata: core.CommandMetadata{Short: "Get all module contracts"}},
+		&mockCommand{name: "get dependencies", metadata: core.CommandMetadata{Short: "Get module dependency graph"}},
+	)
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, subRegs)
+	PrintHelp(&buf, cmd, subCmds)
 
 	output := buf.String()
 
@@ -81,19 +103,22 @@ func TestPrintParentHelp(t *testing.T) {
 
 // TestPrintLeafHelp tests help output for a leaf command (non-parent).
 func TestPrintLeafHelp(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "get modules",
-		Short:         "Get all module contracts",
-		Long:          "Retrieves all module contracts from the repository in structured format.",
-		IsParent:      false,
-		Flags: []registry.FlagMetadata{
-			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "json", Usage: "Output format (json|yaml|table)"},
-			{Name: "debug", Shorthand: "d", Type: "bool", Usage: "Enable debug output"},
+	cmd := &mockCommand{
+		name: "get modules",
+		metadata: core.CommandMetadata{
+			CanonicalName: "get-modules",
+			Short:         "Get all module contracts",
+			Long:          "Retrieves all module contracts from the repository in structured format.",
+			IsParent:      false,
+			Flags: []core.FlagSpec{
+				{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "json", Usage: "Output format (json|yaml|table)"},
+				{Name: "debug", Shorthand: "d", Type: "bool", Usage: "Enable debug output"},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil)
+	PrintHelp(&buf, cmd, nil)
 
 	output := buf.String()
 
@@ -124,17 +149,20 @@ func TestPrintLeafHelp(t *testing.T) {
 
 // TestPrintHelpNoSubcommandDescriptions tests fallback when subcommand descriptions unavailable.
 func TestPrintHelpNoSubcommandDescriptions(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "work",
-		Short:         "Manage work branches",
-		IsParent:      true,
-		Subcommands: []registry.SubcommandGroup{
-			{Name: "Branch", Subcommands: []string{"create", "remove"}},
+	cmd := &mockCommand{
+		name: "work",
+		metadata: core.CommandMetadata{
+			CanonicalName: "work",
+			Short:         "Manage work branches",
+			IsParent:      true,
+			SubcommandGroups: []core.SubcommandGroup{
+				{Name: "Branch", Subcommands: []string{"create", "remove"}},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil) // No subcommand registrations
+	PrintHelp(&buf, cmd, nil) // No subcommand registrations
 
 	output := buf.String()
 
@@ -149,17 +177,20 @@ func TestPrintHelpNoSubcommandDescriptions(t *testing.T) {
 
 // TestPrintHelpWithRequiredFlags tests that required flags are marked.
 func TestPrintHelpWithRequiredFlags(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "build",
-		Short:         "Build modules",
-		IsParent:      false,
-		Flags: []registry.FlagMetadata{
-			{Name: "module", Shorthand: "m", Type: "string", Required: true, Usage: "Module to build"},
+	cmd := &mockCommand{
+		name: "build",
+		metadata: core.CommandMetadata{
+			CanonicalName: "build",
+			Short:         "Build modules",
+			IsParent:      false,
+			Flags: []core.FlagSpec{
+				{Name: "module", Shorthand: "m", Type: "string", Required: true, Usage: "Module to build"},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil)
+	PrintHelp(&buf, cmd, nil)
 
 	output := buf.String()
 
@@ -170,15 +201,18 @@ func TestPrintHelpWithRequiredFlags(t *testing.T) {
 
 // TestPrintHelpEmptyExamples tests that examples section is omitted when empty.
 func TestPrintHelpEmptyExamples(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "simple",
-		Short:         "A simple command",
-		IsParent:      false,
-		Examples:      nil,
+	cmd := &mockCommand{
+		name: "simple",
+		metadata: core.CommandMetadata{
+			CanonicalName: "simple",
+			Short:         "A simple command",
+			IsParent:      false,
+			Examples:      nil,
+		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil)
+	PrintHelp(&buf, cmd, nil)
 
 	output := buf.String()
 
@@ -189,20 +223,23 @@ func TestPrintHelpEmptyExamples(t *testing.T) {
 
 // TestPrintHelpWithDeclarativeFlags tests that behavior flags are grouped separately.
 func TestPrintHelpWithDeclarativeFlags(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "build",
-		Short:         "Build modules",
-		IsParent:      false,
-		Flags: []registry.FlagMetadata{
-			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "json", Usage: "Output format"},
-			{Name: "with-cache", Type: "bool", DefaultValue: "true", Usage: "Enable incremental caching", Behavior: "cache", IsEnableFlag: true, PairFlagName: "no-cache"},
-			{Name: "no-cache", Type: "bool", DefaultValue: "false", Usage: "Disable incremental caching", Behavior: "cache", IsEnableFlag: false, PairFlagName: "with-cache"},
-			{Name: "debug", Shorthand: "d", Type: "bool", Usage: "Enable debug output"},
+	cmd := &mockCommand{
+		name: "build",
+		metadata: core.CommandMetadata{
+			CanonicalName: "build",
+			Short:         "Build modules",
+			IsParent:      false,
+			Flags: []core.FlagSpec{
+				{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "json", Usage: "Output format"},
+				{Name: "with-cache", Type: "bool", DefaultValue: "true", Usage: "Enable incremental caching"},
+				{Name: "no-cache", Type: "bool", DefaultValue: "false", Usage: "Disable incremental caching"},
+				{Name: "debug", Shorthand: "d", Type: "bool", Usage: "Enable debug output"},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil)
+	PrintHelp(&buf, cmd, nil)
 
 	output := buf.String()
 
@@ -239,18 +276,21 @@ func TestPrintHelpWithDeclarativeFlags(t *testing.T) {
 
 // TestPrintHelpOnlyBehaviorFlags tests help output with only behavior flags (no regular flags).
 func TestPrintHelpOnlyBehaviorFlags(t *testing.T) {
-	reg := &registry.CommandRegistration{
-		ActualCommand: "test",
-		Short:         "Run tests",
-		IsParent:      false,
-		Flags: []registry.FlagMetadata{
-			{Name: "with-parallel", Type: "bool", DefaultValue: "true", Usage: "Parallel execution", Behavior: "parallel", IsEnableFlag: true, PairFlagName: "no-parallel"},
-			{Name: "no-parallel", Type: "bool", DefaultValue: "false", Behavior: "parallel", IsEnableFlag: false, PairFlagName: "with-parallel"},
+	cmd := &mockCommand{
+		name: "test",
+		metadata: core.CommandMetadata{
+			CanonicalName: "test",
+			Short:         "Run tests",
+			IsParent:      false,
+			Flags: []core.FlagSpec{
+				{Name: "with-parallel", Type: "bool", DefaultValue: "true", Usage: "Parallel execution"},
+				{Name: "no-parallel", Type: "bool", DefaultValue: "false"},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
-	PrintHelp(&buf, reg, nil)
+	PrintHelp(&buf, cmd, nil)
 
 	output := buf.String()
 

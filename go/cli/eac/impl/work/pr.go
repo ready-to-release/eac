@@ -1,29 +1,3 @@
-// Command: create pr
-// Short: Create pull request with AI-generated description
-// Long: Creates a pull request for the current workspace branch with an AI-generated
-// Long: title and description based on all commits in the branch.
-// Long:
-// Long: This command:
-// Long:   1. Validates the workspace is ready for PR
-// Long:   2. Pushes the branch to origin if needed
-// Long:   3. Analyzes all commits to generate PR title and description
-// Long:   4. Creates the pull request using GitHub CLI
-// Long:
-// Long: Requires GitHub CLI (gh) to be installed and authenticated.
-// Long:
-// Long: Expected Output:
-// Long: - PR created on GitHub
-// Long: - PR URL printed to stdout
-// Long: - AI-generated title and description based on commits
-// Long:
-// Long: Example:
-// Long:   create pr
-// Long:   create pr --target=develop
-// Long:   create pr --title "Add authentication feature"
-// Long:   create pr --debug
-// Flag.target: type=string, default=main, usage=Target branch for the pull request
-// Flag.title: type=string, usage=Custom PR title (description still AI-generated)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode for AI generation
 package work
 
 import (
@@ -35,12 +9,36 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type createPrCommand struct{}
+
+var _ core.SimpleCommandPort = (*createPrCommand)(nil)
+
+func (c *createPrCommand) Name() string { return "create pr" }
+
+func (c *createPrCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-pr",
+		Short:         "Create pull request with AI-generated description",
+		Long:          "Creates a pull request for the current workspace branch with an AI-generated\ntitle and description based on all commits in the branch.\n\nThis command:\n  1. Validates the workspace is ready for PR\n  2. Pushes the branch to origin if needed\n  3. Analyzes all commits to generate PR title and description\n  4. Creates the pull request using GitHub CLI\n\nRequires GitHub CLI (gh) to be installed and authenticated.\n\nExpected Output:\n- PR created on GitHub\n- PR URL printed to stdout\n- AI-generated title and description based on commits\n\nExample:\n  create pr\n  create pr --target=develop\n  create pr --title \"Add authentication feature\"\n  create pr --debug",
+		Flags: []core.FlagSpec{
+			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch for the pull request"},
+			{Name: "title", Type: "string", Usage: "Custom PR title (description still AI-generated)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug mode for AI generation"},
+		},
+	}
+}
+
+func (c *createPrCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreatePR()
+}
 
 // CreatePR creates a pull request for the current workspace.
 func CreatePR() int {

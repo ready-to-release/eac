@@ -1,36 +1,38 @@
-// Command: test debug
-// Short: Parse test results and list all failures
-// Long: Parse test results (Go test JSON and Cucumber JSON) in out/test directory
-// Long: and list all failed tests with their locations.
-// Long:
-// Long: This command scans for test-results.json (Go test JSON) and .cucumber.json
-// Long: files, parses test results, and extracts failure information.
-// Long:
-// Long: Results are presented in a clear table format showing test failures.
-// Long:
-// Long: Expected Output:
-// Long:   - Table of failed tests with test name, package, and error details
-// Long:   - File locations (for Cucumber tests) with line numbers
-// Long:   - Parses out/test/**/*.json files (both Go test JSON and Cucumber JSON)
-// Long:   - If no failures found, displays success message
-// Long:
-// Long: Example:
-// Long:   test debug
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type testDebugCommand struct{}
+
+var _ core.SimpleCommandPort = (*testDebugCommand)(nil)
+
+func (c *testDebugCommand) Name() string { return "test debug" }
+
+func (c *testDebugCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "test-debug",
+		Short:         "Parse test results and list all failures",
+		Long:          "Parse test results (Go test JSON and Cucumber JSON) in out/test directory\nand list all failed tests with their locations.\n\nThis command scans for test-results.json (Go test JSON) and .cucumber.json\nfiles, parses test results, and extracts failure information.\n\nResults are presented in a clear table format showing test failures.\n\nExpected Output:\n  - Table of failed tests with test name, package, and error details\n  - File locations (for Cucumber tests) with line numbers\n  - Parses out/test/**/*.json files (both Go test JSON and Cucumber JSON)\n  - If no failures found, displays success message\n\nExample:\n  test debug",
+	}
+}
+
+func (c *testDebugCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return TestDebug()
+}
 
 // ansiRegex matches ANSI escape sequences for color/formatting.
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
@@ -53,7 +55,7 @@ func TestDebug() int {
 		return 1
 	}
 
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		log.Errorf("failed to get workspace root: %v", err)
 		return 1

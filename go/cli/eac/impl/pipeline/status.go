@@ -1,35 +1,37 @@
-// Command: pipeline status
-// Short: Show CI pipeline status for commits
-// Long: Show CI pipeline status for commits.
-// Long:
-// Long: This command displays the status of GitHub Actions workflows for a specific
-// Long: commit or branch. By default, it shows the status for the current branch HEAD.
-// Long:
-// Long: Use --ref to check status for a specific branch or tag.
-// Long: Use --commit to check status for a specific commit SHA.
-// Long:
-// Long: Expected Output:
-// Long:   - Commit SHA being checked
-// Long:   - List of workflow names with their status (success, failure, in progress)
-// Long:   - Exit code 0 for success (even if workflows are failing)
-// Long:   - Exit code 1 for errors (missing GitHub CLI, invalid ref, etc.)
-// Long:
-// Long: Example:
-// Long:   pipeline status                    # Check current branch HEAD
-// Long:   pipeline status --ref develop      # Check develop branch
-// Long:   pipeline status --commit abc123    # Check specific commit
-// Flag.ref: type=string, usage=Git ref (branch/tag) to check status for
-// Flag.commit: type=string, usage=Commit SHA to check status for
 package pipeline
 
 import (
+	"context"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineStatusCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineStatusCommand)(nil)
+
+func (c *pipelineStatusCommand) Name() string { return "pipeline status" }
+
+func (c *pipelineStatusCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-status",
+		Short:         "Show CI pipeline status for commits",
+		Long:          "Show CI pipeline status for commits.\n\nThis command displays the status of GitHub Actions workflows for a specific\ncommit or branch. By default, it shows the status for the current branch HEAD.\n\nUse --ref to check status for a specific branch or tag.\nUse --commit to check status for a specific commit SHA.\n\nExpected Output:\n  - Commit SHA being checked\n  - List of workflow names with their status (success, failure, in progress)\n  - Exit code 0 for success (even if workflows are failing)\n  - Exit code 1 for errors (missing GitHub CLI, invalid ref, etc.)\n\nExample:\n  pipeline status                    # Check current branch HEAD\n  pipeline status --ref develop      # Check develop branch\n  pipeline status --commit abc123    # Check specific commit",
+		Flags: []core.FlagSpec{
+			{Name: "ref", Type: "string", Usage: "Git ref (branch/tag) to check status for"},
+			{Name: "commit", Type: "string", Usage: "Commit SHA to check status for"},
+		},
+	}
+}
+
+func (c *pipelineStatusCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineStatus()
+}
 
 func PipelineStatus() int {
 	// Validate flags before parsing

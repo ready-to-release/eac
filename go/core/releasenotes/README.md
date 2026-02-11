@@ -17,8 +17,8 @@ module releases.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
+| File         | Responsibility                                                 |
+| ------------ | -------------------------------------------------------------- |
 | validator.go | `Parse`, `ParseContent`, `ValidateVersion`, `GenerateTemplate` |
 
 ## Dependencies
@@ -36,11 +36,13 @@ release note files from repository templates.
 ## Code Health
 
 ### Tech Debt
-- `validator.go:52-54`: regexes are recompiled on every `ParseContent()` call; should be package-level `var` for efficiency
+
+- None
 
 ### Pain Points
+
 - `ParseContent()` uses string concatenation (`currentSection.Content += line + "\n"`) for building content; `strings.Builder` would be more efficient for large files
 
 ### Optimization Opportunities
-- Hoist `versionHeaderRegex` and `sectionHeaderRegex` to package-level compiled vars (low effort, avoids repeated compilation)
+
 - Package is well-tested (397-line test file, ~1.9x test-to-code ratio); no major structural issues

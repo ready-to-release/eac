@@ -1,21 +1,7 @@
-// Command: show test-summary
-// Short: Generate pretty test summary for a module
-// Long: The show test-summary command generates a formatted test summary with test results, metrics, and diagnostics.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive test summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: When run without arguments, shows a summary for all modules that have test manifests.
-// Long: When run with just a module, shows summary for that module across all suites.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted test summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
-// Long: - Success: includes status section, test metrics table (components, tests, passed/failed/skipped, duration), component breakdown
-// Long: - Failure: includes status section, diagnostics with last 100 lines of test log, timing data, and configuration
-// Flag.status: type=string, usage=Test status override (success or failure)
-// Flag.run-id: type=string, usage=GitHub Actions run ID for linking to workflow
 package show
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,12 +10,35 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showTestSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showTestSummaryCommand)(nil)
+
+func (c *showTestSummaryCommand) Name() string { return "show test-summary" }
+
+func (c *showTestSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-test-summary",
+		Short:         "Generate pretty test summary for a module",
+		Long:          "The show test-summary command generates a formatted test summary with test results, metrics, and diagnostics.\nThis command is designed to be used in GitHub Actions workflows to create consistent, attractive test summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nWhen run without arguments, shows a summary for all modules that have test manifests.\nWhen run with just a module, shows summary for that module across all suites.\n\nExpected Output:\n- Markdown-formatted test summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY\n- Success: includes status section, test metrics table (components, tests, passed/failed/skipped, duration), component breakdown\n- Failure: includes status section, diagnostics with last 100 lines of test log, timing data, and configuration",
+		Flags: []core.FlagSpec{
+			{Name: "status", Type: "string", Usage: "Test status override (success or failure)"},
+			{Name: "run-id", Type: "string", Usage: "GitHub Actions run ID for linking to workflow"},
+		},
+	}
+}
+
+func (c *showTestSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowTestSummary()
+}
 
 // ShowTestSummary generates a pretty test summary.
 func ShowTestSummary() int {

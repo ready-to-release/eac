@@ -1,35 +1,51 @@
-// Command: get changed-modules
-// Short: Get modules affected by changed files
-// Flag.as-yaml: type=bool, usage=Output as YAML (default)
-// Flag.as-json: type=bool, usage=Output as JSON
-// Flag.as-toml: type=bool, usage=Output as TOML
-// Flag.base: type=string, usage=Base ref to compare against (default: HEAD)
-// Flag.from-stdin: type=bool, usage=Read file paths from stdin (one per line) instead of git diff
-// Long:
-// Long: Expected Output:
-// Long: YAML list of module monikers that have changes based on git diff against the specified base ref,
-// Long: or based on file paths read from stdin when --from-stdin is used.
-// Long: Only includes modules directly containing changed files.
-// Long:
-// Long: Examples:
-// Long:   get changed-modules                           # Use git diff HEAD
-// Long:   get changed-modules --base main               # Use git diff main
-// Long:   echo "path/to/file.go" | get changed-modules --from-stdin  # Read from stdin
 package get
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// changedModulesFlags defines valid flags for the get changed-modules command
+type getChangedModulesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getChangedModulesCommand)(nil)
+
+func (c *getChangedModulesCommand) Name() string { return "get changed-modules" }
+
+func (c *getChangedModulesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-changed-modules",
+		Short:         "Get modules affected by changed files",
+		Long: "Expected Output:\n" +
+			"YAML list of module monikers that have changes based on git diff against the specified base ref,\n" +
+			"or based on file paths read from stdin when --from-stdin is used.\n" +
+			"Only includes modules directly containing changed files.\n" +
+			"\n" +
+			"Examples:\n" +
+			"  get changed-modules                           # Use git diff HEAD\n" +
+			"  get changed-modules --base main               # Use git diff main\n" +
+			"  echo \"path/to/file.go\" | get changed-modules --from-stdin  # Read from stdin",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default)"},
+			{Name: "as-json", Type: "bool", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", Usage: "Output as TOML"},
+			{Name: "base", Type: "string", Usage: "Base ref to compare against (default: HEAD)"},
+			{Name: "from-stdin", Type: "bool", Usage: "Read file paths from stdin (one per line) instead of git diff"},
+		},
+	}
+}
+
+func (c *getChangedModulesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetChangedModules()
+}
 
 func GetChangedModules() int {
 	// Validate flags before parsing

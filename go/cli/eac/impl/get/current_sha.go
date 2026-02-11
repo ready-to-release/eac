@@ -1,22 +1,3 @@
-// Command: get current-sha
-// Short: Get current commit SHA with auto-detection
-// Long: Returns the current commit SHA using smart detection.
-// Long:
-// Long: Detection order:
-// Long:   1. --sha flag (explicit override)
-// Long:   2. GITHUB_SHA environment variable (GitHub Actions CI)
-// Long:   3. origin/main HEAD after fetch (local devbox)
-// Long:
-// Long: Output formats:
-// Long:   default: Just the SHA
-// Long:   --format shell: SHA="..." SOURCE="ci|devbox|explicit"
-// Long:
-// Long: Example:
-// Long:   get current-sha                    # Auto-detect
-// Long:   get current-sha --sha abc123       # Explicit
-// Long:   get current-sha --format shell     # For eval
-// Flag.sha: type=string, usage=Override with explicit SHA
-// Flag.format: type=string, usage=Output format (default, shell)
 package get
 
 import (
@@ -25,10 +6,47 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getCurrentSHACommand struct{}
+
+var _ core.SimpleCommandPort = (*getCurrentSHACommand)(nil)
+
+func (c *getCurrentSHACommand) Name() string { return "get current-sha" }
+
+func (c *getCurrentSHACommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-current-sha",
+		Short:         "Get current commit SHA with auto-detection",
+		Long: "Returns the current commit SHA using smart detection.\n" +
+			"\n" +
+			"Detection order:\n" +
+			"  1. --sha flag (explicit override)\n" +
+			"  2. GITHUB_SHA environment variable (GitHub Actions CI)\n" +
+			"  3. origin/main HEAD after fetch (local devbox)\n" +
+			"\n" +
+			"Output formats:\n" +
+			"  default: Just the SHA\n" +
+			"  --format shell: SHA=\"...\" SOURCE=\"ci|devbox|explicit\"\n" +
+			"\n" +
+			"Example:\n" +
+			"  get current-sha                    # Auto-detect\n" +
+			"  get current-sha --sha abc123       # Explicit\n" +
+			"  get current-sha --format shell     # For eval",
+		Flags: []core.FlagSpec{
+			{Name: "sha", Type: "string", Usage: "Override with explicit SHA"},
+			{Name: "format", Type: "string", Usage: "Output format (default, shell)"},
+		},
+	}
+}
+
+func (c *getCurrentSHACommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCurrentSHA()
+}
 
 // SHASource indicates where the SHA was detected from.
 type SHASource string

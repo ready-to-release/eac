@@ -57,7 +57,7 @@ func (h *PlantUMLRenderHandler) Build(
 	Logln(logWriter, "=== Rendering plantuml diagrams via container ===")
 
 	docsDir := filepath.Join(workspaceRoot, "docs")
-	cacheDir := paths.PlantUMLAccelCachePath(workspaceRoot)
+	cacheDir := filepath.Join(paths.PlantUMLAccelCachePath(workspaceRoot), module.GetMoniker(), filepath.Base(outputDir))
 	outputPlantUMLDir := filepath.Join(outputDir, "plantuml")
 
 	// 1. Scan all markdown files for plantuml blocks

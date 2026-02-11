@@ -1,10 +1,13 @@
 package templates
 
-import "github.com/ready-to-release/eac/go/clibase/registry"
+import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+)
 
-func init() {
-	registry.RegisterAll(
-		Templates,
-		TemplatesInstall,
-	)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&templatesCommand{},
+		&templatesInstallCommand{},
+	}
 }

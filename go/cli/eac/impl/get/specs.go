@@ -1,35 +1,35 @@
-// Command: get specs
-// Short: Get specification files and status for a module
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//	--branch: Branch to query (default: trunk branch from config, usually "main")
-//
-// Args: module [version]
-// Long:
-// Long: Expected Output:
-// Long: YAML/JSON/TOML representation of specifications including:
-// Long:   - module: Module moniker
-// Long:   - version: Version number or "Unreleased"
-// Long:   - spec_files: Array of specification files with status and metadata
-// Long:   - added_count: Number of added specs
-// Long:   - modified_count: Number of modified specs
-// Long:   - deleted_count: Number of deleted specs
-// Long:   - total_scenarios: Total scenario count across all specs
-// Long:
-// Long: If version is specified, returns specs for that version.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getSpecsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getSpecsCommand)(nil)
+
+func (c *getSpecsCommand) Name() string { return "get specs" }
+
+func (c *getSpecsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-specs",
+		Short:         "Get specification files and status for a module",
+		Long:          "Expected Output:\nYAML/JSON/TOML representation of specifications including:\n  - module: Module moniker\n  - version: Version number or \"Unreleased\"\n  - spec_files: Array of specification files with status and metadata\n  - added_count: Number of added specs\n  - modified_count: Number of modified specs\n  - deleted_count: Number of deleted specs\n  - total_scenarios: Total scenario count across all specs\n\nIf version is specified, returns specs for that version.",
+		Args:          "module [version]",
+	}
+}
+
+func (c *getSpecsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetSpecs()
+}
 
 // specsFlags defines valid flags for the get specs command
 

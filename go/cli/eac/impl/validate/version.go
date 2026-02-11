@@ -1,34 +1,36 @@
-// Command: validate version
-// Short: Validate version format
-// Long: Validates that a version string matches the expected format.
-// Long:
-// Long: Supported types:
-// Long:   semver: x.y.z (e.g., 1.0.0, 2.3.1)
-// Long:   calver: YYYY.MMDD.HHMM (e.g., 2025.0116.1430)
-// Long:
-// Long: Exit codes:
-// Long:   0 - Valid version
-// Long:   1 - Invalid version or error
-// Long:
-// Long: Output formats:
-// Long:   default: Human readable message
-// Long:   --format shell: VALID="true" TYPE="semver" VERSION="1.0.0"
-// Long:
-// Long: Example:
-// Long:   validate version 1.0.0 --type semver
-// Long:   validate version 2025.0116.1430 --type calver
-// Long:   eval $(validate version 1.0.0 --type semver --format shell)
-// Flag.type: type=string, usage=Version type: semver or calver (required)
-// Flag.format: type=string, usage=Output format (default, shell)
 package validate
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
+
+type validateVersionCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateVersionCommand)(nil)
+
+func (c *validateVersionCommand) Name() string { return "validate version" }
+
+func (c *validateVersionCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-version",
+		Short:         "Validate version format",
+		Long:          "Validates that a version string matches the expected format.\n\nSupported types:\n  semver: x.y.z (e.g., 1.0.0, 2.3.1)\n  calver: YYYY.MMDD.HHMM (e.g., 2025.0116.1430)\n\nExit codes:\n  0 - Valid version\n  1 - Invalid version or error\n\nOutput formats:\n  default: Human readable message\n  --format shell: VALID=\"true\" TYPE=\"semver\" VERSION=\"1.0.0\"\n\nExample:\n  validate version 1.0.0 --type semver\n  validate version 2025.0116.1430 --type calver\n  eval $(validate version 1.0.0 --type semver --format shell)",
+		Flags: []core.FlagSpec{
+			{Name: "type", Type: "string", Usage: "Version type: semver or calver (required)"},
+			{Name: "format", Type: "string", Usage: "Output format (default, shell)"},
+		},
+	}
+}
+
+func (c *validateVersionCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateVersion()
+}
 
 // CalVer: YYYY.MMDD.HHMM.
 var calverRegex = regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)

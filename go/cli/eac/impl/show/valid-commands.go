@@ -1,23 +1,34 @@
-// Command: show valid-commands
-// Short: Show all valid commands in a table
-// Long: The show valid-commands command displays all registered commands in the EAC CLI.
-// Long: Shows command names with their descriptions, sorted alphabetically.
-// Long:
-// Long: Expected Output:
-// Long: - Table with columns: Command, Description
-// Long: - Footer row showing total number of commands
-// Long: - Commands sorted alphabetically
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
+
+type showValidCommandsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showValidCommandsCommand)(nil)
+
+func (c *showValidCommandsCommand) Name() string { return "show valid-commands" }
+
+func (c *showValidCommandsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-valid-commands",
+		Short:         "Show all valid commands in a table",
+		Long:          "The show valid-commands command displays all registered commands in the EAC CLI.\nShows command names with their descriptions, sorted alphabetically.\n\nExpected Output:\n- Table with columns: Command, Description\n- Footer row showing total number of commands\n- Commands sorted alphabetically",
+	}
+}
+
+func (c *showValidCommandsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowValidCommands()
+}
 
 func ShowValidCommands() int {
 	// Validate flags against registry metadata
@@ -26,18 +37,18 @@ func ShowValidCommands() int {
 		return 1
 	}
 
-	reg := registry.GetCommandRegistry()
+	all := registry.Global().All()
 
 	// Extract and sort commands
 	type cmdInfo struct {
 		name  string
 		short string
 	}
-	commands := make([]cmdInfo, 0, len(reg))
-	for _, cmd := range reg {
+	commands := make([]cmdInfo, 0, len(all))
+	for _, cmd := range all {
 		commands = append(commands, cmdInfo{
-			name:  cmd.ActualCommand,
-			short: cmd.Short,
+			name:  cmd.Name(),
+			short: cmd.Metadata().Short,
 		})
 	}
 

@@ -14,7 +14,6 @@ Provides OSCAL document loading, writing, and manipulation utilities. Handles OS
 - **`WriteProfile()`** -- Write an OSCAL profile to a JSON file with metadata timestamp update
 - **`WriteAssessmentResults()`** -- Write OSCAL assessment results with file locking for concurrent access
 - **`GetProfileControlIDs()`** -- Extract all control IDs from a profile's import declarations
-- **`GetControlIDsFromProfile()`** -- Extract control IDs from profile imports (alternative implementation)
 - **`ProfileHasControl()`** -- Check if a profile includes a specific control ID
 - **`NewProfileDocument()`** -- Create a new OSCAL profile document with required metadata
 - **`UpdateProfileMetadata()`** -- Update profile metadata timestamps
@@ -29,15 +28,15 @@ Provides OSCAL document loading, writing, and manipulation utilities. Handles OS
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| types.go | Type aliases for go-oscal types and target type constants |
-| constants.go | NIST catalog URL, OSCAL finding states, and observation method constants |
-| loader.go | Profile, assessment results, and catalog loading from files or URLs |
-| writer.go | Profile and assessment results writing with file locking |
-| oscal_helpers.go | Profile control ID extraction and new document creation |
-| profile_helpers.go | Profile control ID extraction and control membership checking |
-| catalog_helpers.go | OSCAL catalog loading from URLs and local files |
+| File               | Responsibility                                                           |
+| ------------------ | ------------------------------------------------------------------------ |
+| types.go           | Type aliases for go-oscal types and target type constants                |
+| constants.go       | NIST catalog URL, OSCAL finding states, and observation method constants |
+| loader.go          | Profile, assessment results, and catalog loading from files or URLs      |
+| writer.go          | Profile and assessment results writing with file locking                 |
+| oscal_helpers.go   | Profile control ID extraction and new document creation                  |
+| profile_helpers.go | Profile control ID extraction and control membership checking            |
+| catalog_helpers.go | OSCAL catalog loading from URLs and local files                          |
 
 ## Dependencies
 
@@ -50,15 +49,21 @@ Provides OSCAL document loading, writing, and manipulation utilities. Handles OS
 
 ## Role in System
 
-The `oscal` package provides the OSCAL document manipulation layer for the risk assessment pipeline. It handles reading and writing OSCAL profiles, catalogs, and assessment results -- the standard format for communicating security control information in compliance workflows.
+The `oscal` package provides the OSCAL document manipulation layer for the risk assessment pipeline.
+
+It handles reading and writing OSCAL profiles, catalogs,
+and assessment results -- the standard format for communicating security control information in compliance workflows.
 
 ## Code Health
 
 ### Tech Debt
-- `GetProfileControlIDs()` in `oscal_helpers.go` and `GetControlIDsFromProfile()` in `profile_helpers.go` are near-identical functions extracting control IDs from profiles
+
+- None identified.
 
 ### Pain Points
+
 - None identified.
 
 ### Optimization Opportunities
-- Consolidate the duplicate control ID extraction functions into a single implementation (low effort)
+
+- None identified.

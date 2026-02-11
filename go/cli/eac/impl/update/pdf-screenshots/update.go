@@ -1,18 +1,3 @@
-// Command: update pdf-screenshots
-// Short: Extract PDF pages as images for documentation cache
-// Long: Scans out/build folders for generated PDF books and extracts
-// Long: each page as a PNG image. Images are stored in .cache/eac/pdf-screenshots/
-// Long: organized by book name with hash marker for cache invalidation.
-// Long:
-// Long: Expected Output:
-// Long:   - PNG images in .cache/eac/pdf-screenshots/ directory
-// Long:   - Organized by book name (one subdirectory per PDF)
-// Long:   - Hash marker files for cache validation
-// Flag.dry-run: type=bool, default=false, usage=Show what would be done without making changes
-// Flag.force: type=bool, shorthand=f, default=false, usage=Regenerate all images ignoring cache
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress
-// Flag.dpi: type=int, default=150, usage=Image resolution (72-300)
-// Flag.module: type=string, shorthand=m, usage=Process only specific module's PDFs
 package pdfscreenshots
 
 import (
@@ -28,15 +13,45 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// commandFlags defines valid flags for the update pdf-screenshots command
+type updatePDFScreenshotsCommand struct{}
+
+var _ core.SimpleCommandPort = (*updatePDFScreenshotsCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updatePDFScreenshotsCommand{},
+	}
+}
+
+func (c *updatePDFScreenshotsCommand) Name() string { return "update pdf-screenshots" }
+
+func (c *updatePDFScreenshotsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-pdf-screenshots",
+		Short:         "Extract PDF pages as images for documentation cache",
+		Long:          "Scans out/build folders for generated PDF books and extracts\neach page as a PNG image. Images are stored in .cache/eac/pdf-screenshots/\norganized by book name with hash marker for cache invalidation.\n\nExpected Output:\n  - PNG images in .cache/eac/pdf-screenshots/ directory\n  - Organized by book name (one subdirectory per PDF)\n  - Hash marker files for cache validation",
+		Flags: []core.FlagSpec{
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would be done without making changes"},
+			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Regenerate all images ignoring cache"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress"},
+			{Name: "dpi", Type: "int", DefaultValue: "150", Usage: "Image resolution (72-300)"},
+			{Name: "module", Shorthand: "m", Type: "string", Usage: "Process only specific module's PDFs"},
+		},
+	}
+}
+
+func (c *updatePDFScreenshotsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdatePDFScreenshots()
+}
 
 var log = logging.C()
 
@@ -59,11 +74,6 @@ type PDFInfo struct {
 	Hash     string // SHA256 hash of file content (first 12 chars)
 	CacheDir string // Path to cache directory for this PDF
 }
-
-func init() {
-	registry.Register(UpdatePDFScreenshots)
-}
-
 // UpdatePDFScreenshots scans out/build for PDFs and extracts pages as images.
 func UpdatePDFScreenshots() int {
 	// Validate flags

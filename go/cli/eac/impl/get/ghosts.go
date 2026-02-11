@@ -1,35 +1,11 @@
-// Command: get ghosts
-// Short: Get discovered ghost entities in structured format
-// Long: Returns structured data about all ghost (dark launch) entities discovered
-// Long: in the repository. Ghosts are files/directories matching the configured
-// Long: naming convention (default: ghost-* prefix).
-// Long:
-// Long: Ghost entities enable:
-// Long:   - Dark launching: Code deployed but inactive
-// Long:   - L4 monitoring: Hidden observability probes
-// Long:   - Feature toggles: Without a full feature flag system
-// Long:
-// Long: Filter Examples:
-// Long:   get ghosts                      # All ghosts
-// Long:   get ghosts --type file          # Only ghost files
-// Long:   get ghosts --type directory     # Only ghost directories
-// Long:   get ghosts --module core        # Ghosts in core module
-// Long:   get ghosts --unowned            # Ghosts not owned by any module
-// Long:
-// Long: Expected Output:
-// Long: GhostReport with ghosts list, summary statistics, and effective config.
-// Flag.as-yaml: type=bool, usage=Output as YAML (default format)
-// Flag.as-json: type=bool, usage=Output as JSON
-// Flag.as-toml: type=bool, usage=Output as TOML
-// Flag.type: type=string, usage=Filter by type (file, directory)
-// Flag.module: type=string, usage=Filter to ghosts in specific module
-// Flag.unowned: type=bool, usage=Only show unowned ghosts
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -37,6 +13,32 @@ import (
 	"github.com/ready-to-release/eac/go/core/ghost"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getGhostsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getGhostsCommand)(nil)
+
+func (c *getGhostsCommand) Name() string { return "get ghosts" }
+
+func (c *getGhostsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-ghosts",
+		Short:         "Get discovered ghost entities in structured format",
+		Long:          "Returns structured data about all ghost (dark launch) entities discovered\nin the repository. Ghosts are files/directories matching the configured\nnaming convention (default: ghost-* prefix).\n\nGhost entities enable:\n  - Dark launching: Code deployed but inactive\n  - L4 monitoring: Hidden observability probes\n  - Feature toggles: Without a full feature flag system\n\nFilter Examples:\n  get ghosts                      # All ghosts\n  get ghosts --type file          # Only ghost files\n  get ghosts --type directory     # Only ghost directories\n  get ghosts --module core        # Ghosts in core module\n  get ghosts --unowned            # Ghosts not owned by any module\n\nExpected Output:\nGhostReport with ghosts list, summary statistics, and effective config.",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", DefaultValue: "", Usage: "Output as YAML (default format)"},
+			{Name: "as-json", Type: "bool", DefaultValue: "", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", DefaultValue: "", Usage: "Output as TOML"},
+			{Name: "type", Type: "string", DefaultValue: "", Usage: "Filter by type (file, directory)"},
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to ghosts in specific module"},
+			{Name: "unowned", Type: "bool", DefaultValue: "", Usage: "Only show unowned ghosts"},
+		},
+	}
+}
+
+func (c *getGhostsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetGhosts()
+}
 
 func GetGhosts() int {
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

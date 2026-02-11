@@ -1,24 +1,12 @@
-// Command: get suite
-// Short: Get test suite definition and configuration
 // Usage: get suite <suite-moniker>
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML test suite definition and configuration, including:
-// Long:   - Suite metadata (moniker, name, description)
-// Long:   - Test selection criteria (tags, modules, patterns)
-// Long:   - Suite-level configuration and settings
-// Long:   - List of included tests with their metadata
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -27,6 +15,24 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
+
+type getSuiteCommand struct{}
+
+var _ core.SimpleCommandPort = (*getSuiteCommand)(nil)
+
+func (c *getSuiteCommand) Name() string { return "get suite" }
+
+func (c *getSuiteCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-suite",
+		Short:         "Get test suite definition and configuration",
+		Long:          "Expected Output:\nYAML test suite definition and configuration, including:\n  - Suite metadata (moniker, name, description)\n  - Test selection criteria (tags, modules, patterns)\n  - Suite-level configuration and settings\n  - List of included tests with their metadata",
+	}
+}
+
+func (c *getSuiteCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetSuite()
+}
 
 // suiteFlags defines valid flags for the get suite command
 

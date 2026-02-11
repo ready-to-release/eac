@@ -1,34 +1,43 @@
-// Command: get changelog
-// Short: Get parsed changelog data for a module
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Args: module [version]
-// Long:
-// Long: Expected Output:
-// Long: YAML/JSON/TOML representation of changelog data including:
-// Long:   - module: Module moniker
-// Long:   - title: Changelog title
-// Long:   - version_type: semver or calver
-// Long:   - unreleased: Unreleased changes (if any)
-// Long:   - versions: Array of version entries with dates and changes
-// Long:
-// Long: If version is specified, returns only that version's data.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// changelogFlags defines valid flags for the get changelog command
+type getChangelogCommand struct{}
+
+var _ core.SimpleCommandPort = (*getChangelogCommand)(nil)
+
+func (c *getChangelogCommand) Name() string { return "get changelog" }
+
+func (c *getChangelogCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-changelog",
+		Short:         "Get parsed changelog data for a module",
+		Long: "Expected Output:\n" +
+			"YAML/JSON/TOML representation of changelog data including:\n" +
+			"  - module: Module moniker\n" +
+			"  - title: Changelog title\n" +
+			"  - version_type: semver or calver\n" +
+			"  - unreleased: Unreleased changes (if any)\n" +
+			"  - versions: Array of version entries with dates and changes\n" +
+			"\n" +
+			"If version is specified, returns only that version's data.",
+		Args: "module [version]",
+	}
+}
+
+func (c *getChangelogCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetChangelog()
+}
 
 func GetChangelog() int {
 	// Validate flags before parsing

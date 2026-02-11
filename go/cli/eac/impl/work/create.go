@@ -1,28 +1,7 @@
-// Command: work create
-// Short: Create a new workspace for parallel development
-// Long: Creates a new git worktree in a sibling directory for parallel development with Claude.
-// Long:
-// Long: The workspace is created in a sibling directory with the naming pattern:
-// Long:   <repo-name>-<branch-name>
-// Long:
-// Long: This allows you to work on multiple features simultaneously with separate Claude Code sessions.
-// Long: Use --debug to enable detailed logging to out/logs/work/.
-// Long:
-// Long: Expected Output:
-// Long:   - New git worktree in sibling directory
-// Long:   - Ready for parallel Claude Code session
-// Long:
-// Long: Example:
-// Long:   work create feature/authentication
-// Long:   work create bugfix/issue-123 --from=develop
-// Long:   work create feature/api --path=../custom-path
-// Long:   work create feature/test --debug
-// Flag.from: type=string, default=main, usage=Base branch to create from
-// Flag.path: type=string, usage=Custom path for workspace (default: ../<repo>-<branch>)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,9 +9,33 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type workCreateCommand struct{}
+
+var _ core.SimpleCommandPort = (*workCreateCommand)(nil)
+
+func (c *workCreateCommand) Name() string { return "work create" }
+
+func (c *workCreateCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work-create",
+		Short:         "Create a new workspace for parallel development",
+		Long:          "Creates a new git worktree in a sibling directory for parallel development with Claude.\n\nThe workspace is created in a sibling directory with the naming pattern:\n  <repo-name>-<branch-name>\n\nThis allows you to work on multiple features simultaneously with separate Claude Code sessions.\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - New git worktree in sibling directory\n  - Ready for parallel Claude Code session\n\nExample:\n  work create feature/authentication\n  work create bugfix/issue-123 --from=develop\n  work create feature/api --path=../custom-path\n  work create feature/test --debug",
+		Flags: []core.FlagSpec{
+			{Name: "from", Type: "string", DefaultValue: "main", Usage: "Base branch to create from"},
+			{Name: "path", Type: "string", Usage: "Custom path for workspace (default: ../<repo>-<branch>)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *workCreateCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Create()
+}
 
 // Create creates a new workspace (git worktree) for parallel development.
 func Create() int {

@@ -1,25 +1,3 @@
-// Command: show
-// Short: Display repository information in human-readable format
-// IsParent: true
-// Group.Configuration: config
-// Group.Documentation: books
-// Group.Repository Structure: modules, components, units, dependencies
-// Group.Files and Changes: files, files-changed, files-staged, ghosts
-// Group.Workspaces: workspaces
-// Group.Build: build-summary, build-times
-// Group.Testing: test-results, test-summary, tests, suite, test-timings
-// Group.Environment: environments
-// Group.Commands: valid-commands
-// Group.Specifications: specs, changelog
-// Group.Approvals: approval-comments, approve-summary
-// Group.Artifacts: artifacts, component-types
-// Group.Lint: lint-summary
-// Group.Scan: scan-summary
-// Group.Release: release-summary, release-notes
-// Group.CI: ci-summary, dependency-ci-summary, deps-setup-summary, trigger-summary
-// Example: clie show modules
-// Example: clie show files-changed
-// Example: clie show suite integration
 package show
 
 import (
@@ -28,12 +6,50 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/help"
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/adapters/tui/selector"
+	"github.com/ready-to-release/eac/go/cli/eac/help"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type showParent struct{}
+
+var _ core.SimpleCommandPort = (*showParent)(nil)
+
+func (c *showParent) Name() string { return "show" }
+
+func (c *showParent) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show",
+		Short:         "Display repository information in human-readable format",
+		IsParent:      true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Configuration", Subcommands: []string{"config"}},
+			{Name: "Documentation", Subcommands: []string{"books"}},
+			{Name: "Repository Structure", Subcommands: []string{"modules", "components", "units", "dependencies"}},
+			{Name: "Files and Changes", Subcommands: []string{"files", "files-changed", "files-staged", "ghosts"}},
+			{Name: "Workspaces", Subcommands: []string{"workspaces"}},
+			{Name: "Build", Subcommands: []string{"build-summary", "build-times"}},
+			{Name: "Testing", Subcommands: []string{"test-results", "test-summary", "tests", "suite", "test-timings"}},
+			{Name: "Environment", Subcommands: []string{"environments"}},
+			{Name: "Commands", Subcommands: []string{"valid-commands"}},
+			{Name: "Specifications", Subcommands: []string{"specs", "changelog"}},
+			{Name: "Approvals", Subcommands: []string{"approval-comments", "approve-summary"}},
+			{Name: "Artifacts", Subcommands: []string{"artifacts", "component-types"}},
+			{Name: "Lint", Subcommands: []string{"lint-summary"}},
+			{Name: "Scan", Subcommands: []string{"scan-summary"}},
+			{Name: "Release", Subcommands: []string{"release-summary", "release-notes"}},
+			{Name: "CI", Subcommands: []string{"ci-summary", "dependency-ci-summary", "deps-setup-summary", "trigger-summary"}},
+		},
+		Examples: []string{"clie show modules", "clie show files-changed", "clie show suite integration"},
+	}
+}
+
+func (c *showParent) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Show()
+}
 
 var log = logging.C()
 
@@ -78,8 +94,8 @@ var subcommands = []tui.SubcommandInfo{
 
 // printHelp prints the help for the show command using registry metadata.
 func printHelp() {
-	reg := registry.GetCommand("show")
-	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
+	cmd, _ := registry.Global().Get("show")
+	help.PrintHelp(os.Stdout, cmd, registry.Global())
 }
 
 // Show command entry point.

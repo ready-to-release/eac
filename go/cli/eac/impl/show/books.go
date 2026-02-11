@@ -1,25 +1,35 @@
-// Command: show books
-// Short: Display all book configurations in a human-readable table
-// Long: The show books command displays all books defined in books.yml,
-// Long: including each book's name, description, and source counts.
-// Long: Books aggregate static content with dynamically-generated content
-// Long: from EAC commands for MkDocs documentation sites.
-// Long:
-// Long: Expected Output:
-// Long: - Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)
-// Long: - Each row shows a book with its source counts and which modules reference it
 // Usage: show books
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showBooksCommand struct{}
+
+var _ core.SimpleCommandPort = (*showBooksCommand)(nil)
+
+func (c *showBooksCommand) Name() string { return "show books" }
+
+func (c *showBooksCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-books",
+		Short:         "Display all book configurations in a human-readable table",
+		Long:          "The show books command displays all books defined in books.yml,\nincluding each book's name, description, and source counts.\nBooks aggregate static content with dynamically-generated content\nfrom EAC commands for MkDocs documentation sites.\n\nExpected Output:\n- Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)\n- Each row shows a book with its source counts and which modules reference it",
+	}
+}
+
+func (c *showBooksCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowBooks()
+}
 
 // ShowBooks displays all configured books in a table format.
 func ShowBooks() int {

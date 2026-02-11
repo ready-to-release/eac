@@ -1,41 +1,40 @@
-// Command: validate config
-// Short: Validate effective configuration from all sources
-// Long: Validate effective configuration from all sources.
-// Long:
-// Long: This command validates the complete configuration stack:
-// Long:   1. Contract defaults (from contracts/eac-*/defaults/)
-// Long:   2. User overrides (from .eac/)
-// Long:   3. Personal overrides (from .eac/*.personal.yml)
-// Long:
-// Long: Validation phases:
-// Long:   - File Checks: All config files are readable
-// Long:   - Schema Validation: YAML matches JSON schemas
-// Long:   - Cross-Reference: Dependencies exist, component types valid
-// Long:   - Completeness: Required fields present
-// Long:
-// Long: Expected Output:
-// Long:   Shows validation status for each config layer. Reports any errors
-// Long:   or warnings found. Exit code 0 if valid, 1 if errors.
-// Long:
-// Long: Example:
-// Long:   validate config
-// Long:   validate config --strict
-// Long:   validate config --format json
-// Flag: --strict: Treat warnings as errors (default: false)
-// Flag: --format: Output format: text, json, github (default: text)
 package validate
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
+
+type validateConfigCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateConfigCommand)(nil)
+
+func (c *validateConfigCommand) Name() string { return "validate config" }
+
+func (c *validateConfigCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-config",
+		Short:         "Validate effective configuration from all sources",
+		Long:          "Validate effective configuration from all sources.\n\nThis command validates the complete configuration stack:\n  1. Contract defaults (from contracts/eac-*/defaults/)\n  2. User overrides (from .eac/)\n  3. Personal overrides (from .eac/*.personal.yml)\n\nValidation phases:\n  - File Checks: All config files are readable\n  - Schema Validation: YAML matches JSON schemas\n  - Cross-Reference: Dependencies exist, component types valid\n  - Completeness: Required fields present\n\nExpected Output:\n  Shows validation status for each config layer. Reports any errors\n  or warnings found. Exit code 0 if valid, 1 if errors.\n\nExample:\n  validate config\n  validate config --strict\n  validate config --format json",
+		Flags: []core.FlagSpec{
+			{Name: "strict", Type: "bool", DefaultValue: "false", Usage: "Treat warnings as errors"},
+			{Name: "format", Type: "string", DefaultValue: "text", Usage: "Output format: text, json, github"},
+		},
+	}
+}
+
+func (c *validateConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateConfigCmd()
+}
 
 // ConfigValidationResult holds the result of config validation.
 type ConfigValidationResult struct {
@@ -82,11 +81,11 @@ func ValidateConfigCmd() int {
 				i++
 			}
 		case "--help", "-h":
-			reg := registry.GetCommand("validate config")
-			if reg != nil {
-				fmt.Println(reg.Short)
+			if cmd, ok := registry.Global().Get("validate config"); ok {
+				meta := cmd.Metadata()
+				fmt.Println(meta.Short)
 				fmt.Println()
-				fmt.Println(reg.Long)
+				fmt.Println(meta.Long)
 			}
 			return 0
 		}

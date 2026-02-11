@@ -1,36 +1,55 @@
-// Command: get binary-sizes
-// Short: Get binary file sizes for a module
-// Flag.module: type=string, usage=Module to get binary sizes for (required)
-// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., clie for clie-linux-amd64)
-// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
-// Long: The get binary-sizes command calculates file sizes for binaries produced by a module build.
-// Long:
-// Long: It scans the build output directory for the specified module and reports sizes for all
-// Long: binary files found. This is useful for release notes and tracking binary size trends.
-// Long:
-// Long: Expected Output (--format shell):
-// Long:   SIZE_LINUX_AMD64="12.3"
-// Long:   SIZE_LINUX_AMD64_UPX="4.5"
-// Long:   SIZE_DARWIN_ARM64="13.1"
-// Long:   ...
-// Long:
-// Long: Example:
-// Long:   get binary-sizes --module clie --binary-prefix clie
-// Long:   eval $(get binary-sizes --module clie --binary-prefix clie --format shell)
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"gopkg.in/yaml.v3"
 )
+
+type getBinarySizesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getBinarySizesCommand)(nil)
+
+func (c *getBinarySizesCommand) Name() string { return "get binary-sizes" }
+
+func (c *getBinarySizesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-binary-sizes",
+		Short:         "Get binary file sizes for a module",
+		Long: "The get binary-sizes command calculates file sizes for binaries produced by a module build.\n" +
+			"\n" +
+			"It scans the build output directory for the specified module and reports sizes for all\n" +
+			"binary files found. This is useful for release notes and tracking binary size trends.\n" +
+			"\n" +
+			"Expected Output (--format shell):\n" +
+			"  SIZE_LINUX_AMD64=\"12.3\"\n" +
+			"  SIZE_LINUX_AMD64_UPX=\"4.5\"\n" +
+			"  SIZE_DARWIN_ARM64=\"13.1\"\n" +
+			"  ...\n" +
+			"\n" +
+			"Example:\n" +
+			"  get binary-sizes --module clie --binary-prefix clie\n" +
+			"  eval $(get binary-sizes --module clie --binary-prefix clie --format shell)",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module to get binary sizes for (required)"},
+			{Name: "binary-prefix", Type: "string", Usage: "Binary name prefix (e.g., clie for clie-linux-amd64)"},
+			{Name: "format", Type: "string", DefaultValue: "shell", Usage: "Output format (shell, json, yaml, markdown)"},
+		},
+	}
+}
+
+func (c *getBinarySizesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetBinarySizes()
+}
 
 // BinarySize represents a single binary file's size.
 type BinarySize struct {

@@ -1,35 +1,41 @@
-// Command: release get-version
-// Short: Extract latest version from changelog
-// Long: Reads the CHANGELOG.md file for a module and outputs the latest version.
-// Long:
-// Long: This command is designed for use in CI/CD pipelines where the changelog
-// Long: is the source of truth for versioning.
-// Long:
-// Long: Expected Output:
-// Long:   - Version string (e.g., 0.0.14) by default
-// Long:   - Tag format (e.g., clie/0.0.14) if --tag flag is specified
-// Long:
-// Long: Examples:
-// Long:   release get-version clie              # Output: 0.0.14
-// Long:   release get-version docs                 # Output: 2025.12.01
-// Long:   release get-version clie --tag        # Output: clie/0.0.14
-// Long:   release get-version clie --json       # Output JSON format
-// Flag.tag: type=bool, usage=Output as git tag format (module/version)
-// Flag.json: type=bool, usage=Output in JSON format
-// Flag.path: type=string, usage=Override changelog path (default: release/<module>/CHANGELOG.md)
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
+
+type releaseGetVersionCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseGetVersionCommand)(nil)
+
+func (c *releaseGetVersionCommand) Name() string { return "release get-version" }
+
+func (c *releaseGetVersionCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-get-version",
+		Short:         "Extract latest version from changelog",
+		Long:          "Reads the CHANGELOG.md file for a module and outputs the latest version.\n\nThis command is designed for use in CI/CD pipelines where the changelog\nis the source of truth for versioning.\n\nExpected Output:\n  - Version string (e.g., 0.0.14) by default\n  - Tag format (e.g., clie/0.0.14) if --tag flag is specified\n\nExamples:\n  release get-version clie              # Output: 0.0.14\n  release get-version docs                 # Output: 2025.12.01\n  release get-version clie --tag        # Output: clie/0.0.14\n  release get-version clie --json       # Output JSON format",
+		Flags: []core.FlagSpec{
+			{Name: "tag", Type: "bool", Usage: "Output as git tag format (module/version)"},
+			{Name: "json", Type: "bool", Usage: "Output in JSON format"},
+			{Name: "path", Type: "string", Usage: "Override changelog path (default: release/<module>/CHANGELOG.md)"},
+		},
+	}
+}
+
+func (c *releaseGetVersionCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseGetVersion()
+}
 
 var getVersionLog = logging.C("release")
 

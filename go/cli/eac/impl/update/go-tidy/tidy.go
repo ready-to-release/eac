@@ -1,18 +1,3 @@
-// Command: update go-tidy
-// Short: Run go mod tidy across all workspace modules
-// Long: Ensures all Go modules in the workspace have tidy go.mod and go.sum files.
-// Long:
-// Long: Parses go.work to discover all workspace modules, then runs 'go mod tidy'
-// Long: in each module directory. Also runs 'go work sync' at the repo root.
-// Long:
-// Long: This is the fix counterpart to 'validate go-tidy' (which only checks).
-// Long:
-// Long: Examples:
-// Long:   update go-tidy                  Tidy all modules
-// Long:   update go-tidy --dry-run        Show what would change without modifying files
-// Long:   update go-tidy --verbose        Show go mod tidy output for each module
-// Flag.dry-run: type=bool, default=false, usage=Show what would change without modifying files
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show go mod tidy output for each module
 package gotidy
 
 import (
@@ -23,19 +8,43 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/update/internal/gowork"
 	"github.com/ready-to-release/eac/go/clibase/goexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateGoTidyCommand struct{}
 
-func init() {
-	registry.Register(UpdateGoTidy)
+var _ core.SimpleCommandPort = (*updateGoTidyCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateGoTidyCommand{},
+	}
 }
 
+func (c *updateGoTidyCommand) Name() string { return "update go-tidy" }
+
+func (c *updateGoTidyCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-go-tidy",
+		Short:         "Run go mod tidy across all workspace modules",
+		Long:          "Ensures all Go modules in the workspace have tidy go.mod and go.sum files.\n\nParses go.work to discover all workspace modules, then runs 'go mod tidy'\nin each module directory. Also runs 'go work sync' at the repo root.\n\nThis is the fix counterpart to 'validate go-tidy' (which only checks).\n\nExamples:\n  update go-tidy                  Tidy all modules\n  update go-tidy --dry-run        Show what would change without modifying files\n  update go-tidy --verbose        Show go mod tidy output for each module",
+		Flags: []core.FlagSpec{
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would change without modifying files"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show go mod tidy output for each module"},
+		},
+	}
+}
+
+func (c *updateGoTidyCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateGoTidy()
+}
+
+var log = logging.C()
 // UpdateGoTidy runs go mod tidy across all workspace modules.
 func UpdateGoTidy() int {
 	args := os.Args[3:] // Skip program name, "update", "go-tidy"

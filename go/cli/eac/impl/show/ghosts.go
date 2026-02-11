@@ -1,30 +1,12 @@
-// Command: show ghosts
-// Short: Display discovered ghost entities in human-readable format
-// Long: Shows ghosts grouped by module with summary statistics.
-// Long: The report includes:
-// Long:   - Summary statistics (total, files, directories, by module)
-// Long:   - Ghosts grouped by owning module
-// Long:   - Unowned ghosts section
-// Long:
-// Long: Ghost entities enable dark launching, L4 monitoring, and feature toggles.
-// Long:
-// Long: Filter Examples:
-// Long:   show ghosts                      # All ghosts
-// Long:   show ghosts --module core        # Ghosts in core module
-// Long:   show ghosts --type directory     # Only ghost directories
-// Long:
-// Long: Expected Output:
-// Long: Markdown-formatted report with summary table and ghosts by module.
-// Flag.type: type=string, usage=Filter by type (file, directory)
-// Flag.module: type=string, usage=Filter to ghosts in specific module
-// Flag.unowned: type=bool, usage=Only show unowned ghosts
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -32,6 +14,29 @@ import (
 	"github.com/ready-to-release/eac/go/core/ghost"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showGhostsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showGhostsCommand)(nil)
+
+func (c *showGhostsCommand) Name() string { return "show ghosts" }
+
+func (c *showGhostsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-ghosts",
+		Short:         "Display discovered ghost entities in human-readable format",
+		Long:          "Shows ghosts grouped by module with summary statistics.\nThe report includes:\n  - Summary statistics (total, files, directories, by module)\n  - Ghosts grouped by owning module\n  - Unowned ghosts section\n\nGhost entities enable dark launching, L4 monitoring, and feature toggles.\n\nFilter Examples:\n  show ghosts                      # All ghosts\n  show ghosts --module core        # Ghosts in core module\n  show ghosts --type directory     # Only ghost directories\n\nExpected Output:\nMarkdown-formatted report with summary table and ghosts by module.",
+		Flags: []core.FlagSpec{
+			{Name: "type", Type: "string", Usage: "Filter by type (file, directory)"},
+			{Name: "module", Type: "string", Usage: "Filter to ghosts in specific module"},
+			{Name: "unowned", Type: "bool", Usage: "Only show unowned ghosts"},
+		},
+	}
+}
+
+func (c *showGhostsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowGhosts()
+}
 
 func ShowGhosts() int {
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

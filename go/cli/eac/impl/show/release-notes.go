@@ -1,31 +1,35 @@
-// Command: show release-notes
-// Short: Display release notes in human-readable format
-// Long: Display release notes from RELEASE-NOTES.md in formatted markdown.
-// Long:
-// Long: Shows the latest version by default, or a specific version if provided.
-// Long: Special keyword: "latest" for most recent release (same as default behavior).
-// Long: Displays all sections for the version (Conclusion on Fitness, Impact on Business Process, etc.)
-// Long:
-// Long: Expected Output:
-// Long: - Version header (## [version] - date) matching changelog format
-// Long: - All sections with headers (###) and content formatted as markdown
-// Long:
-// Long: Example:
-// Long:   show release-notes eac-ext
-// Long:   show release-notes eac-ext latest
-// Long:   show release-notes eac-ext 0.0.7
-// Args: module [version]
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/releasenotes"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showReleaseNotesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showReleaseNotesCommand)(nil)
+
+func (c *showReleaseNotesCommand) Name() string { return "show release-notes" }
+
+func (c *showReleaseNotesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-release-notes",
+		Short:         "Display release notes in human-readable format",
+		Long:          "Display release notes from RELEASE-NOTES.md in formatted markdown.\n\nShows the latest version by default, or a specific version if provided.\nSpecial keyword: \"latest\" for most recent release (same as default behavior).\nDisplays all sections for the version (Conclusion on Fitness, Impact on Business Process, etc.)\n\nExpected Output:\n- Version header (## [version] - date) matching changelog format\n- All sections with headers (###) and content formatted as markdown\n\nExample:\n  show release-notes eac-ext\n  show release-notes eac-ext latest\n  show release-notes eac-ext 0.0.7",
+		Args:          "module [version]",
+	}
+}
+
+func (c *showReleaseNotesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowReleaseNotes()
+}
 
 func ShowReleaseNotes() int {
 	// Validate flags against registry metadata

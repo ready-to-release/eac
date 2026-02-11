@@ -1,25 +1,36 @@
-// Command: show files-changed
-// Short: Show changed (modified, unstaged) files with their module ownership
-// Long: The show files-changed command displays modified files (git diff HEAD) with their module ownership.
-// Long: Useful for identifying which modules are affected by uncommitted changes.
-// Long:
-// Long: Expected Output:
-// Long: - Table with changed file paths and owning modules (comma-separated if multiple)
-// Long: - Files with no module ownership shown as "NONE"
-// Long: - Empty output if no files are changed
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
+
+type showFilesChangedCommand struct{}
+
+var _ core.SimpleCommandPort = (*showFilesChangedCommand)(nil)
+
+func (c *showFilesChangedCommand) Name() string { return "show files-changed" }
+
+func (c *showFilesChangedCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-files-changed",
+		Short:         "Show changed (modified, unstaged) files with their module ownership",
+		Long:          "The show files-changed command displays modified files (git diff HEAD) with their module ownership.\nUseful for identifying which modules are affected by uncommitted changes.\n\nExpected Output:\n- Table with changed file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Empty output if no files are changed",
+	}
+}
+
+func (c *showFilesChangedCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowFilesChanged()
+}
 
 func ShowFilesChanged() int {
 	// Validate flags against registry metadata

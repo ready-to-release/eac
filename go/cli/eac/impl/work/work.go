@@ -1,15 +1,3 @@
-// Command: work
-// Short: Workspace management for parallel development using git worktrees
-// IsParent: true
-// Group.Workspace Lifecycle: create, list, remove
-// Group.Development Workflow: commit, pull
-// Group.Completion: merge, pr
-// Example: clie work create feature/authentication
-// Example: clie work commit --all
-// Example: clie work pull
-// Example: clie work merge
-// Example: clie work pr
-// Example: clie work list
 package work
 
 import (
@@ -17,19 +5,47 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/help"
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/adapters/tui/selector"
+	"github.com/ready-to-release/eac/go/cli/eac/help"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type workCommand struct{}
+
+var _ core.CommandPort = (*workCommand)(nil)
+
+func (c *workCommand) Name() string { return "work" }
+
+func (c *workCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work",
+		Short:         "Workspace management for parallel development using git worktrees",
+		IsParent:      true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Workspace Lifecycle", Subcommands: []string{"create", "list", "remove"}},
+			{Name: "Development Workflow", Subcommands: []string{"commit", "pull"}},
+			{Name: "Completion", Subcommands: []string{"merge", "pr"}},
+		},
+		Examples: []string{
+			"clie work create feature/authentication",
+			"clie work commit --all",
+			"clie work pull",
+			"clie work merge",
+			"clie work pr",
+			"clie work list",
+		},
+	}
+}
 
 var log = logging.C()
 
 // printHelp prints the help for the work command using registry metadata.
 func printHelp() {
-	reg := registry.GetCommand("work")
-	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
+	cmd, _ := registry.Global().Get("work")
+	help.PrintHelp(os.Stdout, cmd, registry.Global())
 }
 
 // Work command entry point.
@@ -52,7 +68,7 @@ func Work() int {
 	}
 
 	// Check for valid subcommand using dynamic discovery from registry
-	if registry.IsValidSubcommand("work", args[0]) {
+	if _, ok := registry.Global().Get("work " + args[0]); ok {
 		// Handled by separate registrations in respective files
 		return 0
 	}

@@ -65,7 +65,7 @@ func (h *DependencyGraphHandler) Build(
 ) int {
 	Logln(logWriter, "=== Generating repository dependency graph ===")
 
-	cacheDir := paths.PlantUMLAccelCachePath(workspaceRoot)
+	cacheDir := filepath.Join(paths.PlantUMLAccelCachePath(workspaceRoot), module.GetMoniker(), filepath.Base(outputDir))
 	outputGraphDir := filepath.Join(outputDir, "dependency-graph")
 
 	// 1. Load dependency graph and generate PlantUML source

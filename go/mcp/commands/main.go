@@ -10,9 +10,18 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/repository"
+)
+
+// cachedCommands holds the result of the first getCommands() call.
+// The command set does not change during a server session, so we
+// discover once and reuse on subsequent tools/list requests.
+var (
+	cachedCommands     CommandTree
+	cachedCommandsOnce sync.Once
 )
 
 type MCPRequest struct {
@@ -191,8 +200,18 @@ func toolInputSchema() InputSchema {
 	}
 }
 
-// getCommands calls the commands system to get command info.
+// getCommands returns the cached command tree, discovering commands on the
+// first call only. The command set does not change during a server session,
+// so sync.Once ensures we shell out exactly once (OO-094).
 func getCommands() CommandTree {
+	cachedCommandsOnce.Do(func() {
+		cachedCommands = discoverCommands()
+	})
+	return cachedCommands
+}
+
+// discoverCommands calls the commands system to get command info.
+func discoverCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return emptyCommandTree()

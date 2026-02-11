@@ -1,37 +1,8 @@
-// Command: update ai-summary
-// Short: Generate AI-powered analysis summaries for modules
-// Long: Analyzes modules using AI to generate comprehensive status summaries.
-// Long: The analysis covers architecture (DSL), specifications (Gherkin),
-// Long: source code, and documentation. Each analysis type produces a
-// Long: separate status file in the output directory.
-// Long:
-// Long: Analysis types:
-// Long:   - ai-dsl: Analyzes Structurizr DSL architecture files
-// Long:   - ai-specs: Analyzes Gherkin BDD specifications
-// Long:   - ai-source: Analyzes source code (depends on dsl and specs)
-// Long:   - ai-docs: Analyzes documentation files
-// Long:
-// Long: Expected Output:
-// Long:   - out/ai-summary/<module>/dsl-status.md
-// Long:   - out/ai-summary/<module>/specs-status.md
-// Long:   - out/ai-summary/<module>/source-status.md
-// Long:   - out/ai-summary/<module>/docs-status.md
-// Long:
-// Long: Example:
-// Long:   update ai-summary                  # Analyze all modules
-// Long:   update ai-summary eac          # Analyze single module
-// Long:   update ai-summary --type=dsl core  # Analyze only DSL for core
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// Flag.type: type=string, shorthand=t, default=, usage=Specific analysis type (dsl, specs, source, docs)
-// Flag.skip-cache: type=bool, usage=Force regeneration even if cached
-// Flag.dry-run: type=bool, usage=Show what would be analyzed without executing
-// Flag.tui: type=bool, usage=Enable TUI console
-// Flag.no-tui: type=bool, usage=Disable TUI console
-// Flag.turbo: type=bool, usage=Enable turbo mode (+2 parallel workers)
 // Usage: update ai-summary [module...]
 package aisummary
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -40,19 +11,47 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateAISummaryCommand struct{}
 
-func init() {
-	registry.Register(UpdateAISummary)
+var _ core.SimpleCommandPort = (*updateAISummaryCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateAISummaryCommand{},
+	}
 }
 
+func (c *updateAISummaryCommand) Name() string { return "update ai-summary" }
+
+func (c *updateAISummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-ai-summary",
+		Short:         "Generate AI-powered analysis summaries for modules",
+		Long:          "Analyzes modules using AI to generate comprehensive status summaries.\nThe analysis covers architecture (DSL), specifications (Gherkin),\nsource code, and documentation. Each analysis type produces a\nseparate status file in the output directory.\n\nAnalysis types:\n  - ai-dsl: Analyzes Structurizr DSL architecture files\n  - ai-specs: Analyzes Gherkin BDD specifications\n  - ai-source: Analyzes source code (depends on dsl and specs)\n  - ai-docs: Analyzes documentation files\n\nExpected Output:\n  - out/ai-summary/<module>/dsl-status.md\n  - out/ai-summary/<module>/specs-status.md\n  - out/ai-summary/<module>/source-status.md\n  - out/ai-summary/<module>/docs-status.md\n\nExample:\n  update ai-summary                  # Analyze all modules\n  update ai-summary eac          # Analyze single module\n  update ai-summary --type=dsl core  # Analyze only DSL for core",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
+			{Name: "type", Shorthand: "t", Type: "string", Usage: "Specific analysis type (dsl, specs, source, docs)"},
+			{Name: "skip-cache", Type: "bool", Usage: "Force regeneration even if cached"},
+			{Name: "dry-run", Type: "bool", Usage: "Show what would be analyzed without executing"},
+			{Name: "tui", Type: "bool", Usage: "Enable TUI console"},
+			{Name: "no-tui", Type: "bool", Usage: "Disable TUI console"},
+			{Name: "turbo", Type: "bool", Usage: "Enable turbo mode (+2 parallel workers)"},
+		},
+	}
+}
+
+func (c *updateAISummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateAISummary()
+}
+
+var log = logging.C()
 // UpdateAISummary is the entry point for the ai-summary command.
 func UpdateAISummary() int {
 	args := os.Args[3:] // Skip program name, "update", and "ai-summary"

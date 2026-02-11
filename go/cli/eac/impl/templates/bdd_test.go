@@ -1,16 +1,19 @@
 package templates
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/ai"      // register templates install ai
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/claude"  // register templates install claude
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/docs"    // register templates install docs
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/reports" // register templates install reports
-	_ "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/specs"   // register templates install specs
+	templatesaicmds "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/ai"
+	templatesclaudecmds "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/claude"
+	templatesdocscmds "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/docs"
+	templatesreportscmds "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/reports"
+	templatesspeccmds "github.com/ready-to-release/eac/go/cli/eac/impl/templates/install/specs"
+	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 func TestFeatures(t *testing.T) {
@@ -32,5 +35,25 @@ func TestFeatures(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	reg := registry.NewCommandRegistry()
+	if err := reg.RegisterAll(Commands()...); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to register templates commands: %v\n", err)
+		os.Exit(1)
+	}
+	// Register install subcommands
+	for _, err := range []error{
+		reg.RegisterAll(templatesaicmds.Commands()...),
+		reg.RegisterAll(templatesclaudecmds.Commands()...),
+		reg.RegisterAll(templatesdocscmds.Commands()...),
+		reg.RegisterAll(templatesreportscmds.Commands()...),
+		reg.RegisterAll(templatesspeccmds.Commands()...),
+	} {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to register template install commands: %v\n", err)
+			os.Exit(1)
+		}
+	}
+	registry.SetGlobal(reg)
+	flags.SetRegistry(reg)
 	os.Exit(m.Run())
 }

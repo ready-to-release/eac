@@ -1,44 +1,3 @@
-// Command: release prune-packages
-// Short: Remove old container image versions from GHCR, keeping newest N
-// Long: Prunes old container image versions from GitHub Container Registry (GHCR),
-// Long: implementing multiple safety checks to prevent accidental deletion of released versions.
-// Long:
-// Long: Safety Checks (in order):
-// Long:   1. Versions with tags matching preserve patterns (e.g., v*, latest) are never deleted
-// Long:   2. Versions associated with GitHub releases are protected
-// Long:   3. Versions whose digest matches a released version are protected
-// Long:   4. Versions created less than min_age_days ago are protected
-// Long:   5. Only versions matching prune patterns (e.g., sha-*, dev-*) are candidates
-// Long:
-// Long: Configuration:
-// Long:   Configure in .eac/repository.yml under registries:
-// Long:     registries:
-// Long:       ghcr.io:
-// Long:         org: your-org
-// Long:         cleanup:
-// Long:           enabled: true
-// Long:           keep: 10
-// Long:           preserve_patterns: ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
-// Long:           prune_patterns: ["sha-*", "dev-*", "pr-*", "ci"]
-// Long:           min_age_days: 7
-// Long:
-// Long: Default mode is dry-run for safety. Use --force to actually delete.
-// Long:
-// Long: Expected Output:
-// Long:   - List of protected versions with reasons
-// Long:   - List of versions to prune
-// Long:   - Summary of cleanup results
-// Long:
-// Long: Example:
-// Long:   release prune-packages eac-ext           # Dry-run: show what would be deleted
-// Long:   release prune-packages eac-ext --force   # Actually delete versions
-// Long:   release prune-packages --all             # Prune all packages (dry-run)
-// Long:   release prune-packages eac-ext --keep 5  # Override keep count
-// Flag.keep: type=int, usage=Override the number of versions to keep (default from config)
-// Flag.all: type=bool, usage=Prune all configured packages
-// Flag.force: type=bool, usage=Actually delete versions (default is dry-run)
-// Flag.verbose: type=bool, usage=Show protected versions with reasons
-// Flag.json: type=bool, usage=Output results in JSON format
 package release
 
 import (
@@ -50,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -57,6 +17,31 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
+
+type releasePrunePackagesCommand struct{}
+
+var _ core.SimpleCommandPort = (*releasePrunePackagesCommand)(nil)
+
+func (c *releasePrunePackagesCommand) Name() string { return "release prune-packages" }
+
+func (c *releasePrunePackagesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-prune-packages",
+		Short:         "Remove old container image versions from GHCR, keeping newest N",
+		Long:          "Prunes old container image versions from GitHub Container Registry (GHCR),\nimplementing multiple safety checks to prevent accidental deletion of released versions.\n\nSafety Checks (in order):\n  1. Versions with tags matching preserve patterns (e.g., v*, latest) are never deleted\n  2. Versions associated with GitHub releases are protected\n  3. Versions whose digest matches a released version are protected\n  4. Versions created less than min_age_days ago are protected\n  5. Only versions matching prune patterns (e.g., sha-*, dev-*) are candidates\n\nConfiguration:\n  Configure in .eac/repository.yml under registries:\n    registries:\n      ghcr.io:\n        org: your-org\n        cleanup:\n          enabled: true\n          keep: 10\n          preserve_patterns: [\"v*\", \"latest\", \"[0-9]*.[0-9]*.[0-9]*\"]\n          prune_patterns: [\"sha-*\", \"dev-*\", \"pr-*\", \"ci\"]\n          min_age_days: 7\n\nDefault mode is dry-run for safety. Use --force to actually delete.\n\nExpected Output:\n  - List of protected versions with reasons\n  - List of versions to prune\n  - Summary of cleanup results\n\nExample:\n  release prune-packages eac-ext           # Dry-run: show what would be deleted\n  release prune-packages eac-ext --force   # Actually delete versions\n  release prune-packages --all             # Prune all packages (dry-run)\n  release prune-packages eac-ext --keep 5  # Override keep count",
+		Flags: []core.FlagSpec{
+			{Name: "keep", Type: "int", Usage: "Override the number of versions to keep (default from config)"},
+			{Name: "all", Type: "bool", Usage: "Prune all configured packages"},
+			{Name: "force", Type: "bool", Usage: "Actually delete versions (default is dry-run)"},
+			{Name: "verbose", Type: "bool", Usage: "Show protected versions with reasons"},
+			{Name: "json", Type: "bool", Usage: "Output results in JSON format"},
+		},
+	}
+}
+
+func (c *releasePrunePackagesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleasePrunePackages()
+}
 
 // PrunePackagesResult contains the result of pruning a package.
 type PrunePackagesResult struct {

@@ -1,42 +1,60 @@
-// Command: get ci-config
-// Short: Derive CI configuration for a module from core config
-// Flag.module: type=string, usage=Module moniker to derive CI config for, required=true, completion=modules
-// Flag.format: type=string, usage=Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)
-// Long:
-// Long: Derives CI configuration for any module from the core config system.
-// Long: All values are computed from repository.yml + blueprints.yml - no duplicate
-// Long: configuration in workflow files needed.
-// Long:
-// Long: With --format shell, outputs shell variable assignments for eval:
-// Long:   IS_CONTAINER=true|false
-// Long:   CONTAINER_PUSH=true|false
-// Long:   HAS_TESTS=true|false
-// Long:   TEST_ON_WINDOWS=true|false
-// Long:   TEST_ON_MACOS=true|false
-// Long:   SCANS=sbom,vuln,secrets
-// Long:   SCAN_FAIL_MODE=warn
-// Long:   BUILD_EVIDENCE=true|false
-// Long:   CROSS_COMPILE_WINDOWS=true|false
-// Long:   BUILD_ARGS=--all
-// Long:   DOWNLOAD_MODULES=clie
-// Long:   CONTAINER_TEST_SCRIPT=path
-// Long:   TEST_SUITES=unit,integration
-// Long:   TEST_SUITES_FULL=unit,integration,acceptance
-// Long:
-// Long: With --format github-output, outputs KEY=value lines for $GITHUB_OUTPUT.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type getCIConfigCommand struct{}
+
+var _ core.SimpleCommandPort = (*getCIConfigCommand)(nil)
+
+func (c *getCIConfigCommand) Name() string { return "get ci-config" }
+
+func (c *getCIConfigCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-ci-config",
+		Short:         "Derive CI configuration for a module from core config",
+		Long: "Derives CI configuration for any module from the core config system.\n" +
+			"All values are computed from repository.yml + blueprints.yml - no duplicate\n" +
+			"configuration in workflow files needed.\n" +
+			"\n" +
+			"With --format shell, outputs shell variable assignments for eval:\n" +
+			"  IS_CONTAINER=true|false\n" +
+			"  CONTAINER_PUSH=true|false\n" +
+			"  HAS_TESTS=true|false\n" +
+			"  TEST_ON_WINDOWS=true|false\n" +
+			"  TEST_ON_MACOS=true|false\n" +
+			"  SCANS=sbom,vuln,secrets\n" +
+			"  SCAN_FAIL_MODE=warn\n" +
+			"  BUILD_EVIDENCE=true|false\n" +
+			"  CROSS_COMPILE_WINDOWS=true|false\n" +
+			"  BUILD_ARGS=--all\n" +
+			"  DOWNLOAD_MODULES=clie\n" +
+			"  CONTAINER_TEST_SCRIPT=path\n" +
+			"  TEST_SUITES=unit,integration\n" +
+			"  TEST_SUITES_FULL=unit,integration,acceptance\n" +
+			"\n" +
+			"With --format github-output, outputs KEY=value lines for $GITHUB_OUTPUT.",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module moniker to derive CI config for", Required: true, Completion: []string{"modules"}},
+			{Name: "format", Type: "string", Usage: "Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)"},
+		},
+	}
+}
+
+func (c *getCIConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCIConfig()
+}
 
 // CIConfigResult represents the derived CI configuration for a module.
 type CIConfigResult struct {

@@ -48,8 +48,7 @@ with semaphores during parallel builds.
 - None identified
 
 ### Pain Points
-- `pool.go:24,28`: `var HostOnlyAllocation` and `var ContainerAllocation` are mutable package-level aliases from contracts; if overwritten they could silently break allocation logic
+- None identified
 
 ### Optimization Opportunities
-- Consider making `HostOnlyAllocation` and `ContainerAllocation` constants or unexported to prevent accidental mutation (trivial effort)
 - No TODO/FIXME markers found -- codebase is clean of deferred work items

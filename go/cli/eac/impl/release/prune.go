@@ -1,26 +1,3 @@
-// Command: release prune
-// Short: Remove old pre-releases and their tags, keeping only the newest N
-// Long: Prunes old pre-releases for a module, keeping only the specified number of newest releases.
-// Long:
-// Long: This command:
-// Long:   - Lists all releases matching the module prefix (e.g., docs/*)
-// Long:   - Keeps the newest N releases (default: 3)
-// Long:   - Deletes older releases and their associated git tags
-// Long:
-// Long: Use this after successful releases to maintain a clean release history.
-// Long:
-// Long: Expected Output:
-// Long:   - Count of releases found
-// Long:   - List of releases deleted (if any)
-// Long:   - Summary of cleanup results
-// Long:
-// Long: Example:
-// Long:   release prune docs              # Keep 3 newest docs/* releases
-// Long:   release prune books --keep 5    # Keep 5 newest books/* releases
-// Long:   release prune --all --keep 3    # Prune all modules
-// Flag.keep: type=int, default=1, usage=Number of releases to keep per module
-// Flag.all: type=bool, usage=Prune all modules with releases
-// Flag.dry-run: type=bool, usage=Show what would be deleted without deleting
 package release
 
 import (
@@ -30,10 +7,34 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releasePruneCommand struct{}
+
+var _ core.SimpleCommandPort = (*releasePruneCommand)(nil)
+
+func (c *releasePruneCommand) Name() string { return "release prune" }
+
+func (c *releasePruneCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-prune",
+		Short:         "Remove old pre-releases and their tags, keeping only the newest N",
+		Long:          "Prunes old pre-releases for a module, keeping only the specified number of newest releases.\n\nThis command:\n  - Lists all releases matching the module prefix (e.g., docs/*)\n  - Keeps the newest N releases (default: 3)\n  - Deletes older releases and their associated git tags\n\nUse this after successful releases to maintain a clean release history.\n\nExpected Output:\n  - Count of releases found\n  - List of releases deleted (if any)\n  - Summary of cleanup results\n\nExample:\n  release prune docs              # Keep 3 newest docs/* releases\n  release prune books --keep 5    # Keep 5 newest books/* releases\n  release prune --all --keep 3    # Prune all modules",
+		Flags: []core.FlagSpec{
+			{Name: "keep", Type: "int", DefaultValue: "1", Usage: "Number of releases to keep per module"},
+			{Name: "all", Type: "bool", Usage: "Prune all modules with releases"},
+			{Name: "dry-run", Type: "bool", Usage: "Show what would be deleted without deleting"},
+		},
+	}
+}
+
+func (c *releasePruneCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleasePrune()
+}
 
 func ReleasePrune() int {
 	// Validate flags before parsing

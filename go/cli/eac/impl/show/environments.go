@@ -1,23 +1,34 @@
-// Command: show environments
-// Short: Display all environment configurations
-// Long: The show environments command displays all environment contracts defined in environments.yml.
-// Long: Shows environment details including moniker, name, level, type, and system dependencies.
-// Long:
-// Long: Expected Output:
-// Long: - Table with environment definitions showing: Moniker, Name, Level, Type, System Dependencies
-// Long: - Summary by level (L0-L4) showing count of environments at each level
-// Long: - Summary by type showing count of environments for each type
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type showEnvironmentsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showEnvironmentsCommand)(nil)
+
+func (c *showEnvironmentsCommand) Name() string { return "show environments" }
+
+func (c *showEnvironmentsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-environments",
+		Short:         "Display all environment configurations",
+		Long:          "The show environments command displays all environment contracts defined in environments.yml.\nShows environment details including moniker, name, level, type, and system dependencies.\n\nExpected Output:\n- Table with environment definitions showing: Moniker, Name, Level, Type, System Dependencies\n- Summary by level (L0-L4) showing count of environments at each level\n- Summary by type showing count of environments for each type",
+	}
+}
+
+func (c *showEnvironmentsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowEnvironments()
+}
 
 func ShowEnvironments() int {
 	// Validate flags against registry metadata

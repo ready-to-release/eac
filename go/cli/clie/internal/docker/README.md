@@ -67,7 +67,6 @@ The docker package is the execution engine of the clie CLI. It handles everythin
 ### Tech Debt
 
 - `hosting-image.go:210-221` -- Duplicates Ping logic that already exists in `EnsureConnected()`. The `EnsureImageExists` function calls `ch.client.Ping()` directly instead of using `ch.EnsureConnected()`, resulting in redundant Docker service error handling.
-- `cleanup.go:167-178` -- Reimplements `strings.Contains` and `strings.LastIndex` as custom `contains`, `containsSubstring`, and `lastIndex` functions. These should use the standard library.
 
 ### Pain Points
 
@@ -76,4 +75,4 @@ The docker package is the execution engine of the clie CLI. It handles everythin
 
 ### Optimization Opportunities
 
-- The custom string helper functions in `cleanup.go` (`contains`, `containsSubstring`, `lastIndex`, `splitLines`) should be replaced with `strings.Contains`, `strings.LastIndex`, and `strings.Split` from the standard library.
+- None identified.

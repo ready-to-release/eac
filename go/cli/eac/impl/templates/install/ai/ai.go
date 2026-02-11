@@ -1,44 +1,49 @@
-// Command: templates install ai
-// Short: Install AI prompt templates without value replacements
-// Long: Install AI prompt templates by copying files as-is (no variable substitution).
-// Long: Templates preserve {{ .Variable }} placeholders for later customization.
-// Long:
-// Long: Template Source and Destination:
-// Long:   Source: templates/ai/ (fixed)
-// Long:   Destination: .eac/templates/ai/ (fixed)
-// Long:
-// Long: Use Case:
-// Long:   Install AI prompt templates once to your project, then customize them as needed.
-// Long:   This command copies files without replacing placeholders.
-// Long:
-// Long: Examples:
-// Long:   templates install ai
-// Long:   templates install ai --debug
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/commands.log
 package ai
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// commandFlags defines valid flags for the templates install ai command
+type templatesInstallAICommand struct{}
 
-var log = logging.C()
+var _ core.SimpleCommandPort = (*templatesInstallAICommand)(nil)
 
-func init() {
-	registry.Register(TemplatesInstallAI)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&templatesInstallAICommand{},
+	}
 }
 
+func (c *templatesInstallAICommand) Name() string { return "templates install ai" }
+
+func (c *templatesInstallAICommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "templates-install-ai",
+		Short:         "Install AI prompt templates without value replacements",
+		Long:          "Install AI prompt templates by copying files as-is (no variable substitution).\nTemplates preserve {{ .Variable }} placeholders for later customization.\n\nTemplate Source and Destination:\n  Source: templates/ai/ (fixed)\n  Destination: .eac/templates/ai/ (fixed)\n\nUse Case:\n  Install AI prompt templates once to your project, then customize them as needed.\n  This command copies files without replacing placeholders.\n\nExamples:\n  templates install ai\n  templates install ai --debug",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save detailed logs to out/commands.log"},
+		},
+	}
+}
+
+func (c *templatesInstallAICommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return TemplatesInstallAI()
+}
+
+var log = logging.C()
 // Config holds configuration for the AI install command.
 type Config struct {
 	Destination   string

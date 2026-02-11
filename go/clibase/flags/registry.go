@@ -3,68 +3,59 @@ package flags
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// GlobalFlags are flags that are valid for all commands.
-// Commands using ValidateFlagsFromRegistry automatically accept these flags.
-var GlobalFlags = []registry.FlagMetadata{
-	{Name: "help", Shorthand: "-h", Type: "bool", Usage: "Show help for command"},
+// globalRegistry is set by the binary's main() to enable flag validation.
+var globalRegistry core.CommandRegistryPort
+
+// SetRegistry sets the global command registry used by ValidateFlagsFromRegistry.
+func SetRegistry(reg core.CommandRegistryPort) {
+	globalRegistry = reg
 }
 
-// ValidateFlagsFromRegistry validates command-line flags against registry metadata.
-// It automatically detects the calling command using runtime.Caller() and validates
-// the provided arguments against the command's registered flag metadata.
+// GlobalFlags are flags that are valid for all commands.
+var GlobalFlags = []core.FlagSpec{
+	{Name: "help", Shorthand: "h", Type: "bool", Usage: "Show help for command"},
+}
+
+// ValidateFlagsFromRegistry validates command-line flags against the global command registry.
+// It resolves the current command from os.Args using longest-match, looks up its
+// flag metadata, and validates the provided arguments.
 // Global flags (--help, -h) are always accepted.
-//
-// Returns an error if:
-// - Unable to detect calling command
-// - Command not found in registry
-// - Unknown flags provided
-// - Required flags missing
-//
-// Example usage:
-//
-//	func Init() int {
-//	    if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-//	        log.Errorf("%v", err)
-//	        return 1
-//	    }
-//	    // ... rest of command logic
-//	}
 func ValidateFlagsFromRegistry(args []string) error {
-	// Auto-detect calling command using runtime.Caller()
-	_, callerFile, _, ok := runtime.Caller(1)
+	if globalRegistry == nil {
+		return nil // No registry configured, skip validation
+	}
+
+	// Resolve command name from os.Args using longest-match
+	cmdName := resolveCommandFromArgs()
+	if cmdName == "" {
+		return nil // Could not determine command, skip validation
+	}
+
+	cmd, ok := globalRegistry.Get(cmdName)
 	if !ok {
-		return fmt.Errorf("failed to detect calling command")
+		return nil // Command not in registry, skip validation
 	}
 
-	// Extract command name from file's // Command: comment
-	commandName, err := extractCommandName(callerFile)
-	if err != nil {
-		return fmt.Errorf("failed to extract command name: %w", err)
-	}
+	return ValidateFlags(args, cmd.Metadata().Flags)
+}
 
-	// Get command registration from registry
-	cmd := registry.GetCommand(commandName)
-	if cmd == nil {
-		return fmt.Errorf("command not found in registry: %s", commandName)
-	}
+// ValidateFlags validates command-line args against the given flag specs.
+func ValidateFlags(args []string, specs []core.FlagSpec) error {
+	allFlags := append(specs, GlobalFlags...)
 
 	// Parse args into flags map
 	parsedFlags := make(map[string]string)
-	var positionalArgs []string
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
 		// Skip positional arguments
 		if !strings.HasPrefix(arg, "-") {
-			positionalArgs = append(positionalArgs, arg)
 			continue
 		}
 
@@ -78,8 +69,7 @@ func ValidateFlagsFromRegistry(args []string) error {
 			flagName = arg
 			// Check if next arg is a value
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
-				// Look up flag metadata to determine if it takes a value
-				flagMeta := findFlagMetadata(cmd.Flags, flagName)
+				flagMeta := findFlag(allFlags, flagName)
 				if flagMeta != nil && flagMeta.Type != "bool" {
 					i++
 					flagValue = args[i]
@@ -87,84 +77,36 @@ func ValidateFlagsFromRegistry(args []string) error {
 			}
 		}
 
-		// Normalize flag name (remove leading dashes for lookup)
 		normalizedName := strings.TrimLeft(flagName, "-")
 		parsedFlags[normalizedName] = flagValue
 	}
 
-	// Validate parsed flags against registry metadata (including global flags)
-	allFlags := append(cmd.Flags, GlobalFlags...)
-	if err := validateParsedFlags(parsedFlags, allFlags); err != nil {
-		return err
-	}
-
-	return nil
+	return validateParsedFlags(parsedFlags, allFlags)
 }
 
-// extractCommandName reads the calling file and extracts the // Command: comment.
-// Handles cross-platform paths by converting Windows paths for registry lookups.
-func extractCommandName(callerFile string) (string, error) {
-	// Translate path for cross-compilation if needed
-	translatedPath, err := translateCrossCompilePath(callerFile)
-	if err != nil {
-		return "", err
+// resolveCommandFromArgs finds the longest matching command name from os.Args.
+func resolveCommandFromArgs() string {
+	if len(os.Args) < 2 {
+		return ""
 	}
-
-	// Read file to find // Command: comment
-	content, err := os.ReadFile(translatedPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file %s: %w", translatedPath, err)
-	}
-
-	// Look for // Command: comment
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "// Command:") {
-			commandName := strings.TrimSpace(strings.TrimPrefix(line, "// Command:"))
-			return commandName, nil
+	for count := len(os.Args) - 1; count >= 1; count-- {
+		name := strings.Join(os.Args[1:count+1], " ")
+		if _, ok := globalRegistry.Get(name); ok {
+			return name
 		}
 	}
-
-	return "", fmt.Errorf("no // Command: comment found in file: %s", translatedPath)
+	return ""
 }
 
-// translateCrossCompilePath handles path translation for cross-compilation scenarios.
-// Windows paths may use backslashes; ensure file exists at expected location.
-func translateCrossCompilePath(path string) (string, error) {
-	// Normalize path separators for current OS
-	normalizedPath := filepath.FromSlash(path)
-
-	// Check if file exists at this path
-	if _, err := os.Stat(normalizedPath); err == nil {
-		return normalizedPath, nil
-	}
-
-	// If not found, try with OS-specific path separators
-	if filepath.Separator == '\\' {
-		// On Windows, try converting forward slashes
-		windowsPath := strings.ReplaceAll(path, "/", "\\")
-		if _, err := os.Stat(windowsPath); err == nil {
-			return windowsPath, nil
-		}
-	}
-
-	// Return original path if no translation worked
-	return normalizedPath, nil
-}
-
-// findFlagMetadata looks up flag metadata by name or shorthand.
-func findFlagMetadata(flags []registry.FlagMetadata, flagName string) *registry.FlagMetadata {
-	// Remove leading dashes
+// findFlag looks up a flag spec by name or shorthand.
+func findFlag(flags []core.FlagSpec, flagName string) *core.FlagSpec {
 	normalizedName := strings.TrimLeft(flagName, "-")
 
 	for i := range flags {
 		flag := &flags[i]
-		// Check full name
 		if flag.Name == normalizedName {
 			return flag
 		}
-		// Check shorthand (with or without dash)
 		if flag.Shorthand != "" {
 			normalizedShorthand := strings.TrimLeft(flag.Shorthand, "-")
 			if normalizedShorthand == normalizedName {
@@ -175,21 +117,18 @@ func findFlagMetadata(flags []registry.FlagMetadata, flagName string) *registry.
 	return nil
 }
 
-// validateParsedFlags validates parsed flags against registry metadata.
-func validateParsedFlags(parsedFlags map[string]string, flagMetadata []registry.FlagMetadata) error {
-	// Check for unknown flags
+// validateParsedFlags validates parsed flags against flag specs.
+func validateParsedFlags(parsedFlags map[string]string, specs []core.FlagSpec) error {
 	for flagName := range parsedFlags {
-		if findFlagMetadata(flagMetadata, flagName) == nil {
-			// Generate helpful error with suggestions
-			return buildUnknownFlagError(flagName, flagMetadata)
+		if findFlag(specs, flagName) == nil {
+			return buildUnknownFlagError(flagName, specs)
 		}
 	}
 
-	// Check for required flags
-	for _, flagMeta := range flagMetadata {
-		if flagMeta.Required {
-			if _, found := parsedFlags[flagMeta.Name]; !found {
-				return fmt.Errorf("required flag missing: --%s", flagMeta.Name)
+	for _, spec := range specs {
+		if spec.Required {
+			if _, found := parsedFlags[spec.Name]; !found {
+				return fmt.Errorf("required flag missing: --%s", spec.Name)
 			}
 		}
 	}
@@ -198,16 +137,15 @@ func validateParsedFlags(parsedFlags map[string]string, flagMetadata []registry.
 }
 
 // buildUnknownFlagError creates a helpful error message for unknown flags.
-func buildUnknownFlagError(unknownFlag string, validFlags []registry.FlagMetadata) error {
+func buildUnknownFlagError(unknownFlag string, validFlags []core.FlagSpec) error {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Unknown flag: --%s\n\n", unknownFlag))
 
-	// List valid flags
 	sb.WriteString("Valid flags:\n")
 	for _, flag := range validFlags {
 		flagStr := fmt.Sprintf("  --%s", flag.Name)
 		if flag.Shorthand != "" {
-			flagStr += fmt.Sprintf(", %s", flag.Shorthand)
+			flagStr += fmt.Sprintf(", -%s", flag.Shorthand)
 		}
 		if flag.Type != "bool" {
 			flagStr += fmt.Sprintf(" <%s>", flag.Type)
@@ -218,7 +156,6 @@ func buildUnknownFlagError(unknownFlag string, validFlags []registry.FlagMetadat
 		sb.WriteString(flagStr + "\n")
 	}
 
-	// Suggest similar flags
 	suggestions := suggestSimilarFlags(unknownFlag, validFlags)
 	if len(suggestions) > 0 {
 		sb.WriteString("\nDid you mean:\n")
@@ -231,11 +168,10 @@ func buildUnknownFlagError(unknownFlag string, validFlags []registry.FlagMetadat
 }
 
 // suggestSimilarFlags suggests flags with similar names using Levenshtein distance.
-func suggestSimilarFlags(unknownFlag string, validFlags []registry.FlagMetadata) []string {
+func suggestSimilarFlags(unknownFlag string, validFlags []core.FlagSpec) []string {
 	const maxDistance = 2
 	var suggestions []string
 
-	// Strip leading dashes from unknown flag for comparison
 	normalizedUnknown := strings.TrimLeft(unknownFlag, "-")
 
 	for _, flag := range validFlags {
@@ -272,9 +208,9 @@ func levenshteinDistance(a, b string) int {
 				cost = 0
 			}
 			matrix[i][j] = min(
-				matrix[i-1][j]+1,      // deletion
-				matrix[i][j-1]+1,      // insertion
-				matrix[i-1][j-1]+cost, // substitution
+				matrix[i-1][j]+1,
+				matrix[i][j-1]+1,
+				matrix[i-1][j-1]+cost,
 			)
 		}
 	}

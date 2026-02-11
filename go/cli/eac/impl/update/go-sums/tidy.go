@@ -1,18 +1,3 @@
-// Command: update go-sums
-// Short: Run go mod tidy across all workspace modules
-// Long: Ensures all Go modules in the workspace have tidy go.mod and go.sum files.
-// Long:
-// Long: Parses go.work to discover all workspace modules, then runs 'go mod tidy'
-// Long: in each module directory. Also runs 'go work sync' at the repo root.
-// Long:
-// Long: This is the fix counterpart to 'validate go-tidy' (which only checks).
-// Long:
-// Long: Examples:
-// Long:   update go-sums                  Tidy all modules
-// Long:   update go-sums --dry-run        Show what would change without modifying files
-// Long:   update go-sums --verbose        Show go mod tidy output for each module
-// Flag.dry-run: type=bool, default=false, usage=Show what would change without modifying files
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show go mod tidy output for each module
 package gosums
 
 import (
@@ -25,17 +10,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/clibase/goexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 var log = logging.C()
-
-func init() {
-	registry.Register(UpdateGoSums)
-}
-
 // UpdateGoSums runs go mod tidy across all workspace modules.
 func UpdateGoSums() int {
 	args := os.Args[3:] // Skip program name, "update", "go-sums"

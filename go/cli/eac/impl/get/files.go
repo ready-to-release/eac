@@ -1,50 +1,47 @@
-// Command: get files
-// Short: Get repository files with their module ownership
-// Long: Get repository files with their module ownership in structured format.
-// Long:
-// Long: This command analyzes the repository and maps each file to its owning module
-// Long: based on module domain. The output can be formatted as YAML, JSON, or TOML
-// Long: for programmatic processing.
-// Long:
-// Long: Use filters to scope the output to specific files or modules:
-// Long:   --changed-only: Only modified/unstaged files
-// Long:   --staged-only: Only staged files
-// Long:   --module: Files owned by a specific module
-// Long:   --pattern: Files matching a glob pattern
-// Long:
-// Long: Example:
-// Long:   get files --as-json
-// Long:   get files --module core
-// Long:   get files --changed-only --as-yaml
-// Long:
-// Long: Expected Output:
-// Long: List of files with owning module information. Format depends on --as-* flag:
-// Long:   - YAML (default): Structured list with file name and modules array
-// Long:   - JSON: Same structure as YAML in JSON format
-// Long:   - TOML: Same structure as YAML in TOML format
-// Long: Each entry contains the file name and list of owning module monikers.
-// Flag.as-yaml: type=bool, usage=Output as YAML (default format)
-// Flag.as-json: type=bool, usage=Output as JSON
-// Flag.as-toml: type=bool, usage=Output as TOML
-// Flag.changed-only: type=bool, usage=Only show modified/unstaged files
-// Flag.staged-only: type=bool, usage=Only show staged files
-// Flag.module: type=string, usage=Filter to files owned by specific module moniker
-// Flag.pattern: type=string, usage=Filter files matching glob pattern
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
+
+type getFilesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getFilesCommand)(nil)
+
+func (c *getFilesCommand) Name() string { return "get files" }
+
+func (c *getFilesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-files",
+		Short:         "Get repository files with their module ownership",
+		Long:          "Get repository files with their module ownership in structured format.\n\nThis command analyzes the repository and maps each file to its owning module\nbased on module domain. The output can be formatted as YAML, JSON, or TOML\nfor programmatic processing.\n\nUse filters to scope the output to specific files or modules:\n  --changed-only: Only modified/unstaged files\n  --staged-only: Only staged files\n  --module: Files owned by a specific module\n  --pattern: Files matching a glob pattern\n\nExample:\n  get files --as-json\n  get files --module core\n  get files --changed-only --as-yaml\n\nExpected Output:\nList of files with owning module information. Format depends on --as-* flag:\n  - YAML (default): Structured list with file name and modules array\n  - JSON: Same structure as YAML in JSON format\n  - TOML: Same structure as YAML in TOML format\nEach entry contains the file name and list of owning module monikers.",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", DefaultValue: "", Usage: "Output as YAML (default format)"},
+			{Name: "as-json", Type: "bool", DefaultValue: "", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", DefaultValue: "", Usage: "Output as TOML"},
+			{Name: "changed-only", Type: "bool", DefaultValue: "", Usage: "Only show modified/unstaged files"},
+			{Name: "staged-only", Type: "bool", DefaultValue: "", Usage: "Only show staged files"},
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to files owned by specific module moniker"},
+			{Name: "pattern", Type: "string", DefaultValue: "", Usage: "Filter files matching glob pattern"},
+		},
+	}
+}
+
+func (c *getFilesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetFiles()
+}
 
 // filesFlags defines valid flags for the get files command
 

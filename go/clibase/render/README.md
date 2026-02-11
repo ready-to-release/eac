@@ -51,7 +51,6 @@ without modifying the render package itself.
 ## Code Health
 
 ### Tech Debt
-- `custom/registry.go:18` mutable package-level `registry` map; concurrent command registration would race without external synchronization
 - Limited test coverage: only `markdown_table_test.go`, `struct_renderer_test.go`, and `examples_test.go` exist; `console_table.go`, `json.go`, and `toml.go` have no dedicated tests
 
 ### Pain Points
@@ -59,4 +58,3 @@ without modifying the render package itself.
 
 ### Optimization Opportunities
 - Add unit tests for `json.go` and `toml.go` round-trip fidelity (low effort)
-- Guard `custom/registry.go` global map with `sync.RWMutex` or switch to `sync.Map` if concurrent registration becomes realistic (low effort)

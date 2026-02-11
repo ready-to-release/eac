@@ -1,34 +1,12 @@
-// Command: release changelog
-// Short: Generate or update changelog from commits
-// Long: Analyzes commits since the last release tag and generates changelog entries.
-// Long:
-// Long: The command reads conventional commit messages (feat, fix, refactor, etc.)
-// Long: and categorizes them into changelog sections (Added, Fixed, Changed, etc.).
-// Long:
-// Long: By default, shows a preview of the changelog entries without writing.
-// Long: Use --write to update the changelog file.
-// Long:
-// Long: Expected Output:
-// Long:   - Preview of changelog entries (default)
-// Long:   - Updated release/<module>/CHANGELOG.md file if --write flag is specified
-// Long:
-// Long: Examples:
-// Long:   release changelog clie              # Preview changelog entries
-// Long:   release changelog clie --write      # Update release/clie/CHANGELOG.md
-// Long:   release changelog clie --from v1.0  # From specific tag
-// Flag.write: type=bool, usage=Write changes to changelog file (default: preview only)
-// Flag.from: type=string, usage=Start from specific tag/ref (default: latest release tag)
-// Flag.to: type=string, usage=End at specific tag/ref (default: HEAD)
-// Flag.version: type=string, usage=Override calculated version number
-// Flag.date: type=string, usage=Override release date (YYYY-MM-DD format)
-// Flag.breaking: type=bool, usage=Force major version bump
 package release
 
 import (
+	"context"
 	"os"
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -36,6 +14,32 @@ import (
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type releaseChangelogCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseChangelogCommand)(nil)
+
+func (c *releaseChangelogCommand) Name() string { return "release changelog" }
+
+func (c *releaseChangelogCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-changelog",
+		Short:         "Generate or update changelog from commits",
+		Long:          "Analyzes commits since the last release tag and generates changelog entries.\n\nThe command reads conventional commit messages (feat, fix, refactor, etc.)\nand categorizes them into changelog sections (Added, Fixed, Changed, etc.).\n\nBy default, shows a preview of the changelog entries without writing.\nUse --write to update the changelog file.\n\nExpected Output:\n  - Preview of changelog entries (default)\n  - Updated release/<module>/CHANGELOG.md file if --write flag is specified\n\nExamples:\n  release changelog clie              # Preview changelog entries\n  release changelog clie --write      # Update release/clie/CHANGELOG.md\n  release changelog clie --from v1.0  # From specific tag",
+		Flags: []core.FlagSpec{
+			{Name: "write", Type: "bool", Usage: "Write changes to changelog file (default: preview only)"},
+			{Name: "from", Type: "string", Usage: "Start from specific tag/ref (default: latest release tag)"},
+			{Name: "to", Type: "string", Usage: "End at specific tag/ref (default: HEAD)"},
+			{Name: "version", Type: "string", Usage: "Override calculated version number"},
+			{Name: "date", Type: "string", Usage: "Override release date (YYYY-MM-DD format)"},
+			{Name: "breaking", Type: "bool", Usage: "Force major version bump"},
+		},
+	}
+}
+
+func (c *releaseChangelogCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseChangelog()
+}
 
 // log is the package-level logger for release commands.
 var log = logging.C()

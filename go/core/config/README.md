@@ -72,5 +72,4 @@ sensible defaults while letting teams and individuals override specific values.
 - `RepositoryConfig` in `repository.go` carries path-helper methods (30+) that could live in `core/paths` to reduce surface area
 
 ### Optimization Opportunities
-- `GetModule`/`GetByMoniker` in `repository.go` perform linear scans over `[]Module`; a moniker-to-index map built once after load would be O(1) — low effort, high impact for large configs
-- `GetByExtension` in `component_types.go:311-323` also does a linear scan; a pre-built extension map would help repos with many component types — low effort
+- None identified

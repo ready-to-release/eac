@@ -42,8 +42,7 @@ verify and aggregate.
 - None identified
 
 ### Pain Points
-- `evidence.go`: `WriteEvidence` and `WriteComponentEvidence` share ~80% of their logic; duplication could be reduced with a shared internal writer
+- None identified
 
 ### Optimization Opportunities
-- Extract a common `writeFile(outputDir, module, scanner, findings)` helper to eliminate duplication between module-level and component-level writers (low effort, medium value)
-- Package is compact (159 lines + 187 lines of tests) and well-covered; minimal issues
+- None identified

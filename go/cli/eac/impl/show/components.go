@@ -1,35 +1,44 @@
-// Command: show components
-// Short: Display all components in a human-readable markdown report
-// Long: Shows components grouped by module with phase support and dependency information.
-// Long: The report includes:
-// Long:   - Summary statistics (total, buildable, lintable, testable, scannable)
-// Long:   - Components grouped by module with phase icons
-// Long:   - Dependency graph showing what each component depends on and what depends on it
-// Long:
-// Long: Filter Examples:
-// Long:   show components                         # All components
-// Long:   show components --module eac   # Components in specific module
-// Long:   show components --type go               # Only Go components
-// Long:   show components --buildable             # Only buildable components
-// Flag.module: type=string, default="", usage=Filter to specific module
-// Flag.type: type=string, default="", usage=Filter by component type (go, typescript, book, etc.)
-// Flag.buildable: type=bool, default=false, usage=Only components with build phase
-// Flag.lintable: type=bool, default=false, usage=Only components with lint phase
-// Flag.testable: type=bool, default=false, usage=Only components with test phase
-// Flag.scannable: type=bool, default=false, usage=Only components with scan phase
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showComponentsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showComponentsCommand)(nil)
+
+func (c *showComponentsCommand) Name() string { return "show components" }
+
+func (c *showComponentsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-components",
+		Short:         "Display all components in a human-readable markdown report",
+		Long:          "Shows components grouped by module with phase support and dependency information.\nThe report includes:\n  - Summary statistics (total, buildable, lintable, testable, scannable)\n  - Components grouped by module with phase icons\n  - Dependency graph showing what each component depends on and what depends on it\n\nFilter Examples:\n  show components                         # All components\n  show components --module eac   # Components in specific module\n  show components --type go               # Only Go components\n  show components --buildable             # Only buildable components",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to specific module"},
+			{Name: "type", Type: "string", DefaultValue: "", Usage: "Filter by component type (go, typescript, book, etc.)"},
+			{Name: "buildable", Type: "bool", DefaultValue: "false", Usage: "Only components with build phase"},
+			{Name: "lintable", Type: "bool", DefaultValue: "false", Usage: "Only components with lint phase"},
+			{Name: "testable", Type: "bool", DefaultValue: "false", Usage: "Only components with test phase"},
+			{Name: "scannable", Type: "bool", DefaultValue: "false", Usage: "Only components with scan phase"},
+		},
+	}
+}
+
+func (c *showComponentsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowComponents()
+}
 
 // componentShowFilters holds the parsed filter flags.
 type componentShowFilters struct {

@@ -1,29 +1,7 @@
-// Command: release extract-version
-// Short: Extract and validate release version from tag or input
-// Flag.module: type=string, usage=Module prefix (e.g., clie, docs)
-// Flag.type: type=string, default=semver, usage=Version type (semver or calver)
-// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/clie/1.0.0)
-// Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
-// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
-// Long: The release extract-version command extracts version information from a git tag ref
-// Long: or explicit version input, validates the format (semver or calver), and outputs
-// Long: structured data for use in release workflows.
-// Long:
-// Long: This command replaces the extract-release-version GitHub Action with pure Go logic,
-// Long: making it testable and usable locally.
-// Long:
-// Long: Expected Output (--format shell):
-// Long:   VERSION="1.0.0"
-// Long:   TAG_NAME="clie/1.0.0"
-// Long:   IS_VALID="true"
-// Long:
-// Long: Example:
-// Long:   release extract-version --module clie --ref refs/tags/clie/1.0.0
-// Long:   release extract-version --module docs --type calver --version ""
-// Long:   eval $(release extract-version --module clie --ref "$GITHUB_REF" --format shell)
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,9 +9,35 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"gopkg.in/yaml.v3"
 )
+
+type releaseExtractVersionCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseExtractVersionCommand)(nil)
+
+func (c *releaseExtractVersionCommand) Name() string { return "release extract-version" }
+
+func (c *releaseExtractVersionCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-extract-version",
+		Short:         "Extract and validate release version from tag or input",
+		Long:          "The release extract-version command extracts version information from a git tag ref\nor explicit version input, validates the format (semver or calver), and outputs\nstructured data for use in release workflows.\n\nThis command replaces the extract-release-version GitHub Action with pure Go logic,\nmaking it testable and usable locally.\n\nExpected Output (--format shell):\n  VERSION=\"1.0.0\"\n  TAG_NAME=\"clie/1.0.0\"\n  IS_VALID=\"true\"\n\nExample:\n  release extract-version --module clie --ref refs/tags/clie/1.0.0\n  release extract-version --module docs --type calver --version \"\"\n  eval $(release extract-version --module clie --ref \"$GITHUB_REF\" --format shell)",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module prefix (e.g., clie, docs)"},
+			{Name: "type", Type: "string", DefaultValue: "semver", Usage: "Version type (semver or calver)"},
+			{Name: "ref", Type: "string", Usage: "Git ref (e.g., refs/tags/clie/1.0.0)"},
+			{Name: "version", Type: "string", Usage: "Explicit version (for workflow_dispatch)"},
+			{Name: "format", Type: "string", DefaultValue: "shell", Usage: "Output format (shell, json, yaml)"},
+		},
+	}
+}
+
+func (c *releaseExtractVersionCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ExtractVersion()
+}
 
 var (
 	reCalver       = regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)

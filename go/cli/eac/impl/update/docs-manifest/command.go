@@ -1,55 +1,50 @@
-// Command: update docs-manifest
-// Short: Update the documentation assets manifest
-// Long: Scans docs/assets/ for documentation assets (drawio diagrams, images)
-// Long: and updates the asset tracking files.
-// Long:
-// Long: This command manages two files:
-// Long:   - descriptions.yml: Human-maintained descriptions and active status (git-tracked)
-// Long:   - .manifest-cache.json: Auto-generated usage and metadata (git-ignored)
-// Long:
-// Long: The descriptions file tracks:
-// Long:   - Asset descriptions (human/LLM-authored, preserved on update)
-// Long:   - Active status flag (mark assets as deprecated with active: false)
-// Long:
-// Long: The cache file tracks:
-// Long:   - Usage references (auto-detected from markdown files)
-// Long:   - File metadata (size, hash, last modified)
-// Long:   - Statistics (total, used, unused by category)
-// Long:
-// Long: Expected Output:
-// Long:   - Updates .manifest-cache.json with current usage
-// Long:   - Updates descriptions.yml only when new assets are discovered
-// Long:   - Reports added/removed/changed assets
-// Long:   - Lists new assets needing descriptions
-// Long:
-// Long: Example:
-// Long:   update docs-manifest              # Update manifest files
-// Long:   update docs-manifest --check      # Validate manifest is up-to-date (CI)
-// Long:   update docs-manifest --dry-run    # Show what would change
-// Flag.check: type=bool, default=false, usage=Validate manifest is up-to-date (exits non-zero if stale)
-// Flag.dry-run: type=bool, default=false, usage=Show what would change without writing
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress
 package docsmanifest
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateDocsManifestCommand struct{}
 
-func init() {
-	registry.Register(UpdateDocsManifest)
+var _ core.SimpleCommandPort = (*updateDocsManifestCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateDocsManifestCommand{},
+	}
 }
 
+func (c *updateDocsManifestCommand) Name() string { return "update docs-manifest" }
+
+func (c *updateDocsManifestCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-docs-manifest",
+		Short:         "Update the documentation assets manifest",
+		Long:          "Scans docs/assets/ for documentation assets (drawio diagrams, images)\nand updates the asset tracking files.\n\nThis command manages two files:\n  - descriptions.yml: Human-maintained descriptions and active status (git-tracked)\n  - .manifest-cache.json: Auto-generated usage and metadata (git-ignored)\n\nThe descriptions file tracks:\n  - Asset descriptions (human/LLM-authored, preserved on update)\n  - Active status flag (mark assets as deprecated with active: false)\n\nThe cache file tracks:\n  - Usage references (auto-detected from markdown files)\n  - File metadata (size, hash, last modified)\n  - Statistics (total, used, unused by category)\n\nExpected Output:\n  - Updates .manifest-cache.json with current usage\n  - Updates descriptions.yml only when new assets are discovered\n  - Reports added/removed/changed assets\n  - Lists new assets needing descriptions\n\nExample:\n  update docs-manifest              # Update manifest files\n  update docs-manifest --check      # Validate manifest is up-to-date (CI)\n  update docs-manifest --dry-run    # Show what would change",
+		Flags: []core.FlagSpec{
+			{Name: "check", Type: "bool", DefaultValue: "false", Usage: "Validate manifest is up-to-date (exits non-zero if stale)"},
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would change without writing"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress"},
+		},
+	}
+}
+
+func (c *updateDocsManifestCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateDocsManifest()
+}
+
+var log = logging.C()
 // UpdateDocsManifest updates the documentation assets manifest.
 func UpdateDocsManifest() int {
 	// Validate flags

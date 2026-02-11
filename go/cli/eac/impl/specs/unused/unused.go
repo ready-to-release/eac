@@ -1,34 +1,48 @@
-// Command: get specs unused-steps
-// Short: Detect unused godog step definitions
-// Long: The get specs unused-steps command scans step definition files in godog components
-// Long: and compares them against feature files in specs/ to find step definitions
-// Long: that are not matched by any Gherkin step.
-// Long: This helps identify dead code and maintain a clean test codebase.
-// Long: Shared steps from go/eac/specs/internal/steps.go are checked against all pairs.
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed output including all scanned files
-// Flag.module: type=string, shorthand=m, default=, usage=Only analyze a specific module (e.g., eac)
 // Usage: specs unused-steps [--verbose] [--module=<name>]
 package unused
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// commandFlags defines valid flags for the specs unused command
+type specsUnusedStepsCommand struct{}
 
-var log = logging.C()
+var _ core.SimpleCommandPort = (*specsUnusedStepsCommand)(nil)
 
-func init() {
-	registry.Register(SpecsUnusedSteps)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&specsUnusedStepsCommand{},
+	}
 }
 
+func (c *specsUnusedStepsCommand) Name() string { return "get specs unused-steps" }
+
+func (c *specsUnusedStepsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-specs-unused-steps",
+		Short:         "Detect unused godog step definitions",
+		Long:          "The get specs unused-steps command scans step definition files in godog components\nand compares them against feature files in specs/ to find step definitions\nthat are not matched by any Gherkin step.\nThis helps identify dead code and maintain a clean test codebase.\nShared steps from go/eac/specs/internal/steps.go are checked against all pairs.",
+		Flags: []core.FlagSpec{
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed output including all scanned files"},
+			{Name: "module", Shorthand: "m", Type: "string", Usage: "Only analyze a specific module (e.g., eac)"},
+		},
+	}
+}
+
+func (c *specsUnusedStepsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return SpecsUnusedSteps()
+}
+
+var log = logging.C()
 // SpecsUnusedSteps is the entry point for the specs unused-steps command.
 func SpecsUnusedSteps() int {
 	args := os.Args[3:] // Skip program name, "specs", and "unused-steps"

@@ -42,7 +42,9 @@ Provides shared infrastructure for GET and SHOW commands, including artifact res
 
 | File | Responsibility |
 | --- | --- |
-| artifact_helpers.go | Artifact resolution, validation, metadata override merging, book expansion, and formatting (698 lines) |
+| artifact_helpers.go | Shared artifact utilities: formatting, book expansion, platform inference, and ID derivation |
+| artifact_resolution.go | Artifact resolution types (`ResolvedArtifact`, `ArtifactResolutionSummary`) and resolution functions |
+| artifact_validation.go | Artifact validation types (`ModuleValidationResult`, `ValidationResults`) and dependency traversal |
 | effective_config.go | Effective module configuration with path variable substitution |
 
 ## Dependencies
@@ -59,10 +61,10 @@ The `impl/internal` package provides the artifact resolution and validation infr
 ## Code Health
 
 ### Tech Debt
-- `artifact_helpers.go` (698 lines) handles artifact resolution, validation, dependency traversal, book expansion, platform inference, and formatting in a single file
+- None identified
 
 ### Pain Points
 - Platform inference relies on string pattern matching against file paths, which is fragile for non-standard naming
 
 ### Optimization Opportunities
-- Split `artifact_helpers.go` into focused files: resolution, validation, platform, formatting (moderate effort, improves navigability)
+- No urgent opportunities identified

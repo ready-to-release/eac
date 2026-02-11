@@ -1,20 +1,3 @@
-// Command: update design
-// Short: Update existing workspace.dsl for a module using AI
-// Long: Updates an existing Structurizr DSL workspace file for a module by analyzing its current
-// Long: source code using AI. The AI re-analyzes the source code in src/<module>/ and updates
-// Long: the architecture documentation to reflect current state, preserving the overall structure
-// Long: while incorporating new components, relationships, or changes. All updated workspaces are
-// Long: automatically validated against Structurizr CLI to ensure correct syntax before saving.
-// Long: Use --debug to save intermediate outputs to out/commands.log for debugging.
-// Long:
-// Long: Expected Output:
-// Long:   - Updated Structurizr DSL workspace file at specs/<module>/.design/workspace.dsl
-// Long:   - Preserves overall structure while incorporating code changes
-// Long:   - Validated syntax (passed Structurizr CLI validation)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging
-// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite workspace.dsl even if validation fails
-// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
-// Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
 // Usage: update design <module>
 package design
 
@@ -26,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	designHelper "github.com/ready-to-release/eac/go/cli/eac/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -40,14 +23,38 @@ import (
 	"github.com/ready-to-release/eac/go/core/validation/formats/structurizr"
 )
 
-var log = logging.C()
+type updateDesignCommand struct{}
 
-// commandFlags defines valid flags for the update design command
+var _ core.SimpleCommandPort = (*updateDesignCommand)(nil)
 
-func init() {
-	registry.Register(UpdateDesign)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateDesignCommand{},
+	}
 }
 
+func (c *updateDesignCommand) Name() string { return "update design" }
+
+func (c *updateDesignCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-design",
+		Short:         "Update existing workspace.dsl for a module using AI",
+		Long:          "Updates an existing Structurizr DSL workspace file for a module by analyzing its current\nsource code using AI. The AI re-analyzes the source code in src/<module>/ and updates\nthe architecture documentation to reflect current state, preserving the overall structure\nwhile incorporating new components, relationships, or changes. All updated workspaces are\nautomatically validated against Structurizr CLI to ensure correct syntax before saving.\nUse --debug to save intermediate outputs to out/commands.log for debugging.\n\nExpected Output:\n  - Updated Structurizr DSL workspace file at specs/<module>/.design/workspace.dsl\n  - Preserves overall structure while incorporating code changes\n  - Validated syntax (passed Structurizr CLI validation)",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging"},
+			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Overwrite workspace.dsl even if validation fails"},
+			{Name: "output", Shorthand: "o", Type: "string", Usage: "Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)"},
+			{Name: "prompt", Type: "string", Usage: "Custom AI prompt file path"},
+		},
+	}
+}
+
+func (c *updateDesignCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateDesign()
+}
+
+var log = logging.C()
 // Intent: Update an existing Structurizr DSL workspace by re-analyzing source code
 //
 // UpdateDesign orchestrates the architecture design update workflow.

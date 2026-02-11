@@ -1,28 +1,36 @@
-// Command: show release-summary
-// Short: Generate release summary from layers JSON
-// Long: Parses release layers JSON and generates a markdown summary.
-// Long:
-// Long: This command replaces the bash/jq loop that iterates over LAYERS_JSON
-// Long: to generate the release summary in GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Input: --layers JSON array of release layers
-// Long:
-// Long: Output: Markdown formatted release summary
-// Long:
-// Long: Example:
-// Long:   show release-summary --layers '[[{"module":"docs","version":"2025.0116","type":"calver"}]]'
-// Long:   show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
-// Flag.layers: type=string, usage=JSON array of release layers (required)
 package show
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showReleaseSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showReleaseSummaryCommand)(nil)
+
+func (c *showReleaseSummaryCommand) Name() string { return "show release-summary" }
+
+func (c *showReleaseSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-release-summary",
+		Short:         "Generate release summary from layers JSON",
+		Long:          "Parses release layers JSON and generates a markdown summary.\n\nThis command replaces the bash/jq loop that iterates over LAYERS_JSON\nto generate the release summary in GITHUB_STEP_SUMMARY.\n\nInput: --layers JSON array of release layers\n\nOutput: Markdown formatted release summary\n\nExample:\n  show release-summary --layers '[[{\"module\":\"docs\",\"version\":\"2025.0116\",\"type\":\"calver\"}]]'\n  show release-summary --layers \"$LAYERS_JSON\" >> $GITHUB_STEP_SUMMARY",
+		Flags: []core.FlagSpec{
+			{Name: "layers", Type: "string", Usage: "JSON array of release layers (required)"},
+		},
+	}
+}
+
+func (c *showReleaseSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowReleaseSummary()
+}
 
 // ReleaseModule represents a module in a release layer.
 type ReleaseModule struct {

@@ -48,7 +48,6 @@ entries in the repository configuration.
 - defaults.go: Path-building functions (`DesignPath`, `SpecsPath`, etc.) use inline string concatenation of `"specs/"` rather than referencing `paths.SpecsDir`, coupling the two packages implicitly
 
 ### Pain Points
-- type_defaults.go: The 3-tier resolution pattern (explicit -> type default -> generic fallback) is repeated 10 times inside `ResolveDefaults`; extracting a `resolveField` helper would halve the function length
 - `TypeDefaults` in this package mirrors `config.TypeDefaults` to avoid import cycles; changes to one must be manually synchronized with the other
 
 ### Optimization Opportunities

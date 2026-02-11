@@ -122,7 +122,7 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 // Each module with a structurizr component gets its own build output.
 // Path: out/build/{module}/structurizr-structurizr-render/structurizr/
 func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, moduleName, "structurizr-structurizr-render", "structurizr")
+	return outSubPath(repoRoot, BuildDir, moduleName, "structurizr-structurizr-render", "structurizr")
 }
 
 // StructurizrAccelCachePath returns the path to the structurizr acceleration cache.
@@ -135,7 +135,7 @@ func StructurizrAccelCachePath(repoRoot string) string {
 // MarkdownCommandsBuildOutputPath returns the markdown-commands fragment output dir.
 // Path: out/build/<module>/markdown-commands-markdown-commands/markdown-commands/
 func MarkdownCommandsBuildOutputPath(repoRoot, moduleName string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, moduleName,
+	return outSubPath(repoRoot, BuildDir, moduleName,
 		"markdown-commands-markdown-commands", "markdown-commands")
 }
 
@@ -143,14 +143,14 @@ func MarkdownCommandsBuildOutputPath(repoRoot, moduleName string) string {
 // This is where rendered drawio PNGs are written by the drawio builder.
 // Path: out/build/docs/drawio-drawio-render/drawio/
 func DrawioBuildOutputPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "drawio-drawio-render", "drawio")
+	return outSubPath(repoRoot, BuildDir, "docs", "drawio-drawio-render", "drawio")
 }
 
 // MermaidBuildOutputPath returns the path to the mermaid build output directory.
 // This is where rendered mermaid SVGs and the index manifest are written.
 // Path: out/build/docs/mermaid-mermaid-render/mermaid/
 func MermaidBuildOutputPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "mermaid-mermaid-render", "mermaid")
+	return outSubPath(repoRoot, BuildDir, "docs", "mermaid-mermaid-render", "mermaid")
 }
 
 // DrawioAccelCachePath returns the path to the drawio acceleration cache.
@@ -178,7 +178,7 @@ func PlantUMLAccelCachePath(repoRoot string) string {
 // This is where rendered plantuml SVGs and the index manifest are written.
 // Path: out/build/docs/plantuml-plantuml-render/plantuml/
 func PlantUMLBuildOutputPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, "docs", "plantuml-plantuml-render", "plantuml")
+	return outSubPath(repoRoot, BuildDir, "docs", "plantuml-plantuml-render", "plantuml")
 }
 
 // PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory.

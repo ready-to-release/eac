@@ -1,28 +1,37 @@
-// Command: pipeline ci get-run-id
-// Short: Get CI run ID for a workflow and commit SHA
-// Long: Look up the run ID of a successful CI workflow run for a specific commit.
-// Long:
-// Long: This command is useful for release workflows that need to download
-// Long: artifacts from a CI run at a specific commit SHA.
-// Long:
-// Long: Expected Output:
-// Long:   - Run ID on stdout (for capturing in scripts)
-// Long:   - Exit code 0 on success, 1 if no run found
-// Long:
-// Long: Example:
-// Long:   pipeline ci get-run-id --workflow ci-docs.yaml --sha abc123
-// Flag.workflow: type=string, usage=Workflow file name to look up
-// Flag.sha: type=string, usage=Commit SHA to find run for
 package ci
 
 import (
+	"context"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineCIGetRunIDCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCIGetRunIDCommand)(nil)
+
+func (c *pipelineCIGetRunIDCommand) Name() string { return "pipeline ci get-run-id" }
+
+func (c *pipelineCIGetRunIDCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-ci-get-run-id",
+		Short:         "Get CI run ID for a workflow and commit SHA",
+		Long:          "Look up the run ID of a successful CI workflow run for a specific commit.\n\nThis command is useful for release workflows that need to download\nartifacts from a CI run at a specific commit SHA.\n\nExpected Output:\n  - Run ID on stdout (for capturing in scripts)\n  - Exit code 0 on success, 1 if no run found\n\nExample:\n  pipeline ci get-run-id --workflow ci-docs.yaml --sha abc123",
+		Flags: []core.FlagSpec{
+			{Name: "workflow", Type: "string", Usage: "Workflow file name to look up"},
+			{Name: "sha", Type: "string", Usage: "Commit SHA to find run for"},
+		},
+	}
+}
+
+func (c *pipelineCIGetRunIDCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCIGetRunID()
+}
 
 func PipelineCIGetRunID() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci get-run-id")

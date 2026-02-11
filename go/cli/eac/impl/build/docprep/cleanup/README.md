@@ -43,10 +43,10 @@ These phases are intentionally last in the pipeline because earlier phases (diag
 ## Code Health
 
 ### Tech Debt
-- ~~`assets.go:24`: `assetReferencePattern` is an exact duplicate of `staging/assetref.go:11`~~ (resolved: `assets.go` now imports `staging.AssetReferencePattern`)
+- None identified
 
 ### Pain Points
-- None identified -- both files are small (304 lines total), focused, and have corresponding test files
+- None identified
 
 ### Optimization Opportunities
-- ~~Extract the shared asset-reference regex into a common location~~ (resolved: canonical pattern in `staging/assetref.go`)
+- None identified

@@ -59,7 +59,6 @@ The `init` package is the onboarding entry point for `eac`, bootstrapping a proj
 
 ### Tech Debt
 - init.go is 757 lines with `Init()` spanning ~233 lines; it handles flag parsing, directory creation, config writing, template copying, and YAML generation
-- ~~Global mutable `var aiExecutor` and `gitRepoProvider` for test injection~~ (resolved: replaced with `Deps` struct)
 - `generateWithScan` (init.go:669) mixes AI generation, fallback logic, and file writing in ~84 lines
 
 ### Pain Points

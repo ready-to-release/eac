@@ -146,10 +146,7 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 		return fmt.Errorf("failed to load module registry: %w", err)
 	}
 
-	var allMonikers []string
-	for _, mod := range registry.All() {
-		allMonikers = append(allMonikers, mod.Moniker)
-	}
+	allMonikers := registry.AllMonikers()
 
 	// Filter to only modules with workflow files
 	filteredOrder := r.filterModulesWithWorkflows(allMonikers)

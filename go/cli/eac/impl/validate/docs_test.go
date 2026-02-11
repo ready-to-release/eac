@@ -1,4 +1,3 @@
-// Command: validate docs
 package validate
 
 import (

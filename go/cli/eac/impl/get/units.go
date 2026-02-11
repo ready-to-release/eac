@@ -1,40 +1,41 @@
-// Command: get units
-// Short: List units of work for a specific framework
-// Long: Returns structured data about units of work for build, test, lint, or scan.
-// Long: Each unit includes its ID, component, tool, cache status, and dependencies.
-// Long:
-// Long: Usage: get units <build|test|lint|scan> [flags]
-// Long:
-// Long: The cache status shows whether a unit is:
-// Long:   - up_to_date: Cached and doesn't need execution
-// Long:   - stale: Needs execution (source changed, previous failure, etc.)
-// Long:   - new: Never executed before
-// Long:
-// Long: Filter Examples:
-// Long:   get units build --module eac    # Build units for specific module
-// Long:   get units test --cached                  # Only cached test units
-// Long:   get units scan --stale                   # Only stale scan units
-// Long:   get units lint --container               # Only container-based lint units
-// Flag.module: type=string, default="", usage=Filter to specific module
-// Flag.component: type=string, default="", usage=Filter to specific component
-// Flag.cached: type=bool, default=false, usage=Only show cached (up-to-date) units
-// Flag.stale: type=bool, default=false, usage=Only show stale (needs execution) units
-// Flag.container: type=bool, default=false, usage=Only show container-based units
-// Flag.host: type=bool, default=false, usage=Only show host-installed units
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getUnitsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getUnitsCommand)(nil)
+
+func (c *getUnitsCommand) Name() string { return "get units" }
+
+func (c *getUnitsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-units",
+		Short:         "List units of work for a specific framework",
+		Long:          "Returns structured data about units of work for build, test, lint, or scan.\nEach unit includes its ID, component, tool, cache status, and dependencies.\n\nUsage: get units <build|test|lint|scan> [flags]\n\nThe cache status shows whether a unit is:\n  - up_to_date: Cached and doesn't need execution\n  - stale: Needs execution (source changed, previous failure, etc.)\n  - new: Never executed before\n\nFilter Examples:\n  get units build --module eac    # Build units for specific module\n  get units test --cached                  # Only cached test units\n  get units scan --stale                   # Only stale scan units\n  get units lint --container               # Only container-based lint units",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to specific module"},
+			{Name: "component", Type: "string", DefaultValue: "", Usage: "Filter to specific component"},
+			{Name: "cached", Type: "bool", DefaultValue: "false", Usage: "Only show cached (up-to-date) units"},
+			{Name: "stale", Type: "bool", DefaultValue: "false", Usage: "Only show stale (needs execution) units"},
+			{Name: "container", Type: "bool", DefaultValue: "false", Usage: "Only show container-based units"},
+			{Name: "host", Type: "bool", DefaultValue: "false", Usage: "Only show host-installed units"},
+		},
+	}
+}
+
+func (c *getUnitsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetUnits()
+}
 
 // unitFilters holds the parsed filter flags.
 type unitFilters struct {

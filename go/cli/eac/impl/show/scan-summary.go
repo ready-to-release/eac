@@ -1,21 +1,7 @@
-// Command: show scan-summary
-// Short: Generate pretty scan summary for a module
-// Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
-// Long: The show scan-summary command generates a formatted security scan summary with status per scan.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive scan summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: The command reads from UoW manifests at out/scan/<module>/*/uow.manifest.json.
-// Long: Status is derived from exit codes - success if all zero, failure otherwise.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted scan summary with emojis and styling
-// Long: - Table showing each scan type with its pass/fail status
-// Long: - Artifact name for results download
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -26,6 +12,27 @@ import (
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showScanSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showScanSummaryCommand)(nil)
+
+func (c *showScanSummaryCommand) Name() string { return "show scan-summary" }
+
+func (c *showScanSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-scan-summary",
+		Short:         "Generate pretty scan summary for a module",
+		Long:          "The show scan-summary command generates a formatted security scan summary with status per scan.\nThis command is designed to be used in GitHub Actions workflows to create consistent, attractive scan summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nThe command reads from UoW manifests at out/scan/<module>/*/uow.manifest.json.\nStatus is derived from exit codes - success if all zero, failure otherwise.\n\nExpected Output:\n- Markdown-formatted scan summary with emojis and styling\n- Table showing each scan type with its pass/fail status\n- Artifact name for results download",
+		Flags: []core.FlagSpec{
+			{Name: "artifact-name", Type: "string", Usage: "Name of the artifact containing scan results"},
+		},
+	}
+}
+
+func (c *showScanSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowScanSummary()
+}
 
 // ShowScanSummary generates a pretty scan summary.
 func ShowScanSummary() int {

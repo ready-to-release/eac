@@ -1,27 +1,36 @@
-// Command: show artifacts
-// Short: Display artifacts for a module with status
-// Long: The show artifacts command displays all build artifacts for a module in a formatted table.
-// Long: Shows resolved names with metadata overrides applied, existence status, and file paths.
-// Long: By default shows artifacts for the current platform. Use --all-platforms to see all platforms.
-// Long:
-// Long: Expected Output:
-// Long: - Formatted table with artifact names, existence status (checkmark or X), and resolved file paths
-// Long: - Summary header showing module name, type, build directory, and platform
-// Long: - Breakdown of build modes (default vs --all)
-// Long: - Metadata overrides section if any metadata is defined
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	showinternal "github.com/ready-to-release/eac/go/cli/eac/impl/show/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showArtifactsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showArtifactsCommand)(nil)
+
+func (c *showArtifactsCommand) Name() string { return "show artifacts" }
+
+func (c *showArtifactsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-artifacts",
+		Short:         "Display artifacts for a module with status",
+		Long:          "The show artifacts command displays all build artifacts for a module in a formatted table.\nShows resolved names with metadata overrides applied, existence status, and file paths.\nBy default shows artifacts for the current platform. Use --all-platforms to see all platforms.\n\nExpected Output:\n- Formatted table with artifact names, existence status (checkmark or X), and resolved file paths\n- Summary header showing module name, type, build directory, and platform\n- Breakdown of build modes (default vs --all)\n- Metadata overrides section if any metadata is defined",
+	}
+}
+
+func (c *showArtifactsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowArtifacts()
+}
 
 // ShowArtifacts displays resolved artifacts for a module.
 func ShowArtifacts() int {

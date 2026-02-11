@@ -39,7 +39,7 @@ func SiteOutputPath(outputDir string) string {
 
 // ServeOutputPath returns the path to the serve output directory (for live docs serving).
 func ServeOutputPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, "serve")
+	return outSubPath(repoRoot, "serve")
 }
 
 // ============================================================================

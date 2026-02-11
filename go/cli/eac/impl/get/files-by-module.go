@@ -1,35 +1,38 @@
-// Command: get files-by-module
-// Short: Get files owned by a module from cached analysis
-// Long: Returns files that belong to a specific module from the FILES_BY_MODULE JSON.
-// Long:
-// Long: This command parses the FILES_BY_MODULE JSON (from get changed-modules-ci)
-// Long: and returns files for a specific module in various formats.
-// Long:
-// Long: Input: FILES_BY_MODULE environment variable or --json flag
-// Long:
-// Long: Output formats:
-// Long:   --count: Just the count of files
-// Long:   --list: One file per line (default)
-// Long:   --format shell: COUNT="N" FILES="f1 f2 f3"
-// Long:
-// Long: Example:
-// Long:   get files-by-module docs                    # List files
-// Long:   get files-by-module docs --count            # Just count
-// Long:   get files-by-module docs --json "$JSON"     # From explicit JSON
-// Long:   eval $(get files-by-module docs --format shell)
-// Flag.count: type=bool, usage=Output only the file count
-// Flag.json: type=string, usage=FILES_BY_MODULE JSON (defaults to env var)
-// Flag.format: type=string, usage=Output format (list, shell)
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type getFilesByModuleCommand struct{}
+
+var _ core.SimpleCommandPort = (*getFilesByModuleCommand)(nil)
+
+func (c *getFilesByModuleCommand) Name() string { return "get files-by-module" }
+
+func (c *getFilesByModuleCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-files-by-module",
+		Short:         "Get files owned by a module from cached analysis",
+		Long:          "Returns files that belong to a specific module from the FILES_BY_MODULE JSON.\n\nThis command parses the FILES_BY_MODULE JSON (from get changed-modules-ci)\nand returns files for a specific module in various formats.\n\nInput: FILES_BY_MODULE environment variable or --json flag\n\nOutput formats:\n  --count: Just the count of files\n  --list: One file per line (default)\n  --format shell: COUNT=\"N\" FILES=\"f1 f2 f3\"\n\nExample:\n  get files-by-module docs                    # List files\n  get files-by-module docs --count            # Just count\n  get files-by-module docs --json \"$JSON\"     # From explicit JSON\n  eval $(get files-by-module docs --format shell)",
+		Flags: []core.FlagSpec{
+			{Name: "count", Type: "bool", DefaultValue: "", Usage: "Output only the file count"},
+			{Name: "json", Type: "string", DefaultValue: "", Usage: "FILES_BY_MODULE JSON (defaults to env var)"},
+			{Name: "format", Type: "string", DefaultValue: "", Usage: "Output format (list, shell)"},
+		},
+	}
+}
+
+func (c *getFilesByModuleCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetFilesByModule()
+}
 
 func GetFilesByModule() int {
 	// Parse arguments

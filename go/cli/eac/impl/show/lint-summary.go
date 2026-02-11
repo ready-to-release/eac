@@ -1,22 +1,7 @@
-// Command: show lint-summary
-// Short: Generate pretty lint summary for a module
-// Flag.artifact-name: type=string, usage=Name of the artifact containing lint results
-// Long: The show lint-summary command generates a formatted lint summary with status.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive lint summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: The command reads from UoW manifests at out/lint/<module>/*/uow.manifest.json.
-// Long: Status is derived from exit codes - success if all zero, failure otherwise.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted lint summary with emojis and styling
-// Long: - Issue count and duration metrics
-// Long: - List of providers that were run
-// Long: - Artifact name for results download
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -27,6 +12,27 @@ import (
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showLintSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showLintSummaryCommand)(nil)
+
+func (c *showLintSummaryCommand) Name() string { return "show lint-summary" }
+
+func (c *showLintSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-lint-summary",
+		Short:         "Generate pretty lint summary for a module",
+		Long:          "The show lint-summary command generates a formatted lint summary with status.\nThis command is designed to be used in GitHub Actions workflows to create consistent, attractive lint summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nThe command reads from UoW manifests at out/lint/<module>/*/uow.manifest.json.\nStatus is derived from exit codes - success if all zero, failure otherwise.\n\nExpected Output:\n- Markdown-formatted lint summary with emojis and styling\n- Issue count and duration metrics\n- List of providers that were run\n- Artifact name for results download",
+		Flags: []core.FlagSpec{
+			{Name: "artifact-name", Type: "string", Usage: "Name of the artifact containing lint results"},
+		},
+	}
+}
+
+func (c *showLintSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowLintSummary()
+}
 
 // ShowLintSummary generates a pretty lint summary.
 func ShowLintSummary() int {

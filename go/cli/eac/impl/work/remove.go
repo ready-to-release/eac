@@ -1,33 +1,3 @@
-// Command: work remove
-// Short: Remove workspace and optionally delete associated branches
-// Long: Removes a workspace and optionally deletes the associated local and remote branches.
-// Long:
-// Long: By default, this command:
-// Long:   1. Validates the workspace can be safely removed
-// Long:   2. Switches to main branch (if in the workspace being removed)
-// Long:   3. Removes the workspace from git tracking
-// Long:   4. Deletes the local branch
-// Long:   5. Preserves the remote branch
-// Long:   6. Informs you if the workspace folder still exists for manual deletion
-// Long:
-// Long: Use --debug to enable detailed logging to out/logs/work/.
-// Long:
-// Long: Expected Output:
-// Long:   - Workspace removed from git tracking
-// Long:   - Local branch deleted (unless --keep-branch)
-// Long:   - Information about manual folder deletion if needed
-// Long:
-// Long: Example:
-// Long:   work remove                              # Remove current workspace
-// Long:   work remove feature/old-feature          # Remove specific workspace
-// Long:   work remove --keep-branch                # Keep local branch
-// Long:   work remove --delete-remote              # Delete remote branch too
-// Long:   work remove --force                      # Remove even with uncommitted changes
-// Long:   work remove --debug                      # Enable debug logging
-// Flag.keep-branch: type=bool, default=false, usage=Keep local branch after removing workspace
-// Flag.delete-remote: type=bool, default=false, usage=Delete remote branch as well
-// Flag.force: type=bool, shorthand=f, default=false, usage=Force remove even with uncommitted changes
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 package work
 
 import (
@@ -40,11 +10,36 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type workRemoveCommand struct{}
+
+var _ core.SimpleCommandPort = (*workRemoveCommand)(nil)
+
+func (c *workRemoveCommand) Name() string { return "work remove" }
+
+func (c *workRemoveCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work-remove",
+		Short:         "Remove workspace and optionally delete associated branches",
+		Long:          "Removes a workspace and optionally deletes the associated local and remote branches.\n\nBy default, this command:\n  1. Validates the workspace can be safely removed\n  2. Switches to main branch (if in the workspace being removed)\n  3. Removes the workspace from git tracking\n  4. Deletes the local branch\n  5. Preserves the remote branch\n  6. Informs you if the workspace folder still exists for manual deletion\n\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - Workspace removed from git tracking\n  - Local branch deleted (unless --keep-branch)\n  - Information about manual folder deletion if needed\n\nExample:\n  work remove                              # Remove current workspace\n  work remove feature/old-feature          # Remove specific workspace\n  work remove --keep-branch                # Keep local branch\n  work remove --delete-remote              # Delete remote branch too\n  work remove --force                      # Remove even with uncommitted changes\n  work remove --debug                      # Enable debug logging",
+		Flags: []core.FlagSpec{
+			{Name: "keep-branch", Type: "bool", DefaultValue: "false", Usage: "Keep local branch after removing workspace"},
+			{Name: "delete-remote", Type: "bool", DefaultValue: "false", Usage: "Delete remote branch as well"},
+			{Name: "force", Type: "bool", Shorthand: "f", DefaultValue: "false", Usage: "Force remove even with uncommitted changes"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *workRemoveCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Remove()
+}
 
 // Remove removes a workspace and optionally deletes branches.
 func Remove() int {

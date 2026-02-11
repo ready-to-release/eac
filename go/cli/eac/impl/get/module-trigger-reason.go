@@ -1,23 +1,42 @@
-// Command: get module-trigger-reason
-// Short: Get the reason a module was triggered for CI
-// Long: Extracts the trigger reason for a specific module from MODULE_STATUS JSON.
-// Long:
-// Long: This is used in CI summaries to explain why each module needs CI.
-// Long:
-// Long: Example:
-// Long:   get module-trigger-reason docs --json "$MODULE_STATUS"
-// Long:   # Output: "files_changed_since_abc1234" or "dependency eac needs CI"
-// Flag.json: type=string, usage=MODULE_STATUS JSON (defaults to env var)
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
+
+type getModuleTriggerReasonCommand struct{}
+
+var _ core.SimpleCommandPort = (*getModuleTriggerReasonCommand)(nil)
+
+func (c *getModuleTriggerReasonCommand) Name() string { return "get module-trigger-reason" }
+
+func (c *getModuleTriggerReasonCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-module-trigger-reason",
+		Short:         "Get the reason a module was triggered for CI",
+		Long: "Extracts the trigger reason for a specific module from MODULE_STATUS JSON.\n" +
+			"\n" +
+			"This is used in CI summaries to explain why each module needs CI.\n" +
+			"\n" +
+			"Example:\n" +
+			"  get module-trigger-reason docs --json \"$MODULE_STATUS\"\n" +
+			"  # Output: \"files_changed_since_abc1234\" or \"dependency eac needs CI\"",
+		Flags: []core.FlagSpec{
+			{Name: "json", Type: "string", Usage: "MODULE_STATUS JSON (defaults to env var)"},
+		},
+	}
+}
+
+func (c *getModuleTriggerReasonCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetModuleTriggerReason()
+}
 
 func GetModuleTriggerReason() int {
 	// Parse arguments

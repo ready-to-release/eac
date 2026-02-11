@@ -103,7 +103,6 @@ func WorkspaceDSLFiles(repoRoot, moniker string) ([]string, error) {
 	}
 
 	var files []string
-	var hasMainWorkspace bool
 
 	for _, entry := range entries {
 		name := entry.Name()
@@ -123,14 +122,11 @@ func WorkspaceDSLFiles(repoRoot, moniker string) ([]string, error) {
 		fullPath := filepath.Join(designDir, name)
 
 		if name == WorkspaceDSL {
-			hasMainWorkspace = true
 			files = append([]string{fullPath}, files...)
 		} else {
 			files = append(files, fullPath)
 		}
 	}
-
-	_ = hasMainWorkspace
 
 	return files, nil
 }

@@ -190,6 +190,11 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		return fmt.Errorf("core config failed - component-kinds: %w", err)
 	}
 
+	// Build extension index for O(1) lookups by file extension
+	if c.ComponentKinds != nil {
+		c.ComponentKinds.buildExtensionIndex()
+	}
+
 	// Apply component-specific defaults after both modules and component kinds are loaded
 	// Skip if Repository is nil (can happen in test environments without contract files)
 	if c.Repository != nil {
@@ -314,6 +319,9 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 			return fmt.Errorf("loading blueprints: %w", err)
 		}
 
+		// Build moniker index for O(1) lookups
+		c.Repository.buildMonikerIndex()
+
 		return nil
 	}
 
@@ -359,6 +367,11 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	if err := c.Repository.deriveModuleDepsFromComponentDeps(); err != nil {
 		return fmt.Errorf("deriving module deps from component_deps: %w", err)
 	}
+
+	// Step 12: Build moniker index for O(1) lookups
+	// Must happen after all module mutations are complete (template expansion,
+	// container discovery, group expansion, component dep derivation).
+	c.Repository.buildMonikerIndex()
 
 	// Note: component group expansion moved to LoadAll, after ApplyComponentDefaults,
 	// because component-kinds may set component_group and depends_on defaults.

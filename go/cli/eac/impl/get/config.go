@@ -1,27 +1,33 @@
-// Command: get config
-// Short: Get loaded repository configuration
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML with all loaded configuration including:
-// Long:   - modules: Module contracts with moniker, type, root path, dependencies
-// Long:   - module_types: Module type definitions with build/test/deploy capabilities
-// Long:   - environments: Environment definitions
-// Long:   - testing: Testing configuration (tags and suites from eac-testing contract)
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type getConfigCommand struct{}
+
+var _ core.SimpleCommandPort = (*getConfigCommand)(nil)
+
+func (c *getConfigCommand) Name() string { return "get config" }
+
+func (c *getConfigCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-config",
+		Short:         "Get loaded repository configuration",
+		Long:          "Expected Output:\nYAML with all loaded configuration including:\n  - modules: Module contracts with moniker, type, root path, dependencies\n  - module_types: Module type definitions with build/test/deploy capabilities\n  - environments: Environment definitions\n  - testing: Testing configuration (tags and suites from eac-testing contract)",
+	}
+}
+
+func (c *getConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetConfig()
+}
 
 // configFlags defines valid flags for the get config command
 

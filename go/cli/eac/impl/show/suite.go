@@ -1,20 +1,12 @@
-// Command: show suite
-// Short: Display test suite details with all tests
-// Long: The show suite command displays detailed information about a specific test suite.
-// Long: Shows selection criteria, production tests with their metadata, and summary statistics.
-// Long:
-// Long: Expected Output:
-// Long: - Suite header with name, moniker, description, and test counts
-// Long: - Selection criteria section showing AnyOf/RequireAll/Exclude tag rules
-// Long: - Formatted table of production tests with columns: #, Moniker, Test Name, Type, Module, Level, Verification, System Deps
-// Long: - Statistics section with counts by type, by module, and aggregated dependencies
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
@@ -23,6 +15,24 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 	testing "github.com/ready-to-release/eac/go/core/testing"
 )
+
+type showSuiteCommand struct{}
+
+var _ core.SimpleCommandPort = (*showSuiteCommand)(nil)
+
+func (c *showSuiteCommand) Name() string { return "show suite" }
+
+func (c *showSuiteCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-suite",
+		Short:         "Display test suite details with all tests",
+		Long:          "The show suite command displays detailed information about a specific test suite.\nShows selection criteria, production tests with their metadata, and summary statistics.\n\nExpected Output:\n- Suite header with name, moniker, description, and test counts\n- Selection criteria section showing AnyOf/RequireAll/Exclude tag rules\n- Formatted table of production tests with columns: #, Moniker, Test Name, Type, Module, Level, Verification, System Deps\n- Statistics section with counts by type, by module, and aggregated dependencies",
+	}
+}
+
+func (c *showSuiteCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowSuite()
+}
 
 // ShowSuite displays detailed information about a test suite in markdown table format
 //

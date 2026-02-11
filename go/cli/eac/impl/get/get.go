@@ -1,26 +1,3 @@
-// Command: get
-// Short: Retrieve repository data in structured format
-// IsParent: true
-// Group.Configuration: config
-// Group.Repository Structure: modules, components, units, dependencies
-// Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local, ghosts
-// Group.CI/CD: ci-dispatch, ci-workflows
-// Group.Build: build-times, build-deps, artifacts
-// Group.Testing: test-results, tests, suite, test-timings
-// Group.Utilities: token-size
-// Group.Commands: valid-commands, documented-commands
-// Group.Release: release-bundle, release-notes, release-status
-// Group.Environment: environments
-// Group.Specifications: specs, changelog
-// Group.Approvals: approval-comments
-// Group.Books: book-description
-// Group.Git: current-sha
-// Group.Evidence: evidence-ci-runs, module-ci-workflow, module-trigger-reason
-// Group.CLI: cli-release-notes
-// Example: clie get modules
-// Example: clie get dependencies
-// Example: clie get changed-modules
-// Example: clie get changed-modules-ci --as-json
 package get
 
 import (
@@ -29,19 +6,58 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/cli/eac/help"
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/tui"
 	"github.com/ready-to-release/eac/go/adapters/tui/selector"
+	"github.com/ready-to-release/eac/go/cli/eac/help"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type getCommand struct{}
+
+var _ core.CommandPort = (*getCommand)(nil)
+
+func (c *getCommand) Name() string { return "get" }
+
+func (c *getCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get",
+		Short:         "Retrieve repository data in structured format",
+		IsParent:      true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Configuration", Subcommands: []string{"config"}},
+			{Name: "Repository Structure", Subcommands: []string{"modules", "components", "units", "dependencies"}},
+			{Name: "Files and Changes", Subcommands: []string{"files", "files-by-module", "changed-modules", "changed-modules-ci", "changed-modules-local", "ghosts"}},
+			{Name: "CI/CD", Subcommands: []string{"ci-dispatch", "ci-workflows"}},
+			{Name: "Build", Subcommands: []string{"build-times", "build-deps", "artifacts"}},
+			{Name: "Testing", Subcommands: []string{"test-results", "tests", "suite", "test-timings"}},
+			{Name: "Utilities", Subcommands: []string{"token-size"}},
+			{Name: "Commands", Subcommands: []string{"valid-commands", "documented-commands"}},
+			{Name: "Release", Subcommands: []string{"release-bundle", "release-notes", "release-status"}},
+			{Name: "Environment", Subcommands: []string{"environments"}},
+			{Name: "Specifications", Subcommands: []string{"specs", "changelog"}},
+			{Name: "Approvals", Subcommands: []string{"approval-comments"}},
+			{Name: "Books", Subcommands: []string{"book-description"}},
+			{Name: "Git", Subcommands: []string{"current-sha"}},
+			{Name: "Evidence", Subcommands: []string{"evidence-ci-runs", "module-ci-workflow", "module-trigger-reason"}},
+			{Name: "CLI", Subcommands: []string{"cli-release-notes"}},
+		},
+		Examples: []string{
+			"clie get modules",
+			"clie get dependencies",
+			"clie get changed-modules",
+			"clie get changed-modules-ci --as-json",
+		},
+	}
+}
 
 var log = logging.C()
 
 // printHelp prints the help for the get command using registry metadata.
 func printHelp() {
-	reg := registry.GetCommand("get")
-	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
+	cmd, _ := registry.Global().Get("get")
+	help.PrintHelp(os.Stdout, cmd, registry.Global())
 }
 
 // Get command entry point.
@@ -64,7 +80,7 @@ func Get() int {
 	}
 
 	// Check for valid subcommand using dynamic discovery from registry
-	if registry.IsValidSubcommand("get", args[0]) {
+	if _, ok := registry.Global().Get("get " + args[0]); ok {
 		// Handled by separate registrations in respective files
 		return 0
 	}

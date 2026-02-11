@@ -22,6 +22,14 @@ const (
 type ComponentKindsConfig struct {
 	// Kinds maps component kind name to its evaluated ComponentType.
 	Kinds map[string]*ComponentType
+
+	// extensionToKind maps file extension to component kind name for O(1) lookup.
+	// Built once via buildExtensionIndex after all kinds are loaded.
+	extensionToKind map[string]string `yaml:"-"`
+
+	// extensionToType maps file extension to *ComponentType for O(1) lookup.
+	// Built once via buildExtensionIndex after all kinds are loaded.
+	extensionToType map[string]*ComponentType `yaml:"-"`
 }
 
 // ComponentType defines how to process files of a certain type.
@@ -313,10 +321,15 @@ func (c *ComponentKindsConfig) Get(name string) *ComponentType {
 
 // GetByExtension returns the component type for a given file extension.
 // Returns nil if no component type matches the extension.
+// Uses a pre-built index for O(1) lookup when available.
 func (c *ComponentKindsConfig) GetByExtension(ext string) *ComponentType {
 	if c == nil || c.Kinds == nil {
 		return nil
 	}
+	if c.extensionToType != nil {
+		return c.extensionToType[ext]
+	}
+	// Fallback to linear scan if index not yet built
 	for _, ct := range c.Kinds {
 		for _, e := range ct.Extensions {
 			if e == ext {
@@ -329,10 +342,15 @@ func (c *ComponentKindsConfig) GetByExtension(ext string) *ComponentType {
 
 // GetComponentKindNameByExtension returns the name of the component kind for a given file extension.
 // Returns empty string if no component kind matches the extension.
+// Uses a pre-built index for O(1) lookup when available.
 func (c *ComponentKindsConfig) GetComponentKindNameByExtension(ext string) string {
 	if c == nil || c.Kinds == nil {
 		return ""
 	}
+	if c.extensionToKind != nil {
+		return c.extensionToKind[ext]
+	}
+	// Fallback to linear scan if index not yet built
 	for name, ct := range c.Kinds {
 		for _, e := range ct.Extensions {
 			if e == ext {
@@ -341,6 +359,22 @@ func (c *ComponentKindsConfig) GetComponentKindNameByExtension(ext string) strin
 		}
 	}
 	return ""
+}
+
+// buildExtensionIndex builds extension-to-kind and extension-to-type maps for O(1) lookup.
+// Must be called after all component kinds are fully loaded.
+func (c *ComponentKindsConfig) buildExtensionIndex() {
+	if c == nil || c.Kinds == nil {
+		return
+	}
+	c.extensionToKind = make(map[string]string)
+	c.extensionToType = make(map[string]*ComponentType)
+	for name, ct := range c.Kinds {
+		for _, ext := range ct.Extensions {
+			c.extensionToKind[ext] = name
+			c.extensionToType[ext] = ct
+		}
+	}
 }
 
 // LoadComponentKinds ensures the component kinds configuration is initialized.

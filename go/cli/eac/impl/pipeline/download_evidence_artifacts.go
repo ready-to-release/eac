@@ -1,19 +1,3 @@
-// Command: pipeline download-evidence-artifacts
-// Short: Download test/scan artifacts for evidence building
-// Long: Downloads test results and scan artifacts from CI runs for a module and all its dependencies.
-// Long: Uses the `get evidence-ci-runs` command to determine which CI runs to download from.
-// Long:
-// Long: For each module in the dependency chain that has a ci-{module}.yaml workflow:
-// Long:   - Downloads test-results-{module}* artifacts to out/test/
-// Long:   - Downloads scan-results-{module} artifacts to out/scan/
-// Long:
-// Long: Fails if any dependency with a CI workflow has no successful CI run.
-// Long:
-// Long: Example:
-// Long:   pipeline download-evidence-artifacts clie
-// Long:   pipeline download-evidence-artifacts eac-ext --output-dir custom/path
-// Args: module (required) - Module moniker to download evidence artifacts for
-// Flag.output-dir: type=string, default=out, usage=Base output directory (test/ and scan/ subdirs will be created)
 package pipeline
 
 import (
@@ -23,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
@@ -30,6 +15,30 @@ import (
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineDownloadEvidenceArtifactsCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineDownloadEvidenceArtifactsCommand)(nil)
+
+func (c *pipelineDownloadEvidenceArtifactsCommand) Name() string {
+	return "pipeline download-evidence-artifacts"
+}
+
+func (c *pipelineDownloadEvidenceArtifactsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-download-evidence-artifacts",
+		Short:         "Download test/scan artifacts for evidence building",
+		Long:          "Downloads test results and scan artifacts from CI runs for a module and all its dependencies.\nUses the `get evidence-ci-runs` command to determine which CI runs to download from.\n\nFor each module in the dependency chain that has a ci-{module}.yaml workflow:\n  - Downloads test-results-{module}* artifacts to out/test/\n  - Downloads scan-results-{module} artifacts to out/scan/\n\nFails if any dependency with a CI workflow has no successful CI run.\n\nExample:\n  pipeline download-evidence-artifacts clie\n  pipeline download-evidence-artifacts eac-ext --output-dir custom/path",
+		Args:          "module (required) - Module moniker to download evidence artifacts for",
+		Flags: []core.FlagSpec{
+			{Name: "output-dir", Type: "string", DefaultValue: "out", Usage: "Base output directory (test/ and scan/ subdirs will be created)"},
+		},
+	}
+}
+
+func (c *pipelineDownloadEvidenceArtifactsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineDownloadEvidenceArtifacts()
+}
 
 // DownloadResult tracks what was downloaded.
 type DownloadResult struct {

@@ -1,41 +1,54 @@
-// Command: create risk-profile
-// Short: Create OSCAL profile from risk assessment using AI
-// Long: The create risk-profile command analyzes a risk assessment document and generates an OSCAL profile
-// Long: selecting appropriate controls from a custom catalog. The AI extracts risks
-// Long: from the assessment and maps them to controls for the entire solution.
-// Long:
-// Long: The generated profile is saved to specs/.risk-controls/risk-profile.json for version control.
-// Long: Use --debug to inspect intermediate outputs and AI reasoning.
-// Long:
-// Long: Expected Output:
-// Long: - OSCAL profile JSON file selecting controls from catalog
-// Long: - AI reasoning for control selection in debug output
-// Flag.catalog: type=string, usage=Catalog URL for control selection and validation (default: NIST 800-53 Rev5)
-// Flag.output: type=string, shorthand=o, usage=Custom output path for the profile file
-// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing profile file
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/commands.log
-// Args: file
 package riskprofile
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/oscal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type createRiskProfileCommand struct{}
 
-func init() {
-	registry.Register(CreateRiskProfile)
+var _ core.SimpleCommandPort = (*createRiskProfileCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&createRiskProfileCommand{},
+	}
 }
+
+func (c *createRiskProfileCommand) Name() string { return "create risk-profile" }
+
+func (c *createRiskProfileCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-risk-profile",
+		Short:         "Create OSCAL profile from risk assessment using AI",
+		Long:          "The create risk-profile command analyzes a risk assessment document and generates an OSCAL profile\nselecting appropriate controls from a custom catalog. The AI extracts risks\nfrom the assessment and maps them to controls for the entire solution.\n\nThe generated profile is saved to specs/.risk-controls/risk-profile.json for version control.\nUse --debug to inspect intermediate outputs and AI reasoning.\n\nExpected Output:\n- OSCAL profile JSON file selecting controls from catalog\n- AI reasoning for control selection in debug output",
+		Args:          "file",
+		Flags: []core.FlagSpec{
+			{Name: "catalog", Type: "string", Usage: "Catalog URL for control selection and validation (default: NIST 800-53 Rev5)"},
+			{Name: "output", Shorthand: "o", Type: "string", Usage: "Custom output path for the profile file"},
+			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Overwrite existing profile file"},
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs to out/commands.log"},
+		},
+	}
+}
+
+func (c *createRiskProfileCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreateRiskProfile()
+}
+
+var log = logging.C()
 
 // Config holds configuration for create risk-profile command.
 type Config struct {
@@ -157,7 +170,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Get workspace root first (needed for config loading)
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}

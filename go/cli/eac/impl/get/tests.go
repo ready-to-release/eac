@@ -1,28 +1,33 @@
-// Command: get tests
-// Short: Get all discovered tests with metadata
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML list of all discovered tests with metadata, including:
-// Long:   - Test name and location (module, package, file)
-// Long:   - Test type (unit, integration, e2e, etc.)
-// Long:   - Tags and markers
-// Long:   - Total test count
-// Long:   - Aggregations by module and type
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type getTestsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getTestsCommand)(nil)
+
+func (c *getTestsCommand) Name() string { return "get tests" }
+
+func (c *getTestsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-tests",
+		Short:         "Get all discovered tests with metadata",
+		Long:          "Expected Output:\nYAML list of all discovered tests with metadata, including:\n  - Test name and location (module, package, file)\n  - Test type (unit, integration, e2e, etc.)\n  - Tags and markers\n  - Total test count\n  - Aggregations by module and type",
+	}
+}
+
+func (c *getTestsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetTests()
+}
 
 // testsFlags defines valid flags for the get tests command
 

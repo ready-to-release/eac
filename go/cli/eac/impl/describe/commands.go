@@ -1,16 +1,13 @@
-// Command: get commands
-// Short: Get structured command information
-// Long: Outputs structured command information in JSON or YAML format.
-// Long: Useful for building shell integrations, completion scripts, and tooling.
-// Flag.format: type=string, shorthand=f, default=json, usage=Output format (json or yaml)
 package describe
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
@@ -19,12 +16,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// commandFlags defines valid flags for the describe commands command.
-var log = logging.C()
+type getCommandsCommand struct{}
 
-func init() {
-	registry.Register(GetCommands)
+var _ core.SimpleCommandPort = (*getCommandsCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&getCommandsCommand{},
+	}
 }
+
+func (c *getCommandsCommand) Name() string { return "get commands" }
+
+func (c *getCommandsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-commands",
+		Short:         "Get structured command information",
+		Long:          "Outputs structured command information in JSON or YAML format.\nUseful for building shell integrations, completion scripts, and tooling.",
+		Flags: []core.FlagSpec{
+			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "json", Usage: "Output format (json or yaml)"},
+		},
+	}
+}
+
+func (c *getCommandsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCommands()
+}
+
+var log = logging.C()
 
 // CommandInfo represents structured information about a command.
 type CommandInfo struct {
@@ -97,17 +117,18 @@ func buildCommandTree() CommandTree {
 	treeMap := make(map[string][]string)
 
 	// Process all registered commands
-	commandRegistry := registry.GetCommandRegistry()
-	for _, reg := range commandRegistry {
-		cmdName := reg.ActualCommand
+	reg := registry.Global()
+	for _, cmd := range reg.All() {
+		cmdName := cmd.Name()
+		meta := cmd.Metadata()
 		parts := strings.Fields(cmdName)
 
 		info := CommandInfo{
 			Name:        cmdName,
 			Parts:       parts,
-			Description: reg.Short,
+			Description: meta.Short,
 			IsLeaf:      true,
-			Args:        reg.Args,
+			Args:        meta.Args,
 		}
 
 		// Determine parent

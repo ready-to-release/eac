@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
@@ -86,40 +87,30 @@ func resetSelectorRegistry() {
 	globalSelectorFactory = nil
 }
 
+// testCommandPort is a minimal CommandPort for testing.
+type testCommandPort struct {
+	name  string
+	short string
+}
+
+func (m *testCommandPort) Name() string { return m.name }
+func (m *testCommandPort) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{Short: m.short}
+}
+
 // TestSubcommandsFromRegistry tests the SubcommandsFromRegistry function.
 func TestSubcommandsFromRegistry(t *testing.T) {
-	// Save and restore original registry
-	originalRegistry := registry.GetCommandRegistry()
-	defer func() {
-		// Reset registry by re-registering original commands
-		// This is a simplified approach for testing
-	}()
+	// Create a test registry with known commands
+	testReg := registry.NewCommandRegistry()
+	testReg.MustRegister(&testCommandPort{name: "test", short: "Test parent command"})
+	testReg.MustRegister(&testCommandPort{name: "test alpha", short: "Alpha subcommand"})
+	testReg.MustRegister(&testCommandPort{name: "test beta", short: "Beta subcommand"})
+	testReg.MustRegister(&testCommandPort{name: "test gamma", short: "Gamma subcommand"})
 
-	// Clear registry and add test data using SetTestRegistry helper
-	registry.SetTestRegistry(map[string]*registry.CommandRegistration{
-		"test": {
-			ActualCommand: "test",
-			CanonicalName: "test",
-			Short:         "Test parent command",
-			IsParent:      true,
-		},
-		"test alpha": {
-			ActualCommand: "test alpha",
-			CanonicalName: "test-alpha",
-			Short:         "Alpha subcommand",
-		},
-		"test beta": {
-			ActualCommand: "test beta",
-			CanonicalName: "test-beta",
-			Short:         "Beta subcommand",
-		},
-		"test gamma": {
-			ActualCommand: "test gamma",
-			CanonicalName: "test-gamma",
-			Short:         "Gamma subcommand",
-		},
-	})
-	defer registry.SetTestRegistry(originalRegistry)
+	// Set as global so SubcommandsFromRegistry can find it
+	oldGlobal := registry.Global()
+	registry.SetGlobal(testReg)
+	defer registry.SetGlobal(oldGlobal)
 
 	t.Run("converts registry to CommandOptions", func(t *testing.T) {
 		opts := SubcommandsFromRegistry("test")

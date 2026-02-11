@@ -1,32 +1,43 @@
-// Command: show approve-summary
-// Short: Generate release approval summary
-// Flag.module: type=string, usage=Module name (required)
-// Flag.version: type=string, usage=Release version (required)
-// Flag.tag: type=string, usage=Full tag name (required)
-// Flag.commit: type=string, usage=Commit SHA (required)
-// Flag.version-type: type=string, default=semver, usage=Version type (semver or calver)
-// Flag.ci-skipped: type=bool, default=false, usage=Whether CI check was skipped
-// Flag.status: type=string, default=success, usage=Overall status (success or failure)
-// Flag.run-id: type=string, usage=Run ID for diagnostic links on failure
-// Long: The show approve-summary command generates a formatted release approval summary.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent approval summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted approval summary with check status table
-// Long: - Shows version, tag, commit, changelog, existing release, and CI check status
-// Long: - On failure, can output diagnostic link via pipeline ci summary-link
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showApproveSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showApproveSummaryCommand)(nil)
+
+func (c *showApproveSummaryCommand) Name() string { return "show approve-summary" }
+
+func (c *showApproveSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-approve-summary",
+		Short:         "Generate release approval summary",
+		Long:          "The show approve-summary command generates a formatted release approval summary.\nThis command is designed to be used in GitHub Actions workflows to create consistent approval summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted approval summary with check status table\n- Shows version, tag, commit, changelog, existing release, and CI check status\n- On failure, can output diagnostic link via pipeline ci summary-link",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module name (required)"},
+			{Name: "version", Type: "string", Usage: "Release version (required)"},
+			{Name: "tag", Type: "string", Usage: "Full tag name (required)"},
+			{Name: "commit", Type: "string", Usage: "Commit SHA (required)"},
+			{Name: "version-type", Type: "string", DefaultValue: "semver", Usage: "Version type (semver or calver)"},
+			{Name: "ci-skipped", Type: "bool", DefaultValue: "false", Usage: "Whether CI check was skipped"},
+			{Name: "status", Type: "string", DefaultValue: "success", Usage: "Overall status (success or failure)"},
+			{Name: "run-id", Type: "string", Usage: "Run ID for diagnostic links on failure"},
+		},
+	}
+}
+
+func (c *showApproveSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowApproveSummary()
+}
 
 // ShowApproveSummary generates a release approval summary.
 func ShowApproveSummary() int {

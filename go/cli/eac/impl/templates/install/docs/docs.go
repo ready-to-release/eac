@@ -1,45 +1,50 @@
-// Command: templates install docs
-// Short: Install documentation templates without value replacements
-// Long: Install documentation templates by copying files as-is (no variable substitution).
-// Long: Templates preserve {{ .Variable }} placeholders for later customization.
-// Long:
-// Long: Template Source:
-// Long:   Always uses local templates/docs/ directory from the repository.
-// Long:
-// Long: Use Case:
-// Long:   Install templates once to your project, then customize them as needed.
-// Long:   This command copies files without replacing placeholders.
-// Long:
-// Long: Examples:
-// Long:   templates install docs
-// Long:   templates install docs --destination ./custom-docs
-// Long:   templates install docs --destination docs/api --debug
-// Flag.destination: type=string, usage=Output directory (default: docs/reference/)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/commands.log
 package docs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// commandFlags defines valid flags for the templates install docs command
+type templatesInstallDocsCommand struct{}
 
-var log = logging.C()
+var _ core.SimpleCommandPort = (*templatesInstallDocsCommand)(nil)
 
-func init() {
-	registry.Register(TemplatesInstallDocs)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&templatesInstallDocsCommand{},
+	}
 }
 
+func (c *templatesInstallDocsCommand) Name() string { return "templates install docs" }
+
+func (c *templatesInstallDocsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "templates-install-docs",
+		Short:         "Install documentation templates without value replacements",
+		Long:          "Install documentation templates by copying files as-is (no variable substitution).\nTemplates preserve {{ .Variable }} placeholders for later customization.\n\nTemplate Source:\n  Always uses local templates/docs/ directory from the repository.\n\nUse Case:\n  Install templates once to your project, then customize them as needed.\n  This command copies files without replacing placeholders.\n\nExamples:\n  templates install docs\n  templates install docs --destination ./custom-docs\n  templates install docs --destination docs/api --debug",
+		Flags: []core.FlagSpec{
+			{Name: "destination", Type: "string", Usage: "Output directory (default: docs/reference/)"},
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save detailed logs to out/commands.log"},
+		},
+	}
+}
+
+func (c *templatesInstallDocsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return TemplatesInstallDocs()
+}
+
+var log = logging.C()
 // Config holds configuration for the docs install command.
 type Config struct {
 	Destination   string

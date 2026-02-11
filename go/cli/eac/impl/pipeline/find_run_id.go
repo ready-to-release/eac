@@ -1,30 +1,34 @@
-// Command: pipeline find-run-id
-// Short: Find workflow run ID by SHA
-//
-//	--workflow <name>: Workflow file name (required)
-//	--sha <sha>: HEAD SHA to find (required)
-//	--status <status>: Filter by status (optional, e.g., success)
-//
-// Long:
-// Long: Finds a workflow run with the given HEAD SHA. Returns the run ID
-// Long: which can be used with gh run download.
-// Long:
-// Long: Output: Run ID (empty if not found)
-// Long:
-// Long: Example:
-// Long:   pipeline find-run-id --workflow ci-clie.yaml --sha abc123
-// Long:   pipeline find-run-id --workflow ci-docs.yaml --sha abc123 --status success
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
+
+type pipelineFindRunIDCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineFindRunIDCommand)(nil)
+
+func (c *pipelineFindRunIDCommand) Name() string { return "pipeline find-run-id" }
+
+func (c *pipelineFindRunIDCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-find-run-id",
+		Short:         "Find workflow run ID by SHA",
+		Long:          "Finds a workflow run with the given HEAD SHA. Returns the run ID\nwhich can be used with gh run download.\n\nOutput: Run ID (empty if not found)\n\nExample:\n  pipeline find-run-id --workflow ci-clie.yaml --sha abc123\n  pipeline find-run-id --workflow ci-docs.yaml --sha abc123 --status success",
+	}
+}
+
+func (c *pipelineFindRunIDCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineFindRunID()
+}
 
 func PipelineFindRunID() int {
 	// Parse flags

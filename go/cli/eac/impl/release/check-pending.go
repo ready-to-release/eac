@@ -1,24 +1,7 @@
-// Command: release check-pending
-// Short: Check for all pending releases (semver and calver)
-// Long: Comprehensive release detection that combines semver (from changelog) and calver (from CI dispatch).
-// Long:
-// Long: This command:
-// Long:   1. Checks semver modules for changelog versions without git tags
-// Long:   2. Checks calver modules with CI workflows (release when CI was dispatched)
-// Long:   3. Checks calver bundle modules (release when any dependency was dispatched)
-// Long:   4. Returns enriched layers ready for release execute-layers
-// Long:
-// Long: Expected Output:
-// Long:   - JSON object with has_pending, modules_json, layers_json, layer_count
-// Long:   - layers_json contains enriched module info [{module, version, tag, type}, ...]
-// Long:
-// Long: Examples:
-// Long:   release check-pending --dispatched "docs books"  # Check with dispatched modules
-// Long:   release check-pending                            # Check semver only
-// Flag.dispatched: type=string, usage=Space-separated list of modules that had CI dispatched
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,12 +9,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseCheckPendingCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseCheckPendingCommand)(nil)
+
+func (c *releaseCheckPendingCommand) Name() string { return "release check-pending" }
+
+func (c *releaseCheckPendingCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-check-pending",
+		Short:         "Check for all pending releases (semver and calver)",
+		Long:          "Comprehensive release detection that combines semver (from changelog) and calver (from CI dispatch).\n\nThis command:\n  1. Checks semver modules for changelog versions without git tags\n  2. Checks calver modules with CI workflows (release when CI was dispatched)\n  3. Checks calver bundle modules (release when any dependency was dispatched)\n  4. Returns enriched layers ready for release execute-layers\n\nExpected Output:\n  - JSON object with has_pending, modules_json, layers_json, layer_count\n  - layers_json contains enriched module info [{module, version, tag, type}, ...]\n\nExamples:\n  release check-pending --dispatched \"docs books\"  # Check with dispatched modules\n  release check-pending                            # Check semver only",
+		Flags: []core.FlagSpec{
+			{Name: "dispatched", Type: "string", Usage: "Space-separated list of modules that had CI dispatched"},
+		},
+	}
+}
+
+func (c *releaseCheckPendingCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseCheckPending()
+}
 
 // PendingModule represents a module needing release.
 type PendingModule struct {
@@ -70,7 +75,7 @@ func ReleaseCheckPending() int {
 	dispatchedModules := parseDispatchedModules(dispatched)
 
 	// Load workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		log.Errorf("failed to get workspace root: %v", err)
 		return 1

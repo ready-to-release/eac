@@ -1,41 +1,41 @@
-// Command: pipeline run
-// Short: Execute module pipelines respecting dependencies
-// Long: Execute module pipelines respecting dependencies.
-// Long:
-// Long: This command runs the full pipeline (build, test, validate) for modules in
-// Long: dependency order. If no modules are specified, all modules are processed.
-// Long:
-// Long: Use --changed-only to run pipelines only for modules with uncommitted changes,
-// Long: which is useful for incremental CI/CD workflows.
-// Long:
-// Long: Use --ref to specify a git reference (branch, tag, commit) to compare against
-// Long: when determining which modules have changed.
-// Long:
-// Long: Expected Output:
-// Long:   - Per-module pipeline execution results (build, test, validate stages)
-// Long:   - Exit code 0 if all pipelines pass
-// Long:   - Exit code 1 if any pipeline fails
-// Long:
-// Long: Example:
-// Long:   pipeline run                    # Run all modules
-// Long:   pipeline run --changed-only     # Run only changed modules
-// Long:   pipeline run core clie   # Run specific modules
-// Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
-// Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
-// Flag.wait: type=bool, usage=Wait for pipeline completion before returning
-// Flag.timeout: type=int, usage=Timeout in seconds when waiting (default: no timeout)
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineRunCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineRunCommand)(nil)
+
+func (c *pipelineRunCommand) Name() string { return "pipeline run" }
+
+func (c *pipelineRunCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-run",
+		Short:         "Execute module pipelines respecting dependencies",
+		Long:          "Execute module pipelines respecting dependencies.\n\nThis command runs the full pipeline (build, test, validate) for modules in\ndependency order. If no modules are specified, all modules are processed.\n\nUse --changed-only to run pipelines only for modules with uncommitted changes,\nwhich is useful for incremental CI/CD workflows.\n\nUse --ref to specify a git reference (branch, tag, commit) to compare against\nwhen determining which modules have changed.\n\nExpected Output:\n  - Per-module pipeline execution results (build, test, validate stages)\n  - Exit code 0 if all pipelines pass\n  - Exit code 1 if any pipeline fails\n\nExample:\n  pipeline run                    # Run all modules\n  pipeline run --changed-only     # Run only changed modules\n  pipeline run core clie   # Run specific modules",
+		Flags: []core.FlagSpec{
+			{Name: "changed-only", Type: "bool", Usage: "Only run pipelines for changed modules"},
+			{Name: "ref", Type: "string", Usage: "Git ref to compare against (default: current branch)"},
+			{Name: "wait", Type: "bool", Usage: "Wait for pipeline completion before returning"},
+			{Name: "timeout", Type: "int", Usage: "Timeout in seconds when waiting (default: no timeout)"},
+		},
+	}
+}
+
+func (c *pipelineRunCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineRun()
+}
 
 func PipelineRun() int {
 	// Validate flags before parsing

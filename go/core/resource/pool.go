@@ -21,11 +21,17 @@ const (
 type PoolAllocation = core.PoolAllocation
 
 // HostOnlyAllocation creates an allocation for host-only work.
-var HostOnlyAllocation = core.HostOnlyAllocation
+func HostOnlyAllocation(weight int) PoolAllocation {
+	return core.HostOnlyAllocation(weight)
+}
 
 // ContainerAllocation creates an allocation for container work.
 // Container work requires capacity from both pools.
-var ContainerAllocation = core.ContainerAllocation
+func ContainerAllocation(hostWeight, dockerWeight int) PoolAllocation {
+	return core.ContainerAllocation(hostWeight, dockerWeight)
+}
 
 // AllocationForWeight creates a PoolAllocation from a weight and container flag.
-var AllocationForWeight = core.AllocationForWeight
+func AllocationForWeight(weight int, isContainer bool) PoolAllocation {
+	return core.AllocationForWeight(weight, isContainer)
+}

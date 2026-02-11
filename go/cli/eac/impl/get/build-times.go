@@ -1,19 +1,7 @@
-// Command: get build-times
-// Short: Display build timing metrics from last build run
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML with build timing metrics parsed from per-module uow.manifest.json files:
-// Long:   - Per-module timing data with duration in seconds
-// Long:   - Aggregated statistics by module type
-// Long:   - Overall summary with total builds and average duration
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +13,28 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 )
+
+type getBuildTimesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getBuildTimesCommand)(nil)
+
+func (c *getBuildTimesCommand) Name() string { return "get build-times" }
+
+func (c *getBuildTimesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-build-times",
+		Short:         "Display build timing metrics from last build run",
+		Long: "Expected Output:\n" +
+			"YAML with build timing metrics parsed from per-module uow.manifest.json files:\n" +
+			"  - Per-module timing data with duration in seconds\n" +
+			"  - Aggregated statistics by module type\n" +
+			"  - Overall summary with total builds and average duration",
+	}
+}
+
+func (c *getBuildTimesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetBuildTimes()
+}
 
 // BuildTiming represents timing data for a single module build.
 type BuildTiming struct {

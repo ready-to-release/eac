@@ -1,26 +1,36 @@
-// Command: show tests
-// Short: Display all test assertions with metadata
-// Long: The show tests command displays all test assertions in the repository with their metadata.
-// Long: Shows test names, modules, components, tags (type, level, verification, dependencies), with indicators for inferred values.
-// Long:
-// Long: Expected Output:
-// Long: - Table with test assertions showing: Module, Component, Assertion, Type, Level, Verify, Deps
-// Long: - Module overview table with per-module statistics (assertions, components, level breakdown, types)
-// Long: - Summary sections showing counts by type and by level
-// Long: - Legend indicating inferred tags with * and ~ symbols
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
+
+type showTestsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showTestsCommand)(nil)
+
+func (c *showTestsCommand) Name() string { return "show tests" }
+
+func (c *showTestsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-tests",
+		Short:         "Display all test assertions with metadata",
+		Long:          "The show tests command displays all test assertions in the repository with their metadata.\nShows test names, modules, components, tags (type, level, verification, dependencies), with indicators for inferred values.\n\nExpected Output:\n- Table with test assertions showing: Module, Component, Assertion, Type, Level, Verify, Deps\n- Module overview table with per-module statistics (assertions, components, level breakdown, types)\n- Summary sections showing counts by type and by level\n- Legend indicating inferred tags with * and ~ symbols",
+	}
+}
+
+func (c *showTestsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowTests()
+}
 
 func ShowTests() int {
 	// Validate flags against registry metadata

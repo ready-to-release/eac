@@ -26,10 +26,12 @@ Provides a plain-text observer for execution events and formatting utilities for
 
 ## Internal Structure
 
-| File                  | Purpose                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| `console_observer.go` | `ConsoleObserver` implementing plain-text event observation                             |
-| `format.go`           | Formatting utilities for result lines, package names, section headers, and list display |
+| File                  | Purpose                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `console_observer.go` | `ConsoleObserver` implementing plain-text event observation          |
+| `format.go`           | Section headers, list formatting, component name formatting          |
+| `display_name.go`     | `PackageDisplayName` and `PackageDisplayNames` extraction utilities  |
+| `result_line.go`      | `ResultLine`, `SummaryCount`, `TimingLine`, `TimingTotal` formatting |
 
 ## Dependencies
 
@@ -48,9 +50,8 @@ Provides the non-TUI output path for command execution. When TUI mode is disable
 
 ### Pain Points
 
-- `format.go` (342 lines) mixes display-name extraction, result-line formatting, and list formatting; these are logically separate concerns
+- None identified
 
 ### Optimization Opportunities
 
-- Split `format.go` into `display_name.go` and `result_line.go` for easier navigation (low effort)
 - Good test coverage exists (`format_test.go` 307 lines, `console_observer_test.go` 245 lines); no urgent gaps

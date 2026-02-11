@@ -1,46 +1,7 @@
-// Command: init
-// Short: Initialize EAC project configuration
-// Long: Initialize EAC project configuration.
-// Long:
-// Long: Creates the .eac directory structure and generates configuration files
-// Long: with calculated defaults. AI provider configuration is optional.
-// Long:
-// Long: Always creates:
-// Long:   - .eac/repository.yml (module definitions with calculated defaults)
-// Long:   - .eac/books.yml (empty documentation books template)
-// Long:   - .eac/environments.yml (empty test environments template)
-// Long:
-// Long: When --ai-provider is specified, also creates:
-// Long:   - .eac/ai-provider.yml (team config) or
-// Long:   - .eac/ai-provider.personal.yml (personal config with tokens)
-// Long:
-// Long: Available AI providers:
-// Long:   - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)
-// Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
-// Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
-// Long:
-// Long: Re-running init will intelligently update existing configuration:
-// Long:   - Preserves user customizations (module names, versioning, dependencies)
-// Long:   - Updates AI-generated content (descriptions, component types)
-// Long:   - Detects new/removed modules automatically
-// Long:
-// Long: Examples:
-// Long:   init                                                      # Initialize project with config files
-// Long:   init                                                      # Re-run to update existing config
-// Long:   init --scan                                               # Scan repository and auto-generate config
-// Long:   init --scan --ai-provider claude-api                      # Scan with AI-enhanced config generation
-// Long:   init --ai-provider claude-api                             # Initialize and configure AI provider
-// Long:   init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token
-// Long:   init --copy-templates                                     # Also copy system template files
-// Flag.scan: type=bool, shorthand=s, default=false, usage=Scan repository to auto-detect modules and generate configuration, required=false
-// Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), required=false, completion=claude-api,openai,gemini
-// Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided), required=false
-// Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional), required=false
-// Flag.copy-templates: type=bool, default=false, usage=Copy system default configuration files to repository for customization, required=false
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis, required=false
 package init
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,9 +9,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -58,10 +19,38 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-func init() {
-	registry.Register(Init)
+type initCommand struct{}
+
+var _ core.SimpleCommandPort = (*initCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&initCommand{},
+	}
 }
 
+func (c *initCommand) Name() string { return "init" }
+
+func (c *initCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "init",
+		Short:         "Initialize EAC project configuration",
+		Long:          "Initialize EAC project configuration.\n\nCreates the .eac directory structure and generates configuration files\nwith calculated defaults. AI provider configuration is optional.\n\nAlways creates:\n  - .eac/repository.yml (module definitions with calculated defaults)\n  - .eac/books.yml (empty documentation books template)\n  - .eac/environments.yml (empty test environments template)\n\nWhen --ai-provider is specified, also creates:\n  - .eac/ai-provider.yml (team config) or\n  - .eac/ai-provider.personal.yml (personal config with tokens)\n\nAvailable AI providers:\n  - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)\n  - openai: OpenAI via API (requires OPENAI_API_KEY)\n  - gemini: Google Gemini via API (requires GOOGLE_API_KEY)\n\nRe-running init will intelligently update existing configuration:\n  - Preserves user customizations (module names, versioning, dependencies)\n  - Updates AI-generated content (descriptions, component types)\n  - Detects new/removed modules automatically\n\nExamples:\n  init                                                      # Initialize project with config files\n  init                                                      # Re-run to update existing config\n  init --scan                                               # Scan repository and auto-generate config\n  init --scan --ai-provider claude-api                      # Scan with AI-enhanced config generation\n  init --ai-provider claude-api                             # Initialize and configure AI provider\n  init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token\n  init --copy-templates                                     # Also copy system template files",
+		Flags: []core.FlagSpec{
+			{Name: "scan", Shorthand: "s", Type: "bool", DefaultValue: "false", Usage: "Scan repository to auto-detect modules and generate configuration"},
+			{Name: "ai-provider", Shorthand: "a", Type: "string", Usage: "AI provider to configure (optional)", Completion: []string{"claude-api", "openai", "gemini"}},
+			{Name: "ai-token", Type: "string", Usage: "AI provider API token (creates personal config if provided)"},
+			{Name: "git-token", Type: "string", Usage: "Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional)"},
+			{Name: "copy-templates", Type: "bool", DefaultValue: "false", Usage: "Copy system default configuration files to repository for customization"},
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis"},
+		},
+	}
+}
+
+func (c *initCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Init()
+}
 var log = logging.C()
 
 // Init initializes EAC project configuration.

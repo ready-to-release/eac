@@ -1,32 +1,35 @@
-// Command: show dependencies
-// Short: Show module dependency graph in a human-readable table format
-// Long: Show module dependency graph in a human-readable table format.
-// Long:
-// Long: This command displays the dependency relationships between modules in the repository.
-// Long: The output shows which modules depend on which other modules, helping you understand
-// Long: the module architecture and plan changes that respect dependencies.
-// Long:
-// Long: The table format makes it easy to see the full dependency graph at a glance.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown table showing module dependencies with columns: Module, Depends On, Used By
-// Long: - Statistics table with metrics like total modules, total dependencies, root/leaf modules
-// Long: - Display order table showing modules ordered by depth, group, and declaration order
-// Long:
-// Long: Example:
-// Long:   show dependencies
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showDependenciesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showDependenciesCommand)(nil)
+
+func (c *showDependenciesCommand) Name() string { return "show dependencies" }
+
+func (c *showDependenciesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-dependencies",
+		Short:         "Show module dependency graph in a human-readable table format",
+		Long:          "Show module dependency graph in a human-readable table format.\n\nThis command displays the dependency relationships between modules in the repository.\nThe output shows which modules depend on which other modules, helping you understand\nthe module architecture and plan changes that respect dependencies.\n\nThe table format makes it easy to see the full dependency graph at a glance.\n\nExpected Output:\n- Markdown table showing module dependencies with columns: Module, Depends On, Used By\n- Statistics table with metrics like total modules, total dependencies, root/leaf modules\n- Display order table showing modules ordered by depth, group, and declaration order\n\nExample:\n  show dependencies",
+	}
+}
+
+func (c *showDependenciesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowDependencies()
+}
 
 func ShowDependencies() int {
 	// Validate flags against registry metadata

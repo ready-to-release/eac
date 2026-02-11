@@ -1,43 +1,7 @@
-// Command: scan
-// Short: Security scanning and evidence collection for audit compliance
-// Long: Scan modules for security vulnerabilities using industry-standard tools.
-// Long:
-// Long: If no modules specified, scans all modules in the repository.
-// Long: If no --scanner specified, uses default scanners for each module type
-// Long: (configured in contracts/scanner/0.1.0/schemas/defaults/).
-// Long:
-// Long: Supported scanners:
-// Long:   - sbom: Software Bill of Materials (Trivy, CycloneDX format)
-// Long:   - vuln: Vulnerability scanning (Trivy)
-// Long:   - secrets: Secrets detection (Trivy)
-// Long:   - iac: Infrastructure as Code scanning (Trivy)
-// Long:   - compliance: CIS compliance checking (Trivy)
-// Long:   - sast: Static Application Security Testing (Semgrep)
-// Long:   - zap: Dynamic Application Security Testing (OWASP ZAP)
-// Long:
-// Long: Example:
-// Long:   scan                                  # All modules, default scanners
-// Long:   scan core                         # Single module, default scanners
-// Long:   scan --scanner sbom                   # All modules, SBOM only
-// Long:   scan core --scanner sbom,vuln     # Single module, specific scanners
-// Long:
-// Long: Evidence output: out/scan/<module>/<scanner>/
-// Flag.scanner: type=string, default=, usage=Scanner types to run (comma-separated: sbom,vuln,secrets,iac,compliance,sast,zap)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging to out/logs/security
-// Flag.tui: type=bool, default=auto, usage=Enable TUI console (default: auto-detect)
-// Flag.no-tui: type=bool, default=false, usage=Disable TUI console
-// Flag.tui-height: type=int, default=8, usage=Set TUI console height (3-20)
-// Flag.ascii: type=bool, default=false, usage=Use ASCII-only characters in TUI
-// Flag.skip-tui-delay: type=bool, default=false, usage=Skip TUI exit delay (exit immediately when done)
-// Flag.sequential: type=bool, default=false, usage=Run scans sequentially instead of in parallel
-// Flag.turbo: type=bool, default=false, usage=Enable turbo mode for faster scanning (increases parallelism)
-// Flag.skip-cache: type=bool, default=false, usage=Skip incremental cache, force full scan
-// Flag.skip-deps: type=bool, default=false, usage=Skip system dependency verification (trivy, semgrep, etc.)
-// HasSideEffects: false
-// Args: modules
 package scan
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -47,7 +11,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -57,9 +20,43 @@ var log = logging.C()
 
 // ValidScannerTypes lists all valid scanner type strings.
 var ValidScannerTypes = []string{"sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"}
+type scanCommand struct{}
 
-func init() {
-	registry.Register(Scan)
+var _ core.SimpleCommandPort = (*scanCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&scanCommand{},
+	}
+}
+
+func (c *scanCommand) Name() string { return "scan" }
+
+func (c *scanCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "scan",
+		Short:         "Security scanning and evidence collection for audit compliance",
+		Long:          "Scan modules for security vulnerabilities using industry-standard tools.\n\nIf no modules specified, scans all modules in the repository.\nIf no --scanner specified, uses default scanners for each module type\n(configured in contracts/scanner/0.1.0/schemas/defaults/).\n\nSupported scanners:\n  - sbom: Software Bill of Materials (Trivy, CycloneDX format)\n  - vuln: Vulnerability scanning (Trivy)\n  - secrets: Secrets detection (Trivy)\n  - iac: Infrastructure as Code scanning (Trivy)\n  - compliance: CIS compliance checking (Trivy)\n  - sast: Static Application Security Testing (Semgrep)\n  - zap: Dynamic Application Security Testing (OWASP ZAP)\n\nExample:\n  scan                                  # All modules, default scanners\n  scan core                         # Single module, default scanners\n  scan --scanner sbom                   # All modules, SBOM only\n  scan core --scanner sbom,vuln     # Single module, specific scanners\n\nEvidence output: out/scan/<module>/<scanner>/",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "scanner", Type: "string", Usage: "Scanner types to run (comma-separated: sbom,vuln,secrets,iac,compliance,sast,zap)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging to out/logs/security"},
+			{Name: "tui", Type: "bool", DefaultValue: "auto", Usage: "Enable TUI console (default: auto-detect)"},
+			{Name: "no-tui", Type: "bool", DefaultValue: "false", Usage: "Disable TUI console"},
+			{Name: "tui-height", Type: "int", DefaultValue: "8", Usage: "Set TUI console height (3-20)"},
+			{Name: "ascii", Type: "bool", DefaultValue: "false", Usage: "Use ASCII-only characters in TUI"},
+			{Name: "skip-tui-delay", Type: "bool", DefaultValue: "false", Usage: "Skip TUI exit delay (exit immediately when done)"},
+			{Name: "sequential", Type: "bool", DefaultValue: "false", Usage: "Run scans sequentially instead of in parallel"},
+			{Name: "turbo", Type: "bool", DefaultValue: "false", Usage: "Enable turbo mode for faster scanning (increases parallelism)"},
+			{Name: "skip-cache", Type: "bool", DefaultValue: "false", Usage: "Skip incremental cache, force full scan"},
+			{Name: "skip-deps", Type: "bool", DefaultValue: "false", Usage: "Skip system dependency verification (trivy, semgrep, etc.)"},
+		},
+	}
+}
+
+func (c *scanCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Scan()
 }
 
 // Scan command entry point.

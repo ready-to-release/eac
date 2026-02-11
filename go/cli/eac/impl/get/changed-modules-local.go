@@ -1,21 +1,7 @@
-// Command: get changed-modules-local
-// Short: Get modules requiring rebuild based on local build state
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML list of modules needing rebuild based on local state, including:
-// Long:   - Modules requiring rebuild (source files changed since last build)
-// Long:   - Up-to-date modules (no changes detected)
-// Long:   - Change reasons for each module
-// Long:   - Fresh build flag (true if no build state exists)
-// Long:   - Detection timestamp
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -30,7 +16,29 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// changedModulesLocalFlags defines valid flags for the get changed-modules-local command
+type getChangedModulesLocalCommand struct{}
+
+var _ core.SimpleCommandPort = (*getChangedModulesLocalCommand)(nil)
+
+func (c *getChangedModulesLocalCommand) Name() string { return "get changed-modules-local" }
+
+func (c *getChangedModulesLocalCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-changed-modules-local",
+		Short:         "Get modules requiring rebuild based on local build state",
+		Long: "Expected Output:\n" +
+			"YAML list of modules needing rebuild based on local state, including:\n" +
+			"  - Modules requiring rebuild (source files changed since last build)\n" +
+			"  - Up-to-date modules (no changes detected)\n" +
+			"  - Change reasons for each module\n" +
+			"  - Fresh build flag (true if no build state exists)\n" +
+			"  - Detection timestamp",
+	}
+}
+
+func (c *getChangedModulesLocalCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetChangedModulesLocal()
+}
 
 // LocalChangedModulesResult represents the output of the get changed-modules-local command.
 type LocalChangedModulesResult struct {

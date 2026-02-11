@@ -1,36 +1,44 @@
-// Command: show units
-// Short: Display units of work in a human-readable markdown report
-// Long: Shows units for a framework (build|test|lint|scan) with cache status visualization.
-// Long: The report includes:
-// Long:   - Summary statistics (total, cached, stale, new, container, host)
-// Long:   - Cache status overview with percentages
-// Long:   - Units grouped by module with status icons
-// Long:   - Stale units section for quick identification
-// Long:
-// Long: Filter Examples:
-// Long:   show units build                        # All build units
-// Long:   show units test --module eac   # Test units for specific module
-// Long:   show units lint --stale                 # Only stale lint units
-// Long:   show units scan --container             # Only container-based scan units
-// Flag.module: type=string, default="", usage=Filter to specific module
-// Flag.component: type=string, default="", usage=Filter to specific component
-// Flag.cached: type=bool, default=false, usage=Only show cached (up-to-date) units
-// Flag.stale: type=bool, default=false, usage=Only show stale units
-// Flag.container: type=bool, default=false, usage=Only show container-based units
-// Flag.host: type=bool, default=false, usage=Only show host-installed units
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showUnitsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showUnitsCommand)(nil)
+
+func (c *showUnitsCommand) Name() string { return "show units" }
+
+func (c *showUnitsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-units",
+		Short:         "Display units of work in a human-readable markdown report",
+		Long:          "Shows units for a framework (build|test|lint|scan) with cache status visualization.\nThe report includes:\n  - Summary statistics (total, cached, stale, new, container, host)\n  - Cache status overview with percentages\n  - Units grouped by module with status icons\n  - Stale units section for quick identification\n\nFilter Examples:\n  show units build                        # All build units\n  show units test --module eac   # Test units for specific module\n  show units lint --stale                 # Only stale lint units\n  show units scan --container             # Only container-based scan units",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to specific module"},
+			{Name: "component", Type: "string", DefaultValue: "", Usage: "Filter to specific component"},
+			{Name: "cached", Type: "bool", DefaultValue: "false", Usage: "Only show cached (up-to-date) units"},
+			{Name: "stale", Type: "bool", DefaultValue: "false", Usage: "Only show stale units"},
+			{Name: "container", Type: "bool", DefaultValue: "false", Usage: "Only show container-based units"},
+			{Name: "host", Type: "bool", DefaultValue: "false", Usage: "Only show host-installed units"},
+		},
+	}
+}
+
+func (c *showUnitsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowUnits()
+}
 
 // unitShowFilters holds the parsed filter flags for show units.
 type unitShowFilters struct {

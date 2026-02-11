@@ -1,31 +1,46 @@
-// Command: get dependencies
-// Short: Get direct dependencies of a module
 // Usage: get dependencies <module>
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--format: Output format (list, space, json)
-//
-// Long:
-// Long: Returns the direct dependencies of a module.
-// Long:
-// Long: Expected Output:
-// Long:   - List of module monikers this module depends on
-// Long:
-// Long: Examples:
-// Long:   get dependencies clie                    # YAML list
-// Long:   get dependencies clie --format space     # Space-separated: "dep1 dep2 dep3"
-// Long:   get dependencies clie --format list      # One per line
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
+
+type getDependenciesModuleCommand struct{}
+
+var _ core.SimpleCommandPort = (*getDependenciesModuleCommand)(nil)
+
+func (c *getDependenciesModuleCommand) Name() string { return "get dependencies" }
+
+func (c *getDependenciesModuleCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-dependencies",
+		Short:         "Get direct dependencies of a module",
+		Long: "Returns the direct dependencies of a module.\n" +
+			"\n" +
+			"Expected Output:\n" +
+			"  - List of module monikers this module depends on\n" +
+			"\n" +
+			"Examples:\n" +
+			"  get dependencies clie                    # YAML list\n" +
+			"  get dependencies clie --format space     # Space-separated: \"dep1 dep2 dep3\"\n" +
+			"  get dependencies clie --format list      # One per line",
+		Args: "<module>",
+		Flags: []core.FlagSpec{
+			{Name: "format", Type: "string", Usage: "Output format (list, space, json)"},
+		},
+	}
+}
+
+func (c *getDependenciesModuleCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetDependenciesModule()
+}
 
 // DependenciesOutput represents the output structure.
 type DependenciesOutput struct {

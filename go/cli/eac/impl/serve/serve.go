@@ -1,18 +1,3 @@
-// Command: serve
-// Short: Start server for a module's build output
-// Long: The serve command starts a Docker container to serve a module's build output.
-// Long: For site-type modules (like docs), serves the HTML site.
-// Long: For PDF-type modules (like books), serves the PDF directory listing.
-// Long: Takes a module moniker as argument (e.g., docs, books).
-// Args: module
-// Flag.no-browser: type=bool, default=false, usage=Don't open browser after starting server
-// Flag.port: type=int, shorthand=p, default=9000, usage=Port number for server (auto-allocated from 9000-9999 if not specified)
-// Flag.stop: type=bool, default=false, usage=Stop the running server
-// Flag.reload: type=bool, default=false, usage=Force reload (auto-detects container config changes)
-// Flag.debug: type=bool, default=false, usage=Enable debug logging
-// Flag.rebuild: type=bool, default=false, usage=Force rebuild before serving
-// Flag.book: type=string, shorthand=b, default=, usage=Named book to serve (defaults to first 'site' book, or first book if no site)
-// Flag.build-actual-site: type=bool, default=false, usage=Build full site before serving (disables live-reload dev mode)
 package serve
 
 import (
@@ -28,7 +13,6 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/clibase/services"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -37,14 +21,43 @@ import (
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
-// commandFlags defines valid flags for the serve command
+type serveCommand struct{}
 
-var log = logging.C()
+var _ core.SimpleCommandPort = (*serveCommand)(nil)
 
-func init() {
-	registry.Register(Serve)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&serveCommand{},
+	}
 }
 
+func (c *serveCommand) Name() string { return "serve" }
+
+func (c *serveCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "serve",
+		Short:         "Start server for a module's build output",
+		Long:          "The serve command starts a Docker container to serve a module's build output.\nFor site-type modules (like docs), serves the HTML site.\nFor PDF-type modules (like books), serves the PDF directory listing.\nTakes a module moniker as argument (e.g., docs, books).",
+		Args:          "module",
+		Flags: []core.FlagSpec{
+			{Name: "no-browser", Type: "bool", DefaultValue: "false", Usage: "Don't open browser after starting server"},
+			{Name: "port", Shorthand: "p", Type: "int", DefaultValue: "9000", Usage: "Port number for server (auto-allocated from 9000-9999 if not specified)"},
+			{Name: "stop", Type: "bool", DefaultValue: "false", Usage: "Stop the running server"},
+			{Name: "reload", Type: "bool", DefaultValue: "false", Usage: "Force reload (auto-detects container config changes)"},
+			{Name: "debug", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
+			{Name: "rebuild", Type: "bool", DefaultValue: "false", Usage: "Force rebuild before serving"},
+			{Name: "book", Shorthand: "b", Type: "string", Usage: "Named book to serve (defaults to first 'site' book, or first book if no site)"},
+			{Name: "build-actual-site", Type: "bool", DefaultValue: "false", Usage: "Build full site before serving (disables live-reload dev mode)"},
+		},
+	}
+}
+
+func (c *serveCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Serve()
+}
+
+var log = logging.C()
 // Serve starts the server for a module.
 func Serve() int {
 	args := os.Args[2:] // Skip program name and "serve"
@@ -712,5 +725,3 @@ func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrow
 
 	return 0
 }
-
-

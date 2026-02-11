@@ -1,28 +1,3 @@
-// Command: create risk-assess
-// Short: Create OSCAL assessment-results from existing test and security evidence
-// Long: The create risk-assess command creates OSCAL assessment-results for modules
-// Long: by reading existing test results and security scan evidence. It maps @control tags in
-// Long: feature files to OSCAL control IDs and determines satisfied/not-satisfied status.
-// Long:
-// Long: This command does NOT run tests or scans. It only reads existing evidence.
-// Long: The command will warn (but continue) if:
-// Long: - Evidence is missing
-// Long: - Evidence is older than max-evidence-age (default: 24h)
-// Long:
-// Long: Evidence is collected from:
-// Long: - Test results: out/test/<module>/*.json
-// Long: - Security scans: out/scan/<module>/**/*.json
-// Long:
-// Long: Expected Output:
-// Long: - OSCAL assessment-results JSON file
-// Long: - Control status (satisfied/not-satisfied) based on test results
-// Long: - Risk assessment reports in Markdown format
-// Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
-// Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for evidence before warning (e.g., 24h, 7d)
-// Flag.suites: type=[]string, default=all, usage=Test suites to check for evidence (e.g., all, integration, acceptance)
-// Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/commands.log
-// Args: modules
 package riskassess
 
 import (
@@ -35,25 +10,55 @@ import (
 
 	"github.com/google/uuid"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/evidence"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/scoring"
 	sharedTemplate "github.com/ready-to-release/eac/go/clibase/template"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var assessLog = logging.C()
+type createRiskAssessCommand struct{}
 
-func init() {
-	registry.Register(CreateRiskAssess)
+var _ core.SimpleCommandPort = (*createRiskAssessCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&createRiskAssessCommand{},
+	}
 }
+
+func (c *createRiskAssessCommand) Name() string { return "create risk-assess" }
+
+func (c *createRiskAssessCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-risk-assess",
+		Short:         "Create OSCAL assessment-results from existing test and security evidence",
+		Long:          "The create risk-assess command creates OSCAL assessment-results for modules\nby reading existing test results and security scan evidence. It maps @control tags in\nfeature files to OSCAL control IDs and determines satisfied/not-satisfied status.\n\nThis command does NOT run tests or scans. It only reads existing evidence.\nThe command will warn (but continue) if:\n- Evidence is missing\n- Evidence is older than max-evidence-age (default: 24h)\n\nEvidence is collected from:\n- Test results: out/test/<module>/*.json\n- Security scans: out/scan/<module>/**/*.json\n\nExpected Output:\n- OSCAL assessment-results JSON file\n- Control status (satisfied/not-satisfied) based on test results\n- Risk assessment reports in Markdown format",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "profile", Shorthand: "p", Type: "string", Required: true, Usage: "Path to OSCAL profile JSON file"},
+			{Name: "max-evidence-age", Type: "string", DefaultValue: "24h", Usage: "Maximum age for evidence before warning (e.g., 24h, 7d)"},
+			{Name: "suites", Type: "[]string", DefaultValue: "all", Usage: "Test suites to check for evidence (e.g., all, integration, acceptance)"},
+			{Name: "sequential", Type: "bool", DefaultValue: "false", Usage: "Run assessments sequentially instead of parallel"},
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs to out/commands.log"},
+		},
+	}
+}
+
+func (c *createRiskAssessCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreateRiskAssess()
+}
+
+var assessLog = logging.C()
 
 // AssessConfig holds configuration for risk assess command.
 type AssessConfig struct {
@@ -247,7 +252,7 @@ func parseAssessConfig() (*AssessConfig, error) {
 	config.Sequential = flags.HasFlag(args, "--sequential", "")
 
 	// Get workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}

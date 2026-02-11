@@ -1,24 +1,7 @@
-// Command: show workspaces
-// Short: List all workspaces and their status
-// Long: Lists all git worktrees (workspaces) in a formatted table showing their path, branch, and status.
-// Long:
-// Long: The status column indicates whether the worktree has uncommitted changes:
-// Long:   - clean: No uncommitted changes
-// Long:   - dirty: Has uncommitted changes
-// Long:
-// Long: Use --verbose to see additional information including commit SHA.
-// Long: Use --debug to enable detailed logging to out/commands.log.
-// Long:
-// Long: Example:
-// Long:   show workspaces
-// Long:   show workspaces --verbose
-// Long:   show workspaces -v
-// Long:   show workspaces --debug
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including commit SHA
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -26,10 +9,33 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showWorkspacesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showWorkspacesCommand)(nil)
+
+func (c *showWorkspacesCommand) Name() string { return "show workspaces" }
+
+func (c *showWorkspacesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-workspaces",
+		Short:         "List all workspaces and their status",
+		Long:          "Lists all git worktrees (workspaces) in a formatted table showing their path, branch, and status.\n\nThe status column indicates whether the worktree has uncommitted changes:\n  - clean: No uncommitted changes\n  - dirty: Has uncommitted changes\n\nUse --verbose to see additional information including commit SHA.\nUse --debug to enable detailed logging to out/commands.log.\n\nExample:\n  show workspaces\n  show workspaces --verbose\n  show workspaces -v\n  show workspaces --debug",
+		Flags: []core.FlagSpec{
+			{Name: "verbose", Type: "bool", Shorthand: "v", DefaultValue: "false", Usage: "Show detailed information including commit SHA"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *showWorkspacesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowWorkspaces()
+}
 
 // ShowWorkspaces displays all git worktrees in a formatted table.
 func ShowWorkspaces() int {

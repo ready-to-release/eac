@@ -1,30 +1,37 @@
-// Command: show specs
-// Short: Display specifications for a release
-// Long: Shows .feature specification files that were added or modified for a release.
-// Long:
-// Long: Expected Output:
-// Long: - Version header with module and version number
-// Long: - Summary line with counts (added, modified, deleted, total scenarios)
-// Long: - Markdown table with columns: File, Status, Scenarios, Feature
-// Long: - Status icons: ✨ Added, 📝 Modified, 🗑️ Deleted
-// Long:
-// Long: Example:
-// Long:   show specs eac-ext
-// Long:   show specs eac-ext latest
-// Long:   show specs eac-ext unreleased
-// Long:   show specs eac-ext 0.0.7
-// Flag.branch: type=string, usage=Branch to query (default: trunk branch from config, usually "main"). Use "HEAD" for current branch
-// Args: module [version]
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showSpecsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showSpecsCommand)(nil)
+
+func (c *showSpecsCommand) Name() string { return "show specs" }
+
+func (c *showSpecsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-specs",
+		Short:         "Display specifications for a release",
+		Long:          "Shows .feature specification files that were added or modified for a release.\n\nExpected Output:\n- Version header with module and version number\n- Summary line with counts (added, modified, deleted, total scenarios)\n- Markdown table with columns: File, Status, Scenarios, Feature\n- Status icons: ✨ Added, 📝 Modified, 🗑️ Deleted\n\nExample:\n  show specs eac-ext\n  show specs eac-ext latest\n  show specs eac-ext unreleased\n  show specs eac-ext 0.0.7",
+		Args: "module [version]",
+		Flags: []core.FlagSpec{
+			{Name: "branch", Type: "string", Usage: "Branch to query (default: trunk branch from config, usually \"main\"). Use \"HEAD\" for current branch"},
+		},
+	}
+}
+
+func (c *showSpecsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowSpecs()
+}
 
 // ShowSpecs displays specifications in human-readable markdown format.
 func ShowSpecs() int {

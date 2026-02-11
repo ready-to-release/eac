@@ -1,22 +1,3 @@
-// Command: work commit
-// Short: Commit changes with AI-generated commit messages
-// Long: Commits changes in the current workspace using AI to generate semantic commit messages.
-// Long:
-// Long: By default, commits only staged changes. Use --all to stage all changes before committing.
-// Long: Uses the commit command internally to generate high-quality commit messages that follow
-// Long: project conventions and include module-specific details.
-// Long:
-// Long: Expected Output:
-// Long:   - Git commit created with AI-generated or custom message
-// Long:
-// Long: Example:
-// Long:   work commit
-// Long:   work commit --all
-// Long:   work commit --message "fix: resolve authentication bug"
-// Long:   work commit -m "feat: add new feature"
-// Flag.all: type=bool, shorthand=a, default=false, usage=Stage all changes before committing
-// Flag.message: type=string, shorthand=m, usage=Custom commit message (skips AI generation)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
 package work
 
 import (
@@ -27,11 +8,35 @@ import (
 
 	"go.uber.org/zap"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 )
+
+type workCommitCommand struct{}
+
+var _ core.SimpleCommandPort = (*workCommitCommand)(nil)
+
+func (c *workCommitCommand) Name() string { return "work commit" }
+
+func (c *workCommitCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "work-commit",
+		Short:         "Commit changes with AI-generated commit messages",
+		Long:          "Commits changes in the current workspace using AI to generate semantic commit messages.\n\nBy default, commits only staged changes. Use --all to stage all changes before committing.\nUses the commit command internally to generate high-quality commit messages that follow\nproject conventions and include module-specific details.\n\nExpected Output:\n  - Git commit created with AI-generated or custom message\n\nExample:\n  work commit\n  work commit --all\n  work commit --message \"fix: resolve authentication bug\"\n  work commit -m \"feat: add new feature\"",
+		Flags: []core.FlagSpec{
+			{Name: "all", Type: "bool", Shorthand: "a", DefaultValue: "false", Usage: "Stage all changes before committing"},
+			{Name: "message", Type: "string", Shorthand: "m", Usage: "Custom commit message (skips AI generation)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug mode (pass through to commit)"},
+		},
+	}
+}
+
+func (c *workCommitCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Commit()
+}
 
 // Commit commits changes with AI-generated or custom message.
 func Commit() int {

@@ -90,11 +90,6 @@ type Config struct {
 	LoadLocal   bool         `mapstructure:"load_local"` // Global flag to use local development images
 }
 
-func (c *Config) GetExtensions() []Extension {
-	// get the extensions from the config file
-	return []Extension{}
-}
-
 var Global Config
 
 // RootDir stores the repository root directory path (set during InitConfig).

@@ -1,29 +1,13 @@
-// Command: pipeline check-recent-run
-// Short: Check if a recent successful workflow run exists
-//
-//	--workflow <name>: Workflow file name (required)
-//	--sha <sha>: HEAD SHA to check (default: current HEAD)
-//	--since <duration>: Time window to check (default: 2h)
-//	--format shell: Output as shell variables
-//
-// Long:
-// Long: Checks if a successful workflow run exists for the given SHA within
-// Long: the specified time window. Used to skip redundant CI runs.
-// Long:
-// Long: Output:
-// Long:   Default: "true" or "false"
-// Long:   --format shell: HAS_RECENT="true/false"
-// Long:
-// Long: Example:
-// Long:   pipeline check-recent-run --workflow ci-trigger.yaml --since 2h
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/github"
@@ -31,6 +15,24 @@ import (
 
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
+
+type pipelineCheckRecentRunCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCheckRecentRunCommand)(nil)
+
+func (c *pipelineCheckRecentRunCommand) Name() string { return "pipeline check-recent-run" }
+
+func (c *pipelineCheckRecentRunCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-check-recent-run",
+		Short:         "Check if a recent successful workflow run exists",
+		Long:          "Checks if a successful workflow run exists for the given SHA within\nthe specified time window. Used to skip redundant CI runs.\n\nOutput:\n  Default: \"true\" or \"false\"\n  --format shell: HAS_RECENT=\"true/false\"\n\nExample:\n  pipeline check-recent-run --workflow ci-trigger.yaml --since 2h",
+	}
+}
+
+func (c *pipelineCheckRecentRunCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCheckRecentRun()
+}
 
 func PipelineCheckRecentRun() int {
 	// Parse flags

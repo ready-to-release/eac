@@ -1,33 +1,44 @@
-// Command: validate design
-// Short: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
-// Long: Validates DSL files for syntax errors and structural issues using the official
-// Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
-// Long: and ensures the workspace can be properly rendered. Supports multiple DSL files per module -
-// Long: files starting with "_" are treated as fragments (for !include) and skipped.
-// Long: Use --all to validate all modules, or --file to validate a specific DSL file.
-// Long:
-// Long: Expected Output:
-// Long:   Displays validation results in console. Results saved to out/logs/design/validation-results.json.
-// Long:   Shows syntax errors, structural issues, and render status. Exit code 0 if valid, 1 if errors, 2 if system errors.
 // Usage: validate design <module> [--file=<name>]
-// Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/.design/ directories
-// Flag.file: type=string, shorthand=f, default="", usage=Validate only a specific DSL file (e.g., --file=landscape)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs and detailed logs to out/logs/design/ for debugging
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show Docker command and raw Structurizr CLI output
 package validate
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateDesignCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateDesignCommand)(nil)
+
+func (c *validateDesignCommand) Name() string { return "validate design" }
+
+func (c *validateDesignCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-design",
+		Short:         "Check workspace.dsl syntax using Structurizr CLI (requires Docker)",
+		Long:          "Validates DSL files for syntax errors and structural issues using the official\nStructurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,\nand ensures the workspace can be properly rendered. Supports multiple DSL files per module -\nfiles starting with \"_\" are treated as fragments (for !include) and skipped.\nUse --all to validate all modules, or --file to validate a specific DSL file.\n\nExpected Output:\n  Displays validation results in console. Results saved to out/logs/design/validation-results.json.\n  Shows syntax errors, structural issues, and render status. Exit code 0 if valid, 1 if errors, 2 if system errors.",
+		Flags: []core.FlagSpec{
+			{Name: "all", Shorthand: "a", Type: "bool", DefaultValue: "false", Usage: "Validate all workspace files in specs/*/.design/ directories"},
+			{Name: "file", Shorthand: "f", Type: "string", DefaultValue: "", Usage: "Validate only a specific DSL file (e.g., --file=landscape)"},
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs and detailed logs to out/logs/design/ for debugging"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show Docker command and raw Structurizr CLI output"},
+		},
+	}
+}
+
+func (c *validateDesignCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateDesign()
+}
 
 // ValidateDesign validates workspace files using Structurizr CLI.
 func ValidateDesign() int {

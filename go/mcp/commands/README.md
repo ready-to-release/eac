@@ -59,9 +59,8 @@ The MCP server is the bridge between AI assistants (such as Claude Code) and the
 
 ### Pain Points
 
-- `getCommands()` shells out to the EAC adapter on every `tools/list` call with no caching; repeated tool-list requests re-discover commands each time
 - Error logging goes to stderr via `fmt.Fprintf` without structured logging
 
 ### Optimization Opportunities
 
-- Cache command discovery results after first `tools/list` call since the command set does not change during a server session
+- None identified

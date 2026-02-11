@@ -1,36 +1,45 @@
-// Command: validate risk-profile
-// Short: Validate OSCAL profile documents against OSCAL 1.1.2 schema
-// Long: The validate risk-profile command validates OSCAL profile documents using go-oscal types.
-// Long:
-// Long: Validation checks include:
-// Long: - JSON parsing with go-oscal types
-// Long: - Required field presence (UUID, metadata, imports)
-// Long: - Control ID format validation
-// Long: - Import href validation
-// Long:
-// Long: Expected Output:
-// Long:   Displays OSCAL profile validation results including required field checks,
-// Long:   control ID format validation, and import href validation. Shows errors and warnings.
-// Long:   Exit code 0 if valid OSCAL 1.1.2 profile, 1 if validation errors.
-// Args: file
 package riskprofile
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/validation"
 	"github.com/ready-to-release/eac/go/core/validation/formats/oscal"
 )
 
 var log = logging.C()
 
-func init() {
-	registry.Register(ValidateRiskProfile)
+type validateRiskProfileCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateRiskProfileCommand)(nil)
+
+func (c *validateRiskProfileCommand) Name() string { return "validate risk-profile" }
+
+func (c *validateRiskProfileCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-risk-profile",
+		Short:         "Validate OSCAL profile documents against OSCAL 1.1.2 schema",
+		Long:          "The validate risk-profile command validates OSCAL profile documents using go-oscal types.\n\nValidation checks include:\n- JSON parsing with go-oscal types\n- Required field presence (UUID, metadata, imports)\n- Control ID format validation\n- Import href validation\n\nExpected Output:\n  Displays OSCAL profile validation results including required field checks,\n  control ID format validation, and import href validation. Shows errors and warnings.\n  Exit code 0 if valid OSCAL 1.1.2 profile, 1 if validation errors.",
+		Args:          "file",
+	}
+}
+
+func (c *validateRiskProfileCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateRiskProfile()
+}
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&validateRiskProfileCommand{},
+	}
 }
 
 // Config holds configuration for validate risk-profile command.
@@ -77,7 +86,7 @@ func parseConfig() (*Config, error) {
 	config := &Config{}
 
 	// Get workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}

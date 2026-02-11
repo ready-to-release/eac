@@ -1,20 +1,3 @@
-// Command: serve gource
-// Short: Visualize repository git history using Gource in a web browser
-// Long: Launches a Docker container with live Gource visualization.
-// Long: Opens browser to view animated git history with files and contributors.
-// Long: Use --output to render to a video file instead of streaming.
-// Flag.no-browser: type=bool, default=false, usage=Don't open browser
-// Flag.port: type=int, shorthand=p, default=0, usage=Port number (auto 9000-9999)
-// Flag.stop: type=bool, default=false, usage=Stop the running server
-// Flag.title: type=string, shorthand=t, default=, usage=Custom title
-// Flag.resolution: type=string, shorthand=r, default=960x540, usage=Video resolution
-// Flag.file-idle-time: type=int, shorthand=i, default=1, usage=Seconds files remain visible (0=forever)
-// Flag.output: type=string, shorthand=o, default=, usage=Output video file path (renders to file instead of streaming)
-// Flag.format: type=string, shorthand=f, default=mp4, usage=Video format: mp4 or webm
-// Flag.duration: type=int, shorthand=d, default=60, usage=Target video duration in seconds
-// Flag.slow: type=float64, shorthand=s, default=1.0, usage=Time dilation multiplier (2.0 = 2x slower, doubles video length)
-// Flag.turbo: type=bool, default=false, usage=Use 80% of CPU and RAM for faster rendering
-// Flag.debug: type=bool, default=false, usage=Enable debug logging
 package gource
 
 import (
@@ -27,20 +10,54 @@ import (
 	"strconv"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type serveGourceCommand struct{}
 
-func init() {
-	registry.Register(ServeGource)
+var _ core.SimpleCommandPort = (*serveGourceCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&serveGourceCommand{},
+	}
 }
 
+func (c *serveGourceCommand) Name() string { return "serve gource" }
+
+func (c *serveGourceCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "serve-gource",
+		Short:         "Visualize repository git history using Gource in a web browser",
+		Long:          "Launches a Docker container with live Gource visualization.\nOpens browser to view animated git history with files and contributors.\nUse --output to render to a video file instead of streaming.",
+		Flags: []core.FlagSpec{
+			{Name: "no-browser", Type: "bool", DefaultValue: "false", Usage: "Don't open browser"},
+			{Name: "port", Shorthand: "p", Type: "int", DefaultValue: "0", Usage: "Port number (auto 9000-9999)"},
+			{Name: "stop", Type: "bool", DefaultValue: "false", Usage: "Stop the running server"},
+			{Name: "title", Shorthand: "t", Type: "string", Usage: "Custom title"},
+			{Name: "resolution", Shorthand: "r", Type: "string", DefaultValue: "960x540", Usage: "Video resolution"},
+			{Name: "file-idle-time", Shorthand: "i", Type: "int", DefaultValue: "1", Usage: "Seconds files remain visible (0=forever)"},
+			{Name: "output", Shorthand: "o", Type: "string", Usage: "Output video file path (renders to file instead of streaming)"},
+			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "mp4", Usage: "Video format: mp4 or webm"},
+			{Name: "duration", Shorthand: "d", Type: "int", DefaultValue: "60", Usage: "Target video duration in seconds"},
+			{Name: "slow", Shorthand: "s", Type: "float64", DefaultValue: "1.0", Usage: "Time dilation multiplier (2.0 = 2x slower, doubles video length)"},
+			{Name: "turbo", Type: "bool", DefaultValue: "false", Usage: "Use 80% of CPU and RAM for faster rendering"},
+			{Name: "debug", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *serveGourceCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ServeGource()
+}
+
+var log = logging.C()
 // ServeGource starts a Gource visualization server for the repository.
 func ServeGource() int {
 	workspaceRoot, err := repository.GetRepositoryRoot("")

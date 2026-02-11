@@ -5,44 +5,79 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // BehaviorGroup represents a grouped set of declarative flags.
 type BehaviorGroup struct {
 	Behavior    string
-	EnableFlag  *registry.FlagMetadata
-	DisableFlag *registry.FlagMetadata
+	EnableFlag  *core.FlagSpec
+	DisableFlag *core.FlagSpec
 }
 
 // CategorizeFlags separates declarative behavior flags from regular flags.
 // Returns regular flags and behavior groups (each group contains enable and disable flags).
-func CategorizeFlags(flags []registry.FlagMetadata) (regular []registry.FlagMetadata, groups []BehaviorGroup) {
-	// Map behavior -> group
+// Behavior flags are detected by convention: --with-X and --no-X pairs.
+func CategorizeFlags(flags []core.FlagSpec) (regular []core.FlagSpec, groups []BehaviorGroup) {
+	// Detect behavior flag pairs by naming convention (--with-X / --no-X)
 	behaviorMap := make(map[string]*BehaviorGroup)
 	var behaviorOrder []string
+	behaviorFlags := make(map[int]bool) // track indices that are behavior flags
 
 	for i := range flags {
 		flag := &flags[i]
+		var behavior string
+		var isEnable bool
 
-		if flag.Behavior == "" {
-			regular = append(regular, *flag)
+		if strings.HasPrefix(flag.Name, "with-") {
+			behavior = strings.TrimPrefix(flag.Name, "with-")
+			isEnable = true
+		} else if strings.HasPrefix(flag.Name, "no-") {
+			behavior = strings.TrimPrefix(flag.Name, "no-")
+			isEnable = false
+		}
+
+		if behavior == "" {
 			continue
 		}
 
-		// Find or create behavior group
-		group, exists := behaviorMap[flag.Behavior]
-		if !exists {
-			group = &BehaviorGroup{Behavior: flag.Behavior}
-			behaviorMap[flag.Behavior] = group
-			behaviorOrder = append(behaviorOrder, flag.Behavior)
+		// Check if the pair exists
+		pairName := "no-" + behavior
+		if !isEnable {
+			pairName = "with-" + behavior
+		}
+		hasPair := false
+		for j := range flags {
+			if flags[j].Name == pairName {
+				hasPair = true
+				break
+			}
 		}
 
-		// Categorize within group
-		if flag.IsEnableFlag {
+		if !hasPair {
+			continue
+		}
+
+		behaviorFlags[i] = true
+
+		group, exists := behaviorMap[behavior]
+		if !exists {
+			group = &BehaviorGroup{Behavior: behavior}
+			behaviorMap[behavior] = group
+			behaviorOrder = append(behaviorOrder, behavior)
+		}
+
+		if isEnable {
 			group.EnableFlag = flag
 		} else {
 			group.DisableFlag = flag
+		}
+	}
+
+	// Collect regular (non-behavior) flags
+	for i := range flags {
+		if !behaviorFlags[i] {
+			regular = append(regular, flags[i])
 		}
 	}
 
@@ -86,39 +121,10 @@ func PrintBehaviorGroup(w io.Writer, group BehaviorGroup) {
 		defaultDisplay)
 }
 
-// FormatDefault formats the default value, handling environment-aware flags.
-func FormatDefault(flag *registry.FlagMetadata) string {
-	if !flag.EnvAware {
-		if flag.DefaultValue == "true" {
-			return "ON"
-		}
-		return "OFF"
+// FormatDefault formats the default value for a flag.
+func FormatDefault(flag *core.FlagSpec) string {
+	if flag.DefaultValue == "true" {
+		return "ON"
 	}
-
-	// Environment-aware display
-	if len(flag.EnvDefaults) == 0 {
-		return "context-aware"
-	}
-
-	var parts []string
-	if on, ok := flag.EnvDefaults["local"]; ok {
-		if on {
-			parts = append(parts, "ON locally")
-		} else {
-			parts = append(parts, "OFF locally")
-		}
-	}
-
-	if on, ok := flag.EnvDefaults["CI"]; ok {
-		if on {
-			parts = append(parts, "ON in CI")
-		} else {
-			parts = append(parts, "OFF in CI")
-		}
-	}
-
-	if len(parts) == 0 {
-		return "context-aware"
-	}
-	return strings.Join(parts, ", ")
+	return "OFF"
 }

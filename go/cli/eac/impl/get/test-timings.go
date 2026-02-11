@@ -1,20 +1,8 @@
-// Command: get test-timings
-// Short: Display test timing metrics from last test run
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML with test timing metrics parsed from out/test/ logs, including:
-// Long:   - Per-scenario timing data with duration in seconds and status (PASS/FAIL)
-// Long:   - Aggregated statistics by module
-// Long:   - Overall summary with total/passed/failed tests and average duration
 package get
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -31,7 +20,27 @@ import (
 
 var reScenarioTiming = regexp.MustCompile(`^\s+---\s+(PASS|FAIL):\s+\S+/(.+?)\s+\(([0-9.]+)s\)`)
 
-// testTimingsFlags defines valid flags for the get test-timings command
+type getTestTimingsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getTestTimingsCommand)(nil)
+
+func (c *getTestTimingsCommand) Name() string { return "get test-timings" }
+
+func (c *getTestTimingsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-test-timings",
+		Short:         "Display test timing metrics from last test run",
+		Long: "Expected Output:\n" +
+			"YAML with test timing metrics parsed from out/test/ logs, including:\n" +
+			"  - Per-scenario timing data with duration in seconds and status (PASS/FAIL)\n" +
+			"  - Aggregated statistics by module\n" +
+			"  - Overall summary with total/passed/failed tests and average duration",
+	}
+}
+
+func (c *getTestTimingsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetTestTimings()
+}
 
 // TestTiming represents timing data for a single test scenario.
 type TestTiming struct {

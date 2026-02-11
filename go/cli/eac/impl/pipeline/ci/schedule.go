@@ -1,27 +1,3 @@
-// Command: pipeline ci schedule
-// Short: Schedule and dispatch CI workflows with concurrency limits
-// Long: Replaces wave-based dispatch with a pull-based scheduler that:
-// Long:   1. Filters modules (CI cache check, same as get ci-dispatch)
-// Long:   2. Builds dependency graph from repository config
-// Long:   3. Dispatches modules as capacity allows and deps are satisfied
-// Long:   4. Polls for completion, dispatches next ready modules
-// Long:   5. Exits 0 when all complete successfully, 1 on any failure
-// Long:
-// Long: This command is the CI-level analog of the local DependencyScheduler.
-// Long: It handles the full dispatch lifecycle: filter, dispatch, poll, report.
-// Long:
-// Long: Example:
-// Long:   pipeline ci schedule --directly-changed "core" --invalidated "eac docs" --head-sha abc123 --max-concurrent 6
-// Long:   pipeline ci schedule --directly-changed "core" --max-concurrent 20 --timeout 3600
-// Flag.directly-changed: type=string, usage=Space-separated list of directly changed modules
-// Flag.invalidated: type=string, usage=Space-separated list of invalidated (dependent) modules
-// Flag.head-sha: type=string, usage=Commit SHA to dispatch CI for
-// Flag.dispatch-ref: type=string, usage=Git ref to dispatch workflows on (default: current branch)
-// Flag.max-concurrent: type=int, default=6, usage=Maximum number of concurrent CI dispatches
-// Flag.timeout: type=int, default=3600, usage=Maximum time in seconds to wait for all CI
-// Flag.poll-interval: type=int, default=30, usage=How often to check for completed workflows (seconds)
-// Flag.trigger-run-id: type=string, usage=Run ID of the triggering workflow (for artifact download)
-// Flag.mock: type=string, usage=Mock CI cache status (JSON format) for testing
 package ci
 
 import (
@@ -33,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
@@ -40,6 +17,35 @@ import (
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineCIScheduleCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCIScheduleCommand)(nil)
+
+func (c *pipelineCIScheduleCommand) Name() string { return "pipeline ci schedule" }
+
+func (c *pipelineCIScheduleCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-ci-schedule",
+		Short:         "Schedule and dispatch CI workflows with concurrency limits",
+		Long:          "Replaces wave-based dispatch with a pull-based scheduler that:\n  1. Filters modules (CI cache check, same as get ci-dispatch)\n  2. Builds dependency graph from repository config\n  3. Dispatches modules as capacity allows and deps are satisfied\n  4. Polls for completion, dispatches next ready modules\n  5. Exits 0 when all complete successfully, 1 on any failure\n\nThis command is the CI-level analog of the local DependencyScheduler.\nIt handles the full dispatch lifecycle: filter, dispatch, poll, report.\n\nExample:\n  pipeline ci schedule --directly-changed \"core\" --invalidated \"eac docs\" --head-sha abc123 --max-concurrent 6\n  pipeline ci schedule --directly-changed \"core\" --max-concurrent 20 --timeout 3600",
+		Flags: []core.FlagSpec{
+			{Name: "directly-changed", Type: "string", Usage: "Space-separated list of directly changed modules"},
+			{Name: "invalidated", Type: "string", Usage: "Space-separated list of invalidated (dependent) modules"},
+			{Name: "head-sha", Type: "string", Usage: "Commit SHA to dispatch CI for"},
+			{Name: "dispatch-ref", Type: "string", Usage: "Git ref to dispatch workflows on (default: current branch)"},
+			{Name: "max-concurrent", Type: "int", DefaultValue: "6", Usage: "Maximum number of concurrent CI dispatches"},
+			{Name: "timeout", Type: "int", DefaultValue: "3600", Usage: "Maximum time in seconds to wait for all CI"},
+			{Name: "poll-interval", Type: "int", DefaultValue: "30", Usage: "How often to check for completed workflows (seconds)"},
+			{Name: "trigger-run-id", Type: "string", Usage: "Run ID of the triggering workflow (for artifact download)"},
+			{Name: "mock", Type: "string", Usage: "Mock CI cache status (JSON format) for testing"},
+		},
+	}
+}
+
+func (c *pipelineCIScheduleCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCISchedule()
+}
 
 // CISchedulerConfig holds configuration for the CI scheduler.
 type CISchedulerConfig struct {

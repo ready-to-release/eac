@@ -8,19 +8,21 @@ import (
 
 // Registry provides fast access to module domain.
 type Registry struct {
-	modules       map[string]*ModuleContract // Keyed by moniker
-	version       string
-	workspaceRoot string
-	modulesByRoot map[string][]*ModuleContract // Index: package root -> modules with packages at that root
+	modules        map[string]*ModuleContract   // Keyed by moniker
+	version        string
+	workspaceRoot  string
+	modulesByRoot  map[string][]*ModuleContract // Index: package root -> modules with packages at that root
+	reverseDepGraph map[string][]string          // Pre-computed reverse dependency graph: dep -> dependents
 }
 
 // NewRegistry creates a new module registry.
 func NewRegistry(version, workspaceRoot string) *Registry {
 	return &Registry{
-		modules:       make(map[string]*ModuleContract),
-		version:       version,
-		workspaceRoot: workspaceRoot,
-		modulesByRoot: make(map[string][]*ModuleContract),
+		modules:         make(map[string]*ModuleContract),
+		version:         version,
+		workspaceRoot:   workspaceRoot,
+		modulesByRoot:   make(map[string][]*ModuleContract),
+		reverseDepGraph: make(map[string][]string),
 	}
 }
 
@@ -40,6 +42,12 @@ func (r *Registry) Add(module *ModuleContract) error {
 	for _, root := range module.GetComponentRoots() {
 		normalizedRoot := normalizeRoot(root)
 		r.modulesByRoot[normalizedRoot] = append(r.modulesByRoot[normalizedRoot], module)
+	}
+
+	// Update reverse dependency graph: for each dependency of this module,
+	// record that this module depends on it
+	for _, dep := range module.DependsOn {
+		r.reverseDepGraph[dep] = append(r.reverseDepGraph[dep], module.Moniker)
 	}
 
 	return nil
@@ -165,29 +173,27 @@ func (r *Registry) GetDependencyGraph() map[string][]string {
 
 // GetReverseDependencyGraph returns a map of reverse dependencies
 // Key: module moniker, Value: list of modules that depend on it.
+// Returns a shallow copy so callers cannot mutate internal state.
 func (r *Registry) GetReverseDependencyGraph() map[string][]string {
-	graph := make(map[string][]string)
+	graph := make(map[string][]string, len(r.modules))
 
-	// Initialize
+	// Ensure every registered module has an entry (even if no dependents)
 	for moniker := range r.modules {
 		graph[moniker] = []string{}
 	}
 
-	// Build reverse graph
-	for moniker, module := range r.modules {
-		for _, dep := range module.DependsOn {
-			graph[dep] = append(graph[dep], moniker)
-		}
+	// Copy pre-computed reverse dependencies
+	for dep, dependents := range r.reverseDepGraph {
+		graph[dep] = append(graph[dep], dependents...)
 	}
 
 	return graph
 }
 
-// GetUsedBy returns all modules that depend on the given module
-// This is computed from depends_on relationships (no longer stored in config).
+// GetUsedBy returns all modules that depend on the given module.
+// This uses the pre-computed reverse dependency graph built during Add.
 func (r *Registry) GetUsedBy(moniker string) []string {
-	reverseGraph := r.GetReverseDependencyGraph()
-	return reverseGraph[moniker]
+	return r.reverseDepGraph[moniker]
 }
 
 // FindModulesForFile returns all modules that match a given file path.

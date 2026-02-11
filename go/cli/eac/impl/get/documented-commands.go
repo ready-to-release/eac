@@ -1,19 +1,8 @@
-// Command: get documented-commands
-// Description: Get EAC commands documented in markdown files
-// Long: Scans all docs/ folder for EAC commands in bash, powershell, and pwsh code blocks.
-// Long: Returns a mapping of commands to their documentation locations.
-// Long:
-// Long: Output Format:
-// Long:   - command: The EAC command (e.g., "build", "get modules")
-// Long:   - occurrences: List of file locations where the command appears
-// Long:     - file: Relative path to the markdown file
-// Long:     - line: Line number in the file
-// Long:     - language: Code block language (bash, powershell, pwsh)
-// Long:     - snippet: The actual command line from the code block
 package get
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,9 +10,28 @@ import (
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getDocumentedCommandsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getDocumentedCommandsCommand)(nil)
+
+func (c *getDocumentedCommandsCommand) Name() string { return "get documented-commands" }
+
+func (c *getDocumentedCommandsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-documented-commands",
+		Short:         "Get EAC commands documented in markdown files",
+		Long:          "Scans all docs/ folder for EAC commands in bash, powershell, and pwsh code blocks.\nReturns a mapping of commands to their documentation locations.\n\nOutput Format:\n  - command: The EAC command (e.g., \"build\", \"get modules\")\n  - occurrences: List of file locations where the command appears\n    - file: Relative path to the markdown file\n    - line: Line number in the file\n    - language: Code block language (bash, powershell, pwsh)\n    - snippet: The actual command line from the code block",
+	}
+}
+
+func (c *getDocumentedCommandsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetDocumentedCommands()
+}
 
 var (
 	reCodeBlockStart = regexp.MustCompile(`^` + "```" + `(bash|powershell|pwsh)\s*$`)
@@ -62,7 +70,7 @@ type CommandsSummary struct {
 // GetDocumentedCommands scans docs for EAC commands in code blocks.
 func GetDocumentedCommands() int {
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
-		workspaceRoot, err := registry.GetWorkspaceRoot()
+		workspaceRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to find repository root: %w", err)
 		}

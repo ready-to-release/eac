@@ -1,20 +1,3 @@
-// Command: release check-exists
-// Short: Check if a release/tag already exists
-// Long: Checks GitHub for an existing release with the given tag.
-// Long:
-// Long: Exit codes:
-// Long:   0 - Release does NOT exist (safe to create)
-// Long:   1 - Release EXISTS or error
-// Long:
-// Long: Output formats:
-// Long:   default: Human readable message
-// Long:   --format shell: EXISTS="true" TAG="..." ERROR="..."
-// Long:
-// Long: Example:
-// Long:   release check-exists --tag clie/1.0.0
-// Long:   eval $(release check-exists --tag clie/1.0.0 --format shell)
-// Flag.tag: type=string, usage=Tag name to check (required)
-// Flag.format: type=string, usage=Output format (default, shell)
 package release
 
 import (
@@ -23,9 +6,32 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseCheckExistsCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseCheckExistsCommand)(nil)
+
+func (c *releaseCheckExistsCommand) Name() string { return "release check-exists" }
+
+func (c *releaseCheckExistsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-check-exists",
+		Short:         "Check if a release/tag already exists",
+		Long:          "Checks GitHub for an existing release with the given tag.\n\nExit codes:\n  0 - Release does NOT exist (safe to create)\n  1 - Release EXISTS or error\n\nOutput formats:\n  default: Human readable message\n  --format shell: EXISTS=\"true\" TAG=\"...\" ERROR=\"...\"\n\nExample:\n  release check-exists --tag clie/1.0.0\n  eval $(release check-exists --tag clie/1.0.0 --format shell)",
+		Flags: []core.FlagSpec{
+			{Name: "tag", Type: "string", Usage: "Tag name to check (required)"},
+			{Name: "format", Type: "string", Usage: "Output format (default, shell)"},
+		},
+	}
+}
+
+func (c *releaseCheckExistsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseCheckExists()
+}
 
 func ReleaseCheckExists() int {
 	// Parse flags

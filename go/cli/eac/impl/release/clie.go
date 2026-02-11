@@ -1,18 +1,3 @@
-// Command: release clie
-// Short: Create a git tag for releasing clie using semver format
-// Long: Creates a git tag in the format 'clie/x.y.z' to trigger the release workflow.
-// Long: The tag follows semantic versioning (semver) and will automatically trigger
-// Long: the GitHub Actions workflow to build and release binaries for multiple platforms.
-// Long: The version must follow semver format (x.y.z) where x, y, z are non-negative integers.
-// Long: IMPORTANT: This command requires --tag-direct flag to prevent accidental releases.
-// Long: The preferred flow is: release this → commit → push → workflow creates tag.
-// Long: Use --tag-direct only when you need to tag directly from devbox.
-// Long:
-// Long: Expected Output:
-// Long:   - Git tag created in format clie/x.y.z
-// Long:   - Tag triggers the release workflow to build and publish binaries
-// Long:
-// Long: Example: release clie --tag-direct 1.0.0
 package release
 
 import (
@@ -24,10 +9,29 @@ import (
 	"strconv"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
+
+type releaseClieCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseClieCommand)(nil)
+
+func (c *releaseClieCommand) Name() string { return "release clie" }
+
+func (c *releaseClieCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-clie",
+		Short:         "Create a git tag for releasing clie using semver format",
+		Long:          "Creates a git tag in the format 'clie/x.y.z' to trigger the release workflow.\nThe tag follows semantic versioning (semver) and will automatically trigger\nthe GitHub Actions workflow to build and release binaries for multiple platforms.\nThe version must follow semver format (x.y.z) where x, y, z are non-negative integers.\nIMPORTANT: This command requires --tag-direct flag to prevent accidental releases.\nThe preferred flow is: release this \u2192 commit \u2192 push \u2192 workflow creates tag.\nUse --tag-direct only when you need to tag directly from devbox.\n\nExpected Output:\n  - Git tag created in format clie/x.y.z\n  - Tag triggers the release workflow to build and publish binaries\n\nExample: release clie --tag-direct 1.0.0",
+	}
+}
+
+func (c *releaseClieCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseSrcCli()
+}
 
 var reSemverStrict = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
 

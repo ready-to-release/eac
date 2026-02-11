@@ -1,18 +1,3 @@
-// Command: validate
-// Short: Validate repository contracts and dependencies
-// IsParent: true
-// Group.Contracts: contracts, dependencies, books
-// Group.Code Quality: go-tidy, markdown, module-files, module-hierarchy
-// Group.Documentation: docs
-// Group.Specifications: specs, test-tags
-// Group.Risk: risk-catalog, risk-profile
-// Group.Release: release, release-version, version
-// Group.Design: design
-// Group.Artifacts: artifacts, control-tags
-// Example: clie validate contracts
-// Example: clie validate dependencies
-// Example: clie validate test-tags
-// Example: clie validate module-hierarchy
 package validate
 
 import (
@@ -20,12 +5,43 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/tui"
+	"github.com/ready-to-release/eac/go/adapters/tui/selector"
 	"github.com/ready-to-release/eac/go/cli/eac/help"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
-	"github.com/ready-to-release/eac/go/adapters/tui"
-	"github.com/ready-to-release/eac/go/adapters/tui/selector"
 )
+
+type validateCommand struct{}
+
+var _ core.CommandPort = (*validateCommand)(nil)
+
+func (c *validateCommand) Name() string { return "validate" }
+
+func (c *validateCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate",
+		Short:         "Validate repository contracts and dependencies",
+		IsParent:      true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Contracts", Subcommands: []string{"contracts", "dependencies", "books"}},
+			{Name: "Code Quality", Subcommands: []string{"go-tidy", "markdown", "module-files", "module-hierarchy"}},
+			{Name: "Documentation", Subcommands: []string{"docs"}},
+			{Name: "Specifications", Subcommands: []string{"specs", "test-tags"}},
+			{Name: "Risk", Subcommands: []string{"risk-catalog", "risk-profile"}},
+			{Name: "Release", Subcommands: []string{"release", "release-version", "version"}},
+			{Name: "Design", Subcommands: []string{"design"}},
+			{Name: "Artifacts", Subcommands: []string{"artifacts", "control-tags"}},
+		},
+		Examples: []string{
+			"clie validate contracts",
+			"clie validate dependencies",
+			"clie validate test-tags",
+			"clie validate module-hierarchy",
+		},
+	}
+}
 
 // subcommands defines all available validate subcommands.
 var subcommands = []tui.SubcommandInfo{
@@ -52,8 +68,8 @@ var subcommands = []tui.SubcommandInfo{
 
 // printHelp prints the help for the validate command using registry metadata.
 func printHelp() {
-	reg := registry.GetCommand("validate")
-	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
+	cmd, _ := registry.Global().Get("validate")
+	help.PrintHelp(os.Stdout, cmd, registry.Global())
 }
 
 // Validate command entry point.

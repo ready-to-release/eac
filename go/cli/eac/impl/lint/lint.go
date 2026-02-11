@@ -1,41 +1,7 @@
-// Command: lint
-// Short: Lint one or more modules by moniker
-// Long: Lint one or more modules by moniker using appropriate linters per module type.
-// Long:
-// Long: This command runs linters on modules in parallel (by default).
-// Long: If no monikers are specified, all modules in the repository are linted.
-// Long:
-// Long: Expected Output:
-// Long:   - Lint logs written to 'out/lint/<module>/lint.log' (one per module)
-// Long:   - Structured results at 'out/lint/<module>/lint.json' (linter-specific format)
-// Long:   - UoW manifests at 'out/lint/<module>/<component>/uow.manifest.json' (with timing data)
-// Long:   - Failed lints are clearly marked with error details
-// Long:   - Exit code 0 indicates no lint issues found
-// Long:   - Non-zero exit code indicates lint issues found or errors
-// Long:
-// Long: Example:
-// Long:   lint                           # Lint all modules
-// Long:   lint eac              # Lint a single module
-// Long:   lint --fix                     # Lint with auto-fix
-// Long:   lint --skip-cache              # Force full lint, ignore incremental state
-// Flag.fix: type=bool, usage=Auto-fix issues where possible
-// Flag.config: type=string, usage=Override lint config file path
-// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full lint
-// Flag.debug: type=bool, usage=Enable debug logs to console
-// Flag.tui: type=bool, usage=Enable TUI console (default for local)
-// Flag.no-tui: type=bool, usage=Disable TUI console
-// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
-// Flag.ascii: type=bool, usage=Use ASCII-only characters in TUI
-// Flag.skip-tui-delay: type=bool, usage=Skip TUI exit delay (exit immediately when done)
-// Flag.sequential: type=bool, usage=Run lints sequentially instead of in parallel
-// Flag.turbo: type=bool, usage=Enable turbo mode for faster linting (increases parallelism)
-// Flag.skip-deps: type=bool, usage=Skip system dependency verification
-// Flag.timings: type=bool, usage=Show detailed timing summary
-// Flag.dry-run: type=bool, usage=Show what would be linted without running linters
-// Args: modules
 package lint
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -46,15 +12,51 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 var log = logging.C()
+type lintCommand struct{}
 
-func init() {
-	registry.Register(Lint)
+var _ core.SimpleCommandPort = (*lintCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&lintCommand{},
+	}
+}
+
+func (c *lintCommand) Name() string { return "lint" }
+
+func (c *lintCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "lint",
+		Short:         "Lint one or more modules by moniker",
+		Long:          "Lint one or more modules by moniker using appropriate linters per module type.\n\nThis command runs linters on modules in parallel (by default).\nIf no monikers are specified, all modules in the repository are linted.\n\nExpected Output:\n  - Lint logs written to 'out/lint/<module>/lint.log' (one per module)\n  - Structured results at 'out/lint/<module>/lint.json' (linter-specific format)\n  - UoW manifests at 'out/lint/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed lints are clearly marked with error details\n  - Exit code 0 indicates no lint issues found\n  - Non-zero exit code indicates lint issues found or errors\n\nExample:\n  lint                           # Lint all modules\n  lint eac              # Lint a single module\n  lint --fix                     # Lint with auto-fix\n  lint --skip-cache              # Force full lint, ignore incremental state",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "fix", Type: "bool", Usage: "Auto-fix issues where possible"},
+			{Name: "config", Type: "string", Usage: "Override lint config file path"},
+			{Name: "skip-cache", Type: "bool", Usage: "Skip incremental cache, force full lint"},
+			{Name: "debug", Type: "bool", Usage: "Enable debug logs to console"},
+			{Name: "tui", Type: "bool", Usage: "Enable TUI console (default for local)"},
+			{Name: "no-tui", Type: "bool", Usage: "Disable TUI console"},
+			{Name: "tui-height", Type: "int", Usage: "Set TUI console height (3-20, default: 6)"},
+			{Name: "ascii", Type: "bool", Usage: "Use ASCII-only characters in TUI"},
+			{Name: "skip-tui-delay", Type: "bool", Usage: "Skip TUI exit delay (exit immediately when done)"},
+			{Name: "sequential", Type: "bool", Usage: "Run lints sequentially instead of in parallel"},
+			{Name: "turbo", Type: "bool", Usage: "Enable turbo mode for faster linting (increases parallelism)"},
+			{Name: "skip-deps", Type: "bool", Usage: "Skip system dependency verification"},
+			{Name: "timings", Type: "bool", Usage: "Show detailed timing summary"},
+			{Name: "dry-run", Type: "bool", Usage: "Show what would be linted without running linters"},
+		},
+	}
+}
+
+func (c *lintCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Lint()
 }
 
 // Lint command entry point - lints one or more modules.

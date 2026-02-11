@@ -1,28 +1,38 @@
-// Command: drawio create
-// Short: Create a new .drawio.png file
-// Long: Creates a new DrawIO diagram file with a blank canvas or from
-// Long: provided XML content.
-// Long:
-// Long: The created file uses a minimal 1x1 transparent PNG as the image.
-// Long: When opened in DrawIO, the diagram will render from the embedded XML.
-// Long:
-// Long: Example:
-// Long:   drawio create -o diagram.drawio.png
-// Long:   drawio create -o diagram.drawio.png --name "Architecture"
-// Long:   drawio create -o diagram.drawio.png --xml content.xml
-// Flag.output: type=string, shorthand=o, required=true, usage=Output .drawio.png file
-// Flag.xml: type=string, usage=XML file to use (default: blank diagram)
-// Flag.name: type=string, default=Page-1, usage=Diagram page name
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioCreateCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioCreateCommand)(nil)
+
+func (c *drawioCreateCommand) Name() string { return "drawio create" }
+
+func (c *drawioCreateCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-create",
+		Short:         "Create a new .drawio.png file",
+		Long:          "Creates a new DrawIO diagram file with a blank canvas or from\nprovided XML content.\n\nThe created file uses a minimal 1x1 transparent PNG as the image.\nWhen opened in DrawIO, the diagram will render from the embedded XML.\n\nExample:\n  drawio create -o diagram.drawio.png\n  drawio create -o diagram.drawio.png --name \"Architecture\"\n  drawio create -o diagram.drawio.png --xml content.xml",
+		Flags: []core.FlagSpec{
+			{Name: "output", Type: "string", Shorthand: "o", Required: true, Usage: "Output .drawio.png file"},
+			{Name: "xml", Type: "string", Usage: "XML file to use (default: blank diagram)"},
+			{Name: "name", Type: "string", DefaultValue: "Page-1", Usage: "Diagram page name"},
+		},
+	}
+}
+
+func (c *drawioCreateCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioCreate()
+}
 
 // DrawioCreate creates a new .drawio.png file.
 func DrawioCreate() int {

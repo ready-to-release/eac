@@ -1,26 +1,14 @@
-// Command: validate specs
-// Short: Validate Gherkin specifications against quality contracts
-// Long: The validate specs command checks existing .feature files against the specification contract,
-// Long: ensuring they follow proper Gherkin syntax, and project standards.
-// Long: Validation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.
-// Long: The command can validate a single file or recursively validate all .feature files in a directory.
-// Long: By default, output is in human-readable text format. Use --format json for machine-readable output.
-// Long:
-// Long: Expected Output:
-// Long:   Displays validation results for Gherkin specification structure, tags, and step formatting.
-// Long:   Shows errors and warnings with line numbers. Exit code 0 if all pass, 1 if critical errors found.
-// Flag.quiet: type=bool, shorthand=q, default=false, usage=Suppress success messages and show only validation errors and warnings
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
-// Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Usage: validate specs <path> [--quiet] [--verbose] [--format json]
 package validate
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -28,6 +16,29 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateSpecsCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateSpecsCommand)(nil)
+
+func (c *validateSpecsCommand) Name() string { return "validate specs" }
+
+func (c *validateSpecsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-specs",
+		Short:         "Validate Gherkin specifications against quality contracts",
+		Long:          "The validate specs command checks existing .feature files against the specification contract,\nensuring they follow proper Gherkin syntax, and project standards.\nValidation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.\nThe command can validate a single file or recursively validate all .feature files in a directory.\nBy default, output is in human-readable text format. Use --format json for machine-readable output.\n\nExpected Output:\n  Displays validation results for Gherkin specification structure, tags, and step formatting.\n  Shows errors and warnings with line numbers. Exit code 0 if all pass, 1 if critical errors found.",
+		Flags: []core.FlagSpec{
+			{Name: "quiet", Shorthand: "q", Type: "bool", DefaultValue: "false", Usage: "Suppress success messages and show only validation errors and warnings"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed validation output including metadata and additional context"},
+			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "text", Usage: "Output format for validation results (text for human-readable, json for machine-readable)", Completion: []string{"text", "json"}},
+		},
+	}
+}
+
+func (c *validateSpecsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateSpecs()
+}
 
 // ============================================================================
 // Mock Support for Testing

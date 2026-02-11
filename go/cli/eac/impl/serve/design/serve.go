@@ -1,40 +1,47 @@
-// Command: serve design
-// Short: View architecture diagrams in browser using Structurizr Lite (Docker)
-// Long: Launches a Docker container running Structurizr Lite web viewer and opens your default browser.
-// Long: The viewer provides interactive C4 model diagrams (system context, containers, components) defined
-// Long: in workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files
-// Long: The viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.
-// Long:
-// Long: Expected Output:
-// Long:   - Docker container running Structurizr Lite on port 9000-9999
-// Long:   - Browser opens automatically to http://localhost:<port>
-// Long:   - Live updates when workspace.dsl file changes
-// Long:   - Generated workspace.json and .structurizr/ directory (git-ignored)
 // Usage: serve design <module>
 package design
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// commandFlags defines valid flags for the serve design command
+type serveDesignCommand struct{}
 
-var log = logging.C()
+var _ core.SimpleCommandPort = (*serveDesignCommand)(nil)
 
-func init() {
-	registry.Register(ServeDesign)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&serveDesignCommand{},
+	}
 }
 
+func (c *serveDesignCommand) Name() string { return "serve design" }
+
+func (c *serveDesignCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "serve-design",
+		Short:         "View architecture diagrams in browser using Structurizr Lite (Docker)",
+		Long:          "Launches a Docker container running Structurizr Lite web viewer and opens your default browser.\nThe viewer provides interactive C4 model diagrams (system context, containers, components) defined\nin workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files\nThe viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.\n\nExpected Output:\n  - Docker container running Structurizr Lite on port 9000-9999\n  - Browser opens automatically to http://localhost:<port>\n  - Live updates when workspace.dsl file changes\n  - Generated workspace.json and .structurizr/ directory (git-ignored)",
+	}
+}
+
+func (c *serveDesignCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ServeDesign()
+}
+
+var log = logging.C()
 // ServeDesign starts Structurizr Lite viewer for a module.
 func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"

@@ -1,18 +1,11 @@
-// Command: extension-meta
-// Short: Output extension metadata for clie CLI
-// Long: Outputs YAML-formatted metadata describing the extension's capabilities,
-// Long: commands, requirements, and configuration for integration with the clie CLI.
-// Long: This command is used by clie CLI to discover and configure extensions.
-// Long:
-// Long: Expected Output:
-// Long:   - YAML-formatted metadata describing extension capabilities
-// Long:   - Commands, requirements, and configuration for clie CLI integration
 package extension
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -20,9 +13,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// commandFlags defines valid flags for the extension-meta command.
-func init() {
-	registry.Register(ExtensionMeta)
+type extensionMetaCommand struct{}
+
+var _ core.SimpleCommandPort = (*extensionMetaCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&extensionMetaCommand{},
+	}
+}
+
+func (c *extensionMetaCommand) Name() string { return "extension-meta" }
+
+func (c *extensionMetaCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "extension-meta",
+		Short:         "Output extension metadata for clie CLI",
+		Long:          "Outputs YAML-formatted metadata describing the extension's capabilities,\ncommands, requirements, and configuration for integration with the clie CLI.\nThis command is used by clie CLI to discover and configure extensions.\n\nExpected Output:\n  - YAML-formatted metadata describing extension capabilities\n  - Commands, requirements, and configuration for clie CLI integration",
+	}
+}
+
+func (c *extensionMetaCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ExtensionMeta()
 }
 
 var log = logging.C()
@@ -88,25 +101,28 @@ func ExtensionMeta() int {
 	}
 
 	// Get command registry
-	cmdRegistry := registry.GetCommandRegistry()
+	reg := registry.Global()
 
 	// Build commands map from registry
 	commands := make(map[string]Command)
 
-	for _, reg := range cmdRegistry {
+	for _, cmd := range reg.All() {
+		cmdName := cmd.Name()
+		meta := cmd.Metadata()
+
 		// Skip the extension-meta command itself
-		if reg.ActualCommand == "extension-meta" {
+		if cmdName == "extension-meta" {
 			continue
 		}
 
 		// Extract parameter names from flags
-		params := make([]string, 0, len(reg.Flags))
-		for _, flag := range reg.Flags {
+		params := make([]string, 0, len(meta.Flags))
+		for _, flag := range meta.Flags {
 			params = append(params, flag.Name)
 		}
 
-		commands[reg.ActualCommand] = Command{
-			Description: reg.Short,
+		commands[cmdName] = Command{
+			Description: meta.Short,
 			Parameters:  params,
 		}
 	}

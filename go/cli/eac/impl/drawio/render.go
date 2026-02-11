@@ -1,23 +1,36 @@
-// Command: drawio render
-// Short: Render diagram to actual PNG image
-// Long: Renders a DrawIO diagram to an actual PNG image that can be viewed.
-// Long:
-// Long: This converts the vector diagram into a rasterized PNG image,
-// Long: allowing you to see what the diagram actually looks like.
-// Long:
-// Long: Example:
-// Long:   drawio render -i diagram.drawio.png -o rendered.png
-// Flag.input: type=string, shorthand=i, usage=Input .drawio.png or decoded XML file, required=true
-// Flag.output: type=string, shorthand=o, usage=Output PNG file (rendered image), required=true
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioRenderCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioRenderCommand)(nil)
+
+func (c *drawioRenderCommand) Name() string { return "drawio render" }
+
+func (c *drawioRenderCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-render",
+		Short:         "Render diagram to actual PNG image",
+		Long:          "Renders a DrawIO diagram to an actual PNG image that can be viewed.\n\nThis converts the vector diagram into a rasterized PNG image,\nallowing you to see what the diagram actually looks like.\n\nExample:\n  drawio render -i diagram.drawio.png -o rendered.png",
+		Flags: []core.FlagSpec{
+			{Name: "input", Type: "string", Shorthand: "i", Required: true, Usage: "Input .drawio.png or decoded XML file"},
+			{Name: "output", Type: "string", Shorthand: "o", Required: true, Usage: "Output PNG file (rendered image)"},
+		},
+	}
+}
+
+func (c *drawioRenderCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioRender()
+}
 
 // DrawioRender renders a DrawIO diagram to an actual PNG image.
 func DrawioRender() int {

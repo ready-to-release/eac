@@ -1,30 +1,49 @@
-// Command: get cli-release-notes
-// Short: Generate release notes for CLI releases
-// Flag.module: type=string, default=clie, usage=Module name
-// Flag.binary-prefix: type=string, default=clie, usage=Binary name prefix
-// Flag.version: type=string, usage=Version string (required)
-// Flag.tag: type=string, usage=Git tag name (required)
-// Flag.commit: type=string, usage=Git commit SHA (required)
-// Flag.repo: type=string, usage=GitHub repository (owner/repo)
-// Flag.run-id: type=string, usage=GitHub Actions run ID
-// Long: The get cli-release-notes command generates release notes markdown for CLI binary releases.
-// Long:
-// Long: It includes installation instructions, binary download links with sizes, and supply chain
-// Long: security information about build attestations.
-// Long:
-// Long: Example:
-// Long:   get cli-release-notes --version 1.0.0 --tag clie/1.0.0 --commit abc123
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getCLIReleaseNotesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getCLIReleaseNotesCommand)(nil)
+
+func (c *getCLIReleaseNotesCommand) Name() string { return "get cli-release-notes" }
+
+func (c *getCLIReleaseNotesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-cli-release-notes",
+		Short:         "Generate release notes for CLI releases",
+		Long: "The get cli-release-notes command generates release notes markdown for CLI binary releases.\n" +
+			"\n" +
+			"It includes installation instructions, binary download links with sizes, and supply chain\n" +
+			"security information about build attestations.\n" +
+			"\n" +
+			"Example:\n" +
+			"  get cli-release-notes --version 1.0.0 --tag clie/1.0.0 --commit abc123",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", DefaultValue: "clie", Usage: "Module name"},
+			{Name: "binary-prefix", Type: "string", DefaultValue: "clie", Usage: "Binary name prefix"},
+			{Name: "version", Type: "string", Usage: "Version string (required)"},
+			{Name: "tag", Type: "string", Usage: "Git tag name (required)"},
+			{Name: "commit", Type: "string", Usage: "Git commit SHA (required)"},
+			{Name: "repo", Type: "string", Usage: "GitHub repository (owner/repo)"},
+			{Name: "run-id", Type: "string", Usage: "GitHub Actions run ID"},
+		},
+	}
+}
+
+func (c *getCLIReleaseNotesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCLIReleaseNotes()
+}
 
 func GetCLIReleaseNotes() int {
 	// Validate flags against registry metadata

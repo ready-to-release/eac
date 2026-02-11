@@ -1,32 +1,43 @@
-// Command: show trigger-summary
-// Short: Generate release trigger summary
-// Flag.module: type=string, usage=Module name (required)
-// Flag.workflow: type=string, usage=Workflow filename (required)
-// Flag.workflow-desc: type=string, usage=Workflow description
-// Flag.version: type=string, usage=Version being released (optional)
-// Flag.trigger-run-id: type=string, usage=Original trigger workflow run ID
-// Flag.ci-run-id: type=string, usage=CI workflow run ID (required)
-// Flag.branch: type=string, usage=Git branch name (required)
-// Flag.commit: type=string, usage=Git commit SHA (required)
-// Long: The show trigger-summary command generates a formatted summary when a release workflow is triggered.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent trigger summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted trigger summary with workflow and property tables
-// Long: - Shows workflow name and description
-// Long: - Shows version, run IDs, branch, and commit information
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showTriggerSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showTriggerSummaryCommand)(nil)
+
+func (c *showTriggerSummaryCommand) Name() string { return "show trigger-summary" }
+
+func (c *showTriggerSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-trigger-summary",
+		Short:         "Generate release trigger summary",
+		Long:          "The show trigger-summary command generates a formatted summary when a release workflow is triggered.\nThis command is designed to be used in GitHub Actions workflows to create consistent trigger summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted trigger summary with workflow and property tables\n- Shows workflow name and description\n- Shows version, run IDs, branch, and commit information",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module name (required)"},
+			{Name: "workflow", Type: "string", Usage: "Workflow filename (required)"},
+			{Name: "workflow-desc", Type: "string", Usage: "Workflow description"},
+			{Name: "version", Type: "string", Usage: "Version being released (optional)"},
+			{Name: "trigger-run-id", Type: "string", Usage: "Original trigger workflow run ID"},
+			{Name: "ci-run-id", Type: "string", Usage: "CI workflow run ID (required)"},
+			{Name: "branch", Type: "string", Usage: "Git branch name (required)"},
+			{Name: "commit", Type: "string", Usage: "Git commit SHA (required)"},
+		},
+	}
+}
+
+func (c *showTriggerSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowTriggerSummary()
+}
 
 // ShowTriggerSummary generates a release trigger summary.
 func ShowTriggerSummary() int {

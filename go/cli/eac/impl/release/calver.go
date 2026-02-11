@@ -1,36 +1,38 @@
-// Command: release generate-module-calver
-// Short: Generate a calver tag for a module
-// Long: Generates a calendar-versioned (calver) tag in the format prefix/YYYY.MMDD.HHMM.
-// Long:
-// Long: Format follows CD Model CalVer specification:
-// Long:   - YYYY: Four-digit year
-// Long:   - MMDD: Month and day (packed, no separator)
-// Long:   - HHMM: Hour and minute in UTC (ensures uniqueness)
-// Long:   - Patch: Omitted (inferred as 0 for main branch commits)
-// Long:
-// Long: By default, only outputs the tag name. Use --create to create the git tag.
-// Long:
-// Long: Expected Output:
-// Long:   - Tag name in format prefix/YYYY.MMDD.HHMM (default behavior)
-// Long:   - Git tag created if --create flag is specified
-// Long:
-// Long: Examples:
-// Long:   release generate-module-calver docs                    # Output: docs/2025.1214.1630
-// Long:   release generate-module-calver docs --create           # Create the tag locally
-// Long:   release generate-module-calver docs --create --push    # Create and push the tag
-// Flag.create: type=bool, usage=Create the git tag (default: false, just output tag name)
-// Flag.push: type=bool, usage=Push the tag to remote after creation (requires --create)
-// Flag.dry-run: type=bool, usage=Show what would be done without creating/pushing
 package release
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type releaseGenerateModuleCalverCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseGenerateModuleCalverCommand)(nil)
+
+func (c *releaseGenerateModuleCalverCommand) Name() string { return "release generate-module-calver" }
+
+func (c *releaseGenerateModuleCalverCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-generate-module-calver",
+		Short:         "Generate a calver tag for a module",
+		Long:          "Generates a calendar-versioned (calver) tag in the format prefix/YYYY.MMDD.HHMM.\n\nFormat follows CD Model CalVer specification:\n  - YYYY: Four-digit year\n  - MMDD: Month and day (packed, no separator)\n  - HHMM: Hour and minute in UTC (ensures uniqueness)\n  - Patch: Omitted (inferred as 0 for main branch commits)\n\nBy default, only outputs the tag name. Use --create to create the git tag.\n\nExpected Output:\n  - Tag name in format prefix/YYYY.MMDD.HHMM (default behavior)\n  - Git tag created if --create flag is specified\n\nExamples:\n  release generate-module-calver docs                    # Output: docs/2025.1214.1630\n  release generate-module-calver docs --create           # Create the tag locally\n  release generate-module-calver docs --create --push    # Create and push the tag",
+		Flags: []core.FlagSpec{
+			{Name: "create", Type: "bool", Usage: "Create the git tag (default: false, just output tag name)"},
+			{Name: "push", Type: "bool", Usage: "Push the tag to remote after creation (requires --create)"},
+			{Name: "dry-run", Type: "bool", Usage: "Show what would be done without creating/pushing"},
+		},
+	}
+}
+
+func (c *releaseGenerateModuleCalverCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseCalver()
+}
 
 func ReleaseCalver() int {
 	// Validate flags before parsing

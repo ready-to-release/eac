@@ -1,27 +1,37 @@
-// Command: drawio decode
-// Short: Decode DrawIO content to human-readable XML
-// Long: Decodes compressed/encoded DrawIO content to readable XML.
-// Long: Accepts .drawio.png files or raw XML input.
-// Long: Output format is optimized for LLM understanding and editing.
-// Long:
-// Long: The decoded XML shows the full mxGraphModel structure with all
-// Long: shapes (mxCell elements), their positions, styles, and connections.
-// Long:
-// Long: Example:
-// Long:   drawio decode -i diagram.drawio.png -o decoded.xml
-// Long:   drawio decode -i diagram.drawio.png  # outputs to stdout
-// Flag.input: type=string, shorthand=i, usage=Input file (.drawio.png or .xml)
-// Flag.output: type=string, shorthand=o, usage=Output file (default: stdout)
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioDecodeCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioDecodeCommand)(nil)
+
+func (c *drawioDecodeCommand) Name() string { return "drawio decode" }
+
+func (c *drawioDecodeCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-decode",
+		Short:         "Decode DrawIO content to human-readable XML",
+		Long:          "Decodes compressed/encoded DrawIO content to readable XML.\nAccepts .drawio.png files or raw XML input.\nOutput format is optimized for LLM understanding and editing.\n\nThe decoded XML shows the full mxGraphModel structure with all\nshapes (mxCell elements), their positions, styles, and connections.\n\nExample:\n  drawio decode -i diagram.drawio.png -o decoded.xml\n  drawio decode -i diagram.drawio.png  # outputs to stdout",
+		Flags: []core.FlagSpec{
+			{Name: "input", Type: "string", Shorthand: "i", Usage: "Input file (.drawio.png or .xml)"},
+			{Name: "output", Type: "string", Shorthand: "o", Usage: "Output file (default: stdout)"},
+		},
+	}
+}
+
+func (c *drawioDecodeCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioDecode()
+}
 
 // DrawioDecode decodes DrawIO content to human-readable XML.
 func DrawioDecode() int {

@@ -3,6 +3,7 @@ package custom
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // CustomRenderer is a function that takes YAML bytes and returns a formatted string.
@@ -15,7 +16,10 @@ type RendererRegistration struct {
 }
 
 // registry holds all registered custom renderers with their command filters.
-var registry = make(map[string]*RendererRegistration)
+var (
+	registry   = make(map[string]*RendererRegistration)
+	registryMu sync.RWMutex
+)
 
 // Register adds a custom renderer to the registry
 // commands can be:
@@ -25,6 +29,9 @@ var registry = make(map[string]*RendererRegistration)
 //
 // This is typically called from init() functions in custom renderer files.
 func Register(name string, renderer CustomRenderer, commands []string) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
 	if _, exists := registry[name]; exists {
 		panic(fmt.Sprintf("custom renderer %q already registered", name))
 	}
@@ -43,6 +50,9 @@ func Register(name string, renderer CustomRenderer, commands []string) {
 // Get retrieves a custom renderer by name, checking if it supports the given command
 // commandName format: kebab-case (e.g., "get-modules").
 func Get(name, commandName string) (CustomRenderer, error) {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	reg, exists := registry[name]
 	if !exists {
 		return nil, fmt.Errorf("custom renderer %q not found", name)
@@ -61,6 +71,9 @@ func Get(name, commandName string) (CustomRenderer, error) {
 // commandName format: kebab-case (e.g., "get-modules")
 // If commandName is empty, returns all renderers.
 func List(commandName string) []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	names := make([]string, 0, len(registry))
 
 	for name, reg := range registry {

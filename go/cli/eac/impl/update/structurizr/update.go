@@ -1,37 +1,52 @@
-// Command: update structurizr
-// Short: Update Structurizr diagram cache from workspace.dsl files
-// Long: Exports all Structurizr views from workspace.dsl files to SVG format
-// Long: and stores them in the .cache/eac/structurizr/ acceleration cache.
-// Long:
-// Long: Expected Output:
-// Long:   - SVG files in .cache/eac/structurizr/
-// Long:   - Cache status summary showing hits/misses
-// Flag.module: type=string, shorthand=m, usage=Export specific module only
-// Flag.force: type=bool, shorthand=f, default=false, usage=Force re-export even if cache is current
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress for each module
-// Flag.dry-run: type=bool, default=false, usage=Show what would be exported without actually exporting
 package structurizr
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	design "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateStructurizrCommand struct{}
 
-func init() {
-	registry.Register(UpdateStructurizr)
+var _ core.SimpleCommandPort = (*updateStructurizrCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateStructurizrCommand{},
+	}
 }
 
+func (c *updateStructurizrCommand) Name() string { return "update structurizr" }
+
+func (c *updateStructurizrCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-structurizr",
+		Short:         "Update Structurizr diagram cache from workspace.dsl files",
+		Long:          "Exports all Structurizr views from workspace.dsl files to SVG format\nand stores them in the .cache/eac/structurizr/ acceleration cache.\n\nExpected Output:\n  - SVG files in .cache/eac/structurizr/\n  - Cache status summary showing hits/misses",
+		Flags: []core.FlagSpec{
+			{Name: "module", Shorthand: "m", Type: "string", Usage: "Export specific module only"},
+			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Force re-export even if cache is current"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress for each module"},
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would be exported without actually exporting"},
+		},
+	}
+}
+
+func (c *updateStructurizrCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateStructurizr()
+}
+
+var log = logging.C()
 // UpdateStructurizr exports Structurizr workspace views to SVG cache.
 func UpdateStructurizr() int {
 	// Validate flags
@@ -266,4 +281,3 @@ func findCachedSVGs(cacheDir, moduleName, dslHash string) []string {
 
 	return matches
 }
-

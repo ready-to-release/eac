@@ -1,34 +1,52 @@
-// Command: get release-config
-// Short: Derive release configuration for a module from core config
-// Flag.module: type=string, usage=Module moniker to derive release config for, required=true, completion=modules
-// Flag.format: type=string, usage=Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)
-// Long:
-// Long: Derives release configuration for any module from the core config system.
-// Long: All values are computed from repository.yml + blueprints.yml.
-// Long:
-// Long: With --format shell, outputs shell variable assignments for eval:
-// Long:   RELEASE_TYPE=cli-binary|container|docs-site|bundle|none
-// Long:   VERSION_TYPE=semver|calver
-// Long:   HAS_EVIDENCE=true|false
-// Long:   AWAIT_MODULE_RELEASES=true|false
-// Long:
-// Long: Release type resolution:
-// Long:   - bundle → bundle
-// Long:   - published + dockerfile with push → container
-// Long:   - published + docs-site component → docs-site
-// Long:   - published + go component with binary_name → cli-binary
-// Long:   - internal / none → none
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type getReleaseConfigCommand struct{}
+
+var _ core.SimpleCommandPort = (*getReleaseConfigCommand)(nil)
+
+func (c *getReleaseConfigCommand) Name() string { return "get release-config" }
+
+func (c *getReleaseConfigCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-release-config",
+		Short:         "Derive release configuration for a module from core config",
+		Long: "Derives release configuration for any module from the core config system.\n" +
+			"All values are computed from repository.yml + blueprints.yml.\n" +
+			"\n" +
+			"With --format shell, outputs shell variable assignments for eval:\n" +
+			"  RELEASE_TYPE=cli-binary|container|docs-site|bundle|none\n" +
+			"  VERSION_TYPE=semver|calver\n" +
+			"  HAS_EVIDENCE=true|false\n" +
+			"  AWAIT_MODULE_RELEASES=true|false\n" +
+			"\n" +
+			"Release type resolution:\n" +
+			"  - bundle -> bundle\n" +
+			"  - published + dockerfile with push -> container\n" +
+			"  - published + docs-site component -> docs-site\n" +
+			"  - published + go component with binary_name -> cli-binary\n" +
+			"  - internal / none -> none",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module moniker to derive release config for", Required: true, Completion: []string{"modules"}},
+			{Name: "format", Type: "string", Usage: "Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)"},
+		},
+	}
+}
+
+func (c *getReleaseConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetReleaseConfig()
+}
 
 // ReleaseConfigResult represents the derived release configuration for a module.
 type ReleaseConfigResult struct {

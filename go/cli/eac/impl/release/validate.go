@@ -1,25 +1,7 @@
-// Command: validate release
-// Short: Validate changelog format and structure
-// Long: Validates that changelog files follow the Keep a Changelog format and
-// Long: contain valid version entries.
-// Long:
-// Long: Checks performed:
-// Long:   - File exists at the path defined in module contract
-// Long:   - Valid Keep a Changelog header format
-// Long:   - Version entries have valid format ([x.y.z] - YYYY-MM-DD)
-// Long:   - Version numbers are valid semver or calver
-// Long:   - Versions are in descending order (newest first)
-// Long:   - No duplicate version numbers
-// Long:
-// Long: Examples:
-// Long:   validate release clie           # Validate single module
-// Long:   validate release --all             # Validate all modules with changelogs
-// Flag.all: type=bool, usage=Validate all modules with changelogs
-// Flag.json: type=bool, usage=Output result in JSON format
-// Args: modules
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,12 +9,36 @@ import (
 	"regexp"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateReleaseCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateReleaseCommand)(nil)
+
+func (c *validateReleaseCommand) Name() string { return "validate release" }
+
+func (c *validateReleaseCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-release",
+		Short:         "Validate changelog format and structure",
+		Long:          "Validates that changelog files follow the Keep a Changelog format and\ncontain valid version entries.\n\nChecks performed:\n  - File exists at the path defined in module contract\n  - Valid Keep a Changelog header format\n  - Version entries have valid format ([x.y.z] - YYYY-MM-DD)\n  - Version numbers are valid semver or calver\n  - Versions are in descending order (newest first)\n  - No duplicate version numbers\n\nExamples:\n  validate release clie           # Validate single module\n  validate release --all             # Validate all modules with changelogs",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "all", Type: "bool", Usage: "Validate all modules with changelogs"},
+			{Name: "json", Type: "bool", Usage: "Output result in JSON format"},
+		},
+	}
+}
+
+func (c *validateReleaseCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseValidate()
+}
 
 var validateLog = logging.C("release")
 
@@ -95,7 +101,7 @@ func ReleaseValidate() int {
 	}
 
 	// Load workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		validateLog.Errorf("failed to get workspace root: %v", err)
 		return 1

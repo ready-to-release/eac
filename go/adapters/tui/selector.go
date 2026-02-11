@@ -72,15 +72,15 @@ func SubcommandsToOptions(subs []SubcommandInfo) []CommandOption {
 // SubcommandsFromRegistry creates CommandOptions from registry for a parent command.
 // This replaces the hardcoded `var subcommands = []tui.SubcommandInfo{...}` pattern.
 func SubcommandsFromRegistry(parentName string) []CommandOption {
-	subs := registry.GetSubcommands(parentName)
+	subs := registry.Global().Subcommands(parentName)
 	opts := make([]CommandOption, len(subs))
 
 	for i, sub := range subs {
 		// Extract just the subcommand name (remove parent prefix)
-		name := strings.TrimPrefix(sub.ActualCommand, parentName+" ")
+		name := strings.TrimPrefix(sub.Name(), parentName+" ")
 		opts[i] = CommandOption{
 			Name:        name,
-			Description: sub.Short,
+			Description: sub.Metadata().Short,
 		}
 	}
 

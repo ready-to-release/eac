@@ -43,11 +43,10 @@ This architecture decouples expensive container-based rendering (handled by buil
 ## Code Health
 
 ### Tech Debt
-- ~~`mermaid.go` and `plantuml.go` mirror each other structurally~~ (resolved: shared `DiagramConfig` abstraction in `diagram.go`; both delegate to generic `ExtractBlocks`, `CheckDiagramCache`, `ReplaceBlocksWithImages`, `ScanForDiagrams`)
 - No test file for `drawio.go`
 
 ### Pain Points
-- None identified -- `DiagramConfig` abstraction makes adding new diagram types a single config struct
+- None identified
 
 ### Optimization Opportunities
-- ~~Extract a shared `DiagramProcessor` abstraction~~ (resolved: `DiagramConfig` in `diagram.go`)
+- None identified

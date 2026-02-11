@@ -1,25 +1,31 @@
-// Command: test list-suites
-// Short: List all available test suites
-// Long: List all available test suites defined in the repository.
-// Long:
-// Long: Test suites are logical groupings of tests defined in domain.
-// Long: This command displays all configured suites, making it easy to discover
-// Long: what test suites are available for execution.
-// Long:
-// Long: Expected Output:
-// Long:   - List of configured test suite names (unit, integration, acceptance, etc.)
-// Long:   - Suite name, display name, and description for each suite
-// Long:
-// Long: Example:
-// Long:   test list-suites
 package test
 
 import (
+	"context"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
+
+type testListSuitesCommand struct{}
+
+var _ core.SimpleCommandPort = (*testListSuitesCommand)(nil)
+
+func (c *testListSuitesCommand) Name() string { return "test list-suites" }
+
+func (c *testListSuitesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "test-list-suites",
+		Short:         "List all available test suites",
+		Long:          "List all available test suites defined in the repository.\n\nTest suites are logical groupings of tests defined in domain.\nThis command displays all configured suites, making it easy to discover\nwhat test suites are available for execution.\n\nExpected Output:\n  - List of configured test suite names (unit, integration, acceptance, etc.)\n  - Suite name, display name, and description for each suite\n\nExample:\n  test list-suites",
+	}
+}
+
+func (c *testListSuitesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ListSuites()
+}
 
 // ListSuites lists all available test suites.
 func ListSuites() int {

@@ -1,25 +1,7 @@
-// Command: get ci-workflows
-// Short: Get list of CI workflow modules
-// Long: Discovers all CI workflows (ci-*.yaml) and returns module names.
-// Long:
-// Long: This replaces the bash pattern:
-// Long:   for workflow in .github/workflows/ci-*.yaml; do
-// Long:     module=$(basename "$workflow" .yaml | sed 's/^ci-//')
-// Long:   done
-// Long:
-// Long: Output formats:
-// Long:   --format space: "mod1 mod2 mod3" (default)
-// Long:   --format list: One module per line
-// Long:   --format json: ["mod1", "mod2", "mod3"]
-// Long:
-// Long: Example:
-// Long:   get ci-workflows                    # Space-separated
-// Long:   get ci-workflows --format list      # One per line
-// Long:   get ci-workflows --format json      # JSON array
-// Flag.format: type=string, usage=Output format (space, list, json)
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,8 +9,45 @@ import (
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getCIWorkflowsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getCIWorkflowsCommand)(nil)
+
+func (c *getCIWorkflowsCommand) Name() string { return "get ci-workflows" }
+
+func (c *getCIWorkflowsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-ci-workflows",
+		Short:         "Get list of CI workflow modules",
+		Long: "Discovers all CI workflows (ci-*.yaml) and returns module names.\n" +
+			"\n" +
+			"This replaces the bash pattern:\n" +
+			"  for workflow in .github/workflows/ci-*.yaml; do\n" +
+			"    module=$(basename \"$workflow\" .yaml | sed 's/^ci-//')\n" +
+			"  done\n" +
+			"\n" +
+			"Output formats:\n" +
+			"  --format space: \"mod1 mod2 mod3\" (default)\n" +
+			"  --format list: One module per line\n" +
+			"  --format json: [\"mod1\", \"mod2\", \"mod3\"]\n" +
+			"\n" +
+			"Example:\n" +
+			"  get ci-workflows                    # Space-separated\n" +
+			"  get ci-workflows --format list      # One per line\n" +
+			"  get ci-workflows --format json      # JSON array",
+		Flags: []core.FlagSpec{
+			{Name: "format", Type: "string", Usage: "Output format (space, list, json)"},
+		},
+	}
+}
+
+func (c *getCIWorkflowsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCIWorkflows()
+}
 
 func GetCIWorkflows() int {
 	// Parse flags

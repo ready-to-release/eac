@@ -5,48 +5,50 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// PrintHelp prints help for a command based on its registration metadata.
+// PrintHelp prints help for a command based on its CommandPort metadata.
 // For parent commands (IsParent=true), it prints grouped subcommands.
 // For leaf commands, it prints flags and long description.
-// subRegs provides optional subcommand registrations for looking up descriptions.
-func PrintHelp(w io.Writer, reg *registry.CommandRegistration, subRegs map[string]*registry.CommandRegistration) {
-	if reg == nil {
+// reg provides the command registry for looking up subcommand descriptions.
+func PrintHelp(w io.Writer, cmd core.CommandPort, reg core.CommandRegistryPort) {
+	if cmd == nil {
 		fmt.Fprintln(w, "No help available.")
 		return
 	}
 
+	meta := cmd.Metadata()
+
 	// Print command name and short description
-	fmt.Fprintf(w, "%s - %s\n", reg.ActualCommand, reg.Short)
+	fmt.Fprintf(w, "%s - %s\n", cmd.Name(), meta.Short)
 	fmt.Fprintln(w)
 
 	// Print usage
-	if reg.IsParent {
-		fmt.Fprintf(w, "Usage: clie %s <subcommand> [args...]\n", reg.ActualCommand)
+	if meta.IsParent {
+		fmt.Fprintf(w, "Usage: clie %s <subcommand> [args...]\n", cmd.Name())
 	} else {
-		fmt.Fprintf(w, "Usage: clie %s [flags]\n", reg.ActualCommand)
+		fmt.Fprintf(w, "Usage: clie %s [flags]\n", cmd.Name())
 	}
 	fmt.Fprintln(w)
 
 	// Print long description if available (for leaf commands)
-	if reg.Long != "" {
-		fmt.Fprintln(w, reg.Long)
+	if meta.Long != "" {
+		fmt.Fprintln(w, meta.Long)
 		fmt.Fprintln(w)
 	}
 
 	// For parent commands, print grouped subcommands
-	if reg.IsParent && len(reg.Subcommands) > 0 {
-		for _, group := range reg.Subcommands {
+	if meta.IsParent && len(meta.SubcommandGroups) > 0 {
+		for _, group := range meta.SubcommandGroups {
 			fmt.Fprintf(w, "%s:\n", group.Name)
 			for _, sub := range group.Subcommands {
 				// Look up subcommand description
 				desc := ""
-				if subRegs != nil {
-					subKey := reg.ActualCommand + " " + sub
-					if subReg, ok := subRegs[subKey]; ok && subReg != nil {
-						desc = subReg.Short
+				if reg != nil {
+					subKey := cmd.Name() + " " + sub
+					if subCmd, ok := reg.Get(subKey); ok {
+						desc = subCmd.Metadata().Short
 					}
 				}
 				if desc != "" {
@@ -60,9 +62,9 @@ func PrintHelp(w io.Writer, reg *registry.CommandRegistration, subRegs map[strin
 	}
 
 	// Print flags if any
-	if len(reg.Flags) > 0 {
+	if len(meta.Flags) > 0 {
 		// Separate declarative behavior flags from regular flags
-		regularFlags, behaviorGroups := CategorizeFlags(reg.Flags)
+		regularFlags, behaviorGroups := CategorizeFlags(meta.Flags)
 
 		// Print behavior flags first (grouped by behavior)
 		PrintBehaviorFlags(w, behaviorGroups)
@@ -93,16 +95,16 @@ func PrintHelp(w io.Writer, reg *registry.CommandRegistration, subRegs map[strin
 	}
 
 	// Print examples if any
-	if len(reg.Examples) > 0 {
+	if len(meta.Examples) > 0 {
 		fmt.Fprintln(w, "Examples:")
-		for _, ex := range reg.Examples {
+		for _, ex := range meta.Examples {
 			fmt.Fprintf(w, "  %s\n", ex)
 		}
 		fmt.Fprintln(w)
 	}
 
 	// Print footer for parent commands
-	if reg.IsParent {
-		fmt.Fprintf(w, "Use 'clie %s <subcommand> --help' for more information about a command.\n", reg.ActualCommand)
+	if meta.IsParent {
+		fmt.Fprintf(w, "Use 'clie %s <subcommand> --help' for more information about a command.\n", cmd.Name())
 	}
 }

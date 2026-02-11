@@ -54,7 +54,7 @@ func (h *DrawioRenderHandler) Build(
 	Logln(logWriter, "=== Rendering drawio images via container ===")
 
 	docsAssetsDir := filepath.Join(workspaceRoot, "docs", "assets")
-	cacheDir := paths.DrawioAccelCachePath(workspaceRoot)
+	cacheDir := filepath.Join(paths.DrawioAccelCachePath(workspaceRoot), module.GetMoniker(), filepath.Base(outputDir))
 	outputDrawioDir := filepath.Join(outputDir, "drawio")
 
 	// 1. Discover all .drawio.png source files

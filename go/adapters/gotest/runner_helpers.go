@@ -1,6 +1,7 @@
 package gotest
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -62,10 +63,57 @@ func findModuleRoot(dir string) string {
 	}
 }
 
+// hasGenerateDirectives checks whether any .go file under root contains a
+// //go:generate directive. It walks the tree and scans each file line-by-line,
+// returning true as soon as the first directive is found.
+func hasGenerateDirectives(root string) (bool, error) {
+	found := false
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if found {
+			return filepath.SkipAll
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "//go:generate ") || line == "//go:generate" {
+				found = true
+				return filepath.SkipAll
+			}
+		}
+		return scanner.Err()
+	})
+	return found, err
+}
+
 // runGoGenerate runs go generate for a package directory.
+// It first checks whether any Go files contain //go:generate directives
+// and skips execution when none are found.
 func runGoGenerate(ctx context.Context, pkgDir string, logWriter io.Writer) error {
 	moduleRoot := findModuleRoot(pkgDir)
 	if moduleRoot == "" {
+		return nil
+	}
+
+	// Skip go generate when no directives exist (OO-005).
+	hasDirectives, err := hasGenerateDirectives(moduleRoot)
+	if err != nil {
+		return fmt.Errorf("scanning for go:generate directives: %w", err)
+	}
+	if !hasDirectives {
 		return nil
 	}
 

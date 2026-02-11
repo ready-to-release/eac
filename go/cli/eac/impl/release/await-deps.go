@@ -1,27 +1,7 @@
-// Command: release await-deps
-// Short: Wait for dependency CI to pass before release
-// Long: Verifies all transitive dependencies have passing CI runs before allowing release.
-// Long:
-// Long: For each dependency, finds the commit where it was last changed and verifies
-// Long: that CI passed for that commit. Waits for in-progress CI runs with configurable
-// Long: timeout. This ensures that releasing a module won't proceed if any of its
-// Long: dependencies have failing CI.
-// Long:
-// Long: Expected Output:
-// Long:   - Exit code 0 if all dependency CI checks passed
-// Long:   - Exit code 1 if any dependency CI failed or timeout occurred
-// Long:
-// Long: Example:
-// Long:   release await-deps eac-ext                    # Check deps for eac-ext
-// Long:   release await-deps eac-ext --timeout 600     # Wait up to 10 minutes
-// Long:   release await-deps eac-ext --skip-static     # Skip static modules (default)
-// Flag.timeout: type=int, usage=Maximum wait time per dependency in seconds (default: 300)
-// Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
-// Flag.skip-static: type=bool, usage=Skip static modules without CI workflows (default: true)
-// Flag.format: type=string, usage=Output format (text or shell for eval)
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,12 +11,37 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseAwaitDepsCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseAwaitDepsCommand)(nil)
+
+func (c *releaseAwaitDepsCommand) Name() string { return "release await-deps" }
+
+func (c *releaseAwaitDepsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-await-deps",
+		Short:         "Wait for dependency CI to pass before release",
+		Long:          "Verifies all transitive dependencies have passing CI runs before allowing release.\n\nFor each dependency, finds the commit where it was last changed and verifies\nthat CI passed for that commit. Waits for in-progress CI runs with configurable\ntimeout. This ensures that releasing a module won't proceed if any of its\ndependencies have failing CI.\n\nExpected Output:\n  - Exit code 0 if all dependency CI checks passed\n  - Exit code 1 if any dependency CI failed or timeout occurred\n\nExample:\n  release await-deps eac-ext                    # Check deps for eac-ext\n  release await-deps eac-ext --timeout 600     # Wait up to 10 minutes\n  release await-deps eac-ext --skip-static     # Skip static modules (default)",
+		Flags: []core.FlagSpec{
+			{Name: "timeout", Type: "int", Usage: "Maximum wait time per dependency in seconds (default: 300)"},
+			{Name: "interval", Type: "int", Usage: "Poll interval in seconds (default: 15)"},
+			{Name: "skip-static", Type: "bool", Usage: "Skip static modules without CI workflows (default: true)"},
+			{Name: "format", Type: "string", Usage: "Output format (text or shell for eval)"},
+		},
+	}
+}
+
+func (c *releaseAwaitDepsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseAwaitDeps()
+}
 
 // DepCIStatus represents the CI status for a dependency.
 type DepCIStatus struct {

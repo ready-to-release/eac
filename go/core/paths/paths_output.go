@@ -9,28 +9,37 @@ import (
 	"time"
 )
 
+// outSubPath joins repoRoot with OutDir and any number of sub-segments.
+// This is the single point of truth for all "out/..." path construction.
+func outSubPath(repoRoot string, segments ...string) string {
+	parts := make([]string, 0, 2+len(segments))
+	parts = append(parts, repoRoot, OutDir)
+	parts = append(parts, segments...)
+	return filepath.Join(parts...)
+}
+
 // Path builder functions
 
 // BuildOutputPath returns the path to a module's build output directory.
 func BuildOutputPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
+	return outSubPath(repoRoot, BuildDir, moniker)
 }
 
 // UnitBuildOutputPath returns the path to a unit's build output directory.
 // Structure: out/build/<module>/<unitDir>.
 func UnitBuildOutputPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir)
+	return outSubPath(repoRoot, BuildDir, module, unitDir)
 }
 
 // TestOutputPath returns the path to a module's test output directory.
 func TestOutputPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
+	return outSubPath(repoRoot, TestDir, moniker)
 }
 
 // UnitTestOutputPath returns the path to a unit's test output directory.
 // Structure: out/test/<module>/<unitDir>.
 func UnitTestOutputPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, module, unitDir)
+	return outSubPath(repoRoot, TestDir, module, unitDir)
 }
 
 // LintOutputPath returns the path to a module's lint output directory.
@@ -38,7 +47,7 @@ func UnitTestOutputPath(repoRoot, module, unitDir string) string {
 // are not valid in Windows file paths (except for drive letters).
 func LintOutputPath(repoRoot, moniker string) string {
 	safeName := sanitizeMonikerForPath(moniker)
-	return filepath.Join(repoRoot, OutDir, LintDir, safeName)
+	return outSubPath(repoRoot, LintDir, safeName)
 }
 
 // sanitizeMonikerForPath replaces characters that are invalid in file paths.
@@ -53,38 +62,38 @@ func sanitizeMonikerForPath(moniker string) string {
 // UnitLintOutputPath returns the path to a unit's lint output directory.
 // Structure: out/lint/<module>/<unitDir>.
 func UnitLintOutputPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, LintDir, module, unitDir)
+	return outSubPath(repoRoot, LintDir, module, unitDir)
 }
 
 // TestOutputDir returns the root test output directory.
 func TestOutputDir(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir)
+	return outSubPath(repoRoot, TestDir)
 }
 
 // EvidenceOutputPath returns the path to a module's evidence output directory.
 func EvidenceOutputPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, EvidenceDir, moniker)
+	return outSubPath(repoRoot, EvidenceDir, moniker)
 }
 
 // AISummaryOutputPath returns the path to a module's AI summary output directory.
 func AISummaryOutputPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, AISummaryDir, moniker)
+	return outSubPath(repoRoot, AISummaryDir, moniker)
 }
 
 // StagingPath returns the path to a module's staging directory.
 func StagingPath(repoRoot, name string) string {
-	return filepath.Join(repoRoot, OutDir, StagingDir, name)
+	return outSubPath(repoRoot, StagingDir, name)
 }
 
 // SecurityOutputPath returns the path to security scan output.
 func SecurityOutputPath(repoRoot, scanner string) string {
-	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
+	return outSubPath(repoRoot, SecurityDir, scanner)
 }
 
 // UnitScanOutputPath returns the path to a unit's scan output directory.
 // Structure: out/scan/<module>/<unitDir>.
 func UnitScanOutputPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, SecurityDir, module, unitDir)
+	return outSubPath(repoRoot, SecurityDir, module, unitDir)
 }
 
 // RiskProfilePath returns the path to a module's OSCAL profile.
@@ -99,12 +108,12 @@ func RiskProfilePath(repoRoot, moduleName string) string {
 func RiskAssessmentResultsPath(repoRoot, moduleName string) string {
 	timestamp := time.Now().Format("20060102-150405")
 	filename := fmt.Sprintf("assessment-results-%s.json", timestamp)
-	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName, filename)
+	return outSubPath(repoRoot, RiskDir, moduleName, filename)
 }
 
 // RiskOutputPath returns the path to a module's risk output directory.
 func RiskOutputPath(repoRoot, moduleName string) string {
-	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName)
+	return outSubPath(repoRoot, RiskDir, moduleName)
 }
 
 // TemplatePath returns the path to a template file or directory.
@@ -120,31 +129,31 @@ func TemplatePath(repoRoot string, subpaths ...string) string {
 //	CommandLogsPath(root, "build", "core") → out/build/core/
 //	CommandLogsPath(root, "templates", "apply") → out/templates/apply/
 func CommandLogsPath(repoRoot, command string, pathSegments ...string) string {
-	parts := make([]string, 0, 3+len(pathSegments))
-	parts = append(parts, repoRoot, OutDir, command)
-	parts = append(parts, pathSegments...)
-	return filepath.Join(parts...)
+	segs := make([]string, 0, 1+len(pathSegments))
+	segs = append(segs, command)
+	segs = append(segs, pathSegments...)
+	return outSubPath(repoRoot, segs...)
 }
 
 // CommandsLogPath returns path to the unified commands log file
 // Example: CommandsLogPath(root) -> <root>/out/commands.log.
 func CommandsLogPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, "commands.log")
+	return outSubPath(repoRoot, "commands.log")
 }
 
 // ToolsPath returns the path to the tools output directory.
 func ToolsPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, ToolsDir)
+	return outSubPath(repoRoot, ToolsDir)
 }
 
 // BuildStatePath returns the path to the build state file.
 func BuildStatePath(repoRoot, stateFileName string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, stateFileName)
+	return outSubPath(repoRoot, BuildDir, stateFileName)
 }
 
 // TestStatePath returns the path to the test state file.
 func TestStatePath(repoRoot, stateFileName string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, stateFileName)
+	return outSubPath(repoRoot, TestDir, stateFileName)
 }
 
 // ============================================================================
@@ -153,41 +162,41 @@ func TestStatePath(repoRoot, stateFileName string) string {
 
 // BuildOutputDir returns the root build output directory (out/build).
 func BuildOutputDir(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir)
+	return outSubPath(repoRoot, BuildDir)
 }
 
 // BuildLogPath returns the path to a module's build.log file.
 func BuildLogPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build.log")
+	return outSubPath(repoRoot, BuildDir, moniker, "build.log")
 }
 
 // UnitBuildLogPath returns the path to a unit's build.log file.
 // Structure: out/build/<module>/<unitDir>/build.log.
 func UnitBuildLogPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir, "build.log")
+	return outSubPath(repoRoot, BuildDir, module, unitDir, "build.log")
 }
 
 // BuildTimingPath returns the path to a module's build-timing.txt file.
 func BuildTimingPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
+	return outSubPath(repoRoot, BuildDir, moniker, "build-timing.txt")
 }
 
 // UnitBuildTimingPath returns the path to a unit's build-timing.txt file.
 // Structure: out/build/<module>/<unitDir>/build-timing.txt.
 func UnitBuildTimingPath(repoRoot, module, unitDir string) string {
-	return filepath.Join(repoRoot, OutDir, BuildDir, module, unitDir, "build-timing.txt")
+	return outSubPath(repoRoot, BuildDir, module, unitDir, "build-timing.txt")
 }
 
 // TestModuleDir returns the path to a module's test output directory
 // Path: out/test/<module>.
 func TestModuleDir(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
+	return outSubPath(repoRoot, TestDir, moniker)
 }
 
 // TestModuleTimingPath returns the path to a module's test-timing.txt file
 // Path: out/test/<module>/test-timing.txt.
 func TestModuleTimingPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, moniker, "test-timing.txt")
+	return outSubPath(repoRoot, TestDir, moniker, "test-timing.txt")
 }
 
 // RiskControlsPath returns the path to the risk controls directory.

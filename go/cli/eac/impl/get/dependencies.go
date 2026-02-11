@@ -1,28 +1,33 @@
-// Command: get dependencies
-// Short: Get full dependency graph for all modules
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//	--as-plantuml: Output as PlantUML diagram
-//	--as-mermaid: Output as Mermaid diagram
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML dependency graph showing module relationships, including:
-// Long:   - List of all module monikers
-// Long:   - Dependency edges (module -> list of dependencies)
-// Long: Alternative formats available: PlantUML diagram, Mermaid diagram.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getDependenciesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getDependenciesCommand)(nil)
+
+func (c *getDependenciesCommand) Name() string { return "get dependencies" }
+
+func (c *getDependenciesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-dependencies",
+		Short:         "Get full dependency graph for all modules",
+		Long:          "Expected Output:\nYAML dependency graph showing module relationships, including:\n  - List of all module monikers\n  - Dependency edges (module -> list of dependencies)\nAlternative formats available: PlantUML diagram, Mermaid diagram.",
+	}
+}
+
+func (c *getDependenciesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetDependencies()
+}
 
 // dependenciesFlags defines valid flags for the get dependencies command
 

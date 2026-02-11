@@ -1,33 +1,42 @@
-// Command: get release-notes
-// Short: Get parsed release notes for a module
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//
-// Args: module [version]
-// Long:
-// Long: Expected Output:
-// Long: YAML/JSON/TOML representation of release notes including:
-// Long:   - versions: Array of version entries
-// Long:     - number: Version number
-// Long:     - date: Release date
-// Long:     - sections: Array of sections with headers and content
-// Long:
-// Long: If version is specified, returns only that version's data.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// releaseNotesFlags defines valid flags for the get release-notes command
+type getReleaseNotesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getReleaseNotesCommand)(nil)
+
+func (c *getReleaseNotesCommand) Name() string { return "get release-notes" }
+
+func (c *getReleaseNotesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-release-notes",
+		Short:         "Get parsed release notes for a module",
+		Long: "Expected Output:\n" +
+			"YAML/JSON/TOML representation of release notes including:\n" +
+			"  - versions: Array of version entries\n" +
+			"    - number: Version number\n" +
+			"    - date: Release date\n" +
+			"    - sections: Array of sections with headers and content\n" +
+			"\n" +
+			"If version is specified, returns only that version's data.",
+		Args: "module [version]",
+	}
+}
+
+func (c *getReleaseNotesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetReleaseNotes()
+}
 
 func GetReleaseNotes() int {
 	// Validate flags before parsing

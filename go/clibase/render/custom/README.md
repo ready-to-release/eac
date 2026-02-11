@@ -40,10 +40,10 @@ Extends the `render` package with named custom output formats. When a user passe
 ## Code Health
 
 ### Tech Debt
-- `registry.go:18` mutable package-level `registry` map with no mutex; concurrent registration from multiple `init()` functions is safe in practice (Go runs `init()` sequentially), but concurrent `Get`/`List` calls at runtime could race if registration happened after startup
+- None identified. Registry map is protected by `sync.RWMutex`.
 
 ### Pain Points
 - None identified; small package with clear responsibilities
 
 ### Optimization Opportunities
-- Guard the global `registry` map with `sync.RWMutex` if concurrent access becomes realistic (low effort)
+- None identified.

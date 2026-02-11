@@ -46,6 +46,6 @@ fast path that skips content reads when file modification times are unchanged.
 
 ## Code Health
 
-- **Tech Debt**: `parallel.go`: `DefaultParallelOptions()` and `normalizeWorkers()` duplicate the floor/cap worker-count logic; extract a shared `clampWorkers(n int) int` helper. `hash.go`: `UncommittedState` reads files sequentially and silently swallows errors as "deleted"; it does not reuse the parallel hashing path.
+- **Tech Debt**: `hash.go`: `UncommittedState` reads files sequentially and silently swallows errors as "deleted"; it does not reuse the parallel hashing path.
 - **Pain Points**: `parallel.go`: `FilesParallel` is ~108 lines with three separate context-cancellation checks; extracting the fan-out loop into a helper would improve readability.
 - **Optimization Opportunities**: `mtimesUnchanged` stats files sequentially; for modules with thousands of source files, parallel stat calls would reduce the fast-path latency (low priority, profile first).

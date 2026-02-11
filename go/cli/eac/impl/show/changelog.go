@@ -1,33 +1,36 @@
-// Command: show changelog
-// Short: Display changelog entries in human-readable format
-// Long: Display changelog entries from CHANGELOG.md in a formatted markdown table.
-// Long:
-// Long: Shows all versions by default, or a specific version if provided.
-// Long: Special keywords: "unreleased" for pending changes, "latest" for most recent release.
-// Long:
-// Long: Expected Output:
-// Long: - Version header with number and date
-// Long: - Markdown table with columns: Category, Description, Commit
-// Long: - Grouped by change type (Added, Changed, Fixed, etc.)
-// Long:
-// Long: Example:
-// Long:   show changelog eac-ext
-// Long:   show changelog eac-ext 0.0.7
-// Long:   show changelog eac-ext latest
-// Long:   show changelog eac-ext unreleased
-// Args: module [version]
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showChangelogCommand struct{}
+
+var _ core.SimpleCommandPort = (*showChangelogCommand)(nil)
+
+func (c *showChangelogCommand) Name() string { return "show changelog" }
+
+func (c *showChangelogCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-changelog",
+		Short:         "Display changelog entries in human-readable format",
+		Long:          "Display changelog entries from CHANGELOG.md in a formatted markdown table.\n\nShows all versions by default, or a specific version if provided.\nSpecial keywords: \"unreleased\" for pending changes, \"latest\" for most recent release.\n\nExpected Output:\n- Version header with number and date\n- Markdown table with columns: Category, Description, Commit\n- Grouped by change type (Added, Changed, Fixed, etc.)\n\nExample:\n  show changelog eac-ext\n  show changelog eac-ext 0.0.7\n  show changelog eac-ext latest\n  show changelog eac-ext unreleased",
+		Args:          "module [version]",
+	}
+}
+
+func (c *showChangelogCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowChangelog()
+}
 
 func ShowChangelog() int {
 	// Validate flags against registry metadata

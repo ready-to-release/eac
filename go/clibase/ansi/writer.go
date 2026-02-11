@@ -148,8 +148,10 @@ func (f *Filter) Write(p []byte) (n int, err error) {
 		// Strip only bad ANSI, preserve colors
 		output = data
 		hadBadAnsi := combinedBadAnsi.Match(data)
-		for _, pattern := range badPatterns {
-			output = pattern.ReplaceAll(output, nil)
+		if hadBadAnsi {
+			for _, pattern := range badPatterns {
+				output = pattern.ReplaceAll(output, nil)
+			}
 		}
 
 		if hadBadAnsi && !f.warnedOnce {
@@ -202,7 +204,11 @@ func getCallerInfo(skip int) string {
 // --- Utility functions ---
 
 // StripBad removes only bad ANSI sequences, preserving colors.
+// Short-circuits when no bad ANSI sequences are detected.
 func StripBad(data []byte) []byte {
+	if !combinedBadAnsi.Match(data) {
+		return data
+	}
 	result := data
 	for _, pattern := range badPatterns {
 		result = pattern.ReplaceAll(result, nil)

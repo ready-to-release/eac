@@ -1,24 +1,7 @@
-// Command: get ci-dispatch
-// Short: Filter modules for CI dispatch based on existing valid CI
-// Flag.directly-changed: type=string, usage=Space-separated list of directly changed modules (always dispatched)
-// Flag.invalidated: type=string, usage=Space-separated list of invalidated modules (checked for valid CI)
-// Flag.head-sha: type=string, usage=Current HEAD SHA to check against (defaults to git HEAD)
-// Flag.mock: type=string, usage=Use mock CI status instead of querying GitHub (JSON format)
-// Flag.format: type=string, usage=Output format (shell outputs shell variables; otherwise uses standard get command formats)
-// Long:
-// Long: Filters modules for CI dispatch by checking if invalidated modules already have
-// Long: valid CI at the current HEAD. Directly changed modules are always dispatched.
-// Long:
-// Long: Mock mode (--mock) accepts JSON mapping module names to CI validity:
-// Long:   {"eac-cli": true, "docs": false}
-// Long: where true = has valid CI (skip), false = needs CI (dispatch)
-// Long:
-// Long: With --format shell, outputs shell variable assignments:
-// Long:   DISPATCH="mod1 mod2 mod3"
-// Long:   SKIPPED="mod4 mod5"
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
@@ -35,7 +19,39 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// ciDispatchFlags defines valid flags for the get ci-dispatch command
+type getCIDispatchCommand struct{}
+
+var _ core.SimpleCommandPort = (*getCIDispatchCommand)(nil)
+
+func (c *getCIDispatchCommand) Name() string { return "get ci-dispatch" }
+
+func (c *getCIDispatchCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-ci-dispatch",
+		Short:         "Filter modules for CI dispatch based on existing valid CI",
+		Long: "Filters modules for CI dispatch by checking if invalidated modules already have\n" +
+			"valid CI at the current HEAD. Directly changed modules are always dispatched.\n" +
+			"\n" +
+			"Mock mode (--mock) accepts JSON mapping module names to CI validity:\n" +
+			"  {\"eac-cli\": true, \"docs\": false}\n" +
+			"where true = has valid CI (skip), false = needs CI (dispatch)\n" +
+			"\n" +
+			"With --format shell, outputs shell variable assignments:\n" +
+			"  DISPATCH=\"mod1 mod2 mod3\"\n" +
+			"  SKIPPED=\"mod4 mod5\"",
+		Flags: []core.FlagSpec{
+			{Name: "directly-changed", Type: "string", Usage: "Space-separated list of directly changed modules (always dispatched)"},
+			{Name: "invalidated", Type: "string", Usage: "Space-separated list of invalidated modules (checked for valid CI)"},
+			{Name: "head-sha", Type: "string", Usage: "Current HEAD SHA to check against (defaults to git HEAD)"},
+			{Name: "mock", Type: "string", Usage: "Use mock CI status instead of querying GitHub (JSON format)"},
+			{Name: "format", Type: "string", Usage: "Output format (shell outputs shell variables; otherwise uses standard get command formats)"},
+		},
+	}
+}
+
+func (c *getCIDispatchCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCIDispatch()
+}
 
 // CIDispatchResult represents the output of the get ci-dispatch command.
 // Combines filtering (dispatch vs skip) with dependency-aware ordering.

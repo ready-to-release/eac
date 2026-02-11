@@ -1,39 +1,39 @@
-// Command: pipeline await-release
-// Short: Wait for release workflows to complete for a specific commit
-// Long: Wait for release workflows (release-*.yaml) to complete for a specific commit SHA.
-// Long:
-// Long: This command polls GitHub Actions for in_progress or queued release workflow
-// Long: runs that match the specified SHA and waits until all complete.
-// Long:
-// Long: SHA Detection (in order of precedence):
-// Long:   1. --sha flag (explicit override)
-// Long:   2. GITHUB_SHA environment variable (GitHub Actions)
-// Long:   3. origin/main HEAD after fetch (local devbox)
-// Long:
-// Long: Expected Output:
-// Long:   - Live progress display showing active workflow count
-// Long:   - Exit code 0 when all workflows complete successfully
-// Long:   - Exit code 1 on timeout or failure
-// Long:
-// Long: Example:
-// Long:   pipeline await-release                              # Auto-detect SHA
-// Long:   pipeline await-release --sha abc123                 # Explicit SHA
-// Long:   pipeline await-release --timeout 300                # 5 minute timeout
-// Long:   pipeline await-release --exclude clie-eac-bundle     # Exclude bundle workflow
-// Flag.sha: type=string, usage=Commit SHA to filter runs (auto-detected if not provided)
-// Flag.timeout: type=int, default=600, usage=Maximum wait time in seconds (default: 600)
-// Flag.interval: type=int, default=30, usage=Poll interval in seconds (default: 30)
-// Flag.pattern: type=string, default=release-*.yaml, usage=Workflow file pattern to match
-// Flag.exclude: type=string, usage=Workflow name substring to exclude (e.g., clie-eac-bundle)
 package pipeline
 
 import (
+	"context"
 	"os"
 	"strconv"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineAwaitReleaseCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineAwaitReleaseCommand)(nil)
+
+func (c *pipelineAwaitReleaseCommand) Name() string { return "pipeline await-release" }
+
+func (c *pipelineAwaitReleaseCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-await-release",
+		Short:         "Wait for release workflows to complete for a specific commit",
+		Long:          "Wait for release workflows (release-*.yaml) to complete for a specific commit SHA.\n\nThis command polls GitHub Actions for in_progress or queued release workflow\nruns that match the specified SHA and waits until all complete.\n\nSHA Detection (in order of precedence):\n  1. --sha flag (explicit override)\n  2. GITHUB_SHA environment variable (GitHub Actions)\n  3. origin/main HEAD after fetch (local devbox)\n\nExpected Output:\n  - Live progress display showing active workflow count\n  - Exit code 0 when all workflows complete successfully\n  - Exit code 1 on timeout or failure\n\nExample:\n  pipeline await-release                              # Auto-detect SHA\n  pipeline await-release --sha abc123                 # Explicit SHA\n  pipeline await-release --timeout 300                # 5 minute timeout\n  pipeline await-release --exclude clie-eac-bundle     # Exclude bundle workflow",
+		Flags: []core.FlagSpec{
+			{Name: "sha", Type: "string", Usage: "Commit SHA to filter runs (auto-detected if not provided)"},
+			{Name: "timeout", Type: "int", DefaultValue: "600", Usage: "Maximum wait time in seconds (default: 600)"},
+			{Name: "interval", Type: "int", DefaultValue: "30", Usage: "Poll interval in seconds (default: 30)"},
+			{Name: "pattern", Type: "string", DefaultValue: "release-*.yaml", Usage: "Workflow file pattern to match"},
+			{Name: "exclude", Type: "string", Usage: "Workflow name substring to exclude (e.g., clie-eac-bundle)"},
+		},
+	}
+}
+
+func (c *pipelineAwaitReleaseCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineAwaitRelease()
+}
 
 func PipelineAwaitRelease() int {
 	// Get workspace root

@@ -1,35 +1,54 @@
-// Command: get release-status
-// Short: Get release status for modules
-// Long: Checks GitHub releases for a list of modules and returns their status.
-// Long:
-// Long: This command queries GitHub releases API to determine which modules
-// Long: have releases and their current versions. Used by release-clie-eac-bundle.
-// Long:
-// Long: SHA Detection:
-// Long:   1. --sha flag (explicit)
-// Long:   2. GITHUB_SHA env var (CI)
-// Long:   3. origin/main (devbox)
-// Long:
-// Long: Output formats:
-// Long:   --format json: {"module": {"tag": "...", "version": "...", "released": true}}
-// Long:   --format shell: RELEASED="mod1 mod2" MISSING="mod3"
-// Long:
-// Long: Example:
-// Long:   get release-status --modules "clie eac-ext docs"
-// Long:   get release-status --modules "clie eac-ext" --format shell
-// Flag.modules: type=string, usage=Space-separated list of modules to check
-// Flag.format: type=string, usage=Output format (json, shell)
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getReleaseStatusCommand struct{}
+
+var _ core.SimpleCommandPort = (*getReleaseStatusCommand)(nil)
+
+func (c *getReleaseStatusCommand) Name() string { return "get release-status" }
+
+func (c *getReleaseStatusCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-release-status",
+		Short:         "Get release status for modules",
+		Long: "Checks GitHub releases for a list of modules and returns their status.\n" +
+			"\n" +
+			"This command queries GitHub releases API to determine which modules\n" +
+			"have releases and their current versions. Used by release-clie-eac-bundle.\n" +
+			"\n" +
+			"SHA Detection:\n" +
+			"  1. --sha flag (explicit)\n" +
+			"  2. GITHUB_SHA env var (CI)\n" +
+			"  3. origin/main (devbox)\n" +
+			"\n" +
+			"Output formats:\n" +
+			"  --format json: {\"module\": {\"tag\": \"...\", \"version\": \"...\", \"released\": true}}\n" +
+			"  --format shell: RELEASED=\"mod1 mod2\" MISSING=\"mod3\"\n" +
+			"\n" +
+			"Example:\n" +
+			"  get release-status --modules \"clie eac-ext docs\"\n" +
+			"  get release-status --modules \"clie eac-ext\" --format shell",
+		Flags: []core.FlagSpec{
+			{Name: "modules", Type: "string", Usage: "Space-separated list of modules to check"},
+			{Name: "format", Type: "string", Usage: "Output format (json, shell)"},
+		},
+	}
+}
+
+func (c *getReleaseStatusCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetReleaseStatus()
+}
 
 // ModuleReleaseStatus represents the release status of a module.
 type ModuleReleaseStatus struct {

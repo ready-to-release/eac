@@ -3,7 +3,11 @@
 
 package gotest
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestExtractGoBuildTags(t *testing.T) {
 	tests := []struct {
@@ -78,6 +82,87 @@ func TestExtractGoBuildTags(t *testing.T) {
 			result := extractGoBuildTags(tt.input)
 			if result != tt.expected {
 				t.Errorf("extractGoBuildTags(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasGenerateDirectives(t *testing.T) {
+	tests := []struct {
+		name     string
+		files    map[string]string
+		expected bool
+	}{
+		{
+			name: "no go files",
+			files: map[string]string{
+				"readme.txt": "just text",
+			},
+			expected: false,
+		},
+		{
+			name: "go file without directive",
+			files: map[string]string{
+				"main.go": "package main\n\nfunc main() {}\n",
+			},
+			expected: false,
+		},
+		{
+			name: "go file with directive",
+			files: map[string]string{
+				"main.go": "package main\n\n//go:generate stringer -type=Pill\n\nfunc main() {}\n",
+			},
+			expected: true,
+		},
+		{
+			name: "directive in subdirectory",
+			files: map[string]string{
+				"main.go":       "package main\n\nfunc main() {}\n",
+				"sub/gen.go":    "package sub\n\n//go:generate mockgen -source=iface.go\n",
+			},
+			expected: true,
+		},
+		{
+			name: "comment mentioning go:generate but not a directive",
+			files: map[string]string{
+				"main.go": "package main\n\n// see //go:generate docs for more\n\nfunc main() {}\n",
+			},
+			expected: false,
+		},
+		{
+			name: "bare directive without args",
+			files: map[string]string{
+				"main.go": "package main\n\n//go:generate\n\nfunc main() {}\n",
+			},
+			expected: true,
+		},
+		{
+			name: "non-go file containing directive text",
+			files: map[string]string{
+				"notes.txt": "//go:generate should be ignored in non-go files\n",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			for name, content := range tt.files {
+				path := filepath.Join(root, filepath.FromSlash(name))
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatalf("mkdir: %v", err)
+				}
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatalf("write: %v", err)
+				}
+			}
+			got, err := hasGenerateDirectives(root)
+			if err != nil {
+				t.Fatalf("hasGenerateDirectives: %v", err)
+			}
+			if got != tt.expected {
+				t.Errorf("hasGenerateDirectives(%q) = %v, want %v", root, got, tt.expected)
 			}
 		})
 	}

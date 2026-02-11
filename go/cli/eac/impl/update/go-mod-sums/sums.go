@@ -1,19 +1,3 @@
-// Command: update go-mod-sums
-// Short: Sync go.sum files across all workspace modules
-// Long: Downloads all declared dependencies and refreshes go.sum checksums
-// Long: without modifying go.mod files.
-// Long:
-// Long: Parses go.work to discover all workspace modules, then runs 'go mod download'
-// Long: in each module directory. Also runs 'go work sync' at the repo root.
-// Long:
-// Long: Use 'update go-tidy' instead if you need to add/remove dependencies in go.mod.
-// Long:
-// Long: Examples:
-// Long:   update go-mod-sums                  Sync all go.sum files
-// Long:   update go-mod-sums --dry-run        Show modules with stale go.sum
-// Long:   update go-mod-sums --verbose        Show download output for each module
-// Flag.dry-run: type=bool, default=false, usage=Show which go.sum files would change without modifying them
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show go mod download output for each module
 package gomodsums
 
 import (
@@ -24,19 +8,43 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/update/internal/gowork"
 	"github.com/ready-to-release/eac/go/clibase/goexec"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateGoModSumsCommand struct{}
 
-func init() {
-	registry.Register(UpdateGoModSums)
+var _ core.SimpleCommandPort = (*updateGoModSumsCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateGoModSumsCommand{},
+	}
 }
 
+func (c *updateGoModSumsCommand) Name() string { return "update go-mod-sums" }
+
+func (c *updateGoModSumsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-go-mod-sums",
+		Short:         "Sync go.sum files across all workspace modules",
+		Long:          "Downloads all declared dependencies and refreshes go.sum checksums\nwithout modifying go.mod files.\n\nParses go.work to discover all workspace modules, then runs 'go mod download'\nin each module directory. Also runs 'go work sync' at the repo root.\n\nUse 'update go-tidy' instead if you need to add/remove dependencies in go.mod.\n\nExamples:\n  update go-mod-sums                  Sync all go.sum files\n  update go-mod-sums --dry-run        Show modules with stale go.sum\n  update go-mod-sums --verbose        Show download output for each module",
+		Flags: []core.FlagSpec{
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show which go.sum files would change without modifying them"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show go mod download output for each module"},
+		},
+	}
+}
+
+func (c *updateGoModSumsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateGoModSums()
+}
+
+var log = logging.C()
 // UpdateGoModSums downloads dependencies and refreshes go.sum across all workspace modules.
 func UpdateGoModSums() int {
 	args := os.Args[3:] // Skip program name, "update", "go-mod-sums"

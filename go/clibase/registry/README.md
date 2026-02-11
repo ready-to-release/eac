@@ -27,10 +27,9 @@ commands register themselves with metadata, flags, and handler functions.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `registry.go` | `CommandRegistration`, `FlagMetadata`, `Register()`, `Get()`, dispatch functions |
-| `declarative.go` | `DeclarativeFlagDefLike` interface and `BuildDeclarativeMetadata()` converter |
+| File                  | Purpose                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `command_registry.go` | `CommandRegistry` (thread-safe), `Register()`, `Get()`, `GetByCanonical()`, `All()`, `Names()`, `Subcommands()` |
 
 ## Dependencies
 
@@ -43,10 +42,13 @@ Acts as the command dispatch layer between the CLI entry point and individual co
 ## Code Health
 
 ### Tech Debt
-- None remaining; previous tech debt items (unprotected registry map, exported mutable var) have been resolved
+
+- None
 
 ### Pain Points
-- `registry.go` (544 lines) combines type definitions, registration logic, and dispatch in a single file; splitting would improve readability
+
+- None
 
 ### Optimization Opportunities
-- Split `registry.go` into `types.go`, `register.go`, and `dispatch.go` for clarity (low effort)
+
+- None

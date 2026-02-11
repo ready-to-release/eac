@@ -53,7 +53,7 @@ The conf package is the central configuration hub for the entire clie CLI. Every
 
 ### Tech Debt
 
-- `config.go:93-96` -- `GetExtensions()` method returns an empty slice and is never called; appears to be an unfinished stub.
+- None identified.
 
 ### Pain Points
 

@@ -1,26 +1,33 @@
-// Command: validate books
-// Short: Validate books.yml configuration
-// Long: Validate the books.yml file including:
-// Long:   - Book names match existing module monikers
-// Long:   - Referenced modules are type mkdocs-render-oci or pdf-oci
-// Long:   - Copy glob patterns are valid syntax
-// Long:   - Commands are valid EAC commands
-// Long:   - Navigation references are valid
-// Long:
-// Long: Expected Output:
-// Long:   Displays validation results for book names, module types, glob patterns, and commands.
-// Long:   Shows which modules reference each book and counts of copy/command/inline sources.
-// Long:   Exit code 0 if all books valid, 1 if validation errors found.
 package validate
 
 import (
+	"context"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateBooksCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateBooksCommand)(nil)
+
+func (c *validateBooksCommand) Name() string { return "validate books" }
+
+func (c *validateBooksCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-books",
+		Short:         "Validate books.yml configuration",
+		Long:          "Validate the books.yml file including:\n  - Book names match existing module monikers\n  - Referenced modules are type mkdocs-render-oci or pdf-oci\n  - Copy glob patterns are valid syntax\n  - Commands are valid EAC commands\n  - Navigation references are valid\n\nExpected Output:\n  Displays validation results for book names, module types, glob patterns, and commands.\n  Shows which modules reference each book and counts of copy/command/inline sources.\n  Exit code 0 if all books valid, 1 if validation errors found.",
+	}
+}
+
+func (c *validateBooksCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateBooks()
+}
 
 // ValidateBooks validates the books.yml configuration.
 func ValidateBooks() int {

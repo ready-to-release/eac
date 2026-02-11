@@ -84,6 +84,44 @@ type ModuleDefaults struct {
 	Design          string
 }
 
+// resolveSliceField resolves a slice field using a 2-tier priority:
+// explicit value (non-nil) > type default (non-nil, with variable substitution) > fallback.
+// A nil explicit value means "not set"; a non-nil slice (even if empty) counts as explicit.
+func resolveSliceField(
+	explicit, typeDefault, fallback []string,
+	moniker, root, moduleType string,
+	pathVars map[string]string,
+) []string {
+	if explicit != nil {
+		return explicit
+	}
+	if typeDefault != nil {
+		return SubstituteAll(typeDefault, moniker, root, moduleType, pathVars)
+	}
+	return fallback
+}
+
+// resolveStringField resolves a string field using a 2-tier priority:
+// explicit value (non-empty) > type default (non-empty, with optional variable substitution) > fallback.
+// When substitute is true, SubstituteVariables is applied to the type default.
+func resolveStringField(
+	explicit, typeDefault, fallback string,
+	substitute bool,
+	moniker, root, moduleType string,
+	pathVars map[string]string,
+) string {
+	if explicit != "" {
+		return explicit
+	}
+	if typeDefault != "" {
+		if substitute {
+			return SubstituteVariables(typeDefault, moniker, root, moduleType, pathVars)
+		}
+		return typeDefault
+	}
+	return fallback
+}
+
 // ResolveDefaults resolves all defaults for a module, combining type-specific
 // defaults with repository path variables. Explicit values in the module take precedence.
 //
@@ -101,86 +139,55 @@ func ResolveDefaults(
 	specs []string,
 	testImpl, design string,
 ) ModuleDefaults {
-	result := ModuleDefaults{}
-
-	// Source - type default only (root-based ownership is handled in MatchesFile)
-	if source != nil {
-		result.Source = source
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Source != nil {
-		result.Source = SubstituteAll(typeDef.Files.Source, moniker, root, moduleType, pathVars)
+	// Extract sub-structs once to avoid repeated nil checks on typeDef.
+	var files *FilesDefaults
+	var repo *RepoDefaults
+	if typeDef != nil {
+		files = typeDef.Files
+		repo = typeDef.Repo
 	}
 
-	// Config - type default only
-	if config != nil {
-		result.Config = config
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Config != nil {
-		result.Config = SubstituteAll(typeDef.Files.Config, moniker, root, moduleType, pathVars)
+	// File-level slice helpers: pull the type default from files (may be nil).
+	var fileSrc, fileCfg, fileAssets, fileTests []string
+	if files != nil {
+		fileSrc = files.Source
+		fileCfg = files.Config
+		fileAssets = files.Assets
+		fileTests = files.Tests
 	}
 
-	// Assets - type default only
-	if assets != nil {
-		result.Assets = assets
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Assets != nil {
-		result.Assets = SubstituteAll(typeDef.Files.Assets, moniker, root, moduleType, pathVars)
+	// Repo-level slice helper: pull from repo (may be nil).
+	var repoSpecs []string
+	if repo != nil {
+		repoSpecs = repo.Specs
 	}
 
-	// Tests - type default only
-	if tests != nil {
-		result.Tests = tests
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Tests != nil {
-		result.Tests = SubstituteAll(typeDef.Files.Tests, moniker, root, moduleType, pathVars)
+	// File-level string helpers.
+	var fileChangelog, fileWorkflowCI, fileWorkflowRelease string
+	if files != nil {
+		fileChangelog = files.Changelog
+		fileWorkflowCI = files.WorkflowCI
+		fileWorkflowRelease = files.WorkflowRelease
 	}
 
-	// Changelog - type default, then generic default
-	if changelog != "" {
-		result.Changelog = changelog
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Changelog != "" {
-		result.Changelog = typeDef.Files.Changelog
-	} else {
-		result.Changelog = Changelog
+	// Repo-level string helpers.
+	var repoTestImpl, repoDesign string
+	if repo != nil {
+		repoTestImpl = repo.TestImpl
+		repoDesign = repo.Design
 	}
 
-	// WorkflowCI - type default only (no generic fallback - empty means no workflow)
-	if workflowCI != "" {
-		result.WorkflowCI = workflowCI
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowCI != "" {
-		result.WorkflowCI = SubstituteVariables(typeDef.Files.WorkflowCI, moniker, root, moduleType, pathVars)
-	}
-	// else: leave empty - no workflow
+	return ModuleDefaults{
+		Source: resolveSliceField(source, fileSrc, nil, moniker, root, moduleType, pathVars),
+		Config: resolveSliceField(config, fileCfg, nil, moniker, root, moduleType, pathVars),
+		Assets: resolveSliceField(assets, fileAssets, nil, moniker, root, moduleType, pathVars),
+		Tests:  resolveSliceField(tests, fileTests, nil, moniker, root, moduleType, pathVars),
+		Specs:  resolveSliceField(specs, repoSpecs, []string{SpecsPattern(moniker)}, moniker, root, moduleType, pathVars),
 
-	// WorkflowRelease - type default only (no generic fallback - empty means no workflow)
-	if workflowRelease != "" {
-		result.WorkflowRelease = workflowRelease
-	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowRelease != "" {
-		result.WorkflowRelease = SubstituteVariables(typeDef.Files.WorkflowRelease, moniker, root, moduleType, pathVars)
+		Changelog:       resolveStringField(changelog, fileChangelog, Changelog, false, moniker, root, moduleType, pathVars),
+		WorkflowCI:      resolveStringField(workflowCI, fileWorkflowCI, "", true, moniker, root, moduleType, pathVars),
+		WorkflowRelease: resolveStringField(workflowRelease, fileWorkflowRelease, "", true, moniker, root, moduleType, pathVars),
+		TestImpl:        resolveStringField(testImpl, repoTestImpl, "", true, moniker, root, moduleType, pathVars),
+		Design:          resolveStringField(design, repoDesign, DesignPath(moniker), true, moniker, root, moduleType, pathVars),
 	}
-	// else: leave empty - no workflow
-
-	// Specs - type default, then generic default
-	// Use nil check instead of len() to distinguish "not set" from "explicitly empty []"
-	if specs != nil {
-		result.Specs = specs
-	} else if typeDef != nil && typeDef.Repo != nil && typeDef.Repo.Specs != nil {
-		result.Specs = SubstituteAll(typeDef.Repo.Specs, moniker, root, moduleType, pathVars)
-	} else {
-		result.Specs = []string{SpecsPattern(moniker)}
-	}
-
-	// TestImpl - type default only (must come from repository.yml via type defaults)
-	if testImpl != "" {
-		result.TestImpl = testImpl
-	} else if typeDef != nil && typeDef.Repo != nil && typeDef.Repo.TestImpl != "" {
-		result.TestImpl = SubstituteVariables(typeDef.Repo.TestImpl, moniker, root, moduleType, pathVars)
-	}
-
-	// Design - type default, then generic default
-	if design != "" {
-		result.Design = design
-	} else if typeDef != nil && typeDef.Repo != nil && typeDef.Repo.Design != "" {
-		result.Design = SubstituteVariables(typeDef.Repo.Design, moniker, root, moduleType, pathVars)
-	} else {
-		result.Design = DesignPath(moniker)
-	}
-
-	return result
 }

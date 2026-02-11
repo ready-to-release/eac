@@ -1,21 +1,34 @@
-// Command: validate module-hierarchy
-// Short: Validate module dependency graph structure
-// Long: Validates the module dependency graph for structural integrity.
-// Long:
-// Long: Expected Output:
-// Long:   Displays structural issues in dependency graph including cycles, non-existent module
-// Long:   references, and bidirectional inconsistencies. Exit code 0 if valid, 1 if issues found.
 package validate
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateModuleHierarchyCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateModuleHierarchyCommand)(nil)
+
+func (c *validateModuleHierarchyCommand) Name() string { return "validate module-hierarchy" }
+
+func (c *validateModuleHierarchyCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-module-hierarchy",
+		Short:         "Validate module dependency graph structure",
+		Long:          "Validates the module dependency graph for structural integrity.\n\nExpected Output:\n  Displays structural issues in dependency graph including cycles, non-existent module\n  references, and bidirectional inconsistencies. Exit code 0 if valid, 1 if issues found.",
+	}
+}
+
+func (c *validateModuleHierarchyCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateModuleHierarchy()
+}
 
 // ValidateModuleHierarchy validates the module dependency graph.
 func ValidateModuleHierarchy() int {

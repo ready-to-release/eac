@@ -1,40 +1,3 @@
-// Command: test
-// Short: Test one or more modules by moniker
-// Args: modules
-// Long: Test one or more modules by moniker using suite-based filtering.
-// Long:
-// Long: This command discovers tests, applies inference rules (e.g., Go tests default to @L1),
-// Long: filters by suite tags, and runs matching tests with consistent summary output.
-// Long:
-// Long: Use --suite to select which tests to run. The default runs suites not marked
-// Long: as extended_suite in config (typically unit + integration).
-// Long:
-// Long: Expected Output:
-// Long:   - Test execution results with pass/fail status
-// Long:   - Detailed test summary table showing modules, packages, and assertions
-// Long:   - Test logs written to out/test/<module>/ directory
-// Long:   - Exit code 0 if all tests pass, non-zero on failure
-// Long:
-// Long: Example:
-// Long:   test eac-cli                    # Test single module
-// Long:   test core clie                # Test multiple modules
-// Long:   test                                 # Test all modules
-// Long:   test eac-cli --suite acceptance # Run acceptance tests only
-// Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
-// Flag.coverage: type=bool, usage=Enable coverage reporting
-// Flag.skip-deps: type=bool, usage=Skip dependency checks before running tests
-// Flag.skip-depm: type=bool, usage=Skip module dependency build artifact validation
-// Flag.list-only: type=bool, usage=List tests without running them
-// Flag.timings: type=bool, usage=Show detailed timing summary after tests complete
-// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
-// Flag.tui: type=bool, usage=Enable TUI console (default for local console mode)
-// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
-// Flag.sequential: type=bool, usage=Run tests sequentially instead of parallel
-// Flag.turbo: type=bool, usage=Enable turbo mode for faster testing (increases parallelism)
-// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full test run
-// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
-// Flag.ascii: type=bool, usage=Use ASCII-only characters in TUI
-// Flag.skip-tui-delay: type=bool, usage=Skip TUI exit delay (exit immediately when done)
 package test
 
 import (
@@ -63,6 +26,42 @@ import (
 )
 
 var log = logging.C()
+
+type testCommand struct{}
+
+var _ core.SimpleCommandPort = (*testCommand)(nil)
+
+func (c *testCommand) Name() string { return "test" }
+
+func (c *testCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "test",
+		Short:         "Test one or more modules by moniker",
+		Long:          "Test one or more modules by moniker using suite-based filtering.\n\nThis command discovers tests, applies inference rules (e.g., Go tests default to @L1),\nfilters by suite tags, and runs matching tests with consistent summary output.\n\nUse --suite to select which tests to run. The default runs suites not marked\nas extended_suite in config (typically unit + integration).\n\nExpected Output:\n  - Test execution results with pass/fail status\n  - Detailed test summary table showing modules, packages, and assertions\n  - Test logs written to out/test/<module>/ directory\n  - Exit code 0 if all tests pass, non-zero on failure\n\nExample:\n  test eac-cli                    # Test single module\n  test core clie                # Test multiple modules\n  test                                 # Test all modules\n  test eac-cli --suite acceptance # Run acceptance tests only",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "suite", Type: "string", Usage: "Filter tests by suite (default: non-extended suites from config)"},
+			{Name: "coverage", Type: "bool", Usage: "Enable coverage reporting"},
+			{Name: "skip-deps", Type: "bool", Usage: "Skip dependency checks before running tests"},
+			{Name: "skip-depm", Type: "bool", Usage: "Skip module dependency build artifact validation"},
+			{Name: "list-only", Type: "bool", Usage: "List tests without running them"},
+			{Name: "timings", Type: "bool", Usage: "Show detailed timing summary after tests complete"},
+			{Name: "debug", Type: "bool", Usage: "Enable debug logs to console (file logging always enabled)"},
+			{Name: "tui", Type: "bool", Usage: "Enable TUI console (default for local console mode)"},
+			{Name: "no-tui", Type: "bool", Usage: "Disable TUI console (use plain output)"},
+			{Name: "sequential", Type: "bool", Usage: "Run tests sequentially instead of parallel"},
+			{Name: "turbo", Type: "bool", Usage: "Enable turbo mode for faster testing (increases parallelism)"},
+			{Name: "skip-cache", Type: "bool", Usage: "Skip incremental cache, force full test run"},
+			{Name: "tui-height", Type: "int", Usage: "Set TUI console height (3-20, default: 6)"},
+			{Name: "ascii", Type: "bool", Usage: "Use ASCII-only characters in TUI"},
+			{Name: "skip-tui-delay", Type: "bool", Usage: "Skip TUI exit delay (exit immediately when done)"},
+		},
+	}
+}
+
+func (c *testCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return Test()
+}
 
 // TestConfig holds test execution configuration.
 type TestConfig struct {

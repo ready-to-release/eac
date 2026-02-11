@@ -1,22 +1,3 @@
-// Command: release cleanup
-// Short: Clean up orphaned tags and partial releases after failure
-// Long: Removes orphaned release artifacts when a release workflow fails.
-// Long:
-// Long: This command deletes:
-// Long:   - Partial GitHub releases (if any exist for the tag)
-// Long:   - Git tags from the remote repository
-// Long:
-// Long: Use this in release workflow cleanup jobs to prevent orphaned tags
-// Long: from blocking future release attempts.
-// Long:
-// Long: Expected Output:
-// Long:   - Deletion of partial GitHub releases (if any exist for the tag)
-// Long:   - Deletion of git tags from the remote repository
-// Long:
-// Long: Example:
-// Long:   release cleanup --tag clie/1.0.0
-// Long:   release cleanup --tag eac-ext/2.0.0
-// Flag.tag: type=string, usage=Tag name to clean up (e.g., clie/1.0.0)
 package release
 
 import (
@@ -25,9 +6,31 @@ import (
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
+
+type releaseCleanupCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseCleanupCommand)(nil)
+
+func (c *releaseCleanupCommand) Name() string { return "release cleanup" }
+
+func (c *releaseCleanupCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-cleanup",
+		Short:         "Clean up orphaned tags and partial releases after failure",
+		Long:          "Removes orphaned release artifacts when a release workflow fails.\n\nThis command deletes:\n  - Partial GitHub releases (if any exist for the tag)\n  - Git tags from the remote repository\n\nUse this in release workflow cleanup jobs to prevent orphaned tags\nfrom blocking future release attempts.\n\nExpected Output:\n  - Deletion of partial GitHub releases (if any exist for the tag)\n  - Deletion of git tags from the remote repository\n\nExample:\n  release cleanup --tag clie/1.0.0\n  release cleanup --tag eac-ext/2.0.0",
+		Flags: []core.FlagSpec{
+			{Name: "tag", Type: "string", Usage: "Tag name to clean up (e.g., clie/1.0.0)"},
+		},
+	}
+}
+
+func (c *releaseCleanupCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseCleanup()
+}
 
 func ReleaseCleanup() int {
 	// Validate flags before parsing

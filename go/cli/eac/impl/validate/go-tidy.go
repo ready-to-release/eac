@@ -1,10 +1,3 @@
-// Command: validate go-tidy
-// Short: Validate Go module dependencies are tidy
-// Long: Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.
-// Long:
-// Long: Expected Output:
-// Long:   Shows pass/fail status for 'go mod tidy' check on all Go modules.
-// Long:   Displays diff output for untidy modules. Exit code 0 if all tidy, 1 if any untidy.
 package validate
 
 import (
@@ -13,11 +6,30 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/goexec"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateGoTidyCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateGoTidyCommand)(nil)
+
+func (c *validateGoTidyCommand) Name() string { return "validate go-tidy" }
+
+func (c *validateGoTidyCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-go-tidy",
+		Short:         "Validate Go module dependencies are tidy",
+		Long:          "Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.\n\nExpected Output:\n  Shows pass/fail status for 'go mod tidy' check on all Go modules.\n  Displays diff output for untidy modules. Exit code 0 if all tidy, 1 if any untidy.",
+	}
+}
+
+func (c *validateGoTidyCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateGoTidy()
+}
 
 // ValidateGoTidy validates that all Go modules have tidy dependencies.
 func ValidateGoTidy() int {

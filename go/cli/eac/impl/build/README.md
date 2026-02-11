@@ -56,9 +56,7 @@ The build package is the largest command implementation in `eac`, orchestrating 
 - No tests for `unit_worker.go`, `unit_work.go`, `compression.go`, or `framework.go` -- only `buildflags`, `cache_checker`, and `build_freshness` have test files
 
 ### Pain Points
-- ~~`hasExistingArtifacts` reloads module registry on every call despite being invoked per-module in a loop~~ (resolved: `modRegistry` now passed as parameter from caller)
 - Artifact derivation runs in both `runModuleBuild` and `processAllArtifactDerivations`, relying on comments to explain why duplication is safe
 
 ### Optimization Opportunities
 - Split `buildUnitWorker` into a cache-check phase and a build-execute phase to improve readability and testability -- moderate effort
-- ~~Hoist config/module loading out of `hasExistingArtifacts`~~ (resolved)

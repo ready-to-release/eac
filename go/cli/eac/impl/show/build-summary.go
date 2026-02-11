@@ -1,17 +1,7 @@
-// Command: show build-summary
-// Short: Generate pretty build summary for a module
-// Long: The show build-summary command generates a formatted build summary with module-specific metrics and diagnostics.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive build summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted build summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
-// Long: - Success: includes status section, build output metrics table, artifacts section, and collapsible configuration
-// Long: - Failure: includes status section, diagnostics with last 50 lines of build log, timing data, and configuration
-// Flag.run-id: type=string, usage=GitHub Actions run ID for linking to workflow
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +13,27 @@ import (
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showBuildSummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showBuildSummaryCommand)(nil)
+
+func (c *showBuildSummaryCommand) Name() string { return "show build-summary" }
+
+func (c *showBuildSummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-build-summary",
+		Short:         "Generate pretty build summary for a module",
+		Long:          "The show build-summary command generates a formatted build summary with module-specific metrics and diagnostics.\nThis command is designed to be used in GitHub Actions workflows to create consistent, attractive build summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted build summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY\n- Success: includes status section, build output metrics table, artifacts section, and collapsible configuration\n- Failure: includes status section, diagnostics with last 50 lines of build log, timing data, and configuration",
+		Flags: []core.FlagSpec{
+			{Name: "run-id", Type: "string", Usage: "GitHub Actions run ID for linking to workflow"},
+		},
+	}
+}
+
+func (c *showBuildSummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowBuildSummary()
+}
 
 // ShowBuildSummary generates a pretty build summary.
 func ShowBuildSummary() int {

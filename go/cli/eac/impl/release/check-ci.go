@@ -1,28 +1,3 @@
-// Command: release check-ci
-// Short: Check CI status for a commit before releasing
-// Long: Waits for a successful CI workflow run on a specific commit.
-// Long:
-// Long: This command polls GitHub Actions to verify that a CI workflow has
-// Long: completed successfully for the given commit SHA. It's used by release
-// Long: workflows to ensure code is tested before releasing.
-// Long:
-// Long: Expected Output:
-// Long:   - Exit code 0 if CI workflow succeeded
-// Long:   - Exit code 1 if CI workflow failed or timeout occurred
-// Long:
-// Long: Exit codes:
-// Long:   0 - CI workflow succeeded
-// Long:   1 - CI workflow failed or timeout
-// Long:
-// Long: Example:
-// Long:   release check-ci --workflow ci-clie.yaml --commit abc123
-// Long:   release check-ci --workflow ci-eac-ext.yaml --commit abc123 --timeout 600
-// Long:   release check-ci --workflow ci-clie.yaml --commit abc123 --strict
-// Flag.workflow: type=string, usage=CI workflow filename (e.g., ci-clie.yaml)
-// Flag.commit: type=string, usage=Commit SHA to check
-// Flag.timeout: type=int, usage=Maximum wait time in seconds (default: 300)
-// Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
-// Flag.strict: type=bool, usage=Require exact commit match (no ancestor check)
 package release
 
 import (
@@ -34,12 +9,38 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseCheckCICommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseCheckCICommand)(nil)
+
+func (c *releaseCheckCICommand) Name() string { return "release check-ci" }
+
+func (c *releaseCheckCICommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-check-ci",
+		Short:         "Check CI status for a commit before releasing",
+		Long:          "Waits for a successful CI workflow run on a specific commit.\n\nThis command polls GitHub Actions to verify that a CI workflow has\ncompleted successfully for the given commit SHA. It's used by release\nworkflows to ensure code is tested before releasing.\n\nExpected Output:\n  - Exit code 0 if CI workflow succeeded\n  - Exit code 1 if CI workflow failed or timeout occurred\n\nExit codes:\n  0 - CI workflow succeeded\n  1 - CI workflow failed or timeout\n\nExample:\n  release check-ci --workflow ci-clie.yaml --commit abc123\n  release check-ci --workflow ci-eac-ext.yaml --commit abc123 --timeout 600\n  release check-ci --workflow ci-clie.yaml --commit abc123 --strict",
+		Flags: []core.FlagSpec{
+			{Name: "workflow", Type: "string", Usage: "CI workflow filename (e.g., ci-clie.yaml)"},
+			{Name: "commit", Type: "string", Usage: "Commit SHA to check"},
+			{Name: "timeout", Type: "int", Usage: "Maximum wait time in seconds (default: 300)"},
+			{Name: "interval", Type: "int", Usage: "Poll interval in seconds (default: 15)"},
+			{Name: "strict", Type: "bool", Usage: "Require exact commit match (no ancestor check)"},
+		},
+	}
+}
+
+func (c *releaseCheckCICommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseCheckCI()
+}
 
 // CIRunStatus represents the status of a GitHub Actions workflow run.
 type CIRunStatus struct {

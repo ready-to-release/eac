@@ -1,29 +1,16 @@
-// Command: update evidence
-// Short: Build evidence documentation for a module
-// Long: Generates evidence PDFs from a module's evidence_books configuration.
-// Long: Evidence books are markdown-based documentation packages that aggregate
-// Long: test results, security scans, and other compliance artifacts.
-// Long:
-// Long: Unlike regular books built via 'build', evidence books are built independently
-// Long: using this command, producing PDFs in out/evidence/<module>/.
-// Long:
-// Long: Expected Output:
-// Long:   - PDF files in out/evidence/<module>/<book-name>-dark.pdf
-// Long:   - One PDF per evidence book configured for the module
-// Flag.all: type=bool, default=false, usage=Build evidence for all modules with evidence_books
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress
 // Usage: update evidence <module>
 package evidence
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/builders"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
@@ -32,12 +19,36 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type updateEvidenceCommand struct{}
 
-func init() {
-	registry.Register(UpdateEvidence)
+var _ core.SimpleCommandPort = (*updateEvidenceCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&updateEvidenceCommand{},
+	}
 }
 
+func (c *updateEvidenceCommand) Name() string { return "update evidence" }
+
+func (c *updateEvidenceCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-evidence",
+		Short:         "Build evidence documentation for a module",
+		Long:          "Generates evidence PDFs from a module's evidence_books configuration.\nEvidence books are markdown-based documentation packages that aggregate\ntest results, security scans, and other compliance artifacts.\n\nUnlike regular books built via 'build', evidence books are built independently\nusing this command, producing PDFs in out/evidence/<module>/.\n\nExpected Output:\n  - PDF files in out/evidence/<module>/<book-name>-dark.pdf\n  - One PDF per evidence book configured for the module",
+		Flags: []core.FlagSpec{
+			{Name: "all", Type: "bool", DefaultValue: "false", Usage: "Build evidence for all modules with evidence_books"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress"},
+		},
+	}
+}
+
+func (c *updateEvidenceCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return UpdateEvidence()
+}
+
+var log = logging.C()
 // UpdateEvidence builds evidence documentation for modules.
 func UpdateEvidence() int {
 	// Parse flags

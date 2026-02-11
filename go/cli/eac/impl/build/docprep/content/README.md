@@ -42,7 +42,7 @@ The content package provides four phases in the docprep preprocessing pipeline w
 ## Code Health
 
 ### Tech Debt
-- ~~`cmdhelp.go` is 819 lines~~ (resolved: split into `cmdhelp.go`, `cmdhelp_format.go`, `cmdhelp_parse.go`, `cmdhelp_helpers.go`); the ~20 exported `Format*` functions still share similar patterns that could use a template-based approach
+- The ~20 exported `Format*` functions still share similar patterns that could use a template-based approach
 - `cmdhelp_parse.go`: `ParseHelpOutput` is ~121 lines with a state-machine parser that is hard to extend for new help sections
 
 ### Pain Points

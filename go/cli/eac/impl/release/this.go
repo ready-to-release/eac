@@ -1,42 +1,7 @@
-// Command: release this
-// Short: Finalize changelog and prepare module for release
-// Long: Updates the changelog with all commits since the last release and prepares
-// Long: the module for release.
-// Long:
-// Long: This command:
-// Long:   1. Analyzes commits since the last release tag
-// Long:   2. Generates changelog entries from conventional commits
-// Long:   3. Merges any manual entries from [Unreleased] section
-// Long:   4. Calculates the next version (respecting constraints from .eac/repository.yml)
-// Long:   5. Adds a new version section to the changelog
-// Long:   6. Clears the [Unreleased] section
-// Long:   7. Writes the updated changelog
-// Long:
-// Long: Manual entries in [Unreleased] are preserved and merged with auto-generated
-// Long: entries. This allows team members to add changelog entries that aren't tied
-// Long: to specific commits.
-// Long:
-// Long: After running this command, commit the changelog and create a PR. Once merged,
-// Long: the release-auto workflow will detect the new version and create the git tag,
-// Long: which triggers the module's release workflow.
-// Long:
-// Long: Expected Output:
-// Long:   - Updated changelog with new version section added
-// Long:   - [Unreleased] section cleared
-// Long:   - Changelog file ready to be committed and submitted in a pull request
-// Long:
-// Long: Examples:
-// Long:   release this clie                      # Update single module changelog
-// Long:   release this clie eac-ext              # Update multiple modules
-// Long:   release this clie eac-ext --dry-run    # Preview without writing
-// Long:   release this clie --json               # Output result as JSON
-// Flag.dry-run: type=bool, usage=Preview changes without writing to changelog
-// Flag.json: type=bool, usage=Output result in JSON format
-// Flag.date: type=string, usage=Override release date (YYYY-MM-DD format)
-// Args: modules
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -44,15 +9,40 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/releasenotes"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseThisCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseThisCommand)(nil)
+
+func (c *releaseThisCommand) Name() string { return "release this" }
+
+func (c *releaseThisCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-this",
+		Short:         "Finalize changelog and prepare module for release",
+		Long:          "Updates the changelog with all commits since the last release and prepares\nthe module for release.\n\nThis command:\n  1. Analyzes commits since the last release tag\n  2. Generates changelog entries from conventional commits\n  3. Merges any manual entries from [Unreleased] section\n  4. Calculates the next version (respecting constraints from .eac/repository.yml)\n  5. Adds a new version section to the changelog\n  6. Clears the [Unreleased] section\n  7. Writes the updated changelog\n\nManual entries in [Unreleased] are preserved and merged with auto-generated\nentries. This allows team members to add changelog entries that aren't tied\nto specific commits.\n\nAfter running this command, commit the changelog and create a PR. Once merged,\nthe release-auto workflow will detect the new version and create the git tag,\nwhich triggers the module's release workflow.\n\nExpected Output:\n  - Updated changelog with new version section added\n  - [Unreleased] section cleared\n  - Changelog file ready to be committed and submitted in a pull request\n\nExamples:\n  release this clie                      # Update single module changelog\n  release this clie eac-ext              # Update multiple modules\n  release this clie eac-ext --dry-run    # Preview without writing\n  release this clie --json               # Output result as JSON",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "dry-run", Type: "bool", Usage: "Preview changes without writing to changelog"},
+			{Name: "json", Type: "bool", Usage: "Output result in JSON format"},
+			{Name: "date", Type: "string", Usage: "Override release date (YYYY-MM-DD format)"},
+		},
+	}
+}
+
+func (c *releaseThisCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseThis()
+}
 
 // ReleaseResult contains the result of a release operation.
 type ReleaseResult struct {
@@ -213,7 +203,7 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	}
 
 	// Load workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to get workspace root: %v", err)
 		return result

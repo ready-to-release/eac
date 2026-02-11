@@ -1,37 +1,48 @@
-// Command: show ci-summary
-// Short: Generate CI workflow summary for a module
-// Flag.build: type=string, usage=Build job result (success/failure/skipped)
-// Flag.container: type=bool, default=false, usage=Whether this is a container module
-// Flag.container-test: type=string, usage=Container test result (for container modules)
-// Flag.container-test-enabled: type=bool, default=false, usage=Whether container test was enabled
-// Flag.test-linux: type=string, usage=Linux test result (for binary modules)
-// Flag.test-windows: type=string, usage=Windows test result (for binary modules)
-// Flag.test-macos: type=string, usage=macOS test result (for binary modules)
-// Flag.test-on-windows: type=bool, default=false, usage=Whether Windows tests were enabled
-// Flag.test-on-macos: type=bool, default=false, usage=Whether macOS tests were enabled
-// Flag.scan: type=string, usage=Security scan result
-// Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
-// Flag.evidence: type=string, usage=Evidence build result
-// Flag.evidence-enabled: type=bool, default=false, usage=Whether evidence building was enabled
-// Long: The show ci-summary command generates a formatted CI workflow summary with job results.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent CI summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted CI summary with job results table
-// Long: - Shows build, test (Linux/Windows/macOS), container test, and scan results
-// Long: - Supports both container and binary module types
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showCISummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showCISummaryCommand)(nil)
+
+func (c *showCISummaryCommand) Name() string { return "show ci-summary" }
+
+func (c *showCISummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-ci-summary",
+		Short:         "Generate CI workflow summary for a module",
+		Long:          "The show ci-summary command generates a formatted CI workflow summary with job results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted CI summary with job results table\n- Shows build, test (Linux/Windows/macOS), container test, and scan results\n- Supports both container and binary module types",
+		Flags: []core.FlagSpec{
+			{Name: "build", Type: "string", Usage: "Build job result (success/failure/skipped)"},
+			{Name: "container", Type: "bool", DefaultValue: "false", Usage: "Whether this is a container module"},
+			{Name: "container-test", Type: "string", Usage: "Container test result (for container modules)"},
+			{Name: "container-test-enabled", Type: "bool", DefaultValue: "false", Usage: "Whether container test was enabled"},
+			{Name: "test-linux", Type: "string", Usage: "Linux test result (for binary modules)"},
+			{Name: "test-windows", Type: "string", Usage: "Windows test result (for binary modules)"},
+			{Name: "test-macos", Type: "string", Usage: "macOS test result (for binary modules)"},
+			{Name: "test-on-windows", Type: "bool", DefaultValue: "false", Usage: "Whether Windows tests were enabled"},
+			{Name: "test-on-macos", Type: "bool", DefaultValue: "false", Usage: "Whether macOS tests were enabled"},
+			{Name: "scan", Type: "string", Usage: "Security scan result"},
+			{Name: "scans-enabled", Type: "bool", DefaultValue: "false", Usage: "Whether scans were enabled"},
+			{Name: "evidence", Type: "string", Usage: "Evidence build result"},
+			{Name: "evidence-enabled", Type: "bool", DefaultValue: "false", Usage: "Whether evidence building was enabled"},
+		},
+	}
+}
+
+func (c *showCISummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowCISummary()
+}
 
 // ShowCISummary generates a CI workflow summary.
 func ShowCISummary() int {

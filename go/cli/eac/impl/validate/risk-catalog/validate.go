@@ -1,37 +1,45 @@
-// Command: validate risk-catalog
-// Short: Validate OSCAL catalogs against OSCAL 1.1.3 schema
-// Long: The validate risk-catalog command validates OSCAL catalog documents against the official
-// Long: OSCAL 1.1.3 JSON schema from NIST.
-// Long:
-// Long: Catalogs define security control libraries (e.g., NIST 800-53) with structured control
-// Long: definitions, parameters, and supporting materials.
-// Long:
-// Long: Validation uses the official OSCAL JSON schema:
-// Long: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
-// Long:
-// Long: Expected Output:
-// Long:   Displays OSCAL schema validation results for catalog document.
-// Long:   Shows missing required fields, schema violations, and structural errors.
-// Long:   Exit code 0 if valid OSCAL 1.1.3 catalog, 1 if validation errors.
-// Args: file
 package riskcatalog
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/validation"
 	"github.com/ready-to-release/eac/go/core/validation/formats/oscal"
 )
 
 var log = logging.C()
 
-func init() {
-	registry.Register(ValidateRiskCatalog)
+type validateRiskCatalogCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateRiskCatalogCommand)(nil)
+
+func (c *validateRiskCatalogCommand) Name() string { return "validate risk-catalog" }
+
+func (c *validateRiskCatalogCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-risk-catalog",
+		Short:         "Validate OSCAL catalogs against OSCAL 1.1.3 schema",
+		Long:          "The validate risk-catalog command validates OSCAL catalog documents against the official\nOSCAL 1.1.3 JSON schema from NIST.\n\nCatalogs define security control libraries (e.g., NIST 800-53) with structured control\ndefinitions, parameters, and supporting materials.\n\nValidation uses the official OSCAL JSON schema:\nhttps://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json\n\nExpected Output:\n  Displays OSCAL schema validation results for catalog document.\n  Shows missing required fields, schema violations, and structural errors.\n  Exit code 0 if valid OSCAL 1.1.3 catalog, 1 if validation errors.",
+		Args:          "file",
+	}
+}
+
+func (c *validateRiskCatalogCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateRiskCatalog()
+}
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&validateRiskCatalogCommand{},
+	}
 }
 
 // Config holds configuration for validate risk-catalog command.
@@ -72,7 +80,7 @@ func parseConfig() (*Config, error) {
 	config := &Config{}
 
 	// Get workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}

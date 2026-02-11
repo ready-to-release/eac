@@ -1,33 +1,32 @@
-// Command: validate release-version
-// Short: Validate release version format
-// Long: Validates that a version string is a valid semantic version.
-// Long:
-// Long: Checks:
-// Long:   - Must be valid semver format: MAJOR.MINOR.PATCH (e.g., 1.2.3)
-// Long:   - Must not have 'v' prefix (e.g., v1.2.3 is rejected)
-// Long:   - Major, minor, and patch must be non-negative integers
-// Long:   - No leading zeros allowed (except for 0 itself)
-// Long:
-// Long: Expected Output:
-// Long:   Exit code 0 if valid semver format, exit code 1 if invalid.
-// Long:   Error message displayed for invalid versions (v prefix, wrong format, leading zeros).
-// Long:   No output on success (silent success).
-// Long:
-// Long: Examples:
-// Long:   validate release-version 1.2.3        # Valid
-// Long:   validate release-version 0.1.0        # Valid
-// Long:   validate release-version v1.2.3       # Invalid: has 'v' prefix
-// Long:   validate release-version 1.2          # Invalid: missing patch
-// Long:   validate release-version 01.2.3       # Invalid: leading zero
 package validate
 
 import (
+	"context"
 	"os"
 	"regexp"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type validateReleaseVersionCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateReleaseVersionCommand)(nil)
+
+func (c *validateReleaseVersionCommand) Name() string { return "validate release-version" }
+
+func (c *validateReleaseVersionCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-release-version",
+		Short:         "Validate release version format",
+		Long:          "Validates that a version string is a valid semantic version.\n\nChecks:\n  - Must be valid semver format: MAJOR.MINOR.PATCH (e.g., 1.2.3)\n  - Must not have 'v' prefix (e.g., v1.2.3 is rejected)\n  - Major, minor, and patch must be non-negative integers\n  - No leading zeros allowed (except for 0 itself)\n\nExpected Output:\n  Exit code 0 if valid semver format, exit code 1 if invalid.\n  Error message displayed for invalid versions (v prefix, wrong format, leading zeros).\n  No output on success (silent success).\n\nExamples:\n  validate release-version 1.2.3        # Valid\n  validate release-version 0.1.0        # Valid\n  validate release-version v1.2.3       # Invalid: has 'v' prefix\n  validate release-version 1.2          # Invalid: missing patch\n  validate release-version 01.2.3       # Invalid: leading zero",
+	}
+}
+
+func (c *validateReleaseVersionCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateReleaseVersion()
+}
 
 // Semver regex: matches MAJOR.MINOR.PATCH where each is a non-negative integer
 // without leading zeros (except for 0 itself).

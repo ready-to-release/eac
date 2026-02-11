@@ -1,26 +1,31 @@
-// Command: release eac-ext
-// Short: Create a git tag for releasing eac-ext using semver format
-// Long: Creates a git tag in the format 'eac-ext/x.y.z' to trigger the release workflow.
-// Long: The tag follows semantic versioning (semver) and will automatically trigger
-// Long: the GitHub Actions workflow to retag and publish the container image.
-// Long: The version must follow semver format (x.y.z) where x, y, z are non-negative integers.
-// Long: IMPORTANT: This command requires --tag-direct flag to prevent accidental releases.
-// Long: The preferred flow is: release this → commit → push → workflow creates tag.
-// Long: Use --tag-direct only when you need to tag directly from devbox.
-// Long:
-// Long: Expected Output:
-// Long:   - Git tag created in format eac-ext/x.y.z
-// Long:   - Tag triggers the release workflow to retag and publish container image
-// Long:
-// Long: Example: release eac-ext --tag-direct 0.0.7
 package release
 
 import (
+	"context"
 	"flag"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type releaseEacExtCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseEacExtCommand)(nil)
+
+func (c *releaseEacExtCommand) Name() string { return "release eac-ext" }
+
+func (c *releaseEacExtCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-eac-ext",
+		Short:         "Create a git tag for releasing eac-ext using semver format",
+		Long:          "Creates a git tag in the format 'eac-ext/x.y.z' to trigger the release workflow.\nThe tag follows semantic versioning (semver) and will automatically trigger\nthe GitHub Actions workflow to retag and publish the container image.\nThe version must follow semver format (x.y.z) where x, y, z are non-negative integers.\nIMPORTANT: This command requires --tag-direct flag to prevent accidental releases.\nThe preferred flow is: release this \u2192 commit \u2192 push \u2192 workflow creates tag.\nUse --tag-direct only when you need to tag directly from devbox.\n\nExpected Output:\n  - Git tag created in format eac-ext/x.y.z\n  - Tag triggers the release workflow to retag and publish container image\n\nExample: release eac-ext --tag-direct 0.0.7",
+	}
+}
+
+func (c *releaseEacExtCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseExtEac()
+}
 
 func ReleaseExtEac() int {
 	// Validate flags before parsing

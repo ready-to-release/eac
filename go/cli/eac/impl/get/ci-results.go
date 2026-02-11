@@ -1,34 +1,7 @@
-// Command: get ci-results
-// Short: Get CI workflow run results with job details and artifact links
-// Long: Returns structured CI run data including job results, artifacts, and diagnostic links.
-// Long:
-// Long: Queries GitHub Actions for CI workflow runs at a given commit SHA or run ID,
-// Long: then enriches each run with job-level details and downloadable artifact info.
-// Long:
-// Long: Input Detection:
-// Long:   - 40-char hex or 7+ hex prefix: treated as commit SHA
-// Long:   - Numeric value: treated as a specific run ID
-// Long:   - Omitted: auto-detects SHA (GITHUB_SHA → origin/main → git HEAD)
-// Long:
-// Long: Output includes per-module:
-// Long:   - Workflow run status and conclusion
-// Long:   - Job-level results with durations
-// Long:   - Artifact names and sizes
-// Long:   - Diagnostic links (web URL, gh CLI commands)
-// Long:
-// Long: Example:
-// Long:   get ci-results                          # Current HEAD
-// Long:   get ci-results abc1234                   # Specific commit
-// Long:   get ci-results abc1234 core clibase      # Specific modules
-// Long:   get ci-results 12345678                   # Specific run ID
-// Long:   get ci-results abc1234 --as-json          # JSON output
-// Args: [sha-or-run-id] [module...]
-// Flag.as-yaml: type=bool, usage=Output as YAML (default format)
-// Flag.as-json: type=bool, usage=Output as JSON
-// Flag.as-toml: type=bool, usage=Output as TOML
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -38,12 +11,58 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getCIResultsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getCIResultsCommand)(nil)
+
+func (c *getCIResultsCommand) Name() string { return "get ci-results" }
+
+func (c *getCIResultsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-ci-results",
+		Short:         "Get CI workflow run results with job details and artifact links",
+		Long: "Returns structured CI run data including job results, artifacts, and diagnostic links.\n" +
+			"\n" +
+			"Queries GitHub Actions for CI workflow runs at a given commit SHA or run ID,\n" +
+			"then enriches each run with job-level details and downloadable artifact info.\n" +
+			"\n" +
+			"Input Detection:\n" +
+			"  - 40-char hex or 7+ hex prefix: treated as commit SHA\n" +
+			"  - Numeric value: treated as a specific run ID\n" +
+			"  - Omitted: auto-detects SHA (GITHUB_SHA -> origin/main -> git HEAD)\n" +
+			"\n" +
+			"Output includes per-module:\n" +
+			"  - Workflow run status and conclusion\n" +
+			"  - Job-level results with durations\n" +
+			"  - Artifact names and sizes\n" +
+			"  - Diagnostic links (web URL, gh CLI commands)\n" +
+			"\n" +
+			"Example:\n" +
+			"  get ci-results                          # Current HEAD\n" +
+			"  get ci-results abc1234                   # Specific commit\n" +
+			"  get ci-results abc1234 core clibase      # Specific modules\n" +
+			"  get ci-results 12345678                   # Specific run ID\n" +
+			"  get ci-results abc1234 --as-json          # JSON output",
+		Args: "[sha-or-run-id] [module...]",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default format)"},
+			{Name: "as-json", Type: "bool", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", Usage: "Output as TOML"},
+		},
+	}
+}
+
+func (c *getCIResultsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetCIResults()
+}
 
 // CIResultsSummary is the top-level result for get ci-results.
 type CIResultsSummary struct {

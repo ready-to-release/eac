@@ -1,38 +1,57 @@
-// Command: get test-results
-// Short: Get test execution results from test manifests
-// Long: Get test execution results from test manifests in structured format.
-// Long:
-// Long: This command reads test UoW manifests from out/test/ and provides
-// Long: comprehensive test execution data including results, timing, coverage, and
-// Long: security control mappings. The output can be formatted as YAML, JSON, or TOML.
-// Long:
-// Long: Output includes:
-// Long:   - Test results with status (passed/failed/skipped)
-// Long:   - Suite assignment and timing data
-// Long:   - Specification coverage for godog tests
-// Long:   - Control tag summaries
-// Long:
-// Long: Example:
-// Long:   get test-results
-// Long:   get test-results eac-ext
-// Long:   get test-results eac-ext clie
-// Long:   get test-results eac-ext --as-json
-// Args: [module...]
-// Flag.as-yaml: type=bool, usage=Output as YAML (default format)
-// Flag.as-json: type=bool, usage=Output as JSON
-// Flag.as-toml: type=bool, usage=Output as TOML
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type getTestResultsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getTestResultsCommand)(nil)
+
+func (c *getTestResultsCommand) Name() string { return "get test-results" }
+
+func (c *getTestResultsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-test-results",
+		Short:         "Get test execution results from test manifests",
+		Long: "Get test execution results from test manifests in structured format.\n" +
+			"\n" +
+			"This command reads test UoW manifests from out/test/ and provides\n" +
+			"comprehensive test execution data including results, timing, coverage, and\n" +
+			"security control mappings. The output can be formatted as YAML, JSON, or TOML.\n" +
+			"\n" +
+			"Output includes:\n" +
+			"  - Test results with status (passed/failed/skipped)\n" +
+			"  - Suite assignment and timing data\n" +
+			"  - Specification coverage for godog tests\n" +
+			"  - Control tag summaries\n" +
+			"\n" +
+			"Example:\n" +
+			"  get test-results\n" +
+			"  get test-results eac-ext\n" +
+			"  get test-results eac-ext clie\n" +
+			"  get test-results eac-ext --as-json",
+		Args: "[module...]",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default format)"},
+			{Name: "as-json", Type: "bool", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", Usage: "Output as TOML"},
+		},
+	}
+}
+
+func (c *getTestResultsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetTestResults()
+}
 
 func GetTestResults() int {
 	// Validate flags before parsing

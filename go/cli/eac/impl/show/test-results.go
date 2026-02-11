@@ -1,19 +1,7 @@
-// Command: show test-results
-// Short: Show test execution results from test manifests
-// Long: Shows test execution results from test manifests with:
-// Long:   - Module overview with pass/fail counts
-// Long:   - Specification coverage for godog tests
-// Long:   - Control tag summaries
-// Long:   - Detailed test results table
-// Long:
-// Long: Example:
-// Long:   show test-results
-// Long:   show test-results eac-ext
-// Long:   show test-results eac-ext clie
-// Args: [module...]
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +9,7 @@ import (
 	"text/template"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/flags"
@@ -29,6 +18,25 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
+
+type showTestResultsCommand struct{}
+
+var _ core.SimpleCommandPort = (*showTestResultsCommand)(nil)
+
+func (c *showTestResultsCommand) Name() string { return "show test-results" }
+
+func (c *showTestResultsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-test-results",
+		Short:         "Show test execution results from test manifests",
+		Long:          "Shows test execution results from test manifests with:\n  - Module overview with pass/fail counts\n  - Specification coverage for godog tests\n  - Control tag summaries\n  - Detailed test results table\n\nExample:\n  show test-results\n  show test-results eac-ext\n  show test-results eac-ext clie",
+		Args:          "[module...]",
+	}
+}
+
+func (c *showTestResultsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowTestResults()
+}
 
 // TestResultsData holds data for the template with formatted time strings.
 type TestResultsData struct {

@@ -1,25 +1,36 @@
-// Command: show files
-// Short: Display all tracked files and their owning modules
-// Long: The show files command displays all tracked files in the repository with their module ownership.
-// Long: Shows which files belong to which modules, helping understand repository structure.
-// Long:
-// Long: Expected Output:
-// Long: - Table with file paths and owning modules (comma-separated if multiple)
-// Long: - Files with no module ownership shown as "NONE"
-// Long: - Sorted by module for easy grouping
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
+
+type showFilesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showFilesCommand)(nil)
+
+func (c *showFilesCommand) Name() string { return "show files" }
+
+func (c *showFilesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-files",
+		Short:         "Display all tracked files and their owning modules",
+		Long:          "The show files command displays all tracked files in the repository with their module ownership.\nShows which files belong to which modules, helping understand repository structure.\n\nExpected Output:\n- Table with file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Sorted by module for easy grouping",
+	}
+}
+
+func (c *showFilesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowFiles()
+}
 
 func ShowFiles() int {
 	// Validate flags against registry metadata

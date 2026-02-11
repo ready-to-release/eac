@@ -1,34 +1,41 @@
-// Command: get components
-// Short: List all components with dependencies and phase information
-// Long: Returns structured data about all components in the repository.
-// Long: Each component includes its type, root path, phase support (build, lint, test, scan),
-// Long: and bidirectional dependencies (depends_on, depended_by).
-// Long:
-// Long: Filter Examples:
-// Long:   get components --module eac    # Components in specific module
-// Long:   get components --type go                # Only Go components
-// Long:   get components --buildable              # Only buildable components
-// Long:   get components --lintable --scannable   # Lintable AND scannable
-// Flag.module: type=string, default="", usage=Filter to specific module
-// Flag.type: type=string, default="", usage=Filter by component type (go, typescript, book, etc.)
-// Flag.buildable: type=bool, default=false, usage=Only components with build phase
-// Flag.lintable: type=bool, default=false, usage=Only components with lint phase
-// Flag.testable: type=bool, default=false, usage=Only components with test phase
-// Flag.scannable: type=bool, default=false, usage=Only components with scan phase
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getComponentsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getComponentsCommand)(nil)
+
+func (c *getComponentsCommand) Name() string { return "get components" }
+
+func (c *getComponentsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-components",
+		Short:         "List all components with dependencies and phase information",
+		Long:          "Returns structured data about all components in the repository.\nEach component includes its type, root path, phase support (build, lint, test, scan),\nand bidirectional dependencies (depends_on, depended_by).\n\nFilter Examples:\n  get components --module eac    # Components in specific module\n  get components --type go                # Only Go components\n  get components --buildable              # Only buildable components\n  get components --lintable --scannable   # Lintable AND scannable",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", DefaultValue: "", Usage: "Filter to specific module"},
+			{Name: "type", Type: "string", DefaultValue: "", Usage: "Filter by component type (go, typescript, book, etc.)"},
+			{Name: "buildable", Type: "bool", DefaultValue: "false", Usage: "Only components with build phase"},
+			{Name: "lintable", Type: "bool", DefaultValue: "false", Usage: "Only components with lint phase"},
+			{Name: "testable", Type: "bool", DefaultValue: "false", Usage: "Only components with test phase"},
+			{Name: "scannable", Type: "bool", DefaultValue: "false", Usage: "Only components with scan phase"},
+		},
+	}
+}
+
+func (c *getComponentsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetComponents()
+}
 
 // componentFilters holds the parsed filter flags.
 type componentFilters struct {

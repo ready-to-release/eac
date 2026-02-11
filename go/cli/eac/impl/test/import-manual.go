@@ -1,32 +1,7 @@
-// Command: test import-manual
-// Short: Import manual test results for a module release
-// Args:
-// Long: Import manual test results from a JSON file and validate against schemas,
-// Long: exported scenarios, and repository configuration.
-// Long:
-// Long: This command validates manual test results, checks for conflicts, and stores
-// Long: them in the repository for later merging into test manifests.
-// Long:
-// Long: Validation includes:
-// Long: - JSON schema compliance
-// Long: - Release version matching
-// Long: - Module validation
-// Long: - Scenario ID cross-validation against exports
-// Long: - Conflict detection (existing results)
-// Long:
-// Long: Expected Output:
-// Long:   - Results stored in test-results/<module>/<version>/manual-results.json
-// Long:   - Exit code 0 on success, non-zero on error
-// Long:
-// Long: Example:
-// Long:   test import-manual --input results.json --release v1.2.0
-// Long:   test import-manual --input results.json --release v1.2.0 --force
-// Flag.input: type=string, usage=Path to manual test results JSON file (required)
-// Flag.release: type=string, usage=Release version being tested (required)
-// Flag.force: type=bool, usage=Overwrite existing results if present
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,9 +9,33 @@ import (
 	"regexp"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type testImportManualCommand struct{}
+
+var _ core.SimpleCommandPort = (*testImportManualCommand)(nil)
+
+func (c *testImportManualCommand) Name() string { return "test import-manual" }
+
+func (c *testImportManualCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "test-import-manual",
+		Short:         "Import manual test results for a module release",
+		Long:          "Import manual test results from a JSON file and validate against schemas,\nexported scenarios, and repository configuration.\n\nThis command validates manual test results, checks for conflicts, and stores\nthem in the repository for later merging into test manifests.\n\nValidation includes:\n- JSON schema compliance\n- Release version matching\n- Module validation\n- Scenario ID cross-validation against exports\n- Conflict detection (existing results)\n\nExpected Output:\n  - Results stored in test-results/<module>/<version>/manual-results.json\n  - Exit code 0 on success, non-zero on error\n\nExample:\n  test import-manual --input results.json --release v1.2.0\n  test import-manual --input results.json --release v1.2.0 --force",
+		Flags: []core.FlagSpec{
+			{Name: "input", Type: "string", Usage: "Path to manual test results JSON file (required)"},
+			{Name: "release", Type: "string", Usage: "Release version being tested (required)"},
+			{Name: "force", Type: "bool", Usage: "Overwrite existing results if present"},
+		},
+	}
+}
+
+func (c *testImportManualCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ImportManual()
+}
 
 // ManualTestResults represents the imported manual test results.
 type ManualTestResults struct {

@@ -1,21 +1,34 @@
-// Command: validate module-files
-// Short: Validate module file ownership
-// Long: Validates that all files have proper module ownership and no files are unordered.
-// Long:
-// Long: Expected Output:
-// Long:   Displays files without proper module ownership (unordered or multi-module files).
-// Long:   Shows file paths and claiming modules. Exit code 0 if all files properly owned, 1 if issues found.
 package validate
 
 import (
+	"context"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateModuleFilesCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateModuleFilesCommand)(nil)
+
+func (c *validateModuleFilesCommand) Name() string { return "validate module-files" }
+
+func (c *validateModuleFilesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-module-files",
+		Short:         "Validate module file ownership",
+		Long:          "Validates that all files have proper module ownership and no files are unordered.\n\nExpected Output:\n  Displays files without proper module ownership (unordered or multi-module files).\n  Shows file paths and claiming modules. Exit code 0 if all files properly owned, 1 if issues found.",
+	}
+}
+
+func (c *validateModuleFilesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateModuleFiles()
+}
 
 // ValidateModuleFiles validates file ownership in modules.
 func ValidateModuleFiles() int {

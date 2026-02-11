@@ -1,41 +1,42 @@
-// Command: get modules
-// Short: Get module contracts with optional filtering
-// Flag.calver: type=bool, default=false, usage=Filter to only CalVer versioned modules
-// Flag.semver: type=bool, default=false, usage=Filter to only SemVer versioned modules
-// Flag.with-ci: type=bool, default=false, usage=Filter to modules that have a CI workflow
-// Flag.with-release: type=bool, default=false, usage=Filter to modules that have a release workflow
-// Flag.bundle: type=bool, default=false, usage=Filter to bundle modules (CalVer with release but no CI)
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//	--as-<name>: Output using custom renderer (e.g., --as-summary, --as-count)
-//
-// Long:
-// Long: Expected Output:
-// Long: YAML list of all module contracts, each containing:
-// Long:   - moniker: Unique module identifier
-// Long:   - type: Module type (e.g., go, container, typescript, static)
-// Long:   - root: Root path relative to repository
-// Long:   - depends_on: List of dependency module monikers
-// Long:   - Additional metadata (books, files, etc.)
-// Long:
-// Long: Filter Examples:
-// Long:   get modules --calver --with-ci     # CalVer modules that auto-release on CI pass
-// Long:   get modules --calver --bundle      # CalVer bundle modules (release when deps change)
-// Long:   get modules --semver               # Traditional versioned modules
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getModulesCommand struct{}
+
+var _ core.SimpleCommandPort = (*getModulesCommand)(nil)
+
+func (c *getModulesCommand) Name() string { return "get modules" }
+
+func (c *getModulesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-modules",
+		Short:         "Get module contracts with optional filtering",
+		Long:          "Expected Output:\nYAML list of all module contracts, each containing:\n  - moniker: Unique module identifier\n  - type: Module type (e.g., go, container, typescript, static)\n  - root: Root path relative to repository\n  - depends_on: List of dependency module monikers\n  - Additional metadata (books, files, etc.)\n\nFilter Examples:\n  get modules --calver --with-ci     # CalVer modules that auto-release on CI pass\n  get modules --calver --bundle      # CalVer bundle modules (release when deps change)\n  get modules --semver               # Traditional versioned modules",
+		Flags: []core.FlagSpec{
+			{Name: "calver", Type: "bool", DefaultValue: "false", Usage: "Filter to only CalVer versioned modules"},
+			{Name: "semver", Type: "bool", DefaultValue: "false", Usage: "Filter to only SemVer versioned modules"},
+			{Name: "with-ci", Type: "bool", DefaultValue: "false", Usage: "Filter to modules that have a CI workflow"},
+			{Name: "with-release", Type: "bool", DefaultValue: "false", Usage: "Filter to modules that have a release workflow"},
+			{Name: "bundle", Type: "bool", DefaultValue: "false", Usage: "Filter to bundle modules (CalVer with release but no CI)"},
+		},
+	}
+}
+
+func (c *getModulesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetModules()
+}
 
 // moduleFilters holds the parsed filter flags.
 type moduleFilters struct {

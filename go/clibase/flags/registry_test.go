@@ -1,12 +1,10 @@
 package flags
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestLevenshteinDistance(t *testing.T) {
@@ -37,7 +35,7 @@ func TestLevenshteinDistance(t *testing.T) {
 }
 
 func TestSuggestSimilarFlags(t *testing.T) {
-	validFlags := []registry.FlagMetadata{
+	validFlags := []core.FlagSpec{
 		{Name: "ai-token"},
 		{Name: "ai-provider"},
 		{Name: "module"},
@@ -69,10 +67,10 @@ func TestSuggestSimilarFlags(t *testing.T) {
 	}
 }
 
-func TestFindFlagMetadata(t *testing.T) {
-	flags := []registry.FlagMetadata{
-		{Name: "ai-provider", Shorthand: "-a"},
-		{Name: "debug", Shorthand: "-d"},
+func TestFindFlag(t *testing.T) {
+	flags := []core.FlagSpec{
+		{Name: "ai-provider", Shorthand: "a"},
+		{Name: "debug", Shorthand: "d"},
 		{Name: "module"},
 	}
 
@@ -93,17 +91,17 @@ func TestFindFlagMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := findFlagMetadata(flags, tt.flagName)
+			result := findFlag(flags, tt.flagName)
 			if tt.found {
 				if result == nil {
-					t.Fatalf("findFlagMetadata(%q) returned nil; want %q", tt.flagName, tt.expected)
+					t.Fatalf("findFlag(%q) returned nil; want %q", tt.flagName, tt.expected)
 				}
 				if result.Name != tt.expected {
-					t.Errorf("findFlagMetadata(%q).Name = %q; want %q", tt.flagName, result.Name, tt.expected)
+					t.Errorf("findFlag(%q).Name = %q; want %q", tt.flagName, result.Name, tt.expected)
 				}
 			} else {
 				if result != nil {
-					t.Errorf("findFlagMetadata(%q) returned %v; want nil", tt.flagName, result)
+					t.Errorf("findFlag(%q) returned %v; want nil", tt.flagName, result)
 				}
 			}
 		})
@@ -111,7 +109,7 @@ func TestFindFlagMetadata(t *testing.T) {
 }
 
 func TestValidateParsedFlags(t *testing.T) {
-	flagMetadata := []registry.FlagMetadata{
+	flagSpecs := []core.FlagSpec{
 		{Name: "ai-provider", Type: "string", Required: true},
 		{Name: "debug", Type: "bool", Required: false},
 		{Name: "module", Type: "string", Required: false},
@@ -149,7 +147,7 @@ func TestValidateParsedFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateParsedFlags(tt.parsedFlags, flagMetadata)
+			err := validateParsedFlags(tt.parsedFlags, flagSpecs)
 			if tt.expectError {
 				if err == nil {
 					t.Fatalf("validateParsedFlags() expected error; got nil")
@@ -167,9 +165,9 @@ func TestValidateParsedFlags(t *testing.T) {
 }
 
 func TestBuildUnknownFlagError(t *testing.T) {
-	validFlags := []registry.FlagMetadata{
-		{Name: "ai-token", Shorthand: "-a", Type: "string", Usage: "AI API token"},
-		{Name: "debug", Shorthand: "-d", Type: "bool", Usage: "Enable debug mode"},
+	validFlags := []core.FlagSpec{
+		{Name: "ai-token", Shorthand: "a", Type: "string", Usage: "AI API token"},
+		{Name: "debug", Shorthand: "d", Type: "bool", Usage: "Enable debug mode"},
 	}
 
 	err := buildUnknownFlagError("api-token", validFlags)
@@ -197,88 +195,35 @@ func TestBuildUnknownFlagError(t *testing.T) {
 	}
 }
 
-func TestExtractCommandName(t *testing.T) {
-	// Create a temporary test file with // Command: comment
-	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test.go")
-
-	content := `package test
-
-// Command: test-command
-// This is a test command
-
-func TestCommand() int {
-	return 0
-}
-`
-	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
+func TestValidateFlags(t *testing.T) {
+	specs := []core.FlagSpec{
+		{Name: "output", Shorthand: "o", Type: "string"},
+		{Name: "verbose", Shorthand: "v", Type: "bool"},
 	}
 
-	commandName, err := extractCommandName(testFile)
-	if err != nil {
-		t.Fatalf("extractCommandName() error = %v; want nil", err)
+	tests := []struct {
+		name        string
+		args        []string
+		expectError bool
+	}{
+		{"valid long flag", []string{"--output", "json"}, false},
+		{"valid short flag", []string{"-o", "json"}, false},
+		{"valid bool flag", []string{"--verbose"}, false},
+		{"valid equals syntax", []string{"--output=json"}, false},
+		{"unknown flag", []string{"--unknown"}, true},
+		{"positional args ignored", []string{"foo", "bar"}, false},
+		{"help always accepted", []string{"--help"}, false},
 	}
 
-	if commandName != "test-command" {
-		t.Errorf("extractCommandName() = %q; want %q", commandName, "test-command")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateFlags(tt.args, specs)
+			if tt.expectError && err == nil {
+				t.Errorf("ValidateFlags() expected error; got nil")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("ValidateFlags() unexpected error: %v", err)
+			}
+		})
 	}
-}
-
-func TestExtractCommandName_MissingComment(t *testing.T) {
-	// Create a temporary test file without // Command: comment
-	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test.go")
-
-	content := `package test
-
-// This is a test command without Command: comment
-
-func TestCommand() int {
-	return 0
-}
-`
-	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	_, err := extractCommandName(testFile)
-	if err == nil {
-		t.Fatal("extractCommandName() expected error for missing comment; got nil")
-	}
-
-	if !strings.Contains(err.Error(), "no // Command: comment found") {
-		t.Errorf("extractCommandName() error = %q; want 'no // Command: comment found'", err.Error())
-	}
-}
-
-func TestTranslateCrossCompilePath(t *testing.T) {
-	// Create a temporary test file
-	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test.go")
-
-	if err := os.WriteFile(testFile, []byte("package test"), 0o644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	// Test with the file that exists
-	translated, err := translateCrossCompilePath(testFile)
-	if err != nil {
-		t.Fatalf("translateCrossCompilePath() error = %v; want nil", err)
-	}
-
-	// Verify file exists at translated path
-	if _, err := os.Stat(translated); err != nil {
-		t.Errorf("translated path %q does not exist: %v", translated, err)
-	}
-}
-
-// TestValidateFlagsFromRegistry_Integration tests the full validation flow
-// Note: This requires actual registry initialization, so we'll mock it.
-func TestValidateFlagsFromRegistry_MockScenario(t *testing.T) {
-	// This test demonstrates the expected behavior but requires:
-	// 1. Registry to be initialized with command
-	// 2. Caller to be a registered command file
-	// Since this is complex to set up in unit tests, we'll test components individually above
-	t.Skip("Integration test - requires full registry setup")
 }

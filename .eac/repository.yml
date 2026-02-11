@@ -210,6 +210,7 @@ modules:
         patterns:
           source:
             - "*.md"
+            - "go/tech-debt-register.md"
             - ".claude/**/*.md"
             - ".github/**/*.md"
             - ".junie/**/*.md"

@@ -1,41 +1,14 @@
-// Command: get changed-modules-ci
-// Short: Get modules requiring rebuild since last successful CI run
-// Flag.pr-base: type=string, usage=For PRs, the base SHA to compare against
-// Flag.filter-workflows: type=bool, usage=Only include modules that have a ci-{module}.yaml workflow file
-// Flag.format: type=string, usage=Output format (shell outputs shell variables; otherwise uses standard get command formats)
-// Long:
-// Long: Expected Output:
-// Long: YAML list of modules needing rebuild based on per-module CI state.
-// Long:
-// Long: Per-module change detection:
-// Long:   For each module with a ci-{module}.yaml workflow:
-// Long:   1. Query the module's last successful CI run
-// Long:   2. If CI passed at current HEAD SHA → skip (no rebuild needed)
-// Long:   3. If CI passed at different SHA → check if module's files changed
-// Long:   4. If no CI history → module needs CI (but NOT bootstrap for all)
-// Long:
-// Long: Output includes:
-// Long:   - All modules requiring rebuild (directly changed + transitive dependents)
-// Long:   - Directly changed modules (files modified since module's last CI success)
-// Long:   - Invalidated modules (transitive dependents requiring rebuild)
-// Long:   - Per-module CI status reasoning
-// Long:
-// Long: With --format shell, outputs shell variable assignments:
-// Long:   MODULES="mod1 mod2 mod3"
-// Long:   DIRECTLY_CHANGED="mod1 mod2"
-// Long:   INVALIDATED="mod3"
-// Long:   BASE_SHA="per-module"
-// Long:   IS_BOOTSTRAP="false"
-// Long:   CHANGED_FILE_COUNT="5"
 package get
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
@@ -46,6 +19,51 @@ import (
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getChangedModulesCICommand struct{}
+
+var _ core.SimpleCommandPort = (*getChangedModulesCICommand)(nil)
+
+func (c *getChangedModulesCICommand) Name() string { return "get changed-modules-ci" }
+
+func (c *getChangedModulesCICommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-changed-modules-ci",
+		Short:         "Get modules requiring rebuild since last successful CI run",
+		Long: "Expected Output:\n" +
+			"YAML list of modules needing rebuild based on per-module CI state.\n" +
+			"\n" +
+			"Per-module change detection:\n" +
+			"  For each module with a ci-{module}.yaml workflow:\n" +
+			"  1. Query the module's last successful CI run\n" +
+			"  2. If CI passed at current HEAD SHA -> skip (no rebuild needed)\n" +
+			"  3. If CI passed at different SHA -> check if module's files changed\n" +
+			"  4. If no CI history -> module needs CI (but NOT bootstrap for all)\n" +
+			"\n" +
+			"Output includes:\n" +
+			"  - All modules requiring rebuild (directly changed + transitive dependents)\n" +
+			"  - Directly changed modules (files modified since module's last CI success)\n" +
+			"  - Invalidated modules (transitive dependents requiring rebuild)\n" +
+			"  - Per-module CI status reasoning\n" +
+			"\n" +
+			"With --format shell, outputs shell variable assignments:\n" +
+			"  MODULES=\"mod1 mod2 mod3\"\n" +
+			"  DIRECTLY_CHANGED=\"mod1 mod2\"\n" +
+			"  INVALIDATED=\"mod3\"\n" +
+			"  BASE_SHA=\"per-module\"\n" +
+			"  IS_BOOTSTRAP=\"false\"\n" +
+			"  CHANGED_FILE_COUNT=\"5\"",
+		Flags: []core.FlagSpec{
+			{Name: "pr-base", Type: "string", Usage: "For PRs, the base SHA to compare against"},
+			{Name: "filter-workflows", Type: "bool", Usage: "Only include modules that have a ci-{module}.yaml workflow file"},
+			{Name: "format", Type: "string", Usage: "Output format (shell outputs shell variables; otherwise uses standard get command formats)"},
+		},
+	}
+}
+
+func (c *getChangedModulesCICommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetChangedModulesCI()
+}
 
 // CIExcludedFilePatterns are documentation files that don't trigger CI rebuilds.
 // These patterns are matched against file basenames within each module's component roots.

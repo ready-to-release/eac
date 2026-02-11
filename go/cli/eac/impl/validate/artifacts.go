@@ -1,42 +1,13 @@
-// Command: validate artifacts
-// Short: Validate that build artifacts exist for a module and its dependencies
-// Long: Validate that build artifacts exist for a module and all transitive dependencies.
-// Long:
-// Long: This command checks that all required build artifacts are present in out/build/
-// Long: for the specified module and all modules it depends on. This ensures that the
-// Long: build→test flow has all necessary artifacts before running tests.
-// Long:
-// Long: The validation includes:
-// Long: - Target module artifacts (executables, files, directories, etc.)
-// Long: - All transitive dependency artifacts (recursive check, unless --skip-depm)
-// Long: - Platform-specific artifacts for current platform (or all if built)
-// Long: - Marker files for modules with no traditional build outputs
-// Long:
-// Long: Validation failures indicate missing artifacts that must be built before testing.
-// Long:
-// Long: Expected Output:
-// Long:   Displays validation results for target module and all dependency artifacts.
-// Long:   Exit code 0 if all artifacts present, non-zero if any missing.
-// Long:   Shows detailed table with artifact counts and missing artifact paths.
-// Long:
-// Long: Example:
-// Long:   validate artifacts eac-cli
-// Long:   validate artifacts clie --os linux --arch amd64
-// Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
-//
-// Args: module
-//
-// Flag.skip-depm: type=bool, default=false, usage=Skip validation of transitive module dependencies (for release workflows)
-// Flag.os: type=string, default=runtime.GOOS, usage=Target OS for platform-specific artifacts
-// Flag.arch: type=string, default=runtime.GOARCH, usage=Target architecture for platform-specific artifacts
 package validate
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
@@ -44,6 +15,30 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateArtifactsCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateArtifactsCommand)(nil)
+
+func (c *validateArtifactsCommand) Name() string { return "validate artifacts" }
+
+func (c *validateArtifactsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-artifacts",
+		Short:         "Validate that build artifacts exist for a module and its dependencies",
+		Long:          "Validate that build artifacts exist for a module and all transitive dependencies.\n\nThis command checks that all required build artifacts are present in out/build/\nfor the specified module and all modules it depends on. This ensures that the\nbuild\u2192test flow has all necessary artifacts before running tests.\n\nThe validation includes:\n- Target module artifacts (executables, files, directories, etc.)\n- All transitive dependency artifacts (recursive check, unless --skip-depm)\n- Platform-specific artifacts for current platform (or all if built)\n- Marker files for modules with no traditional build outputs\n\nValidation failures indicate missing artifacts that must be built before testing.\n\nExpected Output:\n  Displays validation results for target module and all dependency artifacts.\n  Exit code 0 if all artifacts present, non-zero if any missing.\n  Shows detailed table with artifact counts and missing artifact paths.\n\nExample:\n  validate artifacts eac-cli\n  validate artifacts clie --os linux --arch amd64\n  validate artifacts docs --skip-depm     # Release context: skip module deps",
+		Args:          "module",
+		Flags: []core.FlagSpec{
+			{Name: "skip-depm", Type: "bool", DefaultValue: "false", Usage: "Skip validation of transitive module dependencies (for release workflows)"},
+			{Name: "os", Type: "string", DefaultValue: "runtime.GOOS", Usage: "Target OS for platform-specific artifacts"},
+			{Name: "arch", Type: "string", DefaultValue: "runtime.GOARCH", Usage: "Target architecture for platform-specific artifacts"},
+		},
+	}
+}
+
+func (c *validateArtifactsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateArtifacts()
+}
 
 func ValidateArtifacts() int {
 	// Validate flags against registry metadata

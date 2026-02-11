@@ -1,14 +1,17 @@
 package test
 
-import "github.com/ready-to-release/eac/go/clibase/registry"
+import (
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+)
 
-func init() {
-	registry.RegisterAll(
-		ExportManual,
-		ImportManual,
-		ListSuites,
-		MergeResults,
-		Test,
-		TestDebug,
-	)
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&testExportManualCommand{},
+		&testImportManualCommand{},
+		&testListSuitesCommand{},
+		&testMergeResultsCommand{},
+		&testCommand{},
+		&testDebugCommand{},
+	}
 }

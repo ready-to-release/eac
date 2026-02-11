@@ -1,25 +1,36 @@
-// Command: show config
-// Short: Display all loaded configurations with defaults applied
-// Long: The show config command displays all EAC repository configurations
-// Long: loaded with their defaults applied. This includes modules, module types,
-// Long: environments, testing tags, and test suites.
-// Long:
-// Long: Expected Output:
-// Long: - Human-readable display of all configurations with summary table showing status and counts
-// Long: - Detailed tables for modules (moniker, type, root), module types, environments
-// Long: - Testing tags grouped by type, test suites with descriptions
-// Long: - Each section clearly formatted with markdown headers and tables
-// Flag.verbose: type=bool, default=false, usage=Show all config source files with layers and value counts
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 )
+
+type showConfigCommand struct{}
+
+var _ core.SimpleCommandPort = (*showConfigCommand)(nil)
+
+func (c *showConfigCommand) Name() string { return "show config" }
+
+func (c *showConfigCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-config",
+		Short:         "Display all loaded configurations with defaults applied",
+		Long:          "The show config command displays all EAC repository configurations\nloaded with their defaults applied. This includes modules, module types,\nenvironments, testing tags, and test suites.\n\nExpected Output:\n- Human-readable display of all configurations with summary table showing status and counts\n- Detailed tables for modules (moniker, type, root), module types, environments\n- Testing tags grouped by type, test suites with descriptions\n- Each section clearly formatted with markdown headers and tables",
+		Flags: []core.FlagSpec{
+			{Name: "verbose", Type: "bool", DefaultValue: "false", Usage: "Show all config source files with layers and value counts"},
+		},
+	}
+}
+
+func (c *showConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowConfig()
+}
 
 func ShowConfig() int {
 	// Validate flags against registry metadata

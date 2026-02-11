@@ -25,8 +25,8 @@ Strips unwanted ANSI codes from subprocess output before display or logging.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
+| File        | Purpose                                                                                |
+| ----------- | -------------------------------------------------------------------------------------- |
 | `writer.go` | `Filter`, `FilterMode`, constructors, stripping functions, and compiled regex patterns |
 
 ## Dependencies
@@ -35,15 +35,21 @@ None (leaf package within clibase; uses `github.com/MatusOllah/stripansi` for fu
 
 ## Role in System
 
-Inserted into the output pipeline between subprocess stdout/stderr and the TUI or log files. Subprocess output often contains ANSI sequences that would corrupt TUI rendering or make log files unreadable; this package removes them while optionally preserving color information for display.
+Inserted into the output pipeline between subprocess stdout/stderr and the TUI or log files.
+
+Subprocess output often contains ANSI sequences that would corrupt TUI rendering or make log files unreadable;
+this package removes them while optionally preserving color information for display.
 
 ## Code Health
 
 ### Tech Debt
+
 - `writer.go:92` `badPatterns` is a package-level fixed-size array of compiled regexes; safe and immutable at runtime
 
 ### Pain Points
+
 - None identified; compact leaf package with good test coverage (195 test lines vs 222 source lines)
 
 ### Optimization Opportunities
-- The combined quick-match regex (`combinedBadAnsi`) already exists at line 77; the per-pattern iteration in `StripBad` could short-circuit with a `combinedBadAnsi.Match` check (low effort, measure first)
+
+- None identified

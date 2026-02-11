@@ -1,30 +1,38 @@
-// Command: drawio embed
-// Short: Embed XML into a .drawio.png file
-// Long: Embeds DrawIO XML data into a PNG file, creating or updating
-// Long: the mxfile metadata chunk.
-// Long:
-// Long: The PNG image portion is not modified - only the embedded XML metadata.
-// Long: Open the file in DrawIO to update the visual representation.
-// Long:
-// Long: If the PNG file doesn't exist, a new file is created with a minimal
-// Long: 1x1 transparent PNG (DrawIO will render from XML when opened).
-// Long:
-// Long: Example:
-// Long:   drawio embed --png diagram.drawio.png --xml encoded.xml
-// Long:   cat encoded.xml | drawio embed --png diagram.drawio.png
-// Flag.png: type=string, required=true, usage=Target PNG file (created if not exists)
-// Flag.xml: type=string, usage=XML file to embed (default: stdin)
-// Flag.output: type=string, shorthand=o, usage=Output file (default: update --png in place)
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioEmbedCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioEmbedCommand)(nil)
+
+func (c *drawioEmbedCommand) Name() string { return "drawio embed" }
+
+func (c *drawioEmbedCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-embed",
+		Short:         "Embed XML into a .drawio.png file",
+		Long:          "Embeds DrawIO XML data into a PNG file, creating or updating\nthe mxfile metadata chunk.\n\nThe PNG image portion is not modified - only the embedded XML metadata.\nOpen the file in DrawIO to update the visual representation.\n\nIf the PNG file doesn't exist, a new file is created with a minimal\n1x1 transparent PNG (DrawIO will render from XML when opened).\n\nExample:\n  drawio embed --png diagram.drawio.png --xml encoded.xml\n  cat encoded.xml | drawio embed --png diagram.drawio.png",
+		Flags: []core.FlagSpec{
+			{Name: "png", Type: "string", Required: true, Usage: "Target PNG file (created if not exists)"},
+			{Name: "xml", Type: "string", Usage: "XML file to embed (default: stdin)"},
+			{Name: "output", Type: "string", Shorthand: "o", Usage: "Output file (default: update --png in place)"},
+		},
+	}
+}
+
+func (c *drawioEmbedCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioEmbed()
+}
 
 // DrawioEmbed embeds XML into a .drawio.png file.
 func DrawioEmbed() int {

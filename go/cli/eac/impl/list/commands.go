@@ -1,30 +1,48 @@
-// Command: show help
-// Short: Display help information for commands
-// Long: The show help command provides documentation for all available commands.
-// Long: When called without arguments, it lists all commands.
-// Long: When called with a command name, it displays detailed help including description, flags, and usage examples.
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including all subcommands and advanced options
 package list
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
-// commandFlags defines valid flags for the list commands command
+type showHelpCommand struct{}
+
+var _ core.SimpleCommandPort = (*showHelpCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&showHelpCommand{},
+	}
+}
+
+func (c *showHelpCommand) Name() string { return "show help" }
+
+func (c *showHelpCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-help",
+		Short:         "Display help information for commands",
+		Long:          "The show help command provides documentation for all available commands.\nWhen called without arguments, it lists all commands.\nWhen called with a command name, it displays detailed help including description, flags, and usage examples.",
+		Flags: []core.FlagSpec{
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed information including all subcommands and advanced options"},
+		},
+	}
+}
+
+func (c *showHelpCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowHelp()
+}
 
 var log = logging.C()
-
-func init() {
-	registry.Register(ShowHelp)
-}
 
 func ShowHelp() int {
 	args := os.Args[3:] // Skip program name, "show", and "help"
@@ -62,14 +80,10 @@ func ShowHelp() int {
 
 // showAllCommands lists all available commands.
 func showAllCommands(verbose bool) int {
-	// Get sorted command names
-	var names []string
-	commands := registry.GetCommands()
-	for name := range commands {
-		names = append(names, name)
-	}
+	reg := registry.Global()
+	names := reg.Names()
 
-	// Simple alphabetical sort
+	// Simple alphabetical sort (Names() already returns sorted, but ensure)
 	sort.Strings(names)
 
 	// Render as compact list
@@ -81,7 +95,7 @@ func showAllCommands(verbose bool) int {
 
 // showParentHelp displays help for a command prefix that has subcommands but no direct registration.
 func showParentHelp(parentName string, subcommands []string, verbose bool) int {
-	commandRegistry := registry.GetCommandRegistry()
+	reg := registry.Global()
 
 	// Display NAME section
 	log.Info("NAME")
@@ -94,11 +108,11 @@ func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 	// Display COMMANDS section (subcommands)
 	log.Info("COMMANDS")
 	for _, subcmd := range subcommands {
-		subReg := commandRegistry[subcmd]
+		cmdPort, ok := reg.Get(subcmd)
 
 		desc := ""
-		if subReg != nil && subReg.Short != "" {
-			desc = subReg.Short
+		if ok {
+			desc = cmdPort.Metadata().Short
 		}
 
 		// Show full command name (e.g., "create spec") so users know the full command
@@ -121,10 +135,10 @@ func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 
 // showCommandHelp displays detailed help for a specific command.
 func showCommandHelp(commandName string, verbose bool) int {
-	commandRegistry := registry.GetCommandRegistry()
+	reg := registry.Global()
 
-	reg := commandRegistry[commandName]
-	if reg == nil {
+	cmdPort, found := reg.Get(commandName)
+	if !found {
 		// Check if this is a parent prefix with subcommands
 		subcommands := getSubcommands(commandName)
 		if len(subcommands) > 0 {
@@ -136,20 +150,22 @@ func showCommandHelp(commandName string, verbose bool) int {
 		return 1
 	}
 
+	meta := cmdPort.Metadata()
+
 	// Display NAME section
 	log.Info("NAME")
-	log.Infof("    %s - %s\n", reg.ActualCommand, reg.Short)
+	log.Infof("    %s - %s\n", cmdPort.Name(), meta.Short)
 
 	// Display SYNOPSIS section
 	log.Info("SYNOPSIS")
-	synopsis := buildSynopsis(reg)
+	synopsis := buildSynopsis(cmdPort)
 	log.Infof("    %s\n", synopsis)
 
 	// Display DESCRIPTION section
-	if reg.Long != "" {
+	if meta.Long != "" {
 		log.Info("DESCRIPTION")
 		// Wrap long description with indentation
-		lines := strings.Split(reg.Long, "\n")
+		lines := strings.Split(meta.Long, "\n")
 		for _, line := range lines {
 			if line == "" {
 				log.Info("")
@@ -165,11 +181,11 @@ func showCommandHelp(commandName string, verbose bool) int {
 	if len(subcommands) > 0 {
 		log.Info("COMMANDS")
 		for _, subcmd := range subcommands {
-			subReg := commandRegistry[subcmd]
+			subcmdPort, ok := reg.Get(subcmd)
 
 			desc := ""
-			if subReg != nil && subReg.Short != "" {
-				desc = subReg.Short
+			if ok {
+				desc = subcmdPort.Metadata().Short
 			}
 
 			// Extract just the subcommand part (e.g., "create" from "work create")
@@ -183,9 +199,9 @@ func showCommandHelp(commandName string, verbose bool) int {
 	}
 
 	// Display FLAGS section
-	if len(reg.Flags) > 0 {
+	if len(meta.Flags) > 0 {
 		log.Info("FLAGS")
-		for _, flag := range reg.Flags {
+		for _, flag := range meta.Flags {
 			displayFlag(flag)
 		}
 		log.Info("")
@@ -193,12 +209,12 @@ func showCommandHelp(commandName string, verbose bool) int {
 
 	// Display EXAMPLES section
 	log.Info("EXAMPLES")
-	log.Infof("    eac %s", reg.ActualCommand)
-	if len(reg.Flags) > 0 {
+	log.Infof("    eac %s", cmdPort.Name())
+	if len(meta.Flags) > 0 {
 		// Show example with a flag if available
-		for _, flag := range reg.Flags {
+		for _, flag := range meta.Flags {
 			if flag.Type == "bool" {
-				log.Infof("    eac %s --%s", reg.ActualCommand, flag.Name)
+				log.Infof("    eac %s --%s", cmdPort.Name(), flag.Name)
 				break
 			}
 		}
@@ -208,7 +224,7 @@ func showCommandHelp(commandName string, verbose bool) int {
 	// Display additional info
 	if verbose {
 		log.Info("ADDITIONAL INFORMATION")
-		log.Infof("    Canonical name: %s", reg.CanonicalName)
+		log.Infof("    Canonical name: %s", meta.CanonicalName)
 		log.Info("")
 	}
 
@@ -216,11 +232,12 @@ func showCommandHelp(commandName string, verbose bool) int {
 }
 
 // buildSynopsis builds a synopsis line for a command.
-func buildSynopsis(reg *registry.CommandRegistration) string {
-	parts := []string{"eac", reg.ActualCommand}
+func buildSynopsis(cmd core.CommandPort) string {
+	meta := cmd.Metadata()
+	parts := []string{"eac", cmd.Name()}
 
 	// Add flags
-	if len(reg.Flags) > 0 {
+	if len(meta.Flags) > 0 {
 		parts = append(parts, "[flags]")
 	}
 
@@ -231,7 +248,7 @@ func buildSynopsis(reg *registry.CommandRegistration) string {
 }
 
 // displayFlag formats and displays a single flag.
-func displayFlag(flag registry.FlagMetadata) {
+func displayFlag(flag core.FlagSpec) {
 	// Build flag name with shorthand
 	flagName := "--" + flag.Name
 	if flag.Shorthand != "" {
@@ -265,35 +282,21 @@ func displayFlag(flag registry.FlagMetadata) {
 		log.Infof("        %s", flag.Usage)
 	}
 
-	// Display completion values if available
-	if len(flag.Completion) > 0 && flag.Type != "bool" {
-		log.Infof("        Valid values: %s", strings.Join(flag.Completion, ", "))
-	}
-
 	log.Info("")
 }
 
-// getSubcommands returns all subcommands for a given parent command.
+// getSubcommands returns all subcommands for a given parent command as sorted name strings.
 func getSubcommands(parentCommand string) []string {
-	commands := registry.GetCommands()
-	var subcommands []string
+	subcmds := registry.Global().Subcommands(parentCommand)
 
-	prefix := parentCommand + " "
-	for cmdName := range commands {
-		// Check if this is a direct subcommand (no further nesting)
-		if strings.HasPrefix(cmdName, prefix) {
-			// Extract the part after the prefix
-			remainder := strings.TrimPrefix(cmdName, prefix)
-			// Only include if it's a direct child (no more spaces)
-			if !strings.Contains(remainder, " ") {
-				subcommands = append(subcommands, cmdName)
-			}
-		}
+	// Extract names and sort
+	names := make([]string, 0, len(subcmds))
+	for _, cmd := range subcmds {
+		names = append(names, cmd.Name())
 	}
+	sort.Strings(names)
 
-	// Sort alphabetically
-	sort.Strings(subcommands)
-	return subcommands
+	return names
 }
 
 // max returns the maximum of two integers.

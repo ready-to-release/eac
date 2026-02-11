@@ -56,7 +56,7 @@ func (h *MermaidRenderHandler) Build(
 	Logln(logWriter, "=== Rendering mermaid diagrams via container ===")
 
 	docsDir := filepath.Join(workspaceRoot, "docs")
-	cacheDir := paths.MermaidAccelCachePath(workspaceRoot)
+	cacheDir := filepath.Join(paths.MermaidAccelCachePath(workspaceRoot), module.GetMoniker(), filepath.Base(outputDir))
 	outputMermaidDir := filepath.Join(outputDir, "mermaid")
 
 	// 1. Scan all markdown files for mermaid blocks

@@ -47,12 +47,10 @@ The `create squash-message` command generates publication-ready squash commit me
 
 ### Tech Debt
 - `CreateSquashMessage()` in squash-message.go is ~127 lines and handles parsing, git analysis, AI generation, and output in one function
-- ~~Global mutable `gitRepoProvider` used for test injection~~ (resolved: replaced with `Deps` struct in deps.go)
 - No unit tests for formatter.go or validator.go; only BDD-level coverage exists
 
 ### Pain Points
 - squash-message.go concentrates the entire pipeline in a single file with no sub-package decomposition
 
 ### Optimization Opportunities
-- ~~Extract shared AI-commit utilities (prompt context building, mock injection, debug logging) into a common package used by both commit-message and squash-message~~ (resolved: `aiutil.ExecuteGeneration()` now provides shared executor pipeline used by both packages)
 - Add focused unit tests for formatter.go and validator.go to catch regressions without running full BDD suite (high feasibility, small surface area)

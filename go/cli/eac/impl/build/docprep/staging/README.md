@@ -42,7 +42,6 @@ The `FileIndex` it produces is consumed by nearly every subsequent phase for eff
 ## Code Health
 
 ### Tech Debt
-- ~~`assetref.go:11`: `assetRefPattern` duplicates the identical regex in `cleanup/assets.go:24`~~ (resolved: `AssetReferencePattern` is now the canonical source; cleanup imports it)
 - `orphan.go` has no corresponding test file
 
 ### Pain Points

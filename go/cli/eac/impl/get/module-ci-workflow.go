@@ -1,29 +1,48 @@
-// Command: get module-ci-workflow
-// Short: Get CI workflow filename for a module
-// Long: Returns the CI workflow filename for the specified module.
-// Long:
-// Long: This replaces the jq pattern:
-// Long:   echo "$MODULES_JSON" | jq -r '.[] | select(.moniker == "X") | .files.workflows.ci'
-// Long:
-// Long: Exit codes:
-// Long:   0 - Workflow found, outputs filename (e.g., ci-clie.yaml)
-// Long:   1 - Module not found or no CI workflow configured
-// Long:
-// Long: Example:
-// Long:   get module-ci-workflow clie       # Outputs: ci-clie.yaml
-// Long:   get module-ci-workflow core      # Outputs: ci-core.yaml
-// Flag.basename: type=bool, usage=Output only the basename (default true)
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type getModuleCIWorkflowCommand struct{}
+
+var _ core.SimpleCommandPort = (*getModuleCIWorkflowCommand)(nil)
+
+func (c *getModuleCIWorkflowCommand) Name() string { return "get module-ci-workflow" }
+
+func (c *getModuleCIWorkflowCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-module-ci-workflow",
+		Short:         "Get CI workflow filename for a module",
+		Long: "Returns the CI workflow filename for the specified module.\n" +
+			"\n" +
+			"This replaces the jq pattern:\n" +
+			"  echo \"$MODULES_JSON\" | jq -r '.[] | select(.moniker == \"X\") | .files.workflows.ci'\n" +
+			"\n" +
+			"Exit codes:\n" +
+			"  0 - Workflow found, outputs filename (e.g., ci-clie.yaml)\n" +
+			"  1 - Module not found or no CI workflow configured\n" +
+			"\n" +
+			"Example:\n" +
+			"  get module-ci-workflow clie       # Outputs: ci-clie.yaml\n" +
+			"  get module-ci-workflow core      # Outputs: ci-core.yaml",
+		Flags: []core.FlagSpec{
+			{Name: "basename", Type: "bool", Usage: "Output only the basename (default true)"},
+		},
+	}
+}
+
+func (c *getModuleCIWorkflowCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetModuleCIWorkflow()
+}
 
 func GetModuleCIWorkflow() int {
 	// Parse arguments

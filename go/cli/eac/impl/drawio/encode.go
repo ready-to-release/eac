@@ -1,26 +1,37 @@
-// Command: drawio encode
-// Short: Encode human-readable XML back to DrawIO format
-// Long: Encodes decoded/human-readable DrawIO XML back to the compressed
-// Long: format used by DrawIO PNG files.
-// Long:
-// Long: Use this after editing decoded XML, then use 'drawio embed' to
-// Long: write the encoded XML back into a .drawio.png file.
-// Long:
-// Long: Example:
-// Long:   drawio encode -i decoded.xml -o encoded.xml
-// Long:   drawio encode -i decoded.xml | drawio embed --png diagram.drawio.png
-// Flag.input: type=string, shorthand=i, usage=Input decoded XML file (or stdin)
-// Flag.output: type=string, shorthand=o, usage=Output file (default: stdout)
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioEncodeCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioEncodeCommand)(nil)
+
+func (c *drawioEncodeCommand) Name() string { return "drawio encode" }
+
+func (c *drawioEncodeCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-encode",
+		Short:         "Encode human-readable XML back to DrawIO format",
+		Long:          "Encodes decoded/human-readable DrawIO XML back to the compressed\nformat used by DrawIO PNG files.\n\nUse this after editing decoded XML, then use 'drawio embed' to\nwrite the encoded XML back into a .drawio.png file.\n\nExample:\n  drawio encode -i decoded.xml -o encoded.xml\n  drawio encode -i decoded.xml | drawio embed --png diagram.drawio.png",
+		Flags: []core.FlagSpec{
+			{Name: "input", Type: "string", Shorthand: "i", Usage: "Input decoded XML file (or stdin)"},
+			{Name: "output", Type: "string", Shorthand: "o", Usage: "Output file (default: stdout)"},
+		},
+	}
+}
+
+func (c *drawioEncodeCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioEncode()
+}
 
 // DrawioEncode encodes human-readable XML back to DrawIO format.
 func DrawioEncode() int {

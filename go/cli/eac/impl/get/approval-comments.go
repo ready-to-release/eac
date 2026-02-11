@@ -1,36 +1,50 @@
-// Command: get approval-comments
-// Short: Get PR approval comments for a module
-//
-//	--as-yaml: Output as YAML (default)
-//	--as-json: Output as JSON
-//	--as-toml: Output as TOML
-//	--include-all-reviews: Include all review states (not just APPROVED)
-//	--branch: Branch to query (default: trunk branch from config, usually "main")
-//
-// Args: module [version]
-// Long:
-// Long: Expected Output:
-// Long: YAML/JSON/TOML representation of PR approval comments including:
-// Long:   - module: Module moniker
-// Long:   - version: Version number or "Unreleased"
-// Long:   - total_prs: Number of PRs with spec files
-// Long:   - total_approvals: Total number of approval reviews
-// Long:   - approvals: Array of approval reviews with PR details
-// Long:
-// Long: If version is specified, returns approvals for that version.
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-// approvalCommentsFlags defines valid flags for the get approval-comments command
+type getApprovalCommentsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getApprovalCommentsCommand)(nil)
+
+func (c *getApprovalCommentsCommand) Name() string { return "get approval-comments" }
+
+func (c *getApprovalCommentsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-approval-comments",
+		Short:         "Get PR approval comments for a module",
+		Long: "Expected Output:\n" +
+			"YAML/JSON/TOML representation of PR approval comments including:\n" +
+			"  - module: Module moniker\n" +
+			"  - version: Version number or \"Unreleased\"\n" +
+			"  - total_prs: Number of PRs with spec files\n" +
+			"  - total_approvals: Total number of approval reviews\n" +
+			"  - approvals: Array of approval reviews with PR details\n" +
+			"\n" +
+			"If version is specified, returns approvals for that version.",
+		Args: "module [version]",
+		Flags: []core.FlagSpec{
+			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default)"},
+			{Name: "as-json", Type: "bool", Usage: "Output as JSON"},
+			{Name: "as-toml", Type: "bool", Usage: "Output as TOML"},
+			{Name: "include-all-reviews", Type: "bool", Usage: "Include all review states (not just APPROVED)"},
+			{Name: "branch", Type: "string", Usage: "Branch to query (default: trunk branch from config, usually \"main\")"},
+		},
+	}
+}
+
+func (c *getApprovalCommentsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetApprovalComments()
+}
 
 func GetApprovalComments() int {
 	// Validate flags before parsing

@@ -1,27 +1,3 @@
-// Command: test export-manual
-// Short: Export manual test scenarios for human execution
-// Args:
-// Long: Export manual test scenarios (tagged with @Manual) from Gherkin specifications
-// Long: for human execution and evidence collection.
-// Long:
-// Long: This command scans module specifications, extracts scenarios tagged with @Manual,
-// Long: generates stable scenario IDs, and exports them in JSON, CSV, or Markdown format.
-// Long:
-// Long: The exported file includes scenario metadata (name, tags, steps), feature context,
-// Long: and release information for traceability.
-// Long:
-// Long: Expected Output:
-// Long:   - manual-test-scenarios.{json,csv,md} file created
-// Long:   - Scenarios validated against manual-test-export.schema.json
-// Long:   - Exit code 0 on success, non-zero on error
-// Long:
-// Long: Example:
-// Long:   test export-manual --module eac --release v1.2.0 --format json
-// Long:   test export-manual --module eac --release v1.2.0 --format csv
-// Long:   test export-manual --module eac --release v1.2.0 --format markdown
-// Flag.module: type=string, usage=Module moniker to export manual tests from (required)
-// Flag.release: type=string, usage=Release version being tested (required)
-// Flag.format: type=string, usage=Export format: json, csv, markdown (default: json)
 package test
 
 import (
@@ -34,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/specs/export/formats"
@@ -41,6 +18,29 @@ import (
 	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
+
+type testExportManualCommand struct{}
+
+var _ core.SimpleCommandPort = (*testExportManualCommand)(nil)
+
+func (c *testExportManualCommand) Name() string { return "test export-manual" }
+
+func (c *testExportManualCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "test-export-manual",
+		Short:         "Export manual test scenarios for human execution",
+		Long:          "Export manual test scenarios (tagged with @Manual) from Gherkin specifications\nfor human execution and evidence collection.\n\nThis command scans module specifications, extracts scenarios tagged with @Manual,\ngenerates stable scenario IDs, and exports them in JSON, CSV, or Markdown format.\n\nThe exported file includes scenario metadata (name, tags, steps), feature context,\nand release information for traceability.\n\nExpected Output:\n  - manual-test-scenarios.{json,csv,md} file created\n  - Scenarios validated against manual-test-export.schema.json\n  - Exit code 0 on success, non-zero on error\n\nExample:\n  test export-manual --module eac --release v1.2.0 --format json\n  test export-manual --module eac --release v1.2.0 --format csv\n  test export-manual --module eac --release v1.2.0 --format markdown",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module moniker to export manual tests from (required)"},
+			{Name: "release", Type: "string", Usage: "Release version being tested (required)"},
+			{Name: "format", Type: "string", Usage: "Export format: json, csv, markdown (default: json)"},
+		},
+	}
+}
+
+func (c *testExportManualCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ExportManual()
+}
 
 // Type aliases for backward compatibility
 type ManualTestExport = formats.ManualTestExport

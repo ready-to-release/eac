@@ -52,7 +52,6 @@ under `cli/eac/impl/`. All command packages self-register via blank imports in
 
 ### Tech Debt
 - `main.go`: `main()` is ~147 lines (37-184) with inlined help-flag detection and duplicate longest-match resolution logic
-- ~~`main.go`: hand-rolled bubble sort used in `getSubcommands` and `printUsage` instead of `slices.Sort`~~ (resolved: now uses `slices.Sort`)
 - `main.go:27`: `InitialWorkingDir` is exported mutable global state; consider injecting via a context or config struct
 
 ### Pain Points
@@ -61,4 +60,3 @@ under `cli/eac/impl/`. All command packages self-register via blank imports in
 
 ### Optimization Opportunities
 - Extract help resolution and dispatch into separate functions to reduce `main()` complexity -- low effort, high readability gain
-- ~~Replace manual sort loops with `slices.Sort` from the standard library~~ (resolved)

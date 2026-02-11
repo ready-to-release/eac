@@ -1,27 +1,36 @@
-// Command: validate docs
-// Short: Validate documentation for obsolete references
-// Long: Validates documentation files for references to obsolete or deleted configuration files.
-// Long:
-// Long: This command helps maintain documentation accuracy by detecting references to files
-// Long: that no longer exist in the codebase, such as module-types.yml and system-dependencies.yml.
-// Long:
-// Long: Expected Output:
-// Long:   Lists files containing obsolete references.
-// Long:   Shows line numbers and the obsolete reference found.
-// Long:   Exit code 0 if no issues, 1 if validation errors found.
 package validate
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type validateDocsCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateDocsCommand)(nil)
+
+func (c *validateDocsCommand) Name() string { return "validate docs" }
+
+func (c *validateDocsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-docs",
+		Short:         "Validate documentation for obsolete references",
+		Long:          "Validates documentation files for references to obsolete or deleted configuration files.\n\nThis command helps maintain documentation accuracy by detecting references to files\nthat no longer exist in the codebase, such as module-types.yml and system-dependencies.yml.\n\nExpected Output:\n  Lists files containing obsolete references.\n  Shows line numbers and the obsolete reference found.\n  Exit code 0 if no issues, 1 if validation errors found.",
+	}
+}
+
+func (c *validateDocsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateDocs()
+}
 
 // DocsValidationResult represents a single validation issue found in documentation.
 type DocsValidationResult struct {

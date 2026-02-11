@@ -5,15 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 func TestCategorizeFlags(t *testing.T) {
 	t.Run("separates behavior flags from regular flags", func(t *testing.T) {
-		flags := []registry.FlagMetadata{
+		flags := []core.FlagSpec{
 			{Name: "format", Type: "string"},
-			{Name: "with-cache", Behavior: "cache", IsEnableFlag: true, PairFlagName: "no-cache"},
-			{Name: "no-cache", Behavior: "cache", IsEnableFlag: false, PairFlagName: "with-cache"},
+			{Name: "with-cache", Type: "bool"},
+			{Name: "no-cache", Type: "bool"},
 			{Name: "debug", Type: "bool"},
 		}
 
@@ -45,11 +45,11 @@ func TestCategorizeFlags(t *testing.T) {
 	})
 
 	t.Run("handles multiple behavior groups", func(t *testing.T) {
-		flags := []registry.FlagMetadata{
-			{Name: "with-cache", Behavior: "cache", IsEnableFlag: true, PairFlagName: "no-cache"},
-			{Name: "no-cache", Behavior: "cache", IsEnableFlag: false, PairFlagName: "with-cache"},
-			{Name: "with-tui", Behavior: "tui", IsEnableFlag: true, PairFlagName: "no-tui"},
-			{Name: "no-tui", Behavior: "tui", IsEnableFlag: false, PairFlagName: "with-tui"},
+		flags := []core.FlagSpec{
+			{Name: "with-cache", Type: "bool"},
+			{Name: "no-cache", Type: "bool"},
+			{Name: "with-tui", Type: "bool"},
+			{Name: "no-tui", Type: "bool"},
 		}
 
 		regular, groups := CategorizeFlags(flags)
@@ -83,10 +83,13 @@ func TestCategorizeFlags(t *testing.T) {
 	})
 
 	t.Run("preserves order of behavior groups", func(t *testing.T) {
-		flags := []registry.FlagMetadata{
-			{Name: "with-cache", Behavior: "cache", IsEnableFlag: true},
-			{Name: "with-tui", Behavior: "tui", IsEnableFlag: true},
-			{Name: "with-parallel", Behavior: "parallel", IsEnableFlag: true},
+		flags := []core.FlagSpec{
+			{Name: "with-cache", Type: "bool"},
+			{Name: "no-cache", Type: "bool"},
+			{Name: "with-tui", Type: "bool"},
+			{Name: "no-tui", Type: "bool"},
+			{Name: "with-parallel", Type: "bool"},
+			{Name: "no-parallel", Type: "bool"},
 		}
 
 		_, groups := CategorizeFlags(flags)
@@ -108,7 +111,7 @@ func TestCategorizeFlags(t *testing.T) {
 
 func TestFormatDefault(t *testing.T) {
 	t.Run("returns ON for true default", func(t *testing.T) {
-		flag := &registry.FlagMetadata{DefaultValue: "true"}
+		flag := &core.FlagSpec{DefaultValue: "true"}
 		result := FormatDefault(flag)
 		if result != "ON" {
 			t.Errorf("Expected 'ON', got %q", result)
@@ -116,39 +119,10 @@ func TestFormatDefault(t *testing.T) {
 	})
 
 	t.Run("returns OFF for false default", func(t *testing.T) {
-		flag := &registry.FlagMetadata{DefaultValue: "false"}
+		flag := &core.FlagSpec{DefaultValue: "false"}
 		result := FormatDefault(flag)
 		if result != "OFF" {
 			t.Errorf("Expected 'OFF', got %q", result)
-		}
-	})
-
-	t.Run("handles environment-aware defaults", func(t *testing.T) {
-		flag := &registry.FlagMetadata{
-			DefaultValue: "true",
-			EnvAware:     true,
-			EnvDefaults: map[string]bool{
-				"local": true,
-				"CI":    false,
-			},
-		}
-		result := FormatDefault(flag)
-		if !strings.Contains(result, "ON locally") {
-			t.Errorf("Expected 'ON locally' in result, got %q", result)
-		}
-		if !strings.Contains(result, "OFF in CI") {
-			t.Errorf("Expected 'OFF in CI' in result, got %q", result)
-		}
-	})
-
-	t.Run("returns context-aware for empty env defaults", func(t *testing.T) {
-		flag := &registry.FlagMetadata{
-			EnvAware:    true,
-			EnvDefaults: nil,
-		}
-		result := FormatDefault(flag)
-		if result != "context-aware" {
-			t.Errorf("Expected 'context-aware', got %q", result)
 		}
 	})
 }
@@ -157,12 +131,12 @@ func TestPrintBehaviorGroup(t *testing.T) {
 	t.Run("prints enable/disable pair", func(t *testing.T) {
 		group := BehaviorGroup{
 			Behavior: "cache",
-			EnableFlag: &registry.FlagMetadata{
+			EnableFlag: &core.FlagSpec{
 				Name:         "with-cache",
 				Usage:        "Enable incremental caching",
 				DefaultValue: "true",
 			},
-			DisableFlag: &registry.FlagMetadata{
+			DisableFlag: &core.FlagSpec{
 				Name:  "no-cache",
 				Usage: "Disable incremental caching",
 			},
@@ -204,12 +178,12 @@ func TestPrintBehaviorFlags(t *testing.T) {
 		groups := []BehaviorGroup{
 			{
 				Behavior: "cache",
-				EnableFlag: &registry.FlagMetadata{
+				EnableFlag: &core.FlagSpec{
 					Name:         "with-cache",
 					Usage:        "Enable caching",
 					DefaultValue: "true",
 				},
-				DisableFlag: &registry.FlagMetadata{Name: "no-cache"},
+				DisableFlag: &core.FlagSpec{Name: "no-cache"},
 			},
 		}
 

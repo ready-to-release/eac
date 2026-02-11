@@ -18,11 +18,11 @@ and godog BDD tests, with JSON event streaming and CTRF report generation.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| runner.go | `GoTestRunner` implementing `TestTypeRunner` |
+| File              | Responsibility                                   |
+| ----------------- | ------------------------------------------------ |
+| runner.go         | `GoTestRunner` implementing `TestTypeRunner`     |
 | runner_helpers.go | Module lookup, feature extraction, `go generate` |
-| ctrf.go | Go test event to CTRF JSON report conversion |
+| ctrf.go           | Go test event to CTRF JSON report conversion     |
 
 ## Dependencies
 
@@ -45,13 +45,16 @@ godog BDD tests uniformly through the `TestTypeRunner` interface.
 ## Code Health
 
 ### Tech Debt
+
 - `init()` in runner.go registers both runner and descriptor globally; accepting a registry parameter would improve testability
 - `Execute()` in runner.go (~120 lines) mixes package-path parsing, env-var construction, command building, and CTRF conversion in one method
 - Package-level `var goRunnerLog` in runner.go is global mutable state
 
 ### Pain Points
+
 - `extractGoBuildTags` in runner_helpers.go uses manual index arithmetic for tag parsing; a regex-based approach would be more readable and maintainable
 - No unit tests for `Execute()` or `convertGoTestEventsToCTRF` (only runner_helpers_test.go exists)
 
 ### Optimization Opportunities
-- `runGoGenerate` in runner_helpers.go runs `go generate ./...` on every test execution even if no generate directives exist; checking for `//go:generate` directives first could skip unnecessary work
+
+- None identified

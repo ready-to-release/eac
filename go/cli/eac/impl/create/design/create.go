@@ -1,23 +1,3 @@
-// Command: create design
-// Short: Generate workspace.dsl for a module using AI
-// Long: Generates Structurizr DSL workspace files for a module by analyzing its source code using AI.
-// Long: The AI analyzes the source code in go/eac/<module>/ and creates comprehensive architecture
-// Long: documentation including system context views (external systems and actors), container views
-// Long: (major components), and component views (internal structure). All generated workspaces are
-// Long: automatically validated against Structurizr CLI to ensure correct syntax before saving to
-// Long: specs/<module>/.design/workspace.dsl (or custom path via --output). Use --debug to save AI
-// Long: prompts and outputs.
-// Long:
-// Long: Expected Output:
-// Long: - Structurizr DSL workspace file at output path
-// Long: - System context, container, and component views
-// Long: - Validation results if Docker available
-// Long: - Debug logs in out/commands.log if --debug enabled
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging
-// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing workspace.dsl file if it exists
-// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
-// Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
-// Flag.skip-validation: type=bool, shorthand=, default=false, usage=Skip Docker validation (useful when Docker is unavailable)
 // Usage: create design <module>
 package design
 
@@ -29,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	design "github.com/ready-to-release/eac/go/cli/eac/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
@@ -44,10 +24,37 @@ import (
 	"github.com/ready-to-release/eac/go/core/validation/formats/structurizr"
 )
 
-func init() {
-	registry.Register(CreateDesign)
+type createDesignCommand struct{}
+
+var _ core.SimpleCommandPort = (*createDesignCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&createDesignCommand{},
+	}
 }
 
+func (c *createDesignCommand) Name() string { return "create design" }
+
+func (c *createDesignCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-design",
+		Short:         "Generate workspace.dsl for a module using AI",
+		Long:          "Generates Structurizr DSL workspace files for a module by analyzing its source code using AI.\nThe AI analyzes the source code in go/eac/<module>/ and creates comprehensive architecture\ndocumentation including system context views (external systems and actors), container views\n(major components), and component views (internal structure). All generated workspaces are\nautomatically validated against Structurizr CLI to ensure correct syntax before saving to\nspecs/<module>/.design/workspace.dsl (or custom path via --output). Use --debug to save AI\nprompts and outputs.\n\nExpected Output:\n- Structurizr DSL workspace file at output path\n- System context, container, and component views\n- Validation results if Docker available\n- Debug logs in out/commands.log if --debug enabled",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging"},
+			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Overwrite existing workspace.dsl file if it exists"},
+			{Name: "output", Shorthand: "o", Type: "string", Usage: "Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)"},
+			{Name: "prompt", Type: "string", Usage: "Custom AI prompt file path"},
+			{Name: "skip-validation", Type: "bool", DefaultValue: "false", Usage: "Skip Docker validation (useful when Docker is unavailable)"},
+		},
+	}
+}
+
+func (c *createDesignCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreateDesign()
+}
 // Intent: Create a Structurizr DSL workspace from natural language description using AI
 //
 // CreateDesign orchestrates the architecture design generation workflow.

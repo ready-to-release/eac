@@ -28,7 +28,7 @@ var osMu sync.Mutex
 //
 // The lookupFn is called with a space-separated command name (e.g., "show help")
 // and should return the command function and whether it was found.
-// Typically this wraps registry.GetCommand from the clibase/registry package.
+// Typically this wraps registry.Global().Get() from the clibase/registry package.
 func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(args []string) (string, int) {
 	return func(args []string) (string, int) {
 		if len(args) < 1 {

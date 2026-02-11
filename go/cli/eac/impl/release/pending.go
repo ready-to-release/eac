@@ -1,39 +1,7 @@
-// Command: release pending
-// Short: Check if module has pending changes for release
-// Long: Analyzes commits since the last release and outputs release decision data.
-// Long:
-// Long: This command checks the git history and changelog to determine if there
-// Long: are unreleased changes that warrant a new version.
-// Long:
-// Long: Output includes:
-// Long:   - has_changes: whether there are releasable changes
-// Long:   - current_version: the current released version
-// Long:   - next_version: the calculated next version
-// Long:   - change_counts: breakdown by change type (added, fixed, changed, etc.)
-// Long:
-// Long: This is designed for CI/CD pipelines to determine if a release is needed.
-// Long:
-// Long: Expected Output:
-// Long:   - JSON object containing:
-// Long:     - has_changes: boolean indicating if there are releasable changes
-// Long:     - current_version: the current released version
-// Long:     - next_version: the calculated next version
-// Long:     - change_counts: breakdown by change type (added, fixed, changed, etc.)
-// Long:
-// Long: Examples:
-// Long:   release pending clie            # Check clie for pending changes
-// Long:   release pending clie --quiet    # Exit code only (0=changes, 1=no changes)
-// Long:   release pending --all              # Check all releasable modules
-// Long:   release pending --published        # Check only published modules
-// Long:   release pending --internal         # Check only internal modules
-// Flag.quiet: type=bool, usage=Suppress output, use exit code only (0=has changes, 1=no changes)
-// Flag.all: type=bool, usage=Check all modules with changelogs
-// Flag.published: type=bool, usage=Check only published modules
-// Flag.internal: type=bool, usage=Check only internal modules
-// Args: modules
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -41,14 +9,40 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releasePendingCommand struct{}
+
+var _ core.SimpleCommandPort = (*releasePendingCommand)(nil)
+
+func (c *releasePendingCommand) Name() string { return "release pending" }
+
+func (c *releasePendingCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-pending",
+		Short:         "Check if module has pending changes for release",
+		Long:          "Analyzes commits since the last release and outputs release decision data.\n\nThis command checks the git history and changelog to determine if there\nare unreleased changes that warrant a new version.\n\nOutput includes:\n  - has_changes: whether there are releasable changes\n  - current_version: the current released version\n  - next_version: the calculated next version\n  - change_counts: breakdown by change type (added, fixed, changed, etc.)\n\nThis is designed for CI/CD pipelines to determine if a release is needed.\n\nExpected Output:\n  - JSON object containing:\n    - has_changes: boolean indicating if there are releasable changes\n    - current_version: the current released version\n    - next_version: the calculated next version\n    - change_counts: breakdown by change type (added, fixed, changed, etc.)\n\nExamples:\n  release pending clie            # Check clie for pending changes\n  release pending clie --quiet    # Exit code only (0=changes, 1=no changes)\n  release pending --all              # Check all releasable modules\n  release pending --published        # Check only published modules\n  release pending --internal         # Check only internal modules",
+		Args: "modules",
+		Flags: []core.FlagSpec{
+			{Name: "quiet", Type: "bool", Usage: "Suppress output, use exit code only (0=has changes, 1=no changes)"},
+			{Name: "all", Type: "bool", Usage: "Check all modules with changelogs"},
+			{Name: "published", Type: "bool", Usage: "Check only published modules"},
+			{Name: "internal", Type: "bool", Usage: "Check only internal modules"},
+		},
+	}
+}
+
+func (c *releasePendingCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleasePending()
+}
 
 // PendingRelease contains release decision data for CI/CD.
 type PendingRelease struct {
@@ -125,7 +119,7 @@ func ReleasePending() int {
 	}
 
 	// Load workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		log.Errorf("failed to get workspace root: %v", err)
 		return 1

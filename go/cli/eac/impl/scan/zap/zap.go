@@ -1,39 +1,14 @@
-// Command: scan zap
-// Short: Dynamic Application Security Testing using OWASP ZAP
-// Long: Perform Dynamic Application Security Testing (DAST) using OWASP ZAP.
-// Long:
-// Long: This command performs black-box security testing of running web applications
-// Long: using OWASP ZAP via Docker. It detects common vulnerabilities like XSS, SQL
-// Long: injection, CSRF, and misconfigurations. Results are saved as timestamped
-// Long: evidence files with SHA256 integrity verification for audit compliance.
-// Long:
-// Long: Note: Unlike other security commands, ZAP scans a running application URL
-// Long: rather than module files. The module argument is used for evidence file
-// Long: organization only.
-// Long:
-// Long: Expected Output:
-// Long:   Evidence files are written to out/scan/<module>/zap/
-// Long:
-// Long: Example:
-// Long:   security zap src-api --target http://localhost:8080              # Baseline scan
-// Long:   security zap src-api --target http://localhost:8080 --scan-type full  # Full scan
-// Long:   security zap src-api --target http://localhost:8080 --scan-type api   # API scan
-// Long:   security zap src-api --target http://localhost:8080 --debug      # Debug logging
-// Flag.target: type=string, default=, usage=Target URL to scan (required)
-// Flag.scan-type: type=string, default=baseline, usage=Scan type (baseline, full, api)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: false
-// Args: module
 package zap
 
 import (
+	"context"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	"github.com/ready-to-release/eac/go/core/evidence"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -41,9 +16,35 @@ import (
 )
 
 var log = logging.C()
+type scanZapCommand struct{}
 
-func init() {
-	registry.Register(ZAP)
+var _ core.SimpleCommandPort = (*scanZapCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&scanZapCommand{},
+	}
+}
+
+func (c *scanZapCommand) Name() string { return "scan zap" }
+
+func (c *scanZapCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "scan-zap",
+		Short:         "Dynamic Application Security Testing using OWASP ZAP",
+		Long:          "Perform Dynamic Application Security Testing (DAST) using OWASP ZAP.\n\nThis command performs black-box security testing of running web applications\nusing OWASP ZAP via Docker. It detects common vulnerabilities like XSS, SQL\ninjection, CSRF, and misconfigurations. Results are saved as timestamped\nevidence files with SHA256 integrity verification for audit compliance.\n\nNote: Unlike other security commands, ZAP scans a running application URL\nrather than module files. The module argument is used for evidence file\norganization only.\n\nExpected Output:\n  Evidence files are written to out/scan/<module>/zap/\n\nExample:\n  security zap src-api --target http://localhost:8080              # Baseline scan\n  security zap src-api --target http://localhost:8080 --scan-type full  # Full scan\n  security zap src-api --target http://localhost:8080 --scan-type api   # API scan\n  security zap src-api --target http://localhost:8080 --debug      # Debug logging",
+		Args:          "module",
+		Flags: []core.FlagSpec{
+			{Name: "target", Type: "string", Usage: "Target URL to scan (required)"},
+			{Name: "scan-type", Type: "string", DefaultValue: "baseline", Usage: "Scan type (baseline, full, api)"},
+			{Name: "debug", Type: "bool", Shorthand: "d", DefaultValue: "false", Usage: "Enable debug logging"},
+		},
+	}
+}
+
+func (c *scanZapCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ZAP()
 }
 
 // ZAP command entry point
@@ -220,7 +221,6 @@ func ZAP() int {
 
 	return 0
 }
-
 
 func printZAPUsage() {
 	log.Info("Dynamic Application Security Testing using OWASP ZAP")

@@ -1,19 +1,12 @@
-// Command: get build-deps
-// Short: Get aggregated build dependencies for a module
-// Args: module (required) - Module moniker
-// Long:
-// Long: Expected Output:
-// Long: YAML list of module build dependencies, aggregated from the module and all its transitive
-// Long: dependencies. Includes system dependencies resolved from module type capabilities (e.g., go,
-// Long: node, docker) and artifact-specific requirements (e.g., upx for compression).
-// Flag.format: type=string, usage=Output format (shell, space, yaml, json)
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -22,14 +15,37 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+type getBuildDepsCommand struct{}
+
+var _ core.SimpleCommandPort = (*getBuildDepsCommand)(nil)
+
+func (c *getBuildDepsCommand) Name() string { return "get build-deps" }
+
+func (c *getBuildDepsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "get-build-deps",
+		Short:         "Get aggregated build dependencies for a module",
+		Long: "Expected Output:\n" +
+			"YAML list of module build dependencies, aggregated from the module and all its transitive\n" +
+			"dependencies. Includes system dependencies resolved from module type capabilities (e.g., go,\n" +
+			"node, docker) and artifact-specific requirements (e.g., upx for compression).",
+		Args: "module (required) - Module moniker",
+		Flags: []core.FlagSpec{
+			{Name: "format", Type: "string", Usage: "Output format (shell, space, yaml, json)"},
+		},
+	}
+}
+
+func (c *getBuildDepsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetBuildDeps()
+}
+
 // BuildDepsResult contains the build dependencies for a module.
 type BuildDepsResult struct {
 	Module    string   `json:"module" yaml:"module"`
 	Type      string   `json:"type" yaml:"type"`
 	BuildDeps []string `json:"build_deps" yaml:"build_deps"`
 }
-
-// buildDepsFlags defines valid flags for the get build-deps command
 
 func GetBuildDeps() int {
 	// Validate flags before parsing

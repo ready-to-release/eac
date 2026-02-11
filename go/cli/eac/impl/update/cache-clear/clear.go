@@ -1,56 +1,51 @@
-// Command: update cache-clear
-// Short: Clear incremental cache state files
-// Long: Removes cache files used by build, lint, test, and scan commands.
-// Long: This forces a full rebuild/retest/relint on the next run.
-// Long:
-// Long: Cache types:
-// Long:   state    - Incremental state (build/lint/test state.json, capacity semaphores)
-// Long:   asset    - Rendered assets (mermaid, drawio, structurizr caches)
-// Long:   work     - Ephemeral work directories (npm work dirs)
-// Long:   registry - Docker image cache (runs docker image prune)
-// Long:   layer    - Docker builder cache (runs docker builder prune)
-// Long:   all      - Everything
-// Long:
-// Long: The state cache includes capacity semaphore files (.global-*-capacity.*)
-// Long: which coordinate parallel test/build execution. Clear these if tests hang.
-// Long:
-// Long: Default (no --type): state + work (same as --skip-cache default)
-// Long:
-// Long: Examples:
-// Long:   cache-clear                     Clear state + work caches (default)
-// Long:   cache-clear --type=all          Clear all caches including Docker
-// Long:   cache-clear --type=state        Clear only state files
-// Long:   cache-clear --type=asset        Clear only asset caches
-// Long:   cache-clear --type=registry     Clear Docker image cache
-// Long:   cache-clear --type=layer        Clear Docker builder cache
-// Long:   cache-clear --type=local:state  Clear only local state (fine-grained)
-// Long:
-// Long: Use --dry-run to see what would be deleted without actually deleting.
-// Flag.type: type=string, default=state+work, usage=Cache type to clear (state, asset, work, registry, layer, all, or level:type)
-// Flag.dry-run: type=bool, default=false, usage=Show what would be deleted without deleting
-// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show each file being deleted
 package cacheclear
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/registry"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-var log = logging.C()
+type clearCacheCommand struct{}
 
-func init() {
-	registry.Register(ClearCache)
+var _ core.SimpleCommandPort = (*clearCacheCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&clearCacheCommand{},
+	}
 }
 
+func (c *clearCacheCommand) Name() string { return "update cache-clear" }
+
+func (c *clearCacheCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "update-cache-clear",
+		Short:         "Clear incremental cache state files",
+		Long:          "Removes cache files used by build, lint, test, and scan commands.\nThis forces a full rebuild/retest/relint on the next run.\n\nCache types:\n  state    - Incremental state (build/lint/test state.json, capacity semaphores)\n  asset    - Rendered assets (mermaid, drawio, structurizr caches)\n  work     - Ephemeral work directories (npm work dirs)\n  registry - Docker image cache (runs docker image prune)\n  layer    - Docker builder cache (runs docker builder prune)\n  all      - Everything\n\nThe state cache includes capacity semaphore files (.global-*-capacity.*)\nwhich coordinate parallel test/build execution. Clear these if tests hang.\n\nDefault (no --type): state + work (same as --skip-cache default)\n\nExamples:\n  cache-clear                     Clear state + work caches (default)\n  cache-clear --type=all          Clear all caches including Docker\n  cache-clear --type=state        Clear only state files\n  cache-clear --type=asset        Clear only asset caches\n  cache-clear --type=registry     Clear Docker image cache\n  cache-clear --type=layer        Clear Docker builder cache\n  cache-clear --type=local:state  Clear only local state (fine-grained)\n\nUse --dry-run to see what would be deleted without actually deleting.",
+		Flags: []core.FlagSpec{
+			{Name: "type", Type: "string", DefaultValue: "state+work", Usage: "Cache type to clear (state, asset, work, registry, layer, all, or level:type)"},
+			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would be deleted without deleting"},
+			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show each file being deleted"},
+		},
+	}
+}
+
+func (c *clearCacheCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ClearCache()
+}
+
+var log = logging.C()
 // CacheSetResult tracks clearing results for a single cacheset (ClearDir).
 type CacheSetResult struct {
 	Description  string

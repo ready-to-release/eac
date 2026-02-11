@@ -42,11 +42,9 @@ The risk sub-packages provide the domain logic behind the `validate risk-profile
 
 ### Tech Debt
 - `scoring/ai_scorer.go`: test mock injection uses `Deps.AIResponse` package-level state rather than interface-based dependency injection
-- `oscal/oscal_helpers.go` `GetProfileControlIDs` and `oscal/profile_helpers.go` `GetControlIDsFromProfile` duplicate control-ID extraction logic with nearly identical implementations
 
 ### Pain Points
 - `scoring/ai_scorer.go`: `parseAIResponse` silently falls back to a default likelihood of 3 when JSON parsing fails, which may mask malformed AI responses
 
 ### Optimization Opportunities
-- Consolidate the two profile control-ID extraction functions into one, removing the duplicate (low effort)
 - Replace `Deps.AIResponse` test injection with an interface-based AI provider to improve testability (moderate effort)

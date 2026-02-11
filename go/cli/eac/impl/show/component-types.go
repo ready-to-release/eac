@@ -1,21 +1,35 @@
-// Command: show component-types
-// Short: Display all component types grouped by count
-// Long: The show component-types command displays all component types used in the repository,
-// Long: grouped by count to show which types are most commonly used.
-// Long: This helps understand the technology mix and module distribution in the repository.
-// Long: The output is formatted as a Markdown table with a footer showing total types.
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type showComponentTypesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showComponentTypesCommand)(nil)
+
+func (c *showComponentTypesCommand) Name() string { return "show component-types" }
+
+func (c *showComponentTypesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-component-types",
+		Short:         "Display all component types grouped by count",
+		Long:          "The show component-types command displays all component types used in the repository,\ngrouped by count to show which types are most commonly used.\nThis helps understand the technology mix and module distribution in the repository.\nThe output is formatted as a Markdown table with a footer showing total types.",
+	}
+}
+
+func (c *showComponentTypesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowComponentTypes()
+}
 
 func ShowComponentTypes() int {
 	// Validate flags against registry metadata

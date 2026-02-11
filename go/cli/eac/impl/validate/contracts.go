@@ -1,34 +1,32 @@
-// Command: validate contracts
-// Short: Validate repository contracts against JSON schemas
-// Long: Validate repository contracts against JSON schemas.
-// Long:
-// Long: This command validates all EAC repository configuration files against their
-// Long: JSON Schema definitions. It checks:
-// Long:   - repository.yml (optional)
-// Long:   - repository.yml
-// Long:   - environments.yml
-// Long:   - testing-tags.yml
-// Long:   - test-suites.yml
-// Long:
-// Long: Schema validation ensures configuration files are well-formed and contain
-// Long: valid values according to the contract specifications.
-// Long:
-// Long: Expected Output:
-// Long:   Displays schema validation results for each contract file (repository.yml,
-// Long:   environments.yml, testing-tags.yml, test-suites.yml). Shows count of validated
-// Long:   items per file. Exit code 0 if all contracts valid, 1 if any validation errors.
-// Long:
-// Long: Example:
-// Long:   validate contracts
 package validate
 
 import (
+	"context"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type validateContractsCommand struct{}
+
+var _ core.SimpleCommandPort = (*validateContractsCommand)(nil)
+
+func (c *validateContractsCommand) Name() string { return "validate contracts" }
+
+func (c *validateContractsCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "validate-contracts",
+		Short:         "Validate repository contracts against JSON schemas",
+		Long:          "Validate repository contracts against JSON schemas.\n\nThis command validates all EAC repository configuration files against their\nJSON Schema definitions. It checks:\n  - repository.yml (optional)\n  - repository.yml\n  - environments.yml\n  - testing-tags.yml\n  - test-suites.yml\n\nSchema validation ensures configuration files are well-formed and contain\nvalid values according to the contract specifications.\n\nExpected Output:\n  Displays schema validation results for each contract file (repository.yml,\n  environments.yml, testing-tags.yml, test-suites.yml). Shows count of validated\n  items per file. Exit code 0 if all contracts valid, 1 if any validation errors.\n\nExample:\n  validate contracts",
+	}
+}
+
+func (c *validateContractsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ValidateContracts()
+}
 
 var log = logging.C()
 

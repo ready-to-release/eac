@@ -1,23 +1,37 @@
-// Command: drawio info
-// Short: Show information about a DrawIO file
-// Long: Displays metadata about a DrawIO file including diagram count,
-// Long: page names, cell count, and tool information.
-// Long:
-// Long: Example:
-// Long:   drawio info diagram.drawio.png
-// Long:   drawio info --json diagram.drawio.png
-// Flag.json: type=bool, usage=Output as JSON
-// Args: drawio-file
 package drawio
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 )
+
+type drawioInfoCommand struct{}
+
+var _ core.SimpleCommandPort = (*drawioInfoCommand)(nil)
+
+func (c *drawioInfoCommand) Name() string { return "drawio info" }
+
+func (c *drawioInfoCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "drawio-info",
+		Short:         "Show information about a DrawIO file",
+		Long:          "Displays metadata about a DrawIO file including diagram count,\npage names, cell count, and tool information.\n\nExample:\n  drawio info diagram.drawio.png\n  drawio info --json diagram.drawio.png",
+		Flags: []core.FlagSpec{
+			{Name: "json", Type: "bool", Usage: "Output as JSON"},
+		},
+		Args: "drawio-file",
+	}
+}
+
+func (c *drawioInfoCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return DrawioInfo()
+}
 
 // DrawioInfo shows information about a DrawIO file.
 func DrawioInfo() int {

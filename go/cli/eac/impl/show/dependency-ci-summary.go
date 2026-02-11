@@ -1,29 +1,40 @@
-// Command: show dependency-ci-summary
-// Short: Generate dependency CI check summary
-// Flag.module: type=string, usage=Module name (required)
-// Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI
-// Flag.skipped: type=int, default=0, usage=Number of dependencies skipped (no CI workflow)
-// Flag.status: type=string, default=success, usage=Overall status (success or failure)
-// Long: The show dependency-ci-summary command generates a formatted summary of dependency CI check results.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent CI check summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted dependency CI summary with metrics table
-// Long: - Shows passed and skipped counts on success
-// Long: - Shows failure message on failure
-
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 )
+
+type showDependencyCISummaryCommand struct{}
+
+var _ core.SimpleCommandPort = (*showDependencyCISummaryCommand)(nil)
+
+func (c *showDependencyCISummaryCommand) Name() string { return "show dependency-ci-summary" }
+
+func (c *showDependencyCISummaryCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-dependency-ci-summary",
+		Short:         "Generate dependency CI check summary",
+		Long:          "The show dependency-ci-summary command generates a formatted summary of dependency CI check results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI check summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted dependency CI summary with metrics table\n- Shows passed and skipped counts on success\n- Shows failure message on failure",
+		Flags: []core.FlagSpec{
+			{Name: "module", Type: "string", Usage: "Module name (required)"},
+			{Name: "passed", Type: "int", DefaultValue: "0", Usage: "Number of dependencies that passed CI"},
+			{Name: "skipped", Type: "int", DefaultValue: "0", Usage: "Number of dependencies skipped (no CI workflow)"},
+			{Name: "status", Type: "string", DefaultValue: "success", Usage: "Overall status (success or failure)"},
+		},
+	}
+}
+
+func (c *showDependencyCISummaryCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowDependencyCISummary()
+}
 
 // ShowDependencyCISummary generates a dependency CI check summary.
 func ShowDependencyCISummary() int {

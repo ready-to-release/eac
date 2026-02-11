@@ -21,32 +21,13 @@ type ParallelOptions struct {
 	MaxWorkers int
 }
 
-// DefaultParallelOptions returns sensible defaults for parallel hashing.
-// Uses half of available CPUs as a circuit breaker, with floor of min(4, NumCPU) and cap of 8.
-func DefaultParallelOptions() ParallelOptions {
-	numCPU := runtime.NumCPU()
-	workers := numCPU / 2
-	floor := 4
-	if numCPU < floor {
-		floor = numCPU
-	}
-	if workers < floor {
-		workers = floor
-	}
-	if workers > 8 {
-		workers = 8
-	}
-	return ParallelOptions{
-		MaxWorkers: workers,
-	}
-}
-
-// normalizeWorkers ensures MaxWorkers is within valid range.
-// Uses half of available CPUs as default, floor of min(4, NumCPU), cap of 8.
-func normalizeWorkers(opts ParallelOptions) int {
-	numCPU := runtime.NumCPU()
-	workers := opts.MaxWorkers
+// clampWorkers applies the standard floor/cap policy to a worker count.
+// If n <= 0, defaults to NumCPU/2 with floor of min(4, NumCPU).
+// Caps at 8 regardless.
+func clampWorkers(n int) int {
+	workers := n
 	if workers <= 0 {
+		numCPU := runtime.NumCPU()
 		workers = numCPU / 2
 		floor := 4
 		if numCPU < floor {
@@ -60,6 +41,20 @@ func normalizeWorkers(opts ParallelOptions) int {
 		workers = 8
 	}
 	return workers
+}
+
+// DefaultParallelOptions returns sensible defaults for parallel hashing.
+// Uses half of available CPUs as a circuit breaker, with floor of min(4, NumCPU) and cap of 8.
+func DefaultParallelOptions() ParallelOptions {
+	return ParallelOptions{
+		MaxWorkers: clampWorkers(0),
+	}
+}
+
+// normalizeWorkers ensures MaxWorkers is within valid range.
+// Uses half of available CPUs as default, floor of min(4, NumCPU), cap of 8.
+func normalizeWorkers(opts ParallelOptions) int {
+	return clampWorkers(opts.MaxWorkers)
 }
 
 // fileHashResult holds the result of hashing a single file.

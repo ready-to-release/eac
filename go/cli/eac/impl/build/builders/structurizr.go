@@ -77,7 +77,7 @@ func (h *StructurizrRenderHandler) Build(
 	Logln(logWriter, "=== Rendering structurizr diagrams for %s via container ===", moduleName)
 
 	specsDir := filepath.Join(workspaceRoot, "specs")
-	cacheDir := paths.StructurizrAccelCachePath(workspaceRoot)
+	cacheDir := filepath.Join(paths.StructurizrAccelCachePath(workspaceRoot), moduleName, filepath.Base(outputDir))
 	outputStructurizrDir := filepath.Join(outputDir, "structurizr")
 
 	// Locate this module's workspace.dsl
@@ -296,6 +296,11 @@ func renderStructurizrModule(mod structurizrModuleWork, workspaceRoot, specsDir,
 	// Clean up .puml files (only need SVGs)
 	for _, pumlFile := range pumlFiles {
 		os.Remove(pumlFile)
+	}
+
+	// Ensure cache directory exists for the deeper per-UoW path
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, fmt.Errorf("creating cache dir: %w", err)
 	}
 
 	// Collect exported SVGs and copy to cache with proper naming

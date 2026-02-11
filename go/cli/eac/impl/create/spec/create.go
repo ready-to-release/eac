@@ -1,20 +1,3 @@
-// Command: create spec
-// Short: Generate Gherkin specifications from natural language descriptions
-// Long: The create spec command uses AI to transform natural language feature descriptions into
-// Long: properly formatted Gherkin specifications following Rules/Scenarios patterns. The generated specifications
-// Long: include Feature, Rule, and Scenario blocks with appropriate tags and structure.
-// Long: All specifications are validated against the specification contract to ensure they meet quality standards.
-// Long: The command automatically saves the specification to the specs/ directory, organized by module.
-// Long: Use --debug to inspect intermediate outputs and understand how the AI generates specifications.
-// Long:
-// Long: Expected Output:
-// Long: - Gherkin .feature file in specs/ directory
-// Long: - Feature, Rule, and Scenario blocks with tags
-// Long: - Validated against specification contract
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis
-// Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., eac-cli, core). If not provided, the module will be inferred from the description
-// Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
-// Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: create spec <description>
 package spec
 
@@ -26,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/specs"
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/oscal"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
 	configpkg "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
@@ -42,12 +25,38 @@ import (
 	"github.com/ready-to-release/eac/go/core/validation/formats/gherkin"
 )
 
-var log = logging.C()
+type createSpecCommand struct{}
 
-func init() {
-	registry.Register(CreateSpec)
+var _ core.SimpleCommandPort = (*createSpecCommand)(nil)
+
+// Commands returns all command ports provided by this package.
+func Commands() []core.CommandPort {
+	return []core.CommandPort{
+		&createSpecCommand{},
+	}
 }
 
+func (c *createSpecCommand) Name() string { return "create spec" }
+
+func (c *createSpecCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "create-spec",
+		Short:         "Generate Gherkin specifications from natural language descriptions",
+		Long:          "The create spec command uses AI to transform natural language feature descriptions into\nproperly formatted Gherkin specifications following Rules/Scenarios patterns. The generated specifications\ninclude Feature, Rule, and Scenario blocks with appropriate tags and structure.\nAll specifications are validated against the specification contract to ensure they meet quality standards.\nThe command automatically saves the specification to the specs/ directory, organized by module.\nUse --debug to inspect intermediate outputs and understand how the AI generates specifications.\n\nExpected Output:\n- Gherkin .feature file in specs/ directory\n- Feature, Rule, and Scenario blocks with tags\n- Validated against specification contract",
+		Flags: []core.FlagSpec{
+			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis"},
+			{Name: "module", Shorthand: "m", Type: "string", Usage: "Target module for the specification (e.g., eac-cli, core). If not provided, the module will be inferred from the description"},
+			{Name: "output", Shorthand: "o", Type: "string", Usage: "Custom output path for the specification file. If not provided, the path is determined from the feature name and module"},
+			{Name: "prompt", Type: "string", Usage: "Path to a custom system prompt file. Overrides both user override prompts and built-in prompts"},
+		},
+	}
+}
+
+func (c *createSpecCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return CreateSpec()
+}
+
+var log = logging.C()
 // Intent: Create a Gherkin specification from natural language description using AI
 //
 // CreateSpec orchestrates the specification generation workflow.
@@ -643,7 +652,7 @@ func loadModuleControlsContext(workspaceRoot, moduleName string, cfg *configpkg.
 	}
 
 	// Get control IDs from profile
-	controlIDs := oscal.GetControlIDsFromProfile(profile)
+	controlIDs := oscal.GetProfileControlIDs(profile)
 	if len(controlIDs) == 0 {
 		return "(Profile contains no controls - control tags optional)"
 	}

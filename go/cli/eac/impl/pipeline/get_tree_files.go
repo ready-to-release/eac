@@ -1,29 +1,35 @@
-// Command: pipeline get-tree-files
-// Short: Get repository file list from GitHub Trees API
-//
-//	--sha <sha>: Tree SHA to fetch (default: HEAD)
-//
-// Long:
-// Long: Fetches the list of all files in the repository at a given SHA using
-// Long: the GitHub Trees API. This is much faster than git ls-files for large repos.
-// Long:
-// Long: Output: One file path per line
-// Long:
-// Long: Example:
-// Long:   pipeline get-tree-files --sha abc123
-// Long:   pipeline get-tree-files  # uses HEAD
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineGetTreeFilesCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineGetTreeFilesCommand)(nil)
+
+func (c *pipelineGetTreeFilesCommand) Name() string { return "pipeline get-tree-files" }
+
+func (c *pipelineGetTreeFilesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-get-tree-files",
+		Short:         "Get repository file list from GitHub Trees API",
+		Long:          "Fetches the list of all files in the repository at a given SHA using\nthe GitHub Trees API. This is much faster than git ls-files for large repos.\n\nOutput: One file path per line\n\nExample:\n  pipeline get-tree-files --sha abc123\n  pipeline get-tree-files  # uses HEAD",
+	}
+}
+
+func (c *pipelineGetTreeFilesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineGetTreeFiles()
+}
 
 func PipelineGetTreeFiles() int {
 	// Parse flags

@@ -1,26 +1,37 @@
-// Command: show build-times
-// Short: Display build timing metrics in tables
-// Long: The show build-times command displays build timing analysis parsed from build logs.
-// Long: Shows overall statistics, breakdown by module type, and the slowest individual builds.
-// Long:
-// Long: Expected Output:
-// Long: - Table with overall metrics: total builds, passed/failed counts, total/average duration
-// Long: - Summary by type table: module types with build counts, pass/fail, total and average times
-// Long: - Top N slowest builds table showing duration, status, module name, and type
 package show
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 )
+
+type showBuildTimesCommand struct{}
+
+var _ core.SimpleCommandPort = (*showBuildTimesCommand)(nil)
+
+func (c *showBuildTimesCommand) Name() string { return "show build-times" }
+
+func (c *showBuildTimesCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "show-build-times",
+		Short:         "Display build timing metrics in tables",
+		Long:          "The show build-times command displays build timing analysis parsed from build logs.\nShows overall statistics, breakdown by module type, and the slowest individual builds.\n\nExpected Output:\n- Table with overall metrics: total builds, passed/failed counts, total/average duration\n- Summary by type table: module types with build counts, pass/fail, total and average times\n- Top N slowest builds table showing duration, status, module name, and type",
+	}
+}
+
+func (c *showBuildTimesCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ShowBuildTimes()
+}
 
 func ShowBuildTimes() int {
 	return ShowBuildTimesForModules(nil, 20, "")

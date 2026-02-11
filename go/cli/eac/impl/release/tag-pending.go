@@ -1,34 +1,43 @@
-// Command: release tag-pending
-// Short: Check for changelog versions without corresponding git tags
-// Long: Scans changelog files for version entries and checks if the corresponding
-// Long: git tag exists. Returns versions that need tagging.
-// Long:
-// Long: This is used by CI to detect merged releases that need tags created.
-// Long:
-// Long: Expected Output:
-// Long:   - JSON list of versions needing tags, including module, version, tag, and needs_tag fields
-// Long:
-// Long: Examples:
-// Long:   release tag-pending clie        # Check single module
-// Long:   release tag-pending --all          # Check all modules with changelogs
-// Flag.all: type=bool, usage=Check all modules with changelogs
-// Args: modules
 package release
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type releaseTagPendingCommand struct{}
+
+var _ core.SimpleCommandPort = (*releaseTagPendingCommand)(nil)
+
+func (c *releaseTagPendingCommand) Name() string { return "release tag-pending" }
+
+func (c *releaseTagPendingCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "release-tag-pending",
+		Short:         "Check for changelog versions without corresponding git tags",
+		Long:          "Scans changelog files for version entries and checks if the corresponding\ngit tag exists. Returns versions that need tagging.\n\nThis is used by CI to detect merged releases that need tags created.\n\nExpected Output:\n  - JSON list of versions needing tags, including module, version, tag, and needs_tag fields\n\nExamples:\n  release tag-pending clie        # Check single module\n  release tag-pending --all          # Check all modules with changelogs",
+		Args:          "modules",
+		Flags: []core.FlagSpec{
+			{Name: "all", Type: "bool", Usage: "Check all modules with changelogs"},
+		},
+	}
+}
+
+func (c *releaseTagPendingCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return ReleaseTagPending()
+}
 
 var tagPendingLog = logging.C("release")
 
@@ -79,7 +88,7 @@ func ReleaseTagPending() int {
 	}
 
 	// Load workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
+	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		tagPendingLog.Errorf("failed to get workspace root: %v", err)
 		return 1

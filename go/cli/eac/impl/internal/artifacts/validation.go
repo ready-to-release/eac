@@ -2,9 +2,10 @@
 package artifacts
 
 import (
+	"slices"
+
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
-	"github.com/ready-to-release/eac/go/clibase/utils"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
@@ -153,7 +154,7 @@ func ValidateBuildArtifactsWithExpected(
 		// Check each module's UoW manifests for staleness
 		for _, moniker := range moduleList {
 			// Skip modules already in missingFrom (no artifacts)
-			if utils.Contains(missingFrom, moniker) {
+			if slices.Contains(missingFrom, moniker) {
 				continue
 			}
 

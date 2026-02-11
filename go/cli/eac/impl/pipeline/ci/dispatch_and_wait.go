@@ -1,27 +1,7 @@
-// Command: pipeline ci dispatch-and-wait
-// Short: Wait for GitHub workflow runs to complete
-// Long: Dispatch a workflow and wait for it to complete, or wait for an existing run.
-// Long:
-// Long: This command is useful for CI orchestration when you need to trigger
-// Long: a workflow and wait for its completion before proceeding.
-// Long:
-// Long: Expected Output:
-// Long:   - Workflow dispatch confirmation message
-// Long:   - Live progress display with status updates
-// Long:   - Exit code 0 on success, 1 on failure
-// Long:
-// Long: Example:
-// Long:   pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main
-// Long:   pipeline ci dispatch-and-wait --run-id 12345678
-// Long:   pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main --timeout 600
-// Flag.workflow: type=string, usage=Workflow file name to dispatch
-// Flag.ref: type=string, usage=Git ref to run workflow on (default: current branch)
-// Flag.run-id: type=string, usage=Existing run ID to wait for (skips dispatch)
-// Flag.timeout: type=int, usage=Timeout in seconds (default: 300)
-// Flag.inputs: type=string, usage=Workflow inputs as JSON object
 package ci
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,12 +9,38 @@ import (
 	"strings"
 	"time"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineCIDispatchAndWaitCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCIDispatchAndWaitCommand)(nil)
+
+func (c *pipelineCIDispatchAndWaitCommand) Name() string { return "pipeline ci dispatch-and-wait" }
+
+func (c *pipelineCIDispatchAndWaitCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-ci-dispatch-and-wait",
+		Short:         "Wait for GitHub workflow runs to complete",
+		Long:          "Dispatch a workflow and wait for it to complete, or wait for an existing run.\n\nThis command is useful for CI orchestration when you need to trigger\na workflow and wait for its completion before proceeding.\n\nExpected Output:\n  - Workflow dispatch confirmation message\n  - Live progress display with status updates\n  - Exit code 0 on success, 1 on failure\n\nExample:\n  pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main\n  pipeline ci dispatch-and-wait --run-id 12345678\n  pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main --timeout 600",
+		Flags: []core.FlagSpec{
+			{Name: "workflow", Type: "string", Usage: "Workflow file name to dispatch"},
+			{Name: "ref", Type: "string", Usage: "Git ref to run workflow on (default: current branch)"},
+			{Name: "run-id", Type: "string", Usage: "Existing run ID to wait for (skips dispatch)"},
+			{Name: "timeout", Type: "int", Usage: "Timeout in seconds (default: 300)"},
+			{Name: "inputs", Type: "string", Usage: "Workflow inputs as JSON object"},
+		},
+	}
+}
+
+func (c *pipelineCIDispatchAndWaitCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCIDispatchAndWait()
+}
 
 func PipelineCIDispatchAndWait() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci dispatch-and-wait")

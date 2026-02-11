@@ -1,34 +1,41 @@
-// Command: pipeline get-artifact-id
-// Short: Get artifact ID from a workflow run
-// Long: Queries GitHub API to find an artifact ID by name from a workflow run.
-// Long:
-// Long: This replaces the jq pattern:
-// Long:   gh api ... --jq '.artifacts[] | select(.name == "X") | .id'
-// Long:
-// Long: SHA Detection:
-// Long:   1. --sha flag (explicit)
-// Long:   2. GITHUB_SHA env var (CI)
-// Long:   3. origin/main (devbox)
-// Long:
-// Long: Example:
-// Long:   pipeline get-artifact-id --workflow ci-clie.yaml --name build-artifacts
-// Long:   pipeline get-artifact-id --run-id 12345 --name commands-binary
-// Flag.workflow: type=string, usage=Workflow name to find run for
-// Flag.run-id: type=string, usage=Specific run ID (alternative to workflow+sha)
-// Flag.name: type=string, usage=Artifact name to find (required)
-// Flag.sha: type=string, usage=Commit SHA (auto-detected if not provided)
 package pipeline
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
+
+type pipelineGetArtifactIDCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineGetArtifactIDCommand)(nil)
+
+func (c *pipelineGetArtifactIDCommand) Name() string { return "pipeline get-artifact-id" }
+
+func (c *pipelineGetArtifactIDCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-get-artifact-id",
+		Short:         "Get artifact ID from a workflow run",
+		Long:          "Queries GitHub API to find an artifact ID by name from a workflow run.\n\nThis replaces the jq pattern:\n  gh api ... --jq '.artifacts[] | select(.name == \"X\") | .id'\n\nSHA Detection:\n  1. --sha flag (explicit)\n  2. GITHUB_SHA env var (CI)\n  3. origin/main (devbox)\n\nExample:\n  pipeline get-artifact-id --workflow ci-clie.yaml --name build-artifacts\n  pipeline get-artifact-id --run-id 12345 --name commands-binary",
+		Flags: []core.FlagSpec{
+			{Name: "workflow", Type: "string", Usage: "Workflow name to find run for"},
+			{Name: "run-id", Type: "string", Usage: "Specific run ID (alternative to workflow+sha)"},
+			{Name: "name", Type: "string", Usage: "Artifact name to find (required)"},
+			{Name: "sha", Type: "string", Usage: "Commit SHA (auto-detected if not provided)"},
+		},
+	}
+}
+
+func (c *pipelineGetArtifactIDCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineGetArtifactID()
+}
 
 // ArtifactInfo from GitHub API.
 type ArtifactInfo struct {

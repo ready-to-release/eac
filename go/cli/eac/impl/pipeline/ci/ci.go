@@ -1,20 +1,30 @@
-// Command: pipeline ci
-// Short: CI orchestration and diagnostics
-// Long: Commands for CI/CD orchestration including workflow dispatch,
-// Long: monitoring, and diagnostic summary generation.
-// Long:
-// Long: Available commands:
-// Long:   dispatch-and-wait   Dispatch a workflow and wait for completion
-// Long:   get-run-id          Get CI run ID for a workflow and commit SHA
-// Long:   schedule            Schedule and dispatch CI workflows with concurrency limits
-// Long:   summary-link        Generate diagnostic markdown for CI summaries
 package ci
 
 import (
+	"context"
 	"os"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
+
+type pipelineCICommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineCICommand)(nil)
+
+func (c *pipelineCICommand) Name() string { return "pipeline ci" }
+
+func (c *pipelineCICommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-ci",
+		Short:         "CI orchestration and diagnostics",
+		Long:          "Commands for CI/CD orchestration including workflow dispatch,\nmonitoring, and diagnostic summary generation.\n\nAvailable commands:\n  dispatch-and-wait   Dispatch a workflow and wait for completion\n  get-run-id          Get CI run ID for a workflow and commit SHA\n  schedule            Schedule and dispatch CI workflows with concurrency limits\n  summary-link        Generate diagnostic markdown for CI summaries",
+	}
+}
+
+func (c *pipelineCICommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineCI()
+}
 
 var log = logging.C()
 

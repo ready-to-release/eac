@@ -36,7 +36,7 @@ removed commands.
 ## Code Health
 
 ### Tech Debt
-- `commands.go:144`: package-level compiled regex `cmdMarkerPattern`; harmless but couples pattern to package init
+- None identified. (`cmdMarkerPattern` is a package-level compiled regex with doc comment; this is idiomatic Go.)
 
 ### Pain Points
 - Single-file package (201 lines) with all logic in one file; manageable now but may need splitting if more doc formats are added
