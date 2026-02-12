@@ -41,12 +41,16 @@ Provides evidence collection for risk assessment, including discovery and loadin
 - Suite filtering: supports composite suite filters like `"unit+integration"` for control evidence
 - Control tag extraction: extracts `@control:` tags from test entries for control-evidence mapping
 - Age policy: configurable maximum evidence age for staleness detection
+- Import-cycle workaround: `TestManifestData`, `TestEntryData`, `SuiteResultData`, and `TestArtifactData` are local copies of test-internal types, avoiding a cycle between evidence and impl/test/internal (see `types_testing.go` doc comments)
 
 ## Internal Structure
 
 | File | Responsibility |
 | --- | --- |
-| types.go | Evidence types, collection types, summary types, and convenience methods |
+| types_base.go | Core evidence types (`EvidenceType`, `Evidence`) and age policy |
+| types_testing.go | Test-related types (`TestResults`, `TestCase`, `TestSummary`, `TestManifestData`, `ControlTestEvidence`, `TestEvidence`) |
+| types_security.go | Security-related types (`SecurityResults`, `SecurityEvidenceFile`, `VulnerabilitySummary`, `SBOMSummary`) |
+| types_collection.go | `EvidenceCollection` type and its convenience methods |
 | security_loader.go | Security scan file discovery and parsing |
 | test_loader.go | Test evidence loading with control tag extraction and suite filtering |
 
@@ -61,10 +65,13 @@ The `evidence` package is the data collection layer of the risk assessment pipel
 ## Code Health
 
 ### Tech Debt
-- `types.go` contains many type definitions that could be split into domain-specific files as the package grows
+
+- None identified.
 
 ### Pain Points
-- `TestManifestData` and `TestEntryData` types exist to avoid import cycles with `impl/internal`, creating some type duplication
+
+- `security_loader.go` is 348 lines, making it the largest file in the package due to handling multiple scanner types.
 
 ### Optimization Opportunities
-- Extract shared evidence types into a `core/evidence` package to eliminate the import-cycle workaround types (moderate effort)
+
+- None identified.

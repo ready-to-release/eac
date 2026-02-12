@@ -18,7 +18,7 @@ Provides serve context configuration and adapter registrations for Docker-based 
 
 ## Patterns
 
-- Global singleton: `GlobalServeContext` provides shared configuration across serve commands
+- Parameter passing: `*ServeContext` is passed as a parameter to serve adapters (no global state)
 - Adapter pattern: each server type implements a serve adapter function registered with the tool bridge
 - Delegation to tool bridge: type aliases and convenience functions delegate to `tool.GlobalServeBridge()`
 - Docker-based serving: all server types run as Docker containers with volume mounts
@@ -27,7 +27,7 @@ Provides serve context configuration and adapter registrations for Docker-based 
 
 | File | Responsibility |
 | --- | --- |
-| context.go | `ServeContext` struct with Docker/port/browser/watch configuration and `GlobalServeContext` global |
+| context.go | `ServeContext` struct with Docker/port/browser/watch configuration and `DefaultServeContext()` factory |
 | registry.go | Type aliases and convenience functions delegating to `tool.GlobalServeBridge()` |
 | mkdocs_live.go | MkDocs live-reload Docker serve adapter |
 | static_site.go | nginx static site Docker serve adapter |
@@ -45,10 +45,10 @@ The `servers` package provides the concrete Docker-based server implementations 
 ## Code Health
 
 ### Tech Debt
-- `GlobalServeContext` is a mutable global variable, making concurrent access unsafe and testing harder
+- No tests for mkdocs_live.go (74 lines), static_site.go (80 lines), or structurizr.go (68 lines)
 
 ### Pain Points
 - None identified.
 
 ### Optimization Opportunities
-- Replace `GlobalServeContext` with dependency injection or context passing (moderate effort, improves testability)
+- None identified.

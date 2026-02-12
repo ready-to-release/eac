@@ -12,25 +12,30 @@ shelling out to the git CLI.
 - **`CommitInfo`** -- Commit metadata for changelog generation
 - **`MockRepository`** -- Builder-pattern test double with error injection
 - **`LazyRepo`** -- Lazy-initialized repo with test injection support
+- **`Clock`** -- Function type `func() time.Time` for injectable time source
 
 ## Patterns
 
 - Interface abstraction: `GitRepository` enables mock injection in tests
-- Constructor injection: `RepositoryManager` injects logger into all repos
+- Constructor injection: `RepositoryManager` injects logger and clock into all repos
 - Builder pattern: `MockRepository` uses `With*` methods for test setup
 - Lazy initialization: `LazyRepo` defers repo open until first access
+- Clock injection: `RepositoryManager.WithClock()` enables deterministic commit timestamps in tests
 
 ## Internal Structure
 
 | File | Responsibility |
 | --- | --- |
 | interface.go | `GitRepository` interface definition |
-| git.go | `Repository` implementation (status, diff, staging, branch ops) |
+| git.go | `Repository` struct, basic info methods (RootPath, RemoteURL, CurrentBranch, HeadSHA), and shared helpers (resolveBaseRef, resolveToCommit, findMergeBase) |
+| git_status.go | Status and tracking operations (UncommittedFiles, TrackedFiles, StagedFiles, IsFileTracked, IsFileIgnored) |
+| git_staging.go | Staging and commit operations (ConfigSet, Add, Commit, AddRemote) |
+| git_diff.go | Diff and branch comparison operations (StagedDiff, StagedDiffStats, GetBranchCommits, GetBranchDiff, GetBranchDiffStats, GetBranchFiles, formatDiffStats) |
 | manager.go | `RepositoryManager` for opening and initializing repos |
 | history.go | Commit history, tag queries, and ref resolution |
 | mock.go | `MockRepository` with builder methods and error injection |
 | testutil.go | `LazyRepo` lazy-init helper for consumers |
-| time.go | Overridable `timeNow` for deterministic tests |
+| time.go | `Clock` type definition for injectable time source |
 
 ## Dependencies
 
@@ -47,13 +52,15 @@ real go-git operations in production.
 ## Code Health
 
 ### Tech Debt
-- `interface.go`: `GitRepository` has 28 methods -- consider splitting into focused interfaces (e.g., `Reader`, `Writer`, `HistoryQuerier`) to reduce coupling
-- `time.go:7`: package-level mutable `var timeNow = time.Now` used for test overrides; a clock interface injected via constructor would be safer
+- None -- `time.go` mutable var replaced with `Clock` type injected via `RepositoryManager.WithClock()` (TD-124)
 
-### Pain Points
-- `git.go` (601 lines) covers status, diff, staging, and branch operations -- splitting by responsibility would improve navigability
-- `mock.go` (427 lines) must shadow all 28 interface methods, making it expensive to maintain when the interface changes
+### Assessed and Accepted
+- `mock.go` (~490 lines) explicitly implements all 28 `GitRepository` interface methods.
+  This was assessed as part of TD-124. Embedding a base type with default no-op
+  implementations would reduce line count but would hide missing method implementations
+  at compile time when the interface changes. The current explicit approach is verbose
+  but provides immediate compiler errors on interface drift, which is the safer trade-off
+  for a foundational package with many consumers.
 
 ### Optimization Opportunities
-- Extract branch-comparison methods (`GetBranch*`) into a dedicated sub-interface; most consumers only need read-only operations (low effort, high impact on mock size)
 - No TODO/FIXME markers found -- codebase is clean of deferred work items

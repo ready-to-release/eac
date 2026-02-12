@@ -11,8 +11,8 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
 
@@ -214,7 +214,8 @@ func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptio
 
 // getChangedFiles returns list of modified/unstaged files from git.
 func getChangedFiles(workspaceRoot string) ([]string, error) {
-	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", "HEAD")
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "diff", "--name-only", "HEAD")
 	if err != nil {
 		return nil, err
 	}

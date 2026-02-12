@@ -1,7 +1,7 @@
 // Package ownership provides the simplified file ownership model.
 // Ownership is determined by directory roots (most-specific-root wins),
 // not by glob patterns. When multiple components share the same root,
-// file extensions from component-types determine which component owns which file.
+// file extensions from component-kinds determine which component owns which file.
 package ownership
 
 // Owner identifies the module and component that owns a file.

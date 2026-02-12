@@ -129,123 +129,140 @@ func GetValidCommands(ctx context.Context, workspaceRoot string, executor Comman
 	return commands, nil
 }
 
+// parseState tracks mutable state during help output parsing.
+type parseState struct {
+	help                *CommandHelp
+	section             string
+	currentLines        []string
+	expectedOutputLines []string
+	inExpectedOutput    bool
+	currentFlag         *FlagArg
+}
+
 // ParseHelpOutput parses the --help output into a CommandHelp struct.
 func ParseHelpOutput(cmdName, output string) (*CommandHelp, error) {
-	help := &CommandHelp{
-		Name: cmdName,
+	state := &parseState{
+		help:    &CommandHelp{Name: cmdName},
+		section: "description",
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
-	section := "description"
-	var currentLines []string
-	var expectedOutputLines []string
-	inExpectedOutput := false
-	var currentFlag *FlagArg
-
 	for scanner.Scan() {
 		line := scanner.Text()
-
-		switch {
-		case strings.HasPrefix(line, "Usage:"):
-			help.Description = FormatDescription(currentLines)
-			currentLines = nil
-			help.Usage = strings.TrimSpace(strings.TrimPrefix(line, "Usage:"))
-			section = "usage"
-			inExpectedOutput = false
-			currentFlag = nil
-			continue
-		case strings.HasPrefix(line, "Arguments:"):
-			section = "arguments"
-			inExpectedOutput = false
-			currentFlag = nil
-			continue
-		case strings.HasPrefix(line, "Flags:"):
-			section = "flags"
-			inExpectedOutput = false
-			currentFlag = nil
-			continue
-		case strings.HasPrefix(line, "Example:") || strings.HasPrefix(line, "Examples:"):
-			section = "examples"
-			inExpectedOutput = false
-			currentFlag = nil
-			continue
-		case strings.HasPrefix(line, "Expected Output:"):
-			inExpectedOutput = true
-			expectedOutputLines = append(expectedOutputLines, "**Expected Output:**", "")
-			currentFlag = nil
+		if handleSectionHeader(state, line) {
 			continue
 		}
+		parseSectionLine(state, line)
+	}
 
-		switch section {
-		case "description":
-			if inExpectedOutput {
-				expectedOutputLines = append(expectedOutputLines, line)
-			} else if line != "" {
-				currentLines = append(currentLines, line)
-			} else if len(currentLines) > 0 {
-				currentLines = append(currentLines, "")
-			}
-		case "arguments":
-			if arg := ParseFlagLine(line); arg != nil {
-				help.Arguments = append(help.Arguments, *arg)
-				currentFlag = &help.Arguments[len(help.Arguments)-1]
-			} else if currentFlag != nil && strings.HasPrefix(line, "      ") {
-				desc := strings.TrimSpace(line)
-				if currentFlag.Description != "" {
-					currentFlag.Description += " " + desc
-				} else {
-					currentFlag.Description = desc
-				}
-			} else if strings.TrimSpace(line) == "" {
-				// empty line
-			} else if !strings.HasPrefix(line, "  ") && line != "" {
-				section = "notes"
-				help.Notes = line
-				currentFlag = nil
-			}
-		case "flags":
-			if arg := ParseFlagLine(line); arg != nil {
-				help.Flags = append(help.Flags, *arg)
-				currentFlag = &help.Flags[len(help.Flags)-1]
-			} else if currentFlag != nil && strings.HasPrefix(line, "      ") {
-				desc := strings.TrimSpace(line)
-				if currentFlag.Description != "" {
-					currentFlag.Description += " " + desc
-				} else {
-					currentFlag.Description = desc
-				}
-			} else if strings.TrimSpace(line) == "" {
-				// empty line
-			} else if !strings.HasPrefix(line, "  ") && !strings.HasPrefix(line, "-") && line != "" {
-				section = "notes"
-				help.Notes = line
-				currentFlag = nil
-			}
-		case "notes":
-			if help.Notes != "" {
-				help.Notes += "\n"
-			}
-			help.Notes += line
-		case "examples":
-			if help.Examples != "" {
-				help.Examples += "\n"
-			}
-			help.Examples += line
+	finalizeHelp(state)
+	return state.help, nil
+}
+
+// handleSectionHeader checks if a line is a section header and transitions state.
+// Returns true if the line was consumed as a header.
+func handleSectionHeader(s *parseState, line string) bool {
+	switch {
+	case strings.HasPrefix(line, "Usage:"):
+		s.help.Description = FormatDescription(s.currentLines)
+		s.currentLines = nil
+		s.help.Usage = strings.TrimSpace(strings.TrimPrefix(line, "Usage:"))
+		s.section = "usage"
+		s.inExpectedOutput = false
+		s.currentFlag = nil
+		return true
+	case strings.HasPrefix(line, "Arguments:"):
+		s.section = "arguments"
+		s.inExpectedOutput = false
+		s.currentFlag = nil
+		return true
+	case strings.HasPrefix(line, "Flags:"):
+		s.section = "flags"
+		s.inExpectedOutput = false
+		s.currentFlag = nil
+		return true
+	case strings.HasPrefix(line, "Example:") || strings.HasPrefix(line, "Examples:"):
+		s.section = "examples"
+		s.inExpectedOutput = false
+		s.currentFlag = nil
+		return true
+	case strings.HasPrefix(line, "Expected Output:"):
+		s.inExpectedOutput = true
+		s.expectedOutputLines = append(s.expectedOutputLines, "**Expected Output:**", "")
+		s.currentFlag = nil
+		return true
+	}
+	return false
+}
+
+// parseSectionLine dispatches a content line to the appropriate section parser.
+func parseSectionLine(s *parseState, line string) {
+	switch s.section {
+	case "description":
+		parseDescriptionLine(s, line)
+	case "arguments":
+		parseFlagOrArgLine(s, line, &s.help.Arguments)
+	case "flags":
+		parseFlagOrArgLine(s, line, &s.help.Flags)
+	case "notes":
+		if s.help.Notes != "" {
+			s.help.Notes += "\n"
 		}
+		s.help.Notes += line
+	case "examples":
+		if s.help.Examples != "" {
+			s.help.Examples += "\n"
+		}
+		s.help.Examples += line
 	}
+}
 
-	if help.Description == "" && len(currentLines) > 0 {
-		help.Description = FormatDescription(currentLines)
+// parseDescriptionLine handles a line in the description section.
+func parseDescriptionLine(s *parseState, line string) {
+	if s.inExpectedOutput {
+		s.expectedOutputLines = append(s.expectedOutputLines, line)
+	} else if line != "" {
+		s.currentLines = append(s.currentLines, line)
+	} else if len(s.currentLines) > 0 {
+		s.currentLines = append(s.currentLines, "")
 	}
+}
 
-	if len(expectedOutputLines) > 0 {
-		expectedOutput := strings.Join(expectedOutputLines, "\n")
-		if help.Notes != "" {
-			help.Notes = expectedOutput + "\n\n" + help.Notes
+// parseFlagOrArgLine handles a line in the arguments or flags section.
+// It appends parsed flags/args to the target slice, handles continuation lines,
+// and transitions to the notes section when an unindented non-flag line is found.
+func parseFlagOrArgLine(s *parseState, line string, target *[]FlagArg) {
+	if arg := ParseFlagLine(line); arg != nil {
+		*target = append(*target, *arg)
+		s.currentFlag = &(*target)[len(*target)-1]
+	} else if s.currentFlag != nil && strings.HasPrefix(line, "      ") {
+		desc := strings.TrimSpace(line)
+		if s.currentFlag.Description != "" {
+			s.currentFlag.Description += " " + desc
 		} else {
-			help.Notes = expectedOutput
+			s.currentFlag.Description = desc
 		}
+	} else if strings.TrimSpace(line) == "" {
+		// empty line within section
+	} else if !strings.HasPrefix(line, "  ") && !strings.HasPrefix(line, "-") && line != "" {
+		s.section = "notes"
+		s.help.Notes = line
+		s.currentFlag = nil
+	}
+}
+
+// finalizeHelp applies post-parse fixups (description fallback and expected output merging).
+func finalizeHelp(s *parseState) {
+	if s.help.Description == "" && len(s.currentLines) > 0 {
+		s.help.Description = FormatDescription(s.currentLines)
 	}
 
-	return help, nil
+	if len(s.expectedOutputLines) > 0 {
+		expectedOutput := strings.Join(s.expectedOutputLines, "\n")
+		if s.help.Notes != "" {
+			s.help.Notes = expectedOutput + "\n\n" + s.help.Notes
+		} else {
+			s.help.Notes = expectedOutput
+		}
+	}
 }

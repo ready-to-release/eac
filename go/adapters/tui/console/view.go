@@ -43,9 +43,12 @@ func (m Model) computeLayoutMetrics() render.LayoutMetrics {
 }
 
 // invalidateLayoutMetrics forces recomputation on next calculateLayoutMetrics() call.
+// Also recomputes and caches pane heights.
 func (m *Model) invalidateLayoutMetrics() {
 	metrics := m.computeLayoutMetrics()
 	m.Resources.CachedLayoutMetrics = &metrics
+	initH, runH, summaryH := m.computePaneHeights()
+	m.Resources.CachedPaneHeights = &PaneHeights{InitH: initH, RunH: runH, SummaryH: summaryH}
 }
 
 // View renders the console window.

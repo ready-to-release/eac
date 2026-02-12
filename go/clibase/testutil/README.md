@@ -44,13 +44,13 @@ output capture, fixture configuration, git repository helpers, and golden file t
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `assertions.go` | Assertion helper functions for string, value, slice, map, and error patterns |
-| `capture.go` | `CaptureOutput`, `Capture`, `CaptureNoExit`, and output format assertions (JSON/YAML) |
-| `config.go` | `FixtureConfig`, `ModuleSpec`, `SetupMinimalFixture`, `SetupFixtureWithModules`, `WithWorkingDir`, `TempDir`, `WriteFixtureFile` |
-| `git.go` | `GitRepo` for temporary git repository creation and management with EAC config setup |
-| `golden.go` | `GoldenFile` for golden file comparison testing with `-update-golden` flag |
+| File            | Purpose                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `assertions.go` | Assertion helper functions for string, value, slice, map, and error patterns                                                     |
+| `capture.go`    | `CaptureOutput`, `Capture`, `CaptureNoExit`, and output format assertions (JSON/YAML)                                            |
+| `config.go`     | `FixtureConfig`, `ModuleSpec`, `SetupMinimalFixture`, `SetupFixtureWithModules`, `WithWorkingDir`, `TempDir`, `WriteFixtureFile` |
+| `git.go`        | `GitRepo` for temporary git repository creation and management with EAC config setup                                             |
+| `golden.go`     | `GoldenFile` for golden file comparison testing with `-update-golden` flag                                                       |
 
 ## Dependencies
 
@@ -63,11 +63,14 @@ Provides shared test infrastructure used across the CLI test suite. Test files i
 ## Code Health
 
 ### Tech Debt
-- `golden.go:14` package-level mutable `UpdateGolden` flag; safe in practice since `flag.Parse` runs once, but not idiomatic for library code
+
+- None identified
 
 ### Pain Points
-- None identified; files are small and focused
+
+- Implementation files are appropriately sized: `assertions.go` (247 lines), `git.go` (217 lines), `golden.go` (202 lines), `config.go` (171 lines), `capture.go` (169 lines)
+- `testutil_test.go` (128 lines) provides minimal test coverage
 
 ### Optimization Opportunities
-- Add tests for `Capture` edge cases (e.g., pipe failures, concurrent capture) to avoid silent regressions (low effort)
-- Consider using `testing.TB` parameter consistently across all helpers for uniform error reporting (low effort)
+
+- None identified

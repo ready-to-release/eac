@@ -2,10 +2,8 @@ package github
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -45,15 +43,7 @@ func (c *GHClient) GetTreeFiles(sha string) ([]string, error) {
 		return nil, fmt.Errorf("gh api failed: %w", err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	// Filter empty lines
-	files := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if line != "" {
-			files = append(files, line)
-		}
-	}
-	return files, nil
+	return filterNonEmptyLines(string(output)), nil
 }
 
 // ListRuns returns workflow runs matching the given options.
@@ -75,12 +65,7 @@ func (c *GHClient) ListRuns(workflow string, opts ListRunsOpts) ([]WorkflowRun, 
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
 
-	var runs []WorkflowRun
-	if err := json.Unmarshal(output, &runs); err != nil {
-		return nil, fmt.Errorf("failed to parse runs: %w", err)
-	}
-
-	return runs, nil
+	return parseWorkflowRuns(output)
 }
 
 // FindRunBySHA finds a workflow run with the given HEAD SHA.
@@ -139,12 +124,7 @@ func (c *GHClient) ListReleases(limit int) ([]Release, error) {
 		return nil, fmt.Errorf("gh release list failed: %w", err)
 	}
 
-	var releases []Release
-	if err := json.Unmarshal(output, &releases); err != nil {
-		return nil, fmt.Errorf("failed to parse releases: %w", err)
-	}
-
-	return releases, nil
+	return parseReleases(output)
 }
 
 // ReleaseExists checks if a release with the given tag exists.

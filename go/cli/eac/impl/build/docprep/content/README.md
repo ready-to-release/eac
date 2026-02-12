@@ -42,11 +42,13 @@ The content package provides four phases in the docprep preprocessing pipeline w
 ## Code Health
 
 ### Tech Debt
-- The ~20 exported `Format*` functions still share similar patterns that could use a template-based approach
-- `cmdhelp_parse.go`: `ParseHelpOutput` is ~121 lines with a state-machine parser that is hard to extend for new help sections
+
+- None identified
 
 ### Pain Points
-- Three compiled regex patterns in `images.go` (`imagePattern`, `imageWithAttrsPattern`, `drawioImagePattern`) overlap in what they match; adding a new image syntax requires updating multiple regexes
+
+- No test coverage for `commands.go`, `images.go`
 
 ### Optimization Opportunities
-- Extract a generic "format commands as table/list" helper to reduce duplication among `FormatAllCommands`, `FormatCategoryCommands`, `FormatCategoriesTable`, etc. -- moderate effort, high deduplication
+
+- None identified

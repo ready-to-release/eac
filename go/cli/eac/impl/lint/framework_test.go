@@ -6,49 +6,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
-func TestContainsString(t *testing.T) {
-	tests := []struct {
-		name  string
-		slice []string
-		s     string
-		want  bool
-	}{
-		{
-			name:  "found",
-			slice: []string{"a", "b", "c"},
-			s:     "b",
-			want:  true,
-		},
-		{
-			name:  "not found",
-			slice: []string{"a", "b", "c"},
-			s:     "d",
-			want:  false,
-		},
-		{
-			name:  "empty slice",
-			slice: nil,
-			s:     "a",
-			want:  false,
-		},
-		{
-			name:  "empty string match",
-			slice: []string{"", "a"},
-			s:     "",
-			want:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := containsString(tt.slice, tt.s)
-			if got != tt.want {
-				t.Errorf("containsString(%v, %q) = %v, want %v", tt.slice, tt.s, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestIsProviderEnabledForModule(t *testing.T) {
 	tests := []struct {
 		name     string

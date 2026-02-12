@@ -45,10 +45,10 @@ The `artifacts` package is used by the command framework's `AfterInit` hook to v
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- validation.go (224 lines) lacks dedicated unit tests; tested via integration and BDD scenarios
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

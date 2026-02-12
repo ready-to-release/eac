@@ -9,8 +9,8 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	pipelinerunner "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineRunCommand struct{}
@@ -109,7 +109,8 @@ func PipelineRun() int {
 
 // getCurrentBranch gets the current git branch name.
 func getCurrentBranch() string {
-	output, err := gitexec.Run(".", "branch", "--show-current")
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", ".", "branch", "--show-current")
 	if err != nil {
 		return "main"
 	}

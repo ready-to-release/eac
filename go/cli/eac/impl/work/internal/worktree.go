@@ -2,12 +2,13 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // Worktree represents a git worktree.
@@ -20,7 +21,7 @@ type Worktree struct {
 
 // GetWorktrees returns all worktrees in the repository.
 func GetWorktrees(repoRoot string) ([]Worktree, error) {
-	return NewDefaultGitOps(repoRoot).ListWorktrees()
+	return NewDefaultGitOps(repoRoot, tool.GlobalToolSystem()).ListWorktrees()
 }
 
 // parseWorktreeList parses the output of `git worktree list --porcelain`.
@@ -118,9 +119,11 @@ func GenerateWorktreePath(repoName, branchName string) string {
 
 // IsWorktreeClean checks if a worktree has uncommitted changes.
 func IsWorktreeClean(path string) (bool, error) {
-	// Note: NewDefaultGitOps requires repoRoot, but IsWorktreeClean in GitOps
-	// uses the path parameter as the directory, so we pass path as repoRoot
-	return NewDefaultGitOps(path).IsWorktreeClean(path)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return false, fmt.Errorf("tool system not initialized")
+	}
+	return NewDefaultGitOps(path, ts).IsWorktreeClean(path)
 }
 
 // GetRepoName extracts the repository name from the repo root path.
@@ -142,17 +145,21 @@ func WorktreeExists(branch, repoRoot string) (bool, error) {
 
 // BranchExists checks if a branch exists in the repository.
 func BranchExists(branch, repoRoot string) (bool, error) {
-	return NewDefaultGitOps(repoRoot).BranchExists(branch)
+	return NewDefaultGitOps(repoRoot, tool.GlobalToolSystem()).BranchExists(branch)
 }
 
 // GetCurrentBranch returns the current branch name.
 func GetCurrentBranch(path string) (string, error) {
-	return NewDefaultGitOps(path).GetCurrentBranch(path)
+	return NewDefaultGitOps(path, tool.GlobalToolSystem()).GetCurrentBranch(path)
 }
 
 // EnsureInGitRepo checks if we're in a git repository.
 func EnsureInGitRepo() error {
-	_, err := gitexec.Run(".", "rev-parse", "--git-dir")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("not in a git repository")
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "rev-parse", "--git-dir")
 	if err != nil {
 		return fmt.Errorf("not in a git repository")
 	}

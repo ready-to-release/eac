@@ -34,10 +34,13 @@ This package supports the risk assessment workflow by extracting evidence of whi
 ## Code Health
 
 ### Tech Debt
-- None
 
-### Pain Points
 - None identified
 
+### Pain Points
+
+- No test coverage for `tag_extractor.go`
+
 ### Optimization Opportunities
+
 - None identified

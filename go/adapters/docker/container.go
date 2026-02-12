@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -112,85 +113,16 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		defer cancel()
 	}
 
-	// Build mounts
-	var mounts []mount.Mount
-	for _, m := range config.Mounts {
-		// Translate path for DinD
-		source, err := util.TranslatePathForMount(m.Source)
-		if err != nil {
-			return nil, fmt.Errorf("failed to translate mount path %s: %w", m.Source, err)
-		}
-		source = util.FormatDockerVolume(source)
-
-		mounts = append(mounts, mount.Mount{
-			Type:     mount.TypeBind,
-			Source:   source,
-			Target:   m.Target,
-			ReadOnly: m.ReadOnly,
-		})
+	// Build Docker-level configurations from the port config
+	mounts, err := buildMounts(config.Mounts)
+	if err != nil {
+		return nil, err
 	}
 
-	// Build environment variables
-	var envVars []string
-	for k, v := range config.Env {
-		envVars = append(envVars, k+"="+v)
-	}
+	containerConfig := buildContainerConfig(config)
+	hostConfig := buildHostConfig(config, mounts)
 
-	// Container configuration
-	containerConfig := &container.Config{
-		Image:        config.Image,
-		Cmd:          config.Command,
-		Env:          envVars,
-		WorkingDir:   config.WorkingDir,
-		AttachStdout: true,
-		AttachStderr: true,
-		AttachStdin:  config.StdinReader != nil,
-		OpenStdin:    config.StdinReader != nil,
-		StdinOnce:    config.StdinReader != nil,
-	}
-
-	if len(config.Entrypoint) > 0 {
-		containerConfig.Entrypoint = config.Entrypoint
-	}
-
-	if config.User != "" {
-		containerConfig.User = config.User
-	}
-
-	// Host configuration
-	hostConfig := &container.HostConfig{
-		Mounts:     mounts,
-		AutoRemove: true,
-	}
-
-	if config.Network != "" {
-		hostConfig.NetworkMode = container.NetworkMode(config.Network)
-	}
-
-	if config.Privileged {
-		hostConfig.Privileged = true
-	}
-
-	// Apply resource limits
-	if config.Resources != nil {
-		if config.Resources.Memory != "" {
-			memLimit := parseMemoryLimit(config.Resources.Memory)
-			if memLimit > 0 {
-				hostConfig.Resources.Memory = memLimit
-			}
-		}
-		if config.Resources.CPUs > 0 {
-			hostConfig.Resources.NanoCPUs = int64(config.Resources.CPUs * 1e9)
-		}
-		if config.Resources.ShmSize != "" {
-			shmSize := parseMemoryLimit(config.Resources.ShmSize)
-			if shmSize > 0 {
-				hostConfig.ShmSize = shmSize
-			}
-		}
-	}
-
-	// Generate container name if not specified
+	// Resolve container name
 	containerName := config.ContainerName
 	if containerName == "" {
 		containerName = GenerateContainerName()
@@ -207,17 +139,7 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 	containerID := resp.ID
 
 	// Ensure cleanup on any exit
-	defer func() {
-		// Add small delay before cleanup on Windows to allow file handles to release
-		if runtime.GOOS == "windows" {
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		_ = a.client.ContainerStop(cleanupCtx, containerID, container.StopOptions{})                //nolint:errcheck
-		_ = a.client.ContainerRemove(cleanupCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck
-	}()
+	defer a.cleanupContainer(containerID)
 
 	// Attach to container before starting to capture all output
 	attachResp, err := a.client.ContainerAttach(ctx, containerID, container.AttachOptions{
@@ -247,6 +169,135 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		}()
 	}
 
+	// Capture output and wait for container exit
+	exitCode, stdout, stderr, err := a.captureOutputAndWait(ctx, config, attachResp, waitChan, errChan)
+	if err != nil {
+		return nil, err
+	}
+
+	return &containerport.ContainerResult{
+		ExitCode: exitCode,
+		Stdout:   stdout,
+		Stderr:   stderr,
+		Duration: time.Since(start),
+	}, nil
+}
+
+// buildMounts translates port-level mount configs into Docker mount specs.
+func buildMounts(portMounts []containerport.MountConfig) ([]mount.Mount, error) {
+	var mounts []mount.Mount
+	for _, m := range portMounts {
+		source, err := util.TranslatePathForMount(m.Source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to translate mount path %s: %w", m.Source, err)
+		}
+		source = util.FormatDockerVolume(source)
+
+		mounts = append(mounts, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   source,
+			Target:   m.Target,
+			ReadOnly: m.ReadOnly,
+		})
+	}
+	return mounts, nil
+}
+
+// buildContainerConfig creates a Docker container.Config from a port ContainerConfig.
+func buildContainerConfig(config *containerport.ContainerConfig) *container.Config {
+	var envVars []string
+	for k, v := range config.Env {
+		envVars = append(envVars, k+"="+v)
+	}
+
+	cc := &container.Config{
+		Image:        config.Image,
+		Cmd:          config.Command,
+		Env:          envVars,
+		WorkingDir:   config.WorkingDir,
+		AttachStdout: true,
+		AttachStderr: true,
+		AttachStdin:  config.StdinReader != nil,
+		OpenStdin:    config.StdinReader != nil,
+		StdinOnce:    config.StdinReader != nil,
+	}
+
+	if len(config.Entrypoint) > 0 {
+		cc.Entrypoint = config.Entrypoint
+	}
+
+	if config.User != "" {
+		cc.User = config.User
+	}
+
+	return cc
+}
+
+// buildHostConfig creates a Docker container.HostConfig from a port ContainerConfig and resolved mounts.
+func buildHostConfig(config *containerport.ContainerConfig, mounts []mount.Mount) *container.HostConfig {
+	hc := &container.HostConfig{
+		Mounts:     mounts,
+		AutoRemove: true,
+	}
+
+	if config.Network != "" {
+		hc.NetworkMode = container.NetworkMode(config.Network)
+	}
+
+	if config.Privileged {
+		hc.Privileged = true
+	}
+
+	applyResourceLimits(hc, config.Resources)
+
+	return hc
+}
+
+// applyResourceLimits sets memory, CPU, and SHM limits on a host config.
+func applyResourceLimits(hc *container.HostConfig, resources *containerport.ResourceConfig) {
+	if resources == nil {
+		return
+	}
+
+	if resources.Memory != "" {
+		if memLimit := parseMemoryLimit(resources.Memory); memLimit > 0 {
+			hc.Resources.Memory = memLimit
+		}
+	}
+
+	if resources.CPUs > 0 {
+		hc.Resources.NanoCPUs = int64(resources.CPUs * 1e9)
+	}
+
+	if resources.ShmSize != "" {
+		if shmSize := parseMemoryLimit(resources.ShmSize); shmSize > 0 {
+			hc.ShmSize = shmSize
+		}
+	}
+}
+
+// cleanupContainer stops and removes a container, handling Windows file-handle delays.
+func (a *ContainerAdapter) cleanupContainer(containerID string) {
+	// Add small delay before cleanup on Windows to allow file handles to release
+	if runtime.GOOS == "windows" {
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cleanupCancel()
+	_ = a.client.ContainerStop(cleanupCtx, containerID, container.StopOptions{})                //nolint:errcheck
+	_ = a.client.ContainerRemove(cleanupCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck
+}
+
+// captureOutputAndWait copies container stdout/stderr and waits for the container to exit.
+// It returns the exit code, captured stdout bytes, captured stderr bytes, and any error.
+func (a *ContainerAdapter) captureOutputAndWait(
+	ctx context.Context,
+	config *containerport.ContainerConfig,
+	attachResp types.HijackedResponse,
+	waitChan <-chan container.WaitResponse,
+	errChan <-chan error,
+) (int, []byte, []byte, error) {
 	// Determine output destinations (StdoutWriter > LogWriter > buffer capture)
 	var stdout, stderr bytes.Buffer
 	stdoutWriter := chooseWriter(config.StdoutWriter, config.LogWriter, &stdout)
@@ -260,25 +311,18 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 		select {
 		case err := <-errChan:
 			if err != nil {
-				return nil, fmt.Errorf("container wait error: %w", err)
+				return 0, nil, nil, fmt.Errorf("container wait error: %w", err)
 			}
 			continue
 		case waitResp := <-waitChan:
 			exitCode = int(waitResp.StatusCode)
 		case <-ctx.Done():
-			return nil, fmt.Errorf("container execution cancelled or timed out")
+			return 0, nil, nil, fmt.Errorf("container execution cancelled or timed out")
 		}
 		break
 	}
 
-	duration := time.Since(start)
-
-	return &containerport.ContainerResult{
-		ExitCode: exitCode,
-		Stdout:   stdout.Bytes(),
-		Stderr:   stderr.Bytes(),
-		Duration: duration,
-	}, nil
+	return exitCode, stdout.Bytes(), stderr.Bytes(), nil
 }
 
 // isRetryableError determines if an error should trigger a retry.

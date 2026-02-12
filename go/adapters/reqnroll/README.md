@@ -42,10 +42,10 @@ This package is the BDD counterpart to the `dotnet` adapter. Where `dotnet` hand
 ## Code Health
 
 ### Tech Debt
-- runner.go:112-117 `FindTestRoot` returns the first component root it finds regardless of component type, which could be incorrect if a module has multiple components (e.g., both a `dotnet` and a `gherkin` component).
+- None identified
 
 ### Pain Points
-- None identified
+- runner.go is 268 lines; no immediate splitting needed but approaching threshold
 
 ### Optimization Opportunities
 - None identified

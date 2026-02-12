@@ -34,7 +34,9 @@ infrastructure for the repository's multi-framework test system.
 | `discovery_node.go` | TypeScript/Node test discovery |
 | `inference.go` | Tag inference and system-dep enrichment rules |
 | `suite.go` | Suite retrieval, composite suites, test selection |
-| `validation.go` | Post-inference tag validation and GxP checks |
+| `validation.go` | Core tag validation and post-inference checks |
+| `validation_risk.go` | Risk control tag parsing and GxP validation |
+| `validation_feature.go` | Feature-level vs scenario-level tag conflict detection |
 | `context.go` | `SharedTestContext` for BDD step definitions |
 | `isolation.go` | `TestIsolation` for isolated git repos in tests |
 | `fixture.go` | `FixturePool` for reusable test templates |
@@ -72,6 +74,18 @@ and fixture-pooling facilities.
 
 ## Code Health
 
-- **Tech Debt**: `discovery.go:156`: TODO comment -- "Handle complex expressions if needed" for tag expression parsing. `discovery.go:297`: `discoverModuleAllTests()` is ~110 lines; could split per-component discovery into a helper. `discovery.go:20`: package-level `var log` global mutable logger.
-- **Pain Points**: `validation.go` is 551 lines with deeply nested logic; could benefit from smaller validation step functions.
-- **Optimization Opportunities**: Add benchmark tests for fixture pooling to guard against performance regressions (low effort, high value).
+### Tech Debt
+- `discovery_go.go:121`: TODO comment "Handle complex expressions if needed" for tag expression parsing
+- `discovery.go:20`: package-level `var log` global mutable logger
+- `isolation.go` is 467 lines, largest non-test file in package
+- `discovery.go` is 327 lines
+- `discovery_feature.go` is 337 lines
+- `inference.go` is 344 lines
+- `suite.go` is 300 lines
+- `validation.go` is 315 lines
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- Consider splitting `isolation.go` into smaller focused files

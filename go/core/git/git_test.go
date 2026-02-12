@@ -106,7 +106,11 @@ func TestConfigSet(t *testing.T) {
 func TestAddAndCommit(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	repo, err := Init(tmpDir)
+	// Use WithClock to inject a deterministic time via the manager
+	fixedTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	mgr := NewManager(nil).WithClock(func() time.Time { return fixedTime })
+
+	repo, err := mgr.Init(tmpDir)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -127,13 +131,7 @@ func TestAddAndCommit(t *testing.T) {
 		t.Fatalf("Add failed: %v", err)
 	}
 
-	// Set deterministic time for test
-	fixedTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-	oldTimeNow := timeNow
-	timeNow = func() time.Time { return fixedTime }
-	defer func() { timeNow = oldTimeNow }()
-
-	// Commit
+	// Commit (uses the fixed clock injected via manager)
 	hash, err := repo.Commit("Initial commit", "Test User", "test@example.com")
 	if err != nil {
 		t.Fatalf("Commit failed: %v", err)

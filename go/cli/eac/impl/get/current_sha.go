@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -84,10 +84,11 @@ func DetectCurrentSHA(workspaceRoot, explicitSHA string) (*SHAResult, error) {
 	log.Infof("Detected devbox environment (no GITHUB_SHA)")
 
 	// Fetch latest from origin (best-effort, ref might already exist)
-	_ = gitexec.RunSilent(context.Background(), workspaceRoot, "fetch", "origin", "main", "--quiet") //nolint:errcheck
+	ts := tool.GlobalToolSystem()
+	_, _ = ts.RunTool(context.Background(), "git", workspaceRoot, "fetch", "origin", "main", "--quiet") //nolint:errcheck
 
 	// Get origin/main SHA
-	output, err := gitexec.Run(workspaceRoot, "rev-parse", "origin/main")
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "rev-parse", "origin/main")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get origin/main: %w", err)
 	}

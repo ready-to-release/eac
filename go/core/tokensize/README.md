@@ -15,8 +15,8 @@ to identify files that may exceed AI context limits.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
+| File         | Responsibility                                          |
+| ------------ | ------------------------------------------------------- |
 | estimator.go | `EstimateFile`, `EstimateContent`, `ExpandGlobPatterns` |
 
 ## Dependencies
@@ -36,8 +36,11 @@ generation.
 - None identified
 
 ### Pain Points
-- The `char/4` heuristic is a rough approximation; accuracy varies by language and content type
+- None identified
 
 ### Optimization Opportunities
-- Consider adding a configurable multiplier per file extension (e.g., JSON is more token-dense than prose) for improved accuracy (low effort)
-- Package is minimal (94 lines) and well-tested (191 lines); no structural issues
+- Consider adding a configurable multiplier per file extension (e.g., JSON is more token-dense than prose) for improved accuracy
+
+### Assessed and Accepted
+- `char/4` heuristic limitations are documented in `EstimateContent`'s doc comment
+- Package is minimal (111 lines) and well-tested (191 lines)

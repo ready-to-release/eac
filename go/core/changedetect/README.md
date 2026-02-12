@@ -28,11 +28,13 @@ need processing.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| doc.go | Package documentation with architecture and usage examples |
-| changedetect.go | `Detector`, `WorkspaceState`, `ChangeResult`, `DetectOptions`, detection algorithm |
-| adapters.go | `GitRepositoryAdapter`, `HashAdapter`, `ContractResolverAdapter`, `RegistryAdapter` |
+| File            | Responsibility                                                                      |
+| --------------- | ----------------------------------------------------------------------------------- |
+| doc.go          | Package documentation with architecture and usage examples                          |
+| changedetect.go | `Detector` and detection algorithm                                                  |
+| types.go        | `WorkspaceState`, `ModuleState`, `ChangeResult`, `DetectOptions` and related types  |
+| state.go        | State computation, conversion, and workspace state management                       |
+| adapters.go     | `GitRepositoryAdapter`, `HashAdapter`, `ContractResolverAdapter`, `RegistryAdapter` |
 
 ## Dependencies
 
@@ -51,13 +53,12 @@ in large monorepos with many modules.
 ## Code Health
 
 ### Tech Debt
-- `changedetect.go:152`: `DetectChanges` (~182 lines) combines git-state fast path, parallel hashing, dependency propagation, and result assembly -- should be decomposed into stages
-- `changedetect.go` (421 lines): single file holds all core types, the detector, and state computation; splitting into `types.go` and `detector.go` would improve navigation
+- None identified
 
 ### Pain Points
-- Only 1 test file (`changedetect_test.go`) for 3 source files; adapter bridge code in `adapters.go` is tested only through integration paths
 - Heavy use of goroutines and `sync.WaitGroup` in both `DetectChanges` and `ComputeCurrentState` makes debugging concurrency issues difficult
 
 ### Optimization Opportunities
 - Extract the parallel hashing goroutine pool into a reusable helper to reduce duplication between `DetectChanges` and `ComputeCurrentState` (low effort, ~40 lines saved)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+- Good test coverage with changedetect_test.go, helpers_test.go, state_test.go, and types_test.go
+- All files are reasonably sized (largest is changedetect.go at ~200 lines)

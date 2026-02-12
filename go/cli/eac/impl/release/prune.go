@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releasePruneCommand struct{}
@@ -37,10 +35,9 @@ func (c *releasePruneCommand) Execute(_ context.Context, _ *core.CommandRequest)
 }
 
 func ReleasePrune() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold()
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -82,12 +79,8 @@ func ReleasePrune() int {
 	// Get workspace root for module discovery if --all
 	var modules []string
 	if pruneAll {
-		workspaceRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			log.Errorf("Failed to find repository root: %v", err)
-			return 1
-		}
-		modules, err = getModulesWithReleases(workspaceRoot)
+		var err error
+		modules, err = getModulesWithReleases(s.WorkspaceRoot)
 		if err != nil {
 			log.Errorf("Failed to get modules: %v", err)
 			return 1
@@ -162,7 +155,7 @@ func pruneModule(module string, keepCount int, dryRun bool) (int, error) {
 
 func listModuleReleases(module string) ([]string, error) {
 	// Use gh release list with JSON output to correctly parse tag names
-	output, err := ghexec.Run(".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
 	if err != nil {
 		return nil, err
 	}
@@ -184,14 +177,14 @@ func listModuleReleases(module string) ([]string, error) {
 
 func deleteReleaseAndTag(tagName string) error {
 	// Delete the release first
-	output, _, err := ghexec.RunCombined(context.Background(), ".", "release", "delete", tagName, "--yes")
+	output, _, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "release", "delete", tagName, "--yes")
 	if err != nil {
 		// Release might not exist, continue to delete tag
 		log.Debugf("Release delete output: %s", string(output))
 	}
 
 	// Delete the tag via API (URL-encode the slash)
-	repoOutput, err := ghexec.Run(".", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
+	repoOutput, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
 	if err != nil {
 		return fmt.Errorf("failed to get repository: %w", err)
 	}
@@ -201,7 +194,7 @@ func deleteReleaseAndTag(tagName string) error {
 	encodedTag := url.PathEscape(tagName)
 	apiPath := fmt.Sprintf("repos/%s/git/refs/tags/%s", repo, encodedTag)
 
-	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "api", "--method", "DELETE", apiPath)
+	output, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "api", "--method", "DELETE", apiPath)
 	if err != nil {
 		return fmt.Errorf("failed to delete tag: %w", err)
 	}
@@ -214,7 +207,7 @@ func deleteReleaseAndTag(tagName string) error {
 
 func getModulesWithReleases(workspaceRoot string) ([]string, error) {
 	// Get all releases and extract unique module prefixes using JSON output
-	output, err := ghexec.Run(".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
 	if err != nil {
 		return nil, err
 	}

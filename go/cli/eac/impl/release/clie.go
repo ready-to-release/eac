@@ -10,9 +10,8 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releaseClieCommand struct{}
@@ -36,10 +35,9 @@ func (c *releaseClieCommand) Execute(_ context.Context, _ *core.CommandRequest) 
 var reSemverStrict = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
 
 func ReleaseSrcCli() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold()
+	if s == nil {
+		return exitCode
 	}
 
 	fs := flag.NewFlagSet("release clie", flag.ExitOnError)
@@ -206,7 +204,11 @@ func buildTagName(moduleName, version string) string {
 
 // tagExists checks if a git tag already exists.
 func tagExists(tagName string) bool {
-	output, err := gitexec.Run(".", "tag", "-l", tagName)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return false
+	}
+	output, err := ts.RunTool(context.Background(), "git", ".", "tag", "-l", tagName)
 	if err != nil {
 		return false
 	}
@@ -217,10 +219,20 @@ func tagExists(tagName string) bool {
 
 // createGitTag creates a git tag with the given name.
 func createGitTag(tagName string) error {
-	return gitexec.RunSilent(context.Background(), ".", "tag", "-a", tagName, "-m", fmt.Sprintf("Release %s", tagName))
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "tag", "-a", tagName, "-m", fmt.Sprintf("Release %s", tagName))
+	return err
 }
 
 // pushGitTag pushes a git tag to the remote repository.
 func pushGitTag(tagName string) error {
-	return gitexec.RunSilent(context.Background(), ".", "push", "origin", tagName)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "push", "origin", tagName)
+	return err
 }

@@ -19,7 +19,7 @@ The EAC contract system defines all configuration via **YAML contracts validated
 | Contract            | File                  | Location                             | Purpose                                          |
 | ------------------- | --------------------- | ------------------------------------ | ------------------------------------------------ |
 | **Repository**      | `repository.yml`      | `.eac/`                          | Module definitions, dependencies, file ownership |
-| **Component Types** | `component-types.yml` | `contracts/.../defaults/`            | Component type definitions with build behavior   |
+| **Blueprints**      | `blueprints.yml`      | `contracts/.../defaults/`            | Component kind definitions with build behavior   |
 | **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/`            | Tool definitions and resource configuration      |
 | **Registries**      | `registries.yml`      | `contracts/.../defaults/`            | Container registry definitions                   |
 | **Environments**    | `environments.yml`    | `contracts/.../defaults/`            | Test execution environments (L0-L4)              |
@@ -124,11 +124,11 @@ modules:
 
 ---
 
-## Component Types Contract
+## Blueprints Contract
 
-**File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
+**File**: `contracts/core/0.1.0/schemas/defaults/blueprints.yml`
 
-**Purpose**: Define component types with build behavior, file patterns, and tooling
+**Purpose**: Define component kinds with build behavior, file patterns, and tooling
 
 ### Structure
 
@@ -384,7 +384,7 @@ suites:
 ```mermaid
 graph TB
     Modules[repository.yml] -->|defines| Components[components]
-    Components -->|use types from| Types[component-types.yml]
+    Components -->|use types from| Types[blueprints.yml]
     Components -->|use tools from| Tools[tool-config.yml]
     Modules -->|depends_on| Modules
     Suites[test-suites.yml] -->|selects| Tags[testing-tags.yml]
@@ -447,7 +447,7 @@ eac validate-design
 3. **System defaults** (`contracts/eac-core/0.1.0/defaults/`)
 4. **Hardcoded defaults** (in eac-core code)
 
-**Example**: `.eac/component-types.yml` overrides `contracts/eac-core/0.1.0/defaults/component-types.yml`
+**Example**: `.eac/blueprints.yml` overrides `contracts/core/0.1.0/schemas/defaults/blueprints.yml`
 
 ---
 
@@ -501,7 +501,7 @@ contracts/
 └── eac-core/
     └── 0.1.0/
         ├── repository.schema.json
-        ├── component-types.schema.json
+        ├── blueprints.schema.json
         ├── environments.schema.json
         └── ...
 ```
@@ -518,7 +518,7 @@ contracts/
 eac show-modules            # Module table
 eac show-dependencies       # Dependency graph
 eac show-environments       # Environment table
-eac show-component-types    # Component type table
+eac show-component-kinds    # Component kind table
 eac show-config             # All configuration
 ```
 

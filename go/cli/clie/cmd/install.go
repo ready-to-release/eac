@@ -4,17 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"github.com/ready-to-release/eac/go/cli/clie/internal/conf"
 	"github.com/ready-to-release/eac/go/cli/clie/internal/extensions"
-	"github.com/ready-to-release/eac/go/cli/clie/internal/github"
 	"github.com/ready-to-release/eac/go/cli/clie/internal/logging"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // Note: fmt is still imported for fmt.Sprintf and fmt.Errorf
@@ -180,230 +174,45 @@ Examples:
 }
 
 // addExtensionToConfig adds an extension to the config file with the latest SHA version.
+// This orchestrates config file operations using focused helper functions in install_config.go.
 func addExtensionToConfig(extensionName string) error {
 	if extensionName == "" {
 		return fmt.Errorf("extension name is required")
 	}
 
-	// Find the config file
 	repoRoot, err := conf.FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Check for config file at .clie/clie.yml
-	configPaths := []string{
-		filepath.Join(repoRoot, ".clie", "clie.yml"),
-		filepath.Join(repoRoot, ".clie", "clie.yaml"),
-	}
-
-	var configPath string
-	var configMap map[string]interface{}
-
-	// Find existing config
-	for _, cp := range configPaths {
-		if _, err := os.Stat(cp); err == nil {
-			configPath = cp
-			break
-		}
-	}
-
-	if configPath == "" {
-		// No config exists, create at .clie/clie.yml
-		configPath = filepath.Join(repoRoot, ".clie", "clie.yml")
-
-		// Ensure .clie directory exists
-		clieDir := filepath.Join(repoRoot, ".clie")
-		if err := os.MkdirAll(clieDir, 0o755); err != nil { //nolint:gosec // G301: config dir needs to be accessible
-			return fmt.Errorf("failed to create .clie directory: %w", err)
-		}
-
-		logging.Infof("📝 Creating %s", configPath)
-		configMap = map[string]interface{}{
-			"version":    "1.0",
-			"extensions": []interface{}{},
-		}
-	} else {
-		// Parse existing config
-		configData, err := os.ReadFile(configPath)
-		if err != nil {
-			return fmt.Errorf("failed to read config file: %w", err)
-		}
-		if err := yaml.Unmarshal(configData, &configMap); err != nil {
-			return fmt.Errorf("failed to parse config: %w", err)
-		}
-	}
-
-	// Ensure version is set
-	if configMap["version"] == nil {
-		configMap["version"] = "1.0"
-	}
-
-	// Get or create extensions list
-	var extensions []interface{}
-	if exts, ok := configMap["extensions"].([]interface{}); ok {
-		extensions = exts
-	} else {
-		extensions = []interface{}{}
-	}
-
-	// Check if extension already exists in config
-	found := false
-	for _, ext := range extensions {
-		if extMap, ok := ext.(map[string]interface{}); ok {
-			if name, ok := extMap["name"].(string); ok && name == extensionName {
-				found = true
-				break
-			}
-		}
-	}
-
-	if !found {
-		// Query registry to verify extension exists
-		// The registry client supports both authenticated (private packages) and unauthenticated (public packages) access
-		client, err := github.NewRegistryClient()
-		if err != nil {
-			return fmt.Errorf("failed to create registry client: %w", err)
-		}
-
-		// Try to list tags for this specific extension (ext-<name> format)
-		imagePath := fmt.Sprintf("ready-to-release/ext-%s", extensionName)
-		tags, err := client.ListTags(imagePath)
-		if err != nil || len(tags) == 0 {
-			// Provide helpful error message based on whether credentials are available
-			if os.Getenv("GITHUB_TOKEN") == "" {
-				return fmt.Errorf("extension not found in registry: %s\nNote: Set GITHUB_TOKEN and GITHUB_USERNAME environment variables to access private extensions", extensionName)
-			}
-			return fmt.Errorf("extension not found in registry: %s", extensionName)
-		}
-
-		// Extension exists, add it
-		extensions = append(extensions, map[string]interface{}{
-			"name":        extensionName,
-			"description": fmt.Sprintf("%s development environment", cases.Title(language.English).String(extensionName)),
-			"image":       fmt.Sprintf("ghcr.io/%s:latest", imagePath), // Will be replaced with SHA
-		})
-	}
-
-	// Update the extension with the latest SHA tag
-	logging.Infof("📌 Getting latest SHA tag for %s...", extensionName)
-
-	// Create a minimal config to use the existing logic from conf package
-	tempConfig := &conf.Config{
-		Extensions: []conf.Extension{},
-	}
-
-	// Convert our extensions to conf.Extension type for processing
-	for _, ext := range extensions {
-		extMap, ok := ext.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		name, _ := extMap["name"].(string)   //nolint:errcheck // type assertion with fallback to empty string
-		image, _ := extMap["image"].(string) //nolint:errcheck // type assertion with fallback to empty string
-
-		if name != "" && image != "" {
-			tempConfig.Extensions = append(tempConfig.Extensions, conf.Extension{
-				Name:  name,
-				Image: image,
-			})
-		}
-	}
-
-	// Use validatePinnedExtensions to get the latest SHA tags
-	// This function handles cache loading and registry fetching internally
-	unpinnedMessages, _ := conf.ValidatePinnedExtensions(tempConfig, false) //nolint:errcheck // best-effort SHA resolution
-
-	// Parse the messages to extract the SHA tags
-	shaMap := make(map[string]string)
-	for _, msg := range unpinnedMessages {
-		// Message format: "'name' must be pinned, latest is: sha-xxxxx"
-		if parts := strings.Split(msg, "'"); len(parts) >= 2 {
-			name := parts[1]
-			if idx := strings.Index(msg, "latest is: "); idx > 0 {
-				sha := strings.TrimSpace(msg[idx+11:])
-				shaMap[name] = sha
-			}
-		}
-	}
-
-	// Find and update only the specific extension we're adding
-	updated := false
-	for i, ext := range extensions {
-		extMap, ok := ext.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		name, _ := extMap["name"].(string)   //nolint:errcheck // type assertion with fallback to empty string
-		image, _ := extMap["image"].(string) //nolint:errcheck // type assertion with fallback to empty string
-
-		// Only update the extension we're adding
-		if name != extensionName {
-			continue
-		}
-
-		if image == "" {
-			continue
-		}
-
-		// Skip if already pinned (has sha- tag)
-		if strings.Contains(image, ":sha-") {
-			logging.Infof("✅ %s already pinned", name)
-			return nil
-		}
-
-		// Extract base image
-		baseImage := image
-		if idx := strings.LastIndex(image, ":"); idx > 0 {
-			baseImage = image[:idx]
-		}
-
-		// Get the SHA from our map
-		latestSHA, ok := shaMap[name]
-		if !ok || latestSHA == "" || latestSHA == "sha-<unavailable>" {
-			return fmt.Errorf("failed to get latest SHA for %s", name)
-		}
-
-		// Update the extension
-		extMap["image"] = baseImage + ":" + latestSHA
-		extMap["image_pull_policy"] = "IfNotPresent"
-		extensions[i] = extMap
-		updated = true
-
-		logging.Infof("📌 %s configured with %s", name, latestSHA)
-		break
-	}
-
-	if !updated {
-		return fmt.Errorf("failed to update extension %s", extensionName)
-	}
-
-	// Create YAML content with proper field ordering
-	// Using a custom structure to ensure "version" comes first
-	type OrderedConfig struct {
-		Version    string        `yaml:"version"`
-		Extensions []interface{} `yaml:"extensions"`
-	}
-
-	orderedConfig := OrderedConfig{
-		Version:    configMap["version"].(string), //nolint:errcheck // version field always present in valid config
-		Extensions: extensions,
-	}
-
-	// Marshal back to YAML
-	updatedConfig, err := yaml.Marshal(&orderedConfig)
+	// Find or create config file
+	configPath, configMap, err := findOrCreateConfigFile(repoRoot)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return err
 	}
 
-	// Write back to file
-	if err := os.WriteFile(configPath, updatedConfig, 0o644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
+	// Get extensions list and check for duplicates
+	extensions := getExtensionsList(configMap)
+
+	if !extensionExistsInConfig(extensions, extensionName) {
+		extensions, err = verifyAndAddExtension(extensions, extensionName)
+		if err != nil {
+			return err
+		}
 	}
 
-	logging.Infof("✅ Configuration updated in %s", configPath)
+	// Resolve SHA tags
+	shaMap, err := resolveLatestSHA(extensions, extensionName)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	// Update the extension with SHA
+	extensions, err = updateExtensionWithSHA(extensions, extensionName, shaMap)
+	if err != nil {
+		return err
+	}
+
+	// Write updated config
+	return writeConfigFile(configPath, configMap, extensions)
 }

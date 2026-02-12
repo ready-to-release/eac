@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -266,7 +267,11 @@ var RunCmd = &cobra.Command{
 			}
 		}
 
-		logging.Debugf("Running extension: extension=%s args=%v parsed_boundary=%d", extensionName, containerArgs, parsedCmd.ArgumentBoundary)
+		if parsedCmd != nil {
+			logging.Debugf("Running extension: extension=%s args=%v parsed_boundary=%d", extensionName, containerArgs, parsedCmd.ArgumentBoundary)
+		} else {
+			logging.Debugf("Running extension: extension=%s args=%v (no parsed command)", extensionName, containerArgs)
+		}
 
 		// If no arguments are provided, switch to interactive mode
 		// This makes "clie pwsh" behave like "clie interactive pwsh"
@@ -388,43 +393,35 @@ var RunCmd = &cobra.Command{
 		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-		// Track if we're shutting down
-		shuttingDown := false
+		// Track if we're shutting down (atomic to avoid data races between goroutines)
+		var shuttingDownFlag int32
 
 		go func() {
 			sig := <-signalChan
-			shuttingDown = true
+			atomic.StoreInt32(&shuttingDownFlag, 1)
 
 			logging.Debugf("Received interrupt signal, stopping container gracefully: signal=%s container_id=%s", sig.String(), containerID)
 
-			// Start cleanup in a separate goroutine to avoid blocking
-			go func() {
-				// If we're running in Docker (Docker-in-Docker), clean up child containers first
-				if docker.IsRunningInContainer() {
-					logging.Debug("Detected Docker-in-Docker, cleaning up child containers")
-					if err := host.CleanupChildContainers(); err != nil {
-						logging.Warnf("Failed to clean up some child containers: error=%v", err)
-					}
+			// Perform cleanup inline before exiting to avoid racing with os.Exit
+			if docker.IsRunningInContainer() {
+				logging.Debug("Detected Docker-in-Docker, cleaning up child containers")
+				if err := host.CleanupChildContainers(); err != nil {
+					logging.Warnf("Failed to clean up some child containers: error=%v", err)
 				}
+			}
 
-				// Try to stop the container gracefully
-				stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
+			stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
-				if err := host.StopContainerWithContext(stopCtx, containerID); err != nil {
-					logging.Warnf("Failed to stop container gracefully, forcing termination: container_id=%s error=%v", containerID, err)
-
-					// Force stop if graceful stop failed
-					if err := host.StopContainer(containerID); err != nil {
-						logging.Errorf("Failed to force stop container: %v", err)
-					}
-				} else {
-					logging.Debugf("Container stopped gracefully: container_id=%s", containerID)
+			if err := host.StopContainerWithContext(stopCtx, containerID); err != nil {
+				logging.Warnf("Failed to stop container gracefully, forcing termination: container_id=%s error=%v", containerID, err)
+				if err := host.StopContainer(containerID); err != nil {
+					logging.Errorf("Failed to force stop container: %v", err)
 				}
-			}()
+			} else {
+				logging.Debugf("Container stopped gracefully: container_id=%s", containerID)
+			}
 
-			// Give cleanup a moment to start, then exit
-			time.Sleep(100 * time.Millisecond)
 			os.Exit(130) // Standard exit code for SIGINT
 		}()
 
@@ -494,7 +491,7 @@ var RunCmd = &cobra.Command{
 			}
 		}
 
-		if shuttingDown {
+		if atomic.LoadInt32(&shuttingDownFlag) != 0 {
 			os.Exit(0)
 		}
 
@@ -531,7 +528,7 @@ var RunCmd = &cobra.Command{
 		}
 
 		// Exit with the same code as the container (unless we were interrupted)
-		if !shuttingDown && containerExitCode != 0 {
+		if atomic.LoadInt32(&shuttingDownFlag) == 0 && containerExitCode != 0 {
 			os.Exit(int(containerExitCode))
 		}
 	},

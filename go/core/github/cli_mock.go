@@ -215,15 +215,8 @@ func (m *CLIMock) handleRunCommand(args []string) ([]byte, error) {
 
 func (m *CLIMock) handleRunList(args []string) ([]byte, error) {
 	// Parse workflow name from -w flag
-	workflow := ""
-	for i, arg := range args {
-		if arg == "-w" && i+1 < len(args) {
-			workflow = args[i+1]
-			break
-		}
-	}
-
-	if workflow == "" {
+	workflow, ok := parseFlagValue(args, "-w")
+	if !ok {
 		return nil, errors.New("workflow (-w) flag required")
 	}
 

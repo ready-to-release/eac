@@ -17,7 +17,8 @@ import (
 )
 
 // loggingTestCounter ensures unique temp directories for each scenario.
-var loggingTestCounter int64
+// Using atomic.Int64 for safe concurrent access without bare int64 + atomic helpers.
+var loggingTestCounter atomic.Int64
 
 // loggingContext holds test state for logging scenarios.
 type loggingContext struct {
@@ -31,6 +32,8 @@ type loggingContext struct {
 	loggers map[string]*logging.Logger
 }
 
+// logCtx is per-scenario state, reset in registerLoggingSteps Before/After hooks.
+// Godog runs scenarios sequentially, so a package-level var is safe here.
 var logCtx loggingContext
 
 func resetLoggingContext() {
@@ -90,7 +93,7 @@ func aLoggingModuleConfiguredFor(module string) error {
 	os.Unsetenv("CLIE_TEST_LOGGING_ACTIVE")
 
 	// Create a unique temp directory for this scenario
-	count := atomic.AddInt64(&loggingTestCounter, 1)
+	count := loggingTestCounter.Add(1)
 	logCtx.workspaceRoot = filepath.Join(os.TempDir(), fmt.Sprintf("logging-test-%d", count))
 	if err := os.MkdirAll(logCtx.workspaceRoot, 0o750); err != nil {
 		return err

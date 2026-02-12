@@ -35,7 +35,8 @@ This package implements the `help` command, providing the primary user-facing do
 ## Code Health
 
 ### Tech Debt
-- None
+- help.go (377 lines) is the largest file; contains all formatting and display logic
+- No dedicated unit tests for help.go; tested via BDD scenarios
 
 ### Pain Points
 - None identified

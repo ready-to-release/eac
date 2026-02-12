@@ -55,13 +55,10 @@ interface.
 ## Code Health
 
 ### Tech Debt
-
-- Package-level `schemaValidator` and `schemaValidatorOnce` in config_loader.go are global mutable state coupled to the workspace root of the first caller
+- None identified
 
 ### Pain Points
-
-- `Executor.loadConfig()` reads from disk on every `Execute()` call; caching the config with file-mtime invalidation would reduce I/O for repeated invocations
+- config_loader.go is 298 lines; candidate for splitting (extract env var substitution and schema validation into separate files)
 
 ### Optimization Opportunities
-
 - None identified

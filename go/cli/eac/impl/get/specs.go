@@ -110,7 +110,7 @@ func GetSpecs() int {
 
 	// Use the shared get command helper
 	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
-		report, err := reports.GetSpecs(workspaceRoot, module, version, branch)
+		report, err := reports.GetSpecs(reports.Deps(), workspaceRoot, module, version, branch)
 		if err != nil {
 			return nil, err
 		}

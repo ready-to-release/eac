@@ -54,20 +54,32 @@ func (om *OrderedMap) MarshalJSON() ([]byte, error) {
 	return []byte(buf.String()), nil
 }
 
-// RenderAsJSON converts a Go struct to JSON by first marshaling to YAML then to JSON
-// This ensures YAML is the single source of truth for serialization
-// Order is preserved by using yaml.Node to maintain field ordering
+// RenderAsJSON converts a Go struct to JSON using direct JSON marshaling.
+// If the struct has json tags they are used; otherwise encoding/json uses field names.
+// Falls back to YAML-intermediate path for types that only define yaml tags.
 //
 // Example:
 //
 //	type Person struct {
-//	    Name  string `yaml:"name"`
-//	    Age   int    `yaml:"age"`
+//	    Name  string `json:"name" yaml:"name"`
+//	    Age   int    `json:"age"  yaml:"age"`
 //	}
 //	person := Person{Name: "Alice", Age: 30}
 //	jsonStr, err := RenderAsJSON(person)
 func RenderAsJSON(v interface{}) (string, error) {
-	// First marshal to YAML
+	// Try direct JSON marshaling first (avoids YAML intermediate)
+	jsonBytes, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal to JSON: %w", err)
+	}
+	return string(jsonBytes), nil
+}
+
+// RenderAsJSONViaYAML converts a Go struct to JSON via YAML intermediate.
+// Use this only when the struct exclusively uses yaml tags and field ordering
+// from YAML serialization must be preserved.
+func RenderAsJSONViaYAML(v interface{}) (string, error) {
+	// Marshal to YAML
 	yamlBytes, err := yaml.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal to YAML: %w", err)

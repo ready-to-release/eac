@@ -77,6 +77,7 @@ func GetControlTestEvidenceFromManifest(tests []TestEntryData, testSuite string)
 }
 
 // TestEntryData represents a single test entry with metadata.
+// See TestManifestData in types_testing.go for import-cycle workaround explanation.
 type TestEntryData struct {
 	Name     string
 	Package  string

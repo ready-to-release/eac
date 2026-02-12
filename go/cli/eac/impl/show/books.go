@@ -33,12 +33,10 @@ func (c *showBooksCommand) Execute(_ context.Context, _ *core.CommandRequest) in
 
 // ShowBooks displays all configured books in a table format.
 func ShowBooks() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showBooksImpl)
+}
 
+func showBooksImpl() int {
 	args := os.Args[3:] // Skip program name, "show", and "books"
 
 	// Parse flags

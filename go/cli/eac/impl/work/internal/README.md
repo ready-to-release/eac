@@ -43,6 +43,7 @@ Provides shared infrastructure for the `work` command group including git worktr
 | deps.go | `Deps` injectable dependency container with production defaults |
 | git_ops.go | `WorkGitOperations` interface and `defaultGitOps` production implementation (382 lines) |
 | worktree.go | Worktree discovery, parsing, lookup, path generation, and convenience functions (180 lines) |
+| timing.go | Timing wrapper for git operations with debug logging |
 
 ## Dependencies
 
@@ -58,10 +59,11 @@ The `work/internal` package is the foundation for all `work` commands (create, c
 ## Code Health
 
 ### Tech Debt
-- `git_ops.go` (382 lines) implements 15+ git operations in a single file
+- None identified
 
 ### Pain Points
-- Every git operation creates a new `time.Now()` + `time.Since()` pair for duration logging, which is repetitive boilerplate
+- worktree_test.go is 499 lines (significantly exceeds 300-line threshold)
+- git_ops.go is 359 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Extract a helper that wraps git operations with timing and debug logging to reduce boilerplate (moderate effort)
+- None identified

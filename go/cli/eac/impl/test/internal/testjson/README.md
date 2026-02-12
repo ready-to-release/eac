@@ -34,10 +34,10 @@ The `testjson` package handles Go's native test output format. When tests are ru
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for parser.go (115 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

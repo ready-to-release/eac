@@ -129,7 +129,7 @@ Component types define build behavior and defaults for modules:
 See available types:
 
 ```bash
-eac show component-types
+eac show component-kinds
 ```
 
 ## Dependencies
@@ -232,6 +232,6 @@ eac validate contracts
 | Problem            | Solution                                      |
 | ------------------ | --------------------------------------------- |
 | Overlapping files  | Use `exclude` patterns or adjust ownership    |
-| Missing type       | Check component type in `component-types.yml` |
+| Missing type       | Check component type in `blueprints.yml`      |
 | Build fails        | Check `build_deps` are available (docker, go) |
 | Wrong files listed | Verify glob patterns and root directory       |

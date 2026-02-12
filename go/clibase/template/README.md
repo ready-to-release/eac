@@ -25,8 +25,8 @@ Wraps `text/template` with convenience functions for string and file output.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
+| File          | Purpose                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
 | `renderer.go` | `Renderer` with `NewRenderer`, `RenderToString`, `RenderToFile`, `NormalizeSpecPath`, and `defaultFuncMap` |
 
 ## Dependencies
@@ -40,10 +40,13 @@ Used by commands that generate files from templates, such as spec creation and r
 ## Code Health
 
 ### Tech Debt
-- None identified; no TODO/FIXME markers, no mutable global state, all functions are short
+
+- None identified
 
 ### Pain Points
-- None identified; compact leaf package with strong test coverage (393 test lines vs 215 source lines)
+
+- `renderer_test.go` (393 lines) exceeds 300 lines and is almost twice the size of `renderer.go` (215 lines)
 
 ### Optimization Opportunities
-- None identified; the package is well-structured and thoroughly tested
+
+- None identified

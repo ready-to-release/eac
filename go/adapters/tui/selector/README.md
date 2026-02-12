@@ -42,7 +42,7 @@ The selector sub-package provides the interactive command picker TUI that appear
 ## Code Health
 
 ### Tech Debt
-- None
+- selector.go (322 lines) exceeds 300 lines; candidate for splitting bubbletea model and console wrapper
 
 ### Pain Points
 - None identified

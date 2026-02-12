@@ -42,11 +42,17 @@ func UncommittedState(workspaceRoot string, files []string) string {
 		path := filepath.Join(workspaceRoot, file)
 		f, err := os.Open(path)
 		if err != nil {
-			// File might be deleted - include that in hash
-			h.Write([]byte(file + ":deleted\n"))
+			if os.IsNotExist(err) {
+				// File was deleted - include that state in hash
+				h.Write([]byte(file + ":deleted\n"))
+			} else {
+				// Permission denied, device error, etc. - distinct from deletion
+				h.Write([]byte(file + ":error\n"))
+			}
 			continue
 		}
 		if _, err := io.Copy(h, f); err != nil {
+			// Read error after successful open (e.g., I/O failure mid-read)
 			h.Write([]byte(file + ":error\n"))
 		}
 		f.Close()

@@ -10,4 +10,20 @@
 //   - UnitIDAdapter: wraps workunit.UnitID → core.UnitIDPort
 //   - UnitSpecAdapter: wraps workunit.UnitSpec → core.UnitSpecPort
 //   - UnitResultAdapter: wraps workunit.UnitResult → core.UnitResultPort
+//
+// Generic helper:
+//   - AdaptSlice: converts []T to []P via a supplied adapt function
 package adapters
+
+// AdaptSlice converts a slice of concrete values to a slice of port values
+// using the provided adapt function. Returns nil for nil input.
+func AdaptSlice[T any, P any](items []T, adapt func(T) P) []P {
+	if items == nil {
+		return nil
+	}
+	result := make([]P, len(items))
+	for i, item := range items {
+		result[i] = adapt(item)
+	}
+	return result
+}

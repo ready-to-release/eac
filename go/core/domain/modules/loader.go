@@ -28,7 +28,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	opts := config.LoadOptions{
 		RepoRoot:        workspaceRoot,
 		ValidateSchemas: validate,
-		LazyLoad:        true, // We only need modules and component-types
+		LazyLoad:        true, // We only need modules and component-kinds
 	}
 
 	cfg, err := config.Load(opts)
@@ -42,9 +42,9 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		return nil, domain.NewContractError("load", repoPath, err, "failed to load repository.yml")
 	}
 
-	// Load component types for component-specific defaults
-	if err := cfg.LoadComponentKinds(validate); err != nil {
-		// Component types are optional - continue with defaults
+	// Ensure component kinds map is initialized (populated by LoadBlueprints via LoadRepository)
+	if err := cfg.EnsureComponentKinds(validate); err != nil {
+		// Component kinds are optional - continue with defaults
 	}
 
 	// Apply component-specific defaults with repository path variables
@@ -55,23 +55,9 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 
 	// Convert config.Module to domain.BaseContract and process
 	for _, m := range cfg.Repository.Modules {
-		// Convert to BaseContract for ModuleContract creation
-		// Components use config types directly (no lossy copy needed)
-		// Config types are used directly (no lossy copy needed)
-		base := domain.BaseContract{
-			Moniker:        m.Moniker,
-			Name:           m.Name,
-			Description:    m.Description,
-			ModuleGroup:    m.ModuleGroup,
-			DependsOn:      m.DependsOn,
-			Metadata:       m.Metadata,
-			EvidenceBooks:  m.EvidenceBooks,
-			ComponentOrder: m.ComponentOrder,
-			Components:     m.Components,
-			Linting:        m.Linting,
-			Versioning:     m.Versioning,
-			ReleaseBundle:  m.ReleaseBundle,
-		}
+		// Convert to BaseContract for ModuleContract creation.
+		// Uses ModuleToBaseContract to avoid field-by-field mapping boilerplate.
+		base := domain.ModuleToBaseContract(m)
 
 		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyComponentDefaults()
 

@@ -58,6 +58,152 @@ func (c *serveGourceCommand) Execute(_ context.Context, _ *core.CommandRequest) 
 }
 
 var log = logging.C()
+
+// gourceOptions holds all parsed command-line options for the gource command.
+type gourceOptions struct {
+	noBrowser    bool
+	port         int
+	stop         bool
+	title        string
+	resolution   string
+	fileIdleTime int
+	output       string
+	format       string
+	duration     int
+	slow         float64
+	turbo        bool
+	debug        bool
+}
+
+// newGourceOptions returns gourceOptions with default values applied.
+func newGourceOptions() *gourceOptions {
+	return &gourceOptions{
+		resolution:   "1920x1080",
+		fileIdleTime: 1,
+		format:       "mp4",
+		duration:     60,
+		slow:         1.0,
+	}
+}
+
+// parseGourceArgs parses command-line arguments into gourceOptions.
+// Returns nil and an exit code if parsing fails or --help was requested.
+func parseGourceArgs(args []string) (*gourceOptions, int) {
+	opts := newGourceOptions()
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch arg {
+		case "--no-browser":
+			opts.noBrowser = true
+		case "--stop":
+			opts.stop = true
+		case "--turbo":
+			opts.turbo = true
+		case "--debug":
+			opts.debug = true
+		case "--port", "-p":
+			if i+1 < len(args) {
+				i++
+				p, err := strconv.Atoi(args[i])
+				if err != nil {
+					log.Errorf("Error: invalid port number: %s", args[i])
+					return nil, 1
+				}
+				opts.port = p
+			} else {
+				log.Errorf("Error: --port requires a value")
+				return nil, 1
+			}
+		case "--title", "-t":
+			if i+1 < len(args) {
+				i++
+				opts.title = args[i]
+			} else {
+				log.Errorf("Error: --title requires a value")
+				return nil, 1
+			}
+		case "--resolution", "-r":
+			if i+1 < len(args) {
+				i++
+				opts.resolution = args[i]
+			} else {
+				log.Errorf("Error: --resolution requires a value")
+				return nil, 1
+			}
+		case "--file-idle-time", "-i":
+			if i+1 < len(args) {
+				i++
+				t, err := strconv.Atoi(args[i])
+				if err != nil {
+					log.Errorf("Error: invalid file-idle-time: %s", args[i])
+					return nil, 1
+				}
+				opts.fileIdleTime = t
+			} else {
+				log.Errorf("Error: --file-idle-time requires a value")
+				return nil, 1
+			}
+		case "--output", "-o":
+			if i+1 < len(args) {
+				i++
+				opts.output = args[i]
+			} else {
+				log.Errorf("Error: --output requires a value")
+				return nil, 1
+			}
+		case "--format", "-f":
+			if i+1 < len(args) {
+				i++
+				opts.format = strings.ToLower(args[i])
+				if opts.format != "mp4" && opts.format != "webm" {
+					log.Errorf("Error: --format must be 'mp4' or 'webm'")
+					return nil, 1
+				}
+			} else {
+				log.Errorf("Error: --format requires a value")
+				return nil, 1
+			}
+		case "--duration", "-d":
+			if i+1 < len(args) {
+				i++
+				d, err := strconv.Atoi(args[i])
+				if err != nil || d <= 0 {
+					log.Errorf("Error: --duration must be a positive integer (seconds)")
+					return nil, 1
+				}
+				opts.duration = d
+			} else {
+				log.Errorf("Error: --duration requires a value")
+				return nil, 1
+			}
+		case "--slow", "-s":
+			if i+1 < len(args) {
+				i++
+				s, err := strconv.ParseFloat(args[i], 64)
+				if err != nil || s <= 0 {
+					log.Errorf("Error: --slow must be a positive number")
+					return nil, 1
+				}
+				opts.slow = s
+			} else {
+				log.Errorf("Error: --slow requires a value")
+				return nil, 1
+			}
+		case "--help", "-h":
+			printUsage()
+			return nil, 0
+		default:
+			if strings.HasPrefix(arg, "-") {
+				log.Errorf("Error: unknown flag: %s", arg)
+				return nil, 1
+			}
+		}
+	}
+
+	return opts, 0
+}
+
 // ServeGource starts a Gource visualization server for the repository.
 func ServeGource() int {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -66,140 +212,20 @@ func ServeGource() int {
 		return 1
 	}
 
-	args := os.Args[3:] // Skip program name, "serve", and "gource"
-
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
 
-	var noBrowser bool
-	var port int
-	var stop bool
-	var title string
-	var resolution string = "1920x1080"
-	var fileIdleTime int = 1
-	var output string
-	var format string = "mp4"
-	var duration int = 60
-	var slow float64 = 1.0
-	var turbo bool
-	var debug bool
-
-	// Parse arguments
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--no-browser":
-			noBrowser = true
-		case "--stop":
-			stop = true
-		case "--turbo":
-			turbo = true
-		case "--debug":
-			debug = true
-		case "--port", "-p":
-			if i+1 < len(args) {
-				i++
-				p, err := strconv.Atoi(args[i])
-				if err != nil {
-					log.Errorf("Error: invalid port number: %s", args[i])
-					return 1
-				}
-				port = p
-			} else {
-				log.Errorf("Error: --port requires a value")
-				return 1
-			}
-		case "--title", "-t":
-			if i+1 < len(args) {
-				i++
-				title = args[i]
-			} else {
-				log.Errorf("Error: --title requires a value")
-				return 1
-			}
-		case "--resolution", "-r":
-			if i+1 < len(args) {
-				i++
-				resolution = args[i]
-			} else {
-				log.Errorf("Error: --resolution requires a value")
-				return 1
-			}
-		case "--file-idle-time", "-i":
-			if i+1 < len(args) {
-				i++
-				t, err := strconv.Atoi(args[i])
-				if err != nil {
-					log.Errorf("Error: invalid file-idle-time: %s", args[i])
-					return 1
-				}
-				fileIdleTime = t
-			} else {
-				log.Errorf("Error: --file-idle-time requires a value")
-				return 1
-			}
-		case "--output", "-o":
-			if i+1 < len(args) {
-				i++
-				output = args[i]
-			} else {
-				log.Errorf("Error: --output requires a value")
-				return 1
-			}
-		case "--format", "-f":
-			if i+1 < len(args) {
-				i++
-				format = strings.ToLower(args[i])
-				if format != "mp4" && format != "webm" {
-					log.Errorf("Error: --format must be 'mp4' or 'webm'")
-					return 1
-				}
-			} else {
-				log.Errorf("Error: --format requires a value")
-				return 1
-			}
-		case "--duration", "-d":
-			if i+1 < len(args) {
-				i++
-				d, err := strconv.Atoi(args[i])
-				if err != nil || d <= 0 {
-					log.Errorf("Error: --duration must be a positive integer (seconds)")
-					return 1
-				}
-				duration = d
-			} else {
-				log.Errorf("Error: --duration requires a value")
-				return 1
-			}
-		case "--slow", "-s":
-			if i+1 < len(args) {
-				i++
-				s, err := strconv.ParseFloat(args[i], 64)
-				if err != nil || s <= 0 {
-					log.Errorf("Error: --slow must be a positive number")
-					return 1
-				}
-				slow = s
-			} else {
-				log.Errorf("Error: --slow requires a value")
-				return 1
-			}
-		case "--help", "-h":
-			printUsage()
-			return 0
-		default:
-			if strings.HasPrefix(arg, "-") {
-				log.Errorf("Error: unknown flag: %s", arg)
-				return 1
-			}
-		}
+	args := os.Args[3:] // Skip program name, "serve", and "gource"
+	opts, exitCode := parseGourceArgs(args)
+	if opts == nil {
+		return exitCode
 	}
 
 	// Initialize logger
-	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, opts.debug); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
@@ -207,17 +233,38 @@ func ServeGource() int {
 	containerName := "cli-gource"
 
 	// Handle --stop flag
-	if stop {
+	if opts.stop {
 		return handleStop(containerName)
 	}
 
 	ctx := context.Background()
 
 	// Check if already running
+	if code, handled := handleAlreadyRunning(ctx, containerName, opts.noBrowser); handled {
+		return code
+	}
+
+	// Set default title to repository name
+	if opts.title == "" {
+		opts.title = filepath.Base(workspaceRoot)
+	}
+
+	// File output mode - render to file instead of streaming
+	if opts.output != "" {
+		return handleFileOutput(ctx, workspaceRoot, opts)
+	}
+
+	return startServeContainer(ctx, workspaceRoot, containerName, opts)
+}
+
+// handleAlreadyRunning checks whether the gource container is already running.
+// Returns the exit code and true if the situation was handled (running or error),
+// or 0 and false if the caller should proceed with starting a new container.
+func handleAlreadyRunning(ctx context.Context, containerName string, noBrowser bool) (int, bool) {
 	result, running, err := docker.IsServing(ctx, containerName)
 	if err != nil {
 		log.Errorf("Failed to check container status: %v", err)
-		return 1
+		return 1, true
 	}
 
 	if running && result != nil {
@@ -226,20 +273,25 @@ func ServeGource() int {
 		if !noBrowser {
 			_, _ = docker.OpenBrowserWithFallback(result.URL)
 		}
-		return 0
+		return 0, true
 	}
 
-	// Set default title to repository name
-	if title == "" {
-		title = filepath.Base(workspaceRoot)
-	}
+	return 0, false
+}
 
-	// File output mode - render to file instead of streaming
-	if output != "" {
-		return handleFileOutput(ctx, workspaceRoot, title, resolution, fileIdleTime, output, format, duration, slow, turbo)
+// buildGourceEnvVars constructs the environment variable list for a gource container.
+func buildGourceEnvVars(opts *gourceOptions) []string {
+	return []string{
+		fmt.Sprintf("GOURCE_TITLE=%s", opts.title),
+		fmt.Sprintf("GOURCE_RESOLUTION=%s", opts.resolution),
+		fmt.Sprintf("GOURCE_FILE_IDLE_TIME=%d", opts.fileIdleTime),
+		fmt.Sprintf("GOURCE_DURATION=%d", opts.duration),
+		fmt.Sprintf("GOURCE_SLOW=%g", opts.slow),
 	}
+}
 
-	// Build serve config
+// startServeContainer builds and starts the gource streaming container.
+func startServeContainer(ctx context.Context, workspaceRoot, containerName string, opts *gourceOptions) int {
 	serveConfig := &docker.ServeConfig{
 		Name:  containerName,
 		Image: "cli-gource:latest",
@@ -250,25 +302,18 @@ func ServeGource() int {
 		ContentPath:   workspaceRoot,
 		ContainerPath: "/visualization/repo",
 		ContainerPort: 80,
-		EnvVars: []string{
-			fmt.Sprintf("GOURCE_TITLE=%s", title),
-			fmt.Sprintf("GOURCE_RESOLUTION=%s", resolution),
-			fmt.Sprintf("GOURCE_FILE_IDLE_TIME=%d", fileIdleTime),
-			fmt.Sprintf("GOURCE_DURATION=%d", duration),
-			fmt.Sprintf("GOURCE_SLOW=%g", slow),
-		},
+		EnvVars:       buildGourceEnvVars(opts),
 		RestartPolicy: "no", // Stop when visualization ends
-		PreferredPort: port,
+		PreferredPort: opts.port,
 		Memory:        environments.GetContainerMemoryBytes(),
 		CPUs:          float64(runtime.NumCPU()) / 2,
 	}
 
-	// Start container
 	log.Info("Starting Gource visualization...")
 	log.Infof("Repository: %s", workspaceRoot)
-	log.Infof("Resolution: %s", resolution)
+	log.Infof("Resolution: %s", opts.resolution)
 
-	result, err = docker.StartServe(ctx, serveConfig)
+	result, err := docker.StartServe(ctx, serveConfig)
 	if err != nil {
 		log.Errorf("Failed to start container: %v", err)
 		return 1
@@ -278,11 +323,11 @@ func ServeGource() int {
 	log.Info("Gource visualization is running")
 	log.Infof("URL: %s", result.URL)
 
-	if !noBrowser {
+	if !opts.noBrowser {
 		_, _ = docker.OpenBrowserWithFallback(result.URL)
 	}
 
-	if !debug {
+	if !opts.debug {
 		log.Info("")
 		log.Info("Stop with: eac serve gource --stop")
 	}
@@ -309,17 +354,33 @@ func handleStop(containerName string) int {
 }
 
 // handleFileOutput renders the visualization to a video file.
-func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution string, fileIdleTime int, output, format string, duration int, slow float64, turbo bool) int {
+func handleFileOutput(ctx context.Context, workspaceRoot string, opts *gourceOptions) int {
 	log.Info("Rendering Gource visualization to file...")
 	log.Infof("Repository: %s", workspaceRoot)
-	log.Infof("Resolution: %s", resolution)
-	log.Infof("Format: %s", format)
-	log.Infof("Target duration: %d seconds (x%.1f slow = %d seconds)", duration, slow, int(float64(duration)*slow))
-	if turbo {
+	log.Infof("Resolution: %s", opts.resolution)
+	log.Infof("Format: %s", opts.format)
+	log.Infof("Target duration: %d seconds (x%.1f slow = %d seconds)", opts.duration, opts.slow, int(float64(opts.duration)*opts.slow))
+	if opts.turbo {
 		log.Warn("Turbo mode: using 80% of system resources, might crash, dont use in CI")
 	}
 
-	// Resolve output path relative to workspace root
+	outputPath, outputDir, err := resolveOutputPath(workspaceRoot, opts.output, opts.format)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		return 1
+	}
+
+	if err := buildGourceImage(ctx, workspaceRoot); err != nil {
+		log.Errorf("Error: %v", err)
+		return 1
+	}
+
+	return runRenderContainer(ctx, workspaceRoot, outputPath, outputDir, opts)
+}
+
+// resolveOutputPath resolves the output file path and ensures the directory exists.
+// Returns the resolved output path, the output directory, and any error.
+func resolveOutputPath(workspaceRoot, output, format string) (string, string, error) {
 	var outputPath string
 	if filepath.IsAbs(output) {
 		outputPath = output
@@ -327,11 +388,9 @@ func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution stri
 		outputPath = filepath.Join(workspaceRoot, output)
 	}
 
-	// Ensure output directory exists
 	outputDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		log.Errorf("Error: failed to create output directory: %v", err)
-		return 1
+		return "", "", fmt.Errorf("failed to create output directory: %v", err)
 	}
 
 	// Ensure output has correct extension
@@ -340,7 +399,11 @@ func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution stri
 		outputPath += ext
 	}
 
-	// Check image staleness
+	return outputPath, outputDir, nil
+}
+
+// buildGourceImage checks image staleness and rebuilds the Docker image with no-cache.
+func buildGourceImage(ctx context.Context, workspaceRoot string) error {
 	serveConfig := &docker.ServeConfig{
 		Image: "cli-gource:latest",
 		BuildInfo: &docker.BuildInfo{
@@ -357,27 +420,25 @@ func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution stri
 		log.Infof("Rebuilding image: %s", reason)
 	}
 
-	// Build image - always rebuild for file output to ensure latest entrypoint
 	log.Info("Building Docker image (no-cache)...")
-	{
-		dockerfilePath := filepath.Join(workspaceRoot, "containers/gource/Dockerfile")
-		contextPath := filepath.Join(workspaceRoot, "containers/gource")
-		buildCmd := fmt.Sprintf("docker build --no-cache -t cli-gource:latest -f %s %s", dockerfilePath, contextPath)
-		log.Infof("Running: %s", buildCmd)
+	dockerfilePath := filepath.Join(workspaceRoot, "containers/gource/Dockerfile")
+	contextPath := filepath.Join(workspaceRoot, "containers/gource")
+	buildCmd := fmt.Sprintf("docker build --no-cache -t cli-gource:latest -f %s %s", dockerfilePath, contextPath)
+	log.Infof("Running: %s", buildCmd)
 
-		// Use exec to run docker build with --no-cache to ensure fresh entrypoint
-		cmd := exec.CommandContext(ctx, "docker", "build", "--no-cache", "-t", "cli-gource:latest", "-f", dockerfilePath, contextPath)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Errorf("Error: failed to build image: %v", err)
-			return 1
-		}
+	cmd := exec.CommandContext(ctx, "docker", "build", "--no-cache", "-t", "cli-gource:latest", "-f", dockerfilePath, contextPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to build image: %v", err)
 	}
 
-	// Calculate resources - turbo mode uses 80%, normal uses 50%
-	var memoryBytes int64
-	var cpuCount float64
+	return nil
+}
+
+// calculateRenderResources returns the memory and CPU allocation for the render container.
+// Turbo mode uses 80% of system resources; normal mode uses 50%.
+func calculateRenderResources(turbo bool) (memoryBytes int64, cpuCount float64) {
 	if turbo {
 		memoryBytes = int64(float64(environments.GetSystemMemoryBytes()) * 0.8)
 		cpuCount = float64(runtime.NumCPU()) * 0.8
@@ -385,21 +446,28 @@ func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution stri
 		memoryBytes = environments.GetContainerMemoryBytes() // 50% of system
 		cpuCount = float64(runtime.NumCPU()) / 2
 	}
+	return memoryBytes, cpuCount
+}
 
-	// Run container using adapters/docker
+// buildFileOutputEnvVars constructs environment variables for the file-output render container.
+func buildFileOutputEnvVars(opts *gourceOptions, outputFilename string) []string {
+	envVars := buildGourceEnvVars(opts)
+	envVars = append(envVars,
+		"GOURCE_OUTPUT_MODE=file",
+		fmt.Sprintf("GOURCE_OUTPUT_FORMAT=%s", opts.format),
+		fmt.Sprintf("GOURCE_OUTPUT_FILENAME=%s", outputFilename),
+	)
+	return envVars
+}
+
+// runRenderContainer configures and runs the Docker container for file rendering.
+func runRenderContainer(ctx context.Context, workspaceRoot, outputPath, outputDir string, opts *gourceOptions) int {
+	memoryBytes, cpuCount := calculateRenderResources(opts.turbo)
 	outputFilename := filepath.Base(outputPath)
+
 	runConfig := &docker.RunConfig{
-		Image: "cli-gource:latest",
-		EnvVars: []string{
-			fmt.Sprintf("GOURCE_TITLE=%s", title),
-			fmt.Sprintf("GOURCE_RESOLUTION=%s", resolution),
-			fmt.Sprintf("GOURCE_FILE_IDLE_TIME=%d", fileIdleTime),
-			fmt.Sprintf("GOURCE_DURATION=%d", duration),
-			fmt.Sprintf("GOURCE_SLOW=%g", slow),
-			"GOURCE_OUTPUT_MODE=file",
-			fmt.Sprintf("GOURCE_OUTPUT_FORMAT=%s", format),
-			fmt.Sprintf("GOURCE_OUTPUT_FILENAME=%s", outputFilename),
-		},
+		Image:   "cli-gource:latest",
+		EnvVars: buildFileOutputEnvVars(opts, outputFilename),
 		Mounts: []docker.MountConfig{
 			{Source: workspaceRoot, Target: "/visualization/repo", ReadOnly: true},
 			{Source: outputDir, Target: "/visualization/output", ReadOnly: false},

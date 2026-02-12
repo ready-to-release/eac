@@ -58,12 +58,16 @@ The clie CLI is the primary user-facing binary that developers invoke to run con
 
 ### Tech Debt
 
-_None identified._
+- `internal/docker/hosting_test.go` contains TODO comments at lines 64 and 72 indicating incomplete test coverage for extension validation scenarios with proper mocks.
 
 ### Pain Points
 
-_None identified._
+- Multiple files exceed 300 lines: `cmd/run.go` (535 lines), `internal/conf/config-extensions.go` (430 lines), `internal/github/registry.go` (433 lines), `internal/conf/config.go` (390 lines), `cmd/update.go` (379 lines), `internal/command-parser/parser.go` (333 lines), `internal/conf/config-validation.go` (324 lines), `cmd/cleanup.go` (302 lines).
+- No test files exist for `internal/cache` package (0 test files).
+- No test files exist for `internal/extensions` package (0 test files).
+- No test files exist for `internal/session` package (0 test files).
+- No test files exist for `internal/tui` package (0 test files).
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

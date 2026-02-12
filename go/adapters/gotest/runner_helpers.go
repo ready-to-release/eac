@@ -7,11 +7,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
+
+// tagLevelRe matches positive (non-negated) @L0..@L4 tags.
+var tagLevelRe = regexp.MustCompile(`(?:^|[^~])@(L[0-4])`)
+
+// tagDepsRe matches @deps:<name> tags (letters, digits, hyphens).
+var tagDepsRe = regexp.MustCompile(`@deps:([\w-]+)`)
 
 // findModuleForPath finds the module moniker for a given relative path.
 func findModuleForPath(relPath string, cfg *config.EACConfig) string {
@@ -140,58 +147,34 @@ func runGoGenerate(ctx context.Context, pkgDir string, logWriter io.Writer) erro
 // extractGoBuildTags extracts Go build tags from a godog-format suite tag filter string.
 // Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2" or "@deps:gh-token"
 // Output: "L0,L1" or "L0,L1,L2" or "L0,L1,deps_gh_token" (comma-separated Go build tags)
+//
+// Only positive (non-negated) @L0..@L4 tags are included; ~@L2 is excluded.
+// @deps:<name> tags are translated to deps_<name> with hyphens replaced by underscores.
 func extractGoBuildTags(suiteTagFilter string) string {
 	if suiteTagFilter == "" {
 		return ""
 	}
 
 	var tags []string
+	seen := map[string]bool{}
 
-	// Look for L-level tags (@L0, @L1, @L2, @L3, @L4)
-	for _, level := range []string{"L0", "L1", "L2", "L3", "L4"} {
-		tag := "@" + level
-		idx := 0
-		for {
-			pos := strings.Index(suiteTagFilter[idx:], tag)
-			if pos == -1 {
-				break
-			}
-			absPos := idx + pos
-			if absPos == 0 || suiteTagFilter[absPos-1] != '~' {
-				tags = append(tags, level)
-				break
-			}
-			idx = absPos + len(tag)
+	// Match positive @L0..@L4 tags (not preceded by ~)
+	for _, m := range tagLevelRe.FindAllStringSubmatch(suiteTagFilter, -1) {
+		level := m[1]
+		if !seen[level] {
+			seen[level] = true
+			tags = append(tags, level)
 		}
 	}
 
-	// Look for @deps:<name> tags and translate to deps_<name>
-	depsPrefix := "@deps:"
-	idx := 0
-	for {
-		pos := strings.Index(suiteTagFilter[idx:], depsPrefix)
-		if pos == -1 {
-			break
-		}
-		start := idx + pos + len(depsPrefix)
-		end := start
-		for end < len(suiteTagFilter) {
-			c := suiteTagFilter[end]
-			if c == ' ' || c == ',' || c == '&' || c == ')' {
-				break
-			}
-			end++
-		}
-		if end > start {
-			depName := suiteTagFilter[start:end]
-			goBuildTag := "deps_" + strings.ReplaceAll(depName, "-", "_")
+	// Match @deps:<name> tags and translate to deps_<name>
+	for _, m := range tagDepsRe.FindAllStringSubmatch(suiteTagFilter, -1) {
+		depName := m[1]
+		goBuildTag := "deps_" + strings.ReplaceAll(depName, "-", "_")
+		if !seen[goBuildTag] {
+			seen[goBuildTag] = true
 			tags = append(tags, goBuildTag)
 		}
-		idx = end
-	}
-
-	if len(tags) == 0 {
-		return ""
 	}
 
 	return strings.Join(tags, ",")

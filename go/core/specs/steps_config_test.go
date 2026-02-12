@@ -27,6 +27,8 @@ type configTestState struct {
 	origContainerRoot string // Original CLIE_CONTAINER_ROOT value
 }
 
+// cfgState is per-scenario state, reset in registerConfigSteps Before/After hooks.
+// Godog runs scenarios sequentially, so a package-level var is safe here.
 var cfgState *configTestState
 
 // registerConfigSteps registers step definitions for config defaults feature specs.

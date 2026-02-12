@@ -13,8 +13,8 @@ import (
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type workMergeCommand struct{}
@@ -298,11 +298,16 @@ func checkBranchUpToDate(config *mergeConfig) error {
 // switchToTargetBranch switches to the target branch
 // In multi-worktree setups, it finds and switches to the worktree where the target branch is checked out.
 func switchToTargetBranch(targetBranch, repoRoot string) error {
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
+
 	// First, find where the target branch is checked out
 	targetWorktree, err := findWorktreeForBranch(targetBranch)
 	if err != nil {
 		// Branch not checked out anywhere, try normal checkout
-		_, checkoutErr := gitexec.Run(repoRoot, "checkout", targetBranch)
+		_, checkoutErr := ts.RunTool(context.Background(), "git", repoRoot, "checkout", targetBranch)
 		if checkoutErr != nil {
 			return fmt.Errorf("failed to switch to %s: %w", targetBranch, checkoutErr)
 		}
@@ -321,7 +326,11 @@ func switchToTargetBranch(targetBranch, repoRoot string) error {
 // findWorktreeForBranch finds the worktree path where a branch is checked out
 // Returns empty string and error if branch is not checked out in any worktree.
 func findWorktreeForBranch(branch string) (string, error) {
-	output, err := gitexec.Run(".", "worktree", "list", "--porcelain")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return "", fmt.Errorf("tool system not initialized")
+	}
+	output, err := ts.RunTool(context.Background(), "git", ".", "worktree", "list", "--porcelain")
 	if err != nil {
 		return "", fmt.Errorf("failed to list worktrees: %w", err)
 	}
@@ -344,7 +353,11 @@ func findWorktreeForBranch(branch string) (string, error) {
 
 // updateTargetBranch updates the target branch from remote.
 func updateTargetBranch(targetBranch string) error {
-	_, err := gitexec.Run(".", "pull", "origin", targetBranch)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "pull", "origin", targetBranch)
 	if err != nil {
 		return fmt.Errorf("failed to update %s: %w", targetBranch, err)
 	}

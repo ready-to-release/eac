@@ -64,23 +64,21 @@ func TestGetSpecs(t *testing.T) {
 
 	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
-	// Set up mock git repo to avoid expensive git operations
-	mockRepo := &mockGitRepo{
-		commits: []git.CommitInfo{}, // No commits = no expensive diff operations
-		tags:    []string{},
-	}
-	SetGitRepo(mockRepo)
-	defer SetGitRepo(nil)
-
-	// Set up version resolver mock with tags so "latest" version validation passes
+	// Set up deps with mock git repo and version resolver mock
 	versionMock := git.NewMockRepository(workspaceRoot).
 		WithTag("eac-ext/0.0.9", "abc123", time.Now())
-	SetVersionResolverRepo(versionMock)
-	defer SetVersionResolverRepo(nil)
+
+	deps := &ReportDeps{
+		GitRepo: &mockGitRepo{
+			commits: []git.CommitInfo{}, // No commits = no expensive diff operations
+			tags:    []string{},
+		},
+		VersionResolverRepo: versionMock,
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report, err := GetSpecs(workspaceRoot, tt.module, tt.version, "")
+			report, err := GetSpecs(deps, workspaceRoot, tt.module, tt.version, "")
 
 			if tt.wantErr {
 				if err == nil {
@@ -135,23 +133,23 @@ func TestGetSpecs(t *testing.T) {
 func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
-	// Set up mock git repo to avoid expensive git operations
-	mockRepo := &mockGitRepo{
-		commits: []git.CommitInfo{}, // No commits = no expensive diff operations
-		tags:    []string{},
+	// Set up deps with mock git repo
+	deps := &ReportDeps{
+		GitRepo: &mockGitRepo{
+			commits: []git.CommitInfo{}, // No commits = no expensive diff operations
+			tags:    []string{},
+		},
 	}
-	SetGitRepo(mockRepo)
-	defer SetGitRepo(nil)
 
 	// Test eac-ext bundle module (depends on eac and clie)
 	t.Run("eac-ext aggregates specs from dependencies", func(t *testing.T) {
-		bundleReport, err := GetSpecs(workspaceRoot, "eac-ext", "unreleased", "")
+		bundleReport, err := GetSpecs(deps, workspaceRoot, "eac-ext", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(eac-ext) failed: %v", err)
 		}
 
 		// Get specs for dependency module directly
-		depReport, err := GetSpecs(workspaceRoot, "eac", "unreleased", "")
+		depReport, err := GetSpecs(deps, workspaceRoot, "eac", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(eac) failed: %v", err)
 		}
@@ -180,7 +178,7 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 
 	// Test regular module (no dependencies)
 	t.Run("regular module only includes own specs", func(t *testing.T) {
-		report, err := GetSpecs(workspaceRoot, "eac", "unreleased", "")
+		report, err := GetSpecs(deps, workspaceRoot, "eac", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(eac) failed: %v", err)
 		}

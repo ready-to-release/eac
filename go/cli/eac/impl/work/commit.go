@@ -12,7 +12,7 @@ import (
 	commitmessage "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type workCommitCommand struct{}
@@ -191,7 +191,11 @@ func parseCommitConfig() (*commitConfig, error) {
 
 // stageAllChanges stages all changes in the working directory.
 func stageAllChanges() error {
-	_, err := gitexec.Run(".", "add", ".")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "add", ".")
 	if err != nil {
 		return fmt.Errorf("failed to stage changes: %w", err)
 	}
@@ -201,7 +205,11 @@ func stageAllChanges() error {
 
 // checkStagedChanges checks if there are any staged changes.
 func checkStagedChanges() (bool, error) {
-	_, exitCode, err := gitexec.RunCombined(context.Background(), ".", "diff", "--cached", "--quiet")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return false, fmt.Errorf("tool system not initialized")
+	}
+	_, exitCode, err := ts.RunToolCombined(context.Background(), "git", ".", "diff", "--cached", "--quiet")
 	if err != nil {
 		return false, fmt.Errorf("failed to check staged changes: %w", err)
 	}
@@ -212,7 +220,12 @@ func checkStagedChanges() (bool, error) {
 
 // commitWithMessage creates a commit with a custom message.
 func commitWithMessage(message string) int {
-	err := gitexec.RunSilent(context.Background(), ".", "commit", "-m", message)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		log.Errorf("Failed to create commit: tool system not initialized")
+		return 1
+	}
+	_, err := ts.RunTool(context.Background(), "git", ".", "commit", "-m", message)
 	if err != nil {
 		log.Errorf("Failed to create commit: error=%v", err)
 		return 1

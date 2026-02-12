@@ -8,7 +8,11 @@ import "path/filepath"
 // ============================================================================
 
 // ContainersPath returns the path to a container directory.
+// Panics if repoRoot is empty (PP-092).
 func ContainersPath(repoRoot, container string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	return filepath.Join(repoRoot, "containers", container)
 }
 

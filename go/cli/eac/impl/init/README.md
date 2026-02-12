@@ -29,7 +29,9 @@ Initializes EAC project configuration by creating the `.eac` directory structure
 
 | File | Responsibility |
 | --- | --- |
-| init.go | Command entry point, flag parsing, directory creation, config file generation |
+| init.go | Command entry point, flag parsing (`parseInitFlags`), orchestration (`initImpl`), directory creation, template copying |
+| ai_provider.go | AI provider configuration types (`agentConfig`, `tokenConfig`) and functions (`configureAgent`, `writeConfig`, `buildConfigContent`) |
+| generators.go | YAML generation for repository, books, and environments; shared `generateRepoConfigFromScan` helper |
 | deps.go | `Deps` struct and `defaultDeps()` for injectable dependencies (git repo, AI executor) |
 | scanner.go | Filesystem walk detecting modules by package manager files (go.mod, Cargo.toml, etc.) |
 | config_generator.go | `ConfigGenerator` interface with `RuleBasedGenerator` and `AIGenerator` implementations |
@@ -58,13 +60,10 @@ The `init` package is the onboarding entry point for `eac`, bootstrapping a proj
 ## Code Health
 
 ### Tech Debt
-- init.go is 757 lines with `Init()` spanning ~233 lines; it handles flag parsing, directory creation, config writing, template copying, and YAML generation
-- `generateWithScan` (init.go:669) mixes AI generation, fallback logic, and file writing in ~84 lines
+- All production files have corresponding _test.go files; comprehensive test coverage
 
 ### Pain Points
-- init.go concentrates too many responsibilities: agent config, directory setup, file generation, and template copying could each be separate files
-- Six different YAML generation functions in init.go (repository, books, environments) make the file hard to navigate
+- None identified
 
 ### Optimization Opportunities
-- Extract YAML generation functions into a dedicated `generators.go` file to keep init.go under 400 lines (high feasibility, no cross-cutting concerns)
-- Good test coverage exists (scanner, merge, reinit, api_key all have dedicated tests); focus new tests on init.go orchestration edge cases (moderate feasibility)
+- None identified

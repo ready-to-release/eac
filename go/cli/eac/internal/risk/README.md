@@ -41,10 +41,13 @@ The risk sub-packages provide the domain logic behind the `validate risk-profile
 ## Code Health
 
 ### Tech Debt
-- `scoring/ai_scorer.go`: test mock injection uses `Deps.AIResponse` package-level state rather than interface-based dependency injection
+
+- `scoring/ai_scorer.go`: test mock injection uses `Deps.AIResponse` package-level state rather than interface-based dependency injection.
 
 ### Pain Points
-- `scoring/ai_scorer.go`: `parseAIResponse` silently falls back to a default likelihood of 3 when JSON parsing fails, which may mask malformed AI responses
+
+- None identified.
 
 ### Optimization Opportunities
-- Replace `Deps.AIResponse` test injection with an interface-based AI provider to improve testability (moderate effort)
+
+- None identified.

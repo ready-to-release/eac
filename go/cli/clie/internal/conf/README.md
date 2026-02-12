@@ -57,8 +57,10 @@ The conf package is the central configuration hub for the entire clie CLI. Every
 
 ### Pain Points
 
-- `config-extensions.go` -- `ValidatePinnedExtensions` mixes CI validation logic with cache loading and registry HTTP calls, making it hard to test in isolation.
+- `config-extensions.go` is 430 lines, the largest file in the package.
+- `config.go` is 390 lines.
+- `config-validation.go` is 324 lines.
 
 ### Optimization Opportunities
 
-- The `mergeConfigs` function uses field-by-field merge logic that must be updated whenever new fields are added to Config or Extension types. A reflection-based or code-generated merge would reduce maintenance burden.
+- None identified.

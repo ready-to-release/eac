@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -31,8 +30,7 @@ const (
 // Uses multiple signals for robust detection:
 // 1. CLIE_HOST_REPOROOT environment variable (primary indicator)
 // 2. CLIE_DOCKER_MODE explicit flag
-// 3. Windows host path while running on Linux
-// 4. /.dockerenv file exists.
+// 3. /.dockerenv file exists.
 func IsDinD() bool {
 	// Primary check: CLIE_HOST_REPOROOT is set
 	if os.Getenv(EnvHostRepoRoot) != "" {
@@ -42,16 +40,6 @@ func IsDinD() bool {
 	// Secondary check: explicit env var
 	if os.Getenv(EnvDockerMode) == "true" {
 		return true
-	}
-
-	// Fallback: CLIE_HOST_REPOROOT is set with Windows path but we're on Linux
-	// This catches old clie CLI binaries that don't set CLIE_DOCKER_MODE
-	hostRoot := os.Getenv(EnvHostRepoRoot)
-	if hostRoot != "" && runtime.GOOS == "linux" {
-		// Windows paths have backslashes or drive letters
-		if strings.Contains(hostRoot, "\\") || (len(hostRoot) >= 2 && hostRoot[1] == ':') {
-			return true
-		}
 	}
 
 	// Final fallback: check for Docker container indicator file

@@ -11,10 +11,7 @@ import (
 // Dependency injection pattern: Callers should call New() once and pass the
 // returned EACPort to functions that need it (constructor/parameter injection).
 // Do NOT call New() inside the function that needs EAC execution.
-func New(workspaceRoot string) EACPort {
-	registry := tool.GlobalRegistry()
-	executor := tool.GlobalExecutor()
-
+func New(workspaceRoot string, registry *tool.DefaultRegistry, executor *tool.DefaultExecutor) EACPort {
 	td, ok := registry.Get("eac")
 	if !ok {
 		binaryPath := paths.CommandsBinaryPath(workspaceRoot)

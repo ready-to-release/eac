@@ -14,6 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/manifests/testview"
 	"github.com/ready-to-release/eac/go/cli/eac/internal/risk/evidence"
 	coreconfig "github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // collectEvidenceForModule gathers evidence for a specific module (read-only).
@@ -35,7 +36,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			// Check test evidence age
 			age := time.Since(view.ExecutedAt)
 			if !view.ExecutedAt.IsZero() && age >= config.MaxEvidenceAge {
-				testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+				testDir := paths.TestModuleDir(config.WorkspaceRoot, moduleName)
 				relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 				if err != nil {
 					relPath = testDir
@@ -62,7 +63,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			}
 		} else {
 			// No test data found - add warning
-			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+			testDir := paths.TestModuleDir(config.WorkspaceRoot, moduleName)
 			relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 			if err != nil {
 				relPath = testDir
@@ -83,25 +84,21 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		// Check security evidence age
 		age := time.Since(securityResults.LastModified)
 		if !securityResults.LastModified.IsZero() && age >= config.MaxEvidenceAge {
-			// Get the actual directory that was checked using config-based paths
-			cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-			if err == nil {
-				scanBaseDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
-				relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
-				if err != nil {
-					relPath = scanBaseDir
-				}
-				relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
-
-				warning := fmt.Sprintf(
-					"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
-					formatDuration(age),
-					formatDuration(config.MaxEvidenceAge),
-					relPath,
-					securityResults.LastModified.Format("2006-01-02 15:04:05 MST"),
-				)
-				collection.Warnings = append(collection.Warnings, warning)
+			scanBaseDir := paths.ScanModuleOutputPath(config.WorkspaceRoot, moduleName)
+			relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
+			if err != nil {
+				relPath = scanBaseDir
 			}
+			relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
+
+			warning := fmt.Sprintf(
+				"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
+				formatDuration(age),
+				formatDuration(config.MaxEvidenceAge),
+				relPath,
+				securityResults.LastModified.Format("2006-01-02 15:04:05 MST"),
+			)
+			collection.Warnings = append(collection.Warnings, warning)
 		}
 
 		// Use security evidence even if stale
@@ -125,21 +122,18 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			}
 		}
 	} else {
-		// No security results found - add warning using config-based paths
-		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-		if err == nil {
-			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
-			scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
-			if err != nil {
-				scanRelPath = scanDir
-			}
-			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
-			warning := fmt.Sprintf(
-				"⚠️  No security scan evidence found - Expected location: %s",
-				scanRelPath,
-			)
-			collection.Warnings = append(collection.Warnings, warning)
+		// No security results found - add warning
+		scanDir := paths.ScanModuleOutputPath(config.WorkspaceRoot, moduleName)
+		scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
+		if err != nil {
+			scanRelPath = scanDir
 		}
+		scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
+		warning := fmt.Sprintf(
+			"⚠️  No security scan evidence found - Expected location: %s",
+			scanRelPath,
+		)
+		collection.Warnings = append(collection.Warnings, warning)
 	}
 
 	// Determine if we have valid (non-empty, fresh) evidence
@@ -162,16 +156,14 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 
 	// Error if NO evidence exists at all (neither test nor security)
 	if !hasTestEvidence && !hasSecurityEvidence {
-		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-		if err == nil {
-			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
-			testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
-			testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
-			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
-			scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
-			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
+		testDir := paths.TestModuleDir(config.WorkspaceRoot, moduleName)
+		testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
+		testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
+		scanDir := paths.ScanModuleOutputPath(config.WorkspaceRoot, moduleName)
+		scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
+		scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
 
-			return nil, fmt.Errorf(`no evidence found for module '%s'
+		return nil, fmt.Errorf(`no evidence found for module '%s'
 
 Expected locations:
   - Test results: %s/
@@ -180,8 +172,6 @@ Expected locations:
 Run tests and scans to generate evidence:
   test %s
   scan %s`, moduleName, testRelPath, scanRelPath, moduleName, moduleName)
-		}
-		return nil, fmt.Errorf("no evidence found for module '%s'", moduleName)
 	}
 
 	// Error if ALL available evidence is too old
@@ -195,35 +185,33 @@ Run tests and scans to generate evidence:
 	bothTooOld := hasTestEvidence && hasSecurityEvidence && testTooOld && securityTooOld
 
 	if onlyTestTooOld || onlySecurityTooOld || bothTooOld {
-		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-		if err == nil {
-			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
-			testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
-			testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
-			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
-			scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
-			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
+		testDir := paths.TestModuleDir(config.WorkspaceRoot, moduleName)
+		testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
+		testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
+		scanDir := paths.ScanModuleOutputPath(config.WorkspaceRoot, moduleName)
+		scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
+		scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
 
-			// Customize error message based on what's too old
-			if onlyTestTooOld {
-				return nil, fmt.Errorf(`test evidence for module '%s' is too old (max age: %s)
+		// Customize error message based on what's too old
+		if onlyTestTooOld {
+			return nil, fmt.Errorf(`test evidence for module '%s' is too old (max age: %s)
 
 Evidence location:
   - Test results: %s/
 
 Run tests to update evidence:
   test %s`, moduleName, formatDuration(config.MaxEvidenceAge), testRelPath, moduleName)
-			} else if onlySecurityTooOld {
-				return nil, fmt.Errorf(`security evidence for module '%s' is too old (max age: %s)
+		} else if onlySecurityTooOld {
+			return nil, fmt.Errorf(`security evidence for module '%s' is too old (max age: %s)
 
 Evidence location:
   - Security scans: %s/
 
 Run security scans to update evidence:
   scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), scanRelPath, moduleName)
-			} else {
-				// Both are too old
-				return nil, fmt.Errorf(`all evidence for module '%s' is too old (max age: %s)
+		} else {
+			// Both are too old
+			return nil, fmt.Errorf(`all evidence for module '%s' is too old (max age: %s)
 
 Evidence locations:
   - Test results: %s/
@@ -232,14 +220,7 @@ Evidence locations:
 Run tests or scans to update evidence:
   test %s
   scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), testRelPath, scanRelPath, moduleName, moduleName)
-			}
 		}
-		// Fallback if config load fails
-		return nil, fmt.Errorf(`evidence for module '%s' is too old (max age: %s)
-
-Run tests or scans to update evidence:
-  test %s
-  scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), moduleName, moduleName)
 	}
 
 	// Have at least some fresh evidence - return with warnings for any stale evidence

@@ -51,17 +51,18 @@ func (m model) Init() tea.Cmd {
 func pullDockerImageCmd(image string) tea.Cmd {
 	return func() tea.Msg {
 		// Perform the docker pull here
-		return dockerPullMsg{err: pullImage(image)}
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return dockerPullMsg{err: err}
+		}
+		defer cli.Close()
+		return dockerPullMsg{err: pullImage(context.Background(), cli, image)}
 	}
 }
 
-func pullImage(image string) error {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
+// pullImage pulls a Docker image using the provided client.
+// Accepts the client as a parameter for testability.
+func pullImage(ctx context.Context, cli client.APIClient, image string) error {
 	reader, err := cli.ImagePull(ctx, image, img.PullOptions{RegistryAuth: Auth()})
 	if err != nil {
 		return err

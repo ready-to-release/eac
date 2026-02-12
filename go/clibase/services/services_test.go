@@ -439,8 +439,8 @@ func TestServices_Modules_FilterByComponent(t *testing.T) {
 	// The important thing is that the method works without error
 	_ = goModules
 
-	// Filter by non-existent component type should return empty
-	fakeModules := modules.FilterByComponent("nonexistent-component-type")
+	// Filter by non-existent component kind should return empty
+	fakeModules := modules.FilterByComponent("nonexistent-component-kind")
 	assert.Empty(t, fakeModules, "FilterByComponent with nonexistent type should return empty")
 }
 

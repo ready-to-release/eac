@@ -10,7 +10,6 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,10 +53,9 @@ type ExtractVersionOutput struct {
 
 // ExtractVersion extracts and validates a release version.
 func ExtractVersion() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
+	s, exitCode := newReleaseScaffold()
+	if s == nil {
+		return exitCode
 	}
 
 	args := os.Args[3:] // Skip program name, "release", and "extract-version"

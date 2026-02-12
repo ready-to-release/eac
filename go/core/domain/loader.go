@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
 // EACConfigRelPath is the relative path from repo root to EAC configuration.
 // This is where repository-specific EAC contracts are stored (modules, tags, environments).
-// Note: This constant is duplicated here to avoid import cycle with repository package.
-// The canonical definition is in paths.EACConfigRelPath.
-const EACConfigRelPath = ".eac"
+// Delegates to the canonical definition in paths.EACConfigRelPath.
+const EACConfigRelPath = paths.EACConfigRelPath
 
 // Loader handles loading contract YAML files.
 type Loader struct {

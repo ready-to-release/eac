@@ -53,11 +53,13 @@ The `commit-message` package is the AI-driven commit workflow in `eac`, bridging
 ## Code Health
 
 ### Tech Debt
-- commit-message.go is 560+ lines with 20+ functions; the file serves as both entry point and utility collection
-- No dedicated test for context.go or formatter.go (formatter is only tested indirectly through integration)
+
+- `context.go` (319 lines) exceeds 300 lines
 
 ### Pain Points
-- commit-message.go mixes orchestration, git operations, and formatting helpers in one file
+
+- No test coverage for `command.go`, `config.go`, `context.go`, `formatter.go`, `generation.go`, `git.go`, `orchestrator.go`
 
 ### Optimization Opportunities
-- Split commit-message.go into orchestration (entry point + pipeline) and git-helpers (author info, exec, diff) (high feasibility, clear separation boundaries)
+
+- None identified

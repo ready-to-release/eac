@@ -16,8 +16,8 @@ with npm isolation and CTRF report generation.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
+| File      | Responsibility                                                   |
+| --------- | ---------------------------------------------------------------- |
 | runner.go | `MochaRunner` implementing `TestTypeRunner` with CTRF conversion |
 
 ## Dependencies
@@ -39,12 +39,11 @@ results to CTRF format for standardized test result aggregation.
 ## Code Health
 
 ### Tech Debt
-- `Execute()` in runner.go (~124 lines) interleaves npm isolation, dependency installation, command building, piped I/O, CTRF conversion, and result tallying; extracting `installDependencies` and `runMocha` helpers would improve clarity
-- `init()` in runner.go performs global registration; a factory function accepting a registry would be more testable
+- init() in runner.go performs global registration; a factory function accepting a registry would be more testable
 
 ### Pain Points
-- `Execute()` uses `len(tests)` as `TestsFailed` on error and `TestsPassed` on success without consulting the parsed mocha JSON stats, so per-test pass/fail counts are approximate even when detailed results are available
-- No unit tests exist for any function in the package; `Execute()`, `convertMochaJSONToCTRF`, and `GetTestInfo` are all untested
+- runner.go is 349 lines; candidate for splitting (extract CTRF conversion and execution orchestration into separate files)
+- Execute() uses len(tests) as TestsFailed on error and TestsPassed on success without consulting the parsed mocha JSON stats, so per-test pass/fail counts are approximate even when detailed results are available
 
 ### Optimization Opportunities
-- The `npm ci` / `npm install` step runs synchronously within Execute; for modules with unchanged lockfiles, caching node_modules from a previous run could skip reinstallation entirely; moderate effort
+- None identified

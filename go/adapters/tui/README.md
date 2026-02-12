@@ -64,14 +64,11 @@ dependency graph.
 ## Code Health
 
 ### Tech Debt
-- `ParallelConsole.Start()` in console.go (~200 lines) handles signal setup, channel wiring, model creation, and the message pump in one method
-- `SetInitSummary()` and `UpdateStatus()` in console.go perform verbose field-by-field struct mapping (~30 fields each); a code-gen or reflection approach could reduce boilerplate
-- `bootstrap.go` uses `init()` for factory registration, creating implicit import-order coupling with `clibase/display`
+- console.go (948 lines) exceeds 300 lines; candidate for splitting into separate files for message handling, state management, and bubbletea lifecycle
 
 ### Pain Points
-- `globalRegistry` in registry.go is package-level mutable state; tests must be careful about cross-test leakage
-- `observer.go` duplicates the struct-mapping pattern (contract types to TUI types) seen in console.go
+- None identified
 
 ### Optimization Opportunities
-- Extract the async message pump goroutine in `Start()` into a dedicated `messagePump` type for testability; low risk, structural refactor
-- The demo/tui3 code path shares branching logic throughout console.go; extracting a `demoConsole` implementing `Console` would isolate experimental code
+- None identified
+

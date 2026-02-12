@@ -3,7 +3,6 @@
 package design
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,8 +14,10 @@ import (
 	"strings"
 	"time"
 
+	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/iobuffer"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -176,20 +177,9 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 		return nil, fmt.Errorf("Docker is not running. Please start Docker to use validation")
 	}
 
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
+	files, err := discoverModuleDSLFiles(moduleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-
-	// Get all DSL files for this module
-	files, err := paths.WorkspaceDSLFiles(repoRoot, moduleName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list DSL files: %w", err)
-	}
-
-	if len(files) == 0 {
-		return nil, fmt.Errorf("no DSL files found in %s", paths.DesignPath(repoRoot, moduleName))
+		return nil, err
 	}
 
 	// Start timing
@@ -206,56 +196,87 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 		Timestamp:  time.Now(),
 	}
 
-	// Validate each file
+	// Validate each file and aggregate results
 	for _, filePath := range files {
-		fileName := filepath.Base(filePath)
-
-		fileStartTime := time.Now()
-		rawOutput, err := v.executeDockerValidation(filePath)
-		fileExecutionTime := time.Since(fileStartTime)
-
-		fileResult := FileValidationResult{
-			FileName:      fileName,
-			FilePath:      filePath,
-			Valid:         true,
-			Errors:        []ValidationMessage{},
-			Warnings:      []ValidationMessage{},
-			RawOutput:     rawOutput,
-			ExecutionTime: fileExecutionTime,
-		}
-
-		if err != nil {
-			fileResult.Valid = false
-			fileResult.Errors = append(fileResult.Errors, ValidationMessage{
-				Severity: "error",
-				Message:  fmt.Sprintf("Validation execution failed: %v", err),
-			})
-		} else {
-			// Parse output
-			parsed := v.parseValidationOutput(rawOutput)
-			fileResult.Valid = parsed.Valid
-			fileResult.Errors = parsed.Errors
-			fileResult.Warnings = parsed.Warnings
-		}
-
-		// Update overall result
-		if !fileResult.Valid {
-			result.Valid = false
-		}
-		result.Errors = append(result.Errors, fileResult.Errors...)
-		result.Warnings = append(result.Warnings, fileResult.Warnings...)
-		result.Files = append(result.Files, fileResult)
-
-		// For backward compatibility, set WorkspacePath and RawOutput from first file
-		if len(result.Files) == 1 {
-			result.WorkspacePath = filePath
-			result.RawOutput = rawOutput
-		}
+		fileResult := v.validateSingleFile(filePath)
+		mergeFileResult(result, fileResult, filePath)
 	}
 
 	result.ExecutionTime = time.Since(startTime)
 
 	return result, nil
+}
+
+// discoverModuleDSLFiles locates all DSL files for a module, returning an error
+// if the repository root cannot be resolved or no DSL files are found.
+func discoverModuleDSLFiles(moduleName string) ([]string, error) {
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	}
+
+	files, err := paths.WorkspaceDSLFiles(repoRoot, moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list DSL files: %w", err)
+	}
+
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no DSL files found in %s", paths.DesignPath(repoRoot, moduleName))
+	}
+
+	return files, nil
+}
+
+// validateSingleFile runs Docker validation on one DSL file and parses the output
+// into a FileValidationResult.
+func (v *StructurizrValidatorImpl) validateSingleFile(filePath string) FileValidationResult {
+	fileName := filepath.Base(filePath)
+
+	fileStartTime := time.Now()
+	rawOutput, err := v.executeDockerValidation(filePath)
+	fileExecutionTime := time.Since(fileStartTime)
+
+	fileResult := FileValidationResult{
+		FileName:      fileName,
+		FilePath:      filePath,
+		Valid:         true,
+		Errors:        []ValidationMessage{},
+		Warnings:      []ValidationMessage{},
+		RawOutput:     rawOutput,
+		ExecutionTime: fileExecutionTime,
+	}
+
+	if err != nil {
+		fileResult.Valid = false
+		fileResult.Errors = append(fileResult.Errors, ValidationMessage{
+			Severity: "error",
+			Message:  fmt.Sprintf("Validation execution failed: %v", err),
+		})
+	} else {
+		parsed := v.parseValidationOutput(rawOutput)
+		fileResult.Valid = parsed.Valid
+		fileResult.Errors = parsed.Errors
+		fileResult.Warnings = parsed.Warnings
+	}
+
+	return fileResult
+}
+
+// mergeFileResult incorporates a single file's validation result into the overall
+// module ValidationResult, including backward-compatibility fields for the first file.
+func mergeFileResult(result *ValidationResult, fileResult FileValidationResult, filePath string) {
+	if !fileResult.Valid {
+		result.Valid = false
+	}
+	result.Errors = append(result.Errors, fileResult.Errors...)
+	result.Warnings = append(result.Warnings, fileResult.Warnings...)
+	result.Files = append(result.Files, fileResult)
+
+	// For backward compatibility, set WorkspacePath and RawOutput from first file
+	if len(result.Files) == 1 {
+		result.WorkspacePath = filePath
+		result.RawOutput = fileResult.RawOutput
+	}
 }
 
 // ValidateModuleFile validates a specific DSL file within a module.
@@ -347,7 +368,6 @@ func (v *StructurizrValidatorImpl) ValidateAll() (*ValidationSummary, error) {
 		return nil, fmt.Errorf("Docker is not running. Please start Docker to use validation")
 	}
 
-	// Get all modules
 	modules, err := listAvailableModules()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list modules: %w", err)
@@ -357,47 +377,16 @@ func (v *StructurizrValidatorImpl) ValidateAll() (*ValidationSummary, error) {
 		return nil, fmt.Errorf("no modules with workspace files found")
 	}
 
-	// Validate each module
 	startTime := time.Now()
 	summary := &ValidationSummary{
 		TotalModules:  len(modules),
-		PassedModules: 0,
-		FailedModules: 0,
-		TotalErrors:   0,
-		TotalWarnings: 0,
 		Results:       make([]ValidationResult, 0, len(modules)),
 		Timestamp:     time.Now(),
 	}
 
 	for _, module := range modules {
-		result, err := v.ValidateModule(module.Name)
-		if err != nil {
-			// Create error result
-			result = &ValidationResult{
-				Module:        module.Name,
-				WorkspacePath: module.Path,
-				Valid:         false,
-				Errors: []ValidationMessage{
-					{
-						Severity: "error",
-						Message:  fmt.Sprintf("Failed to validate: %v", err),
-					},
-				},
-				Warnings:  []ValidationMessage{},
-				Timestamp: time.Now(),
-			}
-		}
-
-		summary.Results = append(summary.Results, *result)
-
-		if result.Valid {
-			summary.PassedModules++
-		} else {
-			summary.FailedModules++
-		}
-
-		summary.TotalErrors += len(result.Errors)
-		summary.TotalWarnings += len(result.Warnings)
+		result := v.validateModuleOrError(module)
+		accumulateSummary(summary, result)
 	}
 
 	summary.ExecutionTime = time.Since(startTime)
@@ -405,46 +394,94 @@ func (v *StructurizrValidatorImpl) ValidateAll() (*ValidationSummary, error) {
 	return summary, nil
 }
 
+// validateModuleOrError validates a single module, returning a synthetic error
+// result if validation itself fails to execute.
+func (v *StructurizrValidatorImpl) validateModuleOrError(module moduleInfo) *ValidationResult {
+	result, err := v.ValidateModule(module.Name)
+	if err != nil {
+		return &ValidationResult{
+			Module:        module.Name,
+			WorkspacePath: module.Path,
+			Valid:         false,
+			Errors: []ValidationMessage{
+				{
+					Severity: "error",
+					Message:  fmt.Sprintf("Failed to validate: %v", err),
+				},
+			},
+			Warnings:  []ValidationMessage{},
+			Timestamp: time.Now(),
+		}
+	}
+	return result
+}
+
+// accumulateSummary adds a single module's validation result to the running summary totals.
+func accumulateSummary(summary *ValidationSummary, result *ValidationResult) {
+	summary.Results = append(summary.Results, *result)
+
+	if result.Valid {
+		summary.PassedModules++
+	} else {
+		summary.FailedModules++
+	}
+
+	summary.TotalErrors += len(result.Errors)
+	summary.TotalWarnings += len(result.Warnings)
+}
+
 // executeDockerValidation runs Structurizr Lite validation in Docker container
 // Uses Lite instead of CLI to ensure same validation rules as serve command.
 func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string) (string, error) {
-	// Get absolute path for volume mount
+	dockerVolume, relWorkspacePath, err := resolveValidationPaths(workspacePath)
+	if err != nil {
+		return "", err
+	}
+
+	return runDockerValidationCommand(dockerVolume, relWorkspacePath)
+}
+
+// resolveValidationPaths resolves the workspace path into a Docker volume mount
+// and a relative workspace path suitable for the Structurizr CLI validate command.
+func resolveValidationPaths(workspacePath string) (string, string, error) {
 	absWorkspacePath, err := filepath.Abs(workspacePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path: %w", err)
+		return "", "", fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	// Get repository root to mount the entire specs directory
 	// This allows !include paths like ../../repository/.design/_styles.dsl to work
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		return "", fmt.Errorf("failed to get repository root: %w", err)
+		return "", "", fmt.Errorf("failed to get repository root: %w", err)
 	}
 
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
 	if err != nil {
-		return "", fmt.Errorf("failed to load config: %w", err)
+		return "", "", fmt.Errorf("failed to load config: %w", err)
 	}
 
 	specsDir := filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot)
 
-	// Calculate relative path from specs dir to workspace file
 	relWorkspacePath, err := filepath.Rel(specsDir, absWorkspacePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get relative path: %w", err)
+		return "", "", fmt.Errorf("failed to get relative path: %w", err)
 	}
 	// Convert to Unix-style path for Docker
 	relWorkspacePath = filepath.ToSlash(relWorkspacePath)
 
 	// Convert Windows path to Docker volume format
-	dockerVolume := formatDockerVolume(specsDir)
+	dockerVolume := dockerutil.FormatDockerVolume(specsDir)
 
-	// Create context with timeout
+	return dockerVolume, relWorkspacePath, nil
+}
+
+// runDockerValidationCommand executes the Structurizr CLI validate command in Docker
+// and returns the combined stdout+stderr output.
+func runDockerValidationCommand(dockerVolume, relWorkspacePath string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), DockerValidationTimeout)
 	defer cancel()
 
-	// Use Structurizr CLI for validation
-	// Mount entire specs directory so relative !include paths work
 	cmd := exec.CommandContext(ctx, "docker", "run",
 		"--rm",
 		"-v", dockerVolume+":"+DockerWorkspaceMount,
@@ -454,81 +491,21 @@ func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string)
 	)
 
 	// Create limited buffers to prevent memory exhaustion
-	var stdout, stderr limitedBuffer
-	stdout.limit = MaxDockerOutputSize
-	stderr.limit = MaxDockerOutputSize
+	stdout := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
+	stderr := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
 
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	// Run command (don't check error - validation failures return non-zero exit)
-	err = cmd.Run()
+	err := cmd.Run()
 
-	// Check if timeout occurred
 	if ctx.Err() == context.DeadlineExceeded {
 		return "", fmt.Errorf("Docker validation timed out after %v", DockerValidationTimeout)
 	}
+	_ = err // validation failures return non-zero exit; we parse stdout/stderr
 
-	// Combine all output
-	output := stdout.String() + stderr.String()
-
-	return output, nil
-}
-
-// limitedBuffer is a buffer that limits the amount of data it can hold.
-type limitedBuffer struct {
-	buf   bytes.Buffer
-	limit int64
-	total int64
-}
-
-// Write implements io.Writer with size limit.
-func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
-	// Check if we're already over the limit
-	if lb.total >= lb.limit {
-		return 0, fmt.Errorf("buffer limit exceeded (%d bytes)", lb.limit)
-	}
-
-	// Calculate how much we can write
-	remaining := lb.limit - lb.total
-	toWrite := int64(len(p))
-	willExceed := toWrite > remaining
-
-	if willExceed {
-		toWrite = remaining
-	}
-
-	// Write what we can
-	n, err = lb.buf.Write(p[:toWrite])
-	lb.total += int64(n)
-
-	// If we exceeded the limit (not just reached it), return an error
-	if willExceed {
-		return n, fmt.Errorf("buffer limit exceeded (%d bytes)", lb.limit)
-	}
-
-	return n, err
-}
-
-// String returns the buffer contents as a string.
-func (lb *limitedBuffer) String() string {
-	return lb.buf.String()
-}
-
-// formatDockerVolume formats a file path for Docker volume mounting
-// On Windows, converts C:\path\to\dir to /c/path/to/dir for Docker compatibility.
-func formatDockerVolume(path string) string {
-	// On Windows, Docker volume mounts need Unix-style paths
-	// Convert C:\path\to\dir to /c/path/to/dir
-	if len(path) >= 2 && path[1] == ':' {
-		// Extract drive letter and convert to lowercase
-		drive := strings.ToLower(string(path[0]))
-		// Replace backslashes with forward slashes and remove colon
-		rest := strings.ReplaceAll(path[2:], "\\", "/")
-		return "/" + drive + rest
-	}
-	// If not a Windows path, return as-is
-	return path
+	return stdout.String() + stderr.String(), nil
 }
 
 // parseValidationOutput parses Structurizr CLI output from Docker container.
@@ -543,60 +520,59 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 	lines := strings.Split(raw, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-
-		// Skip empty lines
 		if line == "" {
 			continue
 		}
 
-		// Check for error patterns from Structurizr CLI:
-		// - "Relationships cannot be added..."
-		// - "ERROR: ..."
-		// - "Exception: ..."
-		// - "- <identifier> is not a valid identifier (expected: ...)"
-		isError := strings.Contains(line, "ERROR") ||
-			strings.Contains(line, "Exception") ||
-			strings.Contains(line, "cannot be added") ||
-			strings.Contains(line, "cannot be removed") ||
-			strings.Contains(line, "is not a valid") ||
-			(strings.HasPrefix(line, "- ") && strings.Contains(line, "is not"))
-
-		if isError {
+		if isValidationError(line) {
 			result.Valid = false
-
-			// Extract line number from patterns like "at line 62", "line 62", or "Line 15:"
-			// Parse errors default to line 0 (file-level error)
-			lineNum := 0
-			if matches := reAtLineNumber.FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
-			} else if matches := reLineNumber.FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
-			}
-
 			result.Errors = append(result.Errors, ValidationMessage{
 				Severity: "error",
 				Message:  line,
-				Line:     lineNum,
+				Line:     extractLineNumber(line),
 			})
 		}
 
-		// Check for warning patterns
-		if strings.Contains(line, "WARNING") || strings.Contains(line, "warning") {
-			// Extract line number from warnings too (default 0 on parse error)
-			lineNum := 0
-			if matches := reLineNumber.FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
-			}
-
+		if isValidationWarning(line) {
 			result.Warnings = append(result.Warnings, ValidationMessage{
 				Severity: "warning",
 				Message:  line,
-				Line:     lineNum,
+				Line:     extractLineNumber(line),
 			})
 		}
 	}
 
 	return result
+}
+
+// isValidationError checks whether a Structurizr CLI output line represents an error.
+// Matches patterns like "ERROR: ...", "Exception: ...", "cannot be added", etc.
+func isValidationError(line string) bool {
+	return strings.Contains(line, "ERROR") ||
+		strings.Contains(line, "Exception") ||
+		strings.Contains(line, "cannot be added") ||
+		strings.Contains(line, "cannot be removed") ||
+		strings.Contains(line, "is not a valid") ||
+		(strings.HasPrefix(line, "- ") && strings.Contains(line, "is not"))
+}
+
+// isValidationWarning checks whether a Structurizr CLI output line represents a warning.
+func isValidationWarning(line string) bool {
+	return strings.Contains(line, "WARNING") || strings.Contains(line, "warning")
+}
+
+// extractLineNumber extracts a line number from Structurizr CLI output text.
+// Looks for patterns like "at line 62" or "line 62". Returns 0 if no line number is found.
+func extractLineNumber(line string) int {
+	if matches := reAtLineNumber.FindStringSubmatch(line); len(matches) > 1 {
+		n, _ := strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
+		return n
+	}
+	if matches := reLineNumber.FindStringSubmatch(line); len(matches) > 1 {
+		n, _ := strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
+		return n
+	}
+	return 0
 }
 
 // MarshalJSON customizes JSON encoding for time.Duration.

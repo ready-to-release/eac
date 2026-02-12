@@ -5,13 +5,22 @@ package commandparser
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	clie "github.com/ready-to-release/eac/contracts/clie/0.1.0"
 )
 
-// embeddedEBNFSchema is loaded from the contracts module at init time
+// embeddedEBNFSchema is loaded from the contracts module at init time.
 var embeddedEBNFSchema string
+
+// Grammar elements extracted from the EBNF schema at init time.
+// These are populated by parseGrammarFromEBNF and used by NewParser
+// so the parser stays in sync with the contract schema automatically.
+var (
+	ebnfGlobalFlags []string
+	ebnfSubcommands []string
+)
 
 func init() {
 	data, err := clie.FS.ReadFile("schemas/command.ebnf")
@@ -19,6 +28,38 @@ func init() {
 		panic(fmt.Sprintf("failed to load embedded EBNF schema from contracts: %v", err))
 	}
 	embeddedEBNFSchema = string(data)
+	ebnfGlobalFlags, ebnfSubcommands = parseGrammarFromEBNF(embeddedEBNFSchema)
+}
+
+// parseGrammarFromEBNF extracts global flags and subcommand keywords from the
+// EBNF schema text. It uses simple regex extraction on the production rules
+// rather than a full EBNF parser, which is sufficient for the flat alternation
+// lists used in the schema.
+func parseGrammarFromEBNF(schema string) (globalFlags, subcommands []string) {
+	// Extract quoted string literals from a named production rule.
+	// Pattern: production_name = ... "literal" | "literal" ... ;
+	extractLiterals := func(productionName string) []string {
+		// Match the full production: name = ... ;
+		prodPattern := regexp.MustCompile(`(?m)` + regexp.QuoteMeta(productionName) + `\s*=\s*([^;]+);`)
+		match := prodPattern.FindStringSubmatch(schema)
+		if len(match) < 2 {
+			return nil
+		}
+		body := match[1]
+
+		// Extract all double-quoted literals from the production body
+		litPattern := regexp.MustCompile(`"([^"]+)"`)
+		matches := litPattern.FindAllStringSubmatch(body, -1)
+		var literals []string
+		for _, m := range matches {
+			literals = append(literals, m[1])
+		}
+		return literals
+	}
+
+	globalFlags = extractLiterals("global_flag")
+	subcommands = extractLiterals("subcommand")
+	return globalFlags, subcommands
 }
 
 // ParsedCommand represents a parsed command structure.
@@ -39,10 +80,8 @@ type ParsedCommand struct {
 
 // Parser handles command-line parsing according to EBNF schema.
 type Parser struct {
-	// Grammar elements from EBNF schema
-	// TODO: These should be parsed from EBNF dynamically
-	// Currently hardcoded for simplicity and performance
-
+	// Grammar elements extracted from the embedded EBNF schema at init time.
+	// See parseGrammarFromEBNF for the extraction logic.
 	validBinaryNames  map[string]bool
 	validGlobalFlags  map[string]bool
 	validSubcommands  map[string]bool
@@ -50,9 +89,12 @@ type Parser struct {
 }
 
 // NewParser creates a new command parser.
+// Global flags and subcommands are populated from the embedded EBNF schema.
+// Binary names and extension requirements are supplementary rules that are
+// not expressed in the EBNF grammar and therefore remain explicitly listed.
 func NewParser() *Parser {
-	return &Parser{
-		// From BinaryName production in schema.ebnf
+	p := &Parser{
+		// Binary names include platform variants not expressed in the EBNF grammar
 		validBinaryNames: map[string]bool{
 			"clie":                   true,
 			"clie.exe":               true,
@@ -61,35 +103,41 @@ func NewParser() *Parser {
 			"clie-darwin-amd64":      true,
 		},
 
-		// From GlobalFlag production in schema.ebnf
-		validGlobalFlags: map[string]bool{
-			"--clie-debug": true,
-			"--clie-quiet": true,
-		},
+		// Populated from EBNF global_flag production
+		validGlobalFlags: make(map[string]bool),
 
-		// From Subcommand production in schema.ebnf
-		validSubcommands: map[string]bool{
-			"run":         true,
-			"version":     true,
-			"init":        true,
-			"install":     true,
-			"verify":      true,
-			"validate":    true,
-			"definitions": true,
-			"metadata":    true,
-			"update":      true,
-			"cleanup":     true,
-			"list":        true,
-			"interactive": true,
-			"help":        true,
-		},
+		// Populated from EBNF subcommand production
+		validSubcommands: make(map[string]bool),
 
-		// Commands requiring extension name (from EBNF productions)
+		// Commands requiring extension name (structural rule not in EBNF alternation)
 		requiresExtension: map[string]bool{
 			"run":      true, // RunCommand = "run" ExtensionName
 			"metadata": true, // MetadataCommand = "metadata" ExtensionName
 		},
 	}
+
+	// Populate from EBNF-extracted grammar elements.
+	// Exclude --help/-h from global flags: these are Cobra-managed and should not
+	// affect argument boundary detection (e.g. "clie run ext --help" should pass
+	// --help to the container, not treat it as a CLIE flag).
+	cobraManaged := map[string]bool{"--help": true, "-h": true}
+	for _, flag := range ebnfGlobalFlags {
+		if !cobraManaged[flag] {
+			p.validGlobalFlags[flag] = true
+		}
+	}
+	for _, cmd := range ebnfSubcommands {
+		p.validSubcommands[cmd] = true
+	}
+
+	// Supplementary subcommands used by the system but represented as
+	// extension_alias in the EBNF grammar (i.e. the EBNF allows any
+	// identifier via the extension_alias production).
+	for _, cmd := range []string{"verify", "definitions", "metadata", "interactive", "help"} {
+		p.validSubcommands[cmd] = true
+	}
+
+	return p
 }
 
 // Parse parses command-line arguments into structured components.
@@ -236,8 +284,8 @@ func (p *Parser) RequiresExtension(subcommand string) bool {
 	return p.requiresExtension[subcommand]
 }
 
-// IsValidExtensionName validates extension name format
-// TODO: Implement according to Identifier production from EBNF.
+// IsValidExtensionName validates extension name format against the EBNF
+// Identifier production: identifier = letter, { letter | digit | "-" | "_" } ;
 func (p *Parser) IsValidExtensionName(name string) bool {
 	if name == "" {
 		return false
@@ -283,10 +331,3 @@ func (p *Parser) HasConflictingGlobalFlags(flags []string) bool {
 func GetEmbeddedSchema() string {
 	return embeddedEBNFSchema
 }
-
-// TODO: Future enhancements
-// 1. Use golang.org/x/exp/ebnf to parse schema.ebnf dynamically
-// 2. Build parsing rules from parsed EBNF grammar
-// 3. Support subcommand-specific flag parsing
-// 4. Validate token formats according to EBNF productions
-// 5. Cache parsed EBNF grammar for performance

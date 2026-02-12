@@ -62,7 +62,8 @@ and assessment results -- the standard format for communicating security control
 
 ### Pain Points
 
-- None identified.
+- `catalog_helpers.go` is 351 lines, making it the largest file in the package.
+- `loader.go` is 302 lines.
 
 ### Optimization Opportunities
 

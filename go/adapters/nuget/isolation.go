@@ -17,8 +17,11 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/core/fileutil"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
+
+var log = logging.C()
 
 // NuGetRestoreMu serializes all dotnet restore calls to prevent
 // concurrent NuGet cache contention (Windows file locking on shared packages).
@@ -80,11 +83,16 @@ func (n *NuGetIsolation) PrepareIsolatedEnv(moduleRoot, outputDir string) (*Isol
 		return nil, fmt.Errorf("failed to sync project files: %w", err)
 	}
 
-	// Sync source directories
+	// Sync source directories (skip directories that don't exist)
 	for _, dir := range []string{"src", "test", "tests"} {
 		srcDir := filepath.Join(moduleRoot, dir)
+		if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+			continue
+		}
 		dstDir := filepath.Join(workDir, dir)
-		_ = syncDirectory(srcDir, dstDir) // Non-fatal: directory may not exist
+		if err := syncDirectory(srcDir, dstDir); err != nil {
+			log.Debugf("nuget: sync %s failed: %v", dir, err)
+		}
 	}
 
 	// Discover solution file
@@ -153,27 +161,41 @@ func discoverSlnFile(workDir string) string {
 	return ""
 }
 
-// projectFilesChanged checks if any .csproj or .sln files have changed.
+// projectFilesChanged checks if any .csproj, .sln, or Directory.Build.props files have changed.
+// Uses filepath.Walk to detect nested .csproj files in subdirectories (e.g., src/MyLib/MyLib.csproj),
+// not just top-level matches.
 func projectFilesChanged(moduleRoot, workDir string) bool {
-	patterns := []string{"*.csproj", "*.sln", "Directory.Build.props"}
-	for _, pattern := range patterns {
-		matches, _ := filepath.Glob(filepath.Join(moduleRoot, pattern))
-		for _, src := range matches {
-			dst := filepath.Join(workDir, filepath.Base(src))
-			srcInfo, err := os.Stat(src)
-			if err != nil {
-				continue
-			}
-			dstInfo, err := os.Stat(dst)
-			if err != nil {
-				return true
-			}
-			if srcInfo.Size() != dstInfo.Size() || !srcInfo.ModTime().Equal(dstInfo.ModTime()) {
-				return true
-			}
+	changed := false
+	_ = filepath.Walk(moduleRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
 		}
-	}
-	return false
+		name := info.Name()
+		isProjectFile := strings.HasSuffix(name, ".csproj") ||
+			strings.HasSuffix(name, ".fsproj") ||
+			strings.HasSuffix(name, ".sln") ||
+			name == "Directory.Build.props"
+		if !isProjectFile {
+			return nil
+		}
+
+		relPath, relErr := filepath.Rel(moduleRoot, path)
+		if relErr != nil {
+			return nil
+		}
+		dst := filepath.Join(workDir, relPath)
+		dstInfo, dstErr := os.Stat(dst)
+		if dstErr != nil {
+			changed = true
+			return filepath.SkipAll
+		}
+		if info.Size() != dstInfo.Size() || !info.ModTime().Equal(dstInfo.ModTime()) {
+			changed = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return changed
 }
 
 // copyFileIfChanged copies src to dst only if src has changed (based on mtime and size).

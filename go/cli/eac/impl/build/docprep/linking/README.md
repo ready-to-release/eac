@@ -42,10 +42,13 @@ For links that reference files in the docs tree but outside the current book's s
 ## Code Health
 
 ### Tech Debt
+
 - None identified
 
 ### Pain Points
-- None identified -- all three source files have matching test files, and the package is compact (476 lines total)
+
+- None identified
 
 ### Optimization Opportunities
-- None identified -- code-block-safe rewriting and longest-first replacement are already well-optimized for correctness
+
+- None identified

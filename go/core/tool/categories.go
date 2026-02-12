@@ -5,42 +5,38 @@ package tool
 
 import "sync"
 
-// defaultScannerCategoryMap maps security scanner categories to their default tool IDs.
-// Unexported to prevent mutation. Use DefaultScannerCategories() for a safe copy.
-var defaultScannerCategoryMap = map[string]string{
-	"sbom":       ToolTrivySBOM,
-	"vuln":       ToolTrivyVuln,
-	"secrets":    ToolTrivySecrets,
-	"compliance": ToolTrivyCompliance,
-	"iac":        ToolTrivyIaC,
-	"sast":       ToolSemgrep,
-	"zap":        ToolZap,
+// newDefaultScannerCategoryMap returns a fresh scanner category map.
+// Returned as a new map each time to prevent callers from mutating shared state.
+func newDefaultScannerCategoryMap() map[string]string {
+	return map[string]string{
+		"sbom":       ToolTrivySBOM,
+		"vuln":       ToolTrivyVuln,
+		"secrets":    ToolTrivySecrets,
+		"compliance": ToolTrivyCompliance,
+		"iac":        ToolTrivyIaC,
+		"sast":       ToolSemgrep,
+		"zap":        ToolZap,
+	}
 }
 
-// defaultServerTypeMap maps server types to their default tool IDs.
-// Unexported to prevent mutation. Use DefaultServerTypes() for a safe copy.
-var defaultServerTypeMap = map[string]string{
-	ToolStaticSite:      ToolStaticSite,
-	ToolMkDocsLive:      ToolMkDocsLive,
-	ToolStructurizrLite: ToolStructurizrLite,
+// newDefaultServerTypeMap returns a fresh server type map.
+// Returned as a new map each time to prevent callers from mutating shared state.
+func newDefaultServerTypeMap() map[string]string {
+	return map[string]string{
+		ToolStaticSite:      ToolStaticSite,
+		ToolMkDocsLive:      ToolMkDocsLive,
+		ToolStructurizrLite: ToolStructurizrLite,
+	}
 }
 
 // DefaultScannerCategories returns a fresh copy of the scanner category map.
 func DefaultScannerCategories() map[string]string {
-	m := make(map[string]string, len(defaultScannerCategoryMap))
-	for k, v := range defaultScannerCategoryMap {
-		m[k] = v
-	}
-	return m
+	return newDefaultScannerCategoryMap()
 }
 
 // DefaultServerTypes returns a fresh copy of the server type map.
 func DefaultServerTypes() map[string]string {
-	m := make(map[string]string, len(defaultServerTypeMap))
-	for k, v := range defaultServerTypeMap {
-		m[k] = v
-	}
-	return m
+	return newDefaultServerTypeMap()
 }
 
 // CategoryResolver maps scanner categories to default tool IDs.
@@ -52,8 +48,20 @@ type CategoryResolver struct {
 	initialized bool
 }
 
-// globalCategoryResolver is the singleton category resolver.
-var globalCategoryResolver = &CategoryResolver{}
+// globalCategoryResolverOnce ensures the singleton is created exactly once.
+var globalCategoryResolverOnce sync.Once
+
+// globalCategoryResolverInstance is the lazily-initialized singleton.
+// Access only via getGlobalCategoryResolver().
+var globalCategoryResolverInstance *CategoryResolver
+
+// getGlobalCategoryResolver returns the singleton CategoryResolver, creating it on first call.
+func getGlobalCategoryResolver() *CategoryResolver {
+	globalCategoryResolverOnce.Do(func() {
+		globalCategoryResolverInstance = &CategoryResolver{}
+	})
+	return globalCategoryResolverInstance
+}
 
 // initDefaultMappings sets up default category-to-tool mappings.
 // Called lazily on first access.
@@ -65,16 +73,8 @@ func (r *CategoryResolver) initDefaultMappings() {
 		return
 	}
 
-	r.scannerMap = make(map[string]string, len(defaultScannerCategoryMap))
-	for k, v := range defaultScannerCategoryMap {
-		r.scannerMap[k] = v
-	}
-
-	r.serverMap = make(map[string]string, len(defaultServerTypeMap))
-	for k, v := range defaultServerTypeMap {
-		r.serverMap[k] = v
-	}
-
+	r.scannerMap = newDefaultScannerCategoryMap()
+	r.serverMap = newDefaultServerTypeMap()
 	r.initialized = true
 }
 
@@ -146,40 +146,40 @@ func (r *CategoryResolver) OverrideServerTypeMap(m map[string]string) {
 	r.initialized = true
 }
 
-// Package-level convenience functions using globalCategoryResolver.
+// Package-level convenience functions using the global CategoryResolver singleton.
 
 // ScannerToolIDForCategory returns the default tool ID for a scanner category.
 // Categories: sbom, vuln, secrets, compliance, iac, sast, zap
 // Returns empty string if category is unknown.
 func ScannerToolIDForCategory(category string) string {
-	return globalCategoryResolver.ScannerToolIDForCategory(category)
+	return getGlobalCategoryResolver().ScannerToolIDForCategory(category)
 }
 
 // ServerToolIDForType returns the tool ID for a server type.
 // Server types: nginx-oci, mkdocs-live, structurizr-lite
 // Returns empty string if type is unknown.
 func ServerToolIDForType(serverType string) string {
-	return globalCategoryResolver.ServerToolIDForType(serverType)
+	return getGlobalCategoryResolver().ServerToolIDForType(serverType)
 }
 
 // AllScannerCategories returns all known scanner categories.
 func AllScannerCategories() []string {
-	return globalCategoryResolver.AllScannerCategories()
+	return getGlobalCategoryResolver().AllScannerCategories()
 }
 
 // AllServerTypes returns all known server types.
 func AllServerTypes() []string {
-	return globalCategoryResolver.AllServerTypes()
+	return getGlobalCategoryResolver().AllServerTypes()
 }
 
 // OverrideScannerCategoryMap replaces the active scanner category mappings on the global resolver.
 func OverrideScannerCategoryMap(m map[string]string) {
-	globalCategoryResolver.OverrideScannerCategoryMap(m)
+	getGlobalCategoryResolver().OverrideScannerCategoryMap(m)
 }
 
 // OverrideServerTypeMap replaces the active server type mappings on the global resolver.
 func OverrideServerTypeMap(m map[string]string) {
-	globalCategoryResolver.OverrideServerTypeMap(m)
+	getGlobalCategoryResolver().OverrideServerTypeMap(m)
 }
 
 // IsScannerCategory returns true if the string is a known scanner category.

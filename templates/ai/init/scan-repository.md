@@ -150,7 +150,7 @@ modules:
     components:
       <language>:
         root: relative/path
-        type: component-type
+        type: component-kind
 ```
 
 ### 7. Quality Guidelines

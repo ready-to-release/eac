@@ -9,10 +9,10 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type getReleaseBundleCommand struct{}
@@ -304,7 +304,7 @@ func formatAsMarkdown(data *ReleaseBundleOutput) string {
 // getGitHubReleases fetches release tags from GitHub using gh CLI.
 func getGitHubReleases() (map[string]string, error) {
 	// Run: gh release list --limit 100 --json tagName -q '.[].tagName'
-	output, err := ghexec.Run(".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list GitHub releases: %w", err)
 	}
@@ -337,7 +337,7 @@ func getGitHubRepoURL() string {
 		return "https://github.com/" + repo
 	}
 	// Fallback: use gh CLI to get repo info
-	output, err := ghexec.Run(".", "repo", "view", "--json", "url", "-q", ".url")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "repo", "view", "--json", "url", "-q", ".url")
 	if err != nil {
 		return ""
 	}

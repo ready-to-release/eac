@@ -12,11 +12,8 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releaseAwaitDepsCommand struct{}
@@ -56,10 +53,9 @@ type DepCIStatus struct {
 }
 
 func ReleaseAwaitDeps() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold(withModules())
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse arguments
@@ -114,19 +110,8 @@ func ReleaseAwaitDeps() int {
 		return 1
 	}
 
-	// Get workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		log.Errorf("Error: failed to get repository root: %v", err)
-		return 1
-	}
-
-	// Load module registry
-	reg, err := modules.LoadFromWorkspace(workspaceRoot)
-	if err != nil {
-		log.Errorf("Error: failed to load module registry: %v", err)
-		return 1
-	}
+	workspaceRoot := s.WorkspaceRoot
+	reg := s.ModuleRegistry
 
 	// Verify module exists
 	targetModule, exists := reg.Get(module)
@@ -348,7 +333,11 @@ func findLastChangedCommit(mod *modules.ModuleContract, workspaceRoot string) (s
 	args := []string{"log", "-1", "--format=%H%n%s", "--"}
 	args = append(args, paths...)
 
-	output, err := gitexec.Run(workspaceRoot, args...)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return "", "", fmt.Errorf("tool system not initialized")
+	}
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, args...)
 	if err != nil {
 		return "", "", fmt.Errorf("git log failed: %w", err)
 	}
@@ -421,7 +410,7 @@ func waitForDepCI(dep, workflow, commitSHA string, timeout, interval int, target
 // 2. Descendant match - CI ran on a newer commit that includes this commit's changes.
 func checkDepCIStatus(workflow, commitSHA, workspaceRoot string) (DepCIStatus, error) {
 	// First try exact commit match
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"--commit", commitSHA,
 		"--workflow", workflow,
 		"--json", "status,conclusion,databaseId,url",
@@ -509,7 +498,7 @@ func getRecentSuccessfulRuns(workflow, workspaceRoot string) ([]struct {
 	HeadSHA    string `json:"headSha"`
 }, error,
 ) {
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--branch", "main",
 		"--status", "success",

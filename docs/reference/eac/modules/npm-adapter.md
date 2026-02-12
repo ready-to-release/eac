@@ -6,13 +6,13 @@ The `npm-eac` module provides NPM package manager integration for dependency iso
 
 Shows how the NPM adapter provides dependency isolation to build commands.
 
-<!-- structurizr:npm-eac:SystemContext -->
+<!-- structurizr:adapters:npm-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the NPM adapter packages.
 
-<!-- structurizr:npm-eac:Containers -->
+<!-- structurizr:adapters:npm-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,7 +20,7 @@ High-level view of the NPM adapter packages.
 
 NPM workspace isolation with directory sync, file copy, and install mutex.
 
-<!-- structurizr:npm-eac:IsolationComponents -->
+<!-- structurizr:adapters:npm-eac:IsolationComponents -->
 
 ## Design File
 

@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 // ============================================================================
@@ -101,7 +100,6 @@ func SetupMinimalEACConfig(ctx *TestContext, moduleName, modulePath string) erro
 }
 
 // SetupMinimalGoConfig creates a minimal EAC configuration for Go development.
-// Includes module-types and system-dependencies for Go.
 func SetupMinimalGoConfig(ctx *TestContext, moduleName, modulePath string) error {
 	return SetupEACConfig(ctx, "minimal-go", TemplateParams{
 		"MODULE_NAME": moduleName,
@@ -128,7 +126,6 @@ func SetupMultiModuleConfig(ctx *TestContext, module1Name, module1Path, module2N
 //
 // Creates:
 //   - .eac/repository.yml with the module definition
-//   - .eac/module-types.yml with go type
 //   - Module directory with Go source file
 //   - Optionally stages all files in git
 func SetupGoModuleWithEAC(ctx *TestContext, moduleName string, stage bool) error {
@@ -184,50 +181,6 @@ func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType strin
 `, moduleName, moduleName, moduleType, modulePath)
 
 	return CreateFile(ctx, ".eac/repository.yml", content)
-}
-
-// CreateModuleTypesYml creates module-types.yml with the specified types.
-// Common type names: "go", "container", "typescript", "static".
-func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
-	// Map of type definitions
-	typeDefinitions := map[string]string{
-		"go": `  - name: go
-    description: Go module
-    capabilities:
-      - go_module
-`,
-		"container": `  - name: container
-    description: Docker container module
-    capabilities:
-      - buildx
-`,
-		"typescript": `  - name: typescript
-    description: TypeScript/npm module
-    capabilities:
-      - npm_package
-      - typescript
-`,
-		"static": `  - name: static
-    description: Static files module (no build step)
-    capabilities: []
-`,
-	}
-
-	var content strings.Builder
-	content.WriteString("types:\n")
-
-	for i, t := range types {
-		def, ok := typeDefinitions[t]
-		if !ok {
-			return fmt.Errorf("unknown module type: %s", t)
-		}
-		if i > 0 {
-			content.WriteString("\n")
-		}
-		content.WriteString(def)
-	}
-
-	return CreateFile(ctx, ".eac/module-types.yml", content.String())
 }
 
 

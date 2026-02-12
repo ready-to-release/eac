@@ -30,12 +30,12 @@ Command validation against business rules and configuration validation against e
 
 ## Internal Structure
 
-| File                  | Responsibility                                                  |
-| --------------------- | --------------------------------------------------------------- |
-| command-validator.go  | CommandValidator, ValidateCommand, ValidateForRun/Metadata      |
+| File                  | Responsibility                                                       |
+| --------------------- | -------------------------------------------------------------------- |
+| command-validator.go  | CommandValidator, ValidateCommand, ValidateForRun/Metadata           |
 | embedded_validator.go | EmbeddedValidator, JSON Schema validation, schema version extraction |
-| errors.go             | ValidationError, ValidationResult, rule constants, Severity enum |
-| patterns.go           | Compiled regex patterns, enum value lists, PatternValidator utility |
+| errors.go             | ValidationError, ValidationResult, rule constants, Severity enum     |
+| patterns.go           | Compiled regex patterns, enum value lists, PatternValidator utility  |
 
 ## Dependencies
 
@@ -50,13 +50,12 @@ The validator package serves two distinct validation needs. The CommandValidator
 
 ### Tech Debt
 
-- `command-validator.go:111` -- TODO: Check against subcommand-specific flags from EBNF (currently a placeholder comment).
-- `command-validator.go:170` -- TODO: Add debug logging infrastructure for run-specific validation.
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- None identified.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

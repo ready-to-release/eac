@@ -52,10 +52,10 @@ The `unused` sub-package provides a code hygiene tool for BDD test suites. By id
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- No tests for unused.go (277 lines), discovery.go (77 lines), step_parser.go (115 lines), feature_parser.go (91 lines), or matcher.go (105 lines)
 
 ### Pain Points
-- Step matching uses regex conversion which may produce false negatives for complex godog patterns with custom argument types
+- None identified.
 
 ### Optimization Opportunities
-- Cache parsed feature steps across pairs that share the same specs directory (low effort, reduces redundant parsing)
+- None identified.

@@ -51,12 +51,15 @@ func init() {
 // 0 = disabled, 1 = enabled.
 var debugEnabled uint32
 
+// outputMu protects stdOutput and debugOutput from concurrent access.
+var outputMu sync.RWMutex
+
 // stdOutput is where Info messages are written (stdout by default).
-// Can be changed for testing.
+// Can be changed for testing. Protected by outputMu.
 var stdOutput io.Writer = os.Stdout
 
 // debugOutput is where Debug messages are written (stderr by default).
-// Can be changed for testing.
+// Can be changed for testing. Protected by outputMu.
 var debugOutput io.Writer = os.Stderr
 
 // detectExecutionContext determines the execution context based on environment.
@@ -144,7 +147,10 @@ func DebugDirect(module, msg string) {
 	if atomic.LoadUint32(&debugEnabled) == 0 {
 		return
 	}
-	fmt.Fprintf(debugOutput, "%s  DEBUG  %s:%s\n", debugTime(), module, msg)
+	outputMu.RLock()
+	w := debugOutput
+	outputMu.RUnlock()
+	fmt.Fprintf(w, "%s  DEBUG  %s:%s\n", debugTime(), module, msg)
 }
 
 // DebugDirectf writes a formatted debug message directly to stderr.
@@ -153,18 +159,25 @@ func DebugDirectf(module, format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintf(debugOutput, "%s  DEBUG  %s:%s\n", debugTime(), module, msg)
+	outputMu.RLock()
+	w := debugOutput
+	outputMu.RUnlock()
+	fmt.Fprintf(w, "%s  DEBUG  %s:%s\n", debugTime(), module, msg)
 }
 
 // GetDebugOutput returns the current debug output writer.
 // This is useful for combining with other writers (e.g., TUI + file logging).
 func GetDebugOutput() io.Writer {
+	outputMu.RLock()
+	defer outputMu.RUnlock()
 	return debugOutput
 }
 
 // GetStdOutput returns the current standard output writer.
 // This is useful for combining with other writers (e.g., TUI + file logging).
 func GetStdOutput() io.Writer {
+	outputMu.RLock()
+	defer outputMu.RUnlock()
 	return stdOutput
 }
 
@@ -172,6 +185,8 @@ func GetStdOutput() io.Writer {
 // Pass nil to reset to stderr.
 // This is useful for redirecting debug output to a TUI or other custom destination.
 func SetDebugOutput(w io.Writer) {
+	outputMu.Lock()
+	defer outputMu.Unlock()
 	if w == nil {
 		debugOutput = os.Stderr
 	} else {
@@ -183,6 +198,8 @@ func SetDebugOutput(w io.Writer) {
 // Pass nil to reset to stdout.
 // This is useful for redirecting Info output to a TUI or other custom destination.
 func SetStdOutput(w io.Writer) {
+	outputMu.Lock()
+	defer outputMu.Unlock()
 	if w == nil {
 		stdOutput = os.Stdout
 	} else {

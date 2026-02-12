@@ -181,7 +181,6 @@ func (r *GitRepo) HasStagedChanges() bool {
 }
 
 // SetupEACConfig creates a minimal EAC config in the git repository.
-// Note: module-types.yml is not created - the system uses defaults when missing.
 func (r *GitRepo) SetupEACConfig() {
 	r.t.Helper()
 
@@ -195,8 +194,6 @@ modules: []
 }
 
 // SetupEACConfigWithModules creates an EAC config with the given modules.
-// Note: module-types.yml is not created - the system uses defaults when missing.
-// Module types referenced by modules should exist in the contract defaults.
 func (r *GitRepo) SetupEACConfigWithModules(modules []ModuleSpec) {
 	r.t.Helper()
 

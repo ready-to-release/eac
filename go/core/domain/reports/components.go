@@ -28,7 +28,7 @@ type ComponentInfo struct {
 	// Component is the component name (key in module.components map)
 	Component string `json:"component" yaml:"component"`
 
-	// Type is the component type (from component-types.yml)
+	// Type is the component type (from blueprints.yml component-kinds)
 	Type string `json:"type" yaml:"type"`
 
 	// Root is the component root path

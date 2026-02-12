@@ -4,7 +4,7 @@ EBNF-aware command-line argument parser that identifies the boundary between CLI
 
 ## Key Types
 
-- **`Parser`** -- Stateless parser with hardcoded grammar elements from EBNF schema
+- **`Parser`** -- Stateless parser with grammar elements extracted from embedded EBNF schema
 - **`ParsedCommand`** -- Structured result containing binary name, global flags, subcommand, extension name, Viper args, container args, and argument boundary index
 
 ## Key Functions
@@ -16,8 +16,8 @@ EBNF-aware command-line argument parser that identifies the boundary between CLI
 ## Patterns
 
 - Embedded contract: EBNF grammar loaded from `contracts/clie/0.1.0` at init via `clie.FS.ReadFile`
+- Schema-driven grammar: Global flags and subcommands are extracted from the EBNF schema at init using regex-based production rule parsing
 - Argument boundary detection: Once a non-CLIE-flag is seen after the extension name, all subsequent args become container args
-- Hardcoded grammar: Valid binary names, global flags, and subcommands are defined as maps (EBNF schema loaded but not dynamically parsed)
 
 ## Internal Structure
 
@@ -37,14 +37,12 @@ The command parser runs early in PersistentPreRunE to provide structured command
 
 ### Tech Debt
 
-- `parser.go:43` -- TODO: Grammar elements are hardcoded instead of parsed from the embedded EBNF schema dynamically.
-- `parser.go:240` -- TODO: `IsValidExtensionName` should be implemented according to the Identifier production from EBNF.
-- `parser.go:287-292` -- Five TODO items for future enhancements including dynamic EBNF parsing, subcommand-specific flag parsing, and grammar caching.
+- None identified.
 
 ### Pain Points
 
-- The EBNF schema file is loaded at init but only stored as a string; none of the parsing logic actually uses it. All grammar rules are duplicated as hardcoded maps in `NewParser()`.
+- `parser.go` is 333 lines, making it a moderately large file for argument parsing logic.
 
 ### Optimization Opportunities
 
-- Using `golang.org/x/exp/ebnf` to parse the schema dynamically would eliminate the hardcoded grammar duplication and ensure the parser stays in sync with the contract.
+- None identified.

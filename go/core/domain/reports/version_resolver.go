@@ -5,7 +5,6 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
@@ -115,6 +114,31 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 	return info, nil
 }
 
+// ResolveBranchEndRef resolves a branch parameter to the git end-reference used
+// when querying commits. The resolution rules are:
+//   - If branch is non-empty and not "HEAD"/"current", use it directly.
+//   - If branch is empty, fall back to the configured trunk branch (TrunkBranch),
+//     then to "main" if TrunkBranch is also empty.
+//   - If branch is "HEAD" or "current", resolve to "HEAD" (current branch).
+//
+// This is the single source of truth for branch resolution in reports;
+// both GetSpecs and GetApprovalComments delegate here.
+func ResolveBranchEndRef(branch, trunkBranch string) string {
+	endRef := branch
+	if endRef == "" {
+		// Default to configured trunk branch (usually "main" or "master")
+		endRef = trunkBranch
+		if endRef == "" {
+			endRef = "main" // Fallback if not configured
+		}
+	}
+	// Special case: "HEAD" or "current" means use current branch
+	if endRef == "HEAD" || endRef == "current" {
+		endRef = "HEAD"
+	}
+	return endRef
+}
+
 // resolveImplicitVersion handles version resolution for implicit-versioned modules.
 // Implicit modules don't have changelogs - they derive their version from parent modules.
 // Only "unreleased" or "" are valid for implicit modules.
@@ -136,29 +160,10 @@ func resolveImplicitVersion(module, versionStr string) (*VersionInfo, error) {
 	return nil, fmt.Errorf("implicit-versioned module %q does not support version %q; only 'unreleased' is valid", module, versionStr)
 }
 
-// versionResolverRepo holds the git repository instance for testing (allows mock injection).
-var versionResolverRepo git.GitRepository
-
-// SetVersionResolverRepo allows tests to inject a mock repository.
-func SetVersionResolverRepo(repo git.GitRepository) {
-	versionResolverRepo = repo
-}
-
-// getVersionResolverRepo returns the git repository, initializing it if needed.
-func getVersionResolverRepo(workspaceRoot string) (git.GitRepository, error) {
-	if versionResolverRepo != nil {
-		return versionResolverRepo, nil
-	}
-	repo, err := git.NewManager(nil).Open(workspaceRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %w", err)
-	}
-	return repo, nil
-}
-
 // ResolveVersionWithValidation resolves a version and validates that git tags exist.
 // This provides better error messages when tags are missing due to shallow clones.
-func ResolveVersionWithValidation(workspaceRoot, module, versionStr string) (*VersionInfo, error) {
+// deps provides injectable dependencies; pass nil to use zero-value defaults.
+func ResolveVersionWithValidation(deps *ReportDeps, workspaceRoot, module, versionStr string) (*VersionInfo, error) {
 	info, err := ResolveVersion(workspaceRoot, module, versionStr)
 	if err != nil {
 		return nil, err
@@ -170,7 +175,7 @@ func ResolveVersionWithValidation(workspaceRoot, module, versionStr string) (*Ve
 	}
 
 	// Validate that the resolved git tag exists
-	repo, err := getVersionResolverRepo(workspaceRoot)
+	repo, err := deps.getVersionResolverRepo(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}

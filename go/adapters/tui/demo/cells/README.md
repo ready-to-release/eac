@@ -66,7 +66,7 @@ The cells sub-package provides the building blocks for the tui3 demo layout. Eac
 ## Code Health
 
 ### Tech Debt
-- None
+- uow_stats_test.go (276 lines) is approaching 300 lines; monitor for future splitting if test coverage grows
 
 ### Pain Points
 - None identified

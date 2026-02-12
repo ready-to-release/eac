@@ -2,16 +2,11 @@ package pdfscreenshots
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
-	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
@@ -74,43 +69,22 @@ type PDFInfo struct {
 	Hash     string // SHA256 hash of file content (first 12 chars)
 	CacheDir string // Path to cache directory for this PDF
 }
+
+// pdfConfig holds the parsed command configuration.
+type pdfConfig struct {
+	dryRun       bool
+	force        bool
+	verbose      bool
+	dpi          int
+	moduleFilter string
+}
+
 // UpdatePDFScreenshots scans out/build for PDFs and extracts pages as images.
 func UpdatePDFScreenshots() int {
-	// Validate flags
-	args := os.Args[2:]
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+	cfg, err := parsePDFConfig()
+	if err != nil {
 		log.Errorf("%v", err)
 		return 1
-	}
-
-	// Parse flags
-	dryRun := false
-	force := false
-	verbose := false
-	dpi := defaultDPI
-	moduleFilter := ""
-
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--dry-run":
-			dryRun = true
-		case "--force", "-f":
-			force = true
-		case "-v", "--verbose":
-			verbose = true
-		case "--dpi":
-			if i+1 < len(args) {
-				i++
-				if d, err := strconv.Atoi(args[i]); err == nil && d >= 72 && d <= 300 {
-					dpi = d
-				}
-			}
-		case "-m", "--module":
-			if i+1 < len(args) {
-				i++
-				moduleFilter = args[i]
-			}
-		}
 	}
 
 	// Get repo root
@@ -124,7 +98,7 @@ func UpdatePDFScreenshots() int {
 
 	// Scan for PDFs in out/build/
 	buildDir := filepath.Join(repoRoot, paths.OutBuildRelPath)
-	pdfs, err := scanForPDFs(buildDir, moduleFilter)
+	pdfs, err := scanForPDFs(buildDir, cfg.moduleFilter)
 	if err != nil {
 		log.Errorf("Error scanning for PDFs: %v", err)
 		return 1
@@ -132,14 +106,14 @@ func UpdatePDFScreenshots() int {
 
 	if len(pdfs) == 0 {
 		fmt.Println("No PDFs found in out/build/")
-		if moduleFilter != "" {
-			fmt.Printf("  (filtered by module: %s)\n", moduleFilter)
+		if cfg.moduleFilter != "" {
+			fmt.Printf("  (filtered by module: %s)\n", cfg.moduleFilter)
 		}
 		return 0
 	}
 
 	fmt.Printf("Found %d PDF(s)\n", len(pdfs))
-	if verbose {
+	if cfg.verbose {
 		for _, pdf := range pdfs {
 			fmt.Printf("  - %s\n", pdf.RelPath)
 		}
@@ -147,21 +121,76 @@ func UpdatePDFScreenshots() int {
 
 	// Calculate hashes and check cache
 	cacheRoot := paths.PDFScreenshotsCachePath(repoRoot)
+	toProcess := checkCache(pdfs, cacheRoot, cfg)
+
+	if len(toProcess) == 0 {
+		fmt.Println("All PDFs are cached. Nothing to extract.")
+		return 0
+	}
+
+	if cfg.dryRun {
+		fmt.Println("\n[DRY RUN] Would extract pages from:")
+		for _, pdf := range toProcess {
+			fmt.Printf("  - %s -> %s/\n", pdf.RelPath, pdf.BookName)
+		}
+		return 0
+	}
+
+	return processExtraction(toProcess, cacheRoot, repoRoot, cfg)
+}
+
+// parsePDFConfig parses command flags into a pdfConfig.
+func parsePDFConfig() (*pdfConfig, error) {
+	args := os.Args[2:]
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return nil, err
+	}
+
+	cfg := &pdfConfig{
+		dpi: defaultDPI,
+	}
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--dry-run":
+			cfg.dryRun = true
+		case "--force", "-f":
+			cfg.force = true
+		case "-v", "--verbose":
+			cfg.verbose = true
+		case "--dpi":
+			if i+1 < len(args) {
+				i++
+				if d, err := strconv.Atoi(args[i]); err == nil && d >= 72 && d <= 300 {
+					cfg.dpi = d
+				}
+			}
+		case "-m", "--module":
+			if i+1 < len(args) {
+				i++
+				cfg.moduleFilter = args[i]
+			}
+		}
+	}
+
+	return cfg, nil
+}
+
+// checkCache computes hashes and identifies PDFs that need extraction.
+func checkCache(pdfs []PDFInfo, cacheRoot string, cfg *pdfConfig) []PDFInfo {
 	cacheHits := 0
 	cacheMisses := 0
-	toProcess := []PDFInfo{}
+	var toProcess []PDFInfo
 
 	for i := range pdfs {
 		pdf := &pdfs[i]
 		pdf.Hash = hashFile(pdf.Path)
-		// Cache dir is just the book name
 		pdf.CacheDir = filepath.Join(cacheRoot, pdf.BookName)
 
-		// Check if cache is valid (has correct hash marker)
-		if !force && cacheValidWithHash(pdf.CacheDir, pdf.Hash) {
+		if !cfg.force && cacheValidWithHash(pdf.CacheDir, pdf.Hash) {
 			cacheHits++
-			if verbose {
-				fmt.Printf("  ✓ %s [cached]\n", pdf.RelPath)
+			if cfg.verbose {
+				fmt.Printf("  [cached] %s\n", pdf.RelPath)
 			}
 		} else {
 			cacheMisses++
@@ -175,19 +204,11 @@ func UpdatePDFScreenshots() int {
 	}
 	fmt.Println()
 
-	if cacheMisses == 0 {
-		fmt.Println("All PDFs are cached. Nothing to extract.")
-		return 0
-	}
+	return toProcess
+}
 
-	if dryRun {
-		fmt.Println("\n[DRY RUN] Would extract pages from:")
-		for _, pdf := range toProcess {
-			fmt.Printf("  - %s -> %s/\n", pdf.RelPath, pdf.BookName)
-		}
-		return 0
-	}
-
+// processExtraction handles Docker setup and PDF page extraction.
+func processExtraction(toProcess []PDFInfo, cacheRoot, repoRoot string, cfg *pdfConfig) int {
 	// Check Docker availability
 	if !docker.IsDockerAvailable() {
 		fmt.Fprintln(os.Stderr, "Error: Docker is not available but required for PDF extraction")
@@ -222,13 +243,13 @@ func UpdatePDFScreenshots() int {
 	failed := 0
 
 	for _, pdf := range toProcess {
-		if verbose {
+		if cfg.verbose {
 			fmt.Printf("  Processing %s...\n", pdf.RelPath)
 		}
 
 		// Clear old cache if exists (stale hash)
 		if _, err := os.Stat(pdf.CacheDir); err == nil {
-			if verbose {
+			if cfg.verbose {
 				fmt.Printf("  Clearing stale cache for %s\n", pdf.BookName)
 			}
 			_ = os.RemoveAll(pdf.CacheDir)
@@ -236,15 +257,14 @@ func UpdatePDFScreenshots() int {
 
 		// Create cache directory for this PDF
 		if err := os.MkdirAll(pdf.CacheDir, 0o755); err != nil {
-			log.Errorf("  ❌ Failed to create cache dir for %s: %v", pdf.RelPath, err)
+			log.Errorf("  Failed to create cache dir for %s: %v", pdf.RelPath, err)
 			failed++
 			continue
 		}
 
 		// Extract pages using pdftoppm
-		if err := extractPages(dockerClient, pdf.Path, pdf.CacheDir, dpi); err != nil {
-			log.Errorf("  ❌ Failed to extract %s: %v", pdf.RelPath, err)
-			// Clean up partial cache
+		if err := extractPages(dockerClient, pdf.Path, pdf.CacheDir, cfg.dpi); err != nil {
+			log.Errorf("  Failed to extract %s: %v", pdf.RelPath, err)
 			_ = os.RemoveAll(pdf.CacheDir)
 			failed++
 			continue
@@ -253,15 +273,15 @@ func UpdatePDFScreenshots() int {
 		// Write hash marker file
 		hashMarker := filepath.Join(pdf.CacheDir, pdf.Hash+".cache")
 		if err := os.WriteFile(hashMarker, []byte(pdf.Hash), 0o644); err != nil {
-			log.Errorf("  ⚠️  Failed to write cache marker for %s: %v", pdf.RelPath, err)
+			log.Errorf("  Failed to write cache marker for %s: %v", pdf.RelPath, err)
 		}
 
 		// Count extracted pages
 		pageCount := countPages(pdf.CacheDir)
 		extracted++
 
-		if verbose {
-			fmt.Printf("  ✓ %s: %d pages -> %s/\n", pdf.RelPath, pageCount, pdf.BookName)
+		if cfg.verbose {
+			fmt.Printf("  %s: %d pages -> %s/\n", pdf.RelPath, pageCount, pdf.BookName)
 		}
 	}
 
@@ -270,7 +290,7 @@ func UpdatePDFScreenshots() int {
 	if failed > 0 {
 		fmt.Printf("Completed with errors: %d extracted, %d failed\n", extracted, failed)
 	} else {
-		fmt.Printf("✓ Successfully extracted pages from %d PDF(s)\n", extracted)
+		fmt.Printf("Successfully extracted pages from %d PDF(s)\n", extracted)
 	}
 	fmt.Printf("Cache location: %s\n", cacheRoot)
 
@@ -278,222 +298,4 @@ func UpdatePDFScreenshots() int {
 		return 1
 	}
 	return 0
-}
-
-// scanForPDFs finds all PDF files in the build directory.
-func scanForPDFs(buildDir, moduleFilter string) ([]PDFInfo, error) {
-	var pdfs []PDFInfo
-
-	if _, err := os.Stat(buildDir); os.IsNotExist(err) {
-		return pdfs, nil
-	}
-
-	err := filepath.WalkDir(buildDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(strings.ToLower(path), ".pdf") {
-			return nil
-		}
-
-		relPath, relErr := filepath.Rel(buildDir, path)
-		if relErr != nil {
-			relPath = path // Fallback to absolute path
-		}
-		parts := strings.Split(filepath.ToSlash(relPath), "/")
-		module := ""
-		if len(parts) > 0 {
-			module = parts[0]
-		}
-
-		// Apply module filter if specified
-		if moduleFilter != "" && module != moduleFilter {
-			return nil
-		}
-
-		// Extract book name from filename (without .pdf extension)
-		baseName := filepath.Base(path)
-		bookName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
-
-		pdfs = append(pdfs, PDFInfo{
-			Path:     path,
-			RelPath:  relPath,
-			Module:   module,
-			BookName: bookName,
-		})
-
-		return nil
-	})
-
-	return pdfs, err
-}
-
-// hashFile returns the SHA256 hash of a file (first 12 characters).
-func hashFile(path string) string {
-	f, err := os.Open(path)
-	if err != nil {
-		return "unknown"
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "unknown"
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil))[:12]
-}
-
-// cacheValidWithHash checks if cache dir exists with correct hash marker.
-func cacheValidWithHash(cacheDir, hash string) bool {
-	// Check for hash marker file: <hash>.cache
-	hashMarker := filepath.Join(cacheDir, hash+".cache")
-	if _, err := os.Stat(hashMarker); err != nil {
-		return false
-	}
-
-	// Also verify at least one PNG exists
-	entries, err := os.ReadDir(cacheDir)
-	if err != nil {
-		return false
-	}
-
-	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".png") {
-			return true
-		}
-	}
-	return false
-}
-
-// countPages counts the number of PNG files in a directory.
-func countPages(dir string) int {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return 0
-	}
-
-	count := 0
-	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".png") {
-			count++
-		}
-	}
-	return count
-}
-
-// ensurePDFToolsImage builds the pdf-oci Docker image if needed.
-func ensurePDFToolsImage(repoRoot string) error {
-	// Check if image exists
-	cmd := exec.Command("docker", "image", "inspect", pdfToolsImage)
-	if err := cmd.Run(); err == nil {
-		return nil // Image exists
-	}
-
-	// Build the image
-	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-cli-oci")
-	buildCtx := paths.ContainersPath(repoRoot, "pdf-cli-oci")
-
-	fmt.Println("Building pdf-cli-oci image...")
-	cmd = exec.Command("docker", "build",
-		"-t", pdfToolsImage,
-		"-f", dockerfilePath,
-		buildCtx)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-// extractPages uses pdftoppm to extract PDF pages as PNG images.
-func extractPages(_ docker.DockerClient, pdfPath, outputDir string, dpi int) error {
-	pdfDir := filepath.Dir(pdfPath)
-	pdfName := filepath.Base(pdfPath)
-
-	ctx := context.Background()
-
-	runConfig := &docker.RunConfig{
-		Image: pdfToolsImage,
-		Command: []string{
-			"pdftoppm",
-			"-png",
-			"-r", fmt.Sprintf("%d", dpi),
-			"/input/" + pdfName,
-			"/output/page",
-		},
-		Mounts: []docker.MountConfig{
-			{Source: pdfDir, Target: "/input", ReadOnly: true},
-			{Source: outputDir, Target: "/output", ReadOnly: false},
-		},
-		WorkingDir:    "/workspace",
-		Timeout:       10 * time.Minute,
-		ContainerName: fmt.Sprintf("pdf-extract-%d", time.Now().UnixNano()),
-	}
-
-	result, err := docker.RunContainer(ctx, runConfig)
-	if err != nil {
-		return err
-	}
-
-	if result.ExitCode != 0 {
-		logs := result.Stderr
-		if logs == "" {
-			logs = result.Stdout
-		}
-		return fmt.Errorf("container exited with code %d: %s", result.ExitCode, logs)
-	}
-
-	// pdftoppm outputs files like page-1.png, page-2.png
-	// Rename to zero-padded format: page-01.png, page-02.png
-	return renameToZeroPadded(outputDir)
-}
-
-// renameToZeroPadded renames page-1.png to page-01.png etc for proper sorting.
-func renameToZeroPadded(dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-
-	// Find max page number for padding
-	maxPage := 0
-	pagePattern := rePageNumber
-
-	for _, entry := range entries {
-		matches := pagePattern.FindStringSubmatch(entry.Name())
-		if matches != nil {
-			if num, err := strconv.Atoi(matches[1]); err == nil && num > maxPage {
-				maxPage = num
-			}
-		}
-	}
-
-	// Determine padding width
-	padWidth := 2
-	if maxPage >= 100 {
-		padWidth = 3
-	}
-	if maxPage >= 1000 {
-		padWidth = 4
-	}
-
-	// Rename files
-	for _, entry := range entries {
-		matches := pagePattern.FindStringSubmatch(entry.Name())
-		if matches != nil {
-			num, convErr := strconv.Atoi(matches[1])
-			if convErr != nil {
-				continue
-			}
-			newName := fmt.Sprintf("page-%0*d.png", padWidth, num)
-			if entry.Name() != newName {
-				oldPath := filepath.Join(dir, entry.Name())
-				newPath := filepath.Join(dir, newName)
-				if err := os.Rename(oldPath, newPath); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
 }

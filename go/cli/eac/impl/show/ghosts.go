@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
@@ -39,11 +38,10 @@ func (c *showGhostsCommand) Execute(_ context.Context, _ *core.CommandRequest) i
 }
 
 func ShowGhosts() int {
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showGhostsImpl)
+}
 
+func showGhostsImpl() int {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)

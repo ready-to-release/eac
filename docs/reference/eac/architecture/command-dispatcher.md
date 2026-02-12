@@ -20,7 +20,7 @@ This module provides a command dispatcher that automatically discovers and route
 
 # Use commands with tab completion
 run <TAB>              # Shows: commit, describe, list, show
-run show <TAB>         # Shows: files, modules, component-types
+run show <TAB>         # Shows: files, modules, component-kinds
 run show files <TAB>   # Shows: changed, staged
 run show files         # Executes: show all tracked files (markdown table)
 run show modules       # Executes: show modules (markdown table)
@@ -66,7 +66,7 @@ Current commands include:
 - **`show files-staged`** - Show only staged files with module ownership
 - **`show files-changed`** - Show only modified/unstaged files with module ownership
 - **`show modules`** - Show all module contracts in the repository (markdown table)
-- **`show component-types`** - Show module types grouped by count (markdown table)
+- **`show component-kinds`** - Show module types grouped by count (markdown table)
 - **`show release-notes`** - Display release notes in human-readable markdown format
 
 ### Parent Commands (Implicit Help)
@@ -74,7 +74,7 @@ Current commands include:
 Running a parent command without a subcommand shows available subcommands:
 
 ```bash
-go run . show          # Shows: files, modules, component-types
+go run . show          # Shows: files, modules, component-kinds
 go run . show files    # Shows: changed, staged (plus executes show files)
 go run . get           # Shows: commands, modules, etc.
 ```
@@ -199,7 +199,7 @@ Completion data comes from `go run . get commands` which outputs:
   ],
   "tree": {
     "": ["describe", "list", "show"],
-    "show": ["files", "modules", "component-types"],
+    "show": ["files", "modules", "component-kinds"],
     "show files": ["changed", "staged"],
     "list": ["commands"],
     "describe": ["commands"]

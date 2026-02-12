@@ -1,7 +1,10 @@
 package domain
 
-// ComponentType defines how to process files of a certain type for linting and other operations.
+// ComponentType defines component type metadata for domain validation.
 // This is loaded from component-kinds in blueprints and used by the lint orchestrator.
+// See also config.ComponentType in config/component_kinds.go which serves
+// the config loading layer. These types are intentionally separate to avoid
+// coupling between domain validation and config loading concerns.
 type ComponentType struct {
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	Extensions []string `yaml:"extensions" json:"extensions"`

@@ -41,12 +41,12 @@ The version package provides version metadata for the `clie version` command and
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- None identified.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

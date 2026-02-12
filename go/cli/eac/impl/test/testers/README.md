@@ -46,10 +46,10 @@ The `testers` package provides the test execution layer between the test framewo
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for registry.go (24 lines), helpers.go (179 lines), or static.go (52 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

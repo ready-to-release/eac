@@ -3,13 +3,13 @@ package internal
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // ModuleValidationResult represents validation results for a single module.
@@ -199,9 +199,8 @@ func validateSingleModule(
 
 	result.HasBuildArtifacts = true
 
-	// Build directory (make absolute path from relative path)
-	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
-	buildDir := filepath.Join(workspaceRoot, buildDirRel)
+	// Build directory
+	buildDir := paths.BuildOutputPath(workspaceRoot, moniker)
 
 	// Resolve artifacts
 	artifacts, summary, err := ResolveArtifactsForModuleWithConfig(

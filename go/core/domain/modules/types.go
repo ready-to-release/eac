@@ -37,11 +37,21 @@ func (m *ModuleContract) GetComponentRoots() map[string]string {
 }
 
 // GetGlobPatterns returns GitHub Actions compatible glob patterns for this module.
-// Collects patterns from all components.
+// Collects patterns from all components. Results are sorted for determinism
+// since Components is a map with non-deterministic iteration order. This ensures
+// the hash cache (which uses slices.Equal on patterns) can match across runs.
 func (m *ModuleContract) GetGlobPatterns() []string {
 	var patterns []string
 
-	for _, comp := range m.Components {
+	// Collect component names and sort for deterministic iteration
+	compNames := make([]string, 0, len(m.Components))
+	for name := range m.Components {
+		compNames = append(compNames, name)
+	}
+	sort.Strings(compNames)
+
+	for _, name := range compNames {
+		comp := m.Components[name]
 		if comp == nil {
 			continue
 		}
@@ -109,7 +119,7 @@ func (m *ModuleContract) GetAbsolutePaths() []string {
 func (m *ModuleContract) MatchesFile(filePath string) bool {
 	path := normalizePathSeparators(filePath)
 
-	for compName, comp := range m.Components {
+	for _, comp := range m.Components {
 		if comp == nil {
 			continue
 		}
@@ -123,14 +133,17 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 			continue
 		}
 
-		// If component has patterns, check them
+		// Collect all declared patterns across source, tests, config, and data.
+		var allPatterns []string
 		if comp.Patterns != nil {
-			allPatterns := append(append([]string{},
-				comp.Patterns.Source...),
-				comp.Patterns.Tests...)
+			allPatterns = append(allPatterns, comp.Patterns.Source...)
+			allPatterns = append(allPatterns, comp.Patterns.Tests...)
 			allPatterns = append(allPatterns, comp.Patterns.Config...)
 			allPatterns = append(allPatterns, comp.Patterns.Data...)
+		}
 
+		if len(allPatterns) > 0 {
+			// Component has explicit patterns - match against them.
 			for _, pattern := range allPatterns {
 				fullPattern := joinPattern(root, pattern)
 				if matchWithFallback(path, fullPattern) {
@@ -138,12 +151,10 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 				}
 			}
 		} else if root != "" && root != "/" {
-			// No patterns defined - static/catch-all components own files based on component type
-			// Components like "assets" without patterns match by extension
-			// Components like "static" with root but no patterns own all files under root
-			if compName == "static" || compName == "book" {
-				return true
-			}
+			// No patterns defined - component owns all files under its root.
+			// This covers any component type that declares a root without
+			// restricting by patterns (e.g., static content, books).
+			return true
 		}
 	}
 
@@ -273,27 +284,26 @@ func normalizePathSeparators(path string) string {
 }
 
 // matchWithFallback handles glob matching with fallback for ** patterns.
+// The doublestar library handles most cases, but root-level files sometimes
+// need explicit fallback matching when ** is used at different positions.
 func matchWithFallback(path, pattern string) bool {
 	if matchGlobPattern(path, pattern) {
 		return true
 	}
 
-	// Handle ** patterns that don't match root-level files
-	if strings.HasPrefix(pattern, "**/") {
-		if matchGlobPattern(path, strings.TrimPrefix(pattern, "**/")) {
-			return true
-		}
-	} else if strings.Contains(pattern, "/**/") {
+	// Fallback: try collapsing ** to match root-level files directly.
+	switch {
+	case strings.HasPrefix(pattern, "**/"):
+		// "**/foo.go" should also match "foo.go" (root-level)
+		return matchGlobPattern(path, strings.TrimPrefix(pattern, "**/"))
+	case strings.HasPrefix(pattern, "**"):
+		// "**.go" should also match ".go" suffix at root level
+		return matchGlobPattern(path, strings.TrimPrefix(pattern, "**"))
+	case strings.Contains(pattern, "/**/"):
+		// "src/**/foo.go" should also match "src/foo.go" (no intermediate dirs)
 		parts := strings.SplitN(pattern, "/**/", 2)
 		if len(parts) == 2 {
-			directPattern := parts[0] + "/" + parts[1]
-			if matchGlobPattern(path, directPattern) {
-				return true
-			}
-		}
-	} else if strings.HasPrefix(pattern, "**") && !strings.HasPrefix(pattern, "**/") {
-		if matchGlobPattern(path, strings.TrimPrefix(pattern, "**")) {
-			return true
+			return matchGlobPattern(path, parts[0]+"/"+parts[1])
 		}
 	}
 

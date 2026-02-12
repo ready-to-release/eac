@@ -3,16 +3,17 @@
 package pipelinerunner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // errCircularDependency is returned when a circular dependency is detected.
@@ -29,10 +30,18 @@ type PipelineRunner struct {
 }
 
 // New creates a new PipelineRunner.
-func New(repoPath string) *PipelineRunner {
+// An optional GitHubCLI can be provided for dependency injection; when nil,
+// the default NewGitHubCLI constructor is used.
+func New(repoPath string, ghCLI ...GitHubCLI) *PipelineRunner {
+	var cli GitHubCLI
+	if len(ghCLI) > 0 && ghCLI[0] != nil {
+		cli = ghCLI[0]
+	} else {
+		cli = NewGitHubCLI(repoPath)
+	}
 	return &PipelineRunner{
 		repoPath: repoPath,
-		ghCLI:    NewGitHubCLI(repoPath),
+		ghCLI:    cli,
 		wait:     true, // Default to waiting
 		timeout:  0,    // Default to no timeout
 	}
@@ -180,16 +189,20 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	// Determine what to compare against
 	// If ref is provided and not the current branch, compare against that ref
 	// Otherwise, detect uncommitted changes (diff HEAD)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return fmt.Errorf("tool system not initialized")
+	}
 	var output []byte
 	var err error
 	if ref != "" && ref != getCurrentBranch(r.repoPath) {
 		// Compare against specific ref
 		log.Infof("Comparing against ref: %s", ref)
-		output, err = gitexec.Run(r.repoPath, "diff", "--name-only", ref)
+		output, err = ts.RunTool(context.Background(), "git", r.repoPath, "diff", "--name-only", ref)
 	} else {
 		// Detect uncommitted changes
 		log.Info("Detecting uncommitted changes...")
-		output, err = gitexec.Run(r.repoPath, "diff", "--name-only", "HEAD")
+		output, err = ts.RunTool(context.Background(), "git", r.repoPath, "diff", "--name-only", "HEAD")
 	}
 
 	if err != nil {
@@ -228,7 +241,11 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 
 // getCurrentBranch gets the current git branch name.
 func getCurrentBranch(repoPath string) string {
-	output, err := gitexec.Run(repoPath, "branch", "--show-current")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return ""
+	}
+	output, err := ts.RunTool(context.Background(), "git", repoPath, "branch", "--show-current")
 	if err != nil {
 		return ""
 	}

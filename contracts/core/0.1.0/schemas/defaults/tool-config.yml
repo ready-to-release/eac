@@ -768,7 +768,7 @@ component-tools:
     server: static-site
     servers: [static-site, mkdocs-live]
 
-  # docs-pdf and docs-site use tool chains defined in component-types.yml
+  # docs-pdf and docs-site use tool chains defined in blueprints.yml component-kinds
   # No single builder binding needed - the tools list handles execution order
 
   design:

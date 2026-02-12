@@ -39,6 +39,8 @@ and module granularity.
 | passthrough.go | No-op buffer for console mode |
 | moniker.go | `Moniker` parsing and display helpers |
 | ports.go | Contract port adapters for reader, tracker, manifest |
+| ports_getters.go | Trivial getter methods extracted from ports.go to satisfy port interfaces |
+| reader_validate.go | Validation methods extracted from reader.go (ValidateUoW, ValidateModule, VerifyModuleIntegrity) |
 
 ## Dependencies
 
@@ -56,13 +58,14 @@ functionality through contract interfaces to the CLI layer.
 ## Code Health
 
 ### Tech Debt
-- `ports.go` (319 lines): dominated by trivial getter methods to satisfy port interfaces -- consider code generation or embedding to reduce boilerplate
-- `reader.go` (360 lines): `DiskOutputReader` handles reading, validation, integrity checks, and build-ID extraction in a single struct
+
+- None identified
 
 ### Pain Points
-- Port adapter layer (`ports.go`) must be updated every time a field is added to `UoWManifest`, `Artifact`, or view types -- high coupling surface
-- Validation logic in `reader.go` (`ValidateUoW`, `ValidateModule`, `VerifyModuleIntegrity`) mixes read concerns with verification concerns
+
+- Port adapter layer (ports.go, ports_getters.go) must be updated when fields are added to UoWManifest, Artifact, or view types
+- Large test files: cache_detector_test.go (1295 lines), tracker_test.go (1178 lines), types_test.go (1083 lines), uow_manifest_test.go (876 lines), validation_test.go (865 lines), reader_detection_test.go (752 lines)
 
 ### Optimization Opportunities
-- Extract validation methods from `DiskOutputReader` into a dedicated `Validator` struct to separate read and verify responsibilities (low effort)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+
+- None identified

@@ -1035,6 +1035,75 @@ func TestDiscoverComponents_GoTestdata_NoDir(t *testing.T) {
 		"testdata component should not be created when directory does not exist")
 }
 
+// TestFindFirstComponentByType_Deterministic verifies that findFirstComponentByType
+// always returns the same component when multiple components share the same type.
+// This is critical for hash stability: non-deterministic selection causes different
+// glob patterns across process invocations, breaking cache invalidation.
+func TestFindFirstComponentByType_Deterministic(t *testing.T) {
+	// Simulate the adapters module with many Go-typed components.
+	// Map iteration order in Go is non-deterministic, so without sorting
+	// this would return different results across runs.
+	components := ModuleComponents{
+		"godog-eac":    &ComponentEntry{Type: "go", Root: "go/adapters/godog"},
+		"ai-eac":       &ComponentEntry{Type: "go", Root: "go/adapters/ai"},
+		"docker-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/docker"},
+		"eac-to-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/eac"},
+		"tui-eac":      &ComponentEntry{Type: "go", Root: "go/adapters/tui"},
+		"cucumber-eac": &ComponentEntry{Type: "go", Root: "go/adapters/cucumber"},
+		"gotest-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/gotest"},
+		"mocha-eac":    &ComponentEntry{Type: "go", Root: "go/adapters/mocha"},
+		"npm-eac":      &ComponentEntry{Type: "go", Root: "go/adapters/npm"},
+		"pip-eac":      &ComponentEntry{Type: "go", Root: "go/adapters/pip"},
+		"pytest-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/pytest"},
+		"behave-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/behave"},
+		"nuget-eac":    &ComponentEntry{Type: "go", Root: "go/adapters/nuget"},
+		"dotnet-eac":   &ComponentEntry{Type: "go", Root: "go/adapters/dotnet"},
+		"reqnroll-eac": &ComponentEntry{Type: "go", Root: "go/adapters/reqnroll"},
+	}
+
+	// Run 100 times to catch non-determinism (map randomization varies per iteration)
+	var firstName string
+	for i := 0; i < 100; i++ {
+		name, entry := findFirstComponentByType(components, "go")
+		require.NotNil(t, entry, "should find a go component")
+
+		if i == 0 {
+			firstName = name
+			// With sorted names, "ai-eac" should always win (alphabetically first)
+			assert.Equal(t, "ai-eac", name, "alphabetically first go component should be selected")
+		} else {
+			assert.Equal(t, firstName, name,
+				"findFirstComponentByType must return the same component every time (iteration %d)", i)
+		}
+	}
+}
+
+// TestFindFirstComponentByType_ExplicitType verifies selection with explicit Type field.
+func TestFindFirstComponentByType_ExplicitType(t *testing.T) {
+	components := ModuleComponents{
+		"core":      &ComponentEntry{Type: "go", Root: "go/core"},
+		"contracts": &ComponentEntry{Type: "go", Root: "contracts/core"},
+		"web":       &ComponentEntry{Type: "typescript", Root: "ts/web"},
+	}
+
+	name, entry := findFirstComponentByType(components, "go")
+	require.NotNil(t, entry)
+	// "contracts" is alphabetically before "core"
+	assert.Equal(t, "contracts", name)
+	assert.Equal(t, "contracts/core", entry.Root)
+}
+
+// TestFindFirstComponentByType_NilAndEmpty verifies edge cases.
+func TestFindFirstComponentByType_NilAndEmpty(t *testing.T) {
+	name, entry := findFirstComponentByType(nil, "go")
+	assert.Equal(t, "", name)
+	assert.Nil(t, entry)
+
+	name, entry = findFirstComponentByType(ModuleComponents{}, "go")
+	assert.Equal(t, "", name)
+	assert.Nil(t, entry)
+}
+
 // TestDiscoverComponents_GoImplAssets_WrongTemplate verifies that the impl-assets rule
 // does NOT create a component when the module template is go-library because
 // only_templates requires go-exe.

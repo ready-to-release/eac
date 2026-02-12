@@ -33,10 +33,10 @@ The `evidence` sub-package automates the collection and formatting of audit evid
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for update.go (245 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

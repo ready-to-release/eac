@@ -17,9 +17,9 @@ tests, with npm isolation and tag filter translation.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| runner.go | `TsCucumberRunner` implementing `TestTypeRunner` |
+| File              | Responsibility                                     |
+| ----------------- | -------------------------------------------------- |
+| runner.go         | `TsCucumberRunner` implementing `TestTypeRunner`   |
 | tag_translator.go | `CucumberTagTranslator` for cucumber-js tag syntax |
 
 ## Dependencies
@@ -41,12 +41,11 @@ isolation to prevent file lock conflicts during parallel test runs.
 ## Code Health
 
 ### Tech Debt
-- `Execute()` in runner.go (~130 lines) interleaves npm isolation, dependency installation, command building, and result parsing; extracting `installDependencies` and `runCucumber` helpers would improve clarity
-- `init()` in runner.go performs global registration; a factory function accepting a registry would be more testable
+- init() in runner.go performs global registration; a factory function accepting a registry would be more testable
 
 ### Pain Points
-- `Execute()` uses `len(tests)` as `TestsFailed` on error and `TestsPassed` on success without parsing actual cucumber-js output, so per-test pass/fail counts are approximate
-- No unit tests for `Execute()` or `GetTestInfo()`; only tag_translator_test.go exists
+- runner.go is 339 lines; candidate for splitting (extract tag translation and CTRF conversion logic)
+- No unit tests for the full Execute() or GetTestInfo() (requires tool registry); runner_test.go covers helpers, parsing, and public API surface
 
 ### Optimization Opportunities
-- The `npm ci` / `npm install` step runs synchronously within Execute; for modules with unchanged lockfiles, caching node_modules from a previous run could skip reinstallation entirely; moderate effort
+- None identified

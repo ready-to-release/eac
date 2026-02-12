@@ -157,6 +157,7 @@ var suiteInitOnce sync.Once
 
 // logSuiteInitDiagnostics logs diagnostic information at suite initialization.
 // This runs once per test suite and helps debug CI environment issues.
+// Uses the structured logger so output is captured by CI log aggregation.
 func logSuiteInitDiagnostics(repoRoot, specsPath string) {
 	// Only log diagnostics if GODOG_DEBUG_INIT is set or if running in CI
 	if os.Getenv(environments.EnvGodogDebugInit) == "" && os.Getenv(environments.EnvCI) == "" && os.Getenv(environments.EnvGitHubActions) == "" {
@@ -176,23 +177,11 @@ func logSuiteInitDiagnostics(repoRoot, specsPath string) {
 			binaryInfo = fmt.Sprintf("error: %v", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "══════════════════════════════════════════════════════════════════\n")
-		fmt.Fprintf(os.Stderr, "  Godog Suite Initialization Diagnostics\n")
-		fmt.Fprintf(os.Stderr, "══════════════════════════════════════════════════════════════════\n")
-		fmt.Fprintf(os.Stderr, "  Platform:      %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Fprintf(os.Stderr, "  Repo root:     %s\n", repoRoot)
-		fmt.Fprintf(os.Stderr, "  Specs path:    %s\n", specsPath)
-		fmt.Fprintf(os.Stderr, "  Binary path:   %s\n", binaryPath)
-		fmt.Fprintf(os.Stderr, "  Binary status: %s\n", binaryInfo)
+		log.Infof("Godog Suite Init: platform=%s/%s repoRoot=%s specsPath=%s binaryPath=%s binaryStatus=%s",
+			runtime.GOOS, runtime.GOARCH, repoRoot, specsPath, binaryPath, binaryInfo)
 		if !binaryExists {
-			fmt.Fprintf(os.Stderr, "\n")
-			fmt.Fprintf(os.Stderr, "  ⚠️  WARNING: Commands binary not found!\n")
-			fmt.Fprintf(os.Stderr, "  Tests requiring command execution will fail.\n")
-			fmt.Fprintf(os.Stderr, "  Ensure eac is built before running tests.\n")
+			log.Warnf("Commands binary not found at %s - tests requiring command execution will fail. Ensure eac is built before running tests.", binaryPath)
 		}
-		fmt.Fprintf(os.Stderr, "══════════════════════════════════════════════════════════════════\n")
-		fmt.Fprintf(os.Stderr, "\n")
 	})
 }
 

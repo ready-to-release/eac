@@ -53,14 +53,13 @@ Defines the boundary between the command framework and TUI rendering. The framew
 ## Code Health
 
 ### Tech Debt
-- `interfaces.go:22` `Console` interface has ~22 methods; this is a very large interface that forces implementors to satisfy all methods even if only a subset is needed
-- `interfaces.go:318` package-level mutable `globalBootstrap` var for TUI registration; safe in practice but not idiomatic
-- No test file exists; while this is a types-only package, interface compliance tests would catch contract drift
+
+- None identified
 
 ### Pain Points
-- Adding a new TUI feature requires modifying the `Console` interface and updating every implementation, creating high coupling
-- The interface mixes lifecycle (`Start`/`Stop`), output (`SendLine`/`WriteResult`), phase management, UoW tracking, and summary concerns
+
+- `interfaces_test.go` is 614 lines, significantly exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Decompose `Console` into smaller role interfaces (e.g., `PhaseManager`, `UoWTracker`, `SummaryConsole`) composed by implementors (medium effort)
-- Add interface compliance test (`var _ Console = (*mockConsole)(nil)`) to catch signature drift early (low effort)
+
+- None identified

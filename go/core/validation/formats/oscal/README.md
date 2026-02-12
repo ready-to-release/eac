@@ -48,6 +48,11 @@ Used by the AI generation pipeline (`ai/generation`) to validate OSCAL output fr
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+- `profile.go` is 299 lines, approaching refactor threshold
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- None identified

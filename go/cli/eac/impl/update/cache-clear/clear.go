@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -297,152 +295,6 @@ func clearDirectoryContentsWithDetails(fullPath, relPath string, dryRun, verbose
 	}
 
 	return deleted, bytes, items
-}
-
-// semaphoreFiles lists the semaphore files to clear (relative to out directory).
-var semaphoreFiles = []string{
-	".global-capacity.json",
-	".global-capacity.lock",
-	".global-docker-capacity.json",
-	".global-docker-capacity.lock",
-}
-
-// clearSemaphoreFiles deletes capacity semaphore state files.
-// These files coordinate resource allocation across concurrent processes.
-// Stale semaphore state can cause test hangs and should be cleared when debugging timeouts.
-func clearSemaphoreFiles(semaphoreDir, repoRoot string, dryRun, verbose bool) (int, int64, []string) {
-	var deleted int
-	var bytes int64
-	var items []string
-
-	for _, filename := range semaphoreFiles {
-		fullPath := filepath.Join(semaphoreDir, filename)
-		relPath, _ := filepath.Rel(repoRoot, fullPath)
-		if relPath == "" {
-			relPath = filepath.Join(paths.EACCacheRoot, "semaphores", filename)
-		}
-
-		info, err := os.Stat(fullPath)
-		if os.IsNotExist(err) {
-			continue // File doesn't exist, nothing to clear
-		}
-		if err != nil {
-			if verbose {
-				items = append(items, fmt.Sprintf("[skip] %s (error: %v)", relPath, err))
-			}
-			continue
-		}
-
-		fileSize := info.Size()
-		bytes += fileSize
-		items = append(items, fmt.Sprintf("%s (%s)", relPath, formatBytes(fileSize)))
-
-		if !dryRun {
-			if err := os.Remove(fullPath); err != nil {
-				log.Errorf("Failed to delete %s: %v", relPath, err)
-				continue
-			}
-		}
-		deleted++
-	}
-
-	return deleted, bytes, items
-}
-
-// clearDockerCache clears Docker caches using docker commands.
-func clearDockerCache(cacheType cache.Type, dryRun, verbose bool) (int, int64, []string) {
-	var cmd string
-	var args []string
-	var description string
-
-	switch cacheType {
-	case cache.TypeRegistry:
-		cmd = "docker"
-		args = []string{"image", "prune", "-f"}
-		description = "Docker image cache"
-	case cache.TypeLayer:
-		cmd = "docker"
-		args = []string{"builder", "prune", "-f"}
-		description = "Docker builder cache"
-	default:
-		return 0, 0, nil
-	}
-
-	if dryRun {
-		return 1, 0, []string{fmt.Sprintf("Would run: %s %s (%s)", cmd, strings.Join(args, " "), description)}
-	}
-
-	// Execute docker command
-	execCmd := exec.Command(cmd, args...)
-	output, err := execCmd.CombinedOutput()
-	if err != nil {
-		return 0, 0, []string{fmt.Sprintf("Failed to run %s: %v", cmd, err)}
-	}
-
-	// Try to parse reclaimed space from output
-	// Docker outputs: "Total reclaimed space: 1.234GB"
-	var reclaimedBytes int64
-	outputStr := string(output)
-	if strings.Contains(outputStr, "reclaimed space:") {
-		// Parse the output (this is best-effort)
-		reclaimedBytes = parseDockerReclaimedSpace(outputStr)
-	}
-
-	return 1, reclaimedBytes, []string{fmt.Sprintf("%s %s (%s)", cmd, strings.Join(args, " "), description)}
-}
-
-// parseDockerReclaimedSpace tries to parse reclaimed space from docker prune output.
-func parseDockerReclaimedSpace(output string) int64 {
-	// Docker outputs: "Total reclaimed space: 1.234GB" or similar
-	// This is best-effort parsing
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "reclaimed space:") {
-			parts := strings.Split(line, ":")
-			if len(parts) >= 2 {
-				sizeStr := strings.TrimSpace(parts[len(parts)-1])
-				return parseSizeString(sizeStr)
-			}
-		}
-	}
-	return 0
-}
-
-// parseSizeString parses a size string like "1.234GB" into bytes.
-func parseSizeString(s string) int64 {
-	s = strings.TrimSpace(s)
-	if s == "" || s == "0B" {
-		return 0
-	}
-
-	var multiplier float64 = 1
-	suffix := ""
-
-	// Extract numeric part and suffix
-	for i := len(s) - 1; i >= 0; i-- {
-		if s[i] >= '0' && s[i] <= '9' || s[i] == '.' {
-			suffix = s[i+1:]
-			s = s[:i+1]
-			break
-		}
-	}
-
-	switch strings.ToUpper(suffix) {
-	case "B":
-		multiplier = 1
-	case "KB":
-		multiplier = 1024
-	case "MB":
-		multiplier = 1024 * 1024
-	case "GB":
-		multiplier = 1024 * 1024 * 1024
-	case "TB":
-		multiplier = 1024 * 1024 * 1024 * 1024
-	}
-
-	var value float64
-	fmt.Sscanf(s, "%f", &value)
-	return int64(value * multiplier)
 }
 
 // formatBytes formats bytes in human-readable form.

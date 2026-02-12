@@ -29,9 +29,10 @@ See: https://ctrf.io/
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `ctrf.go` | All CTRF types, constructors, `AddTest`, `Merge`, `Parse`, and serialization |
+| File             | Purpose                                                                |
+| ---------------- | ---------------------------------------------------------------------- |
+| `types.go`       | CTRF type definitions (`Report`, `Results`, `Tool`, `Summary`, `Test`, `Status`, `Environment`) and status constants |
+| `operations.go`  | Constructors (`NewReport`, `NewEmptyReport`), `AddTest`, `Merge`, `Parse`, and serialization |
 
 ## Dependencies
 
@@ -44,11 +45,12 @@ Provides the standard test report format used across all test runners. Each runn
 ## Code Health
 
 ### Tech Debt
-- `ctrf.go` (167 lines) has no test file; `Parse`, `Merge`, and `AddTest` are critical aggregation paths that should have unit tests
+- None identified
 
 ### Pain Points
-- All types, constructors, parsing, and merging logic live in a single file; splitting into `types.go` and `operations.go` would improve navigability as the format evolves
+- None identified
 
 ### Optimization Opportunities
-- Add unit tests covering `Merge` edge cases (empty reports, overlapping time ranges, duplicate tests) (low effort)
-- Add round-trip `Parse`/`Marshal` tests to verify JSON schema compliance (low effort)
+- Clean, focused package with only two files (operations.go and types.go)
+- operations.go contains all functionality in a manageable file size
+- No test files present; consider adding tests for CTRF operations (Parse, Merge, AddTest)

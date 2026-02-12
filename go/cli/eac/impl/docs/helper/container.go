@@ -91,16 +91,27 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 		return nil, fmt.Errorf("failed to determine repository root: %w", err)
 	}
 
-	// Generate mkdocs.yml from site template
+	// Prepare MkDocs config and macros
+	configPath, err := prepareMkDocsConfig(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build and launch Docker container
+	serveConfig := buildServeConfig(repoRoot, configPath, port)
+	return launchContainer(ctx, serveConfig)
+}
+
+// prepareMkDocsConfig generates mkdocs.yml and copies macros script.
+// Returns the generated config file path.
+func prepareMkDocsConfig(repoRoot string) (string, error) {
 	configDir := paths.ServeOutputPath(repoRoot)
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		log.Errorf("Failed to create serve config directory: error=%v", err)
-		return nil, fmt.Errorf("failed to create config directory: %w", err)
+		return "", fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	configPath := paths.MkDocsConfigPath(configDir)
-	// docs_dir is relative to config file location (out/serve/mkdocs.yml)
-	// So we need ../../docs to get back to repo root's docs/ directory
 	configOpts := mkdocs.ConfigOptions{
 		SiteName:     "Documentation",
 		DocsDir:      "../../docs",
@@ -108,12 +119,17 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 	}
 	if err := mkdocs.WriteMkDocsConfig(repoRoot, configPath, configOpts); err != nil {
 		log.Errorf("Failed to generate mkdocs.yml: error=%v", err)
-		return nil, fmt.Errorf("failed to generate mkdocs.yml: %w", err)
+		return "", fmt.Errorf("failed to generate mkdocs.yml: %w", err)
 	}
 	log.Debugf("Generated mkdocs.yml from template: configPath=%s", configPath)
 
-	// Copy mkdocs macros script to serve directory as main.py
-	// mkdocs-macros will automatically find main.py in the same directory as mkdocs.yml
+	copyMkDocsMacros(repoRoot, configDir)
+	return configPath, nil
+}
+
+// copyMkDocsMacros copies the mkdocs macros script to the serve directory as main.py.
+// This is optional -- missing macros are silently skipped.
+func copyMkDocsMacros(repoRoot, configDir string) {
 	macrosSource := filepath.Join(repoRoot, "containers", "mkdocs-render-oci", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(configDir, "main.py")
 	macrosData, err := os.ReadFile(macrosSource)
@@ -126,24 +142,24 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 	} else {
 		log.Debugf("Mkdocs macros script not found (optional): path=%s", macrosSource)
 	}
+}
 
-	// Calculate relative config path for Docker
+// buildServeConfig constructs the Docker serve configuration.
+func buildServeConfig(repoRoot, configPath string, port int) *docker.ServeConfig {
 	relConfigPath, relErr := filepath.Rel(repoRoot, configPath)
 	if relErr != nil {
-		relConfigPath = configPath // Fallback to absolute path
+		relConfigPath = configPath
 	}
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
-	// Get Docker configuration from module types
 	containerNameBase, imageName, dockerfile := getDockerImageConfig()
-
-	// Build configuration for the serve helper
 	dockerfilePath := filepath.Join(repoRoot, dockerfile)
 	contextPath := filepath.Dir(dockerfilePath)
 
-	log.Debugf("Container configuration: dockerfile=%s, contextPath=%s, contentPath=%s, configPath=%s, containerPort=%d", dockerfilePath, contextPath, repoRoot, dockerConfigPath, containerInternalPort)
+	log.Debugf("Container configuration: dockerfile=%s, contextPath=%s, contentPath=%s, configPath=%s, containerPort=%d",
+		dockerfilePath, contextPath, repoRoot, dockerConfigPath, containerInternalPort)
 
-	serveConfig := &docker.ServeConfig{
+	return &docker.ServeConfig{
 		Name:  containerNameBase,
 		Image: imageName,
 		BuildInfo: &docker.BuildInfo{
@@ -157,16 +173,19 @@ func startMkDocsContainer(cli docker.DockerClient, ctx context.Context, port int
 		PreferredPort: port,
 		RestartPolicy: "unless-stopped",
 	}
+}
 
-	// Start the serve container
-	log.Infof("Launching container via serve helper: image=%s", imageName)
+// launchContainer starts the Docker container using the serve helper.
+func launchContainer(ctx context.Context, serveConfig *docker.ServeConfig) (*ContainerInfo, error) {
+	log.Infof("Launching container via serve helper: image=%s", serveConfig.Image)
 	result, err := docker.StartServe(ctx, serveConfig)
 	if err != nil {
 		log.Errorf("Failed to start container: error=%v", err)
 		return nil, err
 	}
 
-	log.Infof("Container started successfully: containerName=%s, url=%s, hostPort=%d", result.ContainerName, result.URL, result.HostPort)
+	log.Infof("Container started successfully: containerName=%s, url=%s, hostPort=%d",
+		result.ContainerName, result.URL, result.HostPort)
 
 	return &ContainerInfo{
 		Name: result.ContainerName,

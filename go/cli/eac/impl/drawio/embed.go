@@ -77,7 +77,7 @@ func DrawioEmbed() int {
 	}
 
 	// Check Docker
-	if err := CheckDockerAvailable(repoRoot); err != nil {
+	if err := CheckDockerAvailable(repoRoot, nil); err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -137,7 +137,7 @@ func DrawioEmbed() int {
 	}
 
 	// Run command
-	_, err = RunDrawioCommandWithOutput(repoRoot, cmdArgs)
+	_, err = RunDrawioCommandWithOutput(repoRoot, cmdArgs, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Embedded XML into") {
 			// Success message in stderr

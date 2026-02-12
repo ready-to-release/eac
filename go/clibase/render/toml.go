@@ -7,32 +7,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RenderAsTOML converts a Go struct to TOML by first marshaling to YAML then to TOML
-// This ensures YAML is the single source of truth for serialization
-// Order is preserved where possible (TOML spec requires tables to be at end)
+// RenderAsTOML converts a Go struct to TOML using direct TOML marshaling.
+// If the struct has toml tags they are used; otherwise go-toml uses field names.
 //
 // Example:
 //
 //	type Person struct {
-//	    Name  string `yaml:"name"`
-//	    Age   int    `yaml:"age"`
+//	    Name  string `toml:"name" yaml:"name"`
+//	    Age   int    `toml:"age"  yaml:"age"`
 //	}
 //	person := Person{Name: "Alice", Age: 30}
 //	tomlStr, err := RenderAsTOML(person)
 func RenderAsTOML(v interface{}) (string, error) {
-	// First marshal to YAML to ensure consistent serialization
+	// Direct TOML marshaling (avoids YAML intermediate)
+	tomlBytes, err := toml.Marshal(v)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal to TOML: %w", err)
+	}
+	return string(tomlBytes), nil
+}
+
+// RenderAsTOMLViaYAML converts a Go struct to TOML via YAML intermediate.
+// Use this only when the struct exclusively uses yaml tags.
+func RenderAsTOMLViaYAML(v interface{}) (string, error) {
 	yamlBytes, err := yaml.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal to YAML: %w", err)
 	}
 
-	// Unmarshal YAML to generic interface
 	var intermediate interface{}
 	if err := yaml.Unmarshal(yamlBytes, &intermediate); err != nil {
 		return "", fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	// Marshal to TOML
 	tomlBytes, err := toml.Marshal(intermediate)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal to TOML: %w", err)

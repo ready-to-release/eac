@@ -36,7 +36,7 @@ The `show/internal` package provides display formatting utilities shared across 
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- No test for artifact_formatter.go (195 lines)
 
 ### Pain Points
 - None identified.

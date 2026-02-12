@@ -42,6 +42,11 @@ Shared test utility package providing pre-built GitHub mock scenarios. Used by t
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: The `AssertCallCount` function (line 88 of `fixtures.go`) uses `rune` conversion for number formatting which only works for single-digit counts.
-- **Optimization Opportunities**: Replace panic-based assertions with `testing.T`-based assertions that report file/line correctly and use `fmt.Sprintf` for numbers.
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Assessed and Accepted
+- Panic-based assertions are a deliberate choice for mock helpers used within godog step definitions where `testing.T` is not available

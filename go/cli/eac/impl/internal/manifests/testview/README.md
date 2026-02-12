@@ -45,7 +45,8 @@ Provides UoW-based test data aggregation. Reads test UoW manifests and their ref
 | --- | --- |
 | types.go | Core types (TestModuleView, TestSummary, TestEntry, ArtifactRef) and status/artifact constants |
 | loader.go | UoW manifest loading, module view construction, and dependency expansion |
-| aggregation.go | Cross-module aggregation types (`CompleteTestData`, `ModuleStats`, `SpecCoverage`, `ControlSummary`) and `BuildCompleteTestData` |
+| aggregation.go | `BuildCompleteTestData` entry point for cross-module aggregation |
+| aggregation_types.go | Cross-module aggregation types (`CompleteTestData`, `TestResult`, `ModuleStats`, `SpecCoverage`, `ControlSummary`, `TypeSummary`, `SuiteSummaryEntry`) |
 | aggregation_builders.go | Builder functions for module stats, spec coverage, control summaries, type summaries, and suite summaries |
 | aggregation_extractors.go | `extractTestResults` and `extractLastRun` from module views |
 | helpers.go | Tag stripping, control tag extraction, and feature name extraction |
@@ -67,10 +68,11 @@ The `testview` package is the primary test data aggregation layer used by show a
 ## Code Health
 
 ### Tech Debt
-- None identified
+- aggregation_builders.go (233 lines) is the largest file; contains cross-module aggregation logic
+- Most critical files now have dedicated _test.go coverage (loader, parsers, aggregation)
 
 ### Pain Points
-- None identified
+- helpers.go (60 lines), aggregation_extractors.go (51 lines), and aggregation_types.go (88 lines) lack unit tests
 
 ### Optimization Opportunities
-- No urgent opportunities identified
+- None identified

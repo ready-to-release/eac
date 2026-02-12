@@ -1,44 +1,54 @@
 # validation/formats/json
 
-Placeholder for JSON schema validation.
-
-Currently a stub that always returns valid; the actual JSON schema validation logic lives in `domain.JSONSchemaValidator`.
+JSON schema validation utilities, migrated from `domain.JSONSchemaValidator`.
 
 ## Key Types
 
-| Type        | Purpose                                                                       |
-| ----------- | ----------------------------------------------------------------------------- |
-| `Validator` | Stub validator that accepts a schema path but does not yet perform validation |
+| Type        | Purpose                                                        |
+| ----------- | -------------------------------------------------------------- |
+| `Validator` | Validates JSON documents against a compiled JSON Schema        |
 
 ## Key Functions
 
-| Function       | Purpose                                                       |
-| -------------- | ------------------------------------------------------------- |
-| `NewValidator` | Creates a new JSON schema validator (stub, returns no errors) |
+| Function       | Purpose                                              |
+| -------------- | ---------------------------------------------------- |
+| `NewValidator` | Loads and compiles a JSON Schema, returns a Validator |
 
 ## Patterns
 
-- **Placeholder implementation**: `Validate` and `VerifyImplementation` both return nil
-- **Interface compliance**: Implements `validation.Validator` interface
+- Schema is compiled once in `NewValidator`; subsequent `Validate` calls are fast
+- Array error pattern detection collapses repetitive per-item errors into a single contextual message
+- Enhanced error hints for type mismatches, enum violations, and missing required fields
+- Implements `validation.Validator` interface
 
 ## Internal Structure
 
-| File           | Purpose                                                                |
-| -------------- | ---------------------------------------------------------------------- |
-| `validator.go` | Stub `Validator` type with no-op `Validate` and `VerifyImplementation` |
+| File               | Purpose                                                          |
+| ------------------ | ---------------------------------------------------------------- |
+| `validator.go`     | `Validator` type with `Validate`, `VerifyImplementation`, helpers |
+| `validator_test.go`| Tests for schema loading, nil-schema guard, and URL generation    |
 
 ## Dependencies
 
-| Package           | Purpose                                         |
-| ----------------- | ----------------------------------------------- |
-| `core/validation` | `ValidationError` type for interface compliance |
+| Package            | Purpose                                         |
+| ------------------ | ----------------------------------------------- |
+| `core/validation`  | `ValidationError` type and error codes           |
+| `gojsonschema`     | JSON Schema compilation and validation engine    |
 
 ## Role in System
 
-Reserved for future migration of JSON schema validation from `domain.JSONSchemaValidator` into the `validation/formats` hierarchy. Currently unused in production; the generation pipeline loads `domain.JSONSchemaValidator` directly for JSON format validation.
+This is the canonical location for JSON schema validation within the
+`validation/formats` hierarchy. It provides the same functionality previously
+available only through `domain.JSONSchemaValidator`, consolidated here for
+consistency with other format validators (Gherkin, etc.).
 
 ## Code Health
 
-- **Tech Debt**: This is a stub. The comment on line 22 says "Implementation will be moved from domain.JSONSchemaValidator" -- that migration has not happened yet.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: Complete the migration from `domain.JSONSchemaValidator` to consolidate all format validators under `validation/formats/`.
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- None identified

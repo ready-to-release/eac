@@ -12,6 +12,7 @@ import (
 
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,7 +26,7 @@ type ToolCommandExecutor struct{}
 
 // Run executes an EAC command via the EAC adapter.
 func (t ToolCommandExecutor) Run(ctx context.Context, workspaceRoot string, args []string) (string, error) {
-	port := eac.New(workspaceRoot)
+	port := eac.New(workspaceRoot, tool.GlobalRegistry(), tool.GlobalExecutor())
 	result, err := port.Execute(ctx, args, &eac.ExecConfig{
 		WorkspaceRoot: workspaceRoot,
 		FullEnv:       append(os.Environ(), "NO_COLOR=1"),

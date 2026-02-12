@@ -62,14 +62,13 @@ results that the TUI renderers format for terminal output.
 ## Code Health
 
 ### Tech Debt
-- Four separate package-level mutable globals for test injection: `ghCLI` and `ghCLIExecutor` in `approval_comments.go`, `gitRepoProvider` in `specs.go`, `versionResolverRepo` in `version_resolver.go`; consolidating into a single injectable `Dependencies` struct would simplify wiring
-- `resolvePhases` in `components.go:307-312` hard-codes testable component types (`go`, `gherkin`, `typescript`, `python`) instead of reading from `component-types.yml` testers config
+- `resolvePhases` in `components.go:307-313` hard-codes testable component types (go, gherkin, typescript, python) instead of reading from blueprints.yml component-kinds testers config
 - `globalComponentCache` in `components.go:103` has no invalidation path beyond process restart
 
 ### Pain Points
-- `GetApprovalComments` in `approval_comments.go:178-304` and `GetSpecs` in `specs.go:55-173` share nearly identical branch-resolution and commit-range logic; extracting a shared `resolveCommitRange` helper would reduce duplication
-- Each report function independently calls `config.Load()` / `config.Global()` — callers have no way to pass a pre-loaded config
+- `components.go` (465 lines) is a candidate for splitting into separate files for cache management, dependency graph building, and report generation
+- `approval_comments.go` (318 lines) and `specs.go` (209 lines) share nearly identical branch-resolution and commit-range logic; extracting a shared helper would reduce duplication
+- Each report function independently calls config.Load() or config.Global(); callers cannot inject a pre-loaded config
 
 ### Optimization Opportunities
-- `GetSpecs` and `GetApprovalComments` each open the git repository independently; sharing a single `git.GitRepository` instance across a report session would avoid repeated open calls — moderate effort
-- None identified for CPU-bound work; the bottleneck is I/O (git history, GitHub CLI calls)
+- GetSpecs and GetApprovalComments each open the git repository independently; sharing a single git.GitRepository instance across a report session would avoid repeated open calls

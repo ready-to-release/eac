@@ -49,10 +49,10 @@ The `cucumber` package is the BDD test result processing layer. It parses Cucumb
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

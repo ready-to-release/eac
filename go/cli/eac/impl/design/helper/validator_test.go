@@ -8,6 +8,8 @@ package design
 import (
 	"strings"
 	"testing"
+
+	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 )
 
 // TestParseValidationOutput_Success tests parsing successful validation output
@@ -176,7 +178,8 @@ func TestValidationSummaryJSON(t *testing.T) {
 	}
 }
 
-// TestFormatDockerVolume tests Windows path conversion for Docker volumes
+// TestFormatDockerVolume tests Windows path conversion for Docker volumes.
+// Uses the shared utility from adapters/docker/util.
 func TestFormatDockerVolume(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -207,9 +210,9 @@ func TestFormatDockerVolume(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := formatDockerVolume(tt.input)
+			result := dockerutil.FormatDockerVolume(tt.input)
 			if result != tt.expected {
-				t.Errorf("formatDockerVolume(%q) = %q, expected %q", tt.input, result, tt.expected)
+				t.Errorf("FormatDockerVolume(%q) = %q, expected %q", tt.input, result, tt.expected)
 			}
 		})
 	}

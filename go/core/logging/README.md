@@ -55,8 +55,7 @@ rolling log files, per-module target logs, and TUI panes based on configuration.
 - configure.go and logger.go both construct `zap.ErrorOutput(zapcore.AddSync(io.Discard))` independently; extract a shared `defaultZapOptions()` helper
 
 ### Pain Points
-- configure.go: `ConfigureLogging` is ~142 lines with inline core construction for console, file, target, and TUI; splitting into per-sink builder functions would improve readability
-- `SetDebugOutput`/`SetStdOutput` in debug.go are not protected by a mutex, creating a potential data race if called concurrently with `DebugDirect`
+- None identified
 
 ### Optimization Opportunities
 - `silentLumberjackWriter` captures and restores `stdlog.Writer()` on every `Write` call; replacing with a one-time redirect at init time would remove per-write overhead (low risk, measure under concurrent load)

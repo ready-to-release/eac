@@ -9,9 +9,10 @@ import (
 
 // Compile-time interface checks.
 var (
-	_ core.UnitIDPort     = (*UnitIDAdapter)(nil)
-	_ core.UnitSpecPort   = (*UnitSpecAdapter)(nil)
-	_ core.UnitResultPort = (*UnitResultAdapter)(nil)
+	_ core.UnitIDPort         = (*UnitIDAdapter)(nil)
+	_ core.UnitSpecPort       = (*UnitSpecAdapter)(nil)
+	_ core.UnitResultPort     = (*UnitResultAdapter)(nil)
+	_ core.PoolAllocationPort = (*PoolAllocationAdapter)(nil)
 )
 
 // UnitIDAdapter wraps a workunit.UnitID to implement core.UnitIDPort.
@@ -85,14 +86,10 @@ func (a *UnitSpecAdapter) GetPoolAllocation() core.PoolAllocationPort {
 	return &PoolAllocationAdapter{alloc: alloc}
 }
 
-// PoolAllocationAdapter wraps resource.PoolAllocation to implement core.PoolAllocationPort.
+// PoolAllocationAdapter wraps a core.PoolAllocationPort value (typically core.PoolAllocation)
+// to satisfy core.PoolAllocationPort across the adapter boundary.
 type PoolAllocationAdapter struct {
-	alloc interface {
-		GetHostWeight() int
-		GetDockerWeight() int
-		IsContainer() bool
-		TotalWeight() int
-	}
+	alloc core.PoolAllocationPort
 }
 
 func (a *PoolAllocationAdapter) GetHostWeight() int   { return a.alloc.GetHostWeight() }
@@ -107,14 +104,7 @@ func AdaptUnitSpec(spec workunit.UnitSpec) core.UnitSpecPort {
 
 // AdaptUnitSpecs wraps a slice of unit specs.
 func AdaptUnitSpecs(specs []workunit.UnitSpec) []core.UnitSpecPort {
-	if specs == nil {
-		return nil
-	}
-	result := make([]core.UnitSpecPort, len(specs))
-	for i, s := range specs {
-		result[i] = AdaptUnitSpec(s)
-	}
-	return result
+	return AdaptSlice(specs, AdaptUnitSpec)
 }
 
 // UnitResultAdapter wraps a workunit.UnitResult to implement core.UnitResultPort.
@@ -150,12 +140,5 @@ func AdaptUnitResult(result workunit.UnitResult) core.UnitResultPort {
 
 // AdaptUnitResults wraps a slice of unit results.
 func AdaptUnitResults(results []workunit.UnitResult) []core.UnitResultPort {
-	if results == nil {
-		return nil
-	}
-	result := make([]core.UnitResultPort, len(results))
-	for i, r := range results {
-		result[i] = AdaptUnitResult(r)
-	}
-	return result
+	return AdaptSlice(results, AdaptUnitResult)
 }

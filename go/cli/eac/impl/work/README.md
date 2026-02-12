@@ -19,16 +19,16 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| work.go | Parent command entry point with TUI and subcommand dispatch |
-| create.go | Create new worktree for parallel development |
-| commit.go | Commit changes in current worktree |
-| pull.go | Pull latest changes from remote |
-| merge.go | Merge worktree branch back to main |
-| pr.go | Create pull request from worktree branch |
-| list.go | List all active worktrees with status |
-| remove.go | Remove a worktree and clean up branch |
+| File      | Responsibility                                              |
+| --------- | ----------------------------------------------------------- |
+| work.go   | Parent command entry point with TUI and subcommand dispatch |
+| create.go | Create new worktree for parallel development                |
+| commit.go | Commit changes in current worktree                          |
+| pull.go   | Pull latest changes from remote                             |
+| merge.go  | Merge worktree branch back to main                          |
+| pr.go     | Create pull request from worktree branch                    |
+| list.go   | List all active worktrees with status                       |
+| remove.go | Remove a worktree and clean up branch                       |
 
 ## Dependencies
 
@@ -44,17 +44,24 @@ Manages parallel development workspaces using git worktrees. Provides a complete
 
 ## Role in System
 
-The `work` package enables parallel feature development in `eac` by managing git worktrees as isolated workspaces. Each workspace gets its own directory and branch, allowing developers to run multiple Claude Code sessions simultaneously without branch conflicts or stash juggling.
+The `work` package enables parallel feature development in `eac` by managing git worktrees as isolated workspaces.
+
+Each workspace gets its own directory and branch,
+allowing developers to run multiple Claude Code sessions simultaneously without branch conflicts or stash juggling.
 
 ## Code Health
 
 ### Tech Debt
-- `Remove()` in remove.go (~247 lines) and `CreatePR()` in pr.go (~184 lines) are oversized entry-point functions
-- No test file for work.go (parent command entry point)
+- None identified
 
 ### Pain Points
-- Each subcommand (commit, create, merge, pr, pull, remove) repeats similar config-parse/validate/execute scaffolding that could share a common runner
-- Error handling in merge.go has a dedicated `handleMergeError` recovery path; other commands lack equivalent robustness
+- work_test.go is 717 lines (significantly exceeds 300-line threshold)
+- pr.go is 545 lines (significantly exceeds 300-line threshold)
+- remove.go is 514 lines (significantly exceeds 300-line threshold)
+- merge.go is 447 lines (exceeds 300-line threshold)
+- create.go is 359 lines (exceeds 300-line threshold)
+- pull.go is 347 lines (exceeds 300-line threshold)
+- pr_test.go is 318 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Extract shared command-lifecycle runner to reduce per-subcommand boilerplate (high feasibility, each file follows the same pattern)
+- None identified

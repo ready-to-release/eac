@@ -14,7 +14,7 @@
     },
     "component-tools": {
       "type": "object",
-      "description": "Map of component type to tool assignments. Component types match those in component-types.yml.",
+      "description": "Map of component type to tool assignments. Component types match those in blueprints.yml component-kinds.",
       "additionalProperties": {
         "$ref": "#/$defs/tool_assignment"
       }

@@ -33,9 +33,12 @@ into a unified `EACConfig` that the rest of the system consumes.
 | Path | Purpose |
 |------|---------|
 | `config.go` | Main entry point: `Load`, `LoadAll`, global cache |
-| `repository.go` | Repository config with paths, conventions, remotes |
+| `repository.go` | Repository config types, loader, template expansion |
+| `repository_paths.go` | Path-helper methods delegating to `core/paths` C-variants |
+| `repository_groups.go` | Module group expansion, dependency derivation, component groups |
+| `repository_remote.go` | Remote VCS config type, URL derivation, git remote detection |
 | `modules.go` | Module and component entry types, component discovery |
-| `module_types.go` | Build artifacts, docker build config, type constants |
+| `build_types.go` | Build artifacts, docker build config, type constants |
 | `component_types.go` | Component type registry, file extension mapping |
 | `defaults.go` | Contract default loading and merge functions |
 | `factory_defaults.go` | Singleton factory defaults with `sync.Once` |
@@ -63,13 +66,12 @@ sensible defaults while letting teams and individuals override specific values.
 ## Code Health
 
 ### Tech Debt
-- Multiple global mutable singletons: `global.go` (globalConfig), `cache.go` (globalConfigCache), `git_provider.go` (gitRemoteProvider) each with separate locking
-- `ModuleComponents.Clone()` in `modules.go:426-479` is a 50+ line manual deep-copy; consider a code-generated or reflection-based approach
-- `LoadRepository` in `config.go:254-343` is a 90-line, 10-step orchestration method that mixes loading, merging, and expansion
+- None identified
 
 ### Pain Points
-- No TODO/FIXME markers exist, but the package spans ~56 files making navigation difficult; consider grouping related files into sub-packages (e.g., `config/risk`, `config/books`)
-- `RepositoryConfig` in `repository.go` carries path-helper methods (30+) that could live in `core/paths` to reduce surface area
+- Package spans many files making navigation difficult; consider grouping related files into sub-packages (e.g., `config/risk`, `config/books`, `config/testing`)
 
 ### Optimization Opportunities
-- None identified
+- Good test coverage across the board with dedicated test files for most components
+- Several files exceed 300 lines: consider splitting for easier maintenance (specific candidates would require line count analysis)
+- Well-organized with clear separation between different config concerns (artifacts, books, testing, risk, security)

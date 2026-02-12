@@ -104,11 +104,48 @@ func UpdateDocsManifest() int {
 // runUpdate handles normal update operation
 func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode, dryRun, verbose bool) int {
 	// Phase 1: Load existing files
+	descriptions, existingCache, ok := loadExistingFiles(descriptionsPath, cachePath)
+	if !ok {
+		return 1
+	}
+
+	// Phase 2: Scan for assets
+	discovered, ok := scanAndReportAssets(assetsDir, verbose)
+	if !ok {
+		return 1
+	}
+
+	// Phase 3: Scan for usage
+	usage, ok := scanAndReportUsage(docsDir, assetsDir)
+	if !ok {
+		return 1
+	}
+
+	// Phase 4: Merge and report
+	mergeResult := mergeAndReport(descriptions, existingCache, discovered, usage, descriptionsPath, cachePath, verbose)
+
+	// Handle check mode
+	if checkMode {
+		return handleCheckMode(mergeResult.Result)
+	}
+
+	// Handle dry-run mode
+	if dryRun {
+		return handleDryRunMode(mergeResult.Result, descriptionsPath, cachePath)
+	}
+
+	// Write files
+	return writeManifestFiles(mergeResult)
+}
+
+// loadExistingFiles loads the descriptions and cache files, reporting progress.
+// Returns the loaded data and true on success, or zero values and false on error.
+func loadExistingFiles(descriptionsPath, cachePath string) (map[string]Description, *CacheManifest, bool) {
 	fmt.Println("Loading existing files...")
 	descriptions, err := LoadDescriptions(descriptionsPath)
 	if err != nil {
 		log.Errorf("Error loading descriptions: %v", err)
-		return 1
+		return nil, nil, false
 	}
 	if len(descriptions) > 0 {
 		fmt.Printf("  Loaded %d descriptions\n", len(descriptions))
@@ -119,7 +156,7 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 	existingCache, err := LoadCache(cachePath)
 	if err != nil {
 		log.Errorf("Error loading cache: %v", err)
-		return 1
+		return nil, nil, false
 	}
 	if existingCache != nil {
 		fmt.Printf("  Loaded cache with %d assets\n", len(existingCache.Assets))
@@ -127,12 +164,17 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 		fmt.Println("  No existing cache (will create new)")
 	}
 
-	// Phase 2: Scan for assets
+	return descriptions, existingCache, true
+}
+
+// scanAndReportAssets scans the assets directory and reports what was found.
+// Returns the discovered assets and true on success, or nil and false on error.
+func scanAndReportAssets(assetsDir string, verbose bool) (map[string]DiscoveredAsset, bool) {
 	fmt.Println("\nScanning assets...")
 	discovered, err := ScanAssets(assetsDir)
 	if err != nil {
 		log.Errorf("Error scanning assets: %v", err)
-		return 1
+		return nil, false
 	}
 
 	// Count by category and type
@@ -157,12 +199,17 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 		}
 	}
 
-	// Phase 3: Scan for usage
+	return discovered, true
+}
+
+// scanAndReportUsage scans markdown files for asset references and reports results.
+// Returns the usage map and true on success, or nil and false on error.
+func scanAndReportUsage(docsDir, assetsDir string) (map[string][]string, bool) {
 	fmt.Println("\nScanning markdown files...")
 	usage, err := ScanUsage(docsDir, assetsDir)
 	if err != nil {
 		log.Errorf("Error scanning usage: %v", err)
-		return 1
+		return nil, false
 	}
 
 	usedCount := 0
@@ -173,14 +220,33 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 	}
 	fmt.Printf("  Found %d assets referenced in documentation\n", usedCount)
 
-	// Phase 4: Merge
+	return usage, true
+}
+
+// mergeAndReport merges discovered data with existing state and prints a change summary.
+func mergeAndReport(
+	descriptions map[string]Description,
+	existingCache *CacheManifest,
+	discovered map[string]DiscoveredAsset,
+	usage map[string][]string,
+	descriptionsPath, cachePath string,
+	verbose bool,
+) *MergeResult {
 	fmt.Println("\nUpdating manifest...")
 	mergeResult := MergeManifest(descriptions, existingCache, discovered, usage)
 	result := mergeResult.Result
 	result.DescriptionsPath = descriptionsPath
 	result.CachePath = cachePath
 
-	// Report changes
+	reportChanges(result)
+	reportSummaryStats(result)
+	reportMissingDescriptions(mergeResult, verbose)
+
+	return mergeResult
+}
+
+// reportChanges prints the added/removed/updated asset counts.
+func reportChanges(result *UpdateResult) {
 	if len(result.Added) > 0 {
 		fmt.Printf("  + %d new asset(s)\n", len(result.Added))
 	}
@@ -193,8 +259,10 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 	if !result.NeedsDescriptionsWrite && !result.NeedsCacheWrite {
 		fmt.Println("  No changes detected")
 	}
+}
 
-	// Summary
+// reportSummaryStats prints total, used, and unused asset statistics.
+func reportSummaryStats(result *UpdateResult) {
 	fmt.Println("\nSummary:")
 	fmt.Printf("  Total: %d assets\n", result.TotalAssets)
 	if result.TotalAssets > 0 {
@@ -202,8 +270,12 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 		fmt.Printf("  Used: %d (%.0f%%)\n", result.UsedAssets, usedPct)
 		fmt.Printf("  Unused: %d (%.0f%%)\n", result.UnusedAssets, 100-usedPct)
 	}
+}
 
-	// List assets needing descriptions
+// reportMissingDescriptions lists assets that still need descriptions.
+func reportMissingDescriptions(mergeResult *MergeResult, verbose bool) {
+	result := mergeResult.Result
+
 	needsDescription := []string{}
 	for path, desc := range mergeResult.Descriptions {
 		if desc.Description == "" {
@@ -233,59 +305,63 @@ func runUpdate(descriptionsPath, cachePath, docsDir, assetsDir string, checkMode
 			}
 		}
 	}
+}
 
-	// Handle check mode
-	if checkMode {
-		if result.NeedsCacheWrite {
-			fmt.Println("\nCache is out of date")
-			if len(result.Added) > 0 {
-				fmt.Println("   New assets not in manifest:")
-				for _, p := range result.Added {
-					fmt.Printf("     + %s\n", p)
-				}
+// handleCheckMode validates whether the manifest is up-to-date and returns the appropriate exit code.
+func handleCheckMode(result *UpdateResult) int {
+	if result.NeedsCacheWrite {
+		fmt.Println("\nCache is out of date")
+		if len(result.Added) > 0 {
+			fmt.Println("   New assets not in manifest:")
+			for _, p := range result.Added {
+				fmt.Printf("     + %s\n", p)
 			}
-			if len(result.Removed) > 0 {
-				fmt.Println("   Deleted assets still in manifest:")
-				for _, p := range result.Removed {
-					fmt.Printf("     - %s\n", p)
-				}
+		}
+		if len(result.Removed) > 0 {
+			fmt.Println("   Deleted assets still in manifest:")
+			for _, p := range result.Removed {
+				fmt.Printf("     - %s\n", p)
 			}
-			fmt.Println("\n   Run 'eac update docs-manifest' to update")
-			return 1
 		}
-		fmt.Println("\n✓ Manifest is up to date")
-		return 0
+		fmt.Println("\n   Run 'eac update docs-manifest' to update")
+		return 1
 	}
+	fmt.Println("\n✓ Manifest is up to date")
+	return 0
+}
 
-	// Handle dry-run mode
-	if dryRun {
-		if result.NeedsDescriptionsWrite {
-			fmt.Printf("\n[DRY RUN] Would update descriptions: %s\n", descriptionsPath)
-		}
-		if result.NeedsCacheWrite {
-			fmt.Printf("[DRY RUN] Would write cache: %s\n", cachePath)
-		}
-		if !result.NeedsDescriptionsWrite && !result.NeedsCacheWrite {
-			fmt.Println("\n[DRY RUN] No changes to write")
-		}
-		return 0
-	}
-
-	// Write files
+// handleDryRunMode reports what would change without writing and returns exit code 0.
+func handleDryRunMode(result *UpdateResult, descriptionsPath, cachePath string) int {
 	if result.NeedsDescriptionsWrite {
-		if err := SaveDescriptions(descriptionsPath, mergeResult.Descriptions); err != nil {
+		fmt.Printf("\n[DRY RUN] Would update descriptions: %s\n", descriptionsPath)
+	}
+	if result.NeedsCacheWrite {
+		fmt.Printf("[DRY RUN] Would write cache: %s\n", cachePath)
+	}
+	if !result.NeedsDescriptionsWrite && !result.NeedsCacheWrite {
+		fmt.Println("\n[DRY RUN] No changes to write")
+	}
+	return 0
+}
+
+// writeManifestFiles persists the descriptions and cache files to disk.
+func writeManifestFiles(mergeResult *MergeResult) int {
+	result := mergeResult.Result
+
+	if result.NeedsDescriptionsWrite {
+		if err := SaveDescriptions(result.DescriptionsPath, mergeResult.Descriptions); err != nil {
 			log.Errorf("Error writing descriptions: %v", err)
 			return 1
 		}
-		fmt.Printf("\n✓ Written: %s\n", descriptionsPath)
+		fmt.Printf("\n✓ Written: %s\n", result.DescriptionsPath)
 	}
 
 	if result.NeedsCacheWrite {
-		if err := SaveCache(mergeResult.Cache, cachePath); err != nil {
+		if err := SaveCache(mergeResult.Cache, result.CachePath); err != nil {
 			log.Errorf("Error writing cache: %v", err)
 			return 1
 		}
-		fmt.Printf("✓ Written: %s\n", cachePath)
+		fmt.Printf("✓ Written: %s\n", result.CachePath)
 	}
 
 	if !result.NeedsDescriptionsWrite && !result.NeedsCacheWrite {

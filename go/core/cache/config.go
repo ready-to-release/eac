@@ -71,14 +71,19 @@ func (c *Config) ShouldSkipCI() bool {
 	return c.ShouldSkip(LevelRemote, TypeCI)
 }
 
-// ShouldForcePull returns true if Docker images should be force-pulled.
-// This is triggered when local:registry is skipped.
+// ShouldForcePull returns true when Docker should pull fresh images instead of using
+// locally cached registry layers. This is the Docker-specific alias for ShouldSkipLocalRegistry,
+// translating the abstract cache concept (skip local:registry) into the concrete Docker
+// flag (--pull). Callers building Docker commands should use this method for clarity.
 func (c *Config) ShouldForcePull() bool {
 	return c.ShouldSkipLocalRegistry()
 }
 
-// ShouldForceNoCacheDocker returns true if Docker build should use --no-cache.
-// This is triggered when local:layer is skipped.
+// ShouldForceNoCacheDocker returns true when Docker build should use --no-cache,
+// discarding all locally cached build layers. This is the Docker-specific alias for
+// ShouldSkipLocalLayer, translating the abstract cache concept (skip local:layer) into the
+// concrete Docker flag (--no-cache). Callers building Docker commands should use this method
+// for clarity.
 func (c *Config) ShouldForceNoCacheDocker() bool {
 	return c.ShouldSkipLocalLayer()
 }

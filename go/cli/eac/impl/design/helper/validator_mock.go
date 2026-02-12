@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -167,7 +168,7 @@ func (m *MockStructurizrValidator) ValidateModule(moduleName string) (*Validatio
 	}
 
 	// Check if it starts with a reasonable pattern (not "invalid {")
-	if len(contentStr) > 0 && (contentStr[0:7] == "invalid" || contentStr[0:min(len(contentStr), 100)] == "invalid { dsl content") {
+	if strings.HasPrefix(contentStr, "invalid") {
 		errors = append(errors, ValidationMessage{
 			Severity: "error",
 			Message:  "Invalid DSL syntax",
@@ -279,10 +280,7 @@ func (m *MockStructurizrValidator) loadFixture(moduleName, fileName string) *Val
 	// VALID or INVALID on first line
 	// Followed by error messages (if any)
 	lines := string(content)
-	valid := true
-	if len(lines) > 0 && lines[0:7] == "INVALID" {
-		valid = false
-	}
+	valid := !strings.HasPrefix(lines, "INVALID")
 
 	return &ValidationResult{
 		Module:        moduleName,
@@ -310,10 +308,3 @@ func countBraces(s string) (int, int) {
 	return open, close
 }
 
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

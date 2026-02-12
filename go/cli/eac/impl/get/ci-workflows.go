@@ -2,7 +2,6 @@ package get
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -89,19 +89,20 @@ func GetCIWorkflows() int {
 
 	sort.Strings(modules)
 
-	// Output based on format
+	// Legacy formats have special output requirements (shell scripting)
 	switch format {
 	case "list":
 		for _, m := range modules {
 			fmt.Println(m)
 		}
-	case "json":
-		if output, err := json.Marshal(modules); err == nil {
-			fmt.Println(string(output))
-		}
-	default: // "space"
+		return 0
+	case "space":
 		fmt.Println(strings.Join(modules, " "))
+		return 0
 	}
 
-	return 0
+	// Default: use shared helper for consistent YAML/JSON/TOML output
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
+		return modules, nil
+	})
 }

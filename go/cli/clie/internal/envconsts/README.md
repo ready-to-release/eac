@@ -29,12 +29,12 @@ The envconsts package exists to maintain clie's architectural isolation requirem
 
 ### Tech Debt
 
-_None identified. The intentional duplication from go/core is an architectural decision, not technical debt._
+- None identified. The intentional duplication from go/core is an architectural decision, not technical debt.
 
 ### Pain Points
 
-_None identified._
+- None identified.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

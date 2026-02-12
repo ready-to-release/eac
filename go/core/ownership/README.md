@@ -23,6 +23,7 @@ specificity and extension-based tie-breaking.
 | --- | --- |
 | types.go | `Owner`, `ModuleDefinition`, `ComponentOwnership`, `ValidationError` |
 | resolver.go | `Resolver` with root matching, extension tie-breaking, validation |
+| trie.go | `pathTrie` path-prefix index for O(depth) candidate lookup |
 
 ## Dependencies
 
@@ -38,11 +39,13 @@ glob patterns, keeping resolution deterministic and fast.
 ## Code Health
 
 ### Tech Debt
+
 - None identified
 
 ### Pain Points
-- `resolver.go:129`: `Validate()` iterates all files x all entries (O(n*m)); may become slow on very large repos
+
+- resolver_test.go is 634 lines, exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Pre-build a trie or path-prefix index for `findCandidates()` to reduce matching cost on large file sets (medium effort, high value for scale)
-- Package is small and well-tested (547-line test file); good candidate for a reference example
+
+- None identified

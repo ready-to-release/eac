@@ -211,7 +211,7 @@ func isValidCommand(cmd string) bool {
 		"show files",
 		"show modules",
 		"show dependencies",
-		"show component-types",
+		"show component-kinds",
 		"show environments",
 		"show tests",
 		"show test-results",

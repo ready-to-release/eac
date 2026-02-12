@@ -20,8 +20,9 @@ type Filter struct {
 	mu          sync.Mutex
 }
 
-var (
-	filterImportantPatterns = []*regexp.Regexp{
+// defaultImportantPatterns returns the compiled regexps for important output lines.
+func defaultImportantPatterns() []*regexp.Regexp {
+	return []*regexp.Regexp{
 		regexp.MustCompile(`(?i)error`),
 		regexp.MustCompile(`(?i)failed`),
 		regexp.MustCompile(`(?i)warning`),
@@ -32,7 +33,11 @@ var (
 		regexp.MustCompile(`not found`),
 		regexp.MustCompile(`^FAIL\s`),
 	}
-	filterNoisePatterns = []*regexp.Regexp{
+}
+
+// defaultNoisePatterns returns the compiled regexps for noise output lines.
+func defaultNoisePatterns() []*regexp.Regexp {
+	return []*regexp.Regexp{
 		regexp.MustCompile(`^\s*$`),                         // Empty lines
 		regexp.MustCompile(`^go: downloading`),              // Download messages
 		regexp.MustCompile(`^=== RUN`),                      // Test run markers
@@ -44,13 +49,13 @@ var (
 		regexp.MustCompile(`^coverage:`),                    // Coverage line
 		regexp.MustCompile(`^\?\s+\S+\s+\[no test files\]`), // No test files
 	}
-)
+}
 
 // NewFilter creates a filter with sensible defaults for Go build/test output.
 func NewFilter() *Filter {
 	return &Filter{
-		importantPatterns: filterImportantPatterns,
-		noisePatterns:     filterNoisePatterns,
+		importantPatterns: defaultImportantPatterns(),
+		noisePatterns:     defaultNoisePatterns(),
 		recentLines:       make(map[string]int),
 		maxRecent:         100,
 	}

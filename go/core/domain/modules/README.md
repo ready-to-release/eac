@@ -48,11 +48,10 @@ downstream tools need without re-implementing path logic.
 ## Code Health
 
 ### Tech Debt
-- `loadModules` in `loader.go:24-173` manually maps `config.Module` fields to `domain.BaseContract` field-by-field (~100 lines of boilerplate); a shared conversion function or code generation would reduce drift risk
-- `MatchesFile` in `types.go:109-151` hard-codes component names (`"static"`, `"book"`) as catch-all cases rather than using a component-type property
+- None identified
 
 ### Pain Points
-- `matchWithFallback` in `types.go:276-301` contains multiple overlapping `**` fallback branches that are difficult to reason about and extend
+- None identified
 
 ### Optimization Opportunities
-- `FindModulesForFile` in `registry.go:199-237` already uses a root-prefix index; no further optimization needed
+- None identified

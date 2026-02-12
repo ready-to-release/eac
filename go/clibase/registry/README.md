@@ -27,9 +27,12 @@ commands register themselves with metadata, flags, and handler functions.
 
 ## Internal Structure
 
-| File                  | Purpose                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `command_registry.go` | `CommandRegistry` (thread-safe), `Register()`, `Get()`, `GetByCanonical()`, `All()`, `Names()`, `Subcommands()` |
+| File                  | Purpose                                                                 |
+| --------------------- | ----------------------------------------------------------------------- |
+| `command_registry.go` | Package-level doc comment                                               |
+| `types.go`            | `ErrDuplicateCommand`, global registry, `CommandRegistry` struct        |
+| `registration.go`     | `Register()`, `MustRegister()`, `RegisterAll()`                         |
+| `dispatch.go`         | `Get()`, `GetByCanonical()`, `All()`, `Names()`, `Subcommands()`       |
 
 ## Dependencies
 
@@ -43,12 +46,13 @@ Acts as the command dispatch layer between the CLI entry point and individual co
 
 ### Tech Debt
 
-- None
+- None identified
 
 ### Pain Points
 
-- None
+- `command_registry_test.go` (349 lines) exceeds 300 lines and is significantly larger than all implementation files combined
+- Implementation files are small: `dispatch.go` (66 lines), `types.go` (47 lines), `registration.go` (34 lines), `command_registry.go` (3 lines)
 
 ### Optimization Opportunities
 
-- None
+- None identified

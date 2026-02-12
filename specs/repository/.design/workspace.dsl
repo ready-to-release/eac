@@ -14,7 +14,7 @@ workspace "Repository Module" "Root configuration module defining contracts and 
             contracts = container "Contracts" "YAML contract definitions" "YAML" {
                 modules_yml = component "repository.yml" "Module definitions and ownership" "YAML"
                 environments_yml = component "environments.yml" "Environment configurations" "YAML"
-                module_types_yml = component "module-types.yml" "Module type definitions" "YAML"
+                blueprints_yml = component "blueprints.yml" "Component type definitions and defaults" "YAML"
                 test_suites_yml = component "test-suites.yml" "Test suite definitions" "YAML"
                 testing_tags_yml = component "testing-tags.yml" "Test tag contracts" "YAML"
                 system_deps_yml = component "system-dependencies.yml" "External system dependencies" "YAML"

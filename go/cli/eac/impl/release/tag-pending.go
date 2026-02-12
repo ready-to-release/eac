@@ -9,12 +9,10 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 type releaseTagPendingCommand struct{}
@@ -56,10 +54,9 @@ type TagPendingReport struct {
 }
 
 func ReleaseTagPending() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		tagPendingLog.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold(withModules(), withGit())
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -87,28 +84,9 @@ func ReleaseTagPending() int {
 		return 1
 	}
 
-	// Load workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		tagPendingLog.Errorf("failed to get workspace root: %v", err)
-		return 1
-	}
-
-	// Open git repository
-	// Open git repository
-	gitMgr := git.NewManager(logging.C().Zap())
-	repo, err := gitMgr.Open("")
-	if err != nil {
-		tagPendingLog.Errorf("failed to open git repository: %v", err)
-		return 1
-	}
-
-	// Load module contracts
-	moduleRegistry, err := modules.LoadFromWorkspace("")
-	if err != nil {
-		tagPendingLog.Errorf("failed to load modules: %v", err)
-		return 1
-	}
+	workspaceRoot := s.WorkspaceRoot
+	repo := s.Repo
+	moduleRegistry := s.ModuleRegistry
 
 	// Determine which modules to check
 	var modulesToCheck []string

@@ -54,6 +54,12 @@ Used by the AI generation pipeline (`ai/generation`) for quick validation during
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: `DockerValidator` depends on a global `defaultContainerProvider` variable (`docker.go` line 29) which requires initialization via `SetContainerProvider` before use.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+- `quick.go` is 321 lines
+- `docker.go` is 289 lines with global mutable `defaultContainerProvider` variable requiring initialization via `SetContainerProvider` before use; not concurrency-safe
+
+### Pain Points
+- `DockerValidator` depends on global `defaultContainerProvider` variable which requires initialization via `SetContainerProvider` before use
+
+### Optimization Opportunities
+- Consider splitting `quick.go` by validation type (workspace, syntax, identifiers, relationships)

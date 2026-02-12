@@ -41,10 +41,10 @@ The `risk-catalog` sub-package validates OSCAL catalog documents (e.g., NIST 800
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

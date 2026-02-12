@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releaseCheckExistsCommand struct{}
@@ -34,7 +33,7 @@ func (c *releaseCheckExistsCommand) Execute(_ context.Context, _ *core.CommandRe
 }
 
 func ReleaseCheckExists() int {
-	// Parse flags
+	// Parse flags first (before scaffold, since format affects error output)
 	tag := ""
 	format := ""
 
@@ -58,17 +57,16 @@ func ReleaseCheckExists() int {
 		return 1
 	}
 
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
+	s, exitCode := newReleaseScaffoldNoFlags()
+	if s == nil {
 		if format == "shell" {
 			fmt.Printf("EXISTS=\"\"\n")
 			fmt.Printf("TAG=\"%s\"\n", tag)
 			fmt.Printf("ERROR=\"failed to find repository\"\n")
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
-		return 1
+		return exitCode
 	}
+	workspaceRoot := s.WorkspaceRoot
 
 	// Check if release exists
 	exists, err := checkReleaseExistsRemote(tag, workspaceRoot)
@@ -108,7 +106,7 @@ func ReleaseCheckExists() int {
 }
 
 func checkReleaseExistsRemote(tag, workspaceRoot string) (bool, error) {
-	_, exitCode, err := ghexec.RunCombined(context.Background(), workspaceRoot, "release", "view", tag)
+	_, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", workspaceRoot, "release", "view", tag)
 	if err != nil {
 		return false, err
 	}

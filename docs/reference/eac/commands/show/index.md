@@ -21,7 +21,7 @@ Display repository information in human-readable format for interactive terminal
 | [show files-staged](./files-staged.md)           | Show staged files with module ownership               |
 | [show help](./help.md)                           | Display help information                              |
 | [show modules](./modules.md)                     | Display all module contracts in table                 |
-| [show component-types](./component-types.md)     | Show all component types grouped by count             |
+| [show component-kinds](./component-kinds.md)     | Show all component types grouped by count             |
 | [show release-notes](./release-notes.md)         | Display release notes in human-readable format        |
 | [show specs](./specs.md)                         | Display specifications for a release                  |
 | [show suite](./suite.md)                         | Display detailed test suite information               |

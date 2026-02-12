@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 )
@@ -31,12 +30,10 @@ func (c *showEnvironmentsCommand) Execute(_ context.Context, _ *core.CommandRequ
 }
 
 func ShowEnvironments() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showEnvironmentsImpl)
+}
 
+func showEnvironmentsImpl() int {
 	// Load environment contract using central config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {

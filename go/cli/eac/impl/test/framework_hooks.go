@@ -3,7 +3,6 @@ package test
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/testing"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -55,8 +55,7 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// This ensures locks are only held during actual test execution, not during TUI init
 
 	// Create test output directory
-	repoCfg := ctx.EACConfig.Repository
-	testCfg.TestRunDir = filepath.Join(ctx.WorkspaceRoot, repoCfg.TestOutputDir())
+	testCfg.TestRunDir = paths.TestOutputDir(ctx.WorkspaceRoot)
 	if err := os.MkdirAll(testCfg.TestRunDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %w", err)
 	}
@@ -73,126 +72,43 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 }
 
 // testAfterResolve handles test discovery, filtering, and execution plan setup.
+// It orchestrates four phases: discover, filter-suite, map-modules, detect-incremental.
 func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	testCfg, ok := ctx.Config.TestCmdConfig.(*TestFrameworkConfig)
 	if !ok {
 		return fmt.Errorf("testConfig not found or wrong type")
 	}
-	suite := testCfg.Suite
-	stats := testCfg.Stats
 
 	// Build module mapper early - used for test filtering and module ownership
 	testCfg.ModuleMapper = NewModuleMapper(ctx.ModuleRegistry, ctx.WorkspaceRoot)
 
-	// Test Discovery with suite-specific inferences
-	allTests, err := testing.DiscoverAndEnrich(ctx.WorkspaceRoot, testing.DiscoveryOptions{
-		Inferences: suite.Inferences,
-	})
+	// Phase 1: Discover tests with suite-specific inferences
+	allTests, err := discoverTests(ctx.WorkspaceRoot, testCfg.Suite)
 	if err != nil {
-		return fmt.Errorf("failed to discover tests: %w", err)
+		return err
 	}
-	stats.TotalDiscovered = len(allTests)
-	log.Debugf("Discovered %d tests with %d inference rules applied", len(allTests), len(suite.Inferences))
+	testCfg.Stats.TotalDiscovered = len(allTests)
 
-	// Filter tests by suite and modules
-	validSkipReasons := ctx.EACConfig.Testing.GetValidSkipReasons()
-	skipReasonSet := make(map[string]bool)
-	for _, reason := range validSkipReasons {
-		skipReasonSet[reason] = true
+	// Phase 2: Filter tests by suite, skip tags, module ownership, and OS
+	filterResult, err := filterTestsBySuite(allTests, testCfg.Suite, testCfg.ModuleMapper, ctx.EACConfig.Testing.GetValidSkipReasons(), ctx.Config.Monikers)
+	if err != nil {
+		return err
 	}
-	requestedMonikers := make(map[string]bool)
-	for _, m := range ctx.Config.Monikers {
-		requestedMonikers[m] = true
-	}
+	testCfg.Stats.Skipped = filterResult.skipped
+	testCfg.Stats.NotMatchingSuite = filterResult.notMatchingSuite
+	testCfg.Stats.Selected = len(filterResult.selected)
+	testCfg.Stats.OSFiltered = filterResult.osFiltered
+	testCfg.OSFilteredCount = filterResult.osFiltered
+	testCfg.SelectedTests = filterResult.selected
 
-	var selectedTests []testing.TestReference
-	var unmappedTests []string
-	for i := range allTests {
-		test := &allTests[i]
-		// Check for @skip tags
-		isSkipped := false
-		for _, tag := range test.Tags {
-			for reason := range skipReasonSet {
-				if tag == "@skip:"+reason {
-					isSkipped = true
-					break
-				}
-			}
-			if isSkipped {
-				break
-			}
-		}
-		if isSkipped {
-			stats.Skipped++
-			continue
-		}
-
-		// Check if test matches suite
-		if !suite.Matches(*test) {
-			stats.NotMatchingSuite++
-			continue
-		}
-
-		// Get module ownership from registry (not heuristic)
-		testModule := testCfg.ModuleMapper.GetModuleForFile(test.FilePath)
-		if testModule == "" {
-			// Track unmapped tests for fail-fast reporting
-			unmappedTests = append(unmappedTests, test.FilePath)
-			continue
-		}
-
-		// Check module filter if specified
-		if len(requestedMonikers) > 0 && !requestedMonikers[testModule] {
-			continue
-		}
-
-		selectedTests = append(selectedTests, *test)
-	}
-
-	// Fail fast if tests couldn't be mapped to modules
-	if len(unmappedTests) > 0 {
-		log.Warnf("Found %d tests that could not be mapped to any module:", len(unmappedTests))
-		for _, path := range unmappedTests {
-			log.Warnf("  - %s", path)
-		}
-		return fmt.Errorf("test discovery failed: %d tests have no module ownership - check repository.yml module patterns", len(unmappedTests))
-	}
-
-	stats.Selected = len(selectedTests)
-
-	// Filter by OS compatibility
-	osCompatibleTests := filterByOSCompatibility(selectedTests, os.Stdout)
-	stats.OSFiltered = len(selectedTests) - len(osCompatibleTests)
-	selectedTests = osCompatibleTests
-	testCfg.OSFilteredCount = stats.OSFiltered
-
-	// Calculate module stats
-	stats.ModulesInScope = getUniqueModulesFromTests(selectedTests, testCfg.ModuleMapper)
-
-	// Find modules with no tests
-	inScopeSet := make(map[string]bool)
-	for _, m := range stats.ModulesInScope {
-		inScopeSet[m] = true
-	}
-	var modulesToCheck []string
-	if len(ctx.Config.Monikers) > 0 {
-		modulesToCheck = ctx.Config.Monikers
-	} else {
-		modulesToCheck = ctx.EACConfig.Repository.AllMonikers()
-	}
-	for _, m := range modulesToCheck {
-		if !inScopeSet[m] {
-			stats.ModulesNoTests = append(stats.ModulesNoTests, m)
-		}
-	}
-
-	testCfg.SelectedTests = selectedTests
+	// Phase 3: Calculate module scope stats
+	computeModuleScope(ctx, testCfg)
 
 	// Handle list-only mode
 	if testCfg.ListOnly {
 		ctx.WriteInit("=== Selected Tests ===")
-		for i := range selectedTests {
-			test := &selectedTests[i]
+		for i := range testCfg.SelectedTests {
+			test := &testCfg.SelectedTests[i]
 			ctx.WriteInit("%d. %s (%s)", i+1, test.TestName, test.Type)
 			ctx.WriteInit("   File: %s", test.FilePath)
 			ctx.WriteInit("   Tags: %s", strings.Join(test.Tags, ", "))
@@ -214,7 +130,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	// Group tests by package
-	testsByPackage := groupTestsByPackage(selectedTests, ctx.WorkspaceRoot, ctx.EACConfig)
+	testsByPackage := groupTestsByPackage(testCfg.SelectedTests, ctx.WorkspaceRoot, ctx.EACConfig)
 	testCfg.TestsByPackage = testsByPackage
 
 	if len(testsByPackage) == 0 {
@@ -223,28 +139,161 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		return nil
 	}
 
-	// UoW-based incremental test detection (devbox only)
+	// Phase 4: UoW-based incremental test detection (devbox only)
 	if !environments.IsCI() && !testCfg.ForceRetest && !ctx.Config.DryRun {
 		testsByPackage = detectUoWIncrementalTestChanges(ctx, testCfg, testsByPackage)
 		testCfg.TestsByPackage = testsByPackage
 	}
 
-	// Separate parallel vs sequential paths using package paths directly
-	// (No conversion to module paths - tests use path-based keys)
+	// Build execution plan: classify paths and set scope monikers
+	buildExecutionPlan(ctx, testCfg, testsByPackage)
+
+	// Build init summary
+	buildTestInitSummary(ctx, testCfg)
+
+	return nil
+}
+
+// discoverTests runs test discovery with suite-specific inference rules.
+func discoverTests(workspaceRoot string, suite *testing.TestSuite) ([]testing.TestReference, error) {
+	allTests, err := testing.DiscoverAndEnrich(workspaceRoot, testing.DiscoveryOptions{
+		Inferences: suite.Inferences,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover tests: %w", err)
+	}
+	log.Debugf("Discovered %d tests with %d inference rules applied", len(allTests), len(suite.Inferences))
+	return allTests, nil
+}
+
+// filterResult holds the output of filterTestsBySuite.
+type filterResult struct {
+	selected         []testing.TestReference
+	skipped          int
+	notMatchingSuite int
+	osFiltered       int
+}
+
+// filterTestsBySuite applies skip-tag, suite-match, module-ownership, moniker, and OS filters.
+// It returns the filtered tests and filter statistics, or an error if unmapped tests are found.
+func filterTestsBySuite(
+	allTests []testing.TestReference,
+	suite *testing.TestSuite,
+	mapper *ModuleMapper,
+	validSkipReasons []string,
+	requestedMonikerList []string,
+) (*filterResult, error) {
+	skipReasonSet := make(map[string]bool, len(validSkipReasons))
+	for _, reason := range validSkipReasons {
+		skipReasonSet[reason] = true
+	}
+
+	requestedMonikers := make(map[string]bool, len(requestedMonikerList))
+	for _, m := range requestedMonikerList {
+		requestedMonikers[m] = true
+	}
+
+	result := &filterResult{}
+	var unmappedTests []string
+
+	for i := range allTests {
+		test := &allTests[i]
+
+		// Check for @skip tags
+		if hasSkipTag(test.Tags, skipReasonSet) {
+			result.skipped++
+			continue
+		}
+
+		// Check if test matches suite
+		if !suite.Matches(*test) {
+			result.notMatchingSuite++
+			continue
+		}
+
+		// Get module ownership from registry (not heuristic)
+		testModule := mapper.GetModuleForFile(test.FilePath)
+		if testModule == "" {
+			unmappedTests = append(unmappedTests, test.FilePath)
+			continue
+		}
+
+		// Check module filter if specified
+		if len(requestedMonikers) > 0 && !requestedMonikers[testModule] {
+			continue
+		}
+
+		result.selected = append(result.selected, *test)
+	}
+
+	// Fail fast if tests couldn't be mapped to modules
+	if len(unmappedTests) > 0 {
+		log.Warnf("Found %d tests that could not be mapped to any module:", len(unmappedTests))
+		for _, path := range unmappedTests {
+			log.Warnf("  - %s", path)
+		}
+		return nil, fmt.Errorf("test discovery failed: %d tests have no module ownership - check repository.yml module patterns", len(unmappedTests))
+	}
+
+	// Filter by OS compatibility
+	osCompatible := filterByOSCompatibility(result.selected, os.Stdout)
+	result.osFiltered = len(result.selected) - len(osCompatible)
+	result.selected = osCompatible
+
+	return result, nil
+}
+
+// hasSkipTag returns true if any tag matches a valid skip reason.
+func hasSkipTag(tags []string, skipReasonSet map[string]bool) bool {
+	for _, tag := range tags {
+		for reason := range skipReasonSet {
+			if tag == "@skip:"+reason {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// computeModuleScope calculates which modules are in scope and which have no tests.
+func computeModuleScope(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) {
+	stats := testCfg.Stats
+
+	stats.ModulesInScope = getUniqueModulesFromTests(testCfg.SelectedTests, testCfg.ModuleMapper)
+
+	inScopeSet := make(map[string]bool, len(stats.ModulesInScope))
+	for _, m := range stats.ModulesInScope {
+		inScopeSet[m] = true
+	}
+
+	var modulesToCheck []string
+	if len(ctx.Config.Monikers) > 0 {
+		modulesToCheck = ctx.Config.Monikers
+	} else {
+		modulesToCheck = ctx.EACConfig.Repository.AllMonikers()
+	}
+	for _, m := range modulesToCheck {
+		if !inScopeSet[m] {
+			stats.ModulesNoTests = append(stats.ModulesNoTests, m)
+		}
+	}
+}
+
+// buildExecutionPlan classifies test packages into parallel/sequential paths,
+// aggregates module type information, and sets scope monikers on the execution context.
+func buildExecutionPlan(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) {
 	var parallelPaths, sequentialPaths []string
-	moduleTypes := make(map[string]string)
 	moduleTypeSet := make(map[string]map[string]bool) // Track unique test types per moniker
 
 	for pkgPath, tests := range testsByPackage {
+		// Classify as parallel or sequential
 		hasSequential := false
 		for i := range tests {
-			test := &tests[i]
-			if test.IsSequential {
+			if tests[i].IsSequential {
 				hasSequential = true
 				break
 			}
 		}
-
 		if hasSequential {
 			sequentialPaths = append(sequentialPaths, pkgPath)
 		} else {
@@ -257,7 +306,6 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 			if moduleTypeSet[moniker] == nil {
 				moduleTypeSet[moniker] = make(map[string]bool)
 			}
-			// Capture ALL test types from this package, not just the first
 			for i := range tests {
 				moduleTypeSet[moniker][tests[i].Type] = true
 			}
@@ -265,6 +313,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	// Build moduleTypes map with aggregated types (e.g., "gotest, godog")
+	moduleTypes := make(map[string]string, len(moduleTypeSet))
 	for moniker, types := range moduleTypeSet {
 		var typeList []string
 		for t := range types {
@@ -276,7 +325,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	testCfg.ParallelPaths = parallelPaths
 	testCfg.SequentialPaths = sequentialPaths
-	testCfg.SuiteTagFilter = buildSuiteTagFilter(suite)
+	testCfg.SuiteTagFilter = buildSuiteTagFilter(testCfg.Suite)
 
 	// Convert package paths to module monikers for TUI tree building.
 	// ScopeMonikers must contain monikers (not paths) so buildTreeFromUnitSpecs
@@ -296,11 +345,6 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	ctx.ScopeMonikers = allModules
 	ctx.ComponentTypesDisplay = moduleTypes
 	ctx.Orchestrator.SetComponentTypesDisplay(moduleTypes)
-
-	// Build init summary
-	buildTestInitSummary(ctx, testCfg)
-
-	return nil
 }
 
 // testBeforeExecute initializes the test execution context.

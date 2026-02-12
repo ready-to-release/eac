@@ -49,7 +49,7 @@ func ResolveScanUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 		}
 
 		// Use ComponentResolver to get scan specs for this module
-		// Pass nil for scanCategories to use defaults from component-types.yml
+		// Pass nil for scanCategories to use defaults from blueprints.yml component-kinds
 		specs := compResolver.ResolveForScan(module, nil, cachedModules)
 
 		// Add specs with correct index (weight is already set by ComponentResolver)

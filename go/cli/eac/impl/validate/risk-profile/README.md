@@ -42,10 +42,10 @@ The `risk-profile` sub-package validates OSCAL profile documents to ensure they 
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

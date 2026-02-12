@@ -33,10 +33,10 @@ The `gowork` package is a shared utility used by `update go-tidy`, `update go-su
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

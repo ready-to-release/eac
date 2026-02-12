@@ -31,9 +31,6 @@ func (c *validateTestTagsCommand) Execute(_ context.Context, _ *core.CommandRequ
 	return TestTags()
 }
 
-// package-level config for use by helper functions.
-var eacConfig *config.EACConfig
-
 // TestTags validates that all test tags are defined in the tag contract.
 func TestTags() int {
 	// Validate flags against registry metadata
@@ -48,7 +45,6 @@ func TestTags() int {
 		log.Errorf("Error: failed to load config: %v", err)
 		return 1
 	}
-	eacConfig = cfg // Store for helper functions
 	repoRoot := cfg.RepoRoot
 
 	testing := cfg.Testing
@@ -103,7 +99,7 @@ func TestTags() int {
 			}
 
 			// Check if tag matches a pattern that requires additional validation
-			if isValidPatternTag(tagInfo.Tag, testing) {
+			if isValidPatternTag(tagInfo.Tag, testing, cfg) {
 				continue
 			}
 
@@ -210,7 +206,7 @@ func extractTagsFromFeature(filePath string) ([]TagInfo, error) {
 
 // isValidPatternTag checks if a tag matches any pattern in the contract.
 // This handles pattern tags like @skip:<reason>, @deps:<name>, etc.
-func isValidPatternTag(tag string, testing *config.TestingConfig) bool {
+func isValidPatternTag(tag string, testing *config.TestingConfig, cfg *config.EACConfig) bool {
 	// Only check tags with colons (pattern tags have format @prefix:suffix)
 	if !strings.Contains(tag, ":") {
 		return false
@@ -231,13 +227,13 @@ func isValidPatternTag(tag string, testing *config.TestingConfig) bool {
 		return isValidSkipReason(suffix, testing)
 	case "@deps:":
 		// Validate against system deps, OS platforms, and providers
-		return isValidDepsName(suffix)
+		return isValidDepsName(suffix, cfg)
 	case "@env:":
 		// Validate against environment contracts
-		return isValidEnvMoniker(suffix)
+		return isValidEnvMoniker(suffix, cfg)
 	case "@depm:":
 		// Validate against module contracts
-		return isValidModuleName(suffix)
+		return isValidModuleName(suffix, cfg)
 	}
 
 	// For other patterns not handled by IsKnownTag, accept any suffix
@@ -251,7 +247,7 @@ func isValidSkipReason(reason string, testing *config.TestingConfig) bool {
 }
 
 // isValidDepsName checks if a deps name is valid (tool from tool-config.yml or OS platform).
-func isValidDepsName(name string) bool {
+func isValidDepsName(name string, cfg *config.EACConfig) bool {
 	// Check tool registry for valid tool IDs (if populated)
 	registry := tool.GlobalRegistry()
 	if registry.Has(name) {
@@ -259,8 +255,8 @@ func isValidDepsName(name string) bool {
 	}
 
 	// Load tool config directly to check tool IDs (registry may not be initialized)
-	if eacConfig != nil {
-		toolConfig, err := tool.LoadToolConfig(eacConfig.RepoRoot, eacConfig.ConfigRoot)
+	if cfg != nil {
+		toolConfig, err := tool.LoadToolConfig(cfg.RepoRoot, cfg.ConfigRoot)
 		if err == nil && toolConfig != nil {
 			// Check both system-tools and container-tools
 			if _, exists := toolConfig.SystemTools[name]; exists {
@@ -282,15 +278,14 @@ func isValidDepsName(name string) bool {
 }
 
 // isValidEnvMoniker checks if an environment moniker is defined in environment domain.
-func isValidEnvMoniker(moniker string) bool {
-	// Use the already-loaded config
-	if eacConfig == nil || eacConfig.Environments == nil {
+func isValidEnvMoniker(moniker string, cfg *config.EACConfig) bool {
+	if cfg == nil || cfg.Environments == nil {
 		log.Errorf("Warning: environments config not loaded")
 		return true
 	}
 
 	// Check if moniker exists in environment contracts
-	for _, env := range eacConfig.Environments.Environments {
+	for _, env := range cfg.Environments.Environments {
 		if env.Moniker == moniker {
 			return true
 		}
@@ -300,14 +295,13 @@ func isValidEnvMoniker(moniker string) bool {
 }
 
 // isValidModuleName checks if a module name is defined in module domain.
-func isValidModuleName(moduleName string) bool {
-	// Use the already-loaded config
-	if eacConfig == nil || eacConfig.Repository == nil {
+func isValidModuleName(moduleName string, cfg *config.EACConfig) bool {
+	if cfg == nil || cfg.Repository == nil {
 		log.Errorf("Warning: modules config not loaded")
 		return true
 	}
 
 	// Check if module exists
-	_, found := eacConfig.Repository.GetModule(moduleName)
+	_, found := cfg.Repository.GetModule(moduleName)
 	return found
 }

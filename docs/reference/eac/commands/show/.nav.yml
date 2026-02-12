@@ -10,7 +10,7 @@ nav:
   - build-times.md
   - changelog.md
   - ci-summary.md
-  - component-types.md
+  - component-kinds.md
   - config.md
   - dependencies.md
   - dependency-ci-summary.md

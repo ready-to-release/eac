@@ -19,8 +19,8 @@ Docker utility functions for Docker-in-Docker (DinD) path translation, volume fo
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
+| File    | Responsibility                                                                        |
+| ------- | ------------------------------------------------------------------------------------- |
 | dind.go | DinD detection, path translation, volume formatting, and Docker availability checking |
 
 ## Dependencies
@@ -34,10 +34,10 @@ The util sub-package handles the complexity of Docker volume mounting when the E
 ## Code Health
 
 ### Tech Debt
-- None
+- None identified
 
 ### Pain Points
-- `IsDinD` in dind.go:36 has a redundant second check of `EnvHostRepoRoot` (line 50) that is unreachable since the first check (line 38) already returns true when it is set
+- None identified
 
 ### Optimization Opportunities
 - None identified

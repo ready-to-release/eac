@@ -40,11 +40,11 @@ All modules are defined in `.eac/repository.yml`. Each module has:
 Everything is configured via YAML contracts validated against JSON schemas:
 
 - `repository.yml` - Module definitions (in `.eac/`)
-- `component-types.yml` - Component type definitions (system default)
+- `blueprints.yml` - Component kind definitions (system default)
 - `environments.yml` - Test environments (system default)
 - `test-suites.yml` - Test suite definitions (system default)
 
-System defaults are in `contracts/eac-core/0.1.0/defaults/`.
+System defaults are in `contracts/core/0.1.0/schemas/defaults/`.
 
 ## Quick Commands
 

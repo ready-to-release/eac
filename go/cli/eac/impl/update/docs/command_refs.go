@@ -10,6 +10,7 @@ import (
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"gopkg.in/yaml.v3"
 )
 
@@ -128,7 +129,7 @@ func runCommandRefsUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writ
 // makeCommandSource creates a CommandSource that uses the EAC adapter.
 func makeCommandSource(repoRoot string) docsync.CommandSource {
 	return func() ([]docsync.CommandInfo, error) {
-		port := eac.New(repoRoot)
+		port := eac.New(repoRoot, tool.GlobalRegistry(), tool.GlobalExecutor())
 		result, err := port.Execute(context.Background(), []string{"get", "valid-commands"}, &eac.ExecConfig{
 			WorkspaceRoot: repoRoot,
 			FullEnv:       append(os.Environ(), "NO_COLOR=1"),

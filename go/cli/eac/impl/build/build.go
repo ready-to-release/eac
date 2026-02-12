@@ -204,15 +204,55 @@ func Build() int {
 		return 0
 	}
 
-	// Detect execution environment
+	// Parse all flags (shared + build-specific)
 	env := environment.Detect()
-
-	// Parse shared flags using flag sets
-	shared, err := flags.ParseSharedFlagsWithEnv(flags.BuildConfig(), args, env)
+	shared, buildFlags, monikers, err := parseAllBuildFlags(args, env)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		printBuildUsage()
 		return 1
+	}
+
+	// Resolve build settings (tidy, artifacts mode, workspace root)
+	tidyFirst, artifactsMode, workspaceRoot, err := resolveBuildSettings(env, buildFlags)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		return 1
+	}
+
+	// Ensure eac binary exists (local only - CI uses setup-commands action)
+	if env.IsLocalConsole {
+		if err := ensureCommandsBinary(workspaceRoot); err != nil {
+			log.Errorf("Error: failed to build eac binary: %v", err)
+			return 1
+		}
+	}
+
+	// Handle --list-artifacts flag (early exit path)
+	if buildFlags.ListArtifacts {
+		return handleListArtifacts(monikers, workspaceRoot)
+	}
+
+	// Build requested set BEFORE expanding to all modules.
+	// RequestedSet tracks modules explicitly specified by the user on the command line.
+	requestedSet := make(map[string]bool)
+	for _, m := range monikers {
+		requestedSet[m] = true
+	}
+
+	// Create command config and build-specific config for framework
+	cmdCfg := buildCommandConfig(shared, monikers)
+	buildCfg := buildBuildConfig(buildFlags, tidyFirst, artifactsMode, requestedSet)
+
+	return RunBuildWithFramework(cmdCfg, buildCfg)
+}
+
+// parseAllBuildFlags parses shared flags and build-specific flags from command-line args.
+// Returns shared flags, build-specific flags, extracted monikers, and any error.
+func parseAllBuildFlags(args []string, env *environment.Env) (*flags.SharedFlags, *BuildSpecificFlags, []string, error) {
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.BuildConfig(), args, env)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// Rebuild unconsumed args in original order for build-specific parsing.
@@ -221,44 +261,26 @@ func Build() int {
 	// in the correct position (e.g., "--component site" must stay together).
 	buildArgs := rebuildUnconsumedArgs(args, shared.Remaining, shared.Monikers)
 
-	// Parse build-specific flags from rebuilt args
 	buildFlags, unknownArgs, err := ParseBuildSpecificFlags(buildArgs)
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		printBuildUsage()
-		return 1
+		return nil, nil, nil, err
 	}
 
 	// Check for unknown flags and extract monikers from remaining args
 	var monikers []string
 	for _, arg := range unknownArgs {
 		if strings.HasPrefix(arg, "--") {
-			log.Errorf("Error: unknown flag: %s", arg)
-			printBuildUsage()
-			return 1
+			return nil, nil, nil, fmt.Errorf("unknown flag: %s", arg)
 		}
 		monikers = append(monikers, arg)
 	}
-	skipDeps := shared.SkipDeps
-	skipDepm := shared.SkipDepm
-	forceRebuild := shared.CacheConfig.ShouldSkipState()
-	showTimings := shared.ShowTimings
-	debugMode := shared.Debug
-	turbo := shared.Turbo
-	roof := shared.MaxConcurrency
-	dryRun := shared.DryRun
-	useTUI := shared.UseTUI
-	tuiHeight := shared.TUIHeight
-	tuiASCII := shared.TUIASCIIMode
-	tuiDemo := shared.TUI3Demo
-	skipTUIDelay := shared.SkipTUIDelay
 
-	// Extract build-specific flags
-	useExistingDepm := buildFlags.UseExistingDepm
-	version := buildFlags.Version
-	reproducible := buildFlags.Reproducible
-	listArtifacts := buildFlags.ListArtifacts
+	return shared, buildFlags, monikers, nil
+}
 
+// resolveBuildSettings resolves tidy-first mode, artifacts mode, and workspace root
+// based on the environment and build-specific flags.
+func resolveBuildSettings(env *environment.Env, buildFlags *BuildSpecificFlags) (bool, environments.ArtifactsMode, string, error) {
 	// Handle tidy flag: --tidy-first sets it true, --no-tidy sets it false
 	// Default is based on environment (true for local, false for CI)
 	tidyFirst := !env.IsCI
@@ -274,8 +296,7 @@ func Build() int {
 	if buildFlags.Artifacts != "" {
 		mode, err := environments.ParseArtifactsMode(buildFlags.Artifacts)
 		if err != nil {
-			log.Errorf("Error: %v", err)
-			return 1
+			return false, artifactsMode, "", err
 		}
 		artifactsMode = mode
 	}
@@ -283,80 +304,64 @@ func Build() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("Error: failed to find repository root: %v", err)
+		return false, artifactsMode, "", fmt.Errorf("failed to find repository root: %w", err)
+	}
+
+	return tidyFirst, artifactsMode, workspaceRoot, nil
+}
+
+// handleListArtifacts handles the --list-artifacts flag, loading module contracts
+// and listing artifacts without performing a build.
+func handleListArtifacts(monikers []string, workspaceRoot string) int {
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
+	if err != nil {
+		log.Errorf("Error: failed to load module contracts: %v", err)
 		return 1
 	}
-
-	// Ensure eac binary exists (local only - CI uses setup-commands action)
-	if env.IsLocalConsole {
-		if err := ensureCommandsBinary(workspaceRoot); err != nil {
-			log.Errorf("Error: failed to build eac binary: %v", err)
-			return 1
+	if len(monikers) == 0 {
+		for _, module := range moduleReport.Registry.All() {
+			monikers = append(monikers, module.Moniker)
 		}
 	}
+	return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
+}
 
-	// Build requested set BEFORE expanding to all modules.
-	// RequestedSet tracks modules explicitly specified by the user on the command line.
-	// This enables incremental detection to skip unchanged modules when "eac build" is run
-	// without arguments, while still building explicitly requested modules unconditionally.
-	requestedSet := make(map[string]bool)
-	for _, m := range monikers {
-		requestedSet[m] = true
-	}
-
-	// Handle --list-artifacts flag (requires module contracts; loads them only for this path).
-	// Normal builds skip this — the framework's phaseResolve loads module contracts and
-	// handles "empty monikers = all modules" expansion, saving ~50-200ms on startup.
-	if listArtifacts {
-		moduleReport, err := reports.GetModuleContracts(workspaceRoot)
-		if err != nil {
-			log.Errorf("Error: failed to load module contracts: %v", err)
-			return 1
-		}
-		if len(monikers) == 0 {
-			for _, module := range moduleReport.Registry.All() {
-				monikers = append(monikers, module.Moniker)
-			}
-		}
-		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
-	}
-
-	// Create command config for framework.
-	// Monikers may be empty — the framework's phaseResolve expands empty to all modules.
-	cmdCfg := &cmdframework.CommandConfig{
+// buildCommandConfig constructs a CommandConfig from parsed shared flags and monikers.
+func buildCommandConfig(shared *flags.SharedFlags, monikers []string) *cmdframework.CommandConfig {
+	return &cmdframework.CommandConfig{
 		Type:           core.ActionBuild,
 		CommandPath:    "build",
 		OutputDir:      paths.OutBuildRelPath,
 		Monikers:       monikers,
-		IncludeDepm:    !skipDepm,
-		SkipDeps:       skipDeps,
-		SkipDepm:       skipDepm,
-		ForceRebuild:   forceRebuild,
-		Turbo:          turbo,
-		MaxConcurrency: roof,
-		DryRun:         dryRun,
-		UseTUI:         useTUI,
-		TUIHeight:      tuiHeight,
-		TUIASCIIMode:   tuiASCII,
-		TUI3Demo:       tuiDemo,
-		SkipTUIDelay:   skipTUIDelay,
-		ShowTimings:    showTimings,
-		DebugMode:      debugMode,
+		IncludeDepm:    !shared.SkipDepm,
+		SkipDeps:       shared.SkipDeps,
+		SkipDepm:       shared.SkipDepm,
+		ForceRebuild:   shared.CacheConfig.ShouldSkipState(),
+		Turbo:          shared.Turbo,
+		MaxConcurrency: shared.MaxConcurrency,
+		DryRun:         shared.DryRun,
+		UseTUI:         shared.UseTUI,
+		TUIHeight:      shared.TUIHeight,
+		TUIASCIIMode:   shared.TUIASCIIMode,
+		TUI3Demo:       shared.TUI3Demo,
+		SkipTUIDelay:   shared.SkipTUIDelay,
+		ShowTimings:    shared.ShowTimings,
+		DebugMode:      shared.Debug,
 		CacheConfig:    shared.CacheConfig,
 	}
+}
 
-	// Create build-specific config
-	buildCfg := &BuildConfig{
+// buildBuildConfig constructs a BuildConfig from resolved build settings.
+func buildBuildConfig(buildFlags *BuildSpecificFlags, tidyFirst bool, artifactsMode environments.ArtifactsMode, requestedSet map[string]bool) *BuildConfig {
+	return &BuildConfig{
 		TidyFirst:       tidyFirst,
-		Version:         version,
-		UseExistingDepm: useExistingDepm,
-		Reproducible:    reproducible,
+		Version:         buildFlags.Version,
+		UseExistingDepm: buildFlags.UseExistingDepm,
+		Reproducible:    buildFlags.Reproducible,
 		ArtifactsMode:   artifactsMode,
 		Components:      buildFlags.Components,
 		RequestedSet:    requestedSet,
 	}
-
-	return RunBuildWithFramework(cmdCfg, buildCfg)
 }
 
 // rebuildUnconsumedArgs reconstructs remaining and positional args in their
@@ -494,22 +499,9 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		}
 	}
 
-	// Process artifact derivations (compression, etc.) if all builds succeeded
-	// Use merged artifacts from cfg.GetBuildArtifacts to ensure module-level takes priority
-	cfg := config.Global()
-	if cfg != nil {
-		// Get merged artifacts (module-level takes priority over type-level)
-		// Pass buildAll=true to include all derived artifacts (UPX variants, etc.)
-		mergedArtifacts := cfg.GetBuildArtifacts(module.Moniker, true)
-		if err := ProcessArtifactDerivations(module.Moniker, mergedArtifacts, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
-			output.Writeln(logWriter, "❌ Artifact derivation failed: %v", err)
-			return 1
-		}
-	}
-
-	// Note: Post-build steps are executed centrally by framework.go's buildAfterExecute()
-	// via processAllArtifactDerivations(). This ensures consistent behavior and prevents
-	// duplicate execution when framework.go calls runModuleBuild() as its worker.
+	// Note: Artifact derivations are executed centrally by framework.go's buildAfterExecute()
+	// via processAllArtifactDerivations(). This avoids duplicate derivation runs when
+	// framework.go calls runModuleBuild() as its worker.
 
 	return 0
 }
@@ -639,8 +631,7 @@ func hasExistingArtifacts(moniker, workspaceRoot string, buildAll bool, cfg *con
 	}
 
 	// Resolve artifacts and check if they exist
-	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
-	buildDir := filepath.Join(workspaceRoot, buildDirRel)
+	buildDir := paths.BuildOutputPath(workspaceRoot, moniker)
 
 	// First, verify input hash matches using UoW manifests
 	// This ensures cached artifacts are from the same source code

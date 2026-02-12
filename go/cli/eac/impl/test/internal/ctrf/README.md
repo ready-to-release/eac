@@ -32,7 +32,8 @@ Implements the Common Test Report Format (CTRF) for universal test result report
 
 | File | Responsibility |
 | --- | --- |
-| ctrf.go | All CTRF types, constructors, serialization, parsing, merging, and status constants |
+| types.go | CTRF type definitions (`Report`, `Results`, `Tool`, `Summary`, `Test`, `Status`, `Environment`) and status constants |
+| operations.go | Constructors (`NewReport`, `NewEmptyReport`), serialization, parsing, merging, and report manipulation |
 
 ## Dependencies
 
@@ -45,10 +46,10 @@ The `ctrf` package provides the universal test result format used across the eac
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- All types and functions are in a single file (`ctrf.go`), which may grow as more test formats are supported
+- ctrf_test.go is 711 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

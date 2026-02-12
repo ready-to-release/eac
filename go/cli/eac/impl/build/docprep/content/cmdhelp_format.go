@@ -128,15 +128,12 @@ func FormatCategoriesTable(ctx context.Context, workspaceRoot string, executor C
 		return "", err
 	}
 
-	var sb strings.Builder
-	sb.WriteString("| Category | Commands | Description |\n")
-	sb.WriteString("|----------|----------|-------------|\n")
-
-	for _, cat := range categories {
-		sb.WriteString(fmt.Sprintf("| **%s** | %d | %s |\n", cat.Name, cat.CommandCount, cat.Description))
+	rows := make([][]string, len(categories))
+	for i, cat := range categories {
+		rows[i] = []string{fmt.Sprintf("**%s**", cat.Name), fmt.Sprintf("%d", cat.CommandCount), cat.Description}
 	}
 
-	return sb.String(), nil
+	return FormatTable([]string{"Category", "Commands", "Description"}, rows), nil
 }
 
 // FormatCategoriesList generates a category list with descriptions.

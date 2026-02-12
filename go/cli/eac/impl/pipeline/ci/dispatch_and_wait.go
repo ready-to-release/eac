@@ -11,10 +11,9 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineCIDispatchAndWaitCommand struct{}
@@ -108,7 +107,7 @@ func PipelineCIDispatchAndWait() int {
 func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot string) int {
 	// Get current ref if not specified
 	if ref == "" {
-		output, err := gitexec.Run(workspaceRoot, "rev-parse", "--abbrev-ref", "HEAD")
+		output, err := tool.GlobalToolSystem().RunTool(context.Background(), "git", workspaceRoot, "rev-parse", "--abbrev-ref", "HEAD")
 		if err != nil {
 			log.Errorf("Error getting current branch: %v", err)
 			return 1
@@ -132,7 +131,7 @@ func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot st
 		}
 	}
 
-	_, dispatchErr := ghexec.Run(workspaceRoot, args...)
+	_, dispatchErr := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, args...)
 	if dispatchErr != nil {
 		log.Errorf("Error dispatching workflow: %v", dispatchErr)
 		return 1
@@ -155,7 +154,7 @@ func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot st
 
 func findLatestRunID(workflow, ref, workspaceRoot string) (string, error) {
 	// Get the most recent run for this workflow on this ref
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--branch", ref,
 		"--limit", "1",
@@ -208,7 +207,7 @@ func waitForRun(runID string, timeout int, workspaceRoot string) int {
 }
 
 func getRunStatus(runID, workspaceRoot string) (status, conclusion string, err error) {
-	output, err := ghexec.Run(workspaceRoot, "run", "view", runID,
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "view", runID,
 		"--json", "status,conclusion",
 		"-q", ".status + \"|\" + .conclusion",
 	)

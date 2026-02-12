@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -122,7 +123,7 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 }
 
 func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
-	outputDir := cfg.Repository.BuildOutputPath(module.Moniker)
+	outputDir := paths.BuildOutputPath(cfg.RepoRoot, module.Moniker)
 
 	// Collect artifact definitions from all packages
 	var artifacts []config.Artifact
@@ -235,7 +236,7 @@ func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module, cfg *co
 	var diagnostics string
 
 	// Search for component-level build logs in out/build/<module>/<component>/build.log
-	moduleDir := cfg.Repository.BuildOutputPath(module.Moniker)
+	moduleDir := paths.BuildOutputPath(cfg.RepoRoot, module.Moniker)
 	var foundLogs []string
 
 	entries, err := os.ReadDir(moduleDir)
@@ -268,7 +269,7 @@ func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module, cfg *co
 	}
 
 	// Show timing data if available (check both module and component level)
-	timingPath := cfg.Repository.BuildTimingPath(module.Moniker)
+	timingPath := paths.BuildTimingPath(cfg.RepoRoot, module.Moniker)
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
 	}
@@ -291,7 +292,7 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Container Runtime"), Code("docker"))
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.BuildOutputPath(module.Moniker)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(paths.BuildOutputPath(cfg.RepoRoot, module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Build Configuration", configDetails)
 }

@@ -82,8 +82,8 @@ func TestGetScannerEmoji(t *testing.T) {
 }
 
 func TestLogScannerConfig(t *testing.T) {
-	// logScannerConfig calls getScannerImage(ctx, ...) which needs a non-nil ctx.
-	// With an empty ExecutionContext (EACConfig==nil), image helpers return ""
+	// logScannerConfig calls GetDockerImage(ctx, ...) which needs a non-nil ctx.
+	// With an empty ExecutionContext (EACConfig==nil), the image helper returns ""
 	// so we verify output keywords without requiring full EACConfig wiring.
 	emptyCtx := &cmdframework.ExecutionContext{}
 	multiCfg := &MultiScanConfig{

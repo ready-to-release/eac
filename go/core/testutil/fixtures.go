@@ -2,6 +2,7 @@
 package testutil
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/ready-to-release/eac/go/core/github"
@@ -88,6 +89,6 @@ func AssertNotCalled(mock *github.MockAPI, method string) {
 func AssertCallCount(mock *github.MockAPI, method string, expected int) {
 	actual := mock.CallCount(method)
 	if actual != expected {
-		panic("expected " + method + " to be called " + string(rune(expected+'0')) + " times, got " + string(rune(actual+'0')))
+		panic("expected " + method + " to be called " + strconv.Itoa(expected) + " times, got " + strconv.Itoa(actual))
 	}
 }

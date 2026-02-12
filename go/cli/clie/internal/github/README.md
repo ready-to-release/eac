@@ -43,12 +43,12 @@ The github package handles all interactions with GitHub's authentication and con
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- `registry.go` is 433 lines, making it a large file that handles both GitHub API and OCI Registry fallback logic.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

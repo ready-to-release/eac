@@ -5,7 +5,7 @@ Feature: Tool Resolution for Component Types
   I want EAC to resolve the correct tools for each component type
   So that builds, tests, and scans use the appropriate tools for each language
 
-  The tool system maps component types (from component-types.yml) to specific tools
+  The tool system maps component types (from blueprints.yml component-kinds) to specific tools
   (from tool-config.yml) for each operation (build, test, lint, scan).
 
   Background:

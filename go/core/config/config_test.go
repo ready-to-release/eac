@@ -355,3 +355,21 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 	}
 }
 
+// TestBlueprintsPopulatesComponentKinds verifies the loading pipeline invariant:
+// LoadRepository (via LoadBlueprints) must populate ComponentKinds before
+// EnsureComponentKinds is called. This guards against regressions where the
+// load ordering might change.
+func TestBlueprintsPopulatesComponentKinds(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	// Verify LoadBlueprints populated ComponentKinds
+	require.NotNil(t, cfg.ComponentKinds)
+	require.NotEmpty(t, cfg.ComponentKinds.Kinds, "ComponentKinds should be populated by LoadBlueprints")
+
+	// Verify well-known kinds exist
+	assert.NotNil(t, cfg.ComponentKinds.Get("go"), "go component kind should exist")
+	assert.NotNil(t, cfg.ComponentKinds.Get("typescript"), "typescript component kind should exist")
+	assert.NotNil(t, cfg.ComponentKinds.Get("dockerfile"), "dockerfile component kind should exist")
+}
+

@@ -2,6 +2,7 @@ package git
 
 import "time"
 
-// timeNow is a package-level function that returns the current time.
-// It can be overridden in tests to provide deterministic timestamps.
-var timeNow = time.Now
+// Clock is a function that returns the current time.
+// It is used by Repository to timestamp commits, enabling deterministic
+// tests via constructor injection rather than mutable package-level state.
+type Clock func() time.Time

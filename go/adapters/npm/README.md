@@ -8,20 +8,20 @@ directories.
 
 - **`NpmIsolation`** -- Manages isolated npm work directories
 - **`IsolatedEnv`** -- Represents a prepared isolated environment
-- **`NpmInstallMu`** -- Global mutex serializing npm install calls
+- **`WithInstallLock`** -- Serializes npm install calls via unexported mutex
 
 ## Patterns
 
 - Directory isolation: Copies source to `.cache/eac/npm/work/{moniker}/`
 - Incremental sync: Only copies files changed by mtime and size
 - Shared npm cache: All modules share `.cache/eac/npm/cache/` for downloads
-- Serialized installs: `NpmInstallMu` prevents concurrent npm cache contention
+- Serialized installs: `WithInstallLock()` prevents concurrent npm cache contention
 - Stale detection: Resets work directory when package.json changes
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
+| File         | Responsibility                                                 |
+| ------------ | -------------------------------------------------------------- |
 | isolation.go | `NpmIsolation`, `IsolatedEnv`, file sync, and cache management |
 
 ## Dependencies
@@ -40,12 +40,11 @@ npm installs and test runs do not conflict.
 ## Code Health
 
 ### Tech Debt
-- `NpmInstallMu` in isolation.go is an exported package-level `sync.Mutex` used by both `cucumber` and `mocha` adapters; wrapping it behind a function or moving serialization into `NpmIsolation` would encapsulate the locking strategy
-- No unit tests exist for the package; `PrepareIsolatedEnv`, `syncDirectory`, `copyFileIfChanged`, and `packageFilesChanged` are all untested
+- None identified
 
 ### Pain Points
-- `packageFilesChanged` in isolation.go uses mtime and size comparison, which can miss content changes when file size is unchanged; a content hash check would be more reliable
-- `syncDirectory` in isolation.go swallows `filepath.Walk` errors on both source and destination (lines 218-220, 229-230), making failures silent and hard to diagnose
+- isolation.go is 332 lines; candidate for splitting (extract file sync logic and change detection into separate files)
+- packageFilesChanged in isolation.go uses mtime and size comparison, which can miss content changes when file size is unchanged; a content hash check would be more reliable
 
 ### Optimization Opportunities
-- `syncDirectory` performs two full `filepath.Walk` passes (one for destination tracking, one for source copying); building both maps in a single combined pass or using `os.ReadDir` for shallow directories would reduce I/O; low effort
+- None identified

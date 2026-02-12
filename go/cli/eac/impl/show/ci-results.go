@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type showCIResultsCommand struct{}
@@ -83,7 +84,7 @@ func ShowCIResults() int {
 	}
 
 	// Build GitHub API client
-	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	api := github.NewGHClient(gh.New(tool.GlobalToolSystem(), workspaceRoot), workspaceRoot)
 
 	// Get repo name for links
 	repo := getCIResultsRepoName(workspaceRoot)
@@ -262,7 +263,7 @@ func getCIResultsRepoName(workspaceRoot string) string {
 	if repo := os.Getenv("GH_REPO"); repo != "" {
 		return repo
 	}
-	output, err := ghexec.Run(workspaceRoot, "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
 	if err == nil {
 		name := strings.TrimSpace(string(output))
 		if name != "" {

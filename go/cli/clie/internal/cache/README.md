@@ -38,12 +38,12 @@ The cache package provides two caching layers: registry cache (tag/SHA data from
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- No test files exist for this package. Both `registry_cache.go` (207 lines) and `metadata.go` (147 lines) lack corresponding unit tests.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

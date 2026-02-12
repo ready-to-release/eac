@@ -22,6 +22,12 @@ type memoryStatusEx struct {
 }
 
 // getSystemMemoryBytes returns total system memory on Windows.
+//
+// The unsafe.Sizeof and unsafe.Pointer usage below is the standard Go pattern
+// for calling Windows APIs via syscall. The MEMORYSTATUSEX struct requires its
+// Length field to be set to the struct size before the call, and the struct must
+// be passed as a pointer to the syscall. There is no safe alternative for this
+// Windows API interop pattern. See: https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex
 func getSystemMemoryBytes() uint64 {
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	globalMemoryStatusEx := kernel32.NewProc("GlobalMemoryStatusEx")

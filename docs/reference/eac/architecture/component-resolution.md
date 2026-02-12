@@ -7,7 +7,7 @@ gets built, in what order, and with which tool.
 ## Overview
 
 ```text
-repository.yml          blueprints.yml         component-types.yml
+repository.yml          blueprints.yml         blueprints.yml component-kinds
       │                       │                        │
       └───────────┬───────────┘                        │
                   │                                    │
@@ -130,7 +130,7 @@ Component types can declare `build_after` relationships in
 `blueprints.yml`. This creates intra-module dependency edges between UoWs.
 
 ```yaml
-# In blueprints.yml component-type definitions:
+# In blueprints.yml component-kind definitions:
 dockerfile:
   build_after: [go]
 

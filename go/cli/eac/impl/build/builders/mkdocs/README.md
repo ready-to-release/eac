@@ -61,10 +61,13 @@ This package is the core documentation build engine for the eac system. It imple
 ## Code Health
 
 ### Tech Debt
-- None
+
+- `preprocess.go` (429 lines), `pdf.go` (336 lines) exceed 300 lines
 
 ### Pain Points
-- None identified
+
+- No test coverage for `mkdocsconfig.go`, `pdf.go`, `register.go`, `site.go`
 
 ### Optimization Opportunities
+
 - None identified

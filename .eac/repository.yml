@@ -13,81 +13,57 @@ repository:
     repo: eac
 
 # Module Contracts
-# Component defaults (files.source, files.tests, files.config) loaded from component-types
-# Ordered by dependency layer (Layer 0 first, then Layer 1, etc.)
 #
 # One module per go.mod / container / script bundle.
 # Module groups (module_group) allow depends_on to reference a group name
 # which expands to all modules in that group.
 modules:
-  - moniker: contracts-core
-    name: Core Contracts
-    description: Core domain contracts including ports, schemas, and defaults
-    template: go-contracts
-    module_group: contracts
+  - moniker: contracts
+    name: Contracts
+    description: Domain contracts including ports, schemas, and defaults for all contract modules
     components:
-      go: contracts/core/0.1.0
-      assets: contracts/core/0.1.0
-      # Shared contracts architecture design (covers all contract modules)
+      core:
+        type: go
+        root: contracts/core/0.1.0
+        patterns:
+          config:
+            - "**/*.json"
+            - "**/*.yml"
+            - "go.mod"
       structurizr: specs/contracts/.design
-
-  - moniker: contracts-scanner
-    name: Scanner Contracts
-    description: Security scanner contracts and default policies
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/scanner/0.1.0
-      assets: contracts/scanner/0.1.0
-
-  - moniker: contracts-runtime
-    name: Container Runtime Contract
-    description: OCI container runtime port interfaces
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/container-runtime/0.1.0
-
-  - moniker: contracts-ai
-    name: AI Provider Contract
-    description: AI provider port interfaces
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/ai-provider/0.1.0
-
-  - moniker: contracts-tui
-    name: TUI Contract
-    description: TUI port interfaces
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/tui/0.1.0
-
-  - moniker: contracts-runner
-    name: Runner Contracts
-    description: Test runner port interfaces for build, test, lint, and scan adapters
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/runner/0.1.0
-
-  - moniker: contracts-docs
-    name: Documentation Contracts
-    description: Documentation contract schemas and embedded defaults
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/docs/0.1.0
-
-  - moniker: contracts-clie
-    name: CLIE CLI Contracts
-    description: CLIE CLI contract schemas, EBNF grammar, and embedded defaults
-    template: go-contracts
-    module_group: contracts
-    components:
-      go: contracts/clie/0.1.0
-      assets: contracts/clie/0.1.0
+      scanner:
+        type: go
+        root: contracts/scanner/0.1.0
+        patterns:
+          config:
+            - "**/*.json"
+            - "**/*.yml"
+            - "go.mod"
+      runtime:
+        type: go
+        root: contracts/container-runtime/0.1.0
+      ai:
+        type: go
+        root: contracts/ai-provider/0.1.0
+      tui:
+        type: go
+        root: contracts/tui/0.1.0
+      runner:
+        type: go
+        root: contracts/runner/0.1.0
+      docs:
+        type: go
+        root: contracts/docs/0.1.0
+      clie:
+        type: go
+        root: contracts/clie/0.1.0
+        patterns:
+          config:
+            - "**/*.json"
+            - "**/*.yml"
+            - "**/*.ebnf"
+            - "**/*.yml.md"
+            - "go.mod"
 
   - moniker: mkdocs-render-oci
     name: MkDocs Render Container
@@ -279,19 +255,10 @@ modules:
     name: Core Domain Library
     description: Core domain libraries for configuration, modules, scheduling, and tools
     template: go-library
-    depends_on: [contracts-core, contracts-scanner]
+    depends_on: [contracts]
     components:
       go: go/core
       # Auto-discovered: assets, godog, gherkin, structurizr
-
-  - moniker: godog-eac
-    name: Godog Adapter
-    description: BDD test infrastructure adapter for Godog integration
-    template: go-library
-    depends_on: [core]
-    module_group: adapters
-    components:
-      go: go/adapters/godog
 
   - moniker: clibase
     name: CLI Base Framework
@@ -307,131 +274,60 @@ modules:
     components:
       templates: templates
 
-  - moniker: ai-eac
-    name: AI Adapter
-    description: AI service integration adapter
+  - moniker: adapters
+    name: Adapters
+    description: All adapter modules for test runners, package managers, and runtime integrations
     template: go-library
-    depends_on: [contracts-ai, core]
-    module_group: adapters
+    depends_on: [contracts, core, clibase]
     components:
-      go: go/adapters/ai
-
-  - moniker: docker-eac
-    name: Docker Adapter
-    description: Docker container runtime adapter
-    template: go-library
-    depends_on: [contracts-runtime, core]
-    module_group: adapters
-    components:
-      go: go/adapters/docker
-
-  - moniker: eac-to-eac
-    name: EAC Command Adapter
-    description: EAC command execution adapter
-    template: go-library
-    depends_on: [contracts-runtime, core]
-    module_group: adapters
-    components:
-      go: go/adapters/eac
-
-  - moniker: tui-eac
-    name: TUI Adapter
-    description: Terminal UI adapter for console rendering
-    template: go-library
-    depends_on: [contracts-tui, core, clibase]
-    module_group: adapters
-    components:
-      go: go/adapters/tui
-
-  - moniker: cucumber-eac
-    name: Cucumber Test Runner
-    description: Cucumber/Gherkin test runner adapter for TypeScript BDD execution
-    template: go-library
-    depends_on: [core, clibase]
-    module_group: adapters
-    components:
-      go: go/adapters/cucumber
-
-  - moniker: gotest-eac
-    name: Go Test Runner
-    description: Go test runner adapter for unit and integration test execution
-    template: go-library
-    depends_on: [core, clibase]
-    module_group: adapters
-    components:
-      go: go/adapters/gotest
-
-  - moniker: mocha-eac
-    name: Mocha Test Runner
-    description: Mocha test runner adapter for TypeScript unit test execution
-    template: go-library
-    depends_on: [core, clibase]
-    module_group: adapters
-    components:
-      go: go/adapters/mocha
-
-  - moniker: npm-eac
-    name: NPM Adapter
-    description: NPM package manager adapter for dependency isolation
-    template: go-library
-    depends_on: [core, clibase]
-    module_group: adapters
-    components:
-      go: go/adapters/npm
-
-  - moniker: pip-eac
-    name: Pip Adapter
-    description: Python pip/venv isolation adapter for dependency management
-    template: go-library
-    depends_on: [core]
-    module_group: adapters
-    components:
-      go: go/adapters/pip
-
-  - moniker: pytest-eac
-    name: Pytest Test Runner
-    description: Python pytest test runner adapter for unit test execution
-    template: go-library
-    depends_on: [core, clibase, pip-eac]
-    module_group: adapters
-    components:
-      go: go/adapters/pytest
-
-  - moniker: behave-eac
-    name: Behave Test Runner
-    description: Python behave test runner adapter for BDD test execution
-    template: go-library
-    depends_on: [core, clibase, pip-eac]
-    module_group: adapters
-    components:
-      go: go/adapters/behave
-
-  - moniker: nuget-eac
-    name: NuGet Adapter
-    description: NuGet package manager adapter for .NET dependency isolation
-    template: go-library
-    depends_on: [core]
-    module_group: adapters
-    components:
-      go: go/adapters/nuget
-
-  - moniker: dotnet-eac
-    name: Dotnet Test Runner
-    description: .NET xUnit test runner adapter with TRX report parsing
-    template: go-library
-    depends_on: [core, clibase, nuget-eac]
-    module_group: adapters
-    components:
-      go: go/adapters/dotnet
-
-  - moniker: reqnroll-eac
-    name: Reqnroll Test Runner
-    description: .NET Reqnroll BDD test runner adapter for Gherkin feature execution
-    template: go-library
-    depends_on: [core, clibase, nuget-eac, dotnet-eac]
-    module_group: adapters
-    components:
-      go: go/adapters/reqnroll
+      godog-eac:
+        type: go
+        root: go/adapters/godog
+      ai-eac:
+        type: go
+        root: go/adapters/ai
+      docker-eac:
+        type: go
+        root: go/adapters/docker
+      eac-to-eac:
+        type: go
+        root: go/adapters/eac
+      tui-eac:
+        type: go
+        root: go/adapters/tui
+      cucumber-eac:
+        type: go
+        root: go/adapters/cucumber
+      gotest-eac:
+        type: go
+        root: go/adapters/gotest
+      mocha-eac:
+        type: go
+        root: go/adapters/mocha
+      npm-eac:
+        type: go
+        root: go/adapters/npm
+      pip-eac:
+        type: go
+        root: go/adapters/pip
+      pytest-eac:
+        type: go
+        root: go/adapters/pytest
+      behave-eac:
+        type: go
+        root: go/adapters/behave
+      nuget-eac:
+        type: go
+        root: go/adapters/nuget
+      dotnet-eac:
+        type: go
+        root: go/adapters/dotnet
+      reqnroll-eac:
+        type: go
+        root: go/adapters/reqnroll
+      gh-eac:
+        type: go
+        root: go/adapters/gh
 
   - moniker: dotnet-oci
     name: Dotnet SDK Container
@@ -449,7 +345,7 @@ modules:
     versioning:
       scheme: CalVer
       release_type: published
-    depends_on: [contracts-docs, repository, oci-tools, vscode-commit, eac-mcp-server]
+    depends_on: [contracts, repository, oci-tools, vscode-commit, eac-mcp-server, adapters]
     components:
       site:
         type: docs-site
@@ -523,7 +419,7 @@ modules:
       scheme: SemVer
       changelog: release/clie/CHANGELOG.md
       release_type: published
-    depends_on: [contracts-clie, oci-tools]
+    depends_on: [contracts, oci-tools]
     artifact_matrix: cross-platform-upx
     evidence_books: [release-evidence-clie]
     components:

@@ -11,7 +11,11 @@ import (
 
 // outSubPath joins repoRoot with OutDir and any number of sub-segments.
 // This is the single point of truth for all "out/..." path construction.
+// Panics if repoRoot is empty to fail fast on programming errors (PP-092).
 func outSubPath(repoRoot string, segments ...string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	parts := make([]string, 0, 2+len(segments))
 	parts = append(parts, repoRoot, OutDir)
 	parts = append(parts, segments...)
@@ -88,6 +92,12 @@ func StagingPath(repoRoot, name string) string {
 // SecurityOutputPath returns the path to security scan output.
 func SecurityOutputPath(repoRoot, scanner string) string {
 	return outSubPath(repoRoot, SecurityDir, scanner)
+}
+
+// ScanModuleOutputPath returns the path to a module's scan output directory.
+// Path: out/scan/<moduleName>.
+func ScanModuleOutputPath(repoRoot, moduleName string) string {
+	return outSubPath(repoRoot, SecurityDir, moduleName)
 }
 
 // UnitScanOutputPath returns the path to a unit's scan output directory.

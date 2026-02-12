@@ -29,13 +29,10 @@ The mocks sub-package provides a testify-based mock for `DockerClient` that is u
 ## Code Health
 
 ### Tech Debt
-
-- None
+- None identified
 
 ### Pain Points
-
 - None identified
 
 ### Optimization Opportunities
-
 - None identified

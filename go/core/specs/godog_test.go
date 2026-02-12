@@ -40,7 +40,11 @@ func TestEacCoreFeatures(t *testing.T) {
 
 // registerAllSteps registers all step implementations for core features.
 // Each feature's steps are organized in separate files:
-//   - steps_cache_test.go: cache-invalidation feature
+//   - steps_cache_context_test.go: cache types, context, and step registration
+//   - steps_cache_setup_test.go: repository setup and file manipulation
+//   - steps_cache_assertions_test.go: YAML and output assertions
+//   - steps_cache_ci_mock_test.go: CI mocking functions
+//   - steps_cache_state_test.go: build/lint state management
 //   - steps_config_test.go: config-defaults feature
 //   - steps_logging_test.go: logging feature
 //   - steps_tool_test.go: tool-system feature

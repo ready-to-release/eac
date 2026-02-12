@@ -34,10 +34,10 @@ The `go-sums` sub-package provides an alternative approach to updating Go depend
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- tidy.go is 230 lines (under 300-line threshold but approaching it)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

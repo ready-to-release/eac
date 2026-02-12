@@ -507,8 +507,16 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 		}
 		defer resp.Body.Close()
 
-		// Stream build progress
-		err = jsonmessage.DisplayJSONMessagesStream(resp.Body, config.output(), os.Stdout.Fd(), true, nil)
+		// Stream build progress to the configured output writer.
+		// Use Fd() only when writing to a real terminal (os.Stdout); otherwise
+		// pass 0 to disable terminal control sequences for non-tty writers.
+		outFd := uintptr(0)
+		isTerm := false
+		if f, ok := config.output().(*os.File); ok {
+			outFd = f.Fd()
+			isTerm = true
+		}
+		err = jsonmessage.DisplayJSONMessagesStream(resp.Body, config.output(), outFd, isTerm, nil)
 		if err != nil {
 			return fmt.Errorf("error during image build: %w", err)
 		}
@@ -525,8 +533,14 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 		}
 		defer reader.Close()
 
-		// Stream pull progress
-		err = jsonmessage.DisplayJSONMessagesStream(reader, config.output(), os.Stdout.Fd(), true, nil)
+		// Stream pull progress to the configured output writer.
+		pullFd := uintptr(0)
+		isPullTerm := false
+		if f, ok := config.output().(*os.File); ok {
+			pullFd = f.Fd()
+			isPullTerm = true
+		}
+		err = jsonmessage.DisplayJSONMessagesStream(reader, config.output(), pullFd, isPullTerm, nil)
 		if err != nil {
 			return fmt.Errorf("error during image pull: %w", err)
 		}

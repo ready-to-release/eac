@@ -13,8 +13,8 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type workRemoveCommand struct{}
@@ -88,7 +88,36 @@ func Remove() int {
 		zap.Duration("duration", time.Since(phaseStart)))
 
 	// Phase 3: Check for uncommitted changes
-	phaseStart = time.Now()
+	if code := removeCheckUncommittedChanges(config); code != 0 {
+		return code
+	}
+
+	// Phase 4: Check workspace location and notify user
+	removeCheckWorkspaceLocation(config)
+
+	// Phase 5: Remove workspace (worktree)
+	if code := removeWorktree(config); code != 0 {
+		return code
+	}
+
+	// Phase 6: Delete local branch (unless --keep-branch)
+	removeDeleteLocalBranch(config)
+
+	// Phase 7: Delete remote branch (if --delete-remote)
+	removeHandleRemoteBranch(config)
+
+	// Phase 8: Success
+	config.base.Logger.Info("")
+	config.base.Logger.Info(fmt.Sprintf("✓ Removed workspace for %s", config.branchName))
+	config.base.Logger.Debug("Work remove command completed successfully",
+		zap.Duration("totalDuration", time.Since(startTime)))
+	return 0
+}
+
+// removeCheckUncommittedChanges verifies the worktree is clean or force mode is enabled.
+// Returns 0 to continue, or a non-zero exit code to abort.
+func removeCheckUncommittedChanges(config *removeConfig) int {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 3: Starting check uncommitted changes", zap.String("phase", "phase3"))
 	if !config.force {
 		clean, err := config.base.GitOps.IsWorktreeClean(config.worktreePath)
@@ -125,11 +154,13 @@ func Remove() int {
 				zap.Duration("duration", time.Since(phaseStart)))
 		}
 	}
+	return 0
+}
 
-	// Phase 4: Note about switching (actual directory change happens outside this command)
-	// When running from within the workspace being removed, the caller is responsible
-	// for changing to a safe directory after this command completes.
-	phaseStart = time.Now()
+// removeCheckWorkspaceLocation checks if the user is inside the workspace being removed
+// and logs appropriate guidance.
+func removeCheckWorkspaceLocation(config *removeConfig) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 4: Starting check workspace location", zap.String("phase", "phase4"))
 	inWorkspace := isInWorkspace(config.worktreePath, config.base.RepoRoot)
 	if inWorkspace {
@@ -146,14 +177,18 @@ func Remove() int {
 			zap.Duration("duration", time.Since(phaseStart)),
 			zap.Bool("inWorkspace", false))
 	}
+}
 
-	// Phase 5: Remove workspace
-	phaseStart = time.Now()
+// removeWorktree removes the git worktree and reports on remaining folder state.
+// Returns 0 to continue, or a non-zero exit code to abort.
+func removeWorktree(config *removeConfig) int {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 5: Starting remove workspace", zap.String("phase", "phase5"))
 	config.base.Logger.Info("Removing workspace...")
 
 	// Use git to find the actual common git directory (works correctly in worktrees)
-	output, err := gitexec.Run(config.worktreePath, "rev-parse", "--git-common-dir")
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", config.worktreePath, "rev-parse", "--git-common-dir")
 	if err != nil {
 		config.base.Logger.Debug("Phase 5: Failed - git common dir detection",
 			zap.String("phase", "phase5"),
@@ -172,37 +207,8 @@ func Remove() int {
 
 	// Run git worktree remove from the detected repository root
 	// On Windows, use --force by default to handle locked files
-	output, err = gitexec.Run(actualRepoRoot, "worktree", "remove", "--force", config.worktreePath)
-	if err != nil {
-		// On Windows, even with --force, git may fail to delete locked directories
-		// Check if it's a permission error and if the worktree was successfully unregistered
-		outputStr := string(output)
-		if strings.Contains(outputStr, "Permission denied") || strings.Contains(outputStr, "failed to delete") {
-			// Check if worktree is still registered
-			listOutput, listErr := gitexec.Run(actualRepoRoot, "worktree", "list")
-			if listErr == nil && !strings.Contains(string(listOutput), config.worktreePath) {
-				// Worktree was successfully unregistered, just couldn't delete directory
-				config.base.Logger.Debug("Worktree unregistered but directory couldn't be deleted",
-					zap.String("output", outputStr))
-				// Continue execution - folder will be reported as still existing below
-			} else {
-				// Worktree is still registered, this is a real failure
-				config.base.Logger.Debug("Phase 5: Failed - worktree still registered",
-					zap.String("phase", "phase5"),
-					zap.Duration("duration", time.Since(phaseStart)),
-					zap.Error(err))
-				config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, outputStr))
-				return 1
-			}
-		} else {
-			// Some other error
-			config.base.Logger.Debug("Phase 5: Failed - worktree remove",
-				zap.String("phase", "phase5"),
-				zap.Duration("duration", time.Since(phaseStart)),
-				zap.Error(err))
-			config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
-			return 1
-		}
+	if code := removeWorktreeExec(config, actualRepoRoot, phaseStart); code != 0 {
+		return code
 	}
 
 	// Check if folder still exists and inform user
@@ -217,9 +223,51 @@ func Remove() int {
 		zap.String("phase", "phase5"),
 		zap.Duration("duration", time.Since(phaseStart)),
 		zap.Bool("folderStillExists", folderExists))
+	return 0
+}
 
-	// Phase 6: Delete local branch (unless --keep-branch)
-	phaseStart = time.Now()
+// removeWorktreeExec executes the git worktree remove command and handles
+// Windows-specific permission errors where the worktree may be unregistered
+// but the directory cannot be deleted.
+func removeWorktreeExec(config *removeConfig, actualRepoRoot string, phaseStart time.Time) int {
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", actualRepoRoot, "worktree", "remove", "--force", config.worktreePath)
+	if err != nil {
+		// On Windows, even with --force, git may fail to delete locked directories
+		// Check if it's a permission error and if the worktree was successfully unregistered
+		outputStr := string(output)
+		if strings.Contains(outputStr, "Permission denied") || strings.Contains(outputStr, "failed to delete") {
+			// Check if worktree is still registered
+			listOutput, listErr := ts.RunTool(context.Background(), "git", actualRepoRoot, "worktree", "list")
+			if listErr == nil && !strings.Contains(string(listOutput), config.worktreePath) {
+				// Worktree was successfully unregistered, just couldn't delete directory
+				config.base.Logger.Debug("Worktree unregistered but directory couldn't be deleted",
+					zap.String("output", outputStr))
+				// Continue execution - folder will be reported as still existing
+				return 0
+			}
+			// Worktree is still registered, this is a real failure
+			config.base.Logger.Debug("Phase 5: Failed - worktree still registered",
+				zap.String("phase", "phase5"),
+				zap.Duration("duration", time.Since(phaseStart)),
+				zap.Error(err))
+			config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, outputStr))
+			return 1
+		}
+		// Some other error
+		config.base.Logger.Debug("Phase 5: Failed - worktree remove",
+			zap.String("phase", "phase5"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Error(err))
+		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
+		return 1
+	}
+	return 0
+}
+
+// removeDeleteLocalBranch deletes the local branch unless --keep-branch is set.
+func removeDeleteLocalBranch(config *removeConfig) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 6: Starting delete local branch", zap.String("phase", "phase6"))
 	if !config.keepBranch {
 		config.base.Logger.Info(fmt.Sprintf("Deleting local branch %s...", config.branchName))
@@ -240,9 +288,12 @@ func Remove() int {
 			zap.String("phase", "phase6"),
 			zap.Duration("duration", time.Since(phaseStart)))
 	}
+}
 
-	// Phase 7: Delete remote branch (if --delete-remote)
-	phaseStart = time.Now()
+// removeHandleRemoteBranch deletes the remote branch if --delete-remote is set,
+// or checks and reports if the remote branch still exists.
+func removeHandleRemoteBranch(config *removeConfig) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 7: Starting delete remote branch", zap.String("phase", "phase7"))
 	if config.deleteRemote {
 		config.base.Logger.Info(fmt.Sprintf("Deleting remote branch %s...", config.branchName))
@@ -269,13 +320,6 @@ func Remove() int {
 			zap.Duration("duration", time.Since(phaseStart)),
 			zap.Bool("remoteExists", remoteExistsFlag))
 	}
-
-	// Phase 8: Success
-	config.base.Logger.Info("")
-	config.base.Logger.Info(fmt.Sprintf("✓ Removed workspace for %s", config.branchName))
-	config.base.Logger.Debug("Work remove command completed successfully",
-		zap.Duration("totalDuration", time.Since(startTime)))
-	return 0
 }
 
 // removeConfig holds configuration for the remove command.
@@ -353,14 +397,14 @@ func parseRemoveConfig() (*removeConfig, error) {
 
 // validateRemoveEnvironment validates the environment before removing.
 func validateRemoveEnvironment(config *removeConfig) error {
+	// Prevent removing main workspace (pure string check, no I/O needed)
+	if config.branchName == "main" || config.branchName == "master" {
+		return fmt.Errorf("cannot remove main workspace\nYou are trying to remove the main branch workspace.")
+	}
+
 	// Check we're in a git repository
 	if err := internal.EnsureInGitRepo(); err != nil {
 		return err
-	}
-
-	// Prevent removing main workspace
-	if config.branchName == "main" || config.branchName == "master" {
-		return fmt.Errorf("cannot remove main workspace\nYou are trying to remove the main branch workspace.")
 	}
 
 	return nil
@@ -379,15 +423,16 @@ func isInWorkspace(worktreePath, repoRoot string) bool {
 
 // switchToMain switches to the main branch in the main workspace.
 func switchToMain(repoRoot string) error {
+	ts := tool.GlobalToolSystem()
 	// First verify which branch exists
 	// Try "main" first (preferred for modern git repositories)
-	_, mainExitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/main")
+	_, mainExitCode, err := ts.RunToolCombined(context.Background(), "git", repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/main")
 	if err != nil {
 		return fmt.Errorf("failed to check main branch: %w", err)
 	}
 	mainExists := mainExitCode == 0
 
-	_, masterExitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/master")
+	_, masterExitCode, err := ts.RunToolCombined(context.Background(), "git", repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/master")
 	if err != nil {
 		return fmt.Errorf("failed to check master branch: %w", err)
 	}
@@ -395,7 +440,7 @@ func switchToMain(repoRoot string) error {
 
 	// Try to checkout main if it exists
 	if mainExists {
-		output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "checkout", "main")
+		output, exitCode, err := ts.RunToolCombined(context.Background(), "git", repoRoot, "checkout", "main")
 		if err != nil {
 			return fmt.Errorf("checkout main failed: %w", err)
 		}
@@ -408,7 +453,7 @@ func switchToMain(repoRoot string) error {
 
 	// Try to checkout master if it exists
 	if masterExists {
-		output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "checkout", "master")
+		output, exitCode, err := ts.RunToolCombined(context.Background(), "git", repoRoot, "checkout", "master")
 		if err != nil {
 			return fmt.Errorf("checkout master failed: %w", err)
 		}
@@ -424,8 +469,12 @@ func switchToMain(repoRoot string) error {
 
 // getDefaultBranch detects the default/trunk branch name (main or master).
 func getDefaultBranch(repoRoot string) string {
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return "main"
+	}
 	// Try to get the default branch from git config
-	if output, err := gitexec.Run(repoRoot, "config", "--get", "init.defaultBranch"); err == nil && len(output) > 0 {
+	if output, err := ts.RunTool(context.Background(), "git", repoRoot, "config", "--get", "init.defaultBranch"); err == nil && len(output) > 0 {
 		branch := strings.TrimSpace(string(output))
 		if branch != "" {
 			return branch
@@ -434,7 +483,7 @@ func getDefaultBranch(repoRoot string) string {
 
 	// Check which branches actually exist locally using git branch --list
 	// This is more reliable than rev-parse in worktree contexts
-	if output, err := gitexec.Run(repoRoot, "branch", "--list"); err == nil {
+	if output, err := ts.RunTool(context.Background(), "git", repoRoot, "branch", "--list"); err == nil {
 		branches := string(output)
 		// Check for main first (preferred)
 		if strings.Contains(branches, " main\n") || strings.Contains(branches, "* main\n") {
@@ -452,7 +501,8 @@ func getDefaultBranch(repoRoot string) string {
 
 // deleteRemoteBranch deletes the remote branch.
 func deleteRemoteBranch(repoRoot, branch string) error {
-	output, exitCode, err := gitexec.RunCombined(context.Background(), repoRoot, "push", "origin", "--delete", branch)
+	ts := tool.GlobalToolSystem()
+	output, exitCode, err := ts.RunToolCombined(context.Background(), "git", repoRoot, "push", "origin", "--delete", branch)
 	if err != nil {
 		return fmt.Errorf("failed to delete remote branch: %w", err)
 	}
@@ -464,7 +514,11 @@ func deleteRemoteBranch(repoRoot, branch string) error {
 
 // remoteExists checks if a branch exists on the remote.
 func remoteExists(repoRoot, branch string) bool {
-	output, err := gitexec.Run(repoRoot, "ls-remote", "--heads", "origin", branch)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return false
+	}
+	output, err := ts.RunTool(context.Background(), "git", repoRoot, "ls-remote", "--heads", "origin", branch)
 	if err != nil {
 		return false
 	}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 const manifestVersion = 1
@@ -22,7 +24,8 @@ type CachedItem struct {
 }
 
 // loadManifest reads the manifest from disk. Returns empty manifest if missing/corrupt.
-func loadManifest(path string) *Manifest {
+// Errors are logged at debug level rather than silently swallowed.
+func loadManifest(path string, log *logging.ComponentLogger) *Manifest {
 	m := &Manifest{
 		Version: manifestVersion,
 		Items:   make(map[string]*CachedItem),
@@ -30,14 +33,19 @@ func loadManifest(path string) *Manifest {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Debugf("itemcache: manifest read error (will start fresh): %v", err)
+		}
 		return m
 	}
 
 	var loaded Manifest
 	if err := json.Unmarshal(data, &loaded); err != nil {
+		log.Debugf("itemcache: manifest corrupt (will start fresh): %v", err)
 		return m
 	}
 	if loaded.Version != manifestVersion {
+		log.Debugf("itemcache: manifest version mismatch (got %d, want %d), starting fresh", loaded.Version, manifestVersion)
 		return m
 	}
 	if loaded.Items == nil {

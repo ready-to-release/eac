@@ -3,6 +3,8 @@ package tool
 import (
 	"context"
 	"fmt"
+
+	coretesting "github.com/ready-to-release/eac/go/core/testing"
 )
 
 // ToolSystem holds all tool infrastructure as explicit state.
@@ -144,15 +146,27 @@ func (ts *ToolSystem) ServerToolIDForType(serverType string) string {
 }
 
 // GetTestTypeComponentType returns the component type for a test type.
+// Uses the tool config's test-type-mapping first, then falls back
+// to the adapter registry, then to built-in defaults.
 func (ts *ToolSystem) GetTestTypeComponentType(testType string) string {
+	// 1. Try tool config (data-driven from YAML)
 	if ts.Config != nil && ts.Config.TestTypeMapping != nil {
 		if compType, ok := ts.Config.TestTypeMapping[testType]; ok {
 			return compType
 		}
 	}
+
+	// 2. Try adapter registry via provider
+	if compType := coretesting.GetComponentTypeFromRegistry(testType); compType != "" {
+		return compType
+	}
+
+	// 3. Built-in fallback for well-known types
 	if compType, ok := builtinTestTypeMapping[testType]; ok {
 		return compType
 	}
+
+	// 4. Ultimate fallback
 	return "go"
 }
 
@@ -215,4 +229,37 @@ func (ts *ToolSystem) ExecuteToolByName(ctx context.Context, toolName string, ex
 		return nil, fmt.Errorf("tool %q not found", toolName)
 	}
 	return ts.Execute(ctx, tool, execCtx)
+}
+
+// RunTool executes a tool by name with simple args. Returns stdout.
+// Non-zero exit codes are returned as errors.
+func (ts *ToolSystem) RunTool(ctx context.Context, toolName, workDir string, args ...string) ([]byte, error) {
+	result, err := ts.ExecuteToolByName(ctx, toolName, &ExecutionContext{
+		WorkspaceRoot: workDir,
+		ModuleRoot:    workDir,
+		ArgsOverrides: args,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s execution failed: %w", toolName, err)
+	}
+	if result.ExitCode != 0 {
+		return result.Stderr, fmt.Errorf("%s command failed (exit %d): %s",
+			toolName, result.ExitCode, string(result.Stderr))
+	}
+	return result.Stdout, nil
+}
+
+// RunToolCombined executes a tool returning stdout + exit code.
+// Non-zero exit codes are NOT treated as errors — useful for commands
+// where non-zero exit has semantic meaning.
+func (ts *ToolSystem) RunToolCombined(ctx context.Context, toolName, workDir string, args ...string) ([]byte, int, error) {
+	result, err := ts.ExecuteToolByName(ctx, toolName, &ExecutionContext{
+		WorkspaceRoot: workDir,
+		ModuleRoot:    workDir,
+		ArgsOverrides: args,
+	})
+	if err != nil {
+		return nil, -1, fmt.Errorf("%s execution failed: %w", toolName, err)
+	}
+	return result.Stdout, result.ExitCode, nil
 }

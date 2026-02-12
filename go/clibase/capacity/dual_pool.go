@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ready-to-release/eac/go/clibase/locktracker"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/resource"
 )
 
@@ -87,6 +88,7 @@ func newGlobalSemaphoreInternal(workspaceRoot string, capacity int, registry *lo
 		capacity:      capacity,
 		registry:      registry,
 		lockID:        uuid.New().String(),
+		log:           logging.C(),
 		allocations:   make(map[string]int),
 		sigChan:       nil, // No signal handling
 		sigClose:      nil,

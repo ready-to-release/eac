@@ -8,9 +8,10 @@ package servers
 import "github.com/ready-to-release/eac/go/core/tool"
 
 // ServeContext provides execution-time configuration for servers.
-// It's populated by the framework before calling server functions.
-// This allows native servers to access configuration that's only
-// available at serve execution time (e.g., Docker images from tool-config.yml).
+// It is passed as a parameter to serve adapter functions, allowing
+// native servers to access configuration that's only available at
+// serve execution time (e.g., Docker images from tool-config.yml).
+// Use DefaultServeContext() to obtain a context with sensible defaults.
 type ServeContext struct {
 	// Docker images from tool-config.yml or repository.yml
 	StaticSiteImage  string // e.g., "cli-nginx-oci:latest"
@@ -41,19 +42,6 @@ type ServeContext struct {
 	ModuleMoniker string // Module being served
 	ContentPath   string // Path to content being served
 }
-
-// GlobalServeContext is populated by the framework before serve execution.
-// This allows native servers to access execution-time configuration.
-//
-// Usage pattern:
-//  1. Framework populates GlobalServeContext before calling server
-//  2. Server adapter reads from GlobalServeContext
-//  3. Framework clears GlobalServeContext after server completes
-//
-// Thread safety: The framework serializes server execution per module,
-// so concurrent access to GlobalServeContext is not a concern for the
-// current single-threaded-per-module design.
-var GlobalServeContext *ServeContext
 
 // DefaultServeContext returns a ServeContext with default values.
 // Docker images are looked up from tool-config.yml with hardcoded fallbacks.

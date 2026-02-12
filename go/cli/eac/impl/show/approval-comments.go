@@ -36,12 +36,10 @@ func (c *showApprovalCommentsCommand) Execute(_ context.Context, _ *core.Command
 }
 
 func ShowApprovalComments() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showApprovalCommentsImpl)
+}
 
+func showApprovalCommentsImpl() int {
 	// Parse arguments - expect module after "show approval-comments"
 	args := os.Args[1:]
 
@@ -88,7 +86,7 @@ func ShowApprovalComments() int {
 	}
 
 	// Get approval comments data using core function
-	report, err := reports.GetApprovalComments(workspaceRoot, module, version, includeAllReviews, branch)
+	report, err := reports.GetApprovalComments(reports.Deps(), workspaceRoot, module, version, includeAllReviews, branch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

@@ -69,21 +69,49 @@ func EnsureNavigationStructure(
 	return nil
 }
 
+// navItem represents a single navigation entry collected during directory scanning.
+type navItem struct {
+	name  string
+	order int
+	isDir bool
+}
+
 // GenerateNavForDir creates .nav.yml for a directory.
 func GenerateNavForDir(
 	book *config.Book,
 	stagingDir, dir string,
 	logf func(string, ...any),
 ) error {
-	items, err := os.ReadDir(dir)
+	navItems, err := scanNavItems(book, stagingDir, dir)
 	if err != nil {
 		return err
 	}
 
-	type navItem struct {
-		name  string
-		order int
-		isDir bool
+	if len(navItems) == 0 {
+		return nil
+	}
+
+	sortNavItems(navItems)
+
+	if err := writeNavFile(navItems, dir); err != nil {
+		return err
+	}
+
+	genRelPath, genRelErr := filepath.Rel(stagingDir, dir)
+	if genRelErr != nil || genRelPath == "." {
+		genRelPath = "(root)"
+	}
+	logf("    Generated: %s/.nav.yml", genRelPath)
+
+	return nil
+}
+
+// scanNavItems reads directory entries and builds a list of navigation items,
+// including subdirectories with markdown content and markdown files.
+func scanNavItems(book *config.Book, stagingDir, dir string) ([]navItem, error) {
+	items, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 
 	var navItems []navItem
@@ -124,10 +152,12 @@ func GenerateNavForDir(
 		}
 	}
 
-	if len(navItems) == 0 {
-		return nil
-	}
+	return navItems, nil
+}
 
+// sortNavItems sorts navigation items with index.md first,
+// then files before directories, then by explicit order, then alphabetically.
+func sortNavItems(navItems []navItem) {
 	sort.Slice(navItems, func(i, j int) bool {
 		if navItems[i].name == "index.md" {
 			return true
@@ -149,7 +179,10 @@ func GenerateNavForDir(
 
 		return navItems[i].name < navItems[j].name
 	})
+}
 
+// writeNavFile serializes navigation items to a .nav.yml file in the given directory.
+func writeNavFile(navItems []navItem, dir string) error {
 	nav := make([]any, 0, len(navItems))
 	for _, item := range navItems {
 		nav = append(nav, item.name)
@@ -165,17 +198,7 @@ func GenerateNavForDir(
 	}
 
 	navPath := paths.NavigationConfigPath(dir)
-	if err := os.WriteFile(navPath, data, 0o644); err != nil {
-		return err
-	}
-
-	genRelPath, genRelErr := filepath.Rel(stagingDir, dir)
-	if genRelErr != nil || genRelPath == "." {
-		genRelPath = "(root)"
-	}
-	logf("    Generated: %s/.nav.yml", genRelPath)
-
-	return nil
+	return os.WriteFile(navPath, data, 0o644)
 }
 
 // HasMarkdownContent checks if a directory has any markdown files.
@@ -304,14 +327,14 @@ func GetTitleFromFile(path string) string {
 		endIdx := strings.Index(text[3:], "---")
 		if endIdx > 0 {
 			frontmatter := text[3 : 3+endIdx]
-			titleMatch := frontmatterTitlePattern.FindStringSubmatch(frontmatter)
+			titleMatch := navRegex.FrontmatterTitle.FindStringSubmatch(frontmatter)
 			if len(titleMatch) > 1 {
 				return strings.TrimSpace(titleMatch[1])
 			}
 		}
 	}
 
-	h1Match := h1HeadingPattern.FindStringSubmatch(text)
+	h1Match := navRegex.H1Title.FindStringSubmatch(text)
 	if len(h1Match) > 1 {
 		return strings.TrimSpace(h1Match[1])
 	}

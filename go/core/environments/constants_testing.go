@@ -1,6 +1,6 @@
 package environments
 
-// Test infrastructure, BDD framework, and mock configuration constants.
+// Test infrastructure and BDD framework constants.
 const (
 	// Test infrastructure environment variables.
 	EnvCLIETestLoggingActive = "CLIE_TEST_LOGGING_ACTIVE"
@@ -21,7 +21,14 @@ const (
 	EnvGodogReportName = "GODOG_REPORT_NAME"
 	EnvGodogDebugInit  = "GODOG_DEBUG_INIT"
 
-	// Mock and test configuration.
+	// Non-mock test support.
+	EnvSkipDockerTests = "SKIP_DOCKER_TESTS"
+	EnvFilesByModule   = "FILES_BY_MODULE"
+	EnvModuleStatus    = "MODULE_STATUS"
+)
+
+// Mock configuration constants for test doubles and fixture injection.
+const (
 	EnvCLIEMockAIDir             = "CLIE_MOCK_AI_DIR"
 	EnvCLIEMockSecurity          = "CLIE_MOCK_SECURITY"
 	EnvCLIEMockDocker            = "CLIE_MOCK_DOCKER"
@@ -39,7 +46,4 @@ const (
 	EnvCLIEMockTimeout           = "CLIE_MOCK_TIMEOUT"
 	EnvCLIEMockInvalidRef        = "CLIE_MOCK_INVALID_REF"
 	EnvCLIEMockFailingWorkflow   = "CLIE_MOCK_FAILING_WORKFLOW"
-	EnvSkipDockerTests           = "SKIP_DOCKER_TESTS"
-	EnvFilesByModule             = "FILES_BY_MODULE"
-	EnvModuleStatus              = "MODULE_STATUS"
 )

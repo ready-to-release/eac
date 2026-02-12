@@ -22,7 +22,7 @@ Pytest adapter providing a test runner for Python pytest unit tests, with pip is
 
 | File | Responsibility |
 | --- | --- |
-| runner.go | `PytestRunner` implementing `TestTypeRunner` with venv setup and execution |
+| runner.go | `PytestRunner` implementing `TestTypeRunner` with `RegisterWith()` for explicit registry injection, venv setup, and execution via extracted helpers (`collectPytestResults`, `pytestExecutionFailed`) |
 | ctrf.go | Pytest JSON report to CTRF conversion with crash trace extraction |
 
 ## Dependencies
@@ -41,12 +41,11 @@ The pytest adapter enables Python unit test execution within the unified test fr
 ## Code Health
 
 ### Tech Debt
-- `Execute()` in runner.go (~150 lines) interleaves pip isolation, venv creation, dependency installation, command building, and result parsing; extracting helpers would improve clarity
-- `init()` in runner.go performs global registration; a factory function accepting a registry would be more testable
+- None identified
 
 ### Pain Points
-- `Execute()` falls back to `len(tests)` as `TestsFailed` on error when JSON results are unavailable, so per-test pass/fail counts are approximate in that case
-- No unit tests for `Execute()` or `GetTestInfo()`; only ctrf_test.go exists
+- runner.go is 335 lines; candidate for splitting (extract CTRF conversion and execution orchestration into separate files)
+- No unit tests for the full Execute() (requires tool registry); runner_test.go covers helpers, module resolution, and public API surface
 
 ### Optimization Opportunities
-- The venv creation and `pip install` steps run synchronously within Execute; caching the venv from a previous run when pyproject.toml is unchanged could skip reinstallation entirely
+- None identified

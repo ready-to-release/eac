@@ -51,108 +51,128 @@ func detectCIEnvironment() bool {
 	return false
 }
 
-// ValidatePinnedExtensions validates that extensions use pinned tags in CI environments
+// ValidatePinnedExtensions validates that extensions use pinned tags in CI environments.
 // Returns an error if running in CI and extensions have unpinned tags.
 func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
-	// Get repository root for cache operations
+	registryCache, cacheTTL := loadRegistryCacheForValidation(cfg)
+
+	unpinnedExtensions := collectUnpinnedExtensions(cfg, registryCache, cacheTTL)
+
+	saveRegistryCache(registryCache)
+
+	// In CI, return error if any extensions are unpinned
+	if isCI && len(unpinnedExtensions) > 0 {
+		errMsg := fmt.Sprintf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
+		if os.Getenv(envconsts.EnvCLIETesting) == "true" {
+			logging.Errorf("Extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
+		}
+		return unpinnedExtensions, fmt.Errorf("%s", errMsg)
+	}
+
+	return unpinnedExtensions, nil
+}
+
+// loadRegistryCacheForValidation loads the registry cache and determines the TTL.
+func loadRegistryCacheForValidation(cfg *Config) (*cache.RegistryCache, int) {
 	repoRoot := RootDir
 	if repoRoot == "" {
 		repoRoot, _ = FindRepositoryRoot() //nolint:errcheck // fall through with empty repoRoot
 	}
 
-	// Load or create cache (errors are non-fatal - we'll use empty cache)
 	registryCache, _ := cache.LoadRegistryCache(repoRoot) //nolint:errcheck // empty cache on error
 	if registryCache == nil {
-		// Create new empty cache if none exists
 		registryCache, _ = cache.LoadRegistryCache(repoRoot) //nolint:errcheck // empty cache on error
 	}
 
-	// Determine cache TTL
 	cacheTTL := 300 // default 5 minutes
 	if cfg.Registry != nil && cfg.Registry.CacheTTL > 0 {
 		cacheTTL = cfg.Registry.CacheTTL
 	}
 
-	// Check if we need to refresh cache
-	needsRefresh := registryCache.IsExpired(cacheTTL)
+	return registryCache, cacheTTL
+}
 
-	// Collect unpinned extensions for error reporting (CI) and warning suppression check
+// collectUnpinnedExtensions checks all extensions for unpinned tags and resolves
+// their latest pinned versions from cache or GHCR registry.
+func collectUnpinnedExtensions(cfg *Config, registryCache *cache.RegistryCache, cacheTTL int) []string {
+	needsRefresh := registryCache.IsExpired(cacheTTL)
 	var unpinnedExtensions []string
 
 	for _, ext := range cfg.Extensions {
-		// Skip extensions using local development images - they don't need pinning
 		if ext.LoadLocal {
 			continue
 		}
-		if hasLatestTag(ext.Image) {
-			// Extract the base image without tag
-			baseImage := ext.Image
-			if idx := strings.LastIndex(baseImage, ":"); idx > 0 {
-				baseImage = baseImage[:idx]
-			}
+		if !hasLatestTag(ext.Image) {
+			continue
+		}
 
-			// Extract extension name from image path (e.g., eac-ext -> eac)
-			var extensionName string
-			parts := strings.Split(baseImage, "/")
-			if len(parts) > 0 {
-				lastPart := parts[len(parts)-1]
-				// For ext-<name> format, extract the name
-				if strings.HasPrefix(lastPart, "ext-") {
-					extensionName = strings.TrimPrefix(lastPart, "ext-")
-				} else {
-					extensionName = lastPart
-				}
-			}
+		baseImage, extensionName := parseExtensionImage(ext.Image)
+		pinnedVersion := resolvePinnedVersion(baseImage, extensionName, registryCache, needsRefresh)
 
-			// Get pinned version from cache or fetch if needed
-			var pinnedVersion string
+		unpinnedExtensions = append(unpinnedExtensions,
+			fmt.Sprintf("'%s' must be pinned, latest is: %s", ext.Name, pinnedVersion))
+	}
 
-			if extensionName != "" {
-				// Check cache first
-				if !needsRefresh {
-					if extCache, ok := registryCache.GetExtension(extensionName); ok {
-						pinnedVersion = extCache.LatestSHA
-					}
-				}
+	return unpinnedExtensions
+}
 
-				// If not in cache or cache expired, fetch from GHCR
-				if pinnedVersion == "" {
-					logging.Debugf("Fetching latest tags from GHCR: extension=%s baseImage=%s", extensionName, baseImage)
-					pinnedVersion = fetchAndCacheExtensionTags(baseImage, extensionName, registryCache)
-					logging.Debugf("Fetched pin version: extension=%s pinnedVersion=%s", extensionName, pinnedVersion)
-				}
-			}
+// parseExtensionImage extracts the base image and extension name from an image reference.
+func parseExtensionImage(image string) (baseImage, extensionName string) {
+	baseImage = image
+	if idx := strings.LastIndex(baseImage, ":"); idx > 0 {
+		baseImage = baseImage[:idx]
+	}
 
-			// Fallback if we couldn't get a version
-			if pinnedVersion == "" {
-				pinnedVersion = "sha-<unavailable>"
-			}
-
-			// Collect unpinned extensions
-			unpinnedExtensions = append(unpinnedExtensions,
-				fmt.Sprintf("'%s' must be pinned, latest is: %s", ext.Name, pinnedVersion))
+	parts := strings.Split(baseImage, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		if strings.HasPrefix(lastPart, "ext-") {
+			extensionName = strings.TrimPrefix(lastPart, "ext-")
+		} else {
+			extensionName = lastPart
 		}
 	}
 
-	// Save updated cache
+	return baseImage, extensionName
+}
+
+// resolvePinnedVersion looks up the latest pinned version from cache or fetches from GHCR.
+func resolvePinnedVersion(baseImage, extensionName string, registryCache *cache.RegistryCache, needsRefresh bool) string {
+	if extensionName == "" {
+		return "sha-<unavailable>"
+	}
+
+	// Check cache first
+	if !needsRefresh {
+		if extCache, ok := registryCache.GetExtension(extensionName); ok {
+			return extCache.LatestSHA
+		}
+	}
+
+	// Fetch from GHCR
+	logging.Debugf("Fetching latest tags from GHCR: extension=%s baseImage=%s", extensionName, baseImage)
+	pinnedVersion := fetchAndCacheExtensionTags(baseImage, extensionName, registryCache)
+	logging.Debugf("Fetched pin version: extension=%s pinnedVersion=%s", extensionName, pinnedVersion)
+
+	if pinnedVersion == "" {
+		return "sha-<unavailable>"
+	}
+	return pinnedVersion
+}
+
+// saveRegistryCache persists the registry cache to disk (best-effort).
+func saveRegistryCache(registryCache *cache.RegistryCache) {
+	repoRoot := RootDir
+	if repoRoot == "" {
+		repoRoot, _ = FindRepositoryRoot() //nolint:errcheck // fall through with empty repoRoot
+	}
+
 	logging.Debugf("Saving registry cache: extensionsInCache=%d", len(registryCache.Extensions))
 	if err := registryCache.SaveRegistryCache(repoRoot); err != nil {
 		logging.Errorf("Failed to save registry cache: %v", err)
 	} else {
 		logging.Debug("Registry cache saved successfully")
 	}
-
-	// In CI, return error if any extensions are unpinned
-	if isCI && len(unpinnedExtensions) > 0 {
-		// Skip fatal error if we're in a test environment
-		if os.Getenv(envconsts.EnvCLIETesting) == "true" {
-			logging.Errorf("Extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
-			return unpinnedExtensions, fmt.Errorf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
-		}
-		return unpinnedExtensions, fmt.Errorf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
-	}
-
-	return unpinnedExtensions, nil
 }
 
 // checkLatestTags checks for usage of "latest" Docker image tags and logs warnings.

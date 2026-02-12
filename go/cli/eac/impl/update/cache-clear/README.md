@@ -24,7 +24,9 @@ Clears incremental cache state files, rendered asset caches, ephemeral work dire
 
 | File | Responsibility |
 | --- | --- |
-| clear.go | Command entry point, flag parsing, target clearing execution, Docker prune, semaphore cleanup, summary display |
+| clear.go | Command entry point, flag parsing, target clearing execution, summary display |
+| clear_docker.go | Docker cache clearing and space reclamation logic |
+| clear_semaphores.go | Semaphore file cleanup logic |
 | types.go | `ClearDir`, `CacheTarget`, `ClearMode`, `ClearResult` types, target building/filtering, type flag parsing |
 
 ## Dependencies
@@ -43,13 +45,13 @@ The `update cache-clear` command provides cache management for `eac-cli`, allowi
 ## Code Health
 
 ### Tech Debt
-- clear.go (497 lines) combines entry point, filesystem operations, Docker commands, semaphore cleanup, and display formatting in one file
-- Package-level `var semaphoreFiles` (clear.go:308) hardcodes known semaphore filenames; adding new semaphores requires editing this list
+- Package-level `var semaphoreFiles` in clear_semaphores.go hardcodes known semaphore filenames; adding new semaphores requires editing this list
 
 ### Pain Points
-- Docker cache clearing (`clearDockerCache`) shells out to `docker` directly with string-based space parsing (`parseDockerReclaimedSpace`), which is fragile across Docker version output changes
-- `parseSizeString` (clear.go:417) handles unit conversion with a manual switch on kB/MB/GB/TB suffixes
+- clear.go is 344 lines (exceeds 300-line threshold)
+- types.go is 301 lines (exceeds 300-line threshold)
+- clear_test.go is 1028 lines (exceeds 300-line threshold)
+- No test coverage for clear_docker.go (117 lines) or clear_semaphores.go (59 lines)
 
 ### Optimization Opportunities
-- Split clear.go into orchestration, filesystem-clearing, and docker-clearing files to improve navigability (high feasibility, clear functional boundaries)
-- Make semaphore file list discoverable via a registry or glob pattern instead of a hardcoded slice (low effort, removes maintenance burden)
+- Make semaphore file list discoverable via a registry or glob pattern instead of a hardcoded slice in clear_semaphores.go (low effort, removes maintenance burden)

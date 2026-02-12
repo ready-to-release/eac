@@ -40,12 +40,12 @@ The extensions package provides a higher-level abstraction over raw Docker opera
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- No test files exist for this package. `installer.go` (137 lines) lacks corresponding unit tests.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

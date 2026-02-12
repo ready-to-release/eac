@@ -106,7 +106,7 @@ The input hash covers all files matched by the module's component patterns:
 | `data`          | `testdata/**/*`, `assets/**/*.json`      |
 
 Patterns are defined per-component in `repository.yml` or inherited from
-blueprint templates via `component-types.yml`.
+blueprint templates via `blueprints.yml`.
 
 ### How It Works
 

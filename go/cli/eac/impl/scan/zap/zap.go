@@ -7,6 +7,7 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/scan"
 	"github.com/ready-to-release/eac/go/core/evidence"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -158,16 +159,11 @@ func ZAP() int {
 		return 1
 	}
 
-	if cfg.Security == nil {
-		log.Errorf("Error: security config not loaded\n")
-		return 1
-	}
-	scanner, ok := cfg.Security.GetScanner("zap")
-	if !ok {
+	zapImage := scan.GetScannerImageFromConfig(cfg, evidence.ScannerDAST)
+	if zapImage == "" {
 		log.Errorf("Error: ZAP scanner not found in security config\n")
 		return 1
 	}
-	zapImage := scanner.FullImage()
 	log.Debugf("Using ZAP image: image=%s", zapImage)
 
 	log.Debugf("Starting ZAP DAST scanner: module=%s, target=%s, scanType=%s, debug=%v", moniker, targetURL, scanType, debug)

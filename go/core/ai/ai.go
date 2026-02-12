@@ -9,6 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/ai/generation"
 	"github.com/ready-to-release/eac/go/core/ai/mock"
 	"github.com/ready-to-release/eac/go/core/ai/templates"
+	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/validation"
 )
 
@@ -71,7 +72,15 @@ func ExtractMap(data map[string]interface{}, key string) map[string]interface{} 
 
 type PromptData = templates.PromptData
 
-var BuildPromptWithTemplate = templates.BuildPromptWithTemplate
+// BuildPromptWithTemplate builds an AI prompt using Go text/template.
+// See templates.BuildPromptWithTemplate for full documentation.
+func BuildPromptWithTemplate(
+	promptTemplate string,
+	contract *domain.Contract,
+	customData map[string]string,
+) (string, error) {
+	return templates.BuildPromptWithTemplate(promptTemplate, contract, customData)
+}
 
 // ============================================================================
 // Generation types (from ai/generation)

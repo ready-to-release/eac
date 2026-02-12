@@ -46,7 +46,7 @@ eac show files
 ### 4. Check Module Types
 
 ```bash
-eac show component-types
+eac show component-kinds
 ```
 
 **What happens**: Groups modules by type (go-cli, go-library, mkdocs-site, etc.)

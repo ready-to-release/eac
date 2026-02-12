@@ -11,7 +11,7 @@ type UnitIDPort interface {
 	// GetModule returns the module moniker (e.g., "eac-core")
 	GetModule() string
 
-	// GetComponentType returns the component type from component-types.yml (e.g., "go", "gherkin")
+	// GetComponentType returns the component type from blueprints.yml component-kinds (e.g., "go", "gherkin")
 	GetComponentType() string
 
 	// GetComponentName returns the component instance name (e.g., "go", "docker")
@@ -50,7 +50,7 @@ type UnitSpecPort interface {
 	// GetID returns the unique identifier for this work unit
 	GetID() UnitIDPort
 
-	// GetComponentType returns the component type from component-types.yml
+	// GetComponentType returns the component type from blueprints.yml component-kinds
 	GetComponentType() string
 
 	// IsCached returns whether execution should be skipped
@@ -134,7 +134,7 @@ type UnitRegistryPort interface {
 type UnitResolverPort interface {
 	// ResolveForBuild returns work units for buildable components in a module.
 	// Returns one UnitSpec per buildable component.
-	// Respects build_after dependencies defined in component-types.yml.
+	// Respects build_after dependencies defined in blueprints.yml component-kinds.
 	ResolveForBuild(module ModuleContractPort, cached map[string]bool) []UnitSpecPort
 
 	// ResolveForLint returns work units for lintable components in a module.
@@ -143,6 +143,6 @@ type UnitResolverPort interface {
 
 	// ResolveForScan returns work units for scannable components in a module.
 	// Returns multiple UnitSpecs per component (one per scanner category).
-	// If categories is empty, uses defaults from component-types.yml.
+	// If categories is empty, uses defaults from blueprints.yml component-kinds.
 	ResolveForScan(module ModuleContractPort, categories []string, cached map[string]bool) []UnitSpecPort
 }

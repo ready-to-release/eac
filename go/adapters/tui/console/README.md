@@ -25,8 +25,13 @@ phase-based layout, tabbed output panes, and status visualization.
 
 | File | Responsibility |
 | --- | --- |
-| model.go | `Model` struct, `NewModel`, and `Init` method |
+| model.go | `Model` struct, `NewModel`, `Init`, and channel listeners |
+| model_boot.go | `ModelBootState`, `BootState`, and `ConfigMeta` types |
+| model_display.go | `DisplayConfig`, `PaneHeights`, and pane height calculations |
+| model_execution.go | `ExecutionState`, UoW types/methods, phase helpers, lock formatting |
+| model_interaction.go | `InteractionState`, `ResourceState`, tab/pane sizing, cached metrics |
 | update.go | `Update` method handling all message types |
+| mouse.go | Mouse event handling: tab detection, scroll, text selection, and hover tracking |
 | view.go | Main `View` method composing layout sections |
 | view_init.go | Init phase rendering |
 | view_tabs.go | Tab bar rendering with status indicators |
@@ -59,14 +64,19 @@ and output buffering.
 ## Code Health
 
 ### Tech Debt
-- `Update()` in update.go (~530 lines) is a single switch with 20+ case arms; extracting handler methods per message type would improve readability
-- `handleMouse()` in update.go (~310 lines) inlines tab detection, scroll handling, text selection, and hover tracking; splitting into focused helpers would reduce complexity
-- `Model` in model.go nests four large state structs (Boot, Display, Execution, Interaction); model.go is ~1160 lines total
+- update.go (891 lines) exceeds 300 lines; candidate for splitting into separate message handler files
+- derived_test.go (635 lines) exceeds 300 lines; candidate for splitting into focused test suites
+- model_execution.go (533 lines) exceeds 300 lines; candidate for splitting execution state and UoW management
+- view_logs.go (503 lines) exceeds 300 lines; candidate for splitting log rendering logic
+- catalog_test.go (469 lines) exceeds 300 lines; candidate for splitting into focused widget test files
+- model_test.go (467 lines) exceeds 300 lines; candidate for splitting into focused test suites
+- view_helpers_test.go (423 lines) exceeds 300 lines; candidate for splitting helper test coverage
+- catalog_widgets.go (417 lines) exceeds 300 lines; candidate for splitting individual widgets into separate files
+- mouse.go (389 lines) exceeds 300 lines; candidate for splitting click, scroll, and hover handling
+- view_detail_test.go (333 lines) exceeds 300 lines; candidate for splitting detail view test coverage
 
 ### Pain Points
-- `NewModel()` in model.go takes 8 positional parameters; a config/options struct would be clearer and more extensible
-- Package-level `var log` in model.go couples to `core/logging` at import time
+- None identified
 
 ### Optimization Opportunities
-- The `calculatePaneHeights()` logic (~70 lines) re-derives structured vs buffer mode each call; caching the result alongside layout metrics would avoid redundant computation
-- Extracting mouse hit-testing (detectTabAt, detectResourceZoneAt closures) into reusable methods would allow unit testing without full bubbletea scaffolding
+- None identified

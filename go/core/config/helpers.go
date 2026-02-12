@@ -3,6 +3,8 @@ package config
 
 import (
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // containsAny checks if s contains any of the substrings.
@@ -64,7 +66,7 @@ func GetTestOutputPath(repoRoot string) string {
 	if cfg == nil {
 		return filepath.Join(repoRoot, "out", "test")
 	}
-	return cfg.Repository.TestOutputDirAbs(repoRoot)
+	return paths.TestOutputDir(repoRoot)
 }
 
 // GetTestModuleOutputPath returns the test module output path with graceful fallback to defaults.
@@ -74,5 +76,5 @@ func GetTestModuleOutputPath(repoRoot, moniker string) string {
 	if cfg == nil {
 		return filepath.Join(repoRoot, "out", "test", moniker)
 	}
-	return cfg.Repository.TestModuleDirAbs(repoRoot, moniker)
+	return paths.TestModuleDir(repoRoot, moniker)
 }

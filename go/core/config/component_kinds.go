@@ -377,10 +377,11 @@ func (c *ComponentKindsConfig) buildExtensionIndex() {
 	}
 }
 
-// LoadComponentKinds ensures the component kinds configuration is initialized.
+// EnsureComponentKinds ensures the component kinds configuration is initialized.
 // Component kinds are sourced exclusively from blueprints.yml component-kinds
-// (loaded during LoadBlueprints). This method ensures a non-nil map exists.
-func (c *EACConfig) LoadComponentKinds(validate bool) error {
+// (loaded during LoadBlueprints). This method ensures a non-nil map exists
+// as a safety net; it does not load from any file.
+func (c *EACConfig) EnsureComponentKinds(validate bool) error {
 	if c.ComponentKinds == nil {
 		c.ComponentKinds = &ComponentKindsConfig{
 			Kinds: make(map[string]*ComponentType),

@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineGetTreeFilesCommand struct{}
@@ -51,7 +51,7 @@ func PipelineGetTreeFiles() int {
 
 	// Default to HEAD
 	if sha == "" {
-		output, err := gitexec.Run(workspaceRoot, "rev-parse", "HEAD")
+		output, err := tool.GlobalToolSystem().RunTool(context.Background(), "git", workspaceRoot, "rev-parse", "HEAD")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to get HEAD SHA: %v\n", err)
 			return 1
@@ -60,7 +60,7 @@ func PipelineGetTreeFiles() int {
 	}
 
 	// Use GitHub API
-	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	api := github.NewGHClient(gh.New(tool.GlobalToolSystem(), workspaceRoot), workspaceRoot)
 
 	files, err := api.GetTreeFiles(sha)
 	if err != nil {

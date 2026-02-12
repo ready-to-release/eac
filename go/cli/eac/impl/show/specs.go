@@ -35,12 +35,10 @@ func (c *showSpecsCommand) Execute(_ context.Context, _ *core.CommandRequest) in
 
 // ShowSpecs displays specifications in human-readable markdown format.
 func ShowSpecs() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showSpecsImpl)
+}
 
+func showSpecsImpl() int {
 	// Parse arguments - expect module after "show specs"
 	args := os.Args[1:]
 
@@ -86,7 +84,7 @@ func ShowSpecs() int {
 	}
 
 	// Get specs data using core function
-	report, err := reports.GetSpecs(workspaceRoot, module, version, branch)
+	report, err := reports.GetSpecs(reports.Deps(), workspaceRoot, module, version, branch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

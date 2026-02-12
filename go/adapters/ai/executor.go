@@ -4,6 +4,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -14,6 +15,10 @@ type Executor struct {
 	workspaceRoot     string
 	lastUsedProvider  Provider
 	providerFactories map[string]ProviderFactory
+
+	cachedConfig     *Config
+	cachedConfigOnce sync.Once
+	cachedConfigErr  error
 }
 
 // ProviderFactory creates a provider from configuration.
@@ -81,12 +86,16 @@ func (e *Executor) GetLastUsedProvider() Provider {
 // Loads team config and merges with personal overrides if present.
 // Personal config can override: api_key, model, provider name, endpoint, git token.
 // Both configs are validated against the ai-provider schema.
+// The config is loaded once per Executor instance and cached for subsequent calls.
 func (e *Executor) loadConfig() (*Config, error) {
-	teamConfigPath := paths.EACConfigFilePath(e.workspaceRoot)
-	personalConfigPath := paths.EACConfigPersonalFilePath(e.workspaceRoot)
+	e.cachedConfigOnce.Do(func() {
+		teamConfigPath := paths.EACConfigFilePath(e.workspaceRoot)
+		personalConfigPath := paths.EACConfigPersonalFilePath(e.workspaceRoot)
 
-	// Use merge-based loading with schema validation
-	return LoadConfigWithOverrides(e.workspaceRoot, teamConfigPath, personalConfigPath)
+		// Use merge-based loading with schema validation
+		e.cachedConfig, e.cachedConfigErr = LoadConfigWithOverrides(e.workspaceRoot, teamConfigPath, personalConfigPath)
+	})
+	return e.cachedConfig, e.cachedConfigErr
 }
 
 // LoadProvider loads the configured provider without fallback

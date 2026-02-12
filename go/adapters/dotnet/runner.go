@@ -171,39 +171,14 @@ func (r *DotnetTestRunner) Execute(pkgPath string, tests []testing.TestReference
 	fmt.Fprintf(logWriter, "Command: dotnet %s\n\n", strings.Join(testArgs, " "))
 
 	dotnetTool := tool.GlobalRegistry().GetOrAdhoc("dotnet")
-	cmd := tool.BuildCommand(runCtx, dotnetTool, &tool.ExecutionContext{
+	execResult, runErr := tool.GlobalExecutor().Execute(runCtx, dotnetTool, &tool.ExecutionContext{
 		ModuleRoot:    env.WorkDir,
 		FullEnv:       env.Env,
 		ArgsOverrides: testArgs,
+		LogWriter:     logWriter,
 	})
-
-	stdout, pipeErr := cmd.StdoutPipe()
-	if pipeErr != nil {
-		fmt.Fprintf(logWriter, "Failed to create stdout pipe: %v\n", pipeErr)
-		result.PackageFailed = true
-		return result
-	}
-	stderr, pipeErr := cmd.StderrPipe()
-	if pipeErr != nil {
-		fmt.Fprintf(logWriter, "Failed to create stderr pipe: %v\n", pipeErr)
-		result.PackageFailed = true
-		return result
-	}
-
-	runErr := cmd.Start()
-	if runErr != nil {
-		fmt.Fprintf(logWriter, "Failed to start dotnet test: %v\n", runErr)
-		result.PackageFailed = true
-		return result
-	}
-
-	stdoutOutput, _ := io.ReadAll(stdout)
-	stderrOutput, _ := io.ReadAll(stderr)
-	runErr = cmd.Wait()
-
-	fmt.Fprintf(logWriter, "%s\n", stdoutOutput)
-	if len(stderrOutput) > 0 {
-		fmt.Fprintf(logWriter, "%s\n", stderrOutput)
+	if execResult != nil {
+		fmt.Fprintf(logWriter, "%s%s\n", execResult.Stdout, execResult.Stderr)
 	}
 
 	// Parse TRX and convert to CTRF
@@ -224,13 +199,14 @@ func (r *DotnetTestRunner) Execute(pkgPath string, tests []testing.TestReference
 		}
 	}
 
-	if runErr != nil || result.TestsFailed > 0 {
+	failed := runErr != nil || (execResult != nil && execResult.ExitCode != 0)
+	if failed || result.TestsFailed > 0 {
 		result.PackageFailed = true
 	}
 
 	// Fallback counts if TRX parsing failed
 	if result.TestsTotal == 0 {
-		if runErr != nil {
+		if failed {
 			result.TestsFailed = len(tests)
 			result.PackageFailed = true
 		} else {

@@ -44,10 +44,10 @@ The `reporter` package bridges raw test output files and the display/evidence la
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for collector.go (274 lines) or types.go (119 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

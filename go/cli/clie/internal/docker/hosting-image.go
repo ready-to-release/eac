@@ -10,7 +10,6 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/ready-to-release/eac/go/cli/clie/internal/cache"
-	"github.com/ready-to-release/eac/go/cli/clie/internal/conf"
 	"github.com/ready-to-release/eac/go/cli/clie/internal/github"
 	"github.com/ready-to-release/eac/go/cli/clie/internal/logging"
 )
@@ -97,167 +96,33 @@ func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 }
 
 // EnsureImageExists checks if an image exists locally and pulls it based on the pull policy.
+// Policy resolution and image pulling are delegated to focused helper functions in hosting-image-policy.go.
 func (ch *ContainerHost) EnsureImageExists(imageName, pullPolicy string, loadLocal bool) error {
-	// Ensure Docker connectivity before image operations (lazy Ping)
 	if err := ch.EnsureConnected(); err != nil {
 		return err
 	}
 
-	// Apply default if not specified
 	if pullPolicy == "" {
 		pullPolicy = "AutoDetect"
 	}
 
-	// Handle "AutoDetect" policy - choose based on image tag and local availability
+	// Resolve AutoDetect to a concrete policy
 	if pullPolicy == "AutoDetect" {
-		// First check if image exists locally
-		localImageInfo, err := ch.client.ImageInspect(ch.ctx, imageName)
-		hasLocalImage := err == nil
-
-		if hasLocalImage {
-			logging.Debugf("Local image found: image=%s repoDigests=%d id=%s", imageName, len(localImageInfo.RepoDigests), localImageInfo.ID)
-		}
-
-		// Extract tag from image name (format: registry/repo:tag)
-		tagIndex := strings.LastIndex(imageName, ":")
-		tag := ""
-		if tagIndex > 0 && tagIndex < len(imageName)-1 {
-			tag = imageName[tagIndex+1:]
-		}
-
-		// For development: When loadLocal is true, always prefer local image
-		if hasLocalImage && loadLocal {
-			// loadLocal explicitly requests using the local image (e.g., for development builds)
-			logging.Infof("🏠 Using local development image: %s", imageName)
-			logging.Debugf("Using local development image (loadLocal: true): image=%s hasRepoDigests=%v", imageName, len(localImageInfo.RepoDigests) > 0)
-
-			// Cache the local digest for future checks
-			ch.cacheImageDigest(imageName, tag, localImageInfo)
-			return nil
-		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
-			// For dynamic tags with local image (not loadLocal mode), check cache TTL
-			// This prevents hitting the registry on every command
-			registryCache, _ := cache.LoadRegistryCache(ch.rootDir) //nolint:errcheck // nil is handled below
-			cacheTTL := 300 // default 5 minutes
-			if conf.Global.Registry != nil && conf.Global.Registry.CacheTTL > 0 {
-				cacheTTL = conf.Global.Registry.CacheTTL
-			}
-
-			if registryCache != nil && !registryCache.IsExpired(cacheTTL) {
-				// Cache is still valid, use local image
-				logging.Debugf("Using cached image (cache TTL not expired): image=%s cacheTTL=%d", imageName, cacheTTL)
-				return nil
-			}
-
-			// Cache expired, pull for updates
-			pullPolicy = "Always"
-			logging.Debugf("Auto-detected pull policy: Always (dynamic tag, cache expired): image=%s tag=%s", imageName, tag)
-		} else if hasLocalImage && tag != "" && tag != "latest" && tag != "main" && tag != "master" {
-			// For specific version tags, check if it's a local build first (only if loadLocal is true)
-			if loadLocal && len(localImageInfo.RepoDigests) == 0 {
-				// Local build with version tag
-				logging.Infof("🏠 Using local development image: %s", imageName)
-				logging.Debugf("Using local development image (AutoDetect: versioned local build): image=%s", imageName)
-				return nil
-			}
-			// For remote images with version tags, use local if present
-			// Version tags are immutable by convention, so we can cache aggressively
-			logging.Debugf("Using cached image (AutoDetect: version tag): image=%s", imageName)
-			return nil
-		} else if tag == "latest" || tag == "main" || tag == "master" || tag == "" {
-			// For dynamic tags without recent local image, always pull
-			pullPolicy = "Always"
-			logging.Debugf("Auto-detected pull policy: Always (dynamic tag): image=%s tag=%s", imageName, tag)
-		} else {
-			// For specific version tags, use IfNotPresent for aggressive caching
-			// This includes: v1.0.0, 1.2.3, dev-59-abc123, release-2.0, etc.
-			// Version tags are immutable by convention
-			pullPolicy = "IfNotPresent"
-			logging.Debugf("Auto-detected pull policy: IfNotPresent (version tag - cached aggressively): image=%s tag=%s", imageName, tag)
-		}
-	}
-
-	// Handle "Never" policy - only use local image
-	if pullPolicy == "Never" {
-		_, err := ch.client.ImageInspect(ch.ctx, imageName)
-		if err != nil {
-			return fmt.Errorf("image pull policy is 'Never' but image '%s' not found locally", imageName)
-		}
-		logging.Debugf("Using local image (pull policy: Never): image=%s", imageName)
-		return nil
-	}
-
-	// Handle "IfNotPresent" policy - check locally first
-	if pullPolicy == "IfNotPresent" {
-		_, err := ch.client.ImageInspect(ch.ctx, imageName)
-		if err == nil {
-			// Image exists locally, no need to pull
-			logging.Debugf("Image already exists locally: image=%s", imageName)
+		resolved, useLocal := ch.resolveAutoDetectPolicy(imageName, loadLocal)
+		if useLocal {
 			return nil
 		}
+		pullPolicy = resolved
 	}
 
-	// For "Always" policy or when image not found with "IfNotPresent"
-	logging.Debugf("Pulling image from registry: image=%s pullPolicy=%s", imageName, pullPolicy)
-
-	// Get GitHub authentication using centralized function
-	authConfig, authStr, err := CreateGitHubAuthConfig()
-	if err != nil {
-		return fmt.Errorf("error creating auth config: %w", err)
+	// Handle static policies (Never, IfNotPresent)
+	handled, err := ch.handleStaticPolicy(imageName, pullPolicy)
+	if handled {
+		return err
 	}
 
-	// Check if Docker daemon is running before attempting login
-	_, pingErr := ch.client.Ping(ch.ctx)
-	if pingErr != nil {
-		// Check for common Docker service not running errors
-		errStr := pingErr.Error()
-		if strings.Contains(errStr, "docker_engine") ||
-			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-			strings.Contains(errStr, "Is the docker daemon running") ||
-			strings.Contains(errStr, "system cannot find the file specified") {
-			return fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
-		}
-		return fmt.Errorf("cannot connect to Docker: %w", pingErr)
-	}
-
-	// Log in to registry
-	loginResp, err := ch.client.RegistryLogin(ch.ctx, *authConfig)
-	if err != nil {
-		// Check if this is a Docker service issue
-		errStr := err.Error()
-		if strings.Contains(errStr, "docker_engine") ||
-			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-			strings.Contains(errStr, "system cannot find the file specified") {
-			return fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
-		}
-		return fmt.Errorf("error logging in to registry: %w", err)
-	}
-	logging.Infof("Successfully logged in to registry: status=%s", loginResp.Status)
-
-	// Pull image with user feedback
-	logging.Infof("🔍 Contacting registry for %s...", imageName)
-	reader, err := ch.client.ImagePull(ch.ctx, imageName, image.PullOptions{
-		RegistryAuth: authStr,
-	})
-	if err != nil {
-		return fmt.Errorf("error pulling image: %w", err)
-	}
-	defer reader.Close()
-
-	// Display progress to user
-	if err := DisplayDockerProgress(reader); err != nil {
-		return fmt.Errorf("error during image pull: %w", err)
-	}
-
-	logging.Infof("Successfully pulled image: image=%s", imageName)
-
-	// Cache the pulled image digest
-	tag := ch.extractTag(imageName)
-	if pulledImageInfo, err := ch.client.ImageInspect(ch.ctx, imageName); err == nil {
-		ch.cacheImageDigest(imageName, tag, pulledImageInfo)
-	}
-
-	return nil
+	// Pull from registry (Always policy or IfNotPresent when image not found)
+	return ch.pullImage(imageName)
 }
 
 // extractTag extracts the tag from an image name (format: registry/repo:tag).

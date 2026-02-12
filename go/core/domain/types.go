@@ -110,81 +110,6 @@ func (b *BaseContract) GetComponentRoot(compType string) string {
 	return b.Components.GetComponentRoot(compType)
 }
 
-// HasBuildArtifacts returns true if any component has build artifacts defined.
-func (b *BaseContract) HasBuildArtifacts() bool {
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil && len(comp.Build.Artifacts) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// GetBuildArtifacts returns all build artifacts from all components.
-func (b *BaseContract) GetBuildArtifacts() []config.ModuleArtifact {
-	var result []config.ModuleArtifact
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil {
-			result = append(result, comp.Build.Artifacts...)
-		}
-	}
-	return result
-}
-
-// HasExecutableArtifacts returns true if any component has executable artifacts.
-func (b *BaseContract) HasExecutableArtifacts() bool {
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil {
-			for _, a := range comp.Build.Artifacts {
-				if a.Type == "executable" {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-// HasTestArtifacts returns true if any component has test artifacts.
-func (b *BaseContract) HasTestArtifacts() bool {
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil {
-			for _, a := range comp.Build.Artifacts {
-				if a.Type == "test" {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-// GetBuildHandler returns the build handler from the first component that has one.
-// This is used for module-level handler override detection.
-func (b *BaseContract) GetBuildHandler() string {
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil && comp.Build.Handler != "" {
-			return comp.Build.Handler
-		}
-	}
-	return ""
-}
-
-// GetArtifactsByType returns all artifacts of the specified type from all components.
-func (b *BaseContract) GetArtifactsByType(artifactType string) []config.ModuleArtifact {
-	var result []config.ModuleArtifact
-	for _, comp := range b.Components {
-		if comp != nil && comp.Build != nil {
-			for _, a := range comp.Build.Artifacts {
-				if a.Type == artifactType {
-					result = append(result, a)
-				}
-			}
-		}
-	}
-	return result
-}
-
 // HasBooks returns true if the module has any components of type 'book'.
 func (b *BaseContract) HasBooks() bool {
 	return b.Components.HasComponentType("book")
@@ -281,4 +206,23 @@ func (b *BaseContract) GetComponentAmp(componentName, operation string) float64 
 		return 1.0
 	}
 	return comp.GetAmpForOperation(operation)
+}
+
+// ModuleToBaseContract converts a config.Module to a BaseContract.
+// This centralizes the mapping so callers do not need field-by-field copying.
+func ModuleToBaseContract(m config.Module) BaseContract {
+	return BaseContract{
+		Moniker:        m.Moniker,
+		Name:           m.Name,
+		Description:    m.Description,
+		ModuleGroup:    m.ModuleGroup,
+		DependsOn:      m.DependsOn,
+		Metadata:       m.Metadata,
+		EvidenceBooks:  m.EvidenceBooks,
+		ComponentOrder: m.ComponentOrder,
+		Components:     m.Components,
+		Linting:        m.Linting,
+		Versioning:     m.Versioning,
+		ReleaseBundle:  m.ReleaseBundle,
+	}
 }

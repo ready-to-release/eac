@@ -14,15 +14,18 @@ import (
 
 // StructurizrMarker represents a Structurizr diagram marker found in markdown.
 type StructurizrMarker struct {
-	Module    string // Module name (e.g., "eac")
+	Module    string // Module moniker (e.g., "adapters" or "eac")
+	Component string // Component name (e.g., "tui-eac") - empty for module-level
 	ViewKey   string // View key (e.g., "SystemContext")
 	StartPos  int    // Start position of the marker in the file
 	EndPos    int    // End position of the marker in the file
 	FullMatch string // The full marker text
 }
 
-// structurizrMarkerPattern matches <!-- structurizr:module:viewKey --> markers.
-var structurizrMarkerPattern = regexp.MustCompile(`<!--\s*structurizr:([^:]+):([^>\s]+)\s*-->`)
+// structurizrMarkerPattern matches both:
+//   - 2-part: <!-- structurizr:MODULE:VIEW -->
+//   - 3-part: <!-- structurizr:MODULE:COMPONENT:VIEW -->
+var structurizrMarkerPattern = regexp.MustCompile(`<!--\s*structurizr:([^:]+):([^:>\s]+)(?::([^>\s]+))?\s*-->`)
 
 // structurizrIndexEntry mirrors the builder's index entry.
 type structurizrIndexEntry struct {
@@ -43,10 +46,27 @@ func ExtractStructurizrMarkers(content string) []StructurizrMarker {
 
 	matches := structurizrMarkerPattern.FindAllStringSubmatchIndex(content, -1)
 	for _, match := range matches {
-		if len(match) >= 6 {
+		if len(match) >= 8 {
+			// Group 1: module, Group 2: component-or-view, Group 3: view (if 3-part)
+			group1 := content[match[2]:match[3]]
+			group2 := content[match[4]:match[5]]
+
+			var module, component, viewKey string
+			if match[6] >= 0 && match[7] >= 0 {
+				// 3-part: MODULE:COMPONENT:VIEW
+				module = group1
+				component = group2
+				viewKey = content[match[6]:match[7]]
+			} else {
+				// 2-part: MODULE:VIEW
+				module = group1
+				viewKey = group2
+			}
+
 			markers = append(markers, StructurizrMarker{
-				Module:    content[match[2]:match[3]],
-				ViewKey:   content[match[4]:match[5]],
+				Module:    module,
+				Component: component,
+				ViewKey:   viewKey,
 				StartPos:  match[0],
 				EndPos:    match[1],
 				FullMatch: content[match[0]:match[1]],
@@ -96,39 +116,57 @@ func ProcessStructurizrDiagrams(
 	}
 	logf("    Found %d Structurizr marker(s) in %d file(s)", totalMarkers, len(markersByFile))
 
-	moduleSet := make(map[string]struct{})
+	// Collect unique (module, component) pairs for index loading.
+	type moduleComponent struct{ module, component string }
+	pairSet := make(map[moduleComponent]struct{})
 	for _, markers := range markersByFile {
 		for _, m := range markers {
-			moduleSet[m.Module] = struct{}{}
+			pairSet[moduleComponent{m.Module, m.Component}] = struct{}{}
 		}
 	}
 
 	svgLookup := make(map[string]string)
-	moduleBuildDirs := make(map[string]string)
-	for moduleName := range moduleSet {
-		builderOutputDir := paths.StructurizrModuleBuildOutputPath(workspaceRoot, moduleName)
+	// buildDirs is keyed by the lookup module name: module moniker for 2-part, component name for 3-part.
+	buildDirs := make(map[string]string)
+	for pair := range pairSet {
+		var builderOutputDir string
+		var lookupModule string
+		if pair.component == "" {
+			// 2-part: module-level structurizr
+			builderOutputDir = paths.StructurizrModuleBuildOutputPath(workspaceRoot, pair.module)
+			lookupModule = pair.module
+		} else {
+			// 3-part: per-component structurizr
+			builderOutputDir = paths.StructurizrComponentBuildOutputPath(workspaceRoot, pair.module, pair.component)
+			lookupModule = pair.component
+		}
+
 		indexPath := filepath.Join(builderOutputDir, "structurizr-index.json")
 
 		indexData, err := os.ReadFile(indexPath)
 		if err != nil {
-			warnf("structurizr builder output not found for module %s (build structurizr for that module first)", moduleName)
+			if pair.component != "" {
+				warnf("structurizr builder output not found for %s component %s (build structurizr for that module first)", pair.module, pair.component)
+			} else {
+				warnf("structurizr builder output not found for module %s (build structurizr for that module first)", pair.module)
+			}
 			continue
 		}
 
 		var idx structurizrIndex
 		if err := json.Unmarshal(indexData, &idx); err != nil {
-			warnf("corrupt structurizr-index.json for module %s: %v", moduleName, err)
+			warnf("corrupt structurizr-index.json for %s: %v", lookupModule, err)
 			continue
 		}
 
-		moduleBuildDirs[moduleName] = builderOutputDir
+		buildDirs[lookupModule] = builderOutputDir
 		for _, entry := range idx.Entries {
 			key := entry.Module + ":" + entry.ViewKey
 			svgLookup[key] = entry.SVGFilename
 		}
 	}
 
-	debugf("structurizr: loaded builder indexes for %d module(s) with %d total entries", len(moduleSet), len(svgLookup))
+	debugf("structurizr: loaded builder indexes for %d pair(s) with %d total entries", len(pairSet), len(svgLookup))
 
 	cacheDir := filepath.Join(stagingDir, "assets", "cache", "structurizr")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
@@ -149,16 +187,29 @@ func ProcessStructurizrDiagrams(
 		for i := len(markers) - 1; i >= 0; i-- {
 			marker := markers[i]
 
-			lookupKey := marker.Module + ":" + marker.ViewKey
+			// Lookup key uses component name for 3-part, module name for 2-part
+			// (matches index entry Module field set by the builder)
+			var lookupModule string
+			if marker.Component != "" {
+				lookupModule = marker.Component
+			} else {
+				lookupModule = marker.Module
+			}
+			lookupKey := lookupModule + ":" + marker.ViewKey
 			svgFilename, found := svgLookup[lookupKey]
 			if !found {
-				warnf("structurizr SVG not found in builder output for %s:%s",
-					marker.Module, marker.ViewKey)
+				if marker.Component != "" {
+					warnf("structurizr SVG not found in builder output for %s:%s:%s",
+						marker.Module, marker.Component, marker.ViewKey)
+				} else {
+					warnf("structurizr SVG not found in builder output for %s:%s",
+						marker.Module, marker.ViewKey)
+				}
 				missing++
 				continue
 			}
 
-			srcPath := filepath.Join(moduleBuildDirs[marker.Module], svgFilename)
+			srcPath := filepath.Join(buildDirs[lookupModule], svgFilename)
 			stagingPath := filepath.Join(cacheDir, svgFilename)
 
 			if _, err := os.Stat(srcPath); os.IsNotExist(err) {

@@ -10,11 +10,12 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type getEvidenceCIRunsCommand struct{}
@@ -147,7 +148,7 @@ func getEvidenceCIRuns(moniker, workspaceRoot string) (*EvidenceCIRunsResult, er
 	depsToCheck := getTransitiveDependencies(moniker, moduleRegistry)
 
 	// Create GitHub API client
-	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	api := github.NewGHClient(gh.New(tool.GlobalToolSystem(), workspaceRoot), workspaceRoot)
 
 	result := &EvidenceCIRunsResult{
 		Module:  moniker,

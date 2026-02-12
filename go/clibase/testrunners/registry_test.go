@@ -1,6 +1,7 @@
 package testrunners
 
 import (
+	"io"
 	"sort"
 	"testing"
 )
@@ -255,5 +256,198 @@ func TestBDDComponentNamesEmpty(t *testing.T) {
 	got := BDDComponentNames()
 	if len(got) != 1 || got[0] != "godog" {
 		t.Errorf("BDDComponentNames with no descriptors = %v, want [godog]", got)
+	}
+}
+
+// --- Mock runner for isolated registry tests ---
+
+// mockRunner is a minimal TestTypeRunner for testing.
+type mockRunner struct {
+	types []string
+	bdd   bool
+}
+
+func (m *mockRunner) TestTypes() []string                                     { return m.types }
+func (m *mockRunner) IsBDD() bool                                             { return m.bdd }
+func (m *mockRunner) GetTestInfo(_ TestReference, _ string, _ any) *TestInfo  { return nil }
+func (m *mockRunner) FindTestRoot(_ string, _ any) string                     { return "" }
+func (m *mockRunner) BuildPackagePath(_, _ string) string                     { return "" }
+func (m *mockRunner) Execute(_ string, _ []TestReference, _ io.Writer, _ RunConfig) RunResult {
+	return RunResult{}
+}
+
+// --- Isolated Registry tests ---
+
+func TestNewRegistryIsolation(t *testing.T) {
+	// Verify that two NewRegistry() instances are fully isolated from
+	// each other and from the default (package-level) registry.
+
+	ResetForTesting()
+	defer ResetForTesting()
+
+	regA := NewRegistry()
+	regB := NewRegistry()
+
+	runnerA := &mockRunner{types: []string{"typeA"}}
+	runnerB := &mockRunner{types: []string{"typeB"}}
+
+	regA.Register(runnerA)
+	regB.Register(runnerB)
+
+	t.Run("registry A has only typeA", func(t *testing.T) {
+		if got := regA.Get("typeA"); got == nil {
+			t.Fatal("expected runner for typeA in regA, got nil")
+		}
+		if got := regA.Get("typeB"); got != nil {
+			t.Error("regA should not have typeB")
+		}
+	})
+
+	t.Run("registry B has only typeB", func(t *testing.T) {
+		if got := regB.Get("typeB"); got == nil {
+			t.Fatal("expected runner for typeB in regB, got nil")
+		}
+		if got := regB.Get("typeA"); got != nil {
+			t.Error("regB should not have typeA")
+		}
+	})
+
+	t.Run("default registry is unaffected", func(t *testing.T) {
+		if got := Get("typeA"); got != nil {
+			t.Error("default registry should not have typeA")
+		}
+		if got := Get("typeB"); got != nil {
+			t.Error("default registry should not have typeB")
+		}
+	})
+}
+
+func TestNewRegistryDescriptors(t *testing.T) {
+	reg := NewRegistry()
+
+	reg.RegisterDescriptor(&TestTypeDescriptor{
+		TestType:      "custom",
+		ComponentType: "custom-lang",
+		MonikerStyle:  "feature",
+		IsBDD:         true,
+	})
+
+	t.Run("GetDescriptor", func(t *testing.T) {
+		got := reg.GetDescriptor("custom")
+		if got == nil {
+			t.Fatal("expected descriptor for custom, got nil")
+		}
+		if got.ComponentType != "custom-lang" {
+			t.Errorf("ComponentType = %q, want %q", got.ComponentType, "custom-lang")
+		}
+	})
+
+	t.Run("GetComponentType", func(t *testing.T) {
+		if got := reg.GetComponentType("custom"); got != "custom-lang" {
+			t.Errorf("GetComponentType = %q, want %q", got, "custom-lang")
+		}
+		if got := reg.GetComponentType("missing"); got != "" {
+			t.Errorf("GetComponentType for missing = %q, want empty", got)
+		}
+	})
+
+	t.Run("GetMonikerStyle", func(t *testing.T) {
+		if got := reg.GetMonikerStyle("custom"); got != "feature" {
+			t.Errorf("GetMonikerStyle = %q, want %q", got, "feature")
+		}
+		if got := reg.GetMonikerStyle("missing"); got != "file" {
+			t.Errorf("GetMonikerStyle for missing = %q, want %q", got, "file")
+		}
+	})
+
+	t.Run("AllDescriptors", func(t *testing.T) {
+		all := reg.AllDescriptors()
+		if len(all) != 1 {
+			t.Fatalf("expected 1 descriptor, got %d", len(all))
+		}
+	})
+
+	t.Run("BDDComponentNames", func(t *testing.T) {
+		names := reg.BDDComponentNames()
+		if len(names) != 1 || names[0] != "custom" {
+			t.Errorf("BDDComponentNames = %v, want [custom]", names)
+		}
+	})
+
+	t.Run("SupportedTypes", func(t *testing.T) {
+		// No runners registered, only descriptors
+		types := reg.SupportedTypes()
+		if len(types) != 0 {
+			t.Errorf("SupportedTypes = %v, want empty", types)
+		}
+	})
+}
+
+func TestNewRegistryFallback(t *testing.T) {
+	reg := NewRegistry()
+
+	fb := &mockRunner{types: []string{"fallback-type"}}
+	reg.RegisterFallback(fb)
+
+	t.Run("fallback returned for unknown type", func(t *testing.T) {
+		got := reg.Get("unknown")
+		if got != fb {
+			t.Error("expected fallback runner for unknown type")
+		}
+	})
+
+	t.Run("registered runner takes precedence", func(t *testing.T) {
+		specific := &mockRunner{types: []string{"specific"}}
+		reg.Register(specific)
+
+		got := reg.Get("specific")
+		if got != specific {
+			t.Error("expected specific runner, not fallback")
+		}
+	})
+}
+
+func TestNewRegistryGetAll(t *testing.T) {
+	reg := NewRegistry()
+
+	r1 := &mockRunner{types: []string{"a", "b"}}
+	r2 := &mockRunner{types: []string{"c"}}
+	reg.Register(r1)
+	reg.Register(r2)
+
+	all := reg.GetAll()
+	if len(all) != 3 {
+		t.Fatalf("expected 3 entries in GetAll, got %d", len(all))
+	}
+	if all["a"] != r1 || all["b"] != r1 {
+		t.Error("runner r1 should be registered for both a and b")
+	}
+	if all["c"] != r2 {
+		t.Error("runner r2 should be registered for c")
+	}
+}
+
+func TestNewRegistryResetForTesting(t *testing.T) {
+	reg := NewRegistry()
+
+	reg.Register(&mockRunner{types: []string{"x"}})
+	reg.RegisterDescriptor(&TestTypeDescriptor{TestType: "x"})
+	reg.RegisterFallback(&mockRunner{types: []string{"fb"}})
+
+	// Verify populated
+	if len(reg.GetAll()) == 0 {
+		t.Fatal("expected non-empty registry before reset")
+	}
+
+	reg.ResetForTesting()
+
+	if len(reg.GetAll()) != 0 {
+		t.Error("expected empty runners after reset")
+	}
+	if len(reg.AllDescriptors()) != 0 {
+		t.Error("expected empty descriptors after reset")
+	}
+	if reg.Get("x") != nil {
+		t.Error("expected nil for Get after reset (fallback should be cleared)")
 	}
 }

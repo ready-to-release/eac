@@ -80,8 +80,19 @@ func (h *StructurizrRenderHandler) Build(
 	cacheDir := filepath.Join(paths.StructurizrAccelCachePath(workspaceRoot), moduleName, filepath.Base(outputDir))
 	outputStructurizrDir := filepath.Join(outputDir, "structurizr")
 
-	// Locate this module's workspace.dsl
-	workspacePath := filepath.Join(specsDir, moduleName, ".design", "workspace.dsl")
+	// Resolve workspace.dsl from component root (per-component builds)
+	// or fall back to module-level design path
+	var workspacePath string
+	if opts.Component != "" {
+		compRoot := module.GetComponentRoot(opts.Component)
+		if compRoot != "" {
+			workspacePath = filepath.Join(workspaceRoot, compRoot, "workspace.dsl")
+		}
+	}
+	if workspacePath == "" {
+		workspacePath = filepath.Join(specsDir, moduleName, ".design", "workspace.dsl")
+	}
+
 	content, err := os.ReadFile(workspacePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -93,9 +104,19 @@ func (h *StructurizrRenderHandler) Build(
 		return 1
 	}
 
+	// Derive index module name from the component name.
+	// For per-component builds, strip the "structurizr-" prefix to get the short name
+	// (e.g., "structurizr-tui-eac" -> "tui-eac") which is used in index entries and cache filenames.
+	indexName := moduleName
+	if opts.Component != "" {
+		if short := strings.TrimPrefix(opts.Component, "structurizr-"); short != opts.Component {
+			indexName = short
+		}
+	}
+
 	dslHash := hashDSLContent(string(content))
 	mod := structurizrModuleWork{
-		ModuleName:    moduleName,
+		ModuleName:    indexName,
 		WorkspacePath: workspacePath,
 		DSLHash:       dslHash,
 	}
@@ -115,13 +136,13 @@ func (h *StructurizrRenderHandler) Build(
 			filename := filepath.Base(svgPath)
 			viewKey := extractViewKeyFromCacheFilename(filename, mod.ModuleName)
 			items = append(items, itemcache.Item{
-				Key:           moduleName + ":" + viewKey,
+				Key:           indexName + ":" + viewKey,
 				ContentHash:   dslHash,
 				CacheFilename: filename,
 				OutputRelPath: filename,
 			})
 			allEntries = append(allEntries, StructurizrIndexEntry{
-				Module:      moduleName,
+				Module:      indexName,
 				ViewKey:     viewKey,
 				DSLHash:     dslHash,
 				SVGFilename: filename,
@@ -139,7 +160,7 @@ func (h *StructurizrRenderHandler) Build(
 
 		for _, view := range views {
 			items = append(items, itemcache.Item{
-				Key:           moduleName + ":" + view.ViewKey,
+				Key:           indexName + ":" + view.ViewKey,
 				ContentHash:   dslHash,
 				CacheFilename: view.SVGFilename,
 				OutputRelPath: view.SVGFilename,

@@ -48,13 +48,10 @@ outputs in Gherkin, JSON, OSCAL, or Structurizr formats.
 ## Code Health
 
 ### Tech Debt
-- `ai.go:74`: package-level `var BuildPromptWithTemplate` is mutable; could be replaced with a function call
-- No unit tests for `generation/structured_generator.go` (276 lines) or `generation/strategies.go` (318 lines)
+- None identified
 
 ### Pain Points
-- `generation/retry.go` (426 lines) mixes config building, retry orchestration, and validator loading; splitting these would improve testability
-- `templates/builder.go` has no direct tests; template rendering correctness is only tested indirectly
+- None identified
 
 ### Optimization Opportunities
-- Add unit tests for `StructuredGenerator` and retry strategies directly (low effort, high value)
-- Extract `loadValidatorForFormat` from `retry.go` into a standalone factory to reduce file size and coupling (medium effort)
+- None identified

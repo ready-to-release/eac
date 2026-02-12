@@ -45,6 +45,11 @@ Foundation for BDD specification processing. Used by the `test export-manual` co
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- None identified

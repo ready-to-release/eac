@@ -52,6 +52,13 @@ the current HEAD SHA.
 
 ## Code Health
 
-- **Tech Debt**: `config.go`: `ShouldForcePull` and `ShouldForceNoCacheDocker` are thin wrappers that obscure the underlying `ShouldSkip` call; document or inline them to reduce indirection.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: `ShouldSkip` iterates the full `SkipSpecs` slice on every call; for the current small spec counts this is fine, but if specs grow, a pre-computed `map[Level]map[Type]bool` at parse time would be O(1) (low priority, current usage is well under threshold).
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- config.go: `ShouldSkip` iterates the full `SkipSpecs` slice on every call; for current small spec counts this is fine, but if specs grow, a pre-computed `map[Level]map[Type]bool` at parse time would be O(1) (low priority, current usage is well under threshold)
+- Good test coverage with cache_test.go, ci_test.go, config_test.go, and defaults_test.go
+- All files are concise (all under 200 lines)

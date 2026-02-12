@@ -10,6 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
+	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 // defaultRiskAnalysisPrompt is the fallback prompt when file is not found.
@@ -153,6 +154,7 @@ func parseAIResponse(response string) (*AIRiskAnalysis, error) {
 	}
 
 	// Fall back to creating analysis from response text
+	logging.C().Warnf("AI risk response did not contain valid JSON; falling back to default likelihood=3 (medium). Response preview: %s", truncateString(response, 100))
 	return &AIRiskAnalysis{
 		ComputedLikelihood: 3, // Default to medium
 		Reasoning:          response,

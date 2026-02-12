@@ -8,7 +8,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/test/testers"
-	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -20,14 +20,8 @@ func generateSummaryMulti(testRunID string) error {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Load config for path resolution
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
 	// Construct paths
-	testRunDir := filepath.Join(cfg.Repository.TestOutputDirAbs(workspaceRoot), testRunID)
+	testRunDir := filepath.Join(paths.TestOutputDir(workspaceRoot), testRunID)
 	summaryPath := filepath.Join(testRunDir, "summary.md")
 
 	// Check if test-run-id directory exists

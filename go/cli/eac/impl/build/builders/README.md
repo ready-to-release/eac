@@ -24,7 +24,12 @@ Registry of build handler implementations that compile, render, or package modul
 
 | File/Sub-package | Responsibility |
 | --- | --- |
-| go.go | `GoHandler` for Go compilation with cross-platform and CGO support |
+| go.go | `GoHandler` registration, interface methods, and tool execution |
+| go_build.go | Go build orchestration: library, test, and single-binary builds |
+| go_cross.go | Cross-compilation for multiple GOOS/GOARCH targets |
+| go_artifacts.go | Artifact listing from per-module definitions |
+| go_version.go | Version injection, ldflags, and changelog parsing |
+| go_checksum.go | SHA256 checksum generation for release artifacts |
 | docker.go | `DockerHandler` for Docker image builds |
 | buildx.go | `BuildxHandler` for multi-platform Docker buildx |
 | site.go | `SiteHandler` for unified doc-site preprocessing and render |
@@ -37,6 +42,7 @@ Registry of build handler implementations that compile, render, or package modul
 | helpers.go | `RunCommandWithLog`, `Logln`, and shared builder utilities |
 | drawio.go | DrawIO diagram rendering via container |
 | structurizr.go | Structurizr architecture diagram rendering to SVG |
+| builders_unit_test.go | Unit tests for `Logln`, `substituteVars`, `isBuildMetadataFile` |
 | mkdocs/ | MkDocs-specific handlers (preprocess, site-render, pdf-render) |
 
 ## Dependencies
@@ -45,6 +51,7 @@ Registry of build handler implementations that compile, render, or package modul
 - `core/tool` -- build bridge, handler registry, and tool execution
 - `core/config` -- module and artifact configuration
 - `core/adapters` -- module contract port adapters
+- `core/environments` -- CI detection via `environments.IsCI()`
 - `impl/build/docprep` -- document preprocessing pipeline
 
 ## Role in System
@@ -54,15 +61,13 @@ The builders package provides all concrete `BuildHandler` implementations used b
 ## Code Health
 
 ### Tech Debt
-- `buildx.go:297`: TODO to migrate to tool executor once stdin support is added to ExecutionContext
-- `mkdocs-book.go:438`: TODO to support multiple books per module with `--book` flag
-- `go.go` is 665 lines with many functions; `buildCrossCompiledFromArtifacts` (line 412) is ~97 lines with nested cross-platform loops
-- `buildx.go`: `Build` method (~115 lines, line 55-170) inlines CI detection, registry auth, and arg assembly
+
+- `mkdocs.go` (743 lines), `pdf-render-tool.go` (742 lines), `mkdocs-book.go` (496 lines), `helpers.go` (394 lines), `buildx.go` (353 lines), `structurizr.go` (334 lines), `pdf.go` (320 lines), `docker.go` (311 lines) exceed 300 lines
 
 ### Pain Points
-- No test files for `docker.go`, `drawio.go`, `structurizr.go`, `scripts.go`, `none.go`, or `mermaid-render.go`
-- `buildx.go:84` detects CI via raw env-var checks (`os.Getenv("CI")`) instead of the shared `environment.Detect()` helper
+
+- No test coverage for `drawio.go`, `go_artifacts.go`, `go_build.go`, `go_checksum.go`, `go_cross.go`, `go_version.go`, `mermaid-render.go`, `mkdocs-book.go`, `none.go`, `python.go`, `scripts.go`, `structurizr.go`, `types.go`
 
 ### Optimization Opportunities
-- Extract cross-compilation loop from `go.go` into a helper that builds a single target, reducing nesting -- moderate effort
-- Unify CI-detection logic by using `environment.Detect()` consistently across all handlers -- low effort
+
+- None identified

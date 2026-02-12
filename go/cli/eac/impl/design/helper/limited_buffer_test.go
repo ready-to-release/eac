@@ -6,6 +6,8 @@ package design
 import (
 	"strings"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/iobuffer"
 )
 
 // TestLimitedBuffer_Write tests writing to a limited buffer
@@ -49,19 +51,19 @@ func TestLimitedBuffer_Write(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lb := &limitedBuffer{limit: tt.limit}
+			lb := iobuffer.NewLimitedBuffer(tt.limit)
 			var err error
 
 			for _, write := range tt.writes {
 				_, err = lb.Write([]byte(write))
 			}
 
-			if lb.total != tt.wantTotal {
-				t.Errorf("limitedBuffer.total = %d, want %d", lb.total, tt.wantTotal)
+			if lb.Total() != tt.wantTotal {
+				t.Errorf("LimitedBuffer.Total() = %d, want %d", lb.Total(), tt.wantTotal)
 			}
 
 			if (err != nil) != tt.wantError {
-				t.Errorf("limitedBuffer.Write() error = %v, wantError %v", err, tt.wantError)
+				t.Errorf("LimitedBuffer.Write() error = %v, wantError %v", err, tt.wantError)
 			}
 		})
 	}
@@ -69,7 +71,7 @@ func TestLimitedBuffer_Write(t *testing.T) {
 
 // TestLimitedBuffer_String tests String() method
 func TestLimitedBuffer_String(t *testing.T) {
-	lb := &limitedBuffer{limit: 100}
+	lb := iobuffer.NewLimitedBuffer(100)
 
 	writes := []string{"hello", " ", "world"}
 	for _, write := range writes {
@@ -80,37 +82,37 @@ func TestLimitedBuffer_String(t *testing.T) {
 	want := "hello world"
 
 	if got != want {
-		t.Errorf("limitedBuffer.String() = %q, want %q", got, want)
+		t.Errorf("LimitedBuffer.String() = %q, want %q", got, want)
 	}
 }
 
 // TestLimitedBuffer_ExactLimit tests writing exactly at the limit
 func TestLimitedBuffer_ExactLimit(t *testing.T) {
-	lb := &limitedBuffer{limit: 5}
+	lb := iobuffer.NewLimitedBuffer(5)
 
 	n, err := lb.Write([]byte("12345"))
 	if err != nil {
-		t.Errorf("limitedBuffer.Write() at exact limit should not error, got: %v", err)
+		t.Errorf("LimitedBuffer.Write() at exact limit should not error, got: %v", err)
 	}
 
 	if n != 5 {
-		t.Errorf("limitedBuffer.Write() wrote %d bytes, want 5", n)
+		t.Errorf("LimitedBuffer.Write() wrote %d bytes, want 5", n)
 	}
 
-	if lb.total != 5 {
-		t.Errorf("limitedBuffer.total = %d, want 5", lb.total)
+	if lb.Total() != 5 {
+		t.Errorf("LimitedBuffer.Total() = %d, want 5", lb.Total())
 	}
 
 	// Next write should fail
 	_, err = lb.Write([]byte("x"))
 	if err == nil {
-		t.Error("limitedBuffer.Write() after limit should error, got nil")
+		t.Error("LimitedBuffer.Write() after limit should error, got nil")
 	}
 }
 
 // TestLimitedBuffer_PartialWrite tests that partial writes work correctly
 func TestLimitedBuffer_PartialWrite(t *testing.T) {
-	lb := &limitedBuffer{limit: 5}
+	lb := iobuffer.NewLimitedBuffer(5)
 
 	// Write 3 bytes
 	n, err := lb.Write([]byte("abc"))
@@ -121,38 +123,38 @@ func TestLimitedBuffer_PartialWrite(t *testing.T) {
 	// Write 5 more bytes, but only 2 should fit
 	n, err = lb.Write([]byte("12345"))
 	if err == nil {
-		t.Error("limitedBuffer.Write() should error when exceeding limit")
+		t.Error("LimitedBuffer.Write() should error when exceeding limit")
 	}
 
 	if n != 2 {
-		t.Errorf("limitedBuffer.Write() partial write n = %d, want 2", n)
+		t.Errorf("LimitedBuffer.Write() partial write n = %d, want 2", n)
 	}
 
-	if lb.total != 5 {
-		t.Errorf("limitedBuffer.total = %d, want 5", lb.total)
+	if lb.Total() != 5 {
+		t.Errorf("LimitedBuffer.Total() = %d, want 5", lb.Total())
 	}
 
 	got := lb.String()
 	want := "abc12"
 	if got != want {
-		t.Errorf("limitedBuffer.String() = %q, want %q", got, want)
+		t.Errorf("LimitedBuffer.String() = %q, want %q", got, want)
 	}
 }
 
 // TestLimitedBuffer_LargeData tests with max Docker output size
 func TestLimitedBuffer_LargeData(t *testing.T) {
-	lb := &limitedBuffer{limit: MaxDockerOutputSize}
+	lb := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
 
 	// Write 1MB of data
 	data := strings.Repeat("a", 1024*1024)
 	n, err := lb.Write([]byte(data))
 
 	if err != nil {
-		t.Errorf("limitedBuffer.Write() 1MB should not error: %v", err)
+		t.Errorf("LimitedBuffer.Write() 1MB should not error: %v", err)
 	}
 
 	if n != 1024*1024 {
-		t.Errorf("limitedBuffer.Write() wrote %d bytes, want %d", n, 1024*1024)
+		t.Errorf("LimitedBuffer.Write() wrote %d bytes, want %d", n, 1024*1024)
 	}
 
 	// Write more data up to 10MB
@@ -160,13 +162,13 @@ func TestLimitedBuffer_LargeData(t *testing.T) {
 		lb.Write([]byte(data))
 	}
 
-	if lb.total != MaxDockerOutputSize {
-		t.Errorf("limitedBuffer.total = %d, want %d", lb.total, MaxDockerOutputSize)
+	if lb.Total() != MaxDockerOutputSize {
+		t.Errorf("LimitedBuffer.Total() = %d, want %d", lb.Total(), MaxDockerOutputSize)
 	}
 
 	// Next write should fail
 	_, err = lb.Write([]byte("x"))
 	if err == nil {
-		t.Error("limitedBuffer.Write() beyond max should error")
+		t.Error("LimitedBuffer.Write() beyond max should error")
 	}
 }

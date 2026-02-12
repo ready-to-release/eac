@@ -15,15 +15,24 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-// NpmInstallMu serializes all npm ci/install calls to prevent
+// npmInstallMu serializes all npm ci/install calls to prevent
 // concurrent npm cache contention (Windows EBUSY on shared esbuild.exe etc).
 // Test execution itself remains fully parallel - only the install step is serialized.
-var NpmInstallMu sync.Mutex
+var npmInstallMu sync.Mutex
+
+// WithInstallLock executes fn while holding the npm install mutex.
+// This serializes npm ci/install calls to prevent concurrent npm cache contention.
+func WithInstallLock(fn func() error) error {
+	npmInstallMu.Lock()
+	defer npmInstallMu.Unlock()
+	return fn()
+}
 
 // NpmIsolation manages isolated npm environments for TypeScript test execution.
 type NpmIsolation struct {
@@ -34,9 +43,10 @@ type NpmIsolation struct {
 
 // IsolatedEnv represents a prepared isolated npm environment.
 type IsolatedEnv struct {
-	WorkDir    string   // Isolated directory for npm ci
-	Env        []string // Environment with NPM_CONFIG_CACHE set
-	SourceRoot string   // Original module root (for logging)
+	WorkDir      string   // Isolated directory for npm ci
+	Env          []string // Environment with NPM_CONFIG_CACHE set
+	SourceRoot   string   // Original module root (for logging)
+	DepsUpToDate bool     // True if npm ci/install can be skipped (lockfile unchanged)
 }
 
 // NewNpmIsolation creates a new NpmIsolation instance.
@@ -134,13 +144,61 @@ func (n *NpmIsolation) PrepareIsolatedEnv(moduleRoot, outputDir string) (*Isolat
 	}
 
 	return &IsolatedEnv{
-		WorkDir:    workDir,
-		Env:        env,
-		SourceRoot: moduleRoot,
+		WorkDir:      workDir,
+		Env:          env,
+		SourceRoot:   moduleRoot,
+		DepsUpToDate: !needsReset && npmDepsMarkerValid(workDir, moduleRoot),
 	}, nil
 }
 
+// MarkNpmDepsInstalled writes a marker file after a successful npm ci/install.
+// The marker records the mtime of package-lock.json (or package.json as fallback)
+// so subsequent runs can skip reinstallation.
+func MarkNpmDepsInstalled(workDir, moduleRoot string) {
+	markerPath := filepath.Join(workDir, ".eac-npm-deps-installed")
+	lockFile := filepath.Join(moduleRoot, "package-lock.json")
+	info, err := os.Stat(lockFile)
+	if err != nil {
+		// Fallback to package.json
+		lockFile = filepath.Join(moduleRoot, "package.json")
+		info, err = os.Stat(lockFile)
+		if err != nil {
+			return
+		}
+	}
+	_ = os.WriteFile(markerPath, []byte(info.ModTime().Format(time.RFC3339Nano)), 0o644)
+}
+
+// npmDepsMarkerValid returns true if the npm deps marker matches the current lockfile mtime.
+func npmDepsMarkerValid(workDir, moduleRoot string) bool {
+	markerPath := filepath.Join(workDir, ".eac-npm-deps-installed")
+	data, err := os.ReadFile(markerPath)
+	if err != nil {
+		return false
+	}
+	// Also check that node_modules exists
+	if _, err := os.Stat(filepath.Join(workDir, "node_modules")); os.IsNotExist(err) {
+		return false
+	}
+	lockFile := filepath.Join(moduleRoot, "package-lock.json")
+	info, err := os.Stat(lockFile)
+	if err != nil {
+		lockFile = filepath.Join(moduleRoot, "package.json")
+		info, err = os.Stat(lockFile)
+		if err != nil {
+			return false
+		}
+	}
+	recorded, err := time.Parse(time.RFC3339Nano, string(data))
+	if err != nil {
+		return false
+	}
+	return info.ModTime().Equal(recorded)
+}
+
 // packageFilesChanged checks if package.json or package-lock.json have changed.
+// Note: mtime+size comparison can miss content changes if both are identical.
+// This is an acceptable trade-off for sync performance; content hashing would be slower.
 func packageFilesChanged(moduleRoot, workDir string) bool {
 	files := []string{"package.json", "package-lock.json"}
 	for _, file := range files {
@@ -167,6 +225,8 @@ func packageFilesChanged(moduleRoot, workDir string) bool {
 
 // copyFileIfChanged copies src to dst only if src has changed (based on mtime and size).
 // Returns (true, nil) if file was copied, (false, nil) if no update needed.
+// Note: mtime+size comparison can miss content changes if both are identical.
+// This is an acceptable trade-off for sync performance; content hashing would be slower.
 func copyFileIfChanged(src, dst string) (bool, error) {
 	srcInfo, err := os.Stat(src)
 	if err != nil {
@@ -208,6 +268,8 @@ func copyFileIfChanged(src, dst string) (bool, error) {
 
 // syncDirectory synchronizes src directory to dst with incremental updates.
 // Only copies files that have changed based on mtime and size.
+// Uses a single pass: walks the source to copy changed files while building
+// a set of source-relative paths, then removes destination files not in that set.
 func syncDirectory(srcDir, dstDir string) error {
 	srcInfo, err := os.Stat(srcDir)
 	if err != nil {
@@ -222,18 +284,8 @@ func syncDirectory(srcDir, dstDir string) error {
 		return err
 	}
 
-	// Track files in destination for cleanup
-	dstFiles := make(map[string]bool)
-	_ = filepath.Walk(dstDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil
-		}
-		relPath, _ := filepath.Rel(dstDir, path)
-		dstFiles[relPath] = true
-		return nil
-	})
-
-	// Walk source and copy changed files
+	// Single pass: walk source, copy changed files, track source-relative paths
+	srcFiles := make(map[string]bool)
 	err = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
@@ -250,18 +302,31 @@ func syncDirectory(srcDir, dstDir string) error {
 			return os.MkdirAll(dstPath, 0o755)
 		}
 
-		// Remove from tracking (file still exists in source)
-		delete(dstFiles, relPath)
+		// Track this source file
+		srcFiles[relPath] = true
 
 		// Copy if changed
 		_, copyErr := copyFileIfChanged(path, dstPath)
 		return copyErr
 	})
-
-	// Remove files that no longer exist in source
-	for relPath := range dstFiles {
-		_ = os.Remove(filepath.Join(dstDir, relPath))
+	if err != nil {
+		return err
 	}
 
-	return err
+	// Walk destination to remove files that no longer exist in source
+	_ = filepath.Walk(dstDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			return nil
+		}
+		relPath, _ := filepath.Rel(dstDir, path)
+		if !srcFiles[relPath] {
+			_ = os.Remove(path)
+		}
+		return nil
+	})
+
+	return nil
 }

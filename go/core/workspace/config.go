@@ -1,5 +1,7 @@
 package workspace
 
+import "os"
+
 // Mode controls workspace detection behavior.
 type Mode int
 
@@ -15,6 +17,10 @@ const (
 	// Use when you need the "real" repo root regardless of env.
 	ModeGitOnly
 )
+
+// EnvReaderFunc reads an environment variable by name.
+// Matches the signature of os.Getenv.
+type EnvReaderFunc func(key string) string
 
 // Options configures workspace detection behavior.
 type Options struct {
@@ -34,6 +40,10 @@ type Options struct {
 	// Default: false
 	RequireGit bool
 
+	// EnvReader reads environment variables. Defaults to os.Getenv when nil.
+	// Inject a custom reader in tests to avoid mutating the real environment.
+	EnvReader EnvReaderFunc
+
 	// Logger for debug output (optional).
 	Logger interface{ Debug(msg string, keysAndValues ...any) }
 }
@@ -44,4 +54,13 @@ func DefaultOptions() Options {
 		Mode:     ModeAuto,
 		Validate: true,
 	}
+}
+
+// getenv returns the environment variable value using the configured reader
+// or os.Getenv as fallback.
+func (o Options) getenv(key string) string {
+	if o.EnvReader != nil {
+		return o.EnvReader(key)
+	}
+	return os.Getenv(key)
 }

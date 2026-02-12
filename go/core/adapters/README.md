@@ -45,13 +45,11 @@ decoupling between the domain layer and consuming code.
 ## Code Health
 
 ### Tech Debt
-- No test files exist; adapter correctness relies solely on compile-time interface checks (`var _ Port = (*Adapter)(nil)`) with no behavioral tests
-- unit_adapter.go:90-96 -- `PoolAllocationAdapter` declares an anonymous interface instead of importing the concrete type; this duplicates the method set and may drift
+- None identified
 
 ### Pain Points
-- `ModuleContractAdapter` delegates 16 methods, making the underlying `ModuleContractPort` interface unusually wide; consider splitting into smaller focused interfaces (e.g., identity, components, versioning)
-- `AdaptModules`, `AdaptUnitSpecs`, and `AdaptUnitResults` repeat the same slice-map-adapt loop; a generic `adaptSlice[T, P]` helper (Go 1.18+) would eliminate the boilerplate
+- None identified
 
 ### Optimization Opportunities
-- Adapter allocation could be avoided for read-only callers by embedding the port interface directly in the domain type (requires contract package change, larger effort)
-- Adding a table-driven adapter test for each type would be low-cost and catch method signature drift early (straightforward, high value)
+- All adapter files are concise and focused (doc.go, module_adapter.go, registry_adapter.go, unit_adapter.go all under 150 lines)
+- adapters_test.go present providing test coverage

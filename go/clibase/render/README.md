@@ -26,15 +26,15 @@ renderer registry for extensible output formats.
 
 ## Internal Structure
 
-| File               | Responsibility                                     |
-| ---                | ---                                                |
+| File                 | Responsibility                                               |
+| -------------------- | ------------------------------------------------------------ |
 | `markdown_table.go`  | `MarkdownTableConfig`, `TableBuilder`, `SimpleMarkdownTable` |
 | `console_table.go`   | `ConsoleTableConfig`, `ConsoleTableBuilder`, terminal width  |
-| `formatter.go`       | `FormatMarkdownTable` post-processor for alignment  |
-| `struct_renderer.go` | Struct-to-YAML-code-block rendering                 |
-| `json.go`            | `RenderAsJSON` with order-preserving `OrderedMap`   |
-| `toml.go`            | `RenderAsTOML` via YAML intermediate                |
-| `custom.go`          | Bridge to `render/custom` registry                  |
+| `formatter.go`       | `FormatMarkdownTable` post-processor for alignment           |
+| `struct_renderer.go` | Struct-to-YAML-code-block rendering                          |
+| `json.go`            | `RenderAsJSON` with order-preserving `OrderedMap`            |
+| `toml.go`            | `RenderAsTOML` via YAML intermediate                         |
+| `custom.go`          | Bridge to `render/custom` registry                           |
 
 ## Dependencies
 
@@ -51,10 +51,14 @@ without modifying the render package itself.
 ## Code Health
 
 ### Tech Debt
-- Limited test coverage: only `markdown_table_test.go`, `struct_renderer_test.go`, and `examples_test.go` exist; `console_table.go`, `json.go`, and `toml.go` have no dedicated tests
+
+- None identified
 
 ### Pain Points
-- YAML-first serialization path (JSON/TOML marshal via YAML intermediate) adds latency and subtle ordering bugs if YAML tags differ from JSON tags
+
+- `console_table.go` (308 lines) exceeds 300 lines and has no dedicated test file
+- Large test files: `json_test.go` (574 lines), `toml_test.go` (331 lines), `struct_renderer_test.go` (267 lines)
 
 ### Optimization Opportunities
-- Add unit tests for `json.go` and `toml.go` round-trip fidelity (low effort)
+
+- None identified

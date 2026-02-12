@@ -35,7 +35,7 @@ The parallel sub-package provides the concrete TUI implementation used by all pa
 ## Code Health
 
 ### Tech Debt
-- None
+- None identified
 
 ### Pain Points
 - None identified

@@ -170,19 +170,25 @@ func (r *DiskOutputReader) checkUoWChanged(
 	return false, ""
 }
 
-// hasNewerBuildManifest checks if any build manifest for the given module
-// was executed after the specified time.
+// hasNewerBuildManifest checks if the module's build completed after the specified time.
+// For multi-component modules, the build completion time is the latest ExecutedAt
+// across all build manifests. This prevents false invalidation where early-finishing
+// test UoWs are invalidated by late-finishing build components in the same module.
 func (r *DiskOutputReader) hasNewerBuildManifest(module string, after time.Time) bool {
 	manifests, err := r.ListUoWs(core.ActionBuild, module)
 	if err != nil {
 		return false
 	}
+	// Find the latest build completion time across all components.
+	// A module build is a single logical event — it's only "newer" if all
+	// components finished after the test/lint/scan manifest was created.
+	var latest time.Time
 	for _, m := range manifests {
-		if m.ExecutedAt.After(after) {
-			return true
+		if m.ExecutedAt.After(latest) {
+			latest = m.ExecutedAt
 		}
 	}
-	return false
+	return !latest.IsZero() && latest.After(after)
 }
 
 // IsModuleChanged returns true if any UoW in the module needs execution.

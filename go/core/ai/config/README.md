@@ -52,6 +52,12 @@ Central configuration provider for all AI generation commands. Commands like `cr
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: The `ContractLoader` version parameter is ignored (line 179 of `loader.go`), which is intentional but may confuse callers expecting version-aware behavior.
-- **Optimization Opportunities**: The extraction helpers (`ExtractString`, `ExtractInt`, etc.) could be replaced with a generic function using Go generics.
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- loader.go (391 lines): Extraction helpers (`ExtractString`, `ExtractInt`, `ExtractBool`, `ExtractMap`, `ExtractStringList`) at lines 326-384 could be replaced with a generic function using Go generics, reducing 60 lines to ~20
+- types.go is concise at 40 lines

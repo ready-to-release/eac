@@ -6,19 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sync"
 
 	"github.com/ready-to-release/eac/go/core/domain/schema"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
-)
-
-// Schema validator (lazy initialized).
-var (
-	schemaValidator     *schema.Validator
-	schemaValidatorOnce sync.Once
-	schemaValidatorErr  error
 )
 
 var reEnvVarSubstitution = regexp.MustCompile(`\$\{([^}]+)\}`)
@@ -194,17 +186,17 @@ func loadConfigFileWithValidation(path, workspaceRoot string) (*Config, error) {
 }
 
 // validateAgentConfigSchema validates config data against the ai-provider schema.
+// Creates a validator per call using the provided workspaceRoot. This is cheap
+// because schema.NewValidator shares compiled schemas from a process-level factory
+// and only wraps them with the workspace root context.
 func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
-	schemaValidatorOnce.Do(func() {
-		schemaValidator, schemaValidatorErr = schema.NewValidator(workspaceRoot)
-	})
-
-	if schemaValidatorErr != nil {
+	v, err := schema.NewValidator(workspaceRoot)
+	if err != nil {
 		// Schema validation is optional - don't fail if schemas can't be loaded
 		return nil
 	}
 
-	return schemaValidator.ValidateYAML(schema.SchemaEACConfig, data)
+	return v.ValidateYAML(schema.SchemaAIProvider, data)
 }
 
 // loadPersonalConfigWithValidation loads and validates the personal override file.

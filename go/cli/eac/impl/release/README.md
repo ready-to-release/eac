@@ -64,6 +64,7 @@ Manages the full release lifecycle including changelog generation, version calcu
 | prune_packages.go | Prune old container packages |
 | eac-ext.go | EAC extension release handling |
 | clie.go | CLI-specific release handling |
+| scaffold.go | Generic command-scaffold helper for flag/usage boilerplate |
 
 ## Dependencies
 
@@ -85,13 +86,11 @@ The `release` package orchestrates the entire release pipeline in `eac`, from de
 ## Code Health
 
 ### Tech Debt
-- Several oversized functions: `ReleaseCheckCI` (~213 lines in check-ci.go), `ReleaseAwaitDeps` (~214 lines in await-deps.go), `performRelease` (~292 lines in this.go), `ReleaseChangelog` (~286 lines in changelog.go)
-- No tests for execute-layers.go, cleanup.go, tag-pending.go, or clie.go
+- No files over 300 lines; largest files are under 200 lines
+- No unit tests for execute-layers.go, cleanup.go, tag-pending.go, clie.go, eac-ext.go, changelog.go, check-exists.go, pending.go, prune.go, prune_packages.go, scaffold.go, or this.go
 
 ### Pain Points
-- Duplication across command files: each subcommand repeats flag-parsing, usage-printing, and error-handling scaffolding that could be extracted into a shared harness
-- CI-polling logic in check-ci.go and await-deps.go overlaps significantly (both query workflow runs, check ancestors, inherit previous CI)
+- CI-polling logic in check-ci.go and await-deps.go overlaps (both query workflow runs, check ancestors, inherit previous CI)
 
 ### Optimization Opportunities
-- Extract a generic command-scaffold helper to eliminate per-file flag/usage boilerplate (high feasibility, mechanical refactor)
-- Split check-ci.go and await-deps.go into smaller focused functions and share CI-query utilities (moderate feasibility, needs careful integration testing)
+- None identified

@@ -33,12 +33,12 @@ The session package provides a stable identifier for the current shell session, 
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- No test files exist for this package. `session.go` lacks corresponding unit tests for the cross-platform shell session identification logic.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

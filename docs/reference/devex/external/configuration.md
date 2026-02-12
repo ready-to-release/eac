@@ -14,11 +14,11 @@ EAC uses YAML configuration files with a layered system:
 | `books.yml`      | Book configuration   | No       |
 | `ai-provider.yml`| AI provider settings | No       |
 
-**System defaults** (`contracts/eac-core/0.1.0/defaults/`):
+**System defaults** (`contracts/core/0.1.0/schemas/defaults/`):
 
 | File                  | Purpose                    |
 | --------------------- | -------------------------- |
-| `component-types.yml` | Component type definitions |
+| `blueprints.yml`      | Component kind definitions |
 | `tool-config.yml`     | Tool configurations        |
 | `environments.yml`    | Test environments          |
 | `test-suites.yml`     | Test suite definitions     |

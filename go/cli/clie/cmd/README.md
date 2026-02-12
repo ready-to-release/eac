@@ -67,15 +67,14 @@ The cmd package defines the entire user-facing command surface of the clie CLI. 
 
 ### Tech Debt
 
-- `run.go:269` -- Accesses `parsedCmd.ArgumentBoundary` without nil-guard; `parsedCmd` can be nil from the `nolint:errcheck` on line 251.
-- `install.go:316-329` -- SHA extraction parses warning messages with fragile string splitting (`strings.Split(msg, "'")`) rather than using a structured return value from `ValidatePinnedExtensions`.
-- `test_parsed_command.go` -- File uses build tag `L1` but is not a `_test.go` file by convention; its test functions are included in the production build unless tag-filtered.
+- None identified.
 
 ### Pain Points
 
-- `install.go:182-409` -- `addExtensionToConfig` is 227 lines handling config creation, registry lookup, SHA resolution, and YAML write in a single function.
-- `run.go` -- Signal handler goroutine (line 394-429) calls `os.Exit(130)` after a brief sleep, potentially racing with cleanup operations.
+- `run.go` is 535 lines, making it the largest file in the package.
+- `update.go` is 379 lines.
+- `cleanup.go` is 302 lines.
 
 ### Optimization Opportunities
 
-- The `install.go` SHA resolution reuses `ValidatePinnedExtensions` (designed for CI validation) to extract SHA tags from formatted warning messages. A dedicated `GetLatestSHA(extensionName)` function would be cleaner and more direct.
+- None identified.

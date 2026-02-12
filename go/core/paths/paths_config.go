@@ -2,14 +2,27 @@
 package paths
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
 
+// ValidateRepoRoot checks that repoRoot is non-empty.
+// Returns an error if repoRoot is empty. Callers that accept a repoRoot
+// parameter should call this at the top of their function to fail fast
+// with a clear message instead of silently producing wrong paths (PP-092).
+func ValidateRepoRoot(repoRoot string) error {
+	if repoRoot == "" {
+		return fmt.Errorf("repoRoot must be non-empty")
+	}
+	return nil
+}
+
 // CommandsBinaryPath returns the full path to the pre-built eac binary.
 // This is THE canonical way to locate the commands binary for execution.
+// Panics if repoRoot is empty (PP-092).
 //
 // When running in a container (CLIE_CONTAINER_ROOT is set), uses the container's
 // internal path (e.g., /app/out/tools/eac) where the binary
@@ -45,6 +58,9 @@ func CommandsBinaryPath(repoRoot string) string {
 // If toolsDir is empty, uses the default ToolsDir constant.
 // This variant is useful when the caller has access to configuration.
 func CommandsBinaryPathWithToolsDir(repoRoot, toolsDir string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	binaryName := "eac"
 	if runtime.GOOS == "windows" {
 		binaryName = "eac.exe"
@@ -75,7 +91,11 @@ func CommandsBinaryExists(repoRoot string) (string, bool) {
 }
 
 // SpecsPath returns the path to a module's specs directory.
+// Panics if repoRoot is empty (PP-092).
 func SpecsPath(repoRoot, moniker string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	return filepath.Join(repoRoot, SpecsDir, moniker)
 }
 
@@ -132,7 +152,11 @@ func WorkspaceDSLFiles(repoRoot, moniker string) ([]string, error) {
 }
 
 // EACConfigPath returns the path to the EAC configuration directory.
+// Panics if repoRoot is empty (PP-092).
 func EACConfigPath(repoRoot string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	return filepath.Join(repoRoot, EACDir)
 }
 

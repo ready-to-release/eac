@@ -126,9 +126,10 @@ func linkTranslationPhase(pctx *PreprocessContext) error {
 	return tm.ApplyAllTranslations()
 }
 
-func executeCommandsPhase(pctx *PreprocessContext) error {
-	executor := content.ToolCommandExecutor{}
+// defaultExecutor is the shared command executor for all pipeline phases.
+var defaultExecutor content.CommandExecutor = content.ToolCommandExecutor{}
 
+func executeCommandsPhase(pctx *PreprocessContext) error {
 	// Resolve pre-built fragments directory if module moniker is available
 	fragmentsDir := resolveFragmentsDir(pctx.WorkspaceRoot, pctx.Moniker)
 
@@ -137,7 +138,7 @@ func executeCommandsPhase(pctx *PreprocessContext) error {
 		pctx.Book,
 		pctx.WorkspaceRoot,
 		pctx.StagingDir,
-		executor,
+		defaultExecutor,
 		pctx.Log.Infof,
 		fragmentsDir,
 	)
@@ -179,13 +180,12 @@ func inlineContentPhase(pctx *PreprocessContext) error {
 }
 
 func commandHelpPhase(pctx *PreprocessContext) error {
-	executor := content.ToolCommandExecutor{}
 	return content.ProcessCommandMarkers(
 		pctx.Ctx,
 		pctx.FileIndex,
 		pctx.StagingDir,
 		pctx.WorkspaceRoot,
-		executor,
+		defaultExecutor,
 		pctx.Log.Infof,
 		pctx.Warn,
 	)

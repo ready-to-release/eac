@@ -93,10 +93,52 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 	// Close any existing logging resources
 	closeLoggingLocked()
 
+	// Build all logging cores
+	cores, closers, err := buildConfigureCores(workspaceRoot, command, pathSegments, debugToConsole, tuiWriter)
+	if err != nil {
+		return err
+	}
+
+	// Assemble the final logger from the collected cores
+	assembleGlobalLogger(cores, closers, workspaceRoot)
+
+	// Finalize global state: mark component logger as initialized, store closers, set debug flag
+	finalizeLoggingState(closers, debugToConsole)
+
+	return nil
+}
+
+// buildConfigureCores assembles all zapcore.Core instances needed by ConfigureLogging.
+// Returns the cores slice, any io.Closers that must be closed on shutdown, and an error
+// if essential directory creation fails.
+func buildConfigureCores(workspaceRoot, command string, pathSegments []string, debugToConsole bool, tuiWriter io.Writer) ([]zapcore.Core, []io.Closer, error) {
 	var cores []zapcore.Core
 	var closers []io.Closer
 
-	// Console encoder config - minimal output: message only (no prefix)
+	// Console core is always present
+	cores = append(cores, buildConfigureConsoleCore(debugToConsole))
+
+	// File logging cores (unified + target)
+	if workspaceRoot != "" && command != "" {
+		fileCores, fileClosers, err := buildConfigureFileCores(workspaceRoot, command, pathSegments)
+		if err != nil {
+			return nil, nil, err
+		}
+		cores = append(cores, fileCores...)
+		closers = append(closers, fileClosers...)
+	}
+
+	// TUI core (if TUI writer provided)
+	if tuiWriter != nil {
+		cores = append(cores, buildConfigureTUICore(tuiWriter, debugToConsole))
+	}
+
+	return cores, closers, nil
+}
+
+// buildConfigureConsoleCore creates the console zapcore.Core.
+// Info/Warn/Error always go to console; Debug goes only if debugToConsole is true.
+func buildConfigureConsoleCore(debugToConsole bool) zapcore.Core {
 	consoleEncoderConfig := zapcore.EncoderConfig{
 		TimeKey:        zapcore.OmitKey,
 		LevelKey:       zapcore.OmitKey,
@@ -109,93 +151,117 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 		EncodeDuration: zapcore.StringDurationEncoder,
 	}
 
-	// 1. Console core (always present)
-	// Info/Warn/Error always go to console
-	// Debug goes to console only if debugToConsole=true
 	consoleLevel := zapcore.InfoLevel
 	if debugToConsole {
 		consoleLevel = zapcore.DebugLevel
 	}
-	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
-	consoleCore := zapcore.NewCore(
-		consoleEncoder,
+
+	return zapcore.NewCore(
+		zapcore.NewConsoleEncoder(consoleEncoderConfig),
 		zapcore.AddSync(os.Stderr),
 		consoleLevel,
 	)
-	cores = append(cores, consoleCore)
+}
 
-	// 2. File logging cores
-	// CLIE_TEST_LOGGING_ACTIVE=true disables unified log but allows target logs
+// buildConfigureFileCores creates the unified log core and optional target log core.
+// The unified log writes to out/commands.log (disabled when CLIE_TEST_LOGGING_ACTIVE=true).
+// The target log writes to a command-specific path for build/test modules.
+func buildConfigureFileCores(workspaceRoot, command string, pathSegments []string) ([]zapcore.Core, []io.Closer, error) {
+	// Ensure out/ directory exists
+	if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
+		return nil, nil, fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	logCfg := LoadLoggingConfig(workspaceRoot)
+
+	var cores []zapcore.Core
+	var closers []io.Closer
+
+	// Unified log: out/commands.log (disabled when test logging active)
 	testLoggingActive := os.Getenv("CLIE_TEST_LOGGING_ACTIVE") == "true"
-
-	if workspaceRoot != "" && command != "" {
-		// Ensure out/ directory exists
-		if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
-			return fmt.Errorf("failed to create log directory: %w", err)
-		}
-
-		// Load logging config for rolling settings
-		logCfg := LoadLoggingConfig(workspaceRoot)
-
-		// 2a. Unified log: out/commands.log (disabled when test logging active)
-		if !testLoggingActive {
-			logPath := paths.CommandsLogPath(workspaceRoot)
-			writer := &silentLumberjackWriter{
-				Logger: &lumberjack.Logger{
-					Filename:   logPath,
-					MaxSize:    logCfg.File.MaxSizeMB,
-					MaxBackups: logCfg.File.MaxBackups,
-					MaxAge:     logCfg.File.MaxAgeDays,
-					Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
-				},
-			}
-			closers = append(closers, writer)
-
-			fileEncoder := CreateEncoder(logCfg.File.Formatter, command)
-			fileCore := zapcore.NewCore(
-				fileEncoder,
-				zapcore.AddSync(writer),
-				zapcore.DebugLevel, // File ALWAYS gets debug level
-			)
-			cores = append(cores, fileCore)
-		}
-
-		// 2b. Target file core (for build/test with module) - always enabled
-		if target, ok := logCfg.GetTarget(command); ok && len(pathSegments) > 0 {
-			module := pathSegments[0] // First path segment is the module
-			targetPath := target.ResolveTargetPath(workspaceRoot, module)
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err == nil { //nolint:gosec // G301: Log directory should be world-readable
-				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: Log files should be world-readable
-				if err == nil {
-					closers = append(closers, targetFile)
-
-					targetEncoder := CreateEncoder(target.Formatter, command)
-					targetCore := zapcore.NewCore(
-						targetEncoder,
-						zapcore.AddSync(targetFile),
-						zapcore.DebugLevel,
-					)
-					cores = append(cores, targetCore)
-				}
-			}
-		}
+	if !testLoggingActive {
+		core, closer := buildUnifiedFileCore(workspaceRoot, command, logCfg)
+		cores = append(cores, core)
+		closers = append(closers, closer)
 	}
 
-	// 3. TUI core (if TUI writer provided)
-	// Logs go to TUI pane for live display
-	if tuiWriter != nil {
-		tuiLevel := zapcore.InfoLevel
-		if debugToConsole {
-			tuiLevel = zapcore.DebugLevel
-		}
-		tuiCore := NewTUICore(tuiWriter, tuiLevel)
-		cores = append(cores, tuiCore)
+	// Target file core (for build/test with module) - always enabled
+	if core, closer, ok := buildTargetCore(workspaceRoot, command, pathSegments, logCfg); ok {
+		cores = append(cores, core)
+		closers = append(closers, closer)
 	}
 
-	// Combine all cores
+	return cores, closers, nil
+}
+
+// buildUnifiedFileCore creates the rolling-file core for out/commands.log.
+func buildUnifiedFileCore(workspaceRoot, command string, logCfg LoggingConfig) (zapcore.Core, io.Closer) {
+	logPath := paths.CommandsLogPath(workspaceRoot)
+	writer := &silentLumberjackWriter{
+		Logger: &lumberjack.Logger{
+			Filename:   logPath,
+			MaxSize:    logCfg.File.MaxSizeMB,
+			MaxBackups: logCfg.File.MaxBackups,
+			MaxAge:     logCfg.File.MaxAgeDays,
+			Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+		},
+	}
+
+	fileEncoder := CreateEncoder(logCfg.File.Formatter, command)
+	fileCore := zapcore.NewCore(
+		fileEncoder,
+		zapcore.AddSync(writer),
+		zapcore.DebugLevel, // File ALWAYS gets debug level
+	)
+
+	return fileCore, writer
+}
+
+// buildTargetCore creates the optional target file core for module-specific logs
+// (e.g., out/build/core/build.log or out/test/core/test.log).
+// Returns (core, closer, true) on success, or (nil, nil, false) if not applicable.
+func buildTargetCore(workspaceRoot, command string, pathSegments []string, logCfg LoggingConfig) (zapcore.Core, io.Closer, bool) {
+	target, ok := logCfg.GetTarget(command)
+	if !ok || len(pathSegments) == 0 {
+		return nil, nil, false
+	}
+
+	module := pathSegments[0]
+	targetPath := target.ResolveTargetPath(workspaceRoot, module)
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
+		return nil, nil, false
+	}
+
+	targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: Log files should be world-readable
+	if err != nil {
+		return nil, nil, false
+	}
+
+	targetEncoder := CreateEncoder(target.Formatter, command)
+	targetCore := zapcore.NewCore(
+		targetEncoder,
+		zapcore.AddSync(targetFile),
+		zapcore.DebugLevel,
+	)
+
+	return targetCore, targetFile, true
+}
+
+// buildConfigureTUICore creates a TUI core for live display in TUI panes.
+func buildConfigureTUICore(tuiWriter io.Writer, debugToConsole bool) zapcore.Core {
+	tuiLevel := zapcore.InfoLevel
+	if debugToConsole {
+		tuiLevel = zapcore.DebugLevel
+	}
+	return NewTUICore(tuiWriter, tuiLevel)
+}
+
+// assembleGlobalLogger combines the cores into a single zap logger and replaces
+// the global component logger.
+func assembleGlobalLogger(cores []zapcore.Core, closers []io.Closer, workspaceRoot string) {
 	combinedCore := zapcore.NewTee(cores...)
 
-	// Create new logger with combined core
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1), // Skip the ComponentLogger wrapper
@@ -205,14 +271,18 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 
 	newZapLogger := zap.New(combinedCore, opts...)
 
-	// Replace the global component logger
-	// This affects all existing ComponentLogger instances since they share the global
+	// Replace the global component logger.
+	// This affects all existing ComponentLogger instances since they share the global.
 	componentGlobalLogger = &Logger{
 		Logger:  newZapLogger,
 		config:  DefaultConfig("eac", workspaceRoot),
 		closers: closers,
 	}
+}
 
+// finalizeLoggingState marks the component logger as initialized, stores closers
+// for CloseLogging, and enables the debug flag when requested.
+func finalizeLoggingState(closers []io.Closer, debugToConsole bool) {
 	// Mark the component logger as initialized to prevent initComponentGlobalLogger from overwriting it
 	componentOnce.Do(func() {
 		// Empty - just marks the once as done so initComponentGlobalLogger won't run
@@ -226,8 +296,6 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 	if debugToConsole {
 		EnableDebug()
 	}
-
-	return nil
 }
 
 // CloseLogging closes any open log files.

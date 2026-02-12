@@ -336,7 +336,7 @@ type UoWEntry struct {
 	Module        string // Module moniker (e.g., "core", "eac")
 	Component     string // Component name (e.g., "go", "gherkin")
 	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
-	ComponentType string // From component-types.yml (e.g., "go", "gherkin", "dockerfile")
+	ComponentType string // From blueprints.yml component-kinds (e.g., "go", "gherkin", "dockerfile")
 	Container     bool   // true = runs in container, false = runs on host
 }
 
@@ -398,7 +398,7 @@ type PlannedWorkItem struct {
 	Weight        int    // Approximate weight from component type config
 	Module        string // Module moniker
 	Component     string // Component name
-	ComponentType string // From component-types.yml
+	ComponentType string // From blueprints.yml component-kinds
 }
 
 // UoWEnrichment carries incremental enrichment data for an existing planned tab.

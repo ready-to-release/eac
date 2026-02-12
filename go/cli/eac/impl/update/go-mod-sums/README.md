@@ -34,10 +34,11 @@ The `go-mod-sums` sub-package ensures `go.sum` files are up-to-date across all w
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- sums.go is 223 lines (under 300-line threshold but approaching it)
+- No test coverage (missing sums_test.go)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

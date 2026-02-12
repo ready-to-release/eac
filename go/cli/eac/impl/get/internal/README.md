@@ -35,7 +35,7 @@ This package is the shared foundation for all `get` commands in the eac CLI. Eve
 ## Code Health
 
 ### Tech Debt
-- None
+- renderer.go (153 lines) lacks dedicated unit tests; tested indirectly via get command tests
 
 ### Pain Points
 - None identified

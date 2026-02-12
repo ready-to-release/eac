@@ -21,9 +21,9 @@ Unified help printing for CLI commands, formatting usage, flags, and subcommand 
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| help.go | `PrintHelp` renders full help output for parent and leaf commands, including examples and footer |
+| File           | Responsibility                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| help.go        | `PrintHelp` renders full help output for parent and leaf commands, including examples and footer            |
 | declarative.go | `CategorizeFlags`, `PrintBehaviorFlags`, `PrintBehaviorGroup`, and `FormatDefault` for behavior flag groups |
 
 ## Dependencies
@@ -43,10 +43,13 @@ Required flags are annotated with `[required]` in the output, and flags with non
 ## Code Health
 
 ### Tech Debt
-- None identified
+
+- None identified.
 
 ### Pain Points
-- `FormatDefault` in `declarative.go` relies on map iteration order for `EnvDefaults` (lines 104-118); output order between "local" and "CI" is hard-coded but the map is not ordered
+
+- None identified.
 
 ### Optimization Opportunities
-- None identified -- package is small, well-tested, and focused
+
+- None identified.

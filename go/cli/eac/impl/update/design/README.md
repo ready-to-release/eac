@@ -4,32 +4,29 @@ Implements the `update design` command that generates or updates Structurizr DSL
 
 ## Key Types
 
-None (command-only package with mock support types).
+- **`Deps`** -- Injectable dependencies struct for testing (AI response override, git repo provider)
 
 ## Key Functions
 
-- **`UpdateDesign()`** -- Entry point for the `update design` command (registered via `init()`)
-- **`SetMockAIResponse()`** -- Inject a mock AI response for testing
-- **`ResetMockAIResponse()`** -- Clear the mock AI response
-- **`SetGitRepo()`** -- Inject a mock git repository provider for testing
-- **`ResetGitRepo()`** -- Clear the mock git repository provider
+- **`UpdateDesign()`** -- Entry point for the `update design` command
+- **`defaultDeps()`** -- Returns production dependencies with LazyRepo-based git provider
 
 ## Patterns
 
-- `init()` registration: registers command function with the global registry
-- Mock injection via package-level functions: `SetMockAIResponse()` and `SetGitRepo()` for test control
-- Global mock state: `mockAIResponse` and `gitRepoProvider` package-level variables for test doubles
+- Constructor-based dependency injection: `Deps` struct threaded through `updateDesign(deps)` for test control
+- Public entry point delegates to internal function: `UpdateDesign()` calls `updateDesign(defaultDeps())`
 
 ## Internal Structure
 
 | File | Responsibility |
 | --- | --- |
 | update.go | AI-based DSL update command entry point |
-| mocks.go | Mock injection functions for AI responses and git repository providers |
+| deps.go | Injectable dependencies struct and production defaults |
+| mocks.go | Reserved for test doubles (currently empty) |
 
 ## Dependencies
 
-- `clibase/registry` -- command registration
+- `core/git` -- git repository access via LazyRepo
 - `core/logging` -- structured logging
 
 ## Role in System
@@ -39,10 +36,11 @@ The `design` sub-package automates architecture diagram maintenance. It uses AI 
 ## Code Health
 
 ### Tech Debt
-- `mockAIResponse` is a mutable global variable; test mock injection uses package-level state rather than dependency injection
+- None identified
 
 ### Pain Points
-- Mock state must be explicitly reset between tests to avoid cross-test contamination
+- update.go is 507 lines (exceeds 300-line threshold)
+- No test coverage for deps.go (16 lines), mocks.go (1 line), or update.go (507 lines)
 
 ### Optimization Opportunities
-- Replace global mock state with constructor-based dependency injection (moderate effort, improves test isolation)
+- None identified

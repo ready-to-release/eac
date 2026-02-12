@@ -22,9 +22,11 @@ Generates a comprehensive squash commit message from all branch commits compared
 
 | File | Responsibility |
 | --- | --- |
-| squash-message.go | Command entry point, git analysis pipeline, AI prompt assembly, message output |
+| command.go | Command entry point, configuration parsing, and orchestration pipeline |
+| generator.go | AI prompt assembly, context building, message generation, and final assembly |
 | formatter.go | `SquashJSON` type, `FormatSquashMessage` JSON-to-text conversion, auditor summary extraction |
 | validator.go | `SquashMessageValidator` for header format and length validation |
+| deps.go | Injectable dependencies for testing |
 
 ## Dependencies
 
@@ -46,11 +48,13 @@ The `create squash-message` command generates publication-ready squash commit me
 ## Code Health
 
 ### Tech Debt
-- `CreateSquashMessage()` in squash-message.go is ~127 lines and handles parsing, git analysis, AI generation, and output in one function
-- No unit tests for formatter.go or validator.go; only BDD-level coverage exists
+
+- None identified
 
 ### Pain Points
-- squash-message.go concentrates the entire pipeline in a single file with no sub-package decomposition
+
+- No test coverage for `command.go`, `deps.go`, `generator.go`
 
 ### Optimization Opportunities
-- Add focused unit tests for formatter.go and validator.go to catch regressions without running full BDD suite (high feasibility, small surface area)
+
+- None identified

@@ -20,15 +20,15 @@ used across all format-specific validators.
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
-| --- | --- |
-| validation.go | `ValidationError`, `Validator` interface, `AIExecutor` interface |
-| error_codes.go | `ErrorCode` type and full registry of all error codes |
-| error_formatter.go | `ErrorFormatter` for AI-friendly error messages |
-| formats/gherkin/ | Gherkin feature file validation |
-| formats/json/ | JSON schema validation |
-| formats/oscal/ | OSCAL catalog and profile validation |
-| formats/structurizr/ | Structurizr DSL validation |
+| File/Sub-package     | Responsibility                                                   |
+| -------------------- | ---------------------------------------------------------------- |
+| validation.go        | `ValidationError`, `Validator` interface, `AIExecutor` interface |
+| error_codes.go       | `ErrorCode` type and full registry of all error codes            |
+| error_formatter.go   | `ErrorFormatter` for AI-friendly error messages                  |
+| formats/gherkin/     | Gherkin feature file validation                                  |
+| formats/json/        | JSON schema validation                                           |
+| formats/oscal/       | OSCAL catalog and profile validation                             |
+| formats/structurizr/ | Structurizr DSL validation                                       |
 
 ## Dependencies
 
@@ -44,14 +44,18 @@ and reference error codes from this package.
 ## Code Health
 
 ### Tech Debt
-- `formats/gherkin/validator.go`: `Validate()` is ~200 lines (line 57-260+); consider splitting structural vs semantic checks
-- `error_codes.go`: 1000-line file dominated by static declarations; consider code-generating the registry
-- `formats/structurizr/docker.go:29`: global mutable `defaultContainerProvider` set via `SetContainerProvider()`; not concurrency-safe
+- `error_codes.go` is 1000 lines, dominated by static error code declarations
+- `formats/gherkin/validator.go` is 405 lines
+- `formats/gherkin/validator_tags.go` is 306 lines
+- `formats/structurizr/quick.go` is 321 lines
+- `formats/structurizr/docker.go` is 289 lines with global mutable `defaultContainerProvider` set via `SetContainerProvider()`; not concurrency-safe
+- `formats/oscal/profile.go` is 299 lines
+- `formats/json/validator.go` is 266 lines
+- `error_formatter.go` is 224 lines
 
 ### Pain Points
-- No unit tests in the root `validation/` package (error_codes.go, error_formatter.go, validation.go are untested directly)
 - Four separate interfaces (`Validator`, `AIExecutor`, `AIExecutorWithProviderInfo`, structurizr `Validator`) may confuse consumers
 
 ### Optimization Opportunities
-- Extract error code registry into a generated file to reduce manual maintenance (medium effort, high value)
-- Add table-driven tests for `ErrorFormatter` formatting functions (low effort, high value)
+- Extract error code registry into a generated file to reduce manual maintenance
+- Consider splitting large validator files by validation category

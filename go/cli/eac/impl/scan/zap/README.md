@@ -34,10 +34,10 @@ The `zap` sub-package adds DAST scanning capability to the `scan` command group.
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- zap.go (256 lines) lacks dedicated unit tests; tested via integration scenarios
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

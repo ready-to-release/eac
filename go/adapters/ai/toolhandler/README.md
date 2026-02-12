@@ -22,9 +22,11 @@ AI tool handler that bridges the tool system to the AI adapter for automated mod
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| handler.go | `AIToolHandler` implementing `BuildHandler` with content loading, prompt building, and AI execution |
+| File               | Responsibility                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| handler.go         | `AIToolHandler` implementing `BuildHandler` with AI execution orchestration                |
+| handler_loader.go  | Content loading: `loadFilesWithExtensions` and file collection from module component roots |
+| handler_prompts.go | Prompt construction: analysis-specific prompt building with prior context and instructions |
 
 ## Dependencies
 
@@ -41,10 +43,10 @@ The toolhandler sub-package enables AI-powered automated analysis of module arti
 ## Code Health
 
 ### Tech Debt
-- handler.go is ~460 lines combining content loading, prompt building, and execution logic; extracting `contentLoader` and `promptBuilder` helpers would improve clarity
+- None identified
 
 ### Pain Points
-- `loadFilesWithExtensions` in handler.go:256 silently skips walk errors and limits to 50 files with no user feedback when the limit is hit
+- handler_loader.go is 203 lines; candidate for splitting by file type (e.g., separate DSL, spec, and source loading logic)
 
 ### Optimization Opportunities
 - None identified

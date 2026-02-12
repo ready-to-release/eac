@@ -7,7 +7,7 @@ So that the repository maintains a valid architecture with clear module boundari
 
 Background:
   Given a repository with module contracts defined in .eac/repository.yml
-  And a module type registry in .eac/module-types.yml
+  And component type definitions in the blueprints contract
 
 Rule: Module contract fields must meet schema requirements
 

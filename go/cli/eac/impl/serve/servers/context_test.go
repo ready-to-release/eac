@@ -42,23 +42,17 @@ func TestDefaultServeContext(t *testing.T) {
 	}
 }
 
-func TestGlobalServeContext_InitiallyNil(t *testing.T) {
-	// GlobalServeContext starts as nil
-	// It's set by the framework before serve execution
-	// We just verify the variable exists and can be assigned
-	oldCtx := GlobalServeContext
-
-	GlobalServeContext = &ServeContext{
-		StaticSiteImage: "test-image:v1",
-		WorkspaceRoot:   "/tmp/test",
+func TestServeContext_NilFallback(t *testing.T) {
+	// Adapter functions accept *ServeContext parameter.
+	// When nil is passed, they should use DefaultServeContext().
+	// Verify that DefaultServeContext returns non-nil with expected defaults.
+	ctx := DefaultServeContext()
+	if ctx == nil {
+		t.Fatal("DefaultServeContext should not return nil")
 	}
-
-	if GlobalServeContext.StaticSiteImage != "test-image:v1" {
-		t.Errorf("Failed to set GlobalServeContext")
+	if ctx.DefaultPort != 9000 {
+		t.Errorf("DefaultPort = %d, want 9000", ctx.DefaultPort)
 	}
-
-	// Restore
-	GlobalServeContext = oldCtx
 }
 
 func TestServeContext_AllFieldsSettable(t *testing.T) {

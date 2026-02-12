@@ -88,11 +88,12 @@ cli/
 │       └── books.yml           # Book configuration
 │
 ├── contracts/                  # JSON schemas and system defaults
-│   └── eac-core/0.1.0/         # Versioned schemas and defaults
-│       ├── defaults/           # System default configurations
-│       │   ├── component-types.yml
-│       │   ├── tool-config.yml
-│       │   └── ...
+│   └── core/0.1.0/             # Versioned schemas and defaults
+│       ├── schemas/
+│       │   └── defaults/       # System default configurations
+│       │       ├── blueprints.yml
+│       │       ├── tool-config.yml
+│       │       └── ...
 │       ├── repository.schema.json
 │       └── ...
 │

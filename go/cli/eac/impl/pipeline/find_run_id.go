@@ -6,10 +6,10 @@ import (
 	"os"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
-
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineFindRunIDCommand struct{}
@@ -68,7 +68,7 @@ func PipelineFindRunID() int {
 	}
 
 	// Use GitHub API
-	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	api := github.NewGHClient(gh.New(tool.GlobalToolSystem(), workspaceRoot), workspaceRoot)
 
 	// List runs and filter
 	runs, err := api.ListRuns(workflow, github.ListRunsOpts{

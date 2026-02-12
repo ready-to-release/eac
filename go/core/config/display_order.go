@@ -26,7 +26,7 @@ type DisplayOrder struct {
 // computeDisplayOrder builds the display ordering from module dependencies,
 // baseline tracking, and component-level dependencies.
 // Must be called after expandModuleGroups (module deps resolved) and
-// LoadComponentKinds (build_after available).
+// EnsureComponentKinds (build_after available).
 func (c *RepositoryConfig) computeDisplayOrder(compTypes *ComponentKindsConfig) {
 	order := &DisplayOrder{
 		Depth:      make(map[string]int),

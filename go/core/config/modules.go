@@ -289,7 +289,7 @@ type ModuleLinting struct {
 // The first component in the map becomes the default for build operations.
 // Each entry can be:
 //   - A string: root path for the component
-//   - nil/empty: use default_root from component-types.yml
+//   - nil/empty: use default_root from blueprints.yml component-kinds
 //   - ComponentEntry: full configuration with root and optional pattern overrides
 type ModuleComponents map[string]*ComponentEntry
 
@@ -353,7 +353,7 @@ type ComponentEntry struct {
 	Amp *AmpConfig `yaml:"amp,omitempty" json:"amp,omitempty"`
 
 	// Config contains component-specific configuration (e.g., book name, theme).
-	// Values here override defaults from component-types.yml.
+	// Values here override defaults from blueprints.yml component-kinds.
 	Config map[string]string `yaml:"config,omitempty" json:"config,omitempty"`
 
 	// ComponentGroup is the group name for this component.
@@ -812,7 +812,7 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 	}
 }
 
-// ApplyComponentDefaults resolves component roots and patterns from component-types.yml.
+// ApplyComponentDefaults resolves component roots and patterns from blueprints.yml component-kinds.
 // This should be called after ComponentTypes are loaded.
 func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfig, repoRoot string) {
 	for i := range c.Modules {
@@ -835,7 +835,7 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 			compType = entry.Type
 		}
 
-		// Look up in component-types.yml by TYPE, not name
+		// Look up in blueprints.yml component-kinds by TYPE, not name
 		ct := compTypes.Get(compType)
 		if ct == nil {
 			continue
@@ -847,12 +847,12 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 			m.Components[compName] = entry
 		}
 
-		// Resolve root from component-type default if not set
+		// Resolve root from component-kind default if not set
 		if entry.Root == "" && ct.DefaultRoot != "" {
 			entry.Root = ct.GetRoot(m.Moniker, "")
 		}
 
-		// Merge patterns from component-type if not overridden
+		// Merge patterns from component-kind if not overridden
 		if entry.Patterns == nil {
 			entry.Patterns = &ComponentPatterns{}
 		}
@@ -877,14 +877,14 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 			copy(entry.DependsOn, ct.DependsOn)
 		}
 
-		// Apply component-type defaults (convention-over-configuration)
+		// Apply component-kind defaults (convention-over-configuration)
 		m.applyComponentDefaults(compName, entry, ct)
 
 		entry.Resolved = true
 	}
 }
 
-// applyComponentDefaults applies convention-over-configuration defaults from component-type.
+// applyComponentDefaults applies convention-over-configuration defaults from component-kind.
 func (m *Module) applyComponentDefaults(compName string, entry *ComponentEntry, ct *ComponentType) {
 	if ct.Defaults == nil {
 		return

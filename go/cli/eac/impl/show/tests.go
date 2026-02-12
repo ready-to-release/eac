@@ -9,7 +9,6 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/internal/testdata"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
@@ -33,12 +32,10 @@ func (c *showTestsCommand) Execute(_ context.Context, _ *core.CommandRequest) in
 }
 
 func ShowTests() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showTestsImpl)
+}
 
+func showTestsImpl() int {
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {

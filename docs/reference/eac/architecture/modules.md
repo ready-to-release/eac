@@ -71,7 +71,7 @@ modules:
 
 See [Component Types Reference](./component-kinds.md) for full documentation.
 
-**File**: `contracts/core/0.1.0/schemas/defaults/component-types.yml`
+**File**: `contracts/core/0.1.0/schemas/defaults/blueprints.yml` (component-kinds section)
 
 Component types define:
 
@@ -583,7 +583,7 @@ eac update-design <module>
 eac show-modules               # Module table
 eac show-dependencies          # Dependency graph
 eac show-files                 # File ownership
-eac show-component-types        # Component type table
+eac show-component-kinds        # Component kind table
 eac get-modules                # Modules JSON
 eac get-dependencies           # Dependencies JSON
 ```

@@ -22,13 +22,34 @@ import (
 	_ "github.com/ready-to-release/eac/go/adapters/gotest"
 )
 
-// Package-level cache for test discovery results.
+// testDiscoveryCache holds cached test discovery results shared across scenarios.
 // This avoids re-running expensive discovery for each scenario in test-sanity.
-var (
-	discoveryCache      []testing.TestReference
-	discoveryCacheRoot  string
-	discoveryCacheMutex sync.Mutex
-)
+type testDiscoveryCache struct {
+	mu    sync.Mutex
+	root  string
+	tests []testing.TestReference
+}
+
+// get returns cached results for the given root, or nil if not cached.
+func (c *testDiscoveryCache) get(root string) []testing.TestReference {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.root == root && c.tests != nil {
+		return c.tests
+	}
+	return nil
+}
+
+// set stores discovery results for the given root.
+func (c *testDiscoveryCache) set(root string, tests []testing.TestReference) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.root = root
+	c.tests = tests
+}
+
+// sharedDiscoveryCache is the single instance shared across test-sanity scenarios.
+var sharedDiscoveryCache = &testDiscoveryCache{}
 
 // testSanityContext holds state for test-sanity scenarios.
 type testSanityContext struct {
@@ -277,25 +298,16 @@ func (c *testSanityContext) runTestDiscovery() error {
 	root := c.repoRoot
 
 	// Use cached results if available for the same repo root
-	discoveryCacheMutex.Lock()
-	if discoveryCacheRoot == root && discoveryCache != nil {
-		c.discoveredTests = discoveryCache
-		discoveryCacheMutex.Unlock()
+	if cached := sharedDiscoveryCache.get(root); cached != nil {
+		c.discoveredTests = cached
 	} else {
-		discoveryCacheMutex.Unlock()
-
 		// Raw discovery only - no inferences needed for sanity checks
 		tests, err := testing.DiscoverAndEnrich(root, testing.DiscoveryOptions{})
 		if err != nil {
 			return err
 		}
 
-		// Cache the results
-		discoveryCacheMutex.Lock()
-		discoveryCache = tests
-		discoveryCacheRoot = root
-		discoveryCacheMutex.Unlock()
-
+		sharedDiscoveryCache.set(root, tests)
 		c.discoveredTests = tests
 	}
 

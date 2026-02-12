@@ -24,8 +24,9 @@ BDD test suite that validates repository-wide structural invariants using Godog.
 | File | Responsibility |
 | --- | --- |
 | godog_test.go | Test suite entry point wiring Godog options |
-| steps_test.go | Core steps: module tidy, markdown, feature tags, hierarchy, file ownership |
-| steps_modules_test.go | Module-level validation steps |
+| steps_test.go | Core steps: registration, context struct, Go module tidy, shared build error check |
+| steps_markdown_test.go | Markdown validation, broken link checking, and feature tag conflict detection |
+| steps_modules_test.go | Module hierarchy, file ownership, and build tag validation steps |
 | steps_module_isolation_test.go | Go module import isolation enforcement |
 | steps_test_sanity_test.go | Test discovery count validation against raw scans |
 | steps_command_docs_test.go | CLI command documentation coverage checks |
@@ -53,14 +54,14 @@ This package is the primary structural guard for the repository. Its Gherkin sce
 ## Code Health
 
 ### Tech Debt
-- TODO at steps_test.go:488 for proper Gherkin parsing and tag conflict detection remains unimplemented
-- TODO at steps_test.go:550 for link checking remains unimplemented
-- steps_test.go (~593 lines) is the largest step file, mixing hierarchy, file ownership, markdown, and feature tag steps
+- None identified
 
 ### Pain Points
-- Global mutable context variables (`cmdDocsCtx` in steps_command_docs_test.go:32, `modIsoCtx` in steps_module_isolation_test.go:30) create implicit shared state across scenarios
-- Global mutable `discoveryCache` in steps_test_sanity_test.go:28 caches test discovery results as package-level state
+- All files are test files; no production Go code in this package
+- steps_test_sanity_test.go is 501 lines (significantly exceeds 300-line threshold)
+- steps_test.go is 450 lines (exceeds 300-line threshold)
+- steps_modules_test.go is 370 lines (exceeds 300-line threshold)
+- steps_markdown_test.go is 326 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Extract steps_test.go into focused step files (e.g., hierarchy steps, ownership steps, markdown steps) to reduce the ~593-line single file
-- Implement the TODO stubs for Gherkin tag conflict detection and link checking to complete planned validation coverage
+- None identified

@@ -10,20 +10,27 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
-var log = logging.C()
-
 // Cache manages per-item caching for a single builder type.
 type Cache struct {
 	cacheDir     string
 	manifestPath string
 	manifest     *Manifest
+	log          *logging.ComponentLogger
 }
 
 // New creates a new per-item cache for a builder type.
-func New(cacheDir string) *Cache {
+// An optional logger can be provided; if omitted, a default ComponentLogger is created.
+func New(cacheDir string, logger ...*logging.ComponentLogger) *Cache {
+	var l *logging.ComponentLogger
+	if len(logger) > 0 && logger[0] != nil {
+		l = logger[0]
+	} else {
+		l = logging.C()
+	}
 	return &Cache{
 		cacheDir:     cacheDir,
 		manifestPath: filepath.Join(cacheDir, "item-manifest.json"),
+		log:          l,
 	}
 }
 
@@ -43,7 +50,7 @@ func (c *Cache) Execute(
 	forceRebuild bool,
 ) (*Result, error) {
 	// 1. Load manifest
-	c.manifest = loadManifest(c.manifestPath)
+	c.manifest = loadManifest(c.manifestPath, c.log)
 
 	// 2. Ensure directories exist
 	if err := os.MkdirAll(c.cacheDir, 0o755); err != nil {
@@ -77,7 +84,7 @@ func (c *Cache) Execute(
 		hits = append(hits, item)
 	}
 
-	log.Debugf("itemcache: %d items, %d hits, %d misses (force=%v)",
+	c.log.Debugf("itemcache: %d items, %d hits, %d misses (force=%v)",
 		len(items), len(hits), len(misses), forceRebuild)
 
 	// 4. Build cache misses
@@ -128,7 +135,7 @@ func (c *Cache) Execute(
 
 	// 7. Save manifest
 	if err := saveManifest(c.manifest, c.manifestPath); err != nil {
-		log.Debugf("itemcache: failed to save manifest: %v", err)
+		c.log.Debugf("itemcache: failed to save manifest: %v", err)
 		// Non-fatal: build succeeded even if manifest save fails
 	}
 
@@ -157,12 +164,12 @@ func (c *Cache) prune(currentKeys map[string]bool) {
 		// Remove cache file
 		cachePath := filepath.Join(c.cacheDir, cached.CacheFilename)
 		if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
-			log.Debugf("itemcache: failed to prune %s: %v", cachePath, err)
+			c.log.Debugf("itemcache: failed to prune %s: %v", cachePath, err)
 		}
 
 		// Remove manifest entry
 		delete(c.manifest.Items, key)
-		log.Debugf("itemcache: pruned stale entry: %s", key)
+		c.log.Debugf("itemcache: pruned stale entry: %s", key)
 	}
 }
 

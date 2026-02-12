@@ -6,7 +6,6 @@ import (
 	"os"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/releasenotes"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -32,12 +31,10 @@ func (c *showReleaseNotesCommand) Execute(_ context.Context, _ *core.CommandRequ
 }
 
 func ShowReleaseNotes() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showReleaseNotesImpl)
+}
 
+func showReleaseNotesImpl() int {
 	// Parse arguments - expect module after "show release-notes"
 	args := os.Args[1:]
 

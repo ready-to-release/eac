@@ -29,7 +29,9 @@ Implements the `update pdf-screenshots` command that extracts PDF pages as PNG i
 
 | File | Responsibility |
 | --- | --- |
-| update.go | PDF discovery, cache validation, Docker-based page extraction, and zero-padded renaming (490 lines) |
+| update.go | Command definition, configuration parsing, cache checking, and extraction orchestration |
+| scanner.go | PDF discovery (`scanForPDFs`), file hashing, cache validation, and page counting |
+| extractor.go | Docker image management, PDF page extraction, and zero-padded renaming |
 
 ## Dependencies
 
@@ -47,10 +49,11 @@ The `pdf-screenshots` sub-package maintains a cache of PDF page images for docum
 ## Code Health
 
 ### Tech Debt
-- `update.go` (490 lines) handles discovery, caching, Docker management, extraction, and renaming in a single file
+- None identified
 
 ### Pain Points
-- Requires Docker to be running and the `pdf-cli-oci` image to be buildable
+- update.go is 301 lines (exceeds 300-line threshold)
+- No test coverage (missing extractor_test.go, scanner_test.go, update_test.go)
 
 ### Optimization Opportunities
-- Extract PDF scanning and cache validation into separate files (moderate effort, improves readability)
+- None identified

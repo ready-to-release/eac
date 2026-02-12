@@ -11,8 +11,8 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineAwaitCICommand struct{}
@@ -198,7 +198,7 @@ type runInfo struct {
 // we've already seen for this SHA and only count the first completed one.
 func getRunStatusForSHA(workflowName, sha string) (string, int) {
 	// Get recent runs for this workflow
-	output, err := ghexec.Run(".", "run", "list", "-w", workflowName, "--limit", "20",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "run", "list", "-w", workflowName, "--limit", "20",
 		"--json", "headSha,status,conclusion")
 	if err != nil {
 		return "none", 0
@@ -272,7 +272,7 @@ func awaitRunByID(runID string, timeout, interval int) int {
 		}
 
 		// Get run status
-		output, err := ghexec.Run(".", "run", "view", runID, "--json", "databaseId,status,conclusion,workflowName")
+		output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "run", "view", runID, "--json", "databaseId,status,conclusion,workflowName")
 		if err != nil {
 			log.Errorf("Error getting run status: %v", err)
 			return 1

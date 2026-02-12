@@ -100,7 +100,7 @@ type ComponentBuildHandler struct {
 // GetHandlersForModule returns build handlers for all buildable components in a module.
 // Handler selection:
 // 1. Module-level handler override (build.handler in module config)
-// 2. Component-type builders (from component-types.yml)
+// 2. Component-kind builders (from blueprints.yml component-kinds)
 // 3. ToolResolver lookup for the component type
 func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []ComponentBuildHandler {
 	b.mu.RLock()
@@ -233,7 +233,7 @@ func (b *BuildBridge) GetToolForComponent(componentType string) *ToolDefinition 
 // GetHandlerForComponent returns a build handler for a component type using the resolver.
 // This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build).
 // Native handlers take precedence over tool registry definitions.
-// Falls back to component-types.yml builder field when resolver is unavailable.
+// Falls back to blueprints.yml component-kinds builder field when resolver is unavailable.
 func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -245,7 +245,7 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler 
 		toolID = b.resolver.ResolveToolID(componentType, core.ActionBuild)
 	}
 
-	// Fall back to component-types.yml builders field
+	// Fall back to blueprints.yml component-kinds builders field
 	if toolID == "" {
 		cfg := config.Global()
 		if cfg != nil && cfg.ComponentKinds != nil {

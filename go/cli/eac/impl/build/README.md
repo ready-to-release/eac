@@ -18,18 +18,18 @@ Implements the `build` command, which compiles one or more modules by moniker us
 
 ## Internal Structure
 
-| File/Sub-package | Responsibility |
-| --- | --- |
-| build.go | Entry point, flag parsing, module build orchestration |
-| framework.go | Framework hooks, `RunBuildWithFramework`, incremental detection setup |
-| buildflags.go | `ParseBuildSpecificFlags` for build-only flags |
-| unit_work.go | `ResolveUnitSpecs` converts modules to component work specs |
-| unit_worker.go | `buildUnitWorker` executes a single component build with caching |
-| compression.go | `ProcessArtifactDerivations` for strip/UPX/copy derivations |
-| cache_checker.go | `detectUoWIncrementalChanges` for source-hash change detection |
-| uow_cache.go | `UoWBuildCacheVerifier` for TUI cache verification |
-| builders/ | Builder registry and handler implementations (Go, MkDocs, etc.) |
-| docprep/ | Document preprocessing pipeline for MkDocs builds |
+| File/Sub-package | Responsibility                                                        |
+| ---------------- | --------------------------------------------------------------------- |
+| build.go         | Entry point, flag parsing, module build orchestration                 |
+| framework.go     | Framework hooks, `RunBuildWithFramework`, incremental detection setup |
+| buildflags.go    | `ParseBuildSpecificFlags` for build-only flags                        |
+| unit_work.go     | `ResolveUnitSpecs` converts modules to component work specs           |
+| unit_worker.go   | `buildUnitWorker` executes a single component build with caching      |
+| compression.go   | `ProcessArtifactDerivations` for strip/UPX/copy derivations           |
+| cache_checker.go | `detectUoWIncrementalChanges` for source-hash change detection        |
+| uow_cache.go     | `UoWBuildCacheVerifier` for TUI cache verification                    |
+| builders/        | Builder registry and handler implementations (Go, MkDocs, etc.)       |
+| docprep/         | Document preprocessing pipeline for MkDocs builds                     |
 
 ## Dependencies
 
@@ -50,13 +50,14 @@ The build package is the largest command implementation in `eac`, orchestrating 
 ## Code Health
 
 ### Tech Debt
-- `unit_worker.go`: `buildUnitWorker` is ~285 lines (30-315) with deeply nested cache verification, locking, and build execution; extract cache-check and manifest-recording into helpers
-- `build.go`: `Build()` is ~156 lines (195-351) with inlined flag extraction; the block at lines 233-263 assigns ~18 locals that could be a config struct
-- `framework.go:36`: `cachedUnitWorkMu` is a package-level mutex protecting shared state; consider encapsulating in a type
-- No tests for `unit_worker.go`, `unit_work.go`, `compression.go`, or `framework.go` -- only `buildflags`, `cache_checker`, and `build_freshness` have test files
+
+- `build.go` (755 lines), `unit_worker.go` (482 lines), `framework.go` (420 lines) exceed 300 lines
+- No test coverage for `unit_worker.go`, `compression.go`, `framework.go`, `uow_cache.go`
 
 ### Pain Points
-- Artifact derivation runs in both `runModuleBuild` and `processAllArtifactDerivations`, relying on comments to explain why duplication is safe
+
+- None identified
 
 ### Optimization Opportunities
-- Split `buildUnitWorker` into a cache-check phase and a build-execute phase to improve readability and testability -- moderate effort
+
+- None identified

@@ -43,7 +43,44 @@ func recordScanResult(sctx *scanContext, moniker string, passed bool) {
 // scanUnitWorker runs scans for a single component using component-level execution.
 // This is called by the UnitScheduler for parallel scan component execution.
 func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, spec core.UnitSpec, logWriter io.Writer) int {
-	// Get multi-scan config if available (contains scanner settings)
+	multiCfg := resolveMultiScanConfig(ctx)
+
+	// Extract identity from spec
+	moniker := spec.ID.Module
+	compName := spec.ID.ComponentName
+	scannerTypeStr := spec.ID.Tool
+	component := compName + ":" + scannerTypeStr
+
+	// Check UoW-level cache
+	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
+	pipeline := buildScanPipeline(sctx)
+	if cacheResult := checkUnitCache(pipeline, ctx, spec.ID, component, logWriter); cacheResult != 0 {
+		return cacheResult
+	}
+
+	// Validate module, component, and scannability
+	module, compTypeName, exitCode := validateScanComponent(ctx, moniker, compName, component, logWriter)
+	if exitCode >= 0 {
+		return exitCode
+	}
+
+	// Acquire lock and resolve component root
+	release, componentRoot, exitCode := acquireLockAndResolveRoot(pipeline, ctx, module, moniker, compName, scannerTypeStr, logWriter)
+	if exitCode >= 0 {
+		return exitCode
+	}
+	defer release()
+
+	// Dispatch: single scanner (3-part key) or all scanners (2-part key)
+	if scannerTypeStr != "" {
+		return dispatchSingleScanner(ctx, module, moniker, compName, componentRoot, scannerTypeStr, multiCfg, logWriter)
+	}
+	return dispatchAllScanners(ctx, module, moniker, compName, componentRoot, compTypeName, multiCfg, logWriter)
+}
+
+// resolveMultiScanConfig retrieves the multi-scan config from the execution context,
+// falling back to sensible defaults if none is configured.
+func resolveMultiScanConfig(ctx *cmdframework.ExecutionContext) *MultiScanConfig {
 	multiCfg, _ := ctx.Config.MultiScanConfig.(*MultiScanConfig)
 	if multiCfg == nil {
 		multiCfg = &MultiScanConfig{
@@ -52,17 +89,11 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 			VulnSeverities: nil,
 		}
 	}
+	return multiCfg
+}
 
-	// Extract identity from spec - no more string parsing
-	moniker := spec.ID.Module
-	compName := spec.ID.ComponentName
-	scannerTypeStr := spec.ID.Tool
-	component := compName + ":" + scannerTypeStr // For display/logging
-
-	// Get scan context for caching
-	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
-
-	// Set up shared pipeline for cache + lock orchestration
+// buildScanPipeline constructs the UnitPipeline used for cache lookups and lock orchestration.
+func buildScanPipeline(sctx *scanContext) *cmdframework.UnitPipeline {
 	pipeline := &cmdframework.UnitPipeline{
 		CachedUoWs: nil,
 		LockStyle:  cmdframework.AlwaysLock,
@@ -73,66 +104,103 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 	if sctx != nil {
 		pipeline.CachedUoWs = sctx.cachedUoWs
 	}
+	return pipeline
+}
 
-	// Use spec's UnitID directly for cache lookup
-	unitID := spec.ID
-
-	// Check UoW-level cache first
+// checkUnitCache checks the UoW-level cache and returns a non-zero result if the unit is cached.
+// Returns 0 if the cache was not hit (caller should continue).
+func checkUnitCache(pipeline *cmdframework.UnitPipeline, ctx *cmdframework.ExecutionContext, unitID core.UnitID, component string, logWriter io.Writer) int {
 	log.Debugf("[SCAN-UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
-	if cacheResult := pipeline.CheckCache(ctx, unitID, logWriter); cacheResult != 0 {
-		return cacheResult
-	}
+	return pipeline.CheckCache(ctx, unitID, logWriter)
+}
 
-	// Get module contract
+// validateScanComponent validates that the module exists, the component name is non-empty,
+// and the component type is scannable. Returns (module, compTypeName, exitCode).
+// An exitCode of -1 means validation passed and the caller should continue.
+func validateScanComponent(ctx *cmdframework.ExecutionContext, moniker, compName, component string, logWriter io.Writer) (*modules.ModuleContract, string, int) {
 	module, exists := ctx.ModuleRegistry.Get(moniker)
 	if !exists {
 		output.Writeln(logWriter, "Error: module not found: %s", moniker)
-		return 1
+		return nil, "", 1
 	}
 
-	// Validate component parameter parsing
 	if compName == "" {
 		output.Writeln(logWriter, "Error: invalid component format: %s", component)
-		return 1
+		return nil, "", 1
 	}
 
-	// Get component type for this component
 	compTypeName := module.Components.GetComponentType(compName)
 	compType := ctx.EACConfig.ComponentKinds.Get(compTypeName)
-
-	// Skip non-scannable component types
 	if compType == nil || !compType.IsScannable() {
 		output.Writeln(logWriter, "⚠️  Component type %s is not scannable, skipping", compTypeName)
-		return 0
+		return nil, "", 0
 	}
 
-	// Acquire lock for this unit (component+scanner) with wait
+	return module, compTypeName, -1
+}
+
+// acquireLockAndResolveRoot acquires the unit lock and resolves the component root path.
+// Returns (releaseFunc, componentRoot, exitCode). An exitCode of -1 means success.
+func acquireLockAndResolveRoot(pipeline *cmdframework.UnitPipeline, ctx *cmdframework.ExecutionContext,
+	module *modules.ModuleContract, moniker, compName, scannerTypeStr string, logWriter io.Writer) (func(), string, int) {
+
 	componentDir := cmdframework.UnitDir(compName, scannerTypeStr)
 	release, err := pipeline.AcquireLock(ctx, moniker, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
-		return 1
+		return nil, "", 1
 	}
-	defer release()
 
-	// Get component root path
 	componentRoot := module.Components.GetComponentRoot(compName)
 	if componentRoot == "" {
+		release()
 		output.Writeln(logWriter, "Error: no root found for component %s", compName)
+		return nil, "", 1
+	}
+
+	return release, componentRoot, -1
+}
+
+// dispatchSingleScanner handles the 3-part key case where a specific scanner type is specified.
+func dispatchSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract,
+	moniker, compName, componentRoot, scannerTypeStr string, multiCfg *MultiScanConfig, logWriter io.Writer) int {
+
+	toolID := tool.ScannerToolIDForCategory(scannerTypeStr)
+	if toolID == "" {
+		output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
 		return 1
 	}
+	return runUnitScanner(ctx, module, moniker, compName, componentRoot, evidence.ScannerType(toolID), multiCfg, logWriter)
+}
 
-	// If scanner type specified (3-part key), run only that scanner
-	if scannerTypeStr != "" {
-		toolID := tool.ScannerToolIDForCategory(scannerTypeStr)
-		if toolID == "" {
-			output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
-			return 1
-		}
-		return runUnitScanner(ctx, module, moniker, compName, componentRoot, evidence.ScannerType(toolID), multiCfg, logWriter)
+// dispatchAllScanners handles the 2-part key case where all scanners from the component type
+// configuration are run sequentially.
+func dispatchAllScanners(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract,
+	moniker, compName, componentRoot, compTypeName string, multiCfg *MultiScanConfig, logWriter io.Writer) int {
+
+	scannersList := collectComponentScanners(ctx, compTypeName)
+	if len(scannersList) == 0 {
+		output.Writeln(logWriter, "⚠️  No scanners configured for component type: %s", compTypeName)
+		return 0
 	}
 
-	// 2-part key (no scanner specified): run all scanners from component type configuration
+	exitCode := 0
+	for _, scannerType := range scannersList {
+		result := runUnitScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
+		if result != 0 {
+			exitCode = 1
+		}
+	}
+	return exitCode
+}
+
+// collectComponentScanners resolves the deduplicated list of scanner types for a component type.
+func collectComponentScanners(ctx *cmdframework.ExecutionContext, compTypeName string) []evidence.ScannerType {
+	compType := ctx.EACConfig.ComponentKinds.Get(compTypeName)
+	if compType == nil {
+		return nil
+	}
+
 	var scannersList []evidence.ScannerType
 	seenScanners := make(map[string]bool)
 	for _, s := range compType.GetScanners() {
@@ -143,22 +211,7 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 			}
 		}
 	}
-
-	if len(scannersList) == 0 {
-		output.Writeln(logWriter, "⚠️  No scanners configured for component type: %s", compTypeName)
-		return 0
-	}
-
-	// Run each scanner
-	exitCode := 0
-	for _, scannerType := range scannersList {
-		result := runUnitScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
-		if result != 0 {
-			exitCode = 1 // Mark as failed but continue with other scanners
-		}
-	}
-
-	return exitCode
+	return scannersList
 }
 
 // runUnitScanner runs a single scanner for a component.
@@ -277,25 +330,27 @@ func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext,
 
 // logScannerConfig logs scanner-specific configuration for visibility.
 func logScannerConfig(scannerType evidence.ScannerType, logWriter io.Writer, multiCfg *MultiScanConfig, ctx *cmdframework.ExecutionContext) {
+	image := GetDockerImage(ctx, scannerType)
+
 	switch scannerType {
 	case evidence.ScannerSBOM:
-		output.Writeln(logWriter, "  Using Trivy image: %s", getTrivyImage(ctx))
+		output.Writeln(logWriter, "  Using Trivy image: %s", image)
 		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
 	case evidence.ScannerVuln:
-		output.Writeln(logWriter, "  Using Trivy image: %s", getTrivyImage(ctx))
+		output.Writeln(logWriter, "  Using Trivy image: %s", image)
 		if len(multiCfg.VulnSeverities) > 0 {
 			output.Writeln(logWriter, "  Severity filter: %v", multiCfg.VulnSeverities)
 		}
 	case evidence.ScannerSecrets, evidence.ScannerIaC:
-		output.Writeln(logWriter, "  Using Trivy image: %s", getTrivyImage(ctx))
+		output.Writeln(logWriter, "  Using Trivy image: %s", image)
 	case evidence.ScannerCompliance:
-		output.Writeln(logWriter, "  Using Trivy image: %s", getTrivyImage(ctx))
+		output.Writeln(logWriter, "  Using Trivy image: %s", image)
 		output.Writeln(logWriter, "  Compliance standard: %s", multiCfg.ComplianceStandard)
 	case evidence.ScannerSAST:
-		output.Writeln(logWriter, "  Using Semgrep image: %s", getSemgrepImage(ctx))
+		output.Writeln(logWriter, "  Using Semgrep image: %s", image)
 		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
 	case evidence.ScannerDAST:
-		output.Writeln(logWriter, "  Using ZAP image: %s", getZAPImage(ctx))
+		output.Writeln(logWriter, "  Using ZAP image: %s", image)
 	}
 }
 

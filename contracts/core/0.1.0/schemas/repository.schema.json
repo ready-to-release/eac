@@ -450,7 +450,7 @@
           },
           {
             "type": "null",
-            "description": "Use the default_root from component-types.yml (with {moniker} substitution)"
+            "description": "Use the default_root from blueprints.yml component-kinds (with {moniker} substitution)"
           },
           {
             "$ref": "#/definitions/component_entry",
@@ -474,22 +474,22 @@
         },
         "patterns": {
           "type": "object",
-          "description": "Override default file patterns from component-types",
+          "description": "Override default file patterns from component-kind defaults",
           "properties": {
             "source": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Source file patterns (overrides component-type defaults)"
+              "description": "Source file patterns (overrides component-kind defaults)"
             },
             "tests": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Test file patterns (overrides component-type defaults)"
+              "description": "Test file patterns (overrides component-kind defaults)"
             },
             "config": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Config file patterns (overrides component-type defaults)"
+              "description": "Config file patterns (overrides component-kind defaults)"
             }
           }
         },

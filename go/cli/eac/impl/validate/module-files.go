@@ -115,42 +115,38 @@ func validateModuleFiles(files []repository.RepositoryFileWithModule) *moduleFil
 }
 
 func printModuleFilesReport(report *moduleFilesReport) {
-	log.Info("=== Module File Ownership Validation Report ===")
-	log.Info("")
-
-	hasIssues := false
-
-	// Unordered files
-	if len(report.unorderedFiles) > 0 {
-		hasIssues = true
-		log.Infof("❌ Files in Unordered Module (%d):", len(report.unorderedFiles))
-		log.Info("   These files should be claimed by a proper module:")
-		for _, filePath := range report.unorderedFiles {
-			log.Infof("  • %s", filePath)
-		}
-		log.Info("")
-		log.Info("   Fix: Create or update module contracts to claim these files.")
-		log.Info("")
+	// Build unordered file items
+	unorderedItems := make([]string, len(report.unorderedFiles))
+	for i, filePath := range report.unorderedFiles {
+		unorderedItems[i] = formatBullet(filePath)
 	}
 
-	// Multi-ownership files
-	if len(report.multiOwnershipFiles) > 0 {
-		hasIssues = true
-		log.Infof("❌ Files with Multi-Module Ownership (%d):", len(report.multiOwnershipFiles))
-		log.Info("   Each file should belong to exactly one module:")
-		for filePath, modules := range report.multiOwnershipFiles {
-			log.Infof("  • %s", filePath)
-			log.Infof("    Claimed by: %s", strings.Join(modules, ", "))
-		}
-		log.Info("")
-		log.Info("   Fix: Adjust module contract glob patterns to prevent overlap.")
-		log.Info("")
+	// Build multi-ownership items
+	var multiItems []string
+	for filePath, mods := range report.multiOwnershipFiles {
+		multiItems = append(multiItems, formatBulletWithDetail(filePath, "Claimed by: "+strings.Join(mods, ", ")))
 	}
 
-	if !hasIssues {
-		log.Info("✅ All module file ownership checks passed!")
-		log.Info("")
-	}
+	printValidationReport(validationReport{
+		Title: "Module File Ownership Validation Report",
+		Sections: []validationSection{
+			{
+				Icon:        "❌",
+				Label:       "Files in Unordered Module",
+				Items:       unorderedItems,
+				Description: "These files should be claimed by a proper module:",
+				FixHint:     "Fix: Create or update module contracts to claim these files.",
+			},
+			{
+				Icon:        "❌",
+				Label:       "Files with Multi-Module Ownership",
+				Items:       multiItems,
+				Description: "Each file should belong to exactly one module:",
+				FixHint:     "Fix: Adjust module contract glob patterns to prevent overlap.",
+			},
+		},
+		SuccessMessage: "All module file ownership checks passed!",
+	})
 }
 
 func printModuleFilesUsage() {

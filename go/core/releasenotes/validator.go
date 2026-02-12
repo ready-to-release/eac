@@ -12,6 +12,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 var (
@@ -60,18 +61,24 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 
 	var currentVersion *ReleaseNotesVersion
 	var currentSection *ReleaseNotesSection
+	var contentBuilder strings.Builder
+
+	// finalizeSection stores the accumulated content into the current section.
+	finalizeSection := func() {
+		if currentSection != nil {
+			currentSection.Content = strings.TrimSpace(contentBuilder.String())
+			currentVersion.Sections = append(currentVersion.Sections, *currentSection)
+			currentSection = nil
+			contentBuilder.Reset()
+		}
+	}
 
 	for _, line := range lines {
 		// Check for version header
 		if match := versionHeaderRegex.FindStringSubmatch(line); match != nil {
 			// Save previous version if exists
 			if currentVersion != nil {
-				// Save last section if exists
-				if currentSection != nil {
-					currentSection.Content = strings.TrimSpace(currentSection.Content)
-					currentVersion.Sections = append(currentVersion.Sections, *currentSection)
-					currentSection = nil
-				}
+				finalizeSection()
 				rn.Versions = append(rn.Versions, *currentVersion)
 			}
 
@@ -94,16 +101,13 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 		if currentVersion != nil {
 			if match := sectionHeaderRegex.FindStringSubmatch(line); match != nil {
 				// Save previous section if exists
-				if currentSection != nil {
-					currentSection.Content = strings.TrimSpace(currentSection.Content)
-					currentVersion.Sections = append(currentVersion.Sections, *currentSection)
-				}
+				finalizeSection()
 
 				// Start new section
 				currentSection = &ReleaseNotesSection{
-					Header:  strings.TrimSpace(match[1]),
-					Content: "",
+					Header: strings.TrimSpace(match[1]),
 				}
+				contentBuilder.Reset()
 				continue
 			}
 
@@ -111,7 +115,8 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 			if currentSection != nil {
 				// Skip the main header (# Release release_notes)
 				if !strings.HasPrefix(strings.TrimSpace(line), "#") {
-					currentSection.Content += line + "\n"
+					contentBuilder.WriteString(line)
+					contentBuilder.WriteByte('\n')
 				}
 			}
 		}
@@ -119,10 +124,7 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 
 	// Save last version and section
 	if currentVersion != nil {
-		if currentSection != nil {
-			currentSection.Content = strings.TrimSpace(currentSection.Content)
-			currentVersion.Sections = append(currentVersion.Sections, *currentSection)
-		}
+		finalizeSection()
 		rn.Versions = append(rn.Versions, *currentVersion)
 	}
 
@@ -182,7 +184,7 @@ func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, 
 	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		templateRoot = containerRoot
 	}
-	templatePath := cfg.TemplatePathAbs(templateRoot, "reports", "release", "release-notes-template.md")
+	templatePath := paths.TemplatePath(templateRoot, "reports", "release", "release-notes-template.md")
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("failed to read template file %s: %w", templatePath, err)

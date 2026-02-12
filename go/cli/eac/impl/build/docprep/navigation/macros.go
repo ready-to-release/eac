@@ -17,18 +17,26 @@ var DiataxisSections = map[string]bool{
 	"reference":     true,
 }
 
-// macroPattern matches {{ macro_name() }} or {{ macro_name(args) }}.
-var macroPattern = regexp.MustCompile(`\{\{\s*\w+\([^)]*\)\s*\}\}`)
+// navRegex consolidates all regex patterns used across the navigation package.
+// Previously these were spread across macros.go and index.go as separate package-level vars.
+var navRegex = struct {
+	// Macro patterns
+	Macro      *regexp.Regexp // matches {{ macro_name() }} or {{ macro_name(args) }}
+	Breadcrumb *regexp.Regexp // matches {{ page_breadcrumb() }}
+	Footer     *regexp.Regexp // matches {{ diataxis_footer() }}
 
-// navTitlePattern matches title line in .nav.yml files.
-var navTitlePattern = regexp.MustCompile(`(?m)^title:\s*.*\n?`)
-
-// Patterns for macro injection.
-var (
-	macroH1TitlePattern = regexp.MustCompile(`(?m)^#\s+.+$`)
-	breadcrumbPattern   = regexp.MustCompile(`\{\{\s*page_breadcrumb\(\)\s*\}\}`)
-	footerPattern       = regexp.MustCompile(`\{\{\s*diataxis_footer\(\)\s*\}\}`)
-)
+	// Navigation patterns
+	NavTitle        *regexp.Regexp // matches title line in .nav.yml files
+	H1Title         *regexp.Regexp // matches first H1 heading in markdown
+	FrontmatterTitle *regexp.Regexp // matches title in YAML frontmatter with optional quotes
+}{
+	Macro:            regexp.MustCompile(`\{\{\s*\w+\([^)]*\)\s*\}\}`),
+	Breadcrumb:       regexp.MustCompile(`\{\{\s*page_breadcrumb\(\)\s*\}\}`),
+	Footer:           regexp.MustCompile(`\{\{\s*diataxis_footer\(\)\s*\}\}`),
+	NavTitle:         regexp.MustCompile(`(?m)^title:\s*.*\n?`),
+	H1Title:          regexp.MustCompile(`(?m)^#\s+(.+)$`),
+	FrontmatterTitle: regexp.MustCompile(`(?m)^title:\s*["']?([^"'\n]+)["']?`),
+}
 
 // StripMacros removes Jinja2 macro calls from markdown files (PDF only).
 func StripMacros(fileIndex *staging.FileIndex, logf func(string, ...any)) error {
@@ -44,10 +52,10 @@ func StripMacros(fileIndex *staging.FileIndex, logf func(string, ...any)) error 
 		}
 
 		original := string(content)
-		modified := macroPattern.ReplaceAllString(original, "")
+		modified := navRegex.Macro.ReplaceAllString(original, "")
 
 		if modified != original {
-			matches := macroPattern.FindAllString(original, -1)
+			matches := navRegex.Macro.FindAllString(original, -1)
 			stripped += len(matches)
 			filesModified++
 
@@ -77,7 +85,7 @@ func StripNavTitles(fileIndex *staging.FileIndex, logf func(string, ...any)) err
 			return err
 		}
 
-		modified := navTitlePattern.ReplaceAllString(string(content), "")
+		modified := navRegex.NavTitle.ReplaceAllString(string(content), "")
 
 		if modified != string(content) {
 			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
@@ -124,8 +132,8 @@ func InjectMacros(fileIndex *staging.FileIndex, stagingDir string, logf func(str
 		modified := original
 		macrosAdded := 0
 
-		if !breadcrumbPattern.MatchString(modified) {
-			loc := macroH1TitlePattern.FindStringIndex(modified)
+		if !navRegex.Breadcrumb.MatchString(modified) {
+			loc := navRegex.H1Title.FindStringIndex(modified)
 			if loc != nil {
 				titleEnd := loc[1]
 				modified = modified[:titleEnd] + "\n\n{{ page_breadcrumb() }}" + modified[titleEnd:]
@@ -133,7 +141,7 @@ func InjectMacros(fileIndex *staging.FileIndex, stagingDir string, logf func(str
 			}
 		}
 
-		if !footerPattern.MatchString(modified) {
+		if !navRegex.Footer.MatchString(modified) {
 			modified = strings.TrimRight(modified, "\n\r\t ") + "\n\n{{ diataxis_footer() }}\n"
 			macrosAdded++
 		}

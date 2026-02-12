@@ -6,13 +6,13 @@ The `ai-eac` module provides AI service integration, wrapping multiple LLM provi
 
 Shows how the AI adapter connects CLI commands to AI providers.
 
-<!-- structurizr:ai-eac:SystemContext -->
+<!-- structurizr:adapters:ai-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the AI adapter packages.
 
-<!-- structurizr:ai-eac:Containers -->
+<!-- structurizr:adapters:ai-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,7 +20,7 @@ High-level view of the AI adapter packages.
 
 Provider registry with Anthropic, OpenAI, Gemini, Claude CLI, and Test providers.
 
-<!-- structurizr:ai-eac:ProvidersComponents -->
+<!-- structurizr:adapters:ai-eac:ProvidersComponents -->
 
 ## Design File
 

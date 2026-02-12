@@ -6,7 +6,7 @@ Pip isolation adapter providing safe, parallel-friendly Python virtual environme
 
 - **`PipIsolation`** -- Manages isolated Python venv and work directories
 - **`IsolatedEnv`** -- Represents a prepared isolated environment with venv paths and env vars
-- **`PipInstallMu`** -- Global mutex serializing pip install calls
+- **`WithInstallLock`** -- Serializes pip install calls via unexported mutex
 
 ## Key Functions
 
@@ -19,7 +19,7 @@ Pip isolation adapter providing safe, parallel-friendly Python virtual environme
 - Virtual environment management: Creates venvs at `.cache/eac/python/venv/{key}/`
 - Incremental sync: Only copies files changed by mtime and size
 - Shared pip cache: All modules share `.cache/eac/python/pip-cache/` for downloads
-- Serialized installs: `PipInstallMu` prevents concurrent pip cache contention
+- Serialized installs: `WithInstallLock()` prevents concurrent pip cache contention
 - Stale detection: Resets work directory when pyproject.toml or requirements change
 - Cross-platform: Platform-aware venv binary paths (Scripts/ on Windows, bin/ on Unix)
 
@@ -41,15 +41,11 @@ The pip adapter solves Windows file lock conflicts and parallel test interferenc
 ## Code Health
 
 ### Tech Debt
-
-- `PipInstallMu` in isolation.go is an exported package-level `sync.Mutex` used by both `behave` and `pytest` adapters; wrapping it behind a function or moving serialization into `PipIsolation` would encapsulate the locking strategy
-- No unit tests exist for the package; `PrepareIsolatedEnv`, `syncDirectory`, `copyFileIfChanged`, and `requirementsChanged` are all untested
+- None identified
 
 ### Pain Points
-
-- `requirementsChanged` in isolation.go uses mtime and size comparison, which can miss content changes when file size is unchanged; a content hash check would be more reliable
-- `syncDirectory` in isolation.go:283 swallows `filepath.Walk` errors on the destination pass, making failures silent and hard to diagnose
+- isolation.go is 375 lines; candidate for splitting (extract venv management, file sync logic, and change detection into separate files)
+- requirementsChanged in isolation.go uses mtime and size comparison, which can miss content changes when file size is unchanged; a content hash check would be more reliable
 
 ### Optimization Opportunities
-
-- `syncDirectory` performs two full `filepath.Walk` passes (one for destination tracking, one for source copying); building both maps in a single combined pass would reduce I/O
+- None identified

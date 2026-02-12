@@ -73,46 +73,51 @@ func resolveOutputDir(workspaceRoot string, pathSegments ...string) (string, err
 	return outputDir, nil
 }
 
-// WriteEvidence writes a security evidence file with SHA256 integrity hash.
-//
-// Output structure: out/scan/<module>/<scanner>.json
-func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings interface{}) (string, error) {
-	outputDir, err := resolveOutputDir(workspaceRoot, module)
+// writeEvidence is the shared internal writer that resolves the output directory
+// from the given path segments, then delegates to writeFile. Both module-level and
+// component-level evidence functions use this single code path.
+func writeEvidence(workspaceRoot, module string, scanner ScannerType, findings interface{}, pathSegments ...string) (string, error) {
+	outputDir, err := resolveOutputDir(workspaceRoot, pathSegments...)
 	if err != nil {
 		return "", err
 	}
 	return writeFile(outputDir, module, scanner, findings)
 }
 
-// WriteErrorEvidence writes an evidence file when a scan fails.
-// This maintains the audit trail even when scans encounter errors.
-func WriteErrorEvidence(workspaceRoot, module string, scanner ScannerType, errorMsg string) (string, error) {
+// writeErrorEvidence is the shared internal writer for error evidence. It constructs
+// the standard error findings payload and delegates to writeEvidence.
+func writeErrorEvidence(workspaceRoot, module string, scanner ScannerType, errorMsg string, pathSegments ...string) (string, error) {
 	errorFindings := map[string]interface{}{
 		"error":  errorMsg,
 		"status": "failed",
 	}
-	return WriteEvidence(workspaceRoot, module, scanner, errorFindings)
+	return writeEvidence(workspaceRoot, module, scanner, errorFindings, pathSegments...)
+}
+
+// WriteEvidence writes a security evidence file with SHA256 integrity hash.
+//
+// Output structure: out/scan/<module>/<scanner>.json
+func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings interface{}) (string, error) {
+	return writeEvidence(workspaceRoot, module, scanner, findings, module)
+}
+
+// WriteErrorEvidence writes an evidence file when a scan fails.
+// This maintains the audit trail even when scans encounter errors.
+func WriteErrorEvidence(workspaceRoot, module string, scanner ScannerType, errorMsg string) (string, error) {
+	return writeErrorEvidence(workspaceRoot, module, scanner, errorMsg, module)
 }
 
 // WriteComponentEvidence writes a security evidence file for a specific component.
 //
 // Output structure: out/scan/<module>/<component>/<scanner>.json
 func WriteComponentEvidence(workspaceRoot, module, component string, scanner ScannerType, findings interface{}) (string, error) {
-	outputDir, err := resolveOutputDir(workspaceRoot, module, component)
-	if err != nil {
-		return "", err
-	}
-	return writeFile(outputDir, module, scanner, findings)
+	return writeEvidence(workspaceRoot, module, scanner, findings, module, component)
 }
 
 // WriteComponentErrorEvidence writes an evidence file when a component scan fails.
 // This maintains the audit trail even when scans encounter errors.
 func WriteComponentErrorEvidence(workspaceRoot, module, component string, scanner ScannerType, errorMsg string) (string, error) {
-	errorFindings := map[string]interface{}{
-		"error":  errorMsg,
-		"status": "failed",
-	}
-	return WriteComponentEvidence(workspaceRoot, module, component, scanner, errorFindings)
+	return writeErrorEvidence(workspaceRoot, module, scanner, errorMsg, module, component)
 }
 
 // ReadEvidence reads and parses an evidence file.

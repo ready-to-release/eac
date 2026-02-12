@@ -66,12 +66,12 @@ The docker package is the execution engine of the clie CLI. It handles everythin
 
 ### Tech Debt
 
-- `hosting-image.go:210-221` -- Duplicates Ping logic that already exists in `EnsureConnected()`. The `EnsureImageExists` function calls `ch.client.Ping()` directly instead of using `ch.EnsureConnected()`, resulting in redundant Docker service error handling.
+- `hosting_test.go` lines 64 and 72 contain TODO comments: "Add tests for these scenarios with proper mocks" and "Implement with proper mocks", indicating incomplete test coverage for extension validation.
 
 ### Pain Points
 
-- `hosting-image.go:99-261` -- `EnsureImageExists` is 162 lines with deeply nested conditionals for the AutoDetect pull policy strategy.
-- The package has 13 non-test source files, making it the largest package in the clie module.
+- The package has 13+ non-test source files, making it the largest package in the clie module.
+- `hosting-lifecycle.go` is 280 lines, the largest source file in the package.
 
 ### Optimization Opportunities
 

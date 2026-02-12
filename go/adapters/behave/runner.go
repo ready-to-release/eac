@@ -18,8 +18,14 @@ import (
 )
 
 func init() {
-	testrunners.Register(&BehaveRunner{})
-	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+	RegisterWith(testrunners.DefaultRegistry())
+}
+
+// RegisterWith registers the BehaveRunner and its descriptor with the given registry.
+// This enables testing with an isolated registry instead of relying on global state.
+func RegisterWith(reg *testrunners.Registry) {
+	reg.Register(&BehaveRunner{})
+	reg.RegisterDescriptor(&testrunners.TestTypeDescriptor{
 		TestType:      "behave",
 		IsBDD:         true,
 		ComponentType: "gherkin",
@@ -148,31 +154,81 @@ func extractFeatureFolderName(featurePath string) string {
 	return filepath.Base(dir)
 }
 
+// parsedPackagePath holds the parsed components of a behave package path.
+type parsedPackagePath struct {
+	displayName    string
+	relPkgPath     string
+	relFeatureFile string
+}
+
+// parsePackagePath parses a package path in the format "featureName:moduleRoot:featurePath"
+// or "moduleRoot" into its component parts.
+func parsePackagePath(pkgPath string) parsedPackagePath {
+	parts := strings.Split(pkgPath, ":")
+	switch len(parts) {
+	case 3:
+		return parsedPackagePath{
+			displayName:    parts[0] + ":" + parts[1],
+			relPkgPath:     parts[1],
+			relFeatureFile: parts[2],
+		}
+	case 1:
+		return parsedPackagePath{
+			displayName: parts[0],
+			relPkgPath:  parts[0],
+		}
+	default:
+		return parsedPackagePath{
+			displayName: pkgPath,
+			relPkgPath:  pkgPath,
+		}
+	}
+}
+
+// collectBehaveResults parses behave JSON output and populates the result with CTRF data.
+// Returns true if results were successfully parsed.
+func collectBehaveResults(result *testrunners.RunResult, outputDir string, logWriter io.Writer) bool {
+	if outputDir == "" {
+		return false
+	}
+	jsonPath := filepath.Join(outputDir, "behave.json")
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return false
+	}
+	ctrfReport := convertBehaveJSONToCTRF(data)
+	if ctrfReport == nil {
+		return false
+	}
+	result.TestsPassed = ctrfReport.Results.Summary.Passed
+	result.TestsFailed = ctrfReport.Results.Summary.Failed
+	result.TestsSkipped = ctrfReport.Results.Summary.Skipped
+	result.TestsTotal = ctrfReport.Results.Summary.Tests
+
+	if ctrfData, err := ctrfReport.ToJSON(); err == nil {
+		ctrfPath := filepath.Join(outputDir, "bdd.json")
+		_ = os.WriteFile(ctrfPath, ctrfData, 0o644)
+		fmt.Fprintf(logWriter, "CTRF JSON saved to bdd.json (%d bytes)\n", len(ctrfData))
+	}
+	return true
+}
+
+// executionFailed returns true if the execution result indicates failure.
+func executionFailed(execResult *tool.ExecutionResult, runErr error) bool {
+	return runErr != nil || (execResult != nil && execResult.ExitCode != 0)
+}
+
 // Execute runs Python behave tests for a package.
 func (r *BehaveRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
 	start := time.Now()
-
-	// Parse package path - format: "featureName:moduleRoot:featurePath" or "moduleRoot"
-	var displayName, relPkgPath, relFeatureFile string
-	parts := strings.Split(pkgPath, ":")
-	if len(parts) == 3 {
-		displayName = parts[0] + ":" + parts[1]
-		relPkgPath = parts[1]
-		relFeatureFile = parts[2]
-	} else if len(parts) == 1 {
-		displayName = parts[0]
-		relPkgPath = parts[0]
-	} else {
-		displayName = pkgPath
-		relPkgPath = pkgPath
-	}
+	pkg := parsePackagePath(pkgPath)
 
 	result := testrunners.RunResult{
-		PackageName:   displayName,
+		PackageName:   pkg.displayName,
 		ModuleMoniker: cfg.ModuleMoniker,
 	}
 
-	moduleRoot := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
+	moduleRoot := filepath.Join(cfg.WorkspaceRoot, pkg.relPkgPath)
 
 	// Check if pyproject.toml exists
 	pyprojectToml := filepath.Join(moduleRoot, "pyproject.toml")
@@ -199,45 +255,27 @@ func (r *BehaveRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 	var runErr error
 
 	if pythonTool.Type == tool.ToolTypeContainer {
-		execResult, runErr = r.executeContainer(runCtx, pythonTool, moduleRoot, relFeatureFile, logWriter, cfg)
+		execResult, runErr = r.executeContainer(runCtx, pythonTool, moduleRoot, pkg.relFeatureFile, logWriter, cfg)
 	} else {
-		execResult, runErr = r.executeSystem(runCtx, pythonTool, moduleRoot, relFeatureFile, logWriter, cfg)
+		execResult, runErr = r.executeSystem(runCtx, pythonTool, moduleRoot, pkg.relFeatureFile, logWriter, cfg)
 	}
 
 	if execResult != nil {
 		fmt.Fprintf(logWriter, "%s%s\n", execResult.Stdout, execResult.Stderr)
 	}
 
-	// Parse JSON results if available
-	if cfg.OutputDir != "" {
-		jsonPath := filepath.Join(cfg.OutputDir, "behave.json")
-		if data, err := os.ReadFile(jsonPath); err == nil {
-			if ctrfReport := convertBehaveJSONToCTRF(data); ctrfReport != nil {
-				result.TestsPassed = ctrfReport.Results.Summary.Passed
-				result.TestsFailed = ctrfReport.Results.Summary.Failed
-				result.TestsSkipped = ctrfReport.Results.Summary.Skipped
-				result.TestsTotal = ctrfReport.Results.Summary.Tests
-
-				if ctrfData, err := ctrfReport.ToJSON(); err == nil {
-					ctrfPath := filepath.Join(cfg.OutputDir, "bdd.json")
-					_ = os.WriteFile(ctrfPath, ctrfData, 0o644)
-					fmt.Fprintf(logWriter, "CTRF JSON saved to bdd.json (%d bytes)\n", len(ctrfData))
-				}
-			}
-		}
-	}
-
-	// Fall back to test reference count if no JSON results
-	if result.TestsTotal == 0 {
-		result.TestsTotal = len(tests)
-		if runErr != nil || (execResult != nil && execResult.ExitCode != 0) {
-			result.TestsFailed = len(tests)
+	// Parse JSON results, falling back to synthetic counts
+	if !collectBehaveResults(&result, cfg.OutputDir, logWriter) {
+		failed := executionFailed(execResult, runErr)
+		result.TestsTotal = 1
+		if failed {
+			result.TestsFailed = 1
 		} else {
-			result.TestsPassed = len(tests)
+			result.TestsPassed = 1
 		}
 	}
 
-	if runErr != nil || (execResult != nil && execResult.ExitCode != 0) {
+	if executionFailed(execResult, runErr) {
 		result.PackageFailed = true
 		fmt.Fprintf(logWriter, "behave tests failed\n")
 	} else {
@@ -262,13 +300,16 @@ func (r *BehaveRunner) executeSystem(ctx context.Context, pythonTool *tool.ToolD
 	// Create venv if needed
 	if _, err := os.Stat(env.PythonBin); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "Creating virtual environment at %s...\n", env.VenvDir)
-		pip.PipInstallMu.Lock()
-		venvExecCtx := &tool.ExecutionContext{
-			ModuleRoot:    env.WorkDir,
-			ArgsOverrides: []string{"-m", "venv", env.VenvDir},
-		}
-		venvResult, venvErr := tool.GlobalExecutor().Execute(ctx, pythonTool, venvExecCtx)
-		pip.PipInstallMu.Unlock()
+		var venvResult *tool.ExecutionResult
+		var venvErr error
+		_ = pip.WithInstallLock(func() error {
+			venvExecCtx := &tool.ExecutionContext{
+				ModuleRoot:    env.WorkDir,
+				ArgsOverrides: []string{"-m", "venv", env.VenvDir},
+			}
+			venvResult, venvErr = tool.GlobalExecutor().Execute(ctx, pythonTool, venvExecCtx)
+			return venvErr
+		})
 		if venvResult != nil && (len(venvResult.Stdout) > 0 || len(venvResult.Stderr) > 0) {
 			fmt.Fprintf(logWriter, "%s%s\n", venvResult.Stdout, venvResult.Stderr)
 		}
@@ -278,20 +319,29 @@ func (r *BehaveRunner) executeSystem(ctx context.Context, pythonTool *tool.ToolD
 	}
 
 	// Install dependencies using the resolved python tool with venv env
-	fmt.Fprintf(logWriter, "Installing Python dependencies...\n")
-	pip.PipInstallMu.Lock()
-	pipExecCtx := &tool.ExecutionContext{
-		ModuleRoot:    env.WorkDir,
-		FullEnv:       env.Env,
-		ArgsOverrides: []string{"-m", "pip", "install", "-e", ".[dev,test]", "--quiet"},
-	}
-	installResult, installErr := tool.GlobalExecutor().Execute(ctx, pythonTool, pipExecCtx)
-	pip.PipInstallMu.Unlock()
-	if installResult != nil && (len(installResult.Stdout) > 0 || len(installResult.Stderr) > 0) {
-		fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
-	}
-	if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
-		return installResult, fmt.Errorf("pip install failed: %v", installErr)
+	// Skip reinstallation when deps marker indicates pyproject.toml hasn't changed
+	if env.DepsUpToDate {
+		fmt.Fprintf(logWriter, "Dependencies up-to-date (cached venv), skipping pip install\n")
+	} else {
+		fmt.Fprintf(logWriter, "Installing Python dependencies...\n")
+		var installResult *tool.ExecutionResult
+		var installErr error
+		_ = pip.WithInstallLock(func() error {
+			pipExecCtx := &tool.ExecutionContext{
+				ModuleRoot:    env.WorkDir,
+				FullEnv:       env.Env,
+				ArgsOverrides: []string{"-m", "pip", "install", "-e", ".[dev,test]", "--quiet"},
+			}
+			installResult, installErr = tool.GlobalExecutor().Execute(ctx, pythonTool, pipExecCtx)
+			return installErr
+		})
+		if installResult != nil && (len(installResult.Stdout) > 0 || len(installResult.Stderr) > 0) {
+			fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
+		}
+		if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
+			return installResult, fmt.Errorf("pip install failed: %v", installErr)
+		}
+		pip.MarkDepsInstalled(env.VenvDir, moduleRoot)
 	}
 
 	// Build behave command

@@ -11,8 +11,8 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineWaitCommand struct{}
@@ -185,7 +185,7 @@ func PipelineWait() int {
 
 // getWorkflowRunStatus fetches the status of a workflow run from GitHub.
 func getWorkflowRunStatus(runID string) (*WorkflowRun, error) {
-	output, err := ghexec.Run(".", "run", "view", runID, "--json", "databaseId,name,status,conclusion,url")
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "run", "view", runID, "--json", "databaseId,name,status,conclusion,url")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get run status: %w", err)
 	}

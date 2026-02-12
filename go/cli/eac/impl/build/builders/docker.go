@@ -11,6 +11,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -117,7 +118,7 @@ func (h *DockerHandler) Build(module core.ModuleContractPort, workspaceRoot, out
 	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
 	Logln(logWriter, "   Build context: %s", workspaceRoot)
 
-	isCI := os.Getenv("CI") == "true"
+	isCI := environments.IsCI()
 
 	if isCI {
 		return buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath, tags, logWriter, opts)
@@ -149,10 +150,9 @@ func buildDockerTags(moniker string, module core.ModuleContractPort) []string {
 // buildDockerLocal builds a Docker image locally using buildx with the docker driver.
 // Always uses buildx for consistent behavior and BuildKit features.
 func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer, opts BuildOptions) int {
-	// Always use buildx with the default builder (docker driver).
-	// The docker driver builds directly in Docker daemon - no slow tarball export.
-	// This avoids the docker-container driver which requires exporting images.
-	args := []string{"buildx", "build", "--builder", "default"}
+	// Always use buildx with the docker-driver builder for the active context.
+	// Resolved explicitly to avoid context/builder mismatch and ignore user experiments.
+	args := []string{"buildx", "build", "--builder", detectDockerBuilder()}
 
 	// Apply cache flags from CacheConfig
 	if opts.CacheConfig != nil {
@@ -205,12 +205,12 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 	ciPlatforms := "linux/amd64,linux/arm64"
 
 	// Check if we're in GitHub Actions (has GHA cache available)
-	isGitHubActions := os.Getenv("GITHUB_ACTIONS") == "true"
+	isGitHubActions := environments.IsCI() && os.Getenv("GITHUB_ACTIONS") == "true"
 
 	// Build docker command with all tags for single-platform
-	// Use default builder (docker driver) for single-platform - faster than docker-container driver
+	// Resolved explicitly to use the docker-driver builder for the active context
 	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
-	args := []string{"buildx", "build", "--builder", "default", "--platform", "linux/amd64"}
+	args := []string{"buildx", "build", "--builder", detectDockerBuilder(), "--platform", "linux/amd64"}
 
 	// Apply cache flags from CacheConfig
 	if opts.CacheConfig != nil {

@@ -23,16 +23,19 @@ Creates OSCAL assessment-results from existing test and security scan evidence, 
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| assess.go | Command entry point, config parsing, module discovery, assessment orchestration, report writing |
-| ai_analyzer.go | AI risk assessment generation with retry, prompt building, and executive summary construction |
-| evidence.go | Evidence collection from test manifests and security scan results with age validation |
-| oscal.go | OSCAL assessment-results document building with observations, findings, and control status |
-| parallel.go | Parallel and sequential module assessment execution with order-preserving concurrency |
-| report_builder.go | Template data construction from assessment results with evidence formatting |
-| reporting.go | Console summary display with per-module control counts, evidence details, and risk scores |
-| template_data.go | Data structures for template rendering: report data, executive summary, module data, findings |
+| File               | Responsibility                                                                                |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| assess.go          | Command entry point, type definitions, and assessment orchestration                           |
+| assess_config.go   | CLI flag parsing, module discovery/validation, and workspace root resolution                  |
+| assess_evidence.go | Evidence collection and staleness detection, AI input building, and fallback scoring          |
+| assess_oscal.go    | Aggregated OSCAL report writing, Markdown report generation, and template loading             |
+| ai_analyzer.go     | AI risk assessment generation with retry, prompt building, and executive summary construction |
+| evidence.go        | Evidence collection from test manifests and security scan results with age validation         |
+| oscal.go           | OSCAL assessment-results document building with observations, findings, and control status    |
+| parallel.go        | Parallel and sequential module assessment execution with order-preserving concurrency         |
+| report_builder.go  | Template data construction from assessment results with evidence formatting                   |
+| reporting.go       | Console summary display with per-module control counts, evidence details, and risk scores     |
+| template_data.go   | Data structures for template rendering: report data, executive summary, module data, findings |
 
 ## Dependencies
 
@@ -59,14 +62,13 @@ The `create risk-assess` command provides automated compliance assessment for `e
 ## Code Health
 
 ### Tech Debt
-- assess.go is 731 lines combining entry point, config parsing, report writing, AI input building, and risk scoring
-- `CreateRiskAssess()` (~145 lines) orchestrates too many concerns in a single function
-- No unit tests for oscal.go, evidence.go, parallel.go, or reporting.go
+
+- `oscal.go` (367 lines), `evidence.go` (328 lines) exceed 300 lines
 
 ### Pain Points
-- OSCAL document building in oscal.go (367 lines) has no dedicated tests despite complex compliance logic
-- Evidence collection and staleness detection in evidence.go are untested independently of the full BDD suite
+
+- No test coverage for `assess.go`, `assess_config.go`, `assess_evidence.go`, `assess_oscal.go`, `evidence.go`, `oscal.go`, `parallel.go`, `reporting.go`, `template_data.go`
 
 ### Optimization Opportunities
-- Split assess.go into orchestration, config parsing, and report-output files to reduce file size below 300 lines (high feasibility, natural seam boundaries exist)
-- Add unit tests for oscal.go and evidence.go to validate compliance-critical logic in isolation (high feasibility, functions are mostly pure with clear inputs/outputs)
+
+- None identified

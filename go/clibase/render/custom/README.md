@@ -23,11 +23,11 @@ filtered by which commands they apply to.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `registry.go` | `CustomRenderer`, `RendererRegistration`, `Register()`, `Get()`, `List()`, `SupportsCommand()` |
-| `count.go` | `RenderCount` renderer: produces a simple module count (registered for `get-modules` only) |
-| `summary.go` | `RenderSummary` renderer: produces a human-readable module summary with statistics (registered for all commands) |
+| File          | Purpose                                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `registry.go` | `CustomRenderer`, `RendererRegistration`, `Register()`, `Get()`, `List()`, `SupportsCommand()`                   |
+| `count.go`    | `RenderCount` renderer: produces a simple module count (registered for `get-modules` only)                       |
+| `summary.go`  | `RenderSummary` renderer: produces a human-readable module summary with statistics (registered for all commands) |
 
 ## Dependencies
 
@@ -40,10 +40,14 @@ Extends the `render` package with named custom output formats. When a user passe
 ## Code Health
 
 ### Tech Debt
-- None identified. Registry map is protected by `sync.RWMutex`.
+
+- None identified
 
 ### Pain Points
-- None identified; small package with clear responsibilities
+
+- Test files are larger than implementation: `registry_test.go` (255 lines), `summary_test.go` (211 lines)
+- Implementation files are small: `registry.go` (102 lines), `summary.go` (77 lines), `count.go` (26 lines)
 
 ### Optimization Opportunities
-- None identified.
+
+- None identified

@@ -7,11 +7,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/changelog"
-	"github.com/ready-to-release/eac/go/core/config"
-	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
@@ -45,10 +41,9 @@ func (c *releaseChangelogCommand) Execute(_ context.Context, _ *core.CommandRequ
 var log = logging.C()
 
 func ReleaseChangelog() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold(withModules(), withGit(), withConfig())
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -102,27 +97,13 @@ func ReleaseChangelog() int {
 		return 1
 	}
 
-	// Load module contracts
-	moduleRegistry, err := modules.LoadFromWorkspace("")
-	if err != nil {
-		log.Errorf("failed to load modules: %v", err)
-		return 1
-	}
-
-	moduleContract, exists := moduleRegistry.Get(module)
+	moduleContract, exists := s.ModuleRegistry.Get(module)
 	if !exists {
 		log.Errorf("module '%s' not found", module)
 		return 1
 	}
 
-	// Open git repository
-	// Open git repository
-	gitMgr := git.NewManager(logging.C().Zap())
-	repo, err := gitMgr.Open("")
-	if err != nil {
-		log.Errorf("failed to open git repository: %v", err)
-		return 1
-	}
+	repo := s.Repo
 
 	// Determine changelog path from module contract
 	changelogPath := moduleContract.GetChangelogPath()
@@ -222,16 +203,11 @@ func ReleaseChangelog() int {
 		existingVersions = append(existingVersions, v.Number)
 	}
 
-	// Load config for versioning constraints
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		log.Errorf("failed to load config: %v", err)
-		return 1
-	}
+	cfg := s.Config
 
 	// Determine max bump based on constraints
 	maxBump := changelog.BumpMajor // Default: unrestricted
-	if cfg.Repository.Repository.Versioning.IsPatchOnly() {
+	if cfg.Repository.Versioning.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 		if forceBreaking {
 			log.Warn("--breaking ignored due to patch-only constraint in .eac/repository.yml")
@@ -279,7 +255,7 @@ func ReleaseChangelog() int {
 	log.Infof("Module: %s", module)
 	log.Infof("Current version: %s", currentVersion)
 	log.Infof("New version: %s", newVersion)
-	if cfg.Repository.Repository.Versioning.IsPatchOnly() && versionType == changelog.Semver {
+	if cfg.Repository.Versioning.IsPatchOnly() && versionType == changelog.Semver {
 		log.Info("Version constraint: patch-only (from .eac/repository.yml)")
 	}
 	log.Infof("Commits analyzed: %d", len(commits))

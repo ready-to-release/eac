@@ -15,7 +15,7 @@ Isolated NuGet environments for safe, parallel .NET test and build execution.
 
 - Copy-on-write isolation: project files (`.csproj`, `.sln`, `.props`, `.targets`, `nuget.config`, `global.json`) and source directories (`src/`, `test/`, `tests/`) are copied into a per-unit-of-work subdirectory so that `dotnet restore` and `dotnet build` never mutate the original tree
 - Incremental sync: `copyFileIfChanged` compares mtime and size before copying, and `syncDirectory` removes stale files from the destination, keeping isolation cheap on repeat runs
-- Change-triggered reset: `projectFilesChanged` detects when `.csproj`/`.sln`/`Directory.Build.props` have changed and triggers a full directory wipe before re-syncing, preventing stale build state
+- Change-triggered reset: `projectFilesChanged` uses `filepath.Walk` to recursively detect when `.csproj`/`.fsproj`/`.sln`/`Directory.Build.props` have changed (including nested subdirectories) and triggers a full directory wipe before re-syncing, preventing stale build state
 - Shared NuGet package cache: all isolated environments point `NUGET_PACKAGES` at a single `.cache/eac/nuget/packages` directory so packages are downloaded once
 - Global restore mutex (`NuGetRestoreMu`): a package-level `sync.Mutex` that callers use to serialize `dotnet restore` invocations, preventing NuGet cache corruption from concurrent writes on Windows
 
@@ -37,11 +37,10 @@ This package is a shared infrastructure adapter used by the `dotnet` and `reqnro
 ## Code Health
 
 ### Tech Debt
-- isolation.go:84-88 silently ignores errors from `syncDirectory` for `src/`, `test/`, `tests/` directories. If a real sync failure occurs (e.g., permission denied on a source file), the subsequent `dotnet build` will fail with a confusing error rather than a clear sync-stage error.
-- isolation.go:157-177 `projectFilesChanged` only checks top-level glob matches (`filepath.Glob(filepath.Join(moduleRoot, pattern))`), so nested `.csproj` files in subdirectories are not detected, potentially missing change signals.
+- None identified
 
 ### Pain Points
-- None identified
+- isolation.go is 289 lines; no immediate splitting needed but approaching threshold
 
 ### Optimization Opportunities
 - None identified

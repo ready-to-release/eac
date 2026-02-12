@@ -10,8 +10,8 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type getChangedModulesCommand struct{}
@@ -90,7 +90,8 @@ func GetChangedModules() int {
 		}
 	} else {
 		// Get list of changed files from git
-		output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", baseRef)
+		ts := tool.GlobalToolSystem()
+		output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "diff", "--name-only", baseRef)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: getting changed files: %v\n", err)
 			return 1

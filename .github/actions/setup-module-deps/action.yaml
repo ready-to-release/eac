@@ -49,7 +49,7 @@ runs:
 
         if [ "$INPUT_DEPS" = "auto" ]; then
           # Get build dependencies directly from the commands binary (shell format)
-          # This queries module-types.yml configuration - the source of truth
+          # This queries component-kinds configuration via the commands binary
           eval $(${COMMANDS:?COMMANDS not set} get build-deps "$MODULE" --format shell)
           # Shell format sets: MODULE_TYPE, BUILD_DEPS
           DEPS="$BUILD_DEPS"

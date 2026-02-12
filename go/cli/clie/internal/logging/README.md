@@ -45,12 +45,12 @@ The logging package is used by every other package in the clie module. It provid
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- None identified.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

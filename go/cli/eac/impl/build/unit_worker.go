@@ -49,14 +49,7 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	unitID := spec.ID
 
 	// Create pipeline for shared cache/lock/manifest orchestration
-	pipeline := &cmdframework.UnitPipeline{
-		CachedUoWs:             bctx.cachedUoWs,
-		ValidateCacheArtifacts: true,
-		OnCacheInvalidated:     func(ln string) { delete(bctx.cachedUoWs, ln) },
-		LockStyle:              cmdframework.LockUnlessDryRun,
-		LockConfigFn:           func(m, cd string) locking.Config { return locking.UnitBuildConfig(m, cd, paths.OutBuildRelPath) },
-		Tracker:                bctx.tracker,
-	}
+	pipeline := createWorkerPipeline(bctx)
 
 	// Check UoW-level cache
 	log.Debugf("[UOW-CACHE] Component worker for %s: unitID=%s", component, unitID.Longname())
@@ -73,47 +66,16 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 
 	// Handle placeholder "none" component (modules with no buildable components)
 	if compName == "none" {
-		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
-		// Write a NoOp manifest for the "none" placeholder to satisfy manifest assertions
-		// NoOp manifests are always considered up-to-date in cache detection
-		if bctx.tracker != nil {
-			noneID := workunit.UnitID{
-				Action:        core.ActionBuild,
-				Module:        module,
-				ComponentType: "none",
-				ComponentName: "none",
-				Tool:          "",
-			}
-			manifest := coreoutput.NewNoOpManifest(
-				core.ActionBuild,
-				module,
-				"none",
-				"",
-				"no buildable components",
-			)
-			if err := bctx.tracker.RecordStart(noneID); err != nil {
-				log.Debugf("Failed to record UoW start for %s: %v", noneID.Longname(), err)
-			}
-			if err := bctx.tracker.RecordComplete(noneID, manifest); err != nil {
-				log.Debugf("Failed to record UoW completion for %s: %v", noneID.Longname(), err)
-			}
-		}
-		return 0
+		return handleNonePlaceholder(module, bctx, logWriter)
 	}
 
-	// Component was already parsed above for cache check
 	// compName and toolName are already set, use toolName as builderName
 	builderName := toolName
 
 	// Skip if dependency and artifacts exist (--use-existing-depm)
-	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
-		cfg, err := config.Load(config.DefaultLoadOptions())
-		if err == nil {
-			if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested(), cfg) {
-				output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
-				return 0
-			}
-		}
+	if skip, code := checkExistingDependencyArtifacts(buildCfg, ctx, module, component); skip {
+		output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
+		return code
 	}
 
 	// Acquire unit-level lock with wait (skip in dry-run)
@@ -125,9 +87,85 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	}
 	defer release()
 
-	// Get the handler for this component/tool
-	// For tool chain components, builderName is the tool name (e.g., "pdf-oci")
-	// and we need to get the handler directly by name
+	// Resolve the build handler for this component/tool
+	handler := resolveWorkerHandler(moduleContract, compName, builderName)
+	if handler == nil {
+		output.Writeln(logWriter, "Error: no handler found for component %s in module %s", component, module)
+		return 1
+	}
+
+	// Build options and dry-run check
+	opts := buildWorkerOptions(buildCfg, ctx, bctx, moduleContract, module, component, compName)
+	if ctx.Config.DryRun {
+		output.Writeln(logWriter, "🔨 %s would be built (changed)", module)
+		output.Writeln(logWriter, "   Component: %s, Handler: %s", component, handler.Name())
+		return 0
+	}
+
+	// Execute the build and record results
+	return executeBuildAndRecord(ctx, bctx, spec, pipeline, handler, moduleContract, module, compName, builderName, unitID, opts, logWriter)
+}
+
+// createWorkerPipeline creates a UnitPipeline for shared cache/lock/manifest orchestration.
+func createWorkerPipeline(bctx *buildContext) *cmdframework.UnitPipeline {
+	return &cmdframework.UnitPipeline{
+		CachedUoWs:             bctx.cachedUoWs,
+		ValidateCacheArtifacts: true,
+		OnCacheInvalidated:     func(ln string) { delete(bctx.cachedUoWs, ln) },
+		LockStyle:              cmdframework.LockUnlessDryRun,
+		LockConfigFn:           func(m, cd string) locking.Config { return locking.UnitBuildConfig(m, cd, paths.OutBuildRelPath) },
+		Tracker:                bctx.tracker,
+	}
+}
+
+// handleNonePlaceholder handles the "none" placeholder component for modules with no buildable components.
+// Writes a NoOp manifest to satisfy manifest assertions.
+func handleNonePlaceholder(module string, bctx *buildContext, logWriter io.Writer) int {
+	output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
+	if bctx.tracker != nil {
+		noneID := workunit.UnitID{
+			Action:        core.ActionBuild,
+			Module:        module,
+			ComponentType: "none",
+			ComponentName: "none",
+			Tool:          "",
+		}
+		manifest := coreoutput.NewNoOpManifest(
+			core.ActionBuild,
+			module,
+			"none",
+			"",
+			"no buildable components",
+		)
+		if err := bctx.tracker.RecordStart(noneID); err != nil {
+			log.Debugf("Failed to record UoW start for %s: %v", noneID.Longname(), err)
+		}
+		if err := bctx.tracker.RecordComplete(noneID, manifest); err != nil {
+			log.Debugf("Failed to record UoW completion for %s: %v", noneID.Longname(), err)
+		}
+	}
+	return 0
+}
+
+// checkExistingDependencyArtifacts checks if a dependency module's artifacts already exist
+// and can be skipped (--use-existing-depm). Returns (shouldSkip, exitCode).
+func checkExistingDependencyArtifacts(buildCfg *BuildConfig, ctx *cmdframework.ExecutionContext, module, component string) (bool, int) {
+	if !buildCfg.UseExistingDepm || ctx.Config.DryRun || buildCfg.RequestedSet[module] {
+		return false, 0
+	}
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		return false, 0
+	}
+	if hasExistingArtifacts(module, ctx.WorkspaceRoot, buildCfg.ArtifactsMode.AllArtifactsRequested(), cfg) {
+		return true, 0
+	}
+	return false, 0
+}
+
+// resolveWorkerHandler resolves the build handler for a component/tool combination.
+// First tries direct tool name lookup, then falls back to component-based handler lookup.
+func resolveWorkerHandler(moduleContract *modules.ModuleContract, compName, builderName string) tool.BuildHandler {
 	var handler tool.BuildHandler
 	if builderName != "" {
 		// Try to get handler directly by tool name (for tool chain components)
@@ -137,51 +175,46 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		// Fall back to component-based handler lookup
 		handler = getHandlerForComponent(moduleContract, compName, builderName)
 	}
-	if handler == nil {
-		output.Writeln(logWriter, "Error: no handler found for component %s in module %s", component, module)
-		return 1
-	}
+	return handler
+}
 
-	// Determine which artifacts to build
+// buildWorkerOptions constructs the BuildOptions for a unit worker build.
+func buildWorkerOptions(buildCfg *BuildConfig, ctx *cmdframework.ExecutionContext, bctx *buildContext, moduleContract *modules.ModuleContract, module, component, compName string) tool.BuildOptions {
 	requestedArtifacts := determineRequestedArtifactsForBuild(moduleContract, buildCfg.ArtifactsMode, ctx.WorkspaceRoot)
+	weight := lookupComponentWeight(bctx, module, component, compName)
 
-	// Look up weight for this component from pre-computed weights map
-	// Key format matches what was stored in populateComponentWeights
-	weightKey := module + ":" + component // "module:component:tool" format
-	weight := bctx.componentWeights[weightKey]
-	if weight <= 0 {
-		// Try without tool suffix if not found
-		weight = bctx.componentWeights[module+":"+compName]
-	}
-	if weight <= 0 {
-		weight = 1 // Default to 1 if not found
-	}
-	log.Debugf("[WEIGHT] buildUnitWorker %s: weight=%d (key=%s)", component, weight, weightKey)
-
-	opts := tool.BuildOptions{
+	return tool.BuildOptions{
 		TidyFirst:          buildCfg.TidyFirst,
 		Version:            buildCfg.Version,
 		DryRun:             ctx.Config.DryRun,
 		RequestedArtifacts: requestedArtifacts,
-		Component:          compName, // Pass original component name for component-level parallelism
+		Component:          compName,
 		Reproducible:       buildCfg.ResolveReproducible(),
 		ForceRebuild:       ctx.Config.ForceRebuild,
-		Weight:             weight,                   // Resource multiplier for container builds
-		CacheConfig:        ctx.Config.CacheConfig,   // Fine-grained cache control
-		ArtifactsMode:      buildCfg.ArtifactsMode,   // Artifact scope mode
+		Weight:             weight,
+		CacheConfig:        ctx.Config.CacheConfig,
+		ArtifactsMode:      buildCfg.ArtifactsMode,
 	}
+}
 
-	// In dry-run mode, simulate a successful build
-	if ctx.Config.DryRun {
-		output.Writeln(logWriter, "🔨 %s would be built (changed)", module)
-		output.Writeln(logWriter, "   Component: %s, Handler: %s", component, handler.Name())
-		return 0
+// lookupComponentWeight finds the pre-computed weight for a component from the weights map.
+func lookupComponentWeight(bctx *buildContext, module, component, compName string) int {
+	weightKey := module + ":" + component
+	weight := bctx.componentWeights[weightKey]
+	if weight <= 0 {
+		weight = bctx.componentWeights[module+":"+compName]
 	}
+	if weight <= 0 {
+		weight = 1
+	}
+	log.Debugf("[WEIGHT] buildUnitWorker %s: weight=%d (key=%s)", component, weight, weightKey)
+	return weight
+}
 
-	// Log which component we're building
+// executeBuildAndRecord runs the build, handles exit codes, and records manifests.
+func executeBuildAndRecord(ctx *cmdframework.ExecutionContext, bctx *buildContext, spec core.UnitSpec, pipeline *cmdframework.UnitPipeline, handler tool.BuildHandler, moduleContract *modules.ModuleContract, module, compName, builderName string, unitID workunit.UnitID, opts tool.BuildOptions, logWriter io.Writer) int {
 	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", compName, handler.Name())
 
-	// Adapt module to port interface for handler methods
 	modulePort := adapters.AdaptModule(moduleContract)
 
 	// Validate module before building
@@ -190,8 +223,7 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		return 1
 	}
 
-	// Update UoW ID with actual handler name (may differ from parsed tool name)
-	// and record start
+	// Update UoW ID with actual handler name and record start
 	unitID = workunit.UnitID{
 		Action:        core.ActionBuild,
 		Module:        module,
@@ -199,31 +231,42 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 		ComponentName: compName,
 		Tool:          handler.Name(),
 	}
+	recordWorkerStart(bctx, unitID)
+
+	// Use pre-computed module input hash
+	inputHash := resolveInputHash(ctx, bctx, module, moduleContract)
+
+	// Build the component using component-level output directory: out/build/<module>/<component>/<builder>
+	componentDir := cmdframework.UnitDir(compName, builderName)
+	componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
+	exitCode := handler.Build(modulePort, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
+
+	return handleBuildResult(exitCode, compName, unitID, inputHash, componentOutputDir, handler, modulePort, ctx, bctx, pipeline, logWriter)
+}
+
+// recordWorkerStart records the start of a UoW if a tracker is available.
+func recordWorkerStart(bctx *buildContext, unitID workunit.UnitID) {
 	if bctx.tracker != nil {
 		if err := bctx.tracker.RecordStart(unitID); err != nil {
 			log.Debugf("Failed to record UoW start for %s: %v", unitID.Longname(), err)
 		}
 	}
+}
 
-	// Use pre-computed module input hash to ensure all components in a module
-	// share the same hash. This prevents divergence when parallel builds modify
-	// shared files (e.g., go.sum via go mod tidy).
+// resolveInputHash returns the pre-computed module input hash, falling back to on-demand computation.
+func resolveInputHash(ctx *cmdframework.ExecutionContext, bctx *buildContext, module string, moduleContract *modules.ModuleContract) string {
 	inputHash := bctx.moduleInputHashes[module]
 	if inputHash == "" {
-		// Fallback: compute if not pre-computed (shouldn't happen in normal flow)
 		inputHash = computeComponentInputHash(ctx, module, moduleContract)
 	}
+	return inputHash
+}
 
-	// Build the component
-	// Use component-level output directory: out/build/<module>/<component>/<builder>
-	componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
-	exitCode := handler.Build(modulePort, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
-
-	// Handle exit codes:
-	// -1 = skipped (cached), 0 = success, >0 = failure
+// handleBuildResult processes the build exit code and records the appropriate manifest.
+// Exit codes: -1 = skipped (cached), 0 = success, >0 = failure.
+func handleBuildResult(exitCode int, compName string, unitID workunit.UnitID, inputHash, componentOutputDir string, handler tool.BuildHandler, modulePort core.ModuleContractPort, ctx *cmdframework.ExecutionContext, bctx *buildContext, pipeline *cmdframework.UnitPipeline, logWriter io.Writer) int {
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
-		// Record failure manifest with pre-computed input hash for debugging
 		pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
 			ExitCode:   exitCode,
 			InputHash:  inputHash,
@@ -236,33 +279,31 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	}
 	if exitCode == -1 {
 		output.Writeln(logWriter, "⏭️  Component %s unchanged (cached)", compName)
-		// Record cache hit - validate and return existing manifest
 		if bctx.tracker != nil {
 			if _, err := bctx.tracker.RecordCacheHit(unitID); err != nil {
 				log.Debugf("Cache validation for %s: %v", unitID.Longname(), err)
 			}
 		}
-		return exitCode // Pass through -1 so TUI shows blue
+		return exitCode
 	}
 
 	output.Writeln(logWriter, "✅ Component %s built successfully", compName)
+	recordSuccessManifest(pipeline, unitID, inputHash, componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
+	return 0
+}
 
-	// Record successful completion with artifacts
-	artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
+// recordSuccessManifest records a successful build completion with artifact information.
+func recordSuccessManifest(pipeline *cmdframework.UnitPipeline, unitID workunit.UnitID, inputHash, componentOutputDir string, handler tool.BuildHandler, modulePort core.ModuleContractPort, workspaceRoot string) {
+	artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, workspaceRoot)
 	outputHash := computeOutputHash(artifacts)
 	pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
-		ExitCode:   exitCode,
+		ExitCode:   0,
 		InputHash:  inputHash,
 		ExecutedAt: time.Now().UTC(),
 		Artifacts:  artifacts,
 		OutputHash: outputHash,
 		Version:    "1.0.0",
 	})
-
-	// NOTE: UoW manifests are written atomically via tracker.RecordComplete above
-	// No separate module-level state update needed
-
-	return 0
 }
 
 // getHandlerForComponent finds the build handler for a specific component.

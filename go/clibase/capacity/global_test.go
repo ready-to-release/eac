@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/ready-to-release/eac/go/core/logging"
 )
 
 func TestIsProcessAlive(t *testing.T) {
@@ -36,6 +38,7 @@ func TestCleanStaleFromState_DeadProcess(t *testing.T) {
 
 	gs := &GlobalSemaphore{
 		workspaceRoot: tmpDir,
+		log:           logging.C(),
 		allocations:   make(map[string]int),
 	}
 
@@ -93,6 +96,7 @@ func TestWriteState_LogsErrorOnBadPath(t *testing.T) {
 	// Point workspaceRoot at a nonexistent directory so WriteFile fails
 	gs := &GlobalSemaphore{
 		workspaceRoot: filepath.Join(t.TempDir(), "nonexistent"),
+		log:           logging.C(),
 		allocations:   make(map[string]int),
 	}
 
@@ -125,4 +129,103 @@ func TestGlobalSemaphore_AcquireRelease(t *testing.T) {
 	if used != 0 {
 		t.Errorf("expected used=0 after release, got %d", used)
 	}
+}
+
+func TestGlobalSemaphore_Available(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	gs := NewGlobalSemaphore(tmpDir, 8, nil)
+	defer gs.Close()
+
+	avail := gs.Available()
+	if avail != 8 {
+		t.Errorf("expected available=8, got %d", avail)
+	}
+
+	gs.Acquire(5)
+	avail = gs.Available()
+	if avail != 3 {
+		t.Errorf("expected available=3, got %d", avail)
+	}
+
+	gs.Release(5)
+	avail = gs.Available()
+	if avail != 8 {
+		t.Errorf("expected available=8 after release, got %d", avail)
+	}
+}
+
+func TestGlobalSemaphore_SetCapacity(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	gs := NewGlobalSemaphore(tmpDir, 4, nil)
+	defer gs.Close()
+
+	if gs.Capacity() != 4 {
+		t.Errorf("expected capacity=4, got %d", gs.Capacity())
+	}
+
+	gs.SetCapacity(12)
+	if gs.Capacity() != 12 {
+		t.Errorf("expected capacity=12 after set, got %d", gs.Capacity())
+	}
+}
+
+func TestGlobalSemaphore_MultipleAcquireRelease(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	gs := NewGlobalSemaphore(tmpDir, 10, nil)
+	defer gs.Close()
+
+	// Acquire multiple slots
+	gs.Acquire(2)
+	gs.Acquire(3)
+	gs.Acquire(1)
+
+	used := gs.Used()
+	if used != 6 {
+		t.Errorf("expected used=6, got %d", used)
+	}
+
+	// Release in different order
+	gs.Release(3)
+	used = gs.Used()
+	if used != 3 {
+		t.Errorf("expected used=3 after first release, got %d", used)
+	}
+
+	gs.Release(1)
+	gs.Release(2)
+	used = gs.Used()
+	if used != 0 {
+		t.Errorf("expected used=0 after all releases, got %d", used)
+	}
+}
+
+func TestGlobalSemaphore_ReadState_EmptyDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	gs := &GlobalSemaphore{
+		workspaceRoot: tmpDir,
+		log:           logging.C(),
+		allocations:   make(map[string]int),
+	}
+
+	state := gs.readState()
+	if state == nil {
+		t.Fatal("readState should never return nil")
+	}
+	if len(state.Allocations) != 0 {
+		t.Errorf("expected empty allocations, got %d", len(state.Allocations))
+	}
+}
+
+func TestGlobalSemaphore_ReleaseNonExistent(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	gs := NewGlobalSemaphore(tmpDir, 8, nil)
+	defer gs.Close()
+
+	// Releasing weight that was never acquired should not panic
+	gs.Release(5)
 }

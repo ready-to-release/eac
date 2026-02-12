@@ -163,7 +163,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 	// Render cache misses using batch tool
 	fmt.Fprintf(logWriter, "Rendering %d diagram(s) via mermaid-render tool...\n", result.CacheMisses)
 
-	rendered, failed, err := renderMermaidBatch(repoRoot, cacheDir, statuses, logWriter)
+	rendered, failed, err := renderMermaidBatch(repoRoot, cacheDir, statuses, logWriter, opts.GetBridge())
 	result.Rendered = rendered
 	result.Failed = failed
 
@@ -181,7 +181,7 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 }
 
 // renderMermaidBatch renders diagrams using the mermaid-render tool.
-func renderMermaidBatch(repoRoot, cacheDir string, statuses []diagrams.CacheStatus, logWriter io.Writer) (int, int, error) {
+func renderMermaidBatch(repoRoot, cacheDir string, statuses []diagrams.CacheStatus, logWriter io.Writer, bridge ToolBridge) (int, int, error) {
 	// Filter for cache misses
 	toRender := []diagrams.CacheStatus{}
 	for i := range statuses {
@@ -260,7 +260,6 @@ func renderMermaidBatch(repoRoot, cacheDir string, statuses []diagrams.CacheStat
 	}
 
 	// Execute mermaid-render tool via bridge
-	bridge := tool.GlobalHandlerToolBridge()
 	tc := &tool.ToolContext{
 		WorkspaceRoot: repoRoot,
 		StagingDir:    cacheDir,

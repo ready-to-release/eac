@@ -23,19 +23,20 @@ specifications.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| runner.go | `RunnerConfig`, `CreateScenarioInitializer`, `BuildOptions` |
-| context.go | `TestContext` with isolation, command execution, mocking |
-| steps.go | `RegisterCommonSteps` for shared step definitions |
-| helpers.go | Composable helper functions for step implementations |
-| fixtures.go | Test environment setup (modules, configs, git state) |
-| templates.go | Named EAC configuration templates and substitution |
-| cache.go | `TestCache` with git tracked files caching |
-| dispatcher.go | In-process command dispatch for fast BDD execution |
-| tag_translator.go | `GodogTagTranslator` for godog tag expression syntax |
-| descriptor.go | Test type descriptor registration for godog |
-| doc.go | Package documentation |
+| File              | Responsibility                                              |
+| ----------------- | ----------------------------------------------------------- |
+| runner.go         | `RunnerConfig`, `CreateScenarioInitializer`, `BuildOptions` |
+| context.go        | `TestContext` with isolation, command execution, mocking    |
+| steps.go          | `RegisterCommonSteps` for shared step definitions           |
+| helpers.go        | Composable helper functions for step implementations        |
+| fixtures.go       | Test environment setup (modules, configs, git state)        |
+| templates.go      | Named EAC configuration templates and substitution          |
+| cache.go          | `TestCache` with git tracked files caching                  |
+| cache_adapters.go | Port-interface adapter wrappers (moduleReportAdapter, moduleRegistryAdapter, moduleContractAdapter) |
+| dispatcher.go     | In-process command dispatch for fast BDD execution          |
+| tag_translator.go | `GodogTagTranslator` for godog tag expression syntax        |
+| descriptor.go     | Test type descriptor registration for godog                 |
+| doc.go            | Package documentation                                       |
 
 ## Dependencies
 
@@ -61,12 +62,17 @@ specifications.
 ## Code Health
 
 ### Tech Debt
-- cache.go bundles ~200 lines of port-interface adapter wrappers (moduleReportAdapter, moduleRegistryAdapter, moduleContractAdapter) that could live in a dedicated `adapters` sub-file
-- `buildMockingEnvironment` in context.go (~60 lines) mixes config loading, path resolution, and env-var construction in one method
+- None identified
 
 ### Pain Points
-- `logBinaryNotFoundDiagnostics` in context.go writes directly to `os.Stderr` instead of using the structured logger, making output hard to capture in CI log aggregation
-- Package-level `var log` in cache.go ties all test infrastructure to one logger instance at import time
+- context.go is 543 lines; strong candidate for splitting (extract command execution, mocking, and assertion helpers into separate files)
+- helpers.go is 373 lines; candidate for splitting by concern (command helpers, file helpers, assertion helpers)
+- fixtures.go is 341 lines; candidate for splitting (extract template application and git state setup)
+- cache.go is 292 lines; no immediate splitting needed but approaching threshold
+- runner.go is 276 lines; no immediate splitting needed but approaching threshold
+- templates.go is 251 lines; no immediate splitting needed but approaching threshold
+- cache_adapters.go is 231 lines; no immediate splitting needed but approaching threshold
+- Package-level var log in cache.go captures the component name at init time, though the underlying zap logger is resolved lazily on each call via logging.C()
 
 ### Optimization Opportunities
-- `TestCache.FilesByExtension`, `FilesBySuffix`, and `FilesInDir` each iterate the full tracked-files list; pre-building an extension-keyed index during `EnsurePopulated` would turn O(n) lookups into O(1); feasible with low memory overhead
+- None identified

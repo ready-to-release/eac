@@ -41,7 +41,7 @@ This repository implements comprehensive security measures:
 For detailed information, see our comprehensive documentation:
 
 - [Security Practices](docs/explanation/continuous-delivery/security/) - Shift-left security, SAST, DAST, supply chain security
-- [Security Workflows](docs/reference/repository/continuous-delivery/workflows/security-workflows.md) - Automated security scanning
+- [Security Workflows](docs/reference/eac/continuous-delivery/workflows/security-workflows.md) - Automated security scanning
 - [Scan Command](docs/how-to-guides/eac/commands/build-test-validate/scan-for-security-issues.md) - Running security scans locally
 
 ## License

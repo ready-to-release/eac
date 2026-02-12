@@ -21,7 +21,7 @@ import (
 	helpcmds "github.com/ready-to-release/eac/go/cli/eac/impl/help"
 	initcmds "github.com/ready-to-release/eac/go/cli/eac/impl/init"
 	lintcmds "github.com/ready-to-release/eac/go/cli/eac/impl/lint"
-	listcmds "github.com/ready-to-release/eac/go/cli/eac/impl/list"
+	showhelpcmds "github.com/ready-to-release/eac/go/cli/eac/impl/show/help"
 	pipelinecmds "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline"
 	pipelinecicmds "github.com/ready-to-release/eac/go/cli/eac/impl/pipeline/ci"
 	releasecmds "github.com/ready-to-release/eac/go/cli/eac/impl/release"
@@ -77,7 +77,7 @@ func All() [][]core.CommandPort {
 		// Standalone and single-command groups
 		initcmds.Commands(),
 		describecmds.Commands(),
-		listcmds.Commands(),
+		showhelpcmds.Commands(),
 		extensioncmds.Commands(),
 		servecmds.Commands(),
 		servedesigncmds.Commands(),

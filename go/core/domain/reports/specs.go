@@ -34,25 +34,12 @@ type SpecsReport struct {
 	TotalScenarios int        `json:"total_scenarios" yaml:"total_scenarios" toml:"total_scenarios"`
 }
 
-// gitRepoProvider provides lazy-initialized git repository with test injection support.
-var gitRepoProvider = &git.LazyRepo{}
-
-// getGitRepo returns the git repository, initializing it if needed.
-func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	return gitRepoProvider.Get(workspaceRoot)
-}
-
-// SetGitRepo allows tests to inject a mock repository.
-// This enables proper unit testing without requiring a real git repository.
-func SetGitRepo(repo git.GitRepository) {
-	gitRepoProvider.Set(repo)
-}
-
-// GetSpecs loads specifications for a module and version
-// Version can be: empty (unreleased), "latest", "unreleased", or specific version number
-// For bundle/container modules with dependencies, specs are aggregated from all dependent modules
+// GetSpecs loads specifications for a module and version.
+// Version can be: empty (unreleased), "latest", "unreleased", or specific version number.
+// For bundle/container modules with dependencies, specs are aggregated from all dependent modules.
 // Branch specifies which branch to query (default "main"). Use "HEAD" or "current" for current branch.
-func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, error) {
+// deps provides injectable dependencies; pass nil to use zero-value defaults.
+func GetSpecs(deps *ReportDeps, workspaceRoot, module, version, branch string) (*SpecsReport, error) {
 	// Load config to get module information
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -65,13 +52,13 @@ func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, erro
 	}
 
 	// Resolve version using common helper with tag validation
-	versionInfo, err := ResolveVersionWithValidation(workspaceRoot, module, version)
+	versionInfo, err := ResolveVersionWithValidation(deps, workspaceRoot, module, version)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get git repository using the standard interface pattern
-	repo, err := getGitRepo(workspaceRoot)
+	// Get git repository using injected deps
+	repo, err := deps.getGitRepo(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -80,20 +67,7 @@ func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, erro
 	var commits []git.CommitInfo
 
 	// Determine end reference based on branch parameter and version
-	endRef := branch
-	if endRef == "" {
-		// Default to configured trunk branch (usually "main" or "master")
-		endRef = cfg.Repository.Repository.TrunkBranch
-		if endRef == "" {
-			endRef = "main" // Fallback if not configured
-		}
-	}
-	// Special case: "HEAD" or "current" means use current branch
-	if endRef == "HEAD" || endRef == "current" {
-		endRef = "HEAD"
-	}
-	// Try origin/branch if local branch doesn't exist
-	// (resolveRef in git layer handles this automatically)
+	endRef := ResolveBranchEndRef(branch, cfg.Repository.Repository.TrunkBranch)
 
 	// For specific versions (not unreleased), use the version's tag as end point
 	if !versionInfo.IsUnreleased && versionInfo.GitTag != "" {

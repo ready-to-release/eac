@@ -31,16 +31,18 @@ const (
 	ContractVersion = "0.1.0"
 )
 
-// Standard semantic commit types as defined in the contract
+// StandardCommitTypes returns the list of standard semantic commit types.
 // Note: This list should be loaded from the contract at runtime
 // See: contracts/commit-message/0.1.0/structure.yml.
-var StandardCommitTypes = []string{
-	"feat",
-	"fix",
-	"refactor",
-	"docs",
-	"chore",
-	"test",
-	"perf",
-	"style",
+func StandardCommitTypes() []string {
+	return []string{
+		"feat",
+		"fix",
+		"refactor",
+		"docs",
+		"chore",
+		"test",
+		"perf",
+		"style",
+	}
 }

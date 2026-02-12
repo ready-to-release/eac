@@ -45,6 +45,7 @@ Parent command that validates repository contracts, configuration, dependencies,
 | release.go | Release configuration validation |
 | version.go | Version format validation |
 | control-tags.go | Security control tag validation |
+| validation_report.go | Shared `ValidationOutput` formatter for spec and config validation |
 
 ## Dependencies
 
@@ -68,12 +69,12 @@ The `validate` package serves as the quality gate in `eac`, ensuring repository 
 ## Code Health
 
 ### Tech Debt
-- `test-tags.go`: `eacConfig` is a mutable package-level var caching the loaded config; prefer passing it as a parameter
-- `specs.go`: `gitRepoProvider` is a mutable package-level var for test stubbing; prefer an interface parameter
-- No test files for `config.go` (427 lines), `contracts.go`, `dependencies.go`, `module-hierarchy.go`, `module-files.go`, `test-tags.go`, or `design.go`
+- None identified
 
 ### Pain Points
-- Three separate output formatters (`outputText`, `outputJSON`, `configOutputGitHub`) duplicated across `specs.go` and `config.go`; no shared validation output abstraction
+- specs_test.go is 931 lines (significantly exceeds 300-line threshold)
+- config.go is 463 lines (exceeds 300-line threshold)
+- test-tags.go is 307 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Extract a shared `ValidationOutput` formatter used by both spec and config validation to reduce format-handling duplication (moderate effort)
+- None identified

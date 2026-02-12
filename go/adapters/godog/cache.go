@@ -3,12 +3,10 @@ package godog
 import (
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/ready-to-release/eac/go/core/domain/modules"
 	contractsreports "github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -33,6 +31,10 @@ type TestCache struct {
 
 	// trackedFiles is the cached list from git ls-files
 	trackedFiles []string
+
+	// extIndex maps file extensions to their file lists for O(1) lookups.
+	// Built during EnsurePopulated to avoid scanning the full list on every query.
+	extIndex map[string][]string
 }
 
 // NewTestCache creates a new empty test cache.
@@ -75,6 +77,14 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 	cachedFilePath := filepath.Join(repoRoot, ".git", "cached-files.txt")
 	if cachedData, err := os.ReadFile(cachedFilePath); err == nil && len(cachedData) > 0 {
 		c.trackedFiles = strings.Split(strings.TrimSpace(string(cachedData)), "\n")
+		// Build extension-keyed index for O(1) lookups
+		c.extIndex = make(map[string][]string)
+		for _, f := range c.trackedFiles {
+			ext := filepath.Ext(f)
+			if ext != "" {
+				c.extIndex[ext] = append(c.extIndex[ext], f)
+			}
+		}
 		c.populated = true
 		log.Debugf("Cache populated from pre-computed file (files=%d, source=.git/cached-files.txt)", len(c.trackedFiles))
 		return nil
@@ -108,6 +118,15 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 		c.trackedFiles[i] = strings.ReplaceAll(f, "\\", "/")
 	}
 
+	// Build extension-keyed index for O(1) lookups
+	c.extIndex = make(map[string][]string)
+	for _, f := range c.trackedFiles {
+		ext := filepath.Ext(f)
+		if ext != "" {
+			c.extIndex[ext] = append(c.extIndex[ext], f)
+		}
+	}
+
 	c.populated = true
 	return nil
 }
@@ -121,10 +140,24 @@ func (c *TestCache) TrackedFiles() []string {
 }
 
 // FilesByExtension returns files matching the given extension (e.g., ".md").
+// Uses the pre-built extension index for O(1) lookup instead of scanning all files.
 func (c *TestCache) FilesByExtension(ext string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	if c.extIndex != nil {
+		// O(1) lookup via pre-built index
+		result := c.extIndex[ext]
+		// Return a copy to prevent callers from mutating the index
+		if len(result) == 0 {
+			return nil
+		}
+		out := make([]string, len(result))
+		copy(out, result)
+		return out
+	}
+
+	// Fallback: linear scan (only if index not yet built)
 	var filtered []string
 	for _, f := range c.trackedFiles {
 		if strings.HasSuffix(f, ext) {
@@ -189,10 +222,21 @@ func (c *TestCache) FilesInDirWithExtension(dir, ext string) []string {
 
 // FilesMatchingAnyExtension returns files matching any of the given extensions.
 // Extensions should include the dot (e.g., ".sh", ".ps1").
+// Uses the pre-built extension index when available.
 func (c *TestCache) FilesMatchingAnyExtension(extensions []string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	if c.extIndex != nil {
+		// Use pre-built index: collect files from each extension bucket
+		var filtered []string
+		for _, ext := range extensions {
+			filtered = append(filtered, c.extIndex[ext]...)
+		}
+		return filtered
+	}
+
+	// Fallback: linear scan
 	var filtered []string
 	for _, f := range c.trackedFiles {
 		for _, ext := range extensions {
@@ -246,224 +290,3 @@ func (c *TestCache) RepoRoot() string {
 
 // Interface compliance check
 var _ core.TestCachePort = (*TestCache)(nil)
-
-// ============================================================================
-// Adapters for concrete types to port interfaces
-// ============================================================================
-
-// moduleReportAdapter wraps *contractsreports.ModuleContractReport to implement core.ModuleReportPort.
-type moduleReportAdapter struct {
-	report *contractsreports.ModuleContractReport
-}
-
-func newModuleReportAdapter(report *contractsreports.ModuleContractReport) *moduleReportAdapter {
-	return &moduleReportAdapter{report: report}
-}
-
-// Registry implements core.ModuleReportPort.
-func (a *moduleReportAdapter) Registry() core.ModuleRegistryPort {
-	if a.report.Registry == nil {
-		return nil
-	}
-	return newModuleRegistryAdapter(a.report.Registry)
-}
-
-// Errors implements core.ModuleReportPort.
-func (a *moduleReportAdapter) Errors() []error {
-	return nil // ModuleContractReport doesn't track errors
-}
-
-var _ core.ModuleReportPort = (*moduleReportAdapter)(nil)
-
-// moduleRegistryAdapter wraps *modules.Registry to implement core.ModuleRegistryPort.
-type moduleRegistryAdapter struct {
-	registry *modules.Registry
-}
-
-func newModuleRegistryAdapter(registry *modules.Registry) *moduleRegistryAdapter {
-	return &moduleRegistryAdapter{registry: registry}
-}
-
-// Get implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) Get(moniker string) (core.ModuleContractPort, bool) {
-	mod, ok := a.registry.Get(moniker)
-	if !ok || mod == nil {
-		return nil, false
-	}
-	return newModuleContractAdapter(mod), true
-}
-
-// Has implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) Has(moniker string) bool {
-	_, ok := a.registry.Get(moniker)
-	return ok
-}
-
-// All implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) All() []core.ModuleContractPort {
-	mods := a.registry.All()
-	result := make([]core.ModuleContractPort, len(mods))
-	for i, mod := range mods {
-		result[i] = newModuleContractAdapter(mod)
-	}
-	return result
-}
-
-// AllMonikers implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) AllMonikers() []string {
-	mods := a.registry.All()
-	result := make([]string, len(mods))
-	for i, mod := range mods {
-		result[i] = mod.Moniker
-	}
-	sort.Strings(result)
-	return result
-}
-
-// Count implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) Count() int {
-	return len(a.registry.All())
-}
-
-// FilterByComponent implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) FilterByComponent(componentType string) []core.ModuleContractPort {
-	mods := a.registry.All()
-	var result []core.ModuleContractPort
-	for _, mod := range mods {
-		if mod.HasComponent(componentType) {
-			result = append(result, newModuleContractAdapter(mod))
-		}
-	}
-	return result
-}
-
-// FindModulesForFile implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) FindModulesForFile(filePath string) []core.ModuleContractPort {
-	mods := a.registry.FindModulesForFile(filePath)
-	result := make([]core.ModuleContractPort, len(mods))
-	for i, mod := range mods {
-		result[i] = newModuleContractAdapter(mod)
-	}
-	return result
-}
-
-// WorkspaceRoot implements core.ModuleRegistryPort.
-func (a *moduleRegistryAdapter) WorkspaceRoot() string {
-	return a.registry.WorkspaceRoot()
-}
-
-var _ core.ModuleRegistryPort = (*moduleRegistryAdapter)(nil)
-
-// moduleContractAdapter wraps *modules.ModuleContract to implement core.ModuleContractPort.
-type moduleContractAdapter struct {
-	module *modules.ModuleContract
-}
-
-func newModuleContractAdapter(module *modules.ModuleContract) *moduleContractAdapter {
-	return &moduleContractAdapter{module: module}
-}
-
-// GetMoniker implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetMoniker() string {
-	return a.module.Moniker
-}
-
-// GetName implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetName() string {
-	return a.module.GetName()
-}
-
-// GetDescription implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetDescription() string {
-	return a.module.GetDescription()
-}
-
-// GetModuleGroup implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetModuleGroup() string {
-	return a.module.GetModuleGroup()
-}
-
-// HasComponent implements core.ModuleContractPort.
-func (a *moduleContractAdapter) HasComponent(componentType string) bool {
-	return a.module.HasComponent(componentType)
-}
-
-// GetComponentRoot implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetComponentRoot(componentType string) string {
-	return a.module.GetComponentRoot(componentType)
-}
-
-// GetComponentRoots implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetComponentRoots() map[string]string {
-	return a.module.GetComponentRoots()
-}
-
-// GetComponentTypesDisplay implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetComponentTypesDisplay() string {
-	return a.module.GetComponentTypesDisplay()
-}
-
-// GetComponentGroup implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetComponentGroup(componentName string) string {
-	return a.module.GetComponentGroup(componentName)
-}
-
-// GetComponentAmp implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetComponentAmp(componentName, operation string) float64 {
-	// Access amp from component config if defined
-	if comp, ok := a.module.Components[componentName]; ok && comp != nil {
-		return comp.Amp.GetAmp(operation)
-	}
-	return 1.0 // Default amplifier
-}
-
-// GetDependsOn implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetDependsOn() []string {
-	return a.module.DependsOn
-}
-
-// GetVersioningScheme implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetVersioningScheme() string {
-	if a.module.Versioning != nil {
-		return a.module.Versioning.Scheme
-	}
-	return ""
-}
-
-// GetReleaseType implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetReleaseType() string {
-	if a.module.Versioning != nil {
-		return a.module.Versioning.ReleaseType
-	}
-	return ""
-}
-
-// GetChangelog implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetChangelog() string {
-	return a.module.GetChangelog()
-}
-
-// HasVersioning implements core.ModuleContractPort.
-func (a *moduleContractAdapter) HasVersioning() bool {
-	return a.module.Versioning != nil && a.module.Versioning.Scheme != ""
-}
-
-// GetMetadata implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetMetadata() map[string]interface{} {
-	// Convert map[string]string to map[string]interface{}
-	if a.module.Metadata == nil {
-		return nil
-	}
-	result := make(map[string]interface{}, len(a.module.Metadata))
-	for k, v := range a.module.Metadata {
-		result[k] = v
-	}
-	return result
-}
-
-// GetContentHash implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetContentHash() (string, error) {
-	return a.module.GetContentHash()
-}
-
-var _ core.ModuleContractPort = (*moduleContractAdapter)(nil)

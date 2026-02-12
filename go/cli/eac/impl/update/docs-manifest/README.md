@@ -46,13 +46,12 @@ The `docs-manifest` package provides asset inventory management for `eac` docume
 ## Code Health
 
 ### Tech Debt
-- `runUpdate` in command.go (~191 lines) handles loading, scanning, merging, writing, and reporting in one function
-- No unit tests for command.go, descriptions.go, or manifest.go (only merge, scanner, and usage have tests)
+- None identified
 
 ### Pain Points
-- `runUpdate` mixes orchestration with console output formatting, making it hard to test the update logic without capturing stdout
-- descriptions.go and manifest.go perform file I/O directly without interfaces, limiting testability
+- command.go is 372 lines (exceeds 300-line threshold)
+- merge_test.go is 317 lines (exceeds 300-line threshold)
+- manifest_test.go is 313 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Split `runUpdate` into discrete load/scan/merge/write/report functions and test each independently (high feasibility, function already follows phased design internally)
-- Add unit tests for descriptions.go and manifest.go YAML/JSON serialization (high feasibility, small files with clear contracts)
+- None identified

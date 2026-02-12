@@ -14,16 +14,33 @@ var (
 	reservedPorts = make(map[int]time.Time)
 	// portMutex protects the reservedPorts map.
 	portMutex sync.Mutex
+	// portCleanupOnce ensures the background cleanup goroutine starts only once.
+	portCleanupOnce sync.Once
 )
+
+// startBackgroundPortCleanup launches a background goroutine that periodically
+// sweeps expired port reservations, removing per-call overhead from ReservePort.
+func startBackgroundPortCleanup() {
+	portCleanupOnce.Do(func() {
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				portMutex.Lock()
+				cleanupExpiredReservations()
+				portMutex.Unlock()
+			}
+		}()
+	})
+}
 
 // ReservePort attempts to reserve a specific port.
 // Returns true if reservation successful, false if already reserved.
 func ReservePort(port int) bool {
+	startBackgroundPortCleanup()
+
 	portMutex.Lock()
 	defer portMutex.Unlock()
-
-	// Clean up expired reservations
-	cleanupExpiredReservations()
 
 	// Check if port is already reserved
 	if _, exists := reservedPorts[port]; exists {

@@ -21,10 +21,10 @@ cache hits at the item level rather than the module level.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `types.go` | `Item`, `BuildFunc`, `Result` type definitions |
-| `cache.go` | `Cache` struct with `New()`, `Execute()`, `prune()`, and `copyFile()` |
+| File          | Purpose                                                                      |
+| ------------- | ---------------------------------------------------------------------------- |
+| `types.go`    | `Item`, `BuildFunc`, `Result` type definitions                               |
+| `cache.go`    | `Cache` struct with `New()`, `Execute()`, `prune()`, and `copyFile()`        |
 | `manifest.go` | `Manifest` and `CachedItem` types with `loadManifest()` and `saveManifest()` |
 
 ## Dependencies
@@ -38,11 +38,13 @@ Provides fine-grained caching for individual build artifacts within a module. Wh
 ## Code Health
 
 ### Tech Debt
-- `cache.go:13` package-level mutable `log` var; prefer constructor-injected logger
-- `manifest.go` silently returns an empty manifest on load errors; this is intentional for first-run scenarios but could mask corruption
+
+- None identified
 
 ### Pain Points
-- None identified; strong test coverage (649 test lines across the sub-package)
+
+- `cache_test.go` is 650 lines, significantly exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Inject logger via `Cache` constructor rather than package-level var to improve testability (low effort)
+
+- None identified

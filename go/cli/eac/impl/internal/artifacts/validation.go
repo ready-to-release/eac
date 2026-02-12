@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/logging"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -135,21 +136,17 @@ func ValidateBuildArtifactsWithExpected(
 		}
 	}
 
-	// Check for staleness using UoW manifest input hashes
+	// Check for staleness using UoW manifest input hashes.
+	// Uses the build's mtime-based hash cache for consistency: if the build
+	// reconciled hashes after modifying files (e.g., go mod tidy updating go.sum),
+	// the cache reflects the post-build state and matches the updated manifests.
+	// Only falls back to fresh computation when the cache misses (files changed
+	// since the build), which correctly detects real source staleness.
 	var staleModules []string
 	staleReasons := make(map[string]string)
 
 	if moduleRegistry != nil {
-		// Build map of current source hashes per module
-		moduleFiles := make(map[string][]string)
-		for _, moniker := range moduleList {
-			if contract, ok := moduleRegistry.Get(moniker); ok {
-				files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
-				if err == nil {
-					moduleFiles[moniker] = files
-				}
-			}
-		}
+		hashCache := hash.LoadCache(paths.InputHashCachePath(workspaceRoot))
 
 		// Check each module's UoW manifests for staleness
 		for _, moniker := range moduleList {
@@ -174,13 +171,16 @@ func ValidateBuildArtifactsWithExpected(
 				}
 			}
 
-			// Compute current input hash
-			files, ok := moduleFiles[moniker]
-			if !ok || len(files) == 0 {
+			// Get module contract for patterns
+			contract, ok := moduleRegistry.Get(moniker)
+			if !ok {
 				continue
 			}
 
-			currentHash, err := hash.Files(workspaceRoot, files)
+			// Compute current input hash via cache. The cache returns the build's
+			// reconciled hash if file mtimes haven't changed since the build,
+			// or recomputes if files were modified externally.
+			currentHash, _, err := hashCache.GetOrCompute(moniker, contract.GetGlobPatterns(), workspaceRoot)
 			if err != nil {
 				continue
 			}

@@ -52,10 +52,13 @@ This package is the internal engine for the `create commit-message` command. It 
 ## Code Health
 
 ### Tech Debt
-- constants.go:37 StandardCommitTypes is a hardcoded list with a comment noting it should be loaded from the contract at runtime
+
+- `verifier.go` (550 lines), `cleanup.go` (488 lines) exceed 300 lines
 
 ### Pain Points
-- None identified
+
+- No test coverage for `constants.go`, `module_validator.go`, `progress.go`, `toplevel_validator.go`, `validator.go`
 
 ### Optimization Opportunities
+
 - None identified

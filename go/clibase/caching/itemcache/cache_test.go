@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -403,7 +404,7 @@ func TestManifest_RoundTrip(t *testing.T) {
 	err := saveManifest(original, path)
 	require.NoError(t, err)
 
-	loaded := loadManifest(path)
+	loaded := loadManifest(path, logging.C())
 	require.NotNil(t, loaded)
 	assert.Equal(t, manifestVersion, loaded.Version)
 	require.Len(t, loaded.Items, 2)
@@ -423,7 +424,7 @@ func TestManifest_CorruptJSON(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(path, []byte("{not valid json!!!"), 0o644))
 
-	loaded := loadManifest(path)
+	loaded := loadManifest(path, logging.C())
 	require.NotNil(t, loaded)
 	assert.Equal(t, manifestVersion, loaded.Version)
 	assert.Empty(t, loaded.Items)
@@ -443,7 +444,7 @@ func TestManifest_VersionMismatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0o644))
 
-	loaded := loadManifest(path)
+	loaded := loadManifest(path, logging.C())
 	require.NotNil(t, loaded)
 	assert.Equal(t, manifestVersion, loaded.Version)
 	assert.Empty(t, loaded.Items, "items from wrong-version manifest should be discarded")
@@ -483,7 +484,7 @@ func TestPrune_RemovesStaleEntries(t *testing.T) {
 	assert.Empty(t, calls)
 
 	// Verify manifest was persisted with only 3 entries.
-	persistedManifest := loadManifest(filepath.Join(cacheDir, "item-manifest.json"))
+	persistedManifest := loadManifest(filepath.Join(cacheDir, "item-manifest.json"), logging.C())
 	assert.Len(t, persistedManifest.Items, 3)
 	for _, item := range currentItems {
 		assert.Contains(t, persistedManifest.Items, item.Key)
@@ -540,7 +541,7 @@ func TestPrune_HandlesDeletedFiles(t *testing.T) {
 	assert.Equal(t, 1, result.CacheHits)
 
 	// Stale entry removed from manifest.
-	persistedManifest := loadManifest(filepath.Join(cacheDir, "item-manifest.json"))
+	persistedManifest := loadManifest(filepath.Join(cacheDir, "item-manifest.json"), logging.C())
 	assert.NotContains(t, persistedManifest.Items, "stale-gone")
 	assert.Contains(t, persistedManifest.Items, currentItems[0].Key)
 }
@@ -629,7 +630,7 @@ func TestExecute_ManifestPersistedAfterBuild(t *testing.T) {
 	require.NoError(t, statErr, "manifest file should exist after Execute")
 
 	// Load and verify contents.
-	persisted := loadManifest(manifestPath)
+	persisted := loadManifest(manifestPath, logging.C())
 	require.Len(t, persisted.Items, 2)
 
 	assert.Equal(t, "h-alpha", persisted.Items["alpha"].ContentHash)

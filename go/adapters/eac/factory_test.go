@@ -8,11 +8,10 @@ import (
 )
 
 func TestFactory_FallbackToNative(t *testing.T) {
-	// Clear any existing global registry so "eac" is not found
-	tool.SetGlobalRegistry(tool.NewRegistry())
-	defer tool.SetGlobalRegistry(tool.NewRegistry())
+	registry := tool.NewRegistry()
+	executor := tool.NewExecutor()
 
-	adapter := New("/tmp/workspace")
+	adapter := New("/tmp/workspace", registry, executor)
 
 	// Should return a nativeAdapter since "eac" is not registered
 	_, ok := adapter.(*nativeAdapter)

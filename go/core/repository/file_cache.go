@@ -153,6 +153,19 @@ func (c *FileCache) TrackedFiles() ([]string, error) {
 	return c.trackedFiles, nil
 }
 
+// filter returns all tracked files for which predicate returns true.
+// It assumes the cache is already populated and holds at least a read lock.
+// Callers must ensure ensurePopulated() has been called and the appropriate lock is held.
+func (c *FileCache) filter(predicate func(string) bool) []string {
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if predicate(f) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
+}
+
 // FilesByExtension returns files matching the given extension (e.g., ".md").
 // Results are cached for subsequent calls with the same extension.
 func (c *FileCache) FilesByExtension(ext string) ([]string, error) {
@@ -176,13 +189,9 @@ func (c *FileCache) FilesByExtension(ext string) ([]string, error) {
 		return files, nil
 	}
 
-	// Filter files by extension
-	var filtered []string
-	for _, f := range c.trackedFiles {
-		if strings.HasSuffix(f, ext) {
-			filtered = append(filtered, f)
-		}
-	}
+	filtered := c.filter(func(f string) bool {
+		return strings.HasSuffix(f, ext)
+	})
 	c.byExtension[ext] = filtered
 	return filtered, nil
 }
@@ -210,13 +219,9 @@ func (c *FileCache) FilesBySuffix(suffix string) ([]string, error) {
 		return files, nil
 	}
 
-	// Filter files by suffix
-	var filtered []string
-	for _, f := range c.trackedFiles {
-		if strings.HasSuffix(f, suffix) {
-			filtered = append(filtered, f)
-		}
-	}
+	filtered := c.filter(func(f string) bool {
+		return strings.HasSuffix(f, suffix)
+	})
 	c.bySuffix[suffix] = filtered
 	return filtered, nil
 }
@@ -237,13 +242,9 @@ func (c *FileCache) FilesInDir(dir string) ([]string, error) {
 		dir = dir + "/"
 	}
 
-	var filtered []string
-	for _, f := range c.trackedFiles {
-		if strings.HasPrefix(f, dir) {
-			filtered = append(filtered, f)
-		}
-	}
-	return filtered, nil
+	return c.filter(func(f string) bool {
+		return strings.HasPrefix(f, dir)
+	}), nil
 }
 
 // FilesInDirWithExtension returns files under dir matching extension.
@@ -261,13 +262,9 @@ func (c *FileCache) FilesInDirWithExtension(dir, ext string) ([]string, error) {
 		dir = dir + "/"
 	}
 
-	var filtered []string
-	for _, f := range c.trackedFiles {
-		if strings.HasPrefix(f, dir) && strings.HasSuffix(f, ext) {
-			filtered = append(filtered, f)
-		}
-	}
-	return filtered, nil
+	return c.filter(func(f string) bool {
+		return strings.HasPrefix(f, dir) && strings.HasSuffix(f, ext)
+	}), nil
 }
 
 // FilesMatchingAnyExtension returns files matching any of the given extensions.
@@ -281,16 +278,14 @@ func (c *FileCache) FilesMatchingAnyExtension(extensions []string) ([]string, er
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	var filtered []string
-	for _, f := range c.trackedFiles {
+	return c.filter(func(f string) bool {
 		for _, ext := range extensions {
 			if strings.HasSuffix(f, ext) {
-				filtered = append(filtered, f)
-				break
+				return true
 			}
 		}
-	}
-	return filtered, nil
+		return false
+	}), nil
 }
 
 // AbsolutePath returns the absolute path for a relative tracked file.

@@ -24,8 +24,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
-var log = logging.C()
-
 // IncrementalResult holds the results of incremental change detection.
 // Callers copy the fields they need into their command-specific context structs.
 type IncrementalResult struct {
@@ -65,6 +63,7 @@ func DetectIncrementalChanges(
 	specs []workunit.UnitSpec,
 	logPrefix string,
 ) *IncrementalResult {
+	log := logging.C()
 	startTime := time.Now()
 	defer func() {
 		ctx.SetChangeDetectionTiming(time.Since(startTime))

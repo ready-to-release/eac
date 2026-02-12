@@ -10,9 +10,9 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/update/internal/gowork"
-	"github.com/ready-to-release/eac/go/clibase/goexec"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type updateGoTidyCommand struct{}
@@ -153,7 +153,8 @@ func UpdateGoTidy() int {
 
 // runGoWorkSync runs "go work sync" at the repo root.
 func runGoWorkSync(repoRoot string, verbose bool) error {
-	output, exitCode, err := goexec.RunCombined(context.Background(), repoRoot, "work", "sync")
+	ts := tool.GlobalToolSystem()
+	output, exitCode, err := ts.RunToolCombined(context.Background(), "go", repoRoot, "work", "sync")
 	if err != nil {
 		return err
 	}
@@ -168,7 +169,8 @@ func runGoWorkSync(repoRoot string, verbose bool) error {
 
 // runGoModTidyDiff runs "go mod tidy -diff" and returns the diff output.
 func runGoModTidyDiff(modulePath string) (string, error) {
-	output, exitCode, err := goexec.RunCombined(context.Background(), modulePath, "mod", "tidy", "-diff")
+	ts := tool.GlobalToolSystem()
+	output, exitCode, err := ts.RunToolCombined(context.Background(), "go", modulePath, "mod", "tidy", "-diff")
 	if err != nil {
 		return "", fmt.Errorf("go mod tidy -diff failed: %w", err)
 	}
@@ -185,6 +187,8 @@ func runGoModTidyDiff(modulePath string) (string, error) {
 
 // runGoModTidy runs "go mod tidy" and reports whether files changed.
 func runGoModTidy(modulePath string, verbose bool) (bool, error) {
+	ts := tool.GlobalToolSystem()
+
 	// Snapshot go.mod and go.sum before
 	goModBefore, err := os.ReadFile(filepath.Join(modulePath, "go.mod"))
 	if err != nil {
@@ -192,7 +196,7 @@ func runGoModTidy(modulePath string, verbose bool) (bool, error) {
 	}
 	goSumBefore, _ := os.ReadFile(filepath.Join(modulePath, "go.sum")) // go.sum may not exist yet
 
-	output, exitCode, runErr := goexec.RunCombined(context.Background(), modulePath, "mod", "tidy")
+	output, exitCode, runErr := ts.RunToolCombined(context.Background(), "go", modulePath, "mod", "tidy")
 	if verbose && len(output) > 0 {
 		fmt.Print(string(output))
 	}

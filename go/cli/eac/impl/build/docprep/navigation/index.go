@@ -4,18 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
-)
-
-// Patterns for title extraction.
-var (
-	frontmatterTitlePattern = regexp.MustCompile(`(?m)^title:\s*["']?([^"'\n]+)["']?`)
-	h1HeadingPattern        = regexp.MustCompile(`(?m)^#\s+(.+)$`)
 )
 
 // tocEntry represents a TOC item.

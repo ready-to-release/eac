@@ -29,7 +29,14 @@ runner for the `core` module's own acceptance tests.
 | export/formats/markdown.go | Markdown export formatter |
 | export/formats/factory.go | Format selection factory |
 | godog_test.go | Godog test runner for `core` module specs |
-| steps_*.go | Step definitions for cache, config, tool, logging tests |
+| steps_cache_context_test.go | Cache types, context, and step registration |
+| steps_cache_setup_test.go | Repository setup and file manipulation |
+| steps_cache_assertions_test.go | YAML and output assertions |
+| steps_cache_ci_mock_test.go | CI mocking functions |
+| steps_cache_state_test.go | Build/lint state management |
+| steps_config_test.go | Config-defaults feature steps |
+| steps_logging_test.go | Logging feature steps |
+| steps_tool_test.go | Tool-system feature steps |
 
 ## Dependencies
 
@@ -46,13 +53,11 @@ The root-level test files run BDD acceptance tests for the `core` module itself.
 ## Code Health
 
 ### Tech Debt
-- `steps_cache_test.go` is 1104 lines; consider splitting into focused step-definition files by cache scenario group
-- Multiple package-level mutable vars for test state: `toolState` (steps_tool_test.go:33), `logCtx` (steps_logging_test.go:34), `cfgState` (steps_config_test.go:30), `cacheCtx` (steps_cache_test.go:45)
+- Package-level vars for test state (`toolState`, `logCtx`, `cfgState`, `cacheCtx`) are reset per-scenario via Before/After hooks and documented as safe for sequential Godog execution
+- `steps_config_test.go` is 595 lines, largest test file in package
 
 ### Pain Points
-- Test state globals (`cacheCtx`, `cfgState`, etc.) make parallel test execution unsafe; moving to struct-based contexts would improve isolation
-- `steps_logging_test.go:20`: `loggingTestCounter` is a global `int64` used for unique naming; an atomic or per-test approach would be safer
+- None identified
 
 ### Optimization Opportunities
-- Split `steps_cache_test.go` into smaller files by feature area (e.g., CI status, file changes, YAML parsing) to improve navigability (medium effort)
-- Library sub-packages (`gherkin/`, `export/formats/`) are clean and well-tested; no changes needed there
+- None identified

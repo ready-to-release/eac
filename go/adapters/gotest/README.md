@@ -45,16 +45,12 @@ godog BDD tests uniformly through the `TestTypeRunner` interface.
 ## Code Health
 
 ### Tech Debt
-
-- `init()` in runner.go registers both runner and descriptor globally; accepting a registry parameter would improve testability
-- `Execute()` in runner.go (~120 lines) mixes package-path parsing, env-var construction, command building, and CTRF conversion in one method
-- Package-level `var goRunnerLog` in runner.go is global mutable state
+- init() in runner.go registers both runner and descriptor globally; accepting a registry parameter would improve testability
+- Package-level var goRunnerLog in runner.go is global mutable state
 
 ### Pain Points
-
-- `extractGoBuildTags` in runner_helpers.go uses manual index arithmetic for tag parsing; a regex-based approach would be more readable and maintainable
-- No unit tests for `Execute()` or `convertGoTestEventsToCTRF` (only runner_helpers_test.go exists)
+- runner.go is 371 lines; candidate for splitting (extract CTRF conversion, tag translation, and execution orchestration into separate files)
+- No unit tests for the full Execute() or convertGoTestEventsToCTRF (requires tool registry); runner_test.go and runner_helpers_test.go cover helpers and public API surface
 
 ### Optimization Opportunities
-
 - None identified

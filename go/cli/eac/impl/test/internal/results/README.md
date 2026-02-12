@@ -38,10 +38,10 @@ The `results` package provides the discovery and aggregation layer for test resu
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for results.go (251 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

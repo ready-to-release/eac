@@ -19,10 +19,12 @@ Generates Structurizr DSL workspace files for a module by analyzing its source c
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| create.go | Command entry point, config parsing, prompt building, AI generation with validation, output writing |
-| mocks.go | Test infrastructure: mock AI response and git repository injection |
+| File              | Responsibility                                                     |
+| ----------------- | ------------------------------------------------------------------ |
+| create.go         | Command entry point, config parsing, orchestration                 |
+| prompt_builder.go | Prompt-loading and contract-building logic for AI generation       |
+| create_exec.go    | AI generation execution with validation and output writing         |
+| mocks.go          | Test infrastructure: mock AI response and git repository injection |
 
 ## Dependencies
 
@@ -47,14 +49,13 @@ The `create design` command provides AI-powered architecture documentation gener
 ## Code Health
 
 ### Tech Debt
-- All production logic concentrated in create.go (530 lines); prompt building, config parsing, and validation could be split
-- Global mutable `mockAIResponse` and `gitRepoProvider` in mocks.go for test injection follow the same pattern seen across create/ subcommands
-- `buildContractBasedPrompt` (create.go:352-424, ~72 lines) mixes file I/O, string assembly, and error handling
+
+- `create.go` (307 lines) exceeds 300 lines
 
 ### Pain Points
-- Only two production files (create.go + mocks.go) makes the package feel monolithic despite well-decomposed functions
-- Docker pre-flight check in `checkDockerAvailability` silently skips validation when Docker is unavailable, which may mask real failures
+
+- No test coverage for `create.go`, `create_exec.go`, `deps.go`, `mocks.go`, `prompt_builder.go`
 
 ### Optimization Opportunities
-- Extract prompt-loading and contract-building logic into a separate file to keep create.go focused on orchestration (high feasibility, natural boundary)
-- Consolidate mock injection pattern (mockAIResponse, gitRepoProvider) with commit-message and squash-message into a shared test-support package (moderate feasibility, cross-package change)
+
+- None identified

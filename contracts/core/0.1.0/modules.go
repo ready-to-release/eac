@@ -27,39 +27,49 @@ type ModuleRegistryPort interface {
 	WorkspaceRoot() string
 }
 
-// ModuleContractPort provides access to a single module's contract.
-type ModuleContractPort interface {
-	// Identity
+// ModuleIdentity provides module identification.
+type ModuleIdentity interface {
 	GetMoniker() string
 	GetName() string
 	GetDescription() string
 	GetModuleGroup() string
+}
 
-	// Components
+// ModuleComponentProvider provides component layout information.
+type ModuleComponentProvider interface {
 	HasComponent(componentType string) bool
 	GetComponentRoot(componentType string) string
 	GetComponentRoots() map[string]string
 	GetComponentTypesDisplay() string
 	GetComponentAmp(componentName, operation string) float64
 	GetComponentGroup(componentName string) string
+}
 
-	// Dependencies
-	GetDependsOn() []string
-
-	// Versioning
+// ModuleReleaseInfo provides versioning and changelog information.
+type ModuleReleaseInfo interface {
 	GetVersioningScheme() string
 	GetReleaseType() string
 	GetChangelog() string
 	HasVersioning() bool
+}
 
-	// Metadata
+// ModuleContent provides dependency and metadata information.
+type ModuleContent interface {
+	GetDependsOn() []string
 	GetMetadata() map[string]interface{}
-
-	// Content
 	// GetContentHash returns a SHA256 hash of the module's owned files.
 	// Used for content-addressed caching (e.g., Docker image tags).
 	// Returns short hash (8 chars) and any error encountered.
 	GetContentHash() (string, error)
+}
+
+// ModuleContractPort provides access to a single module's contract.
+// It composes the focused sub-interfaces for full module access.
+type ModuleContractPort interface {
+	ModuleIdentity
+	ModuleComponentProvider
+	ModuleReleaseInfo
+	ModuleContent
 }
 
 // ComponentTypePort provides component type configuration.

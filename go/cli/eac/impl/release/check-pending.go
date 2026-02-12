@@ -13,8 +13,6 @@ import (
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/git"
-	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 type releaseCheckPendingCommand struct{}
@@ -74,28 +72,14 @@ func ReleaseCheckPending() int {
 
 	dispatchedModules := parseDispatchedModules(dispatched)
 
-	// Load workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		log.Errorf("failed to get workspace root: %v", err)
-		return 1
+	s, exitCode := newReleaseScaffoldNoFlags(withModules(), withGit())
+	if s == nil {
+		return exitCode
 	}
 
-	// Load module contracts
-	moduleRegistry, err := modules.LoadFromWorkspace("")
-	if err != nil {
-		log.Errorf("failed to load modules: %v", err)
-		return 1
-	}
-
-	// Open git repository
-	// Open git repository
-	gitMgr := git.NewManager(logging.C().Zap())
-	repo, err := gitMgr.Open("")
-	if err != nil {
-		log.Errorf("failed to open git repository: %v", err)
-		return 1
-	}
+	workspaceRoot := s.WorkspaceRoot
+	moduleRegistry := s.ModuleRegistry
+	repo := s.Repo
 
 	// Collect all pending releases
 	var allPending []PendingModule

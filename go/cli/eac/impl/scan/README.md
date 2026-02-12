@@ -63,12 +63,9 @@ The `scan` package provides the security scanning command for `eac`, orchestrati
 ## Code Health
 
 ### Tech Debt
-- unit_worker.go (537 lines) contains 15 functions spanning scanner execution, evidence writing, manifest tracking, and result handling
-- `scanUnitWorker` (unit_worker.go, ~129 lines) orchestrates too many concerns in a single function
+- No files over 300 lines; largest files are framework.go and unit_worker.go
+- unit_worker_test.go provides unit tests for worker logic
+- No unit tests for scan.go, scanflags.go, or unit_work.go
 
 ### Pain Points
-- Docker image resolution in framework.go uses per-scanner helper functions (`getTrivyImage`, `getSemgrepImage`, `getZAPImage`) that duplicate the same config-lookup pattern
-- `scanUnitWorker` lacks direct unit tests (requires Docker/framework mocks); tested indirectly at BDD level
-
-### Optimization Opportunities
-- Consolidate per-scanner image helpers into a single `getScannerImage` lookup with a scanner-type-to-config-key map (high feasibility, mechanical deduplication)
+- None identified

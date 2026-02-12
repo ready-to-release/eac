@@ -39,6 +39,14 @@ Supports the definitions merge pipeline where teams maintain per-directory `defi
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+
+- None identified
+
+### Pain Points
+
+- Large test files: merger_edge_cases_test.go (333 lines), merger_unit_test.go (313 lines), merger_logic_test.go (299 lines), merger_test.go (297 lines)
+
+### Optimization Opportunities
+
+- None identified

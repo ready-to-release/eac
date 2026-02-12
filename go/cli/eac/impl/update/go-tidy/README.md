@@ -34,10 +34,11 @@ The `go-tidy` sub-package ensures all Go workspace modules have clean `go.mod` a
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- tidy.go is 212 lines (under 300-line threshold but approaching it)
+- No test coverage (missing tidy_test.go)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

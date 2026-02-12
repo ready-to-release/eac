@@ -60,13 +60,16 @@ Provides the flag parsing and composition layer used by all CLI commands. Each c
 ## Code Health
 
 ### Tech Debt
-- `registry.go:15` mutable package-level `GlobalFlags` slice; safer as a function returning a copy
-- `registry.go:39` `ValidateFlagsFromRegistry` uses `runtime.Caller()` to auto-detect calling command; this is fragile across refactors
+
+- None identified
 
 ### Pain Points
-- 12 source files totaling ~2500 non-test lines; navigation is difficult -- grouping related flag sets into sub-packages would help
-- `docs.go` doc-generation logic (271 lines) is tightly coupled to the flag set types; changes to flag sets require parallel updates
+
+- `output_test.go` is 494 lines, significantly exceeds 300-line threshold
+- `cache_test.go` is 466 lines, significantly exceeds 300-line threshold
+- `parser_test.go` is 339 lines, exceeds 300-line threshold
+- `commands_test.go` is 333 lines, exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Consolidate the four nearly identical `*Config()` factory functions in `commands.go` into a data-driven table (low effort)
-- Replace `runtime.Caller()` detection in `registry.go` with explicit command-name parameter for reliability (medium effort)
+
+- None identified

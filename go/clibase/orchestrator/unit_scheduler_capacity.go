@@ -17,7 +17,7 @@ func (us *UnitScheduler) startCapacityTicker() {
 		for {
 			select {
 			case <-us.capacityTicker.C:
-				hostCap := detectAvailableCapacity(us.configMax, us.turbo)
+				hostCap := detectAvailableCapacityWith(us.detector, us.configMax, us.turbo)
 				dockerCap := detectDockerCapacity(us.turbo)
 				us.semaphore.SetCapacity(hostCap, dockerCap)
 			case <-us.capacityStop:
@@ -57,13 +57,16 @@ func (d systemCapacityDetector) EffectiveMemoryGB() int {
 	return 8 // Hard fallback
 }
 
-// defaultDetector is the system-level capacity detector used in production.
-var defaultDetector CapacityDetector = systemCapacityDetector{}
+// newSystemCapacityDetector returns the default production capacity detector.
+func newSystemCapacityDetector() CapacityDetector {
+	return systemCapacityDetector{}
+}
 
-// detectAvailableCapacity calculates the pressure roof for parallel builds.
+// detectAvailableCapacity calculates the pressure roof for parallel builds
+// using the default system detector.
 // If --roof is set, uses that value directly. Otherwise auto-detects from system resources.
 func detectAvailableCapacity(configMax int, turbo float64) int {
-	return detectAvailableCapacityWith(defaultDetector, configMax, turbo)
+	return detectAvailableCapacityWith(newSystemCapacityDetector(), configMax, turbo)
 }
 
 // detectAvailableCapacityWith is the testable implementation that accepts an injected detector.

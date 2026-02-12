@@ -46,6 +46,11 @@ Used by the `test export-manual` command to export manual test scenarios extract
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+- None identified
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- None identified

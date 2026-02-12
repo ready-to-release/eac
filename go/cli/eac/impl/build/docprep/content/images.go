@@ -11,36 +11,49 @@ import (
 	"github.com/ready-to-release/eac/go/cli/eac/impl/build/docprep/staging"
 )
 
-// imagePattern matches markdown images: ![alt](path)
-var imagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{[^{}\n]*\})?`)
+// imagePatterns consolidates all image-related regex patterns.
+// Previously these were three separate overlapping patterns; now a single base
+// pattern captures all markdown images with an optional attr_list group, and
+// specialised helpers filter by drawio extension or attr presence.
+var imagePatterns = struct {
+	// base matches any markdown image with optional attr_list: ![alt](path){attrs}
+	base *regexp.Regexp
+	// attrList matches key-value pairs inside an attr_list block
+	attrList *regexp.Regexp
+}{
+	base:     regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{:?\s*([^}]*)\})?`),
+	attrList: regexp.MustCompile(`(\w+)\s*=\s*"?([^"\s}]+)"?`),
+}
 
-// reAttrList matches attr_list key-value pairs
-var reAttrList = regexp.MustCompile(`(\w+)\s*=\s*"?([^"\s}]+)"?`)
+// isDrawioImage returns true if the image path ends with .drawio.
+func isDrawioImage(path string) bool {
+	return strings.HasSuffix(path, ".drawio")
+}
 
-// imageWithAttrsPattern matches markdown images with attr_list: ![alt](path){attrs}
-var imageWithAttrsPattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)\s*\{:?\s*([^}]+)\}`)
-
-// drawioImagePattern matches markdown images pointing to .drawio files.
-var drawioImagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]*\.drawio)\)`)
+// hasAttrList returns true if the optional attrs capture group is non-empty.
+func hasAttrList(match []string) bool {
+	return len(match) > 4 && strings.TrimSpace(match[4]) != ""
+}
 
 // ConvertAttrListImages converts ![alt](path){attrs} to <img> tags.
 func ConvertAttrListImages(content string, adjustPaths bool) (string, int) {
 	count := 0
 
-	result := imageWithAttrsPattern.ReplaceAllStringFunc(content, func(match string) string {
-		parts := imageWithAttrsPattern.FindStringSubmatch(match)
-		if len(parts) < 4 {
+	result := imagePatterns.base.ReplaceAllStringFunc(content, func(match string) string {
+		parts := imagePatterns.base.FindStringSubmatch(match)
+		if len(parts) < 3 {
 			return match
 		}
 
 		alt := parts[1]
 		src := parts[2]
-		attrs := parts[3]
 
-		if strings.HasSuffix(src, ".drawio") {
+		// Skip non-attr-list images and drawio images
+		if !hasAttrList(parts) || isDrawioImage(src) {
 			return match
 		}
 
+		attrs := parts[4]
 		htmlAttrs := ParseAttrListToHTML(attrs)
 		if htmlAttrs == "" {
 			return match
@@ -62,8 +75,7 @@ func ConvertAttrListImages(content string, adjustPaths bool) (string, int) {
 func ParseAttrListToHTML(attrs string) string {
 	var htmlParts []string
 
-	attrPattern := reAttrList
-	matches := attrPattern.FindAllStringSubmatch(attrs, -1)
+	matches := imagePatterns.attrList.FindAllStringSubmatch(attrs, -1)
 
 	for _, m := range matches {
 		if len(m) >= 3 {
@@ -84,12 +96,12 @@ func ParseAttrListToHTML(attrs string) string {
 func AddImageWidthConstraints(content string) (string, int) {
 	count := 0
 
-	result := imagePattern.ReplaceAllStringFunc(content, func(match string) string {
+	result := imagePatterns.base.ReplaceAllStringFunc(content, func(match string) string {
 		if strings.Contains(match, "width=") || strings.Contains(match, "style=") {
 			return match
 		}
 
-		parts := imagePattern.FindStringSubmatch(match)
+		parts := imagePatterns.base.FindStringSubmatch(match)
 		if len(parts) < 3 {
 			return match
 		}
@@ -101,7 +113,7 @@ func AddImageWidthConstraints(content string) (string, int) {
 			existingAttrs = parts[3]
 		}
 
-		if strings.HasSuffix(path, ".drawio") {
+		if isDrawioImage(path) {
 			return match
 		}
 
@@ -129,13 +141,18 @@ func AddImageWidthConstraints(content string) (string, int) {
 func ConvertDrawioImages(content, relFileDir, siteURL string) (string, int) {
 	count := 0
 
-	result := drawioImagePattern.ReplaceAllStringFunc(content, func(match string) string {
-		parts := drawioImagePattern.FindStringSubmatch(match)
+	result := imagePatterns.base.ReplaceAllStringFunc(content, func(match string) string {
+		parts := imagePatterns.base.FindStringSubmatch(match)
 		if len(parts) < 3 {
 			return match
 		}
 
 		imgPath := parts[2]
+
+		// Only process drawio images
+		if !isDrawioImage(imgPath) {
+			return match
+		}
 
 		var urlPath string
 		if strings.HasPrefix(imgPath, "/") {

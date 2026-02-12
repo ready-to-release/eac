@@ -4,7 +4,6 @@ package repository
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -375,47 +374,6 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 	return nil
 }
 
-func (c *repositoryContext) discoverAllMarkdownFiles() error {
-	if err := c.ensureRepoRoot(); err != nil {
-		return err
-	}
-
-	// Use cached git ls-files instead of filepath.Walk (49s -> <1s)
-	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
-		return err
-	}
-
-	// Get all .md files from cache and convert to absolute paths
-	// Filter out files that no longer exist on disk (e.g., deleted but not yet staged)
-	relPaths := c.sharedCtx.OriginalRepoCache.FilesByExtension(".md")
-	c.markdownFiles = make([]string, 0, len(relPaths))
-	for _, relPath := range relPaths {
-		absPath := c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
-		if _, err := os.Stat(absPath); err == nil {
-			c.markdownFiles = append(c.markdownFiles, absPath)
-		}
-	}
-	return nil
-}
-
-func (c *repositoryContext) discoverAllGherkinFeatureFiles() error {
-	if err := c.ensureRepoRoot(); err != nil {
-		return err
-	}
-
-	// Use cached git ls-files instead of filepath.Walk
-	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
-		return err
-	}
-
-	// Get all .feature files in specs/ directory from cache
-	relPaths := c.sharedCtx.OriginalRepoCache.FilesInDirWithExtension("specs", ".feature")
-	c.featureFiles = make([]string, len(relPaths))
-	for i, relPath := range relPaths {
-		c.featureFiles[i] = c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
-	}
-	return nil
-}
 
 // ============================================================================
 // When Steps
@@ -441,54 +399,6 @@ func (c *repositoryContext) runGoModTidyDiffInEachModule() error {
 	return nil
 }
 
-func (c *repositoryContext) validateEachMarkdownFile() error {
-	// Basic markdown validation - check for common issues
-	for _, path := range c.markdownFiles {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			c.markdownErrors[path] = append(c.markdownErrors[path], fmt.Sprintf("failed to read: %v", err))
-			continue
-		}
-
-		// Check for malformed headers (e.g., #NoSpace)
-		// Must track code blocks to avoid false positives on shebangs like #!/bin/bash
-		lines := strings.Split(string(content), "\n")
-		inCodeBlock := false
-		for i, line := range lines {
-			trimmedLine := strings.TrimSpace(line)
-
-			// Track code block boundaries
-			if strings.HasPrefix(trimmedLine, "```") {
-				inCodeBlock = !inCodeBlock
-				continue
-			}
-
-			// Skip lines inside code blocks
-			if inCodeBlock {
-				continue
-			}
-
-			if strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "# ") &&
-				!strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") &&
-				!strings.HasPrefix(line, "#### ") && !strings.HasPrefix(line, "##### ") &&
-				!strings.HasPrefix(line, "###### ") && line != "#" {
-				// Check if it's actually a header without space
-				trimmed := strings.TrimLeft(line, "#")
-				if len(trimmed) > 0 && trimmed[0] != ' ' && trimmed[0] != '\n' && trimmed[0] != '\r' {
-					c.markdownErrors[path] = append(c.markdownErrors[path],
-						fmt.Sprintf("line %d: malformed header (missing space after #)", i+1))
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (c *repositoryContext) validateFeatureFilesForConflictingLLevelTags() error {
-	// TODO: Implement proper Gherkin parsing and tag conflict detection
-	// For now, this is a placeholder
-	return nil
-}
 
 // ============================================================================
 // Then Steps
@@ -528,59 +438,6 @@ func (c *repositoryContext) noModuleShouldHaveAnyDiffOutput() error {
 
 func (c *repositoryContext) ifAnyModuleIsNotTidyIShouldSeeTheModulePathAndDiff() error {
 	// Passive assertion - error messages from above steps provide this info
-	return nil
-}
-
-func (c *repositoryContext) allFilesShouldHaveValidMarkdownSyntax() error {
-	if len(c.markdownErrors) > 0 {
-		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("found %d file(s) with markdown errors:\n", len(c.markdownErrors)))
-		for path, errors := range c.markdownErrors {
-			sb.WriteString(fmt.Sprintf("\n  %s:\n", path))
-			for _, err := range errors {
-				sb.WriteString(fmt.Sprintf("    - %s\n", err))
-			}
-		}
-		return fmt.Errorf("%s", sb.String())
-	}
-	return nil
-}
-
-func (c *repositoryContext) noFilesShouldHaveBrokenLinks() error {
-	// TODO: Implement link checking
-	return nil
-}
-
-func (c *repositoryContext) noFilesShouldHaveMalformedHeaders() error {
-	for path, errors := range c.markdownErrors {
-		for _, err := range errors {
-			if strings.Contains(err, "malformed header") {
-				return fmt.Errorf("file %s has malformed headers", path)
-			}
-		}
-	}
-	return nil
-}
-
-func (c *repositoryContext) ifAnyFileHasErrorsIShouldSeeDetails() error {
-	// Passive assertion
-	return nil
-}
-
-func (c *repositoryContext) noFeatureShouldHaveConflictingLTags() error {
-	if len(c.tagConflicts) > 0 {
-		return fmt.Errorf("found tag conflicts: %v", c.tagConflicts)
-	}
-	return nil
-}
-
-func (c *repositoryContext) noFeatureShouldHaveConflictingVerificationTags() error {
-	// Same as L-tags for now
-	return nil
-}
-
-func (c *repositoryContext) ifConflictsFoundIShouldSeeDetails() error {
-	// Passive assertion
 	return nil
 }
 

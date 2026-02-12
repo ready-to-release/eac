@@ -111,13 +111,12 @@ func WriteFixtureFile(t *testing.T, baseDir, relPath, content string) {
 
 // SetupMinimalFixture creates a minimal valid EAC config fixture in a temp directory.
 // Returns the path to the fixture root.
-// Note: module-types.yml is not created - the system uses defaults when missing.
 func SetupMinimalFixture(t *testing.T) string {
 	t.Helper()
 
 	dir := TempDir(t, "eac-test-*")
 
-	// Create minimal repository.yml (module-types.yml not needed - defaults are used)
+	// Create minimal repository.yml
 	WriteFixtureFile(t, dir, ".eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests
@@ -130,8 +129,6 @@ modules: []
 }
 
 // SetupFixtureWithModules creates a fixture with specified modules.
-// Note: module-types.yml is not created - the system uses defaults when missing.
-// Module types referenced by modules should exist in the contract defaults.
 func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 	t.Helper()
 
@@ -148,7 +145,7 @@ func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 		}
 	}
 
-	// Create repository.yml (module-types.yml not needed - defaults are used)
+	// Create repository.yml
 	WriteFixtureFile(t, dir, ".eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests

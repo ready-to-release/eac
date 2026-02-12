@@ -56,13 +56,36 @@ The `get` package is the primary data retrieval interface in `eac`, exposing rep
 ## Code Health
 
 ### Tech Debt
-- Only 8 test files cover ~38 source files; most subcommands (modules, files, dependencies, tests, etc.) have no unit tests
-- 11 subcommands do not use the shared `ExecuteGetCommand` helper (e.g., `artifacts.go`, `binary-sizes.go`, `files-by-module.go`), implementing their own output formatting
+- 8 subcommands bypass `ExecuteGetCommand` due to legitimate special output requirements (see below)
+
+### Subcommands Not Using ExecuteGetCommand
+
+The following subcommands intentionally bypass the shared helper. Each has a documented reason:
+
+| Subcommand | Reason |
+| --- | --- |
+| `binary-sizes.go` | Default output is shell variables (`SIZE_X="12.3"`) for `eval`; also supports markdown table format -- none of these map to YAML/JSON/TOML |
+| `book-description.go` | Returns a single plain-text string (book title); no structured data to render |
+| `cli-release-notes.go` | Generates freeform markdown release notes; output is a text document, not structured data |
+| `current_sha.go` | Returns a single SHA string or shell variables (`SHA="..." SOURCE="..."`); no structured data |
+| `files-by-module.go` | Parses JSON from environment variable and outputs file lists or shell variables; data flow is inverse (JSON in, plain text out) |
+| `module-ci-workflow.go` | Returns a single filename string; no structured data to render |
+| `module-trigger-reason.go` | Returns a single human-readable reason string; no structured data to render |
+| `token-size.go` | Uses threshold-based exit codes (returns 1 when files exceed limit); default output is `file: N tokens` text; `ExecuteGetCommand` always returns 0 on success |
+
+### Subcommands With Dual-Mode Output
+
+These subcommands use `ExecuteGetCommand` for their default structured output path but have additional special-purpose formats:
+
+| Subcommand | Special Formats | Helper Used For |
+| --- | --- | --- |
+| `ci-config.go` | `--format shell`, `--format github-output` | Default (YAML/JSON/TOML) |
+| `release-config.go` | `--format shell`, `--format github-output` | Default (YAML/JSON/TOML) |
+| `ci-workflows.go` | `--format space`, `--format list` | Default (YAML/JSON/TOML) |
+| `release-status.go` | `--format shell` | Default (YAML/JSON/TOML) |
 
 ### Pain Points
-- Pattern duplication across individual command files: each file repeats the same init/register, flag-parse, load-config, render cycle despite 28/39 using the shared helper
-- `files.go` (236 lines) and `artifacts.go` (260 lines) are notably larger than the average subcommand (~80-100 lines), suggesting they carry extra complexity
+- No files over 300 lines; largest production files are files.go and artifacts.go at ~240 lines each
 
 ### Optimization Opportunities
-- Migrate the remaining 11 non-helper subcommands to `ExecuteGetCommand` for consistent output format handling -- moderate effort, improves uniformity
-- Add table-driven tests covering the core data-fetch logic for the untested subcommands -- moderate effort, high coverage gain
+- Most commands now have corresponding _test.go files; remaining untested commands are validated via BDD scenarios

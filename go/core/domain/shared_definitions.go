@@ -45,9 +45,18 @@ var validSeverities = map[string]bool{
 	"CRITICAL": true,
 }
 
-// ValidScannerCategories returns the valid scanner categories.
+// copyMap returns a shallow copy of the given map, protecting the original from mutation.
+func copyMap(m map[string]bool) map[string]bool {
+	c := make(map[string]bool, len(m))
+	for k, v := range m {
+		c[k] = v
+	}
+	return c
+}
+
+// ValidScannerCategories returns a copy of the valid scanner categories.
 func ValidScannerCategories() map[string]bool {
-	return validScannerCategories
+	return copyMap(validScannerCategories)
 }
 
 // IsValidScannerCategory returns true if the category is valid.
@@ -55,9 +64,9 @@ func IsValidScannerCategory(category string) bool {
 	return validScannerCategories[category]
 }
 
-// ValidServerTypes returns the valid server types.
+// ValidServerTypes returns a copy of the valid server types.
 func ValidServerTypes() map[string]bool {
-	return validServerTypes
+	return copyMap(validServerTypes)
 }
 
 // IsValidServerType returns true if the server type is valid.
@@ -65,9 +74,9 @@ func IsValidServerType(serverType string) bool {
 	return validServerTypes[serverType]
 }
 
-// ValidPlatforms returns the valid platforms.
+// ValidPlatforms returns a copy of the valid platforms.
 func ValidPlatforms() map[string]bool {
-	return validPlatforms
+	return copyMap(validPlatforms)
 }
 
 // IsValidPlatform returns true if the platform is valid.
@@ -75,9 +84,9 @@ func IsValidPlatform(platform string) bool {
 	return validPlatforms[platform]
 }
 
-// ValidSeverities returns the valid severity levels.
+// ValidSeverities returns a copy of the valid severity levels.
 func ValidSeverities() map[string]bool {
-	return validSeverities
+	return copyMap(validSeverities)
 }
 
 // IsValidSeverity returns true if the severity is valid.

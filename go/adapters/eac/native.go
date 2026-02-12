@@ -30,25 +30,7 @@ func NewNative(binaryPath, workspaceRoot string, executor *tool.DefaultExecutor)
 }
 
 func (a *nativeAdapter) Execute(ctx context.Context, args []string, cfg *ExecConfig) (*Result, error) {
-	if cfg == nil {
-		cfg = &ExecConfig{}
-	}
-	ws := cfg.WorkspaceRoot
-	if ws == "" {
-		ws = a.workspaceRoot
-	}
-
-	execCtx := &tool.ExecutionContext{
-		WorkspaceRoot: ws,
-		ModuleRoot:    cfg.ModuleRoot,
-		OutputDir:     cfg.OutputDir,
-		StdoutWriter:  cfg.StdoutWriter,
-		StderrWriter:  cfg.StderrWriter,
-		StdinReader:   cfg.StdinReader,
-		EnvOverrides:  cfg.Env,
-		FullEnv:       cfg.FullEnv,
-		ArgsOverrides: args,
-	}
+	execCtx, _ := buildExecContext(a.workspaceRoot, args, cfg)
 	toolResult, err := a.executor.Execute(ctx, a.toolDef, execCtx)
 	if err != nil {
 		return nil, err

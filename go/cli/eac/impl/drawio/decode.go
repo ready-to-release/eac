@@ -71,7 +71,7 @@ func DrawioDecode() int {
 	}
 
 	// Check Docker
-	if err := CheckDockerAvailable(repoRoot); err != nil {
+	if err := CheckDockerAvailable(repoRoot, nil); err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -118,7 +118,7 @@ func DrawioDecode() int {
 	}
 
 	// Run command
-	output, err := RunDrawioCommandWithOutput(repoRoot, cmdArgs)
+	output, err := RunDrawioCommandWithOutput(repoRoot, cmdArgs, nil)
 	if err != nil {
 		// Check if it's just stderr messages (status messages go to stderr)
 		if strings.Contains(err.Error(), "Decoded to") {

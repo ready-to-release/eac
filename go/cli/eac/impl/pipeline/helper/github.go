@@ -10,10 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // WorkflowRunSummary represents a GitHub Actions workflow run.
@@ -36,23 +35,67 @@ type GitHubCLI interface {
 // GitHubCLIImpl implements GitHubCLI using the gh CLI tool.
 type GitHubCLIImpl struct {
 	repoPath string
+	ts       *tool.ToolSystem
 }
 
 // NewGitHubCLI creates a new GitHub CLI wrapper.
 // If CLIE_MOCK_GITHUB_CLI environment variable is set, returns a mock implementation.
 func NewGitHubCLI(repoPath string) GitHubCLI {
 	if os.Getenv(environments.EnvCLIEMockGitHubCLI) == "true" {
-		return &MockGitHubCLI{repoPath: repoPath}
+		return NewMockGitHubCLI(repoPath)
 	}
 	return &GitHubCLIImpl{
 		repoPath: repoPath,
+		ts:       tool.GlobalToolSystem(),
 	}
+}
+
+// MockOption configures optional mock behaviors via functional options.
+type MockOption func(*MockGitHubCLI)
+
+// WithSimulateTimeout makes WatchRunWithTimeout return a timeout error.
+func WithSimulateTimeout() MockOption {
+	return func(m *MockGitHubCLI) {
+		m.simulateTimeout = true
+	}
+}
+
+// WithSimulateInvalidRef makes GetCommitSHA return an error for any ref.
+func WithSimulateInvalidRef() MockOption {
+	return func(m *MockGitHubCLI) {
+		m.simulateInvalidRef = true
+	}
+}
+
+// WithFailingWorkflow marks a specific workflow name as failing.
+func WithFailingWorkflow(name string) MockOption {
+	return func(m *MockGitHubCLI) {
+		m.failingWorkflow = name
+	}
+}
+
+// WithNoWorkflows makes ListWorkflowRuns return an empty list.
+func WithNoWorkflows() MockOption {
+	return func(m *MockGitHubCLI) {
+		m.noWorkflows = true
+	}
+}
+
+// NewMockGitHubCLI creates a mock GitHubCLI for testing. Behavior is controlled
+// through functional options (preferred) or falls back to environment variables
+// for backward compatibility with BDD test harnesses.
+func NewMockGitHubCLI(repoPath string, opts ...MockOption) *MockGitHubCLI {
+	m := &MockGitHubCLI{repoPath: repoPath}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
 }
 
 // TriggerWorkflow triggers a GitHub workflow and returns the run ID.
 func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error) {
 	// Trigger the workflow
-	output, exitCode, err := ghexec.RunCombined(context.Background(), g.repoPath, "workflow", "run", workflowFile, "--ref", ref)
+	output, exitCode, err := g.ts.RunToolCombined(context.Background(), "gh", g.repoPath, "workflow", "run", workflowFile, "--ref", ref)
 	if err != nil {
 		return "", fmt.Errorf("failed to trigger workflow %s: %w", workflowFile, err)
 	}
@@ -64,7 +107,7 @@ func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error
 	time.Sleep(config.CIDispatchSettleTime())
 
 	// Get the most recent run ID for this workflow
-	output, err = ghexec.Run(g.repoPath, "run", "list", "--workflow="+workflowFile, "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId")
+	output, err = g.ts.RunTool(context.Background(), "gh", g.repoPath, "run", "list", "--workflow="+workflowFile, "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId")
 	if err != nil {
 		return "", fmt.Errorf("failed to get run ID for %s: %w", workflowFile, err)
 	}
@@ -79,7 +122,7 @@ func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error
 
 // WatchRun watches a workflow run until completion and returns error if it fails.
 func (g *GitHubCLIImpl) WatchRun(runID string) error {
-	output, exitCode, err := ghexec.RunCombined(context.Background(), g.repoPath, "run", "watch", runID, "--exit-status")
+	output, exitCode, err := g.ts.RunToolCombined(context.Background(), "gh", g.repoPath, "run", "watch", runID, "--exit-status")
 	if err != nil {
 		return fmt.Errorf("workflow run %s failed: %w", runID, err)
 	}
@@ -114,13 +157,13 @@ func (g *GitHubCLIImpl) GetCommitSHA(ref string) (string, error) {
 	}
 
 	// First try git to get the SHA locally (faster)
-	output, err := gitexec.Run(g.repoPath, "rev-parse", ref)
+	output, err := g.ts.RunTool(context.Background(), "git", g.repoPath, "rev-parse", ref)
 	if err == nil {
 		return strings.TrimSpace(string(output)), nil
 	}
 
 	// Fallback to gh API if git fails (e.g., for remote refs not fetched locally)
-	output, err = ghexec.Run(g.repoPath, "api", "repos/{owner}/{repo}/commits/"+ref, "--jq", ".sha")
+	output, err = g.ts.RunTool(context.Background(), "gh", g.repoPath, "api", "repos/{owner}/{repo}/commits/"+ref, "--jq", ".sha")
 	if err != nil {
 		return "", fmt.Errorf("failed to get commit SHA for ref %s: %w", ref, err)
 	}
@@ -131,7 +174,7 @@ func (g *GitHubCLIImpl) GetCommitSHA(ref string) (string, error) {
 // ListWorkflowRuns lists all workflow runs for a given commit SHA.
 func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error) {
 	// Use gh run list with commit filter
-	output, err := ghexec.Run(g.repoPath, "run", "list",
+	output, err := g.ts.RunTool(context.Background(), "gh", g.repoPath, "run", "list",
 		"--commit", commitSHA,
 		"--json", "name,status,conclusion,workflowName")
 	if err != nil {
@@ -166,13 +209,16 @@ func (g *GitHubCLIImpl) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary
 }
 
 // MockGitHubCLI is a mock implementation for testing.
+// Behavior is configured via constructor options (NewMockGitHubCLI) or, for
+// backward compatibility, via environment variables.
 type MockGitHubCLI struct {
 	repoPath string
 
-	// Mock behavior control
-	failingWorkflows []string  // List of workflow names that should fail
-	noWorkflows      bool       // If true, return no workflows
-	invalidRef       bool       // If true, simulate invalid ref error
+	// Behavior control -- set via MockOption constructors
+	simulateTimeout    bool   // If true, WatchRunWithTimeout returns a timeout error
+	simulateInvalidRef bool   // If true, GetCommitSHA returns an error
+	failingWorkflow    string // Workflow name that should report failure
+	noWorkflows        bool   // If true, ListWorkflowRuns returns empty
 }
 
 // TriggerWorkflow simulates triggering a workflow.
@@ -195,20 +241,15 @@ func (m *MockGitHubCLI) WatchRun(runID string) error {
 
 // WatchRunWithTimeout simulates watching a workflow run with timeout.
 func (m *MockGitHubCLI) WatchRunWithTimeout(runID string, timeoutSeconds int) error {
-	// Check if we should simulate a timeout
-	// For testing, we can use an environment variable
-	if os.Getenv(environments.EnvCLIEMockTimeout) == "true" {
+	if m.simulateTimeout || os.Getenv(environments.EnvCLIEMockTimeout) == "true" {
 		return fmt.Errorf("timeout exceeded (%d seconds) waiting for run %s", timeoutSeconds, runID)
 	}
-
-	// Mock workflows succeed immediately if not simulating timeout
 	return nil
 }
 
 // GetCommitSHA simulates getting a commit SHA for a ref.
 func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
-	// Check if we should simulate invalid ref
-	if os.Getenv(environments.EnvCLIEMockInvalidRef) == "true" {
+	if m.simulateInvalidRef || os.Getenv(environments.EnvCLIEMockInvalidRef) == "true" {
 		return "", fmt.Errorf("not found: invalid ref %s", ref)
 	}
 
@@ -217,7 +258,11 @@ func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 	}
 
 	// Try to get actual commit SHA from repo if it exists
-	output, err := gitexec.Run(m.repoPath, "rev-parse", ref)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return "", fmt.Errorf("not found: invalid ref %s", ref)
+	}
+	output, err := ts.RunTool(context.Background(), "git", m.repoPath, "rev-parse", ref)
 	if err == nil {
 		return strings.TrimSpace(string(output)), nil
 	}
@@ -229,13 +274,15 @@ func (m *MockGitHubCLI) GetCommitSHA(ref string) (string, error) {
 
 // ListWorkflowRuns simulates listing workflow runs for a commit.
 func (m *MockGitHubCLI) ListWorkflowRuns(commitSHA string) ([]WorkflowRunSummary, error) {
-	// Check if we should return no workflows
-	if os.Getenv("CLIE_MOCK_NO_WORKFLOWS") == "true" {
+	if m.noWorkflows || os.Getenv("CLIE_MOCK_NO_WORKFLOWS") == "true" {
 		return []WorkflowRunSummary{}, nil
 	}
 
-	// Check if we should simulate failing workflows
-	failingWorkflow := os.Getenv(environments.EnvCLIEMockFailingWorkflow)
+	// Prefer struct field, fall back to env var for backward compatibility
+	failingWorkflow := m.failingWorkflow
+	if failingWorkflow == "" {
+		failingWorkflow = os.Getenv(environments.EnvCLIEMockFailingWorkflow)
+	}
 
 	// Read workflows directory to find actual workflows
 	workflowsDir := filepath.Join(m.repoPath, ".github", "workflows")

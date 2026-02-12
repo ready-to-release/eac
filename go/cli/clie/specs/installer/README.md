@@ -31,12 +31,12 @@ The specs/installer directory contains BDD acceptance tests for the extension in
 
 ### Tech Debt
 
-_None identified._
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- None identified.
 
 ### Optimization Opportunities
 
-_None identified._
+- None identified.

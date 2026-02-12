@@ -4,6 +4,7 @@ package markdown
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"os"
@@ -226,69 +227,64 @@ func (v *Validator) ValidateDirectory(rootDir string) ([]ValidationResult, error
 	return results, nil
 }
 
-// extractCodeBlocks extracts all code blocks from the AST.
-func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
-	var blocks []CodeBlock
-
-	if err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+// walkAndCollect walks an AST and collects items using a visitor function.
+// The visitor is called for each entering node. If it returns a non-nil value,
+// that value is appended to the result slice.
+func walkAndCollect[T any](doc ast.Node, visitor func(n ast.Node) *T) []T {
+	var results []T
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
-
-		if codeBlock, ok := n.(*ast.FencedCodeBlock); ok {
-			lang := string(codeBlock.Language(source))
-			content := extractNodeContent(source, codeBlock)
-			line := 1 // Default to line 1
-			if codeBlock.Lines().Len() > 0 {
-				byteOffset := codeBlock.Lines().At(0).Start
-				line = byteOffsetToLineNumber(source, byteOffset)
-			}
-
-			blocks = append(blocks, CodeBlock{
-				Language: lang,
-				Content:  content,
-				Line:     line,
-			})
+		if item := visitor(n); item != nil {
+			results = append(results, *item)
 		}
-
 		return ast.WalkContinue, nil
-	}); err != nil {
-		return blocks // Walk callback never returns error
-	}
+	})
+	return results
+}
 
-	return blocks
+// extractCodeBlocks extracts all code blocks from the AST.
+func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
+	return walkAndCollect(doc, func(n ast.Node) *CodeBlock {
+		codeBlock, ok := n.(*ast.FencedCodeBlock)
+		if !ok {
+			return nil
+		}
+		lang := string(codeBlock.Language(source))
+		content := extractNodeContent(source, codeBlock)
+		line := 1 // Default to line 1
+		if codeBlock.Lines().Len() > 0 {
+			byteOffset := codeBlock.Lines().At(0).Start
+			line = byteOffsetToLineNumber(source, byteOffset)
+		}
+		return &CodeBlock{
+			Language: lang,
+			Content:  content,
+			Line:     line,
+		}
+	})
 }
 
 // extractSections extracts all sections with their headings.
 func (v *Validator) extractSections(source []byte, doc ast.Node) []Section {
-	var sections []Section
-
-	if err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
+	return walkAndCollect(doc, func(n ast.Node) *Section {
+		heading, ok := n.(*ast.Heading)
+		if !ok {
+			return nil
 		}
-
-		if heading, ok := n.(*ast.Heading); ok {
-			headingText := extractHeadingText(source, heading)
-			line := 1 // Default to line 1
-			if heading.Lines().Len() > 0 {
-				byteOffset := heading.Lines().At(0).Start
-				line = byteOffsetToLineNumber(source, byteOffset)
-			}
-
-			sections = append(sections, Section{
-				Heading: headingText,
-				Level:   heading.Level,
-				Line:    line,
-			})
+		headingText := extractHeadingText(source, heading)
+		line := 1 // Default to line 1
+		if heading.Lines().Len() > 0 {
+			byteOffset := heading.Lines().At(0).Start
+			line = byteOffsetToLineNumber(source, byteOffset)
 		}
-
-		return ast.WalkContinue, nil
-	}); err != nil {
-		return sections // Walk callback never returns error
-	}
-
-	return sections
+		return &Section{
+			Heading: headingText,
+			Level:   heading.Level,
+			Line:    line,
+		}
+	})
 }
 
 // validateCodeBlock validates a code block based on its language.
@@ -301,6 +297,19 @@ func (v *Validator) validateCodeBlock(block CodeBlock) error {
 	case "yaml", "yml":
 		var data interface{}
 		return yaml.Unmarshal([]byte(block.Content), &data)
+
+	case "xml":
+		decoder := xml.NewDecoder(strings.NewReader(block.Content))
+		for {
+			_, err := decoder.Token()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 
 	default:
 		// Unknown language - skip validation
@@ -417,9 +426,6 @@ func sanitizeMessage(msg string) string {
 	// Replace newlines with " | " to keep output on one line
 	msg = strings.ReplaceAll(msg, "\n  ", " | ")
 	msg = strings.ReplaceAll(msg, "\n", " | ")
-	// Collapse multiple spaces
-	for strings.Contains(msg, "  ") {
-		msg = strings.ReplaceAll(msg, "  ", " ")
-	}
-	return strings.TrimSpace(msg)
+	// Collapse whitespace using strings.Fields (splits on any whitespace, Join rejoins with single space)
+	return strings.Join(strings.Fields(msg), " ")
 }

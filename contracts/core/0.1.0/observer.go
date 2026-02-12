@@ -306,7 +306,7 @@ type PlannedWorkItemInfo struct {
 	Weight        int    // Approximate weight from component type config
 	Module        string // Module moniker
 	Component     string // Component name
-	ComponentType string // From component-types.yml
+	ComponentType string // From blueprints.yml component-kinds
 }
 
 // UoWEnrichmentEvent is emitted as tool resolution enriches planned work items.

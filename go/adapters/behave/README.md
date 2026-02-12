@@ -43,12 +43,11 @@ The behave adapter enables Python BDD test execution within the unified test fra
 ## Code Health
 
 ### Tech Debt
-- `Execute()` in runner.go (~170 lines) interleaves pip isolation, venv creation, dependency installation, command building, and result parsing; extracting helpers would improve clarity
-- `init()` in runner.go performs global registration; a factory function accepting a registry would be more testable
+- None identified
 
 ### Pain Points
-- `Execute()` falls back to `len(tests)` as `TestsFailed` on error when JSON results are unavailable, so per-test pass/fail counts are approximate in that case
-- No unit tests for `Execute()` or `GetTestInfo()`; only ctrf_test.go and tags_test.go exist
+- runner.go is 438 lines; candidate for splitting (extract CTRF conversion, tag translation, and execution orchestration into separate files)
+- No unit tests for the full Execute() or GetTestInfo() (requires tool registry); runner_test.go covers helpers, fallback logic, and public API surface
 
 ### Optimization Opportunities
-- The venv creation and `pip install` steps run synchronously within Execute; caching the venv from a previous run when pyproject.toml is unchanged could skip reinstallation entirely
+- None identified

@@ -9,8 +9,8 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineGetArtifactIDCommand struct{}
@@ -118,7 +118,7 @@ func PipelineGetArtifactID() int {
 }
 
 func findRunID(workflow, sha, workspaceRoot string) (string, error) {
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--commit", sha,
 		"--status", "success",
@@ -138,7 +138,7 @@ func findRunID(workflow, sha, workspaceRoot string) (string, error) {
 }
 
 func getArtifactIDFromRun(runID, artifactName, workspaceRoot string) (string, error) {
-	output, err := ghexec.Run(workspaceRoot, "api",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "api",
 		fmt.Sprintf("repos/{owner}/{repo}/actions/runs/%s/artifacts", runID),
 	)
 	if err != nil {

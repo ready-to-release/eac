@@ -50,13 +50,10 @@ The providers sub-package contains all concrete AI provider implementations used
 ## Code Health
 
 ### Tech Debt
-
-- None
+- None identified
 
 ### Pain Points
-
-- `Gemini.Execute` in gemini.go creates a new `genai.Client` on every call; caching the client would reduce connection overhead for repeated invocations
+- None identified
 
 ### Optimization Opportunities
-
 - None identified

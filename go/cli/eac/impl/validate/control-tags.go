@@ -13,6 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -73,7 +74,7 @@ func ControlTags() int {
 	ctlog.Info("Validating OSCAL control tags...")
 
 	// Load OSCAL catalog
-	catalogPath := cfg.Repository.RiskCatalogPathAbs(workspaceRoot)
+	catalogPath := paths.RiskCatalogPath(workspaceRoot)
 	if _, err := os.Stat(catalogPath); os.IsNotExist(err) {
 		ctlog.Errorf("Error: OSCAL catalog not found at %s", catalogPath)
 		ctlog.Error("Please ensure the catalog exists before validating control tags")

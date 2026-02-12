@@ -49,7 +49,7 @@ component-kinds:
     defaults:
       artifact_pattern: "{moniker}{ext}"
     files:
-      source: ["**/*.go", "**/*.go.txt", "**/*.json"]
+      source: ["**/*.go", "**/*.go.txt", "**/*.json", "**/README.md"]
       tests: ["**/*_test.go"]
       config: ["go.mod", "go.sum"]
 
@@ -364,6 +364,46 @@ component-kinds:
       source: ["**/*.md"]
 
 # =============================================================================
+# Component Blueprints - Per-component auto-discovery
+# =============================================================================
+# Component blueprints iterate over each existing component in a module,
+# substitute {name} with the component's map key, run a filesystem discovery
+# check, and create an auxiliary component if the check passes.
+#
+# This complements module-level discovery ({moniker}) without conflict:
+#   - Single-component module (e.g., core): Module-level finds specs/core/.design/.
+#     Blueprint checks specs/go/.design/ (component name = go) which doesn't exist. No conflict.
+#   - Multi-component module (e.g., adapters): Module-level finds nothing at
+#     specs/adapters/.design/. Blueprint finds specs/godog-eac/.design/ for each adapter. Works.
+
+component-blueprints:
+  structurizr-per-component:
+    component: "structurizr-{name}"
+    type: structurizr
+    root: "{specs_root}/{name}/{design_dir}"
+    discovery:
+      check: required_file
+      required_file: "{workspace_dsl}"
+
+  gherkin-per-component:
+    component: "gherkin-{name}"
+    type: gherkin
+    root: "{specs_root}/{name}"
+    discovery:
+      check: has_files_in_subdirs
+      check_pattern: "{specification}"
+
+  godog-per-component:
+    component: "godog-{name}"
+    type: godog
+    discovery:
+      derive_from: ["{name}"]
+      derive_subdirs:
+        "{name}": specs
+      check: required_file
+      required_file: "{godog_test}"
+
+# =============================================================================
 # Discovery Rules - Named rules for auto-discovering auxiliary components
 # =============================================================================
 # Discovery rules define HOW to find auxiliary components (assets,
@@ -452,6 +492,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Go CLI tool (published)
   # Use for: command-line tools with releases
@@ -465,6 +509,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Go internal CLI (not externally released)
   # Use for: internal tools, development utilities
@@ -478,6 +526,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Go MCP server module
   # Use for: MCP (Model Context Protocol) servers
@@ -491,6 +543,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Go executable module (published CLI tool)
   # Use for: CLI tools with releases, cross-platform builds
@@ -504,6 +560,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Go contracts module (embedded contract files)
   # Use for: modules providing schemas, EBNF grammars, YAML defaults via go:embed
@@ -515,6 +575,9 @@ module-templates:
       - assets-from-go
       - gherkin-specs
       - structurizr-design
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
 
   # ==========================================================================
   # CONTAINER TEMPLATES
@@ -607,6 +670,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # ==========================================================================
   # SCRIPT TEMPLATES
@@ -624,6 +691,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
   # Script bundles with invokers
   # Use for: script modules with PowerShell and Bash invoker scripts
@@ -636,6 +707,10 @@ module-templates:
       - gherkin-specs
       - structurizr-design
       - godog-from-go
+    blueprints:
+      - structurizr-per-component
+      - gherkin-per-component
+      - godog-per-component
 
 # =============================================================================
 # Artifact Matrices

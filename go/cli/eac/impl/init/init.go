@@ -5,14 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"gopkg.in/yaml.v3"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -51,7 +46,97 @@ func (c *initCommand) Metadata() core.CommandMetadata {
 func (c *initCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
 	return Init()
 }
+
 var log = logging.C()
+
+// initFlags holds parsed command-line flags for the init command.
+type initFlags struct {
+	scan          bool
+	aiProvider    string
+	aiToken       string
+	gitToken      string
+	copyTemplates bool
+	debug         bool
+}
+
+// parseInitFlags parses command-line arguments into an initFlags struct.
+func parseInitFlags() *initFlags {
+	f := &initFlags{}
+
+	for i := 2; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		switch arg {
+		case "--scan", "-s":
+			f.scan = true
+		case "--ai-provider", "-a":
+			if i+1 < len(os.Args) {
+				f.aiProvider = os.Args[i+1]
+				i++ // Skip the value
+			}
+		case "--ai-token":
+			if i+1 < len(os.Args) {
+				f.aiToken = os.Args[i+1]
+				i++ // Skip the value
+			}
+		case "--git-token":
+			if i+1 < len(os.Args) {
+				f.gitToken = os.Args[i+1]
+				i++ // Skip the value
+			}
+		case "--copy-templates":
+			f.copyTemplates = true
+		case "--debug", "-d":
+			f.debug = true
+		}
+	}
+
+	return f
+}
+
+// showInitSuccess displays the success message and next steps after first-time initialization.
+// configPath is the AI provider config path (empty if no AI provider was configured).
+// config is the AI agent config (nil if no AI provider was configured).
+func showInitSuccess(eacDir string, f *initFlags, configPath string, config *agentConfig) {
+	log.Info("")
+	log.Info("✅ EAC project initialized")
+	log.Info("")
+	log.Info("📁 Configuration files created:")
+	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "repository.yml")))
+	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "books.yml")))
+	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "environments.yml")))
+	if configPath != "" {
+		log.Info(fmt.Sprintf("   %s", configPath))
+	}
+	log.Info("")
+
+	if config == nil {
+		// No AI provider configured
+		log.Info("📋 Next steps:")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
+		log.Info("   2. Verify modules: clie eac show modules")
+		log.Info("   3. Commit to version control: git add .eac/")
+		log.Info("")
+		log.Info("ℹ️  To configure AI provider (optional):")
+		log.Info("     clie eac init --ai-provider claude-api")
+	} else if f.aiToken != "" {
+		// Personal config with tokens
+		log.Info("📋 Next steps:")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
+		log.Info("   2. Verify modules: clie eac show modules")
+		log.Info("   3. Do NOT commit ai-provider.personal.yml (contains tokens)")
+		log.Info("   4. Commit other config files: git add .eac/repository.yml .eac/books.yml .eac/environments.yml")
+	} else {
+		// Team config with placeholders
+		log.Info("📋 Next steps:")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
+		log.Info("   2. Verify modules: clie eac show modules")
+		if config.envVarName != "" {
+			log.Info(fmt.Sprintf("   3. Set environment variable: %s", config.envVarName))
+		}
+		log.Info("   4. Commit to version control: git add .eac/")
+	}
+	log.Info("")
+}
 
 // Init initializes EAC project configuration.
 func Init() int {
@@ -66,40 +151,7 @@ func initImpl(deps *Deps) int {
 		return 1
 	}
 
-	// Parse flags to get all options
-	scan := false
-	aiProvider := ""
-	aiToken := ""
-	gitToken := ""
-	copyTemplates := false
-	debug := false
-
-	for i := 2; i < len(os.Args); i++ {
-		arg := os.Args[i]
-		switch arg {
-		case "--scan", "-s":
-			scan = true
-		case "--ai-provider", "-a":
-			if i+1 < len(os.Args) {
-				aiProvider = os.Args[i+1]
-				i++ // Skip the value
-			}
-		case "--ai-token":
-			if i+1 < len(os.Args) {
-				aiToken = os.Args[i+1]
-				i++ // Skip the value
-			}
-		case "--git-token":
-			if i+1 < len(os.Args) {
-				gitToken = os.Args[i+1]
-				i++ // Skip the value
-			}
-		case "--copy-templates":
-			copyTemplates = true
-		case "--debug", "-d":
-			debug = true
-		}
-	}
+	f := parseInitFlags()
 
 	// Get workspace root via repository API
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -109,7 +161,7 @@ func initImpl(deps *Deps) int {
 	}
 
 	// Configure logging system (component loggers + file logging)
-	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, f.debug); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
@@ -134,20 +186,20 @@ func initImpl(deps *Deps) int {
 
 		// Determine which AI provider to use
 		// Only configure AI if explicitly requested via --ai-provider flag
-		if aiProvider != "" && aiProvider != existingConfig.AIProvider {
+		if f.aiProvider != "" && f.aiProvider != existingConfig.AIProvider {
 			// Override AI provider
-			log.Info(fmt.Sprintf("🔄 Switching AI provider: %s → %s", existingConfig.AIProvider, aiProvider))
-		} else if aiProvider != "" && existingConfig.AIProvider != "" {
+			log.Info(fmt.Sprintf("🔄 Switching AI provider: %s → %s", existingConfig.AIProvider, f.aiProvider))
+		} else if f.aiProvider != "" && existingConfig.AIProvider != "" {
 			// Same provider explicitly requested, just log
-			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", aiProvider))
-		} else if aiProvider == "" && existingConfig.AIProvider != "" {
+			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", f.aiProvider))
+		} else if f.aiProvider == "" && existingConfig.AIProvider != "" {
 			// No --ai-provider flag, but existing config has one - keep it
 			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", existingConfig.AIProvider))
 		}
 
 		// Re-scan and merge with existing config
 		// Only pass aiProvider if user explicitly specified it (not from existing config)
-		return reinitialize(deps, workspaceRoot, eacDir, scan, aiProvider)
+		return reinitialize(deps, workspaceRoot, eacDir, f.scan, f.aiProvider)
 	}
 
 	// First-time initialization mode
@@ -162,9 +214,9 @@ func initImpl(deps *Deps) int {
 	}
 
 	// Generate config files
-	if scan {
+	if f.scan {
 		// Scan repository and generate config
-		if err := generateWithScan(deps, workspaceRoot, eacDir, aiProvider); err != nil {
+		if err := generateWithScan(deps, workspaceRoot, eacDir, f.aiProvider); err != nil {
 			log.Error(fmt.Sprintf("Error generating configuration from scan: %v", err))
 			return 1
 		}
@@ -187,7 +239,7 @@ func initImpl(deps *Deps) int {
 	}
 
 	// Copy system templates if requested
-	if copyTemplates {
+	if f.copyTemplates {
 		log.Info("")
 		log.Info("📄 Copying system template files...")
 		if err := copySystemTemplates(workspaceRoot); err != nil {
@@ -198,23 +250,8 @@ func initImpl(deps *Deps) int {
 	}
 
 	// If no AI provider specified, show success and exit
-	if aiProvider == "" {
-		log.Info("")
-		log.Info("✅ EAC project initialized")
-		log.Info("")
-		log.Info("📁 Configuration files created:")
-		log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "repository.yml")))
-		log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "books.yml")))
-		log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "environments.yml")))
-		log.Info("")
-		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .eac/repository.yml")
-		log.Info("   2. Verify modules: clie eac show modules")
-		log.Info("   3. Commit to version control: git add .eac/")
-		log.Info("")
-		log.Info("ℹ️  To configure AI provider (optional):")
-		log.Info("     clie eac init --ai-provider claude-api")
-		log.Info("")
+	if f.aiProvider == "" {
+		showInitSuccess(eacDir, f, "", nil)
 		return 0
 	}
 
@@ -224,7 +261,7 @@ func initImpl(deps *Deps) int {
 	log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// Configure agent using --ai-provider flag
-	config, err := configureAgent(aiProvider)
+	config, err := configureAgent(f.aiProvider)
 	if err != nil {
 		log.Errorf("Error during configuration: %v", err)
 		return 1
@@ -232,8 +269,8 @@ func initImpl(deps *Deps) int {
 
 	// Create tokens struct
 	tokens := &tokenConfig{
-		aiToken:  aiToken,
-		gitToken: gitToken,
+		aiToken:  f.aiToken,
+		gitToken: f.gitToken,
 	}
 
 	// Write configuration (team or personal based on token presence)
@@ -243,127 +280,14 @@ func initImpl(deps *Deps) int {
 		return 1
 	}
 
-	// Success message
-	log.Info("")
-	log.Info("✅ EAC project initialized")
-	log.Info("")
-	log.Info("📁 Configuration files created:")
-	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "repository.yml")))
-	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "books.yml")))
-	log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "environments.yml")))
-	log.Info(fmt.Sprintf("   %s", configPath))
-	log.Info("")
-
-	// Provide appropriate next steps based on config type
-	if aiToken != "" {
-		// Personal config with tokens
-		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .eac/repository.yml")
-		log.Info("   2. Verify modules: clie eac show modules")
-		log.Info("   3. Do NOT commit ai-provider.personal.yml (contains tokens)")
-		log.Info("   4. Commit other config files: git add .eac/repository.yml .eac/books.yml .eac/environments.yml")
-	} else {
-		// Team config with placeholders
-		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .eac/repository.yml")
-		log.Info("   2. Verify modules: clie eac show modules")
-		if config.envVarName != "" {
-			log.Info(fmt.Sprintf("   3. Set environment variable: %s", config.envVarName))
-		}
-		log.Info("   4. Commit to version control: git add .eac/")
-	}
-	log.Info("")
-
+	showInitSuccess(eacDir, f, configPath, config)
 	return 0
-}
-
-// agentConfig holds configuration for an AI provider.
-type agentConfig struct {
-	providerName string // "claude-api", "claude-cli", "openai", "gemini"
-	envVarName   string // "ANTHROPIC_API_KEY", etc. (empty for claude-cli)
-	model        string // "claude-3-haiku-20240307", etc.
-	endpoint     string // API endpoint URL (empty for claude-cli)
-}
-
-// tokenConfig holds actual token values (for personal config).
-type tokenConfig struct {
-	aiToken  string // Actual AI API token
-	gitToken string // Actual Git API token
 }
 
 // fileExists checks if a file exists.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// configureAgent configures the AI provider based on user input.
-func configureAgent(aiProvider string) (*agentConfig, error) {
-	config := &agentConfig{}
-
-	// Configure provider based on --ai flag
-	if err := configureProvider(config, aiProvider); err != nil {
-		return nil, err
-	}
-
-	displayProviderInfo(config)
-	return config, nil
-}
-
-// configureProvider sets up the config based on the provider key.
-func configureProvider(config *agentConfig, provider string) error {
-	switch strings.ToLower(provider) {
-	case "claude-api":
-		config.providerName = "claude-api"
-		config.envVarName = "ANTHROPIC_API_KEY"
-		config.model = providers.DefaultClaudeAPIModel
-		config.endpoint = "https://api.anthropic.com/v1"
-
-	case "openai":
-		config.providerName = "openai"
-		config.envVarName = "OPENAI_API_KEY"
-		config.model = providers.DefaultOpenAIModel
-		config.endpoint = "https://api.openai.com/v1"
-
-	case "gemini":
-		config.providerName = "gemini"
-		config.envVarName = "GOOGLE_API_KEY"
-		config.model = providers.DefaultGeminiModel
-		config.endpoint = "https://generativelanguage.googleapis.com"
-
-	default:
-		return fmt.Errorf("unsupported provider: %s\nSupported: claude-api, openai, gemini", provider)
-	}
-
-	return nil
-}
-
-// displayProviderInfo shows information about the selected provider.
-func displayProviderInfo(config *agentConfig) {
-	log.Info("")
-	log.Info(fmt.Sprintf("✓ %s selected", config.providerName))
-	if config.envVarName != "" {
-		log.Info(fmt.Sprintf("  Environment variable: %s", config.envVarName))
-	}
-
-	// Provider-specific API key instructions
-	switch config.providerName {
-	case "claude-api":
-		log.Info("  Get your API key at: https://claude.ai/settings/api")
-		log.Info("  Note: Personal or workspace-owned API keys both work")
-		log.Info("  Requires: ANTHROPIC_API_KEY environment variable")
-	case "claude-cli":
-		log.Info("  Uses Claude Code CLI (no API key needed)")
-		log.Info("  Note: Requires Claude Code to be installed and authenticated")
-	case "openai":
-		log.Info("  Get your API key at: https://platform.openai.com/api-keys")
-	case "gemini":
-		log.Info("  Get your API key at: https://makersuite.google.com/app/apikey")
-	}
-
-	log.Info("")
-	log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	log.Info("")
 }
 
 // createDirectoryStructure creates the .eac directory structure.
@@ -382,93 +306,6 @@ func createDirectoryStructure(workspaceRoot string) error {
 	}
 
 	return nil
-}
-
-// writeConfig writes the EAC configuration (team or personal based on tokens).
-func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig) (string, error) {
-	// Determine which file to write and whether to use env vars or direct tokens
-	var configPath string
-	var useEnvVars bool
-
-	if tokens.aiToken != "" {
-		// User provided AI token - write personal config with direct values
-		configPath = paths.EACConfigPersonalFilePath(workspaceRoot)
-		useEnvVars = false
-		log.Info("📝 Creating personal configuration with actual tokens...")
-	} else {
-		// No tokens provided - write team config with env var placeholders
-		configPath = paths.EACConfigFilePath(workspaceRoot)
-		useEnvVars = true
-		log.Info("📝 Creating team configuration with environment variable placeholders...")
-	}
-
-	// Build config content
-	content := buildConfigContent(config, tokens, useEnvVars)
-
-	// Write to file
-	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
-		return "", fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return configPath, nil
-}
-
-// buildConfigContent builds the YAML config content.
-func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars bool) string {
-	var content strings.Builder
-
-	// Header comment
-	if useEnvVars {
-		content.WriteString("# EAC Configuration (Team/Shared)\n")
-		content.WriteString("# Generated by: eac init command\n")
-		content.WriteString("# SAFE TO COMMIT: Contains environment variable placeholders\n")
-		content.WriteString("#\n")
-		content.WriteString("# This file is committed and shared across the team.\n")
-		content.WriteString("# Used by eac CLI, CI/CD, and production workflows.\n")
-		content.WriteString("#\n")
-		content.WriteString("# For local development with Claude CLI (no API costs):\n")
-		content.WriteString("# - Run: .\\importer.ps1\n")
-		content.WriteString("# - This creates: .eac/ai-provider.personal.yml (gitignored)\n")
-		content.WriteString("# - Personal config takes precedence over this team config\n")
-	} else {
-		content.WriteString("# EAC Configuration (Personal)\n")
-		content.WriteString("# Generated by: eac init command\n")
-		content.WriteString("# GITIGNORED: Contains actual token values\n")
-		content.WriteString("# DO NOT COMMIT THIS FILE\n")
-		content.WriteString("#\n")
-		content.WriteString("# This file is specific to your machine and contains actual API tokens.\n")
-		content.WriteString("# You can manually change tokens to ${ENV_VAR} format if preferred.\n")
-	}
-	content.WriteString("\n")
-
-	// AI configuration
-	content.WriteString("ai:\n")
-	content.WriteString(fmt.Sprintf("  provider: %s\n", config.providerName))
-	content.WriteString(fmt.Sprintf("  model: %s\n", config.model))
-
-	if config.endpoint != "" {
-		content.WriteString(fmt.Sprintf("  endpoint: %s\n", config.endpoint))
-	}
-
-	if config.envVarName != "" {
-		if useEnvVars {
-			content.WriteString(fmt.Sprintf("  api_key: ${%s}\n", config.envVarName))
-		} else {
-			content.WriteString(fmt.Sprintf("  api_key: %s\n", tokens.aiToken))
-		}
-	}
-
-	// Git configuration
-	content.WriteString("\ngit:\n")
-	if useEnvVars {
-		content.WriteString("  token: ${GIT_TOKEN}\n")
-	} else if tokens.gitToken != "" {
-		content.WriteString(fmt.Sprintf("  token: %s\n", tokens.gitToken))
-	} else {
-		content.WriteString("  token: \"\"\n")
-	}
-
-	return content.String()
 }
 
 // copySystemTemplates copies system default configuration files to user repository.
@@ -529,204 +366,4 @@ func copySystemTemplates(workspaceRoot string) error {
 	log.Info(fmt.Sprintf("   📊 Summary: %d copied, %d skipped", copiedCount, skippedCount))
 
 	return nil
-}
-
-// generateRepositoryYML generates repository.yml with calculated defaults.
-func generateRepositoryYML(workspaceRoot, eacDir string) error {
-	// Load calculated config (merges all defaults)
-	cfg, err := config.Load(config.LoadOptions{
-		RepoRoot:        workspaceRoot,
-		ValidateSchemas: false, // Don't validate during init - files may not exist yet
-	})
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	// Serialize to YAML
-	yamlBytes, err := yaml.Marshal(cfg.Repository)
-	if err != nil {
-		return fmt.Errorf("failed to serialize config: %w", err)
-	}
-
-	// Add header
-	header := `# EAC Repository Configuration
-# Generated by: clie eac init
-#
-# This file defines your repository settings and module domain.
-# Edit this file to customize modules, dependencies, and build settings.
-#
-# Documentation: https://eac.readthedocs.io/configuration/repository
-
-`
-
-	path := filepath.Join(eacDir, "repository.yml")
-	if err := os.WriteFile(path, []byte(header+string(yamlBytes)), 0o644); err != nil {
-		return fmt.Errorf("failed to write repository.yml: %w", err)
-	}
-
-	log.Info("   ✓ Generated repository.yml")
-	return nil
-}
-
-// generateBooksYML generates books.yml with empty template.
-func generateBooksYML(eacDir string) error {
-	content := `# Documentation Books Configuration
-# Generated by: clie eac init
-#
-# Define documentation books for your project.
-# Each book represents a documentation site built with MkDocs.
-#
-# Example:
-#   books:
-#     - name: docs
-#       title: Project Documentation
-#       description: Main documentation site
-#       output: site
-#       sources:
-#         - path: docs
-#
-# Documentation: https://eac.readthedocs.io/configuration/books
-
-books: []
-`
-
-	path := filepath.Join(eacDir, "books.yml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("failed to write books.yml: %w", err)
-	}
-
-	log.Info("   ✓ Generated books.yml")
-	return nil
-}
-
-// generateEnvironmentsYML generates environments.yml with empty template.
-func generateEnvironmentsYML(eacDir string) error {
-	content := `# Test Environments Configuration
-# Generated by: clie eac init
-#
-# Define test environments for your project.
-# Environments specify where and how tests run.
-#
-# Example:
-#   environments:
-#     - moniker: local
-#       name: Local Development
-#       description: Local development environment
-#       level: L0
-#
-#     - moniker: staging
-#       name: Staging
-#       description: Pre-production staging environment
-#       level: L2
-#
-# Test Levels:
-#   L0 - Unit tests (no external dependencies)
-#   L1 - Integration tests (local dependencies)
-#   L2 - System tests (staging environment)
-#   L3 - Acceptance tests (production-like)
-#   L4 - Production validation
-#
-# Documentation: https://eac.readthedocs.io/configuration/environments
-
-environments: []
-`
-
-	path := filepath.Join(eacDir, "environments.yml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("failed to write environments.yml: %w", err)
-	}
-
-	log.Info("   ✓ Generated environments.yml")
-	return nil
-}
-
-// generateWithScan scans the repository and generates configuration files.
-func generateWithScan(deps *Deps, workspaceRoot, eacDir, aiProvider string) error {
-	log.Info("")
-	log.Info("🔍 Scanning repository structure...")
-
-	// Run scanner
-	scanResult, err := ScanRepository(workspaceRoot)
-	if err != nil {
-		return fmt.Errorf("failed to scan repository: %w", err)
-	}
-
-	// Report scan results
-	if len(scanResult.Modules) == 0 {
-		log.Warn("   ⚠️  No modules detected")
-		log.Info("   Falling back to manual configuration")
-
-		// Generate empty templates
-		if err := generateBooksYML(eacDir); err != nil {
-			return err
-		}
-		if err := generateEnvironmentsYML(eacDir); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	log.Info(fmt.Sprintf("   ✓ Detected: %d module(s)", len(scanResult.Modules)))
-	for _, mod := range scanResult.Modules {
-		log.Info(fmt.Sprintf("      - %s (%s) at %s", mod.Name, mod.Language, mod.Root))
-	}
-
-	// Generate repository.yml using strategy pattern
-	log.Info("")
-	var repoYAML string
-
-	if aiProvider != "" {
-		log.Info(fmt.Sprintf("🤖 Generating configuration with AI (%s)...", aiProvider))
-		// Use AI generator with rule-based fallback
-		aiGen := newAIGenerator(aiProvider, deps)
-		ruleGen := NewRuleBasedGenerator()
-
-		// Try AI generation first
-		repoYAML, err = aiGen.Generate(workspaceRoot, scanResult)
-		if err != nil {
-			log.Warn(fmt.Sprintf("   ⚠️  AI generation failed: %v", err))
-			log.Info("   Falling back to rule-based generation")
-			repoYAML, err = ruleGen.Generate(workspaceRoot, scanResult)
-			if err != nil {
-				return fmt.Errorf("failed to generate configuration: %w", err)
-			}
-		} else {
-			log.Info("   ✓ AI-enhanced configuration generated")
-		}
-	} else {
-		log.Info("🔧 Generating configuration (rule-based)...")
-		generator := NewRuleBasedGenerator()
-		repoYAML, err = generator.Generate(workspaceRoot, scanResult)
-		if err != nil {
-			return fmt.Errorf("failed to generate configuration: %w", err)
-		}
-		log.Info("   ✓ Configuration generated")
-		log.Info("")
-		log.Info("   💡 Tip: Use --ai-provider claude-api for enhanced descriptions")
-	}
-
-	// Write repository.yml
-	repoPath := filepath.Join(eacDir, "repository.yml")
-	if err := os.WriteFile(repoPath, []byte(repoYAML), 0o644); err != nil {
-		return fmt.Errorf("failed to write repository.yml: %w", err)
-	}
-	log.Info(fmt.Sprintf("   ✓ Generated %s", repoPath))
-
-	// Generate other config files
-	if err := generateBooksYML(eacDir); err != nil {
-		return err
-	}
-	if err := generateEnvironmentsYML(eacDir); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// generateRepositoryYAMLFromScan is deprecated - use NewRuleBasedGenerator().Generate() instead.
-// Kept for backward compatibility.
-func generateRepositoryYAMLFromScan(scanResult *ScanResult) string {
-	generator := NewRuleBasedGenerator()
-	result, _ := generator.Generate("", scanResult)
-	return result
 }

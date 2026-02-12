@@ -4,11 +4,13 @@ package internal
 
 import (
 	"testing"
+
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func TestNewDefaultGitOps(t *testing.T) {
 	t.Run("returns non-nil implementation", func(t *testing.T) {
-		ops := NewDefaultGitOps("/tmp/test-repo")
+		ops := NewDefaultGitOps("/tmp/test-repo", tool.NewToolSystemForTesting())
 		if ops == nil {
 			t.Fatal("NewDefaultGitOps() returned nil")
 		}

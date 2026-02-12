@@ -160,7 +160,6 @@ func runFileChecks(repoRoot, configRoot string, result *ConfigValidationResult) 
 		file     string
 	}{
 		{"core", "repository.yml"},
-		{"core", "component-types.yml"},
 		{"core", "books.yml"},
 		{"security", "scanners.yml"},
 		{"security", "policies.yml"},
@@ -262,7 +261,6 @@ func runLoadValidation(repoRoot, configRoot string, result *ConfigValidationResu
 	}{
 		{"repository", cfg.LoadRepository},
 		{"environments", cfg.LoadEnvironments},
-		{"component-types", cfg.LoadComponentKinds},
 	}
 
 	for _, ct := range configTypes {

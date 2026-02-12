@@ -12,7 +12,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -39,30 +38,6 @@ func (c *validateSpecsCommand) Metadata() core.CommandMetadata {
 func (c *validateSpecsCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
 	return ValidateSpecs()
 }
-
-// ============================================================================
-// Mock Support for Testing
-// ============================================================================
-
-// gitRepoProvider provides lazy-initialized git repository with test injection support.
-var gitRepoProvider = &git.LazyRepo{}
-
-// getGitRepo returns the git repository, creating one if needed.
-func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
-	return gitRepoProvider.Get(workspaceRoot)
-}
-
-// SetGitRepo allows tests to inject a mock repository.
-func SetGitRepo(repo git.GitRepository) {
-	gitRepoProvider.Set(repo)
-}
-
-// ResetGitRepo clears the mock git repository.
-func ResetGitRepo() {
-	gitRepoProvider.Reset()
-}
-
-// ============================================================================
 
 // ValidateSpecs validates existing Gherkin specification files.
 func ValidateSpecs() int {

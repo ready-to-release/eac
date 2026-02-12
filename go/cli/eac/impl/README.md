@@ -20,7 +20,6 @@ Module moniker: `eac` | Dependencies: `clibase`, `core`, adapters
 | `eac help` | [help/](./help/) | Display help information for commands |
 | `eac init` | [init/](./init/) | Initialize EAC project configuration |
 | `eac lint` | [lint/](./lint/) | Lint modules using the command framework |
-| `eac list` | [list/](./list/) | List available commands and resources |
 | `eac pipeline` | [pipeline/](./pipeline/) | CI pipeline orchestration (await, dispatch, monitor) |
 | `eac release` | [release/](./release/) | Release lifecycle management (await-deps, tagging, changelog) |
 | `eac scan` | [scan/](./scan/) | Security scanning using the command framework |

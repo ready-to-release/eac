@@ -18,8 +18,14 @@ import (
 )
 
 func init() {
-	testrunners.Register(&PytestRunner{})
-	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+	RegisterWith(testrunners.DefaultRegistry())
+}
+
+// RegisterWith registers the PytestRunner and its descriptor with the given registry.
+// This enables testing with an isolated registry instead of relying on global state.
+func RegisterWith(reg *testrunners.Registry) {
+	reg.Register(&PytestRunner{})
+	reg.RegisterDescriptor(&testrunners.TestTypeDescriptor{
 		TestType:      "pytest",
 		IsBDD:         false,
 		ComponentType: "python",
@@ -104,6 +110,39 @@ func (r *PytestRunner) BuildPackagePath(testRoot, testPath string) string {
 	return testRoot
 }
 
+// collectPytestResults parses pytest JSON output and populates the result with CTRF data.
+// Returns true if results were successfully parsed.
+func collectPytestResults(result *testrunners.RunResult, outputDir string, logWriter io.Writer) bool {
+	if outputDir == "" {
+		return false
+	}
+	jsonPath := filepath.Join(outputDir, "results.json")
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return false
+	}
+	ctrfReport := convertPytestJSONToCTRF(data)
+	if ctrfReport == nil {
+		return false
+	}
+	result.TestsPassed = ctrfReport.Results.Summary.Passed
+	result.TestsFailed = ctrfReport.Results.Summary.Failed
+	result.TestsSkipped = ctrfReport.Results.Summary.Skipped
+	result.TestsTotal = ctrfReport.Results.Summary.Tests
+
+	if ctrfData, err := ctrfReport.ToJSON(); err == nil {
+		ctrfPath := filepath.Join(outputDir, "unit.json")
+		_ = os.WriteFile(ctrfPath, ctrfData, 0o644)
+		fmt.Fprintf(logWriter, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
+	}
+	return true
+}
+
+// pytestExecutionFailed returns true if the execution result indicates failure.
+func pytestExecutionFailed(execResult *tool.ExecutionResult, runErr error) bool {
+	return runErr != nil || (execResult != nil && execResult.ExitCode != 0)
+}
+
 // Execute runs Python pytest tests for a package.
 func (r *PytestRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
 	start := time.Now()
@@ -148,36 +187,20 @@ func (r *PytestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 		fmt.Fprintf(logWriter, "%s%s\n", execResult.Stdout, execResult.Stderr)
 	}
 
-	// Parse JSON results if available
-	if cfg.OutputDir != "" {
-		jsonPath := filepath.Join(cfg.OutputDir, "results.json")
-		if data, err := os.ReadFile(jsonPath); err == nil {
-			if ctrfReport := convertPytestJSONToCTRF(data); ctrfReport != nil {
-				result.TestsPassed = ctrfReport.Results.Summary.Passed
-				result.TestsFailed = ctrfReport.Results.Summary.Failed
-				result.TestsSkipped = ctrfReport.Results.Summary.Skipped
-				result.TestsTotal = ctrfReport.Results.Summary.Tests
-
-				if ctrfData, err := ctrfReport.ToJSON(); err == nil {
-					ctrfPath := filepath.Join(cfg.OutputDir, "unit.json")
-					_ = os.WriteFile(ctrfPath, ctrfData, 0o644)
-					fmt.Fprintf(logWriter, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
-				}
-			}
-		}
-	}
-
-	// If we didn't get counts from JSON, fall back to test reference count
-	if result.TestsTotal == 0 {
-		result.TestsTotal = len(tests)
-		if runErr != nil || (execResult != nil && execResult.ExitCode != 0) {
-			result.TestsFailed = len(tests)
+	// Parse JSON results; if unavailable, report 1 passed or 1 failed as conservative fallback.
+	// len(tests) is the test-file count, not the individual test count, so using it
+	// would inflate metrics. Real counts come from pytest JSON when available.
+	if !collectPytestResults(&result, cfg.OutputDir, logWriter) {
+		if pytestExecutionFailed(execResult, runErr) {
+			result.TestsTotal = 1
+			result.TestsFailed = 1
 		} else {
-			result.TestsPassed = len(tests)
+			result.TestsTotal = 1
+			result.TestsPassed = 1
 		}
 	}
 
-	if runErr != nil || (execResult != nil && execResult.ExitCode != 0) {
+	if pytestExecutionFailed(execResult, runErr) {
 		result.PackageFailed = true
 		fmt.Fprintf(logWriter, "pytest tests failed\n")
 	} else {
@@ -202,13 +225,16 @@ func (r *PytestRunner) executeSystem(ctx context.Context, pythonTool *tool.ToolD
 	// Create venv if needed
 	if _, err := os.Stat(env.PythonBin); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "Creating virtual environment at %s...\n", env.VenvDir)
-		pip.PipInstallMu.Lock()
-		venvExecCtx := &tool.ExecutionContext{
-			ModuleRoot:    env.WorkDir,
-			ArgsOverrides: []string{"-m", "venv", env.VenvDir},
-		}
-		venvResult, venvErr := tool.GlobalExecutor().Execute(ctx, pythonTool, venvExecCtx)
-		pip.PipInstallMu.Unlock()
+		var venvResult *tool.ExecutionResult
+		var venvErr error
+		_ = pip.WithInstallLock(func() error {
+			venvExecCtx := &tool.ExecutionContext{
+				ModuleRoot:    env.WorkDir,
+				ArgsOverrides: []string{"-m", "venv", env.VenvDir},
+			}
+			venvResult, venvErr = tool.GlobalExecutor().Execute(ctx, pythonTool, venvExecCtx)
+			return venvErr
+		})
 		if venvResult != nil && (len(venvResult.Stdout) > 0 || len(venvResult.Stderr) > 0) {
 			fmt.Fprintf(logWriter, "%s%s\n", venvResult.Stdout, venvResult.Stderr)
 		}
@@ -218,20 +244,29 @@ func (r *PytestRunner) executeSystem(ctx context.Context, pythonTool *tool.ToolD
 	}
 
 	// Install dependencies using the resolved python tool with venv env
-	fmt.Fprintf(logWriter, "Installing Python dependencies...\n")
-	pip.PipInstallMu.Lock()
-	pipExecCtx := &tool.ExecutionContext{
-		ModuleRoot:    env.WorkDir,
-		FullEnv:       env.Env,
-		ArgsOverrides: []string{"-m", "pip", "install", "-e", ".[dev,test]", "--quiet"},
-	}
-	installResult, installErr := tool.GlobalExecutor().Execute(ctx, pythonTool, pipExecCtx)
-	pip.PipInstallMu.Unlock()
-	if installResult != nil && (len(installResult.Stdout) > 0 || len(installResult.Stderr) > 0) {
-		fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
-	}
-	if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
-		return installResult, fmt.Errorf("pip install failed: %v", installErr)
+	// Skip reinstallation when deps marker indicates pyproject.toml hasn't changed
+	if env.DepsUpToDate {
+		fmt.Fprintf(logWriter, "Dependencies up-to-date (cached venv), skipping pip install\n")
+	} else {
+		fmt.Fprintf(logWriter, "Installing Python dependencies...\n")
+		var installResult *tool.ExecutionResult
+		var installErr error
+		_ = pip.WithInstallLock(func() error {
+			pipExecCtx := &tool.ExecutionContext{
+				ModuleRoot:    env.WorkDir,
+				FullEnv:       env.Env,
+				ArgsOverrides: []string{"-m", "pip", "install", "-e", ".[dev,test]", "--quiet"},
+			}
+			installResult, installErr = tool.GlobalExecutor().Execute(ctx, pythonTool, pipExecCtx)
+			return installErr
+		})
+		if installResult != nil && (len(installResult.Stdout) > 0 || len(installResult.Stderr) > 0) {
+			fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
+		}
+		if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
+			return installResult, fmt.Errorf("pip install failed: %v", installErr)
+		}
+		pip.MarkDepsInstalled(env.VenvDir, moduleRoot)
 	}
 
 	// Build pytest command with JSON report

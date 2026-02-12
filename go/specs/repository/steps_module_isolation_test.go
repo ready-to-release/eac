@@ -27,68 +27,54 @@ type moduleIsolationContext struct {
 	importsByFile   map[string][]string // file -> list of local imports
 }
 
-var modIsoCtx *moduleIsolationContext
-
 // registerModuleIsolationSteps registers module isolation step definitions.
 func registerModuleIsolationSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
-	// Background
-	sc.Step(`^the repository contains the following Go modules:$`, theRepositoryContainsGoModules)
-
-	// Given steps
-	sc.Step(`^I am checking module "([^"]*)"$`, iAmCheckingModule)
-
-	// When steps
-	sc.Step(`^I scan all \.go files for import statements$`, iScanAllGoFilesForImports)
-	sc.Step(`^I scan all production \.go files in "([^"]*)"$`, iScanAllProductionGoFilesIn)
-	sc.Step(`^I build the module dependency graph from go\.mod files$`, iBuildModuleDependencyGraph)
-
-	// Then steps - forbidden imports
-	sc.Step(`^no files should import "([^"]*)"$`, noFilesShouldImport)
-	sc.Step(`^no production files should import "([^"]*)"$`, noProductionFilesShouldImport)
-
-	// Then steps - allowed imports
-	sc.Step(`^files may import "([^"]*)"$`, filesMayImport)
-
-	// Then steps - graph validation
-	// Note: "the graph should have no circular dependencies" is registered in steps.go
-	sc.Step(`^the dependency order should be:$`, dependencyOrderShouldBe)
-}
-
-func theRepositoryContainsGoModules(table *godog.Table) error {
-	// Initialize context
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		return err
-	}
-	modIsoCtx = &moduleIsolationContext{
-		repoRoot:      repoRoot,
+	// Per-scenario context -- no global mutable state.
+	miCtx := &moduleIsolationContext{
 		importsByFile: make(map[string][]string),
 	}
-	// Table is informational - we verify modules exist on demand
-	return nil
+
+	sc.Step(`^the repository contains the following Go modules:$`, miCtx.theRepositoryContainsGoModules)
+	sc.Step(`^I am checking module "([^"]*)"$`, miCtx.iAmCheckingModule)
+	sc.Step(`^I scan all \.go files for import statements$`, miCtx.iScanAllGoFilesForImports)
+	sc.Step(`^I scan all production \.go files in "([^"]*)"$`, miCtx.iScanAllProductionGoFilesIn)
+	sc.Step(`^I build the module dependency graph from go\.mod files$`, miCtx.iBuildModuleDependencyGraph)
+	sc.Step(`^no files should import "([^"]*)"$`, miCtx.noFilesShouldImport)
+	sc.Step(`^no production files should import "([^"]*)"$`, miCtx.noProductionFilesShouldImport)
+	sc.Step(`^files may import "([^"]*)"$`, miCtx.filesMayImport)
+	sc.Step(`^the dependency order should be:$`, miCtx.dependencyOrderShouldBe)
 }
 
-func iAmCheckingModule(moduleName string) error {
-	if modIsoCtx == nil {
+func (c *moduleIsolationContext) ensureInit() error {
+	if c.repoRoot == "" {
 		repoRoot, err := findRepoRoot()
 		if err != nil {
 			return err
 		}
-		modIsoCtx = &moduleIsolationContext{
-			repoRoot:      repoRoot,
-			importsByFile: make(map[string][]string),
-		}
+		c.repoRoot = repoRoot
+		c.importsByFile = make(map[string][]string)
+	}
+	return nil
+}
+
+func (c *moduleIsolationContext) theRepositoryContainsGoModules(table *godog.Table) error {
+	return c.ensureInit()
+}
+
+func (c *moduleIsolationContext) iAmCheckingModule(moduleName string) error {
+	if err := c.ensureInit(); err != nil {
+		return err
 	}
 
-	modIsoCtx.currentModule = moduleName
-	modIsoCtx.modulePath = filepath.Join(modIsoCtx.repoRoot, moduleName)
-	modIsoCtx.scannedFiles = nil
-	modIsoCtx.productionFiles = nil
-	modIsoCtx.testFiles = nil
-	modIsoCtx.importsByFile = make(map[string][]string)
+	c.currentModule = moduleName
+	c.modulePath = filepath.Join(c.repoRoot, moduleName)
+	c.scannedFiles = nil
+	c.productionFiles = nil
+	c.testFiles = nil
+	c.importsByFile = make(map[string][]string)
 
 	// Verify module exists
-	goModPath := filepath.Join(modIsoCtx.modulePath, "go.mod")
+	goModPath := filepath.Join(c.modulePath, "go.mod")
 	if _, err := os.Stat(goModPath); os.IsNotExist(err) {
 		return fmt.Errorf("module %s not found (no go.mod at %s)", moduleName, goModPath)
 	}
@@ -96,12 +82,12 @@ func iAmCheckingModule(moduleName string) error {
 	return nil
 }
 
-func iScanAllGoFilesForImports() error {
-	if modIsoCtx == nil || modIsoCtx.modulePath == "" {
+func (c *moduleIsolationContext) iScanAllGoFilesForImports() error {
+	if c.modulePath == "" {
 		return fmt.Errorf("module not selected - use 'I am checking module' first")
 	}
 
-	return filepath.Walk(modIsoCtx.modulePath, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(c.modulePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
 		}
@@ -118,7 +104,7 @@ func iScanAllGoFilesForImports() error {
 			return nil
 		}
 
-		modIsoCtx.scannedFiles = append(modIsoCtx.scannedFiles, path)
+		c.scannedFiles = append(c.scannedFiles, path)
 
 		imports, err := extractLocalImports(path)
 		if err != nil {
@@ -126,32 +112,25 @@ func iScanAllGoFilesForImports() error {
 		}
 
 		if len(imports) > 0 {
-			relPath, relErr := filepath.Rel(modIsoCtx.repoRoot, path)
+			relPath, relErr := filepath.Rel(c.repoRoot, path)
 			if relErr != nil {
 				relPath = path
 			}
-			modIsoCtx.importsByFile[relPath] = imports
+			c.importsByFile[relPath] = imports
 		}
 
 		return nil
 	})
 }
 
-func iScanAllProductionGoFilesIn(modulePath string) error {
-	if modIsoCtx == nil {
-		repoRoot, err := findRepoRoot()
-		if err != nil {
-			return err
-		}
-		modIsoCtx = &moduleIsolationContext{
-			repoRoot:      repoRoot,
-			importsByFile: make(map[string][]string),
-		}
+func (c *moduleIsolationContext) iScanAllProductionGoFilesIn(modulePath string) error {
+	if err := c.ensureInit(); err != nil {
+		return err
 	}
 
-	fullPath := filepath.Join(modIsoCtx.repoRoot, modulePath)
-	modIsoCtx.modulePath = fullPath
-	modIsoCtx.currentModule = modulePath
+	fullPath := filepath.Join(c.repoRoot, modulePath)
+	c.modulePath = fullPath
+	c.currentModule = modulePath
 
 	return filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -172,11 +151,11 @@ func iScanAllProductionGoFilesIn(modulePath string) error {
 
 		// Skip test files
 		if strings.HasSuffix(info.Name(), "_test.go") {
-			modIsoCtx.testFiles = append(modIsoCtx.testFiles, path)
+			c.testFiles = append(c.testFiles, path)
 			return nil
 		}
 
-		modIsoCtx.productionFiles = append(modIsoCtx.productionFiles, path)
+		c.productionFiles = append(c.productionFiles, path)
 
 		imports, err := extractLocalImports(path)
 		if err != nil {
@@ -184,24 +163,20 @@ func iScanAllProductionGoFilesIn(modulePath string) error {
 		}
 
 		if len(imports) > 0 {
-			relPath, relErr := filepath.Rel(modIsoCtx.repoRoot, path)
+			relPath, relErr := filepath.Rel(c.repoRoot, path)
 			if relErr != nil {
 				relPath = path
 			}
-			modIsoCtx.importsByFile[relPath] = imports
+			c.importsByFile[relPath] = imports
 		}
 
 		return nil
 	})
 }
 
-func noFilesShouldImport(forbiddenImport string) error {
-	if modIsoCtx == nil {
-		return fmt.Errorf("no module scanned")
-	}
-
+func (c *moduleIsolationContext) noFilesShouldImport(forbiddenImport string) error {
 	var violations []string
-	for file, imports := range modIsoCtx.importsByFile {
+	for file, imports := range c.importsByFile {
 		for _, imp := range imports {
 			if strings.HasPrefix(imp, forbiddenImport) {
 				violations = append(violations, fmt.Sprintf("  - %s imports %s", file, imp))
@@ -216,13 +191,9 @@ func noFilesShouldImport(forbiddenImport string) error {
 	return nil
 }
 
-func noProductionFilesShouldImport(forbiddenImport string) error {
-	if modIsoCtx == nil {
-		return fmt.Errorf("no module scanned")
-	}
-
+func (c *moduleIsolationContext) noProductionFilesShouldImport(forbiddenImport string) error {
 	var violations []string
-	for file, imports := range modIsoCtx.importsByFile {
+	for file, imports := range c.importsByFile {
 		// Skip test files
 		if strings.Contains(file, "/tests/") || strings.HasSuffix(file, "_test.go") {
 			continue
@@ -242,27 +213,16 @@ func noProductionFilesShouldImport(forbiddenImport string) error {
 	return nil
 }
 
-func filesMayImport(allowedImport string) error {
+func (c *moduleIsolationContext) filesMayImport(allowedImport string) error {
 	// This is a documentation step - allowed imports don't need validation
 	return nil
 }
 
-func iBuildModuleDependencyGraph() error {
-	if modIsoCtx == nil {
-		repoRoot, err := findRepoRoot()
-		if err != nil {
-			return err
-		}
-		modIsoCtx = &moduleIsolationContext{
-			repoRoot:      repoRoot,
-			importsByFile: make(map[string][]string),
-		}
-	}
-	// Graph is built implicitly by scanning go.mod files
-	return nil
+func (c *moduleIsolationContext) iBuildModuleDependencyGraph() error {
+	return c.ensureInit()
 }
 
-func dependencyOrderShouldBe(table *godog.Table) error {
+func (c *moduleIsolationContext) dependencyOrderShouldBe(table *godog.Table) error {
 	// This is a documentation/assertion step
 	// Full validation would verify actual dependencies match expected layers
 	return nil

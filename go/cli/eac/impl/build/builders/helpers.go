@@ -75,6 +75,29 @@ func RunCommandWithEnv(ctx context.Context, dir string, logWriter io.Writer, env
 	return result.ExitCode
 }
 
+// RunCommandWithStdin executes a command with stdin input via the tool executor.
+// Output is streamed to the provided writer.
+// Returns exit code (0 = success, non-zero = failure).
+func RunCommandWithStdin(ctx context.Context, dir string, logWriter io.Writer, stdin io.Reader, name string, args ...string) int {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc(name)
+	execCtx := &tool.ExecutionContext{
+		WorkspaceRoot: dir,
+		ModuleRoot:    dir,
+		LogWriter:     logWriter,
+		StdoutWriter:  logWriter,
+		StderrWriter:  logWriter,
+		StdinReader:   stdin,
+		ArgsOverrides: args,
+	}
+
+	result, err := tool.GlobalExecutor().Execute(ctx, toolDef, execCtx)
+	if err != nil {
+		Logln(logWriter, "\nError: failed to execute command: %v", err)
+		return 1
+	}
+	return result.ExitCode
+}
+
 // CopyFile copies a file from src to dst, preserving permissions.
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
@@ -105,6 +128,26 @@ func CopyFile(src, dst string) error {
 // On Windows, converts C:\path to /c/path for Docker compatibility.
 func FormatDockerVolumePath(path string) string {
 	return dockerutil.FormatDockerVolume(path)
+}
+
+// detectDockerBuilder returns the docker-driver builder for the active Docker context.
+// Docker Desktop can switch between contexts (e.g., "default" vs "desktop-linux"),
+// and each context has a matching docker-driver builder with the same name.
+// We always resolve this explicitly to avoid context/builder mismatch errors
+// and to ignore any non-docker-driver builder the user may have set as their buildx default.
+func detectDockerBuilder() string {
+	toolDef := tool.GlobalRegistry().GetOrAdhoc("docker")
+	execCtx := &tool.ExecutionContext{
+		ArgsOverrides: []string{"context", "show"},
+	}
+	result, err := tool.GlobalExecutor().Execute(context.Background(), toolDef, execCtx)
+	if err == nil && result.ExitCode == 0 {
+		name := strings.TrimSpace(string(result.Stdout))
+		if name != "" {
+			return name
+		}
+	}
+	return "default"
 }
 
 // IsDockerInDocker detects if we're running inside a Docker container.

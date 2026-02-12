@@ -33,10 +33,13 @@ This package sits at the boundary between CLI argument parsing and command execu
 ## Code Health
 
 ### Tech Debt
-- None
+
+- None identified
 
 ### Pain Points
+
 - None identified
 
 ### Optimization Opportunities
+
 - None identified

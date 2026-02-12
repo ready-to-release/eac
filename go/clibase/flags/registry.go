@@ -16,9 +16,12 @@ func SetRegistry(reg core.CommandRegistryPort) {
 	globalRegistry = reg
 }
 
-// GlobalFlags are flags that are valid for all commands.
-var GlobalFlags = []core.FlagSpec{
-	{Name: "help", Shorthand: "h", Type: "bool", Usage: "Show help for command"},
+// GlobalFlags returns flags that are valid for all commands.
+// Returns a fresh copy each call so callers cannot mutate shared state.
+func GlobalFlags() []core.FlagSpec {
+	return []core.FlagSpec{
+		{Name: "help", Shorthand: "h", Type: "bool", Usage: "Show help for command"},
+	}
 }
 
 // ValidateFlagsFromRegistry validates command-line flags against the global command registry.
@@ -36,7 +39,17 @@ func ValidateFlagsFromRegistry(args []string) error {
 		return nil // Could not determine command, skip validation
 	}
 
-	cmd, ok := globalRegistry.Get(cmdName)
+	return ValidateFlagsForCommand(args, cmdName)
+}
+
+// ValidateFlagsForCommand validates command-line flags against the registry using
+// an explicit command name. This avoids reliance on os.Args for command resolution.
+func ValidateFlagsForCommand(args []string, commandName string) error {
+	if globalRegistry == nil {
+		return nil // No registry configured, skip validation
+	}
+
+	cmd, ok := globalRegistry.Get(commandName)
 	if !ok {
 		return nil // Command not in registry, skip validation
 	}
@@ -46,7 +59,7 @@ func ValidateFlagsFromRegistry(args []string) error {
 
 // ValidateFlags validates command-line args against the given flag specs.
 func ValidateFlags(args []string, specs []core.FlagSpec) error {
-	allFlags := append(specs, GlobalFlags...)
+	allFlags := append(specs, GlobalFlags()...)
 
 	// Parse args into flags map
 	parsedFlags := make(map[string]string)

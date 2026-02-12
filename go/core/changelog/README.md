@@ -32,7 +32,8 @@ and calendar versioning.
 | parser.go | `Parse`, `ParseString`, `ParseReader` with regex-based line parsing |
 | writer.go | `String`, `Write` with link definition generation |
 | conventional.go | `Commit`, `ParseCommitMessage`, `CommitsToVersion`, `FilterCommitsByModule` |
-| semver.go | `BumpType`, `ParseSemver`, `BumpSemver`, `NextCalver`, `CalculateNextVersionConstrained` |
+| semver.go | `BumpType`, `ParseSemver`, `BumpSemver`, `NextCalver`, `VersionCalcOptions`, `CalculateNextVersion`, `CalculateNextVersionConstrained` |
+| testhelpers_test.go | Shared test fixtures (`makeEntry`, `makeCommit`, `makeVersion`, `testDate`, `minimalChangelog`) |
 
 ## Dependencies
 
@@ -49,13 +50,12 @@ can use its preferred versioning scheme.
 ## Code Health
 
 ### Tech Debt
-- `semver.go:163`: `CalculateNextVersionConstrained` takes 7 parameters -- consider introducing an options struct to improve readability
-- `conventional.go:38`: `conventionalCommitRegex` is a complex multi-group regex; a doc comment explaining each capture group would aid future maintainers
+- None identified
 
 ### Pain Points
-- `parser.go` uses regex-based line-by-line parsing with mutable state variables (`currentVersion`, `currentSection`, `descriptionLines`) -- fragile for edge cases in markdown formatting
-- No shared test helpers between `parser_test.go` and `conventional_test.go` despite both constructing similar changelog fixtures
+- None identified
 
 ### Optimization Opportunities
-- This is a clean leaf package with good separation of concerns; no structural changes needed
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+- Clean leaf package with good separation of concerns; no structural changes needed
+- Excellent test coverage with conventional_test.go, parser_test.go, semver_test.go, and testhelpers_test.go
+- All files are reasonably sized (largest is parser.go at ~250 lines, semver.go at ~280 lines)

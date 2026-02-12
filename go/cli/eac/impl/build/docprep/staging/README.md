@@ -42,10 +42,13 @@ The `FileIndex` it produces is consumed by nearly every subsequent phase for eff
 ## Code Health
 
 ### Tech Debt
-- `orphan.go` has no corresponding test file
+
+- None identified
 
 ### Pain Points
-- None identified -- files are small and well-structured
+
+- None identified
 
 ### Optimization Opportunities
-- None identified -- lazy-copy optimization and mtime comparison are already in place for I/O reduction
+
+- None identified

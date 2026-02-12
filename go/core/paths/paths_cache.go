@@ -9,7 +9,11 @@ import (
 
 // CacheRootPath returns the root EAC cache directory (.cache/eac).
 // All transient build caches should be stored under this directory.
+// Panics if repoRoot is empty to fail fast on programming errors (PP-092).
 func CacheRootPath(repoRoot string) string {
+	if repoRoot == "" {
+		panic("paths: repoRoot must be non-empty")
+	}
 	return filepath.Join(repoRoot, EACCacheRoot)
 }
 
@@ -123,6 +127,13 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 // Path: out/build/{module}/structurizr-structurizr-render/structurizr/
 func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
 	return outSubPath(repoRoot, BuildDir, moduleName, "structurizr-structurizr-render", "structurizr")
+}
+
+// StructurizrComponentBuildOutputPath returns the path to a per-component structurizr build output.
+// Path: out/build/{module}/structurizr-{component}-structurizr-render/structurizr/
+func StructurizrComponentBuildOutputPath(repoRoot, moduleName, componentName string) string {
+	unitDir := "structurizr-" + componentName + "-structurizr-render"
+	return outSubPath(repoRoot, BuildDir, moduleName, unitDir, "structurizr")
 }
 
 // StructurizrAccelCachePath returns the path to the structurizr acceleration cache.

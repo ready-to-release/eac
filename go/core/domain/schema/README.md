@@ -7,7 +7,7 @@ against them.
 ## Key Types
 
 - `Validator` compiles and caches JSON schemas, exposing `ValidateYAML` and `ValidateJSON` methods
-- `SchemaType` is a string enum identifying which schema to validate against (repository, blueprints, component-types, etc.)
+- `SchemaType` is a string enum identifying which schema to validate against (repository, blueprints, etc.)
 - `ValidationError` wraps schema violations with field path and description
 
 ## Patterns
@@ -40,12 +40,10 @@ to their declared schemas before the rest of the system processes them.
 ## Code Health
 
 ### Tech Debt
-- `GetSchemaTypes()` in `validator.go:187-200` returns a hand-maintained list that can fall out of sync with the `schemaFileNames` map; deriving it from the map keys would eliminate the duplication
-- `SchemaEACConfig` constant is named `"ai-provider"` which is potentially confusing relative to its Go identifier; a rename or alias would improve clarity
+- None identified
 
 ### Pain Points
-- None identified; the package is small (3 files), well-tested, and narrowly scoped
+- None identified
 
 ### Optimization Opportunities
-- Schema compilation already uses `sync.Once` via `FactoryValidator`; no further caching is needed
-- `convertYAMLToJSON` in `validator.go:144-168` allocates new maps/slices on every call; for very large configs a streaming approach could help, but in practice configs are small — not worth the complexity
+- None identified

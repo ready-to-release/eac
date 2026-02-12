@@ -120,24 +120,18 @@ func TestGetApprovalComments(t *testing.T) {
 
 	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
-	// Set up mock GitHub CLI
-	mockCLI := &mockGitHubCLI{
-		prs: map[int]*PRData{},
+	// Set up deps with mock GitHub CLI and mock git repo
+	deps := &ReportDeps{
+		GitHubCLI: &mockGitHubCLI{prs: map[int]*PRData{}},
+		GitRepo: &mockGitRepo{
+			commits: []git.CommitInfo{}, // No commits = no expensive diff operations
+			tags:    []string{},
+		},
 	}
-	SetGitHubCLI(mockCLI)
-	defer SetGitHubCLI(nil)
-
-	// Set up mock git repo to avoid expensive git operations (rename detection etc)
-	mockRepo := &mockGitRepo{
-		commits: []git.CommitInfo{}, // No commits = no expensive diff operations
-		tags:    []string{},
-	}
-	SetGitRepo(mockRepo)
-	defer SetGitRepo(nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report, err := GetApprovalComments(workspaceRoot, tt.module, tt.version, false, "")
+			report, err := GetApprovalComments(deps, workspaceRoot, tt.module, tt.version, false, "")
 
 			if tt.wantErr {
 				if err == nil {
@@ -185,81 +179,77 @@ func TestGetApprovalComments(t *testing.T) {
 func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
-	// Set up mock GitHub CLI with sample PR data
-	mockCLI := &mockGitHubCLI{
-		prs: map[int]*PRData{
-			123: {
-				Number:             123,
-				Title:              "Add new feature to eac",
-				Author:             "developer1",
-				Body:               "This PR adds a new feature to eac module",
-				MergedAt:           time.Now(),
-				MergeCommitMessage: "Merge pull request #123\n\nAdded new feature implementation",
-				Files:              []string{"specs/eac/new-feature.feature", "go/cli/eac/impl/test.go"},
-				Reviews: []ReviewData{
-					{Author: "reviewer1", State: "APPROVED", SubmittedAt: time.Now()},
-					{Author: "reviewer2", State: "APPROVED", SubmittedAt: time.Now()},
+	// Set up deps with mock GitHub CLI and mock git repo
+	deps := &ReportDeps{
+		GitHubCLI: &mockGitHubCLI{
+			prs: map[int]*PRData{
+				123: {
+					Number:             123,
+					Title:              "Add new feature to eac",
+					Author:             "developer1",
+					Body:               "This PR adds a new feature to eac module",
+					MergedAt:           time.Now(),
+					MergeCommitMessage: "Merge pull request #123\n\nAdded new feature implementation",
+					Files:              []string{"specs/eac/new-feature.feature", "go/cli/eac/impl/test.go"},
+					Reviews: []ReviewData{
+						{Author: "reviewer1", State: "APPROVED", SubmittedAt: time.Now()},
+						{Author: "reviewer2", State: "APPROVED", SubmittedAt: time.Now()},
+					},
 				},
-			},
-			456: {
-				Number:             456,
-				Title:              "Update clie spec",
-				Author:             "developer2",
-				Body:               "Updates the clie specification",
-				MergedAt:           time.Now(),
-				MergeCommitMessage: "Merge pull request #456\n\nUpdated clie spec",
-				Files:              []string{"specs/clie/update.feature"},
-				Reviews: []ReviewData{
-					{Author: "reviewer3", State: "APPROVED", SubmittedAt: time.Now()},
+				456: {
+					Number:             456,
+					Title:              "Update clie spec",
+					Author:             "developer2",
+					Body:               "Updates the clie specification",
+					MergedAt:           time.Now(),
+					MergeCommitMessage: "Merge pull request #456\n\nUpdated clie spec",
+					Files:              []string{"specs/clie/update.feature"},
+					Reviews: []ReviewData{
+						{Author: "reviewer3", State: "APPROVED", SubmittedAt: time.Now()},
+					},
 				},
-			},
-			789: {
-				Number:             789,
-				Title:              "Non-spec PR",
-				Author:             "developer3",
-				Body:               "This PR contains no spec files",
-				MergedAt:           time.Now(),
-				MergeCommitMessage: "Merge pull request #789\n\nNon-spec changes",
-				Files:              []string{"go/eac/core/test.go"},
-				Reviews: []ReviewData{
-					{Author: "reviewer4", State: "APPROVED", SubmittedAt: time.Now()},
+				789: {
+					Number:             789,
+					Title:              "Non-spec PR",
+					Author:             "developer3",
+					Body:               "This PR contains no spec files",
+					MergedAt:           time.Now(),
+					MergeCommitMessage: "Merge pull request #789\n\nNon-spec changes",
+					Files:              []string{"go/eac/core/test.go"},
+					Reviews: []ReviewData{
+						{Author: "reviewer4", State: "APPROVED", SubmittedAt: time.Now()},
+					},
 				},
 			},
 		},
-	}
-	SetGitHubCLI(mockCLI)
-	defer SetGitHubCLI(nil)
-
-	// Set up mock git repo with sample commits containing PR references
-	mockRepo := &mockGitRepo{
-		commits: []git.CommitInfo{
-			{
-				SHA:      "abc123",
-				ShortSHA: "abc123",
-				Message:  "feat: add new feature (#123)\n\nThis adds the feature.",
-				Subject:  "feat: add new feature (#123)",
-				Author:   "developer1",
-				Date:     time.Now(),
-				Files:    []string{"specs/eac/new-feature.feature"},
+		GitRepo: &mockGitRepo{
+			commits: []git.CommitInfo{
+				{
+					SHA:      "abc123",
+					ShortSHA: "abc123",
+					Message:  "feat: add new feature (#123)\n\nThis adds the feature.",
+					Subject:  "feat: add new feature (#123)",
+					Author:   "developer1",
+					Date:     time.Now(),
+					Files:    []string{"specs/eac/new-feature.feature"},
+				},
+				{
+					SHA:      "def456",
+					ShortSHA: "def456",
+					Message:  "Merge pull request #456 from user/branch\n\nUpdate specs",
+					Subject:  "Merge pull request #456 from user/branch",
+					Author:   "developer2",
+					Date:     time.Now(),
+					Files:    []string{"specs/clie/update.feature"},
+				},
 			},
-			{
-				SHA:      "def456",
-				ShortSHA: "def456",
-				Message:  "Merge pull request #456 from user/branch\n\nUpdate specs",
-				Subject:  "Merge pull request #456 from user/branch",
-				Author:   "developer2",
-				Date:     time.Now(),
-				Files:    []string{"specs/clie/update.feature"},
-			},
+			tags: []string{},
 		},
-		tags: []string{},
 	}
-	SetGitRepo(mockRepo)
-	defer SetGitRepo(nil)
 
 	// Test eac-ext bundle module (depends on eac-cli and clie)
 	t.Run("eac-ext returns valid report structure", func(t *testing.T) {
-		bundleReport, err := GetApprovalComments(workspaceRoot, "eac-ext", "unreleased", false, "")
+		bundleReport, err := GetApprovalComments(deps, workspaceRoot, "eac-ext", "unreleased", false, "")
 		if err != nil {
 			t.Fatalf("GetApprovalComments(eac-ext) failed: %v", err)
 		}
@@ -301,7 +291,7 @@ func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 
 	// Test regular module (no dependencies)
 	t.Run("regular module only includes own approvals", func(t *testing.T) {
-		report, err := GetApprovalComments(workspaceRoot, "eac", "unreleased", false, "")
+		report, err := GetApprovalComments(deps, workspaceRoot, "eac", "unreleased", false, "")
 		if err != nil {
 			t.Fatalf("GetApprovalComments(eac) failed: %v", err)
 		}

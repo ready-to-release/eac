@@ -196,11 +196,24 @@ func computeRulePath(rule ComponentDiscoveryRule, components ModuleComponents, v
 
 // findFirstComponentByType finds the first component whose type matches.
 // Returns the component name and entry, or ("", nil) if not found.
+// Components are checked in sorted name order for deterministic results,
+// since map iteration order in Go is non-deterministic across processes.
 func findFirstComponentByType(components ModuleComponents, typeName string) (string, *ComponentEntry) {
 	if components == nil {
 		return "", nil
 	}
-	for name, entry := range components {
+	// Sort component names for deterministic selection.
+	// Without sorting, map iteration order varies between process invocations,
+	// causing derived components (like assets) to get different roots and patterns,
+	// which breaks hash-based cache invalidation across commands.
+	names := make([]string, 0, len(components))
+	for name := range components {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		entry := components[name]
 		if entry == nil || entry.Root == "" {
 			continue
 		}

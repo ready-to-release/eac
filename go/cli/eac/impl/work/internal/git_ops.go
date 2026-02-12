@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 var log = logging.C()
@@ -52,24 +52,23 @@ type WorkGitOperations interface {
 // defaultGitOps implements WorkGitOperations using real git commands.
 type defaultGitOps struct {
 	repoRoot string
+	ts       *tool.ToolSystem
 }
 
 // NewDefaultGitOps returns the production WorkGitOperations implementation
 // that shells out to real git commands rooted at repoRoot.
-func NewDefaultGitOps(repoRoot string) WorkGitOperations {
-	return &defaultGitOps{repoRoot: repoRoot}
+func NewDefaultGitOps(repoRoot string, ts *tool.ToolSystem) WorkGitOperations {
+	return &defaultGitOps{repoRoot: repoRoot, ts: ts}
 }
 
 // CreateWorktree creates a new git worktree.
 func (g *defaultGitOps) CreateWorktree(path, branch, base string) error {
-	log.Debugf("Git operation: createWorktree | path=%s branch=%s base=%s repoRoot=%s", path, branch, base, g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "worktree", "add", path, "-b", branch, base)
-
-	log.Debugf("Git operation completed: createWorktree | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("createWorktree",
+		fmt.Sprintf("path=%s branch=%s base=%s repoRoot=%s", path, branch, base, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "worktree", "add", path, "-b", branch, base)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to create worktree: %w", err)
 	}
@@ -78,14 +77,12 @@ func (g *defaultGitOps) CreateWorktree(path, branch, base string) error {
 
 // RemoveWorktree removes a git worktree.
 func (g *defaultGitOps) RemoveWorktree(path string) error {
-	log.Debugf("Git operation: removeWorktree | path=%s repoRoot=%s", path, g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "worktree", "remove", path)
-
-	log.Debugf("Git operation completed: removeWorktree | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("removeWorktree",
+		fmt.Sprintf("path=%s repoRoot=%s", path, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "worktree", "remove", path)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to remove worktree: %w", err)
 	}
@@ -98,7 +95,7 @@ func (g *defaultGitOps) ListWorktrees() ([]Worktree, error) {
 
 	start := time.Now()
 
-	output, err := gitexec.Run(g.repoRoot, "worktree", "list", "--porcelain")
+	output, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "worktree", "list", "--porcelain")
 
 	log.Debugf("Git operation completed: listWorktrees | duration=%v output=%q err=%v", time.Since(start), string(output), err)
 
@@ -130,7 +127,7 @@ func (g *defaultGitOps) BranchExists(branch string) (bool, error) {
 
 	start := time.Now()
 
-	_, exitCode, err := gitexec.RunCombined(context.Background(), g.repoRoot, "rev-parse", "--verify", fmt.Sprintf("refs/heads/%s", branch))
+	_, exitCode, err := g.ts.RunToolCombined(context.Background(), "git", g.repoRoot, "rev-parse", "--verify", fmt.Sprintf("refs/heads/%s", branch))
 
 	log.Debugf("Git operation completed: branchExists | duration=%v exists=%v err=%v", time.Since(start), exitCode == 0, err)
 
@@ -146,7 +143,7 @@ func (g *defaultGitOps) GetCurrentBranch(path string) (string, error) {
 
 	start := time.Now()
 
-	output, err := gitexec.Run(path, "rev-parse", "--abbrev-ref", "HEAD")
+	output, err := g.ts.RunTool(context.Background(), "git", path, "rev-parse", "--abbrev-ref", "HEAD")
 	branch := strings.TrimSpace(string(output))
 
 	log.Debugf("Git operation completed: getCurrentBranch | duration=%v branch=%s output=%q err=%v", time.Since(start), branch, string(output), err)
@@ -159,18 +156,16 @@ func (g *defaultGitOps) GetCurrentBranch(path string) (string, error) {
 
 // DeleteBranch deletes a branch.
 func (g *defaultGitOps) DeleteBranch(branch string, force bool) error {
-	log.Debugf("Git operation: deleteBranch | branch=%s force=%v repoRoot=%s", branch, force, g.repoRoot)
-
-	start := time.Now()
-
 	flag := "-d"
 	if force {
 		flag = "-D"
 	}
-	_, err := gitexec.Run(g.repoRoot, "branch", flag, branch)
-
-	log.Debugf("Git operation completed: deleteBranch | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("deleteBranch",
+		fmt.Sprintf("branch=%s force=%v repoRoot=%s", branch, force, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "branch", flag, branch)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to delete branch %s: %w", branch, err)
 	}
@@ -183,7 +178,7 @@ func (g *defaultGitOps) IsWorktreeClean(path string) (bool, error) {
 
 	start := time.Now()
 
-	output, err := gitexec.Run(path, "status", "--porcelain")
+	output, err := g.ts.RunTool(context.Background(), "git", path, "status", "--porcelain")
 	isClean := strings.TrimSpace(string(output)) == ""
 
 	log.Debugf("Git operation completed: isWorktreeClean | duration=%v isClean=%v output=%q err=%v", time.Since(start), isClean, string(output), err)
@@ -196,14 +191,12 @@ func (g *defaultGitOps) IsWorktreeClean(path string) (bool, error) {
 
 // FetchBranch fetches a branch from origin.
 func (g *defaultGitOps) FetchBranch(branch string) error {
-	log.Debugf("Git operation: fetchBranch | branch=%s repoRoot=%s", branch, g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "fetch", "origin", branch)
-
-	log.Debugf("Git operation completed: fetchBranch | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("fetchBranch",
+		fmt.Sprintf("branch=%s repoRoot=%s", branch, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "fetch", "origin", branch)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to fetch origin/%s: %w", branch, err)
 	}
@@ -212,18 +205,16 @@ func (g *defaultGitOps) FetchBranch(branch string) error {
 
 // PushBranch pushes a branch to origin.
 func (g *defaultGitOps) PushBranch(branch string, force bool) error {
-	log.Debugf("Git operation: pushBranch | branch=%s force=%v repoRoot=%s", branch, force, g.repoRoot)
-
-	start := time.Now()
-
 	args := []string{"push", "origin", branch}
 	if force {
 		args = append(args, "--force")
 	}
-	_, err := gitexec.Run(g.repoRoot, args...)
-
-	log.Debugf("Git operation completed: pushBranch | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("pushBranch",
+		fmt.Sprintf("branch=%s force=%v repoRoot=%s", branch, force, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, args...)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to push %s: %w", branch, err)
 	}
@@ -232,14 +223,12 @@ func (g *defaultGitOps) PushBranch(branch string, force bool) error {
 
 // Rebase rebases current branch onto target.
 func (g *defaultGitOps) Rebase(target string) error {
-	log.Debugf("Git operation: rebase | target=%s repoRoot=%s", target, g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "rebase", fmt.Sprintf("origin/%s", target))
-
-	log.Debugf("Git operation completed: rebase | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("rebase",
+		fmt.Sprintf("target=%s repoRoot=%s", target, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "rebase", fmt.Sprintf("origin/%s", target))
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("rebase failed: %w", err)
 	}
@@ -248,20 +237,18 @@ func (g *defaultGitOps) Rebase(target string) error {
 
 // Merge merges a branch.
 func (g *defaultGitOps) Merge(branch string, squash bool) error {
-	log.Debugf("Git operation: merge | branch=%s squash=%v repoRoot=%s", branch, squash, g.repoRoot)
-
-	start := time.Now()
-
 	args := []string{"merge"}
 	if squash {
 		args = append(args, "--squash")
 	}
 	args = append(args, branch)
 
-	_, err := gitexec.Run(g.repoRoot, args...)
-
-	log.Debugf("Git operation completed: merge | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("merge",
+		fmt.Sprintf("branch=%s squash=%v repoRoot=%s", branch, squash, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, args...)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("merge failed: %w", err)
 	}
@@ -270,14 +257,12 @@ func (g *defaultGitOps) Merge(branch string, squash bool) error {
 
 // MergeAbort aborts an in-progress merge.
 func (g *defaultGitOps) MergeAbort() error {
-	log.Debugf("Git operation: mergeAbort | repoRoot=%s", g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "merge", "--abort")
-
-	log.Debugf("Git operation completed: mergeAbort | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("mergeAbort",
+		fmt.Sprintf("repoRoot=%s", g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "merge", "--abort")
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("merge abort failed: %w", err)
 	}
@@ -286,14 +271,12 @@ func (g *defaultGitOps) MergeAbort() error {
 
 // RebaseAbort aborts an in-progress rebase.
 func (g *defaultGitOps) RebaseAbort() error {
-	log.Debugf("Git operation: rebaseAbort | repoRoot=%s", g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "rebase", "--abort")
-
-	log.Debugf("Git operation completed: rebaseAbort | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("rebaseAbort",
+		fmt.Sprintf("repoRoot=%s", g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "rebase", "--abort")
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("rebase abort failed: %w", err)
 	}
@@ -302,14 +285,12 @@ func (g *defaultGitOps) RebaseAbort() error {
 
 // Stash stashes uncommitted changes.
 func (g *defaultGitOps) Stash(message string) error {
-	log.Debugf("Git operation: stash | message=%s repoRoot=%s", message, g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "stash", "push", "-m", message)
-
-	log.Debugf("Git operation completed: stash | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("stash",
+		fmt.Sprintf("message=%s repoRoot=%s", message, g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "stash", "push", "-m", message)
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to stash changes: %w", err)
 	}
@@ -318,14 +299,12 @@ func (g *defaultGitOps) Stash(message string) error {
 
 // StashPop reapplies stashed changes.
 func (g *defaultGitOps) StashPop() error {
-	log.Debugf("Git operation: stashPop | repoRoot=%s", g.repoRoot)
-
-	start := time.Now()
-
-	_, err := gitexec.Run(g.repoRoot, "stash", "pop")
-
-	log.Debugf("Git operation completed: stashPop | duration=%v err=%v", time.Since(start), err)
-
+	err := timeOperation("stashPop",
+		fmt.Sprintf("repoRoot=%s", g.repoRoot),
+		func() error {
+			_, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "stash", "pop")
+			return err
+		})
 	if err != nil {
 		return fmt.Errorf("failed to reapply stashed changes: %w", err)
 	}
@@ -338,7 +317,7 @@ func (g *defaultGitOps) GetCommitCount(base, head string) (int, error) {
 
 	start := time.Now()
 
-	output, err := gitexec.Run(g.repoRoot, "rev-list", "--count", fmt.Sprintf("%s..%s", base, head))
+	output, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "rev-list", "--count", fmt.Sprintf("%s..%s", base, head))
 
 	var count int
 	if err == nil {
@@ -362,7 +341,7 @@ func (g *defaultGitOps) GetConflictingFiles() ([]string, error) {
 
 	start := time.Now()
 
-	output, err := gitexec.Run(g.repoRoot, "diff", "--name-only", "--diff-filter=U")
+	output, err := g.ts.RunTool(context.Background(), "git", g.repoRoot, "diff", "--name-only", "--diff-filter=U")
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	var conflicts []string

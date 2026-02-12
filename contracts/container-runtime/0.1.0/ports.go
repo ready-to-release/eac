@@ -3,11 +3,15 @@
 // This package provides a runtime-agnostic interface for container operations.
 // Implementations can use Docker, Podman, containerd, or other OCI-compliant runtimes.
 //
-// The primary interface is ContainerPort, which abstracts:
-//   - Container execution (running one-shot tasks)
-//   - Image building
-//   - Image pulling
-//   - Runtime availability checks
+// The package defines focused sub-interfaces for specific concerns:
+//   - ContainerExecutor: running one-shot container tasks
+//   - ImageBuilder: building and pulling container images
+//   - ImageInspector: querying image metadata and existence
+//   - ContainerRuntime: runtime availability and lifecycle
+//
+// ContainerPort composes all sub-interfaces into a single comprehensive port.
+// Prefer depending on the narrower sub-interfaces when only a subset of
+// functionality is needed.
 //
 // Implementations are provided by adapter packages such as:
 //   - github.com/ready-to-release/eac/go/eac/adapters/docker (Docker adapter)
@@ -19,19 +23,27 @@ import (
 	"time"
 )
 
-// ContainerPort defines the interface for OCI container operations.
-// Implementations: Docker, Podman, containerd, etc.
-type ContainerPort interface {
+// ContainerExecutor runs containers.
+// This is the minimal interface needed by callers that only execute containers.
+type ContainerExecutor interface {
 	// Execute runs a container and waits for completion.
 	// This is for one-shot tasks, not long-running services.
 	Execute(ctx context.Context, config *ContainerConfig) (*ContainerResult, error)
+}
 
+// ImageBuilder builds and pulls container images.
+// Callers that only need to build or pull images should depend on this interface.
+type ImageBuilder interface {
 	// Build builds a container image from a Containerfile/Dockerfile.
 	Build(ctx context.Context, config *BuildConfig) error
 
 	// Pull ensures an image is available locally.
 	Pull(ctx context.Context, imageRef string) error
+}
 
+// ImageInspector queries container image metadata.
+// Callers that only need to check image existence or metadata should depend on this interface.
+type ImageInspector interface {
 	// ImageExists checks if an image exists locally.
 	ImageExists(ctx context.Context, imageRef string) bool
 
@@ -40,12 +52,29 @@ type ContainerPort interface {
 
 	// ImageCreatedTime returns the creation timestamp of a local image.
 	ImageCreatedTime(ctx context.Context, imageRef string) (time.Time, error)
+}
 
+// ContainerRuntime provides runtime availability checking and lifecycle management.
+// Callers that only need to check runtime availability should depend on this interface.
+type ContainerRuntime interface {
 	// IsAvailable checks if the container runtime is available.
 	IsAvailable() bool
 
 	// Close releases resources.
 	Close() error
+}
+
+// ContainerPort defines the full interface for OCI container operations.
+// It composes all focused sub-interfaces into a single comprehensive port.
+// Implementations: Docker, Podman, containerd, etc.
+//
+// Prefer depending on the narrower sub-interfaces (ContainerExecutor, ImageBuilder,
+// ImageInspector, ContainerRuntime) when only a subset of functionality is needed.
+type ContainerPort interface {
+	ContainerExecutor
+	ImageBuilder
+	ImageInspector
+	ContainerRuntime
 }
 
 // ContainerConfig defines configuration for running a container.

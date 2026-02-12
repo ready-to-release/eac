@@ -100,7 +100,7 @@ Show commands provide formatted, human-readable output designed for terminal dis
 **Module & Repository Information**:
 
 - `show modules` - Display module contracts in table format
-- `show component-types` - Module types grouped by count
+- `show component-kinds` - Module types grouped by count
 - `show dependencies` - Dependency graph in table format
 - `show files` - Repository files with module ownership
 - `show files-changed` - Modified files with module ownership

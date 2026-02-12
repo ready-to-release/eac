@@ -53,14 +53,10 @@ The MCP server is the bridge between AI assistants (such as Claude Code) and the
 ## Code Health
 
 ### Tech Debt
-
-- All production code in a single main.go (322 lines) with 25+ functions; type definitions, request handling, command discovery, and execution are intermixed
-- main.go:135 protocol version `2024-11-05` is hardcoded inline in `initializeResponse`; updating requires editing function internals
+- None identified
 
 ### Pain Points
-
-- Error logging goes to stderr via `fmt.Fprintf` without structured logging
+- None identified
 
 ### Optimization Opportunities
-
 - None identified

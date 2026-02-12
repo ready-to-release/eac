@@ -23,9 +23,12 @@ Validates AI-generated Gherkin specifications against structure, tag, naming, an
 
 ## Internal Structure
 
-| File           | Purpose                                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------- |
-| `validator.go` | `Validator` type with all validation logic (~700 lines covering structure, tags, naming, size, indentation) |
+| File                   | Purpose                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `validator.go`         | `Validator` type, `NewValidator`, and core validation orchestration           |
+| `validator_tags.go`    | Tag validation: presence, format patterns, verification tag requirements     |
+| `validator_features.go`| Structure validation: Feature, Rule, Scenario nesting, naming, size checks   |
+| `validator_contract.go`| Contract-driven validation rules and pattern loading                          |
 
 ## Dependencies
 
@@ -42,6 +45,12 @@ Used by the AI generation pipeline (`ai/generation`) to validate Gherkin output 
 
 ## Code Health
 
-- **Tech Debt**: The validator is a single ~700-line file. Could benefit from splitting into per-category validator functions in separate files (structure, tags, naming, size).
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: None identified.
+### Tech Debt
+- `validator.go` is 405 lines
+- `validator_tags.go` is 306 lines
+
+### Pain Points
+- None identified
+
+### Optimization Opportunities
+- Consider further splitting validation logic by concern (structure, tags, naming, size)

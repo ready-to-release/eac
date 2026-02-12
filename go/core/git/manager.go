@@ -27,6 +27,7 @@ import (
 //	repo2, err := gitMgr.Open(otherPath)
 type RepositoryManager struct {
 	logger *zap.Logger
+	clock  Clock // Optional clock override; nil means time.Now
 }
 
 // NewManager creates a new RepositoryManager with the given logger.
@@ -50,6 +51,23 @@ func NewManager(logger *zap.Logger) *RepositoryManager {
 	}
 	return &RepositoryManager{
 		logger: logger,
+	}
+}
+
+// WithClock returns a copy of the manager that injects the given clock
+// into every repository it creates. This is intended for tests that need
+// deterministic timestamps without mutable package-level state.
+//
+// Example:
+//
+//	fixed := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+//	mgr := git.NewManager(nil).WithClock(func() time.Time { return fixed })
+//	repo, _ := mgr.Init(tmpDir)
+//	// repo.Commit(...) will use the fixed time
+func (m *RepositoryManager) WithClock(c Clock) *RepositoryManager {
+	return &RepositoryManager{
+		logger: m.logger,
+		clock:  c,
 	}
 }
 
@@ -102,6 +120,7 @@ func (m *RepositoryManager) Open(path string) (*Repository, error) {
 		repo:     repo,
 		rootPath: wt.Filesystem.Root(),
 		logger:   m.logger, // Share manager's logger
+		clock:    m.clock,  // Share manager's clock (nil means time.Now)
 	}, nil
 }
 
@@ -145,5 +164,6 @@ func (m *RepositoryManager) Init(path string) (*Repository, error) {
 		repo:     repo,
 		rootPath: absPath,
 		logger:   m.logger, // Share manager's logger
+		clock:    m.clock,  // Share manager's clock (nil means time.Now)
 	}, nil
 }

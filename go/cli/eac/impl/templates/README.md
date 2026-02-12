@@ -34,6 +34,7 @@ Installs project template files for documentation, AI prompts, specifications, r
 | internal/renderer.go | `Renderer` with directory walk, file rendering, string template paths, and byte copy |
 | internal/security.go | `ValidatePath` and `SecureFilePath` for path traversal prevention |
 | internal/values.go | `TemplateValues` type, JSON loading, and required-key validation |
+| install/handler.go | Generic install handler reducing each sub-package to a thin registration wrapper |
 
 ## Dependencies
 
@@ -51,14 +52,10 @@ The `templates` package provides the `templates install` command family for `eac
 ## Code Health
 
 ### Tech Debt
-- Install sub-packages (ai, docs, reports, specs) are each ~200 lines with near-identical structure: init registration, flag parsing, path resolution, renderer invocation
-- Only install/claude has a dedicated unit test; install/ai, install/docs, install/reports, and install/specs have no tests
-- Each install sub-package declares its own `var log = logging.C()` independently
+- None identified.
 
 ### Pain Points
-- High boilerplate duplication across the five install sub-packages; adding a new template type requires copying an entire file and changing paths/names
-- No test coverage for install/ai, install/docs, install/reports, install/specs despite containing path resolution and rendering logic
+- None identified.
 
 ### Optimization Opportunities
-- Extract a generic install handler that takes template source path, destination path, and optional values, reducing each sub-package to a thin registration wrapper (high feasibility, all follow identical patterns)
-- Good internal/ test coverage exists (security_test.go, templates_test.go); focus new tests on install sub-package path resolution edge cases (moderate feasibility)
+- Good internal/ test coverage exists (security_test.go, templates_test.go); all install sub-packages now have tests (ai_test.go, claude_test.go, docs_test.go, reports_test.go, specs_test.go, handler_test.go)

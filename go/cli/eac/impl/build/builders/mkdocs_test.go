@@ -162,7 +162,7 @@ func TestCalculateWeightedMemory(t *testing.T) {
 }
 
 func TestGetEffectiveWeight(t *testing.T) {
-	// Book component type has cpus: 4 in component-types.yml
+	// Book component type has cpus: 4 in blueprints.yml component-kinds
 	weight := getEffectiveWeight("book")
-	assert.Equal(t, 4, weight, "Book weight should be 4 (from component-types.yml)")
+	assert.Equal(t, 4, weight, "Book weight should be 4 (from blueprints.yml component-kinds)")
 }

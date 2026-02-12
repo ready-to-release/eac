@@ -44,7 +44,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Component type (from component-types.yml). If empty, component name is used as the type."
+          "description": "Component type (from blueprints.yml component-kinds). If empty, component name is used as the type."
         },
         "root": {
           "type": "string",

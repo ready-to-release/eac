@@ -63,10 +63,13 @@ The `scoring` package is the computation engine of the risk assessment pipeline.
 ## Code Health
 
 ### Tech Debt
+
 - None identified.
 
 ### Pain Points
-- None identified.
+
+- `evidence_extractor.go` is 254 lines due to handling multiple scanner formats (Trivy, GoSec, ZAP).
 
 ### Optimization Opportunities
+
 - None identified.

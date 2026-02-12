@@ -33,12 +33,10 @@ func (c *showConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) i
 }
 
 func ShowConfig() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showConfigImpl)
+}
 
+func showConfigImpl() int {
 	args := os.Args[2:]
 
 	// Check for help flag
@@ -235,7 +233,7 @@ func printShowConfigUsage() {
 	fmt.Println("")
 	fmt.Println("This command displays a summary of all loaded configurations:")
 	fmt.Println("  - modules: Module contracts with defaults applied")
-	fmt.Println("  - module_types: Module type definitions")
+	fmt.Println("  - component_kinds: Component type definitions")
 	fmt.Println("  - environments: Environment contracts")
 	fmt.Println("  - testing: Testing tags and test suites (from eac-testing contract)")
 	fmt.Println("")

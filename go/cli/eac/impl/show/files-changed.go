@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/clibase/render"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
@@ -33,12 +32,10 @@ func (c *showFilesChangedCommand) Execute(_ context.Context, _ *core.CommandRequ
 }
 
 func ShowFilesChanged() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showFilesChangedImpl)
+}
 
+func showFilesChangedImpl() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -47,7 +44,12 @@ func ShowFilesChanged() int {
 	}
 
 	// Get list of changed files from git
-	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", "HEAD")
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		fmt.Fprintf(os.Stderr, "Error: tool system not initialized\n")
+		return 1
+	}
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "diff", "--name-only", "HEAD")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: getting changed files: %v\n", err)
 		return 1

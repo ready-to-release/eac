@@ -3,10 +3,13 @@ package internal
 
 import (
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // BaseConfig holds common configuration for all work commands.
@@ -48,7 +51,49 @@ func ParseBaseConfig(args []string) (*BaseConfig, error) {
 	}
 
 	// Initialize git operations
-	config.GitOps = NewDefaultGitOps(config.RepoRoot)
+	ts := tool.GlobalToolSystem()
+	config.GitOps = NewDefaultGitOps(config.RepoRoot, ts)
 
 	return config, nil
+}
+
+// RunCommand provides shared scaffolding for work subcommands.
+// It validates flags, parses base config, verifies we're in a git repo,
+// and invokes the command-specific logic. This eliminates repeated
+// boilerplate across commit, create, merge, pull, and remove subcommands.
+//
+// The argOffset is the number of os.Args to skip (e.g., 2 for "work commit").
+// The fn receives the parsed BaseConfig and remaining args, and returns an exit code.
+func RunCommand(argOffset int, fn func(base *BaseConfig, args []string) int) int {
+	startTime := time.Now()
+
+	args := os.Args[argOffset:]
+
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(args); err != nil {
+		logging.C().Errorf("%v", err)
+		return 1
+	}
+
+	// Parse base config
+	base, err := ParseBaseConfig(args)
+	if err != nil {
+		logging.C().Errorf("Error: %v", err)
+		return 1
+	}
+	defer func() { _ = base.Logger.Sync() }() //nolint:errcheck // best-effort sync
+
+	// Verify git repository
+	if err := EnsureInGitRepo(); err != nil {
+		base.Logger.Error(fmt.Sprintf("Not in git repository: %v", err))
+		return 1
+	}
+
+	exitCode := fn(base, args)
+
+	if base.Debug {
+		base.Logger.Debug(fmt.Sprintf("Command completed in %v", time.Since(startTime)))
+	}
+
+	return exitCode
 }

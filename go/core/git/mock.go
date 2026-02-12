@@ -487,5 +487,5 @@ func (m *MockRepository) WithBranchFiles(files []string) *MockRepository {
 	return m
 }
 
-// Ensure MockRepository implements GitRepository.
+// Ensure MockRepository implements GitRepository (also verified in interface.go).
 var _ GitRepository = (*MockRepository)(nil)

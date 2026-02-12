@@ -70,7 +70,7 @@ The extension calls the `commit` command which orchestrates a 7-lever system:
 6. **LEVER 5**: Feedback loop (AI auto-fix)
 7. **LEVER 5.1**: Pre-re-verification cleanup
 
-See [commit documentation](../../../docs/reference/commands/commit.md) for details.
+See [commit documentation](../../docs/reference/eac/commands/work/commit.md) for details.
 
 ## Release Notes
 

@@ -38,7 +38,6 @@ primary implementation; commands and the scheduler interact only through
 
 ### Tech Debt
 - No test files; add compile-time `var _ ContainerPort = ...` checks to catch interface drift
-- `ContainerPort` has 8 methods mixing execution (`Execute`), image ops (`Build`, `Pull`), and queries (`ImageExists`, `ManifestExists`) -- consider splitting into `ContainerExecutor` and `ImageManager` role interfaces
 
 ### Pain Points
 - `ContainerConfig` has 15 fields with no builder or validation; callers must manually set correct combinations (e.g., `StdoutWriter` vs `LogWriter` precedence rules documented only in comments)

@@ -39,12 +39,12 @@ The tui package provides visual feedback during Docker image pulls. It is an alt
 
 ### Tech Debt
 
-- `spinner.go:58-72` -- The `pullImage` function creates its own Docker client (`client.NewClientWithOpts`) instead of accepting a `DockerClient` interface or using the shared `ContainerHost`. This bypasses the mock-friendly interface used everywhere else in the codebase.
+- None identified.
 
 ### Pain Points
 
-_None identified._
+- No test files exist for this package. `spinner.go` lacks corresponding unit tests for the Bubble Tea model.
 
 ### Optimization Opportunities
 
-- Refactoring `pullImage` to accept a `DockerClient` interface would allow testing without a live Docker daemon and would be consistent with the rest of the docker package's architecture.
+- None identified.

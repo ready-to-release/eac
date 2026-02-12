@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 // CIWorkflowDispatcher dispatches and monitors CI workflows.
@@ -49,7 +49,7 @@ func (d *ghWorkflowDispatcher) Dispatch(ctx context.Context, module, ref, sha, t
 		args = append(args, "-f", fmt.Sprintf("trigger_run_id=%s", triggerRunID))
 	}
 
-	_, err := ghexec.RunContext(ctx, d.workspaceRoot, args...)
+	_, err := tool.GlobalToolSystem().RunTool(ctx, "gh", d.workspaceRoot, args...)
 	if err != nil {
 		return fmt.Errorf("dispatch %s: %w", workflow, err)
 	}
@@ -72,7 +72,7 @@ type runStatusInfo struct {
 func (d *ghWorkflowDispatcher) GetStatus(ctx context.Context, module, sha string) (string, string, error) {
 	workflow := fmt.Sprintf("ci-%s.yaml", module)
 
-	output, err := ghexec.RunContext(ctx, d.workspaceRoot,
+	output, err := tool.GlobalToolSystem().RunTool(ctx, "gh", d.workspaceRoot,
 		"run", "list", "-w", workflow, "--limit", "20",
 		"--json", "headSha,status,conclusion")
 	if err != nil {

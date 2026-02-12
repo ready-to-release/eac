@@ -3,12 +3,170 @@ package commitmessage
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/repository/reports"
 )
+
+// executionConfig holds configuration for the commit AI command.
+type executionConfig struct {
+	workspaceRoot   string
+	debug           bool
+	autoCommit      bool
+	stagedFiles     []repository.RepositoryFileWithModule
+	affectedModules []string
+	gitDiff         string
+}
+
+// buildExecutionContext gathers staged files, affected modules, and git diff.
+func buildExecutionContext(deps *Deps, workspaceRoot string, debug bool) (*executionConfig, string, string, error) {
+	log.Debug("buildExecutionContext: start")
+	// Validate inputs
+	if workspaceRoot == "" {
+		return nil, "", "", fmt.Errorf("workspaceRoot cannot be empty")
+	}
+	if _, err := os.Stat(workspaceRoot); os.IsNotExist(err) {
+		return nil, "", "", fmt.Errorf("workspaceRoot does not exist: %s", workspaceRoot)
+	}
+
+	// Get staged files report
+	log.Debug("buildExecutionContext: calling getStagedFilesReport")
+	report, stagedFilesTable, err := getStagedFilesReport(workspaceRoot)
+	log.Debug("buildExecutionContext: getStagedFilesReport complete")
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	if len(report.AllFiles) == 0 {
+		return nil, "", "", nil // No staged changes (not an error)
+	}
+
+	// Extract affected modules
+	log.Debug("buildExecutionContext: extracting affected modules")
+	affectedModules := extractAffectedModules(report)
+
+	// Get git diff and stats
+	log.Debug("buildExecutionContext: calling getGitDiffAndStats")
+	gitDiff, diffStats, err := getGitDiffAndStats(deps, workspaceRoot)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	log.Debugf("Affected modules count: %d", len(affectedModules))
+	for i, mod := range affectedModules {
+		log.Debugf("  %d. %s", i+1, mod)
+	}
+
+	cfg := &executionConfig{
+		workspaceRoot:   workspaceRoot,
+		debug:           debug,
+		stagedFiles:     report.AllFiles,
+		affectedModules: affectedModules,
+		gitDiff:         gitDiff,
+	}
+
+	return cfg, stagedFilesTable, diffStats, nil
+}
+
+// getStagedFilesReport retrieves staged files and builds a table representation.
+func getStagedFilesReport(workspaceRoot string) (*reports.FilesModulesReport, string, error) {
+	// Get staged files with module mappings
+	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot)
+	if err != nil {
+		return nil, "", fmt.Errorf("getting module mappings: %w", err)
+	}
+
+	// Build the staged files table
+	tb := render.NewTableBuilder().WithHeaders("File", "Modules")
+	for _, file := range report.AllFiles {
+		modulesStr := "NONE"
+		if len(file.Modules) > 0 {
+			modulesStr = strings.Join(file.Modules, ", ")
+		}
+		tb.AddRow(file.Name, modulesStr)
+	}
+	stagedFilesTable := tb.Build()
+
+	return report, stagedFilesTable, nil
+}
+
+// extractAffectedModules extracts and validates unique module names from file report.
+func extractAffectedModules(report *reports.FilesModulesReport) []string {
+	moduleSet := make(map[string]bool)
+	for _, file := range report.AllFiles {
+		for _, module := range file.Modules {
+			// Validate module name: only lowercase letters, numbers, dashes, underscores
+			if isValidModuleName(module) {
+				moduleSet[module] = true
+			} else {
+				log.Warnf("skipping invalid module name: module=%s", module)
+			}
+		}
+	}
+
+	var affectedModules []string
+	for module := range moduleSet {
+		affectedModules = append(affectedModules, module)
+	}
+
+	return affectedModules
+}
+
+// getGitDiffAndStats retrieves git diff and diff stats for staged changes.
+func getGitDiffAndStats(deps *Deps, workspaceRoot string) (string, string, error) {
+	log.Debug("getGitDiffAndStats: start")
+	log.Debug("getGitDiffAndStats: calling getGitRepo")
+	repo, err := deps.GetGitRepo(workspaceRoot)
+	if err != nil {
+		return "", "", err
+	}
+	log.Debug("getGitDiffAndStats: getGitRepo complete")
+
+	// Get git diff
+	log.Debug("getGitDiffAndStats: calling StagedDiff")
+	diffOutput, err := repo.StagedDiff()
+	if err != nil {
+		return "", "", fmt.Errorf("getting git diff: %w", err)
+	}
+	log.Debug("getGitDiffAndStats: StagedDiff complete")
+
+	// Check diff size to prevent memory issues
+	if len(diffOutput) > commitmessageinternal.MaxDiffSize {
+		return "", "", fmt.Errorf("git diff too large: %d bytes (max %d bytes / %.1f MB). Consider committing in smaller chunks",
+			len(diffOutput), commitmessageinternal.MaxDiffSize, float64(commitmessageinternal.MaxDiffSize)/(1024*1024))
+	}
+
+	// Get git diff stats
+	log.Debug("getGitDiffAndStats: calling StagedDiffStats")
+	diffStats, err := repo.StagedDiffStats()
+	if err != nil {
+		log.Warnf("failed to get diff stats: %v", err)
+		diffStats = ""
+	}
+	log.Debug("getGitDiffAndStats: StagedDiffStats complete")
+
+	return diffOutput, strings.TrimSpace(diffStats), nil
+}
+
+// isValidModuleName checks if a module name is valid (lowercase letters, numbers, dashes, underscores only)
+// Rejects paths with slashes or other special characters.
+func isValidModuleName(name string) bool {
+	if name == "" || len(name) > 50 {
+		return false
+	}
+
+	for _, ch := range name {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
+			return false
+		}
+	}
+
+	return true
+}
 
 // buildTopLevelContext creates context for the top-level commit message agent.
 func buildTopLevelContext(stagedFilesTable, gitDiff, diffStats string, affectedModules []string) string {

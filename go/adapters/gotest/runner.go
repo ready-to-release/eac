@@ -200,35 +200,110 @@ func (r *GoTestRunner) BuildPackagePath(testRoot, featurePath string) string {
 	return testRoot
 }
 
+// parsedGoTestPkg holds the parsed components of a Go test package path.
+type parsedGoTestPkg struct {
+	displayName    string
+	relPkgPath     string
+	relFeatureFile string
+}
+
+// parseGoTestPackagePath parses a package path in "featureName:testRoot:featurePath" or "testRoot" format.
+func parseGoTestPackagePath(pkgPath string) parsedGoTestPkg {
+	parts := strings.Split(pkgPath, ":")
+	switch len(parts) {
+	case 3:
+		// BDD format: featureName:testRoot:featurePath
+		return parsedGoTestPkg{
+			displayName:    parts[0] + ":" + parts[1],
+			relPkgPath:     parts[1],
+			relFeatureFile: parts[2],
+		}
+	case 1:
+		// Unit test format: just the package path
+		return parsedGoTestPkg{
+			displayName: parts[0],
+			relPkgPath:  parts[0],
+		}
+	default:
+		// Fallback for unexpected format
+		return parsedGoTestPkg{
+			displayName: pkgPath,
+			relPkgPath:  pkgPath,
+		}
+	}
+}
+
+// buildGoTestArgs constructs the go test command arguments including build tags,
+// coverage flags, and the package path.
+func buildGoTestArgs(suiteTagFilterStr string, cfg testrunners.RunConfig) []string {
+	args := []string{"test", "-json", "-v"}
+
+	// Extract Go build tags from suite filter
+	if buildTags := extractGoBuildTags(suiteTagFilterStr); buildTags != "" {
+		args = append(args, "-tags", buildTags)
+	}
+
+	// Add coverage if enabled
+	if cfg.Coverage && cfg.OutputDir != "" {
+		coverageFile := filepath.Join(cfg.OutputDir, "coverage.out")
+		args = append(args, "-cover", "-coverprofile="+coverageFile)
+	}
+
+	// Add package path
+	args = append(args, ".")
+	return args
+}
+
+// buildGodogEnvOverrides constructs the godog-specific environment variable overrides
+// for BDD test execution including format, tag filters, output dir, and feature paths.
+func buildGodogEnvOverrides(actualPkgDir string, cfg testrunners.RunConfig, suiteTagFilterStr, relFeatureFile string) map[string]string {
+	envOverrides := map[string]string{
+		"GODOG_FORMAT": "progress",
+	}
+	if suiteTagFilterStr != "" {
+		envOverrides["GODOG_SUITE_TAGS"] = suiteTagFilterStr
+	}
+	if cfg.OutputDir != "" {
+		envOverrides["GODOG_OUTPUT_DIR"] = cfg.OutputDir
+	}
+	if relFeatureFile != "" {
+		relFeaturePath, relErr := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
+		if relErr == nil {
+			envOverrides["GODOG_PATHS"] = filepath.ToSlash(relFeaturePath)
+		}
+	}
+	return envOverrides
+}
+
+// saveGoTestCTRF converts streaming go test events to CTRF format and writes
+// the JSON artifact to the output directory. Only applies to non-godog tests.
+func saveGoTestCTRF(streamingRunner *testrunners.StreamingRunner, outputDir string) {
+	if outputDir == "" {
+		return
+	}
+	events := streamingRunner.GetEvents()
+	if len(events) == 0 {
+		return
+	}
+	report := convertGoTestEventsToCTRF(events)
+	if ctrfData, err := report.ToJSON(); err == nil {
+		jsonPath := filepath.Join(outputDir, "unit.json")
+		_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
+	}
+}
+
 // Execute runs Go tests for a package and returns results.
 // logWriter is provided by the orchestrator (UoW manages log files).
 func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
 	start := time.Now()
 
-	// Parse package path - new format: "featureName:testRoot:featurePath" or "testRoot"
-	var displayName, relPkgPath, relFeatureFile string
-	parts := strings.Split(pkgPath, ":")
-	if len(parts) == 3 {
-		// BDD format: featureName:testRoot:featurePath
-		displayName = parts[0] + ":" + parts[1]
-		relPkgPath = parts[1]
-		relFeatureFile = parts[2]
-	} else if len(parts) == 1 {
-		// Unit test format: just the package path
-		displayName = parts[0]
-		relPkgPath = parts[0]
-	} else {
-		// Fallback for unexpected format
-		displayName = pkgPath
-		relPkgPath = pkgPath
-	}
-
+	pkg := parseGoTestPackagePath(pkgPath)
 	result := testrunners.RunResult{
-		PackageName:   displayName,
+		PackageName:   pkg.displayName,
 		ModuleMoniker: cfg.ModuleMoniker,
 	}
 
-	actualPkgDir := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
+	actualPkgDir := filepath.Join(cfg.WorkspaceRoot, pkg.relPkgPath)
 
 	// UoW creates the log file - runner just writes to logWriter
 	streamingRunner := testrunners.NewStreamingRunner(logWriter, logWriter)
@@ -248,24 +323,9 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 	translator := &godogadapter.GodogTagTranslator{}
 	suiteTagFilterStr := translator.TranslateTagFilter(cfg.SuiteTagFilter)
 
-	// Build go test command
-	goTestArgs := []string{"test", "-json", "-v"}
+	goTestArgs := buildGoTestArgs(suiteTagFilterStr, cfg)
 
-	// Extract Go build tags from suite filter
-	if buildTags := extractGoBuildTags(suiteTagFilterStr); buildTags != "" {
-		goTestArgs = append(goTestArgs, "-tags", buildTags)
-	}
-
-	// Add coverage if enabled
-	if cfg.Coverage && cfg.OutputDir != "" {
-		coverageFile := filepath.Join(cfg.OutputDir, "coverage.out")
-		goTestArgs = append(goTestArgs, "-cover", "-coverprofile="+coverageFile)
-	}
-
-	// Add package path
-	goTestArgs = append(goTestArgs, ".")
-
-	// Build godog-specific environment variables
+	// Build environment overrides
 	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
 	testRunID := filepath.Base(cfg.TestRunDir)
 
@@ -275,18 +335,8 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 	}
 
 	if isGodogTest {
-		envOverrides["GODOG_FORMAT"] = "progress"
-		if suiteTagFilterStr != "" {
-			envOverrides["GODOG_SUITE_TAGS"] = suiteTagFilterStr
-		}
-		if cfg.OutputDir != "" {
-			envOverrides["GODOG_OUTPUT_DIR"] = cfg.OutputDir
-		}
-		if relFeatureFile != "" {
-			relFeaturePath, relErr := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
-			if relErr == nil {
-				envOverrides["GODOG_PATHS"] = filepath.ToSlash(relFeaturePath)
-			}
+		for k, v := range buildGodogEnvOverrides(actualPkgDir, cfg, suiteTagFilterStr, pkg.relFeatureFile) {
+			envOverrides[k] = v
 		}
 	}
 
@@ -303,15 +353,8 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 	testResult, runErr := streamingRunner.Run(cmd)
 
 	// Save CTRF JSON output for unit tests (non-godog)
-	if !isGodogTest && cfg.OutputDir != "" {
-		events := streamingRunner.GetEvents()
-		if len(events) > 0 {
-			report := convertGoTestEventsToCTRF(events)
-			if ctrfData, err := report.ToJSON(); err == nil {
-				jsonPath := filepath.Join(cfg.OutputDir, "unit.json")
-				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
-			}
-		}
+	if !isGodogTest {
+		saveGoTestCTRF(streamingRunner, cfg.OutputDir)
 	}
 
 	result.TestsPassed = testResult.TestsPassed

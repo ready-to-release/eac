@@ -43,10 +43,13 @@ Cache statistics (hit/miss counts via `CacheStats` and `CacheHitStats`) are repo
 ## Code Health
 
 ### Tech Debt
+
 - None identified
 
 ### Pain Points
-- None identified -- both files are focused, well-tested, and use thread-safe patterns
+
+- None identified
 
 ### Optimization Opportunities
-- None identified -- package is small (323 lines of source) and already uses content-addressable hashing for efficiency
+
+- None identified

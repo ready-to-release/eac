@@ -17,12 +17,12 @@ Unix and Windows.
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| command_unix.go | Unix command wrapping (pass-through) |
+| File               | Responsibility                          |
+| ------------------ | --------------------------------------- |
+| command_unix.go    | Unix command wrapping (pass-through)    |
 | command_windows.go | Windows command wrapping (pass-through) |
-| newline_unix.go | Unix line ending constant (\n) |
-| newline_windows.go | Windows line ending constant (\r\n) |
+| newline_unix.go    | Unix line ending constant (\n)          |
+| newline_windows.go | Windows line ending constant (\r\n)     |
 
 ## Dependencies
 
@@ -43,12 +43,13 @@ without risk of churn.
 ## Code Health
 
 ### Tech Debt
-- No test files exist; both `WrapCommand` and `LineEnding` are untested
-- `WrapCommand` has identical pass-through implementations on both platforms (command_unix.go, command_windows.go); the abstraction exists but adds no current value
+
+- WrapCommand has identical pass-through implementations on both platforms (command_unix.go, command_windows.go); the abstraction exists but adds no current value
 
 ### Pain Points
+
 - None identified
 
 ### Optimization Opportunities
-- Consider adding a simple platform_test.go with build-tag-aware assertions for `LineEnding` to prevent accidental regression (trivial effort)
-- If `WrapCommand` remains a pass-through long-term, it could be replaced by a single-file no-op to reduce maintenance surface (low priority, deferred until an actual platform divergence arises)
+
+- If WrapCommand remains a pass-through long-term, it could be replaced by a single-file no-op to reduce maintenance surface (low priority, deferred until an actual platform divergence arises)

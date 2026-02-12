@@ -56,14 +56,11 @@ The `design` package provides architecture-as-code capabilities for `eac`, enabl
 ## Code Health
 
 ### Tech Debt
-- helper/validator.go (631 lines) combines Docker execution, output parsing, JSON marshaling, and volume formatting in one file
-- helper/export.go (446 lines) has no unit tests; only the validator and validation helpers have dedicated test files
-- helper/validator_mock.go (319 lines) is large for a mock, duplicating validation result construction logic
+- helper/export.go (477 lines) now has export_test.go (803 lines) covering all core functionality
+- helper/validator_mock.go (310 lines) is large for a mock but serves multiple test scenarios
 
 ### Pain Points
-- No tests for export.go or validation_formatter.go (269 lines) despite them containing complex formatting and file-collection logic
-- Docker volume path formatting (`formatDockerVolume` in validator.go:515) handles Windows path conversion inline; similar logic exists in adapters/docker/util
+- helper/validation_formatter.go (269 lines) lacks dedicated unit tests despite complex formatting logic
 
 ### Optimization Opportunities
-- Add unit tests for export.go view collection and DSL hashing (high feasibility, `collectExportedViews` and `HashDSLContent` are testable with temp directories)
-- Extract Docker execution helpers from validator.go into a shared Docker-runner to reduce file size and reuse across export.go (moderate feasibility, both files run Docker containers with similar patterns)
+- None identified

@@ -23,8 +23,10 @@ Implements the `test` command, which discovers, filters, and executes tests acro
 | File | Responsibility |
 | --- | --- |
 | test.go | Entry point, CLI flag parsing, test configuration, `Test()` function |
+| test_exec.go | Test execution orchestration extracted from test.go |
+| test_resolve.go | Test resolution and discovery logic extracted from test.go |
 | framework.go | Framework hooks setup and test execution orchestration |
-| framework_hooks.go | `AfterInit`, `AfterResolve`, `AfterExecute` hook implementations |
+| framework_hooks.go | `AfterInit`, `AfterResolve` (orchestrator), `AfterExecute` hooks; sub-functions: `discoverTests`, `filterTestsBySuite`, `computeModuleScope`, `buildExecutionPlan` |
 | framework_selection.go | Suite-based test selection and filtering logic |
 | testflags.go | `ParseTestSpecificFlags` for test-only flags |
 | unit_work.go | `ResolveTestUnitSpecs` converts test packages to work unit specs |
@@ -53,11 +55,13 @@ The test package is the second-largest command implementation in `eac`, parallel
 ## Code Health
 
 ### Tech Debt
-- `testAfterResolve` is ~231 lines -- the largest single function in the CLI; it handles suite filtering, test discovery, module mapping, hash pre-computation, and incremental detection all inline
-- `test.go` is still 673 lines combining entry point, configuration, and usage display
+- None identified
 
 ### Pain Points
-- No test file for `framework.go`, `unit_worker.go`, `discovery.go`, `incremental.go`, `module_mapping.go`, or `summary.go`
+- framework_hooks.go is 549 lines (exceeds 300-line threshold)
+- unit_work.go is 412 lines (exceeds 300-line threshold)
+- unit_worker.go is 323 lines (exceeds 300-line threshold)
+- No test coverage for framework.go (104 lines), framework_hooks.go (549 lines), unit_worker.go (323 lines), summary.go (68 lines), test_exec.go (170 lines), test_resolve.go (272 lines)
 
 ### Optimization Opportunities
-- Break `testAfterResolve` into focused sub-functions (discover, filter-suite, map-modules, detect-incremental) -- high impact on maintainability
+- None identified

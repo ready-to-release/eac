@@ -17,15 +17,24 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
-// PipInstallMu serializes all pip install calls to prevent
+// pipInstallMu serializes all pip install calls to prevent
 // concurrent pip cache contention. Test execution itself remains
 // fully parallel - only the install step is serialized.
-var PipInstallMu sync.Mutex
+var pipInstallMu sync.Mutex
+
+// WithInstallLock executes fn while holding the pip install mutex.
+// This serializes pip install calls to prevent concurrent pip cache contention.
+func WithInstallLock(fn func() error) error {
+	pipInstallMu.Lock()
+	defer pipInstallMu.Unlock()
+	return fn()
+}
 
 // PipIsolation manages isolated Python environments for test execution.
 type PipIsolation struct {
@@ -37,11 +46,12 @@ type PipIsolation struct {
 
 // IsolatedEnv represents a prepared isolated Python environment.
 type IsolatedEnv struct {
-	WorkDir    string   // Isolated directory with copied source files
-	VenvDir    string   // Path to the virtual environment
-	PythonBin  string   // Path to python binary in venv
-	Env        []string // Environment with VIRTUAL_ENV, PATH, PIP_CACHE_DIR
-	SourceRoot string   // Original module root (for logging)
+	WorkDir      string   // Isolated directory with copied source files
+	VenvDir      string   // Path to the virtual environment
+	PythonBin    string   // Path to python binary in venv
+	Env          []string // Environment with VIRTUAL_ENV, PATH, PIP_CACHE_DIR
+	SourceRoot   string   // Original module root (for logging)
+	DepsUpToDate bool     // True if pip install can be skipped (deps marker matches pyproject.toml)
 }
 
 // NewPipIsolation creates a new PipIsolation instance.
@@ -131,12 +141,46 @@ func (p *PipIsolation) PrepareIsolatedEnv(moduleRoot, outputDir string) (*Isolat
 	env := buildPythonEnv(venvDir, p.pipCacheDir)
 
 	return &IsolatedEnv{
-		WorkDir:    workDir,
-		VenvDir:    venvDir,
-		PythonBin:  pythonBin,
-		Env:        env,
-		SourceRoot: moduleRoot,
+		WorkDir:      workDir,
+		VenvDir:      venvDir,
+		PythonBin:    pythonBin,
+		Env:          env,
+		SourceRoot:   moduleRoot,
+		DepsUpToDate: !needsReset && depsMarkerValid(venvDir, moduleRoot),
 	}, nil
+}
+
+// MarkDepsInstalled writes a marker file to the venv directory after a successful pip install.
+// The marker records the mtime of pyproject.toml so subsequent runs can skip reinstallation.
+func MarkDepsInstalled(venvDir, moduleRoot string) {
+	markerPath := filepath.Join(venvDir, ".eac-deps-installed")
+	pyproject := filepath.Join(moduleRoot, "pyproject.toml")
+	info, err := os.Stat(pyproject)
+	if err != nil {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(markerPath), 0o755)
+	_ = os.WriteFile(markerPath, []byte(info.ModTime().Format(time.RFC3339Nano)), 0o644)
+}
+
+// depsMarkerValid returns true if the deps marker file exists and its recorded
+// mtime matches the current pyproject.toml mtime, meaning pip install can be skipped.
+func depsMarkerValid(venvDir, moduleRoot string) bool {
+	markerPath := filepath.Join(venvDir, ".eac-deps-installed")
+	data, err := os.ReadFile(markerPath)
+	if err != nil {
+		return false
+	}
+	pyproject := filepath.Join(moduleRoot, "pyproject.toml")
+	info, err := os.Stat(pyproject)
+	if err != nil {
+		return false
+	}
+	recorded, err := time.Parse(time.RFC3339Nano, string(data))
+	if err != nil {
+		return false
+	}
+	return info.ModTime().Equal(recorded)
 }
 
 // NeedsVenvCreate checks whether the venv needs to be created.
@@ -205,6 +249,8 @@ func buildPythonEnv(venvDir, pipCacheDir string) []string {
 }
 
 // requirementsChanged checks if pyproject.toml or requirements*.txt have changed.
+// Note: mtime+size comparison can miss content changes if both are identical.
+// This is an acceptable trade-off for sync performance; content hashing would be slower.
 func requirementsChanged(moduleRoot, workDir string) bool {
 	files := []string{"pyproject.toml", "requirements.txt", "requirements-dev.txt", "setup.py"}
 	for _, file := range files {
@@ -229,6 +275,8 @@ func requirementsChanged(moduleRoot, workDir string) bool {
 }
 
 // copyFileIfChanged copies src to dst only if src has changed (based on mtime and size).
+// Note: mtime+size comparison can miss content changes if both are identical.
+// This is an acceptable trade-off for sync performance; content hashing would be slower.
 func copyFileIfChanged(src, dst string) (bool, error) {
 	srcInfo, err := os.Stat(src)
 	if err != nil {
@@ -265,6 +313,8 @@ func copyFileIfChanged(src, dst string) (bool, error) {
 }
 
 // syncDirectory synchronizes src directory to dst with incremental updates.
+// Uses a single pass: walks the source to copy changed files while building
+// a set of source-relative paths, then removes destination files not in that set.
 func syncDirectory(srcDir, dstDir string) error {
 	srcInfo, err := os.Stat(srcDir)
 	if err != nil {
@@ -278,18 +328,8 @@ func syncDirectory(srcDir, dstDir string) error {
 		return err
 	}
 
-	// Track files in destination for cleanup
-	dstFiles := make(map[string]bool)
-	_ = filepath.Walk(dstDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil
-		}
-		relPath, _ := filepath.Rel(dstDir, path)
-		dstFiles[relPath] = true
-		return nil
-	})
-
-	// Walk source and copy changed files
+	// Single pass: walk source, copy changed files, track source-relative paths
+	srcFiles := make(map[string]bool)
 	err = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
@@ -306,15 +346,30 @@ func syncDirectory(srcDir, dstDir string) error {
 			return os.MkdirAll(dstPath, 0o755)
 		}
 
-		delete(dstFiles, relPath)
+		// Track this source file
+		srcFiles[relPath] = true
+
 		_, copyErr := copyFileIfChanged(path, dstPath)
 		return copyErr
 	})
-
-	// Remove files that no longer exist in source
-	for relPath := range dstFiles {
-		_ = os.Remove(filepath.Join(dstDir, relPath))
+	if err != nil {
+		return err
 	}
 
-	return err
+	// Walk destination to remove files that no longer exist in source
+	_ = filepath.Walk(dstDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			return nil
+		}
+		relPath, _ := filepath.Rel(dstDir, path)
+		if !srcFiles[relPath] {
+			_ = os.Remove(path)
+		}
+		return nil
+	})
+
+	return nil
 }

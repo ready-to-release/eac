@@ -10,14 +10,14 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/github"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type getChangedModulesCICommand struct{}
@@ -192,7 +192,7 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 	modulesWithCI, filteredOut := filterModulesWithWorkflows(allModules, workspaceRoot)
 
 	// Create GitHub API client and CI run querier (may not be used if mocking)
-	api := github.NewGHClient(ghexec.New(workspaceRoot), workspaceRoot)
+	api := github.NewGHClient(gh.New(tool.GlobalToolSystem(), workspaceRoot), workspaceRoot)
 	querier := NewGHCIRunQuerier(api)
 
 	// Track results
@@ -253,8 +253,11 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 				var files []string
 				if mockedChangedFiles != nil {
 					files = mockedChangedFiles
-				} else if baseSHA := status.LastSuccessSHA; baseSHA != "" {
-					files, _ = getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+				} else if mockedStatus == nil {
+					// Only call git diff when not in mocked mode (tool system may not be initialized)
+					if baseSHA := status.LastSuccessSHA; baseSHA != "" {
+						files, _ = getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+					}
 				}
 				if len(files) > 0 {
 					moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
@@ -570,7 +573,7 @@ func determineBaseSHA(prBase, workflow, branch, workspaceRoot string) (string, b
 // getLastSuccessfulCISHA queries gh CLI for the last successful workflow run SHA.
 func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, error) {
 	// gh run list -b <branch> -s success -w "<workflow>" -L 1 --json headSha -q '.[0].headSha'
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"-b", branch,
 		"-s", "success",
 		"-w", workflow,
@@ -588,7 +591,8 @@ func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, err
 
 // getCurrentSHA gets the current HEAD SHA.
 func getCurrentSHA(workspaceRoot string) (string, error) {
-	output, err := gitexec.Run(workspaceRoot, "rev-parse", "HEAD")
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "rev-parse", "HEAD")
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse failed: %w", err)
 	}
@@ -598,7 +602,8 @@ func getCurrentSHA(workspaceRoot string) (string, error) {
 
 // getChangedFilesBetweenSHAs gets the list of files changed between two SHAs.
 func getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
-	output, err := gitexec.Run(workspaceRoot, "diff", "--name-only", baseSHA+".."+headSHA)
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "diff", "--name-only", baseSHA+".."+headSHA)
 	if err != nil {
 		return nil, fmt.Errorf("git diff failed: %w", err)
 	}

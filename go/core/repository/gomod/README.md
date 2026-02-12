@@ -60,6 +60,14 @@ Powers the `validate-go-tidy` and dependency validation commands. The dependency
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: None identified.
-- **Optimization Opportunities**: The regex patterns in `parser.go` (lines 13-19) are compiled at package init; this is fine but they could be documented more clearly as module-level constants.
+### Tech Debt
+
+- None identified
+
+### Pain Points
+
+- None identified
+
+### Optimization Opportunities
+
+- The regex patterns in parser.go (lines 13-19) are compiled at package init; this is fine but they could be documented more clearly as module-level constants

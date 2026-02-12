@@ -32,7 +32,10 @@ and cache invalidation across build, test, lint, and scan commands.
 | unit_spec.go | `UnitSpec` alias and factory functions |
 | unit_result.go | `UnitResult` with success/cached/failed helpers |
 | unit_state.go | `UnitState`, `InvalidationRule`, test set classification |
-| state_manager.go | `StateManager` for state persistence and change detection |
+| state_manager.go | `StateManager` for state persistence and core change detection |
+| uow_state.go | UoW-level state management and change detection |
+| module_state.go | Module-level state management and change detection |
+| test_state.go | Test-module-level state management with test-set-specific invalidation |
 | aggregator.go | `UoWAggregator` for module-level cache rollup |
 | lock.go | File-based locking with wait and stale detection |
 | display.go | `DisplayNameResolver` alias from contracts |
@@ -56,13 +59,14 @@ module-level granularity expected by the TUI and summary displays.
 ## Code Health
 
 ### Tech Debt
-- `state_manager.go` (557 lines): `DetectTestModuleChanges` (lines 410-604, ~195 lines) is the largest function in the package -- complex branching for test-set-specific invalidation
-- `unit_state.go:33,43`: mutable package-level `var DefaultRules` and `var IntegrationTestRule` maps could be overwritten at runtime; consider making them unexported or using functions
+- `test_state.go` is 342 lines
+- `uow_state.go` is 245 lines
+- `lock.go` is 229 lines
+- `module_state.go` is 140 lines
+- `unit_state.go` is 126 lines with mutable package-level `var DefaultRules` and `var IntegrationTestRule` maps that could be overwritten at runtime
 
 ### Pain Points
-- `state_manager.go` mixes UoW-level, module-level, and test-module-level change detection in one struct -- three different granularities with overlapping but distinct logic
-- `unit_spec.go`: four `var` aliases (`NewBuildSpec`, `NewTestSpec`, `NewLintSpec`, `NewScanSpec`) re-export contract constructors; changes in contracts silently alter this package's API
+- `unit_spec.go` contains four `var` aliases (`NewBuildSpec`, `NewTestSpec`, `NewLintSpec`, `NewScanSpec`) that re-export contract constructors; changes in contracts silently alter this package's API
 
 ### Optimization Opportunities
-- Split `StateManager` into focused managers per granularity (UoW, module, test-module) to reduce file size and simplify testing (medium effort, high readability gain)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+- Consider making `DefaultRules` and `IntegrationTestRule` unexported or using functions to prevent runtime mutation

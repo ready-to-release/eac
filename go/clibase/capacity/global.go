@@ -18,8 +18,6 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-var log = logging.C()
-
 const (
 	// semaphoreDir is the directory for cross-process coordination files.
 	// Located under .cache/eac/semaphores/ to consolidate all caches.
@@ -49,6 +47,7 @@ type GlobalSemaphore struct {
 	capacity      int
 	registry      *locktracker.Registry
 	lockID        string
+	log           *logging.ComponentLogger
 
 	// Custom file names (defaults to stateFile/stateLockFile if empty)
 	stateFileName string
@@ -74,6 +73,7 @@ func NewGlobalSemaphore(workspaceRoot string, capacity int, registry *locktracke
 		capacity:      capacity,
 		registry:      registry,
 		lockID:        uuid.New().String(),
+		log:           logging.C(),
 		allocations:   make(map[string]int),
 		sigChan:       make(chan os.Signal, 1),
 		sigClose:      make(chan struct{}),
@@ -366,11 +366,11 @@ func (gs *GlobalSemaphore) writeState(state *State) {
 	path := filepath.Join(gs.workspaceRoot, stateDir, gs.getStateFileName())
 	data, err := json.Marshal(state)
 	if err != nil {
-		log.Warnf("capacity: failed to marshal state: %v", err)
+		gs.log.Warnf("capacity: failed to marshal state: %v", err)
 		return
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		log.Warnf("capacity: failed to write state: %v", err)
+		gs.log.Warnf("capacity: failed to write state: %v", err)
 	}
 }
 

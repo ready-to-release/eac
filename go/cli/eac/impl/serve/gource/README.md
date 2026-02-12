@@ -38,10 +38,10 @@ The `gource` sub-package provides repository history visualization within the `s
 ## Code Health
 
 ### Tech Debt
-- `serve.go` (455 lines) handles command parsing, Docker management, signal handling, and file output in a single file
+- No test for serve.go (540 lines)
 
 ### Pain Points
-- None identified.
+- serve.go (540 lines) exceeds 300-line guideline
 
 ### Optimization Opportunities
-- Extract Docker container lifecycle management into a shared helper (low priority, only used here)
+- Docker container lifecycle helpers are already well-decomposed within the file; extracting to a shared package has low benefit since gource is the only consumer (deferred)

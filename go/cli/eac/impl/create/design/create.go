@@ -12,16 +12,12 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	design "github.com/ready-to-release/eac/go/cli/eac/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/cli/eac/impl/design/helper"
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	coreai "github.com/ready-to-release/eac/go/core/ai"
 	eacConfig "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
-	"github.com/ready-to-release/eac/go/core/validation/formats/structurizr"
 )
 
 type createDesignCommand struct{}
@@ -102,6 +98,7 @@ func createDesign(deps *Deps) int {
 			return 1
 		}
 	} else {
+		log.Warnf("Docker validation skipped via --skip-validation flag for module %q", config.Module)
 		out.Progress("⚠️  Skipping Docker validation")
 	}
 
@@ -115,7 +112,7 @@ func createDesign(deps *Deps) int {
 			// Fallback to default path if config loading fails (e.g., in tests)
 			outputPath = filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
 		} else {
-			outputPath = filepath.Join(cfg.Repository.SpecsPathAbs(config.TemplateRoot, config.Module), ".design", "workspace.dsl")
+			outputPath = filepath.Join(paths.SpecsPath(config.TemplateRoot, config.Module), ".design", "workspace.dsl")
 		}
 	}
 
@@ -309,233 +306,3 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	return sb.String()
 }
 
-// validateModuleExists checks if the source code exists for the specified module.
-func validateModuleExists(config *DesignConfig, out *design.Output) error {
-	out.Progressf("🔍 Validating source code for module '%s'...", config.Module)
-
-	// Check if source directory exists
-	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
-		return fmt.Errorf("source code not found for module '%s'\n\nExpected at: %s\n\nUsage: design create <module>\nExample: design create clie (analyzes code in go/cli/clie/)",
-			config.Module, config.SourcePath)
-	}
-
-	out.Progressf("✅ Source code found at: %s", config.SourcePath)
-	return nil
-}
-
-// checkDockerAvailability checks if Docker is running before starting expensive operations.
-func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
-	out.Progress("🐳 Checking Docker availability...")
-
-	// Create a temporary validator to check Docker
-	validator, err := structurizr.NewCompositeValidator("", "", true)
-	if err != nil {
-		return fmt.Errorf("failed to create validator: %w", err)
-	}
-	defer validator.Cleanup()
-
-	// Check if Docker is running
-	if !validator.IsDockerRunning() {
-		return fmt.Errorf("Docker is not running\n\nStructurizr validation requires Docker to be running.\nPlease start Docker and try again.")
-	}
-
-	out.Progress("✅ Docker is available")
-	return nil
-}
-
-// loadAndBuildPrompt loads the contract and builds the AI prompt.
-func loadAndBuildPrompt(config *DesignConfig, out *design.Output) (string, error) {
-	out.Progress("📋 Loading design contract...")
-
-	fullPrompt, err := buildContractBasedPrompt(config)
-	if err != nil {
-		return "", err
-	}
-
-	if config.Debug {
-		log.Debugf("Full AI prompt built: promptLength=%d", len(fullPrompt))
-	}
-
-	return fullPrompt, nil
-}
-
-// buildContractBasedPrompt builds the AI prompt with contract context.
-func buildContractBasedPrompt(config *DesignConfig) (string, error) {
-	// Load contract using generalized loader
-	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, paths.DefaultsVersion)
-
-	contractData, err := loader.LoadContract()
-	if err != nil {
-		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	// Load prompt (default or custom)
-	promptContent, err := loadPrompt(config)
-	if err != nil {
-		return "", fmt.Errorf("failed to load prompt: %w", err)
-	}
-
-	// Build prompt template
-	promptTemplate, err := coreai.BuildPromptWithTemplate(
-		promptContent,
-		contractData,
-		nil,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to build prompt template: %w", err)
-	}
-
-	// Build final prompt with module context
-	var prompt strings.Builder
-	prompt.WriteString(promptTemplate)
-	prompt.WriteString("\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n")
-
-	// Module context
-	prompt.WriteString("## Target Module\n\n")
-	prompt.WriteString("Module: ")
-	prompt.WriteString(config.Module)
-	prompt.WriteString("\n\n")
-	prompt.WriteString("Analyze the source code in the following directory and generate architecture documentation:\n\n")
-	prompt.WriteString("Source Path: ")
-	prompt.WriteString(config.SourcePath)
-	prompt.WriteString("\n\n")
-	prompt.WriteString("Use the naming format: ")
-	prompt.WriteString(config.Module)
-	prompt.WriteString(" Architecture\n\n")
-
-	// Analysis instructions
-	prompt.WriteString("## Analysis Instructions\n\n")
-	prompt.WriteString("Examine the module's source code to understand:\n")
-	prompt.WriteString("- Main components and their responsibilities\n")
-	prompt.WriteString("- Dependencies between components\n")
-	prompt.WriteString("- External systems or services the module interacts with\n")
-	prompt.WriteString("- Data flow and relationships\n\n")
-
-	// Generation requirements
-	prompt.WriteString("## Generation Requirements\n\n")
-	prompt.WriteString("Generate a COMPLETE architecture including:\n")
-	prompt.WriteString("- System Context view: Show the main system with external actors and systems\n")
-	prompt.WriteString("- Container view: Break down the main system into major containers\n")
-	prompt.WriteString("- Component views: For each significant container, show internal components\n")
-	prompt.WriteString("- Relationships: Connect all elements with descriptive relationships\n\n")
-
-	// Final instruction
-	prompt.WriteString("## Generate Now\n\n")
-	prompt.WriteString("Generate the complete Structurizr DSL workspace now.\n")
-	prompt.WriteString("Return ONLY the DSL content starting with 'workspace' - no markdown fences, no explanations.\n")
-
-	return prompt.String(), nil
-}
-
-// loadPrompt loads the AI prompt for design generation with three-tier priority:
-// 1. Command flag (--prompt)
-// 2. Team override (.eac/templates/coreai.TypeDesign/design.md)
-// 3. System default (templates/coreai.TypeDesign/design.md)
-// Convention: Empty string uses type name (design.md).
-func loadPrompt(config *DesignConfig) (string, error) {
-	// Load prompt with three-tier priority system
-	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, "")
-	prompt, source, err := loader.LoadPromptWithPriority("", config.PromptPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to load prompt: %w", err)
-	}
-
-	// Log source if not default
-	if source != "embedded fallback" && config.Debug {
-		log.Errorf("ℹ️  Using %s prompt", source)
-	}
-
-	return prompt, nil
-}
-
-// generateAndValidate generates AI output with retry and validates with Structurizr CLI.
-func generateAndValidate(config *DesignConfig, prompt string, out *design.Output) (string, error) {
-	// Create executor
-	executor := ai.NewExecutor(config.TemplateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
-
-	// Create composite validator (quick + full validation)
-	// Skip expensive Docker validation if quick validation finds errors or if --skip-validation
-	validator, err := structurizr.NewCompositeValidator(config.Module, config.TemplateRoot, !config.SkipValidation)
-	if err != nil {
-		return "", fmt.Errorf("failed to create validator: %w", err)
-	}
-	defer validator.Cleanup()
-
-	// Load AI config to get retry strategy
-	var aiConfig *coreai.AIConfig
-	aiConfig, err = coreai.LoadAIConfig(config.TemplateRoot)
-	if err != nil {
-		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
-		aiConfig = nil
-	}
-
-	// Build retry configuration using factory
-	retryConfig, err := coreai.BuildRetryConfig(
-		coreai.TypeDesign,
-		coreai.FormatStructurizr,
-		executorAdapter,
-		validator,
-		config.TemplateRoot,
-		aiConfig,
-		coreai.WithDebug(config.Debug),
-		coreai.WithLogger(logging.C().Zap()),
-		coreai.WithDefaultMaxAttempts(3),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to build retry config: %w", err)
-	}
-
-	// Generate with retry and validation
-	out.Progress("🤖 Generating architecture design with AI...")
-
-	result, err := coreai.GenerateWithRetry(
-		context.Background(),
-		retryConfig,
-		prompt,
-	)
-	if err != nil {
-		return "", fmt.Errorf("generation failed: %w", err)
-	}
-
-	return result.Output, nil
-}
-
-// writeOutputAndReportSuccess writes the workspace file and reports success.
-func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content string, out *design.Output) error {
-	// Ensure directory exists
-	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
-	}
-
-	// Write file
-	if err := os.WriteFile(outputPath, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	// Report success
-	out.Progress("\n✅ Architecture design created")
-	out.Progressf("   File: %s", outputPath)
-	if !config.SkipValidation {
-		out.Progress("   Valid: ✅ Passed Structurizr validation\n")
-	} else {
-		out.Progress("   Valid: ⚠️  Validation skipped\n")
-	}
-	out.Progress("ℹ️  Next steps:")
-	out.Progress("   1. Review the generated workspace")
-	out.Progress("   2. Refine containers and relationships as needed")
-	out.Progressf("   3. View in browser: design serve %s", config.Module)
-	out.Progressf("   4. Validate anytime: design validate %s", config.Module)
-
-	return nil
-}
-
-// fileExists checks if a file exists.
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}

@@ -36,11 +36,10 @@ removed commands.
 ## Code Health
 
 ### Tech Debt
-- None identified. (`cmdMarkerPattern` is a package-level compiled regex with doc comment; this is idiomatic Go.)
+- None identified
 
 ### Pain Points
-- Single-file package (201 lines) with all logic in one file; manageable now but may need splitting if more doc formats are added
+- None identified
 
 ### Optimization Opportunities
-- Well-tested (555-line test file with 2.7x test-to-code ratio); no major issues
-- Could cache `findOrphanedDocs` directory walk results if called repeatedly (low effort, low priority)
+- None identified

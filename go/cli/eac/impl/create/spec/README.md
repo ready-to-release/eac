@@ -58,10 +58,13 @@ This package implements the `create spec` command, which transforms natural lang
 ## Code Health
 
 ### Tech Debt
-- None
+
+- `create.go` (701 lines) exceeds 300 lines
 
 ### Pain Points
-- None identified
+
+- No test coverage for `create.go`, `deps.go`
 
 ### Optimization Opportunities
+
 - None identified

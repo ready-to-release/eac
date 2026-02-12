@@ -37,7 +37,7 @@ The `design` sub-package provides interactive architecture diagram viewing withi
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- No test for serve.go (191 lines)
 
 ### Pain Points
 - None identified.

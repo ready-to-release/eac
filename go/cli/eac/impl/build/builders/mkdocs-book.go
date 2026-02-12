@@ -434,8 +434,8 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 		return "", false
 	}
 
-	// Use the first book for this module
-	// TODO: Support multiple books per module with --book flag
+	// Multi-book support is handled upstream in buildMkDocsModule via opts.Component.
+	// This fallback path runs only when no books are configured via GetBooksByModule.
 	book := moduleBooks[0]
 	if len(moduleBooks) > 1 {
 		Logln(logWriter, "📚 Found %d books for module '%s', using '%s'", len(moduleBooks), moniker, book.Name)

@@ -6,13 +6,13 @@ The `cucumber-eac` module provides Cucumber/Gherkin test runner integration for 
 
 Shows how the Cucumber adapter integrates with the test execution framework.
 
-<!-- structurizr:cucumber-eac:SystemContext -->
+<!-- structurizr:adapters:cucumber-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Cucumber adapter packages.
 
-<!-- structurizr:cucumber-eac:Containers -->
+<!-- structurizr:adapters:cucumber-eac:Containers -->
 
 ## Design File
 

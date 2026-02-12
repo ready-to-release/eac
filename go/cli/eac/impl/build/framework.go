@@ -2,8 +2,10 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,8 +15,8 @@ import (
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/environment"
-	"github.com/ready-to-release/eac/go/clibase/git"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/hash"
@@ -321,6 +323,14 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		log.Debugf("buildAfterExecute: processAllArtifactDerivations took %v", time.Since(start))
 	}
 
+	// Reconcile input hashes: if the build modified source files (e.g., go mod tidy
+	// updating go.sum), the pre-computed hash stored in manifests no longer matches
+	// the current file state. Recompute and update manifests so downstream commands
+	// (test, lint, scan) see consistent hashes when validating build artifacts.
+	if !ctx.Config.DryRun && anyBuilt {
+		reconcileBuildHashes(ctx)
+	}
+
 	// Assert all UoWs have valid manifests (skip in dry-run mode)
 	if !ctx.Config.DryRun {
 		if err := assertBuildManifestsExist(ctx); err != nil {
@@ -329,6 +339,74 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	return nil
+}
+
+// reconcileBuildHashes recomputes module input hashes after building and updates
+// any manifests whose hash has drifted. This handles the case where build operations
+// (notably go mod tidy, which runs by default locally) modify source files that are
+// included in the hash patterns (e.g., go.sum). Without reconciliation, the pre-build
+// hash stored in manifests would mismatch the post-build file state, causing downstream
+// commands (test, lint, scan) to always report stale build artifacts.
+func reconcileBuildHashes(ctx *cmdframework.ExecutionContext) {
+	bctx, ok := ctx.Config.BuildCmdContext.(*buildContext)
+	if !ok || bctx == nil || ctx.ModuleRegistry == nil {
+		return
+	}
+
+	reader := coreoutput.NewReader(ctx.WorkspaceRoot)
+	hashCache := hash.LoadCache(paths.InputHashCachePath(ctx.WorkspaceRoot))
+	updated := false
+
+	for _, result := range ctx.Results {
+		if result.ExitCode != 0 {
+			continue // Only reconcile successfully built modules
+		}
+		moniker := result.Moniker
+		preHash := bctx.moduleInputHashes[moniker]
+		if preHash == "" {
+			continue
+		}
+
+		contract, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		// Recompute hash from current file state (after build operations)
+		postHash, _, err := hashCache.GetOrCompute(moniker, contract.GetGlobPatterns(), ctx.WorkspaceRoot)
+		if err != nil {
+			log.Debugf("reconcileBuildHashes: failed to recompute hash for %s: %v", moniker, err)
+			continue
+		}
+
+		if postHash == preHash {
+			continue // No drift
+		}
+
+		log.Debugf("reconcileBuildHashes: hash drifted for %s (pre=%s post=%s), updating manifests", moniker, preHash[:12], postHash[:12])
+
+		// Update all build manifests for this module
+		manifests, err := reader.ListUoWs(core.ActionBuild, moniker)
+		if err != nil {
+			log.Debugf("reconcileBuildHashes: failed to list manifests for %s: %v", moniker, err)
+			continue
+		}
+		for _, m := range manifests {
+			if m.InputHash == preHash {
+				m.InputHash = postHash
+				if err := m.Save(ctx.WorkspaceRoot); err != nil {
+					log.Debugf("reconcileBuildHashes: failed to save manifest for %s/%s: %v", moniker, m.Component, err)
+				}
+			}
+		}
+		updated = true
+	}
+
+	if updated {
+		if err := hashCache.Save(); err != nil {
+			log.Debugf("reconcileBuildHashes: failed to save hash cache: %v", err)
+		}
+	}
 }
 
 // assertBuildManifestsExist verifies that all executed UoWs have valid manifests.
@@ -415,6 +493,14 @@ func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStat
 
 // getGitCommit retrieves git commit SHA.
 func getGitCommit(workspaceRoot string) string {
-	return git.GetCommitSHA(workspaceRoot)
+	ts := tool.GlobalToolSystem()
+	if ts == nil {
+		return ""
+	}
+	output, err := ts.RunTool(context.Background(), "git", workspaceRoot, "rev-parse", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
 }
 

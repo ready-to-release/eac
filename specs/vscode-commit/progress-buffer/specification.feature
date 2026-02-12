@@ -1,4 +1,4 @@
-@L1 @ov @depm:vscode-commit
+@ov @depm:vscode-commit
 Feature: vscode-commit_progress-buffer
 
   As a developer

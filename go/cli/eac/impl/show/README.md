@@ -55,6 +55,8 @@ Parent command that displays repository information in human-readable format. Ho
 | build-summary.go | GitHub Actions build summary with metrics and diagnostics |
 | build-times.go | Build duration analysis |
 | test-summary.go | GitHub Actions test summary with per-module breakdown |
+| test_summary_table.go | Table-building logic extracted from test-summary.go |
+| execute.go | `ExecuteShowCommand` shared helper for flag parsing and output rendering |
 | test-results.go | Detailed test results from UoW manifests |
 | test-timings.go | Test duration analysis |
 | tests.go | Test listing display |
@@ -75,7 +77,7 @@ Parent command that displays repository information in human-readable format. Ho
 | ghosts.go | Ghost file detection |
 | approval-comments.go | PR approval comments display |
 | approve-summary.go | Approval status summary |
-| component-types.go | Component type listing |
+| component-kinds.go | Component kind listing |
 | lint-summary.go | Lint results summary |
 | scan-summary.go | Security scan results summary |
 | trigger-summary.go | CI trigger analysis |
@@ -107,13 +109,12 @@ The `show` package is the human-readable counterpart to `get`, producing formatt
 ## Code Health
 
 ### Tech Debt
-- `test-summary.go` is 655 lines with `generateCombinedSummary` spanning ~125 lines; it mixes table building, status derivation, and markdown generation
-- Only 7 test files for ~35 source files; most summary generators (`build-summary.go`, `ci-summary.go`, `test-results.go`, etc.) have no unit tests
+- Only 7 test files for 41 non-test Go files
+- No tests for build-summary.go (360 lines), ci-summary.go, test-results.go, approval-comments.go, artifacts.go, and 30+ other command files
 
 ### Pain Points
-- Pattern duplication: each subcommand file repeats flag-parse and error-handling boilerplate similar to `get/` commands, without a shared `ExecuteShowCommand` helper
-- `build-summary.go` (354 lines) and `test-summary.go` (655 lines) are significantly larger than typical subcommands, suggesting they could be decomposed
+- build-summary.go (360 lines) exceeds 300-line guideline
+- 17% test coverage (7 test files / 41 source files) is below typical project standards
 
 ### Optimization Opportunities
-- Introduce an `ExecuteShowCommand` helper analogous to `get`'s `ExecuteGetCommand` to standardize flag parsing and output rendering (moderate effort)
-- Extract the table-building logic from `test-summary.go` into `summary_formatter.go` for reuse (low effort)
+- None identified.

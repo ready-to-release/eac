@@ -10,12 +10,10 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/github"
-	"github.com/ready-to-release/eac/go/core/repository"
-
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 )
 
 type releasePrunePackagesCommand struct{}
@@ -67,10 +65,9 @@ type PruneVersionResult struct {
 }
 
 func ReleasePrunePackages() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold(withConfig())
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -112,21 +109,11 @@ func ReleasePrunePackages() int {
 		return 1
 	}
 
-	// Load config
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		log.Errorf("Failed to find repository root: %v", err)
-		return 1
-	}
-
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
-	if err != nil {
-		log.Errorf("Failed to load config: %v", err)
-		return 1
-	}
+	workspaceRoot := s.WorkspaceRoot
+	cfg := s.Config
 
 	// Check for registry configuration
-	registryConfig := cfg.Repository.GetRegistryConfig("ghcr.io")
+	registryConfig := cfg.GetRegistryConfig("ghcr.io")
 	if registryConfig == nil {
 		log.Errorf("No registry configuration found for ghcr.io")
 		log.Infof("Add registries section to .eac/repository.yml:")
@@ -152,13 +139,13 @@ func ReleasePrunePackages() int {
 	}
 
 	// Initialize packages client
-	ghExec := ghexec.New(workspaceRoot)
+	ghExec := gh.New(tool.GlobalToolSystem(), workspaceRoot)
 	pkgClient := github.NewGHPackagesClient(ghExec, workspaceRoot)
 	ghClient := github.NewGHClient(ghExec, workspaceRoot)
 	ctx := context.Background()
 
 	// Get org (from registry config or derived from remote config)
-	org := cfg.Repository.GetRegistryOrg("ghcr.io")
+	org := cfg.GetRegistryOrg("ghcr.io")
 	if org == "" {
 		log.Errorf("No organization configured. Set registries.ghcr.io.org or repository.remote.registry_url")
 		return 1

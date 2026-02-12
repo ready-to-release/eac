@@ -66,7 +66,7 @@ func DrawioEncode() int {
 	}
 
 	// Check Docker
-	if err := CheckDockerAvailable(repoRoot); err != nil {
+	if err := CheckDockerAvailable(repoRoot, nil); err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -115,7 +115,7 @@ func DrawioEncode() int {
 	}
 
 	// Run command
-	output, err := RunDrawioCommandWithOutput(repoRoot, cmdArgs)
+	output, err := RunDrawioCommandWithOutput(repoRoot, cmdArgs, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Encoded to") {
 			// Success message in stderr

@@ -37,7 +37,7 @@ func (c *showParent) Metadata() core.CommandMetadata {
 			{Name: "Commands", Subcommands: []string{"valid-commands"}},
 			{Name: "Specifications", Subcommands: []string{"specs", "changelog"}},
 			{Name: "Approvals", Subcommands: []string{"approval-comments", "approve-summary"}},
-			{Name: "Artifacts", Subcommands: []string{"artifacts", "component-types"}},
+			{Name: "Artifacts", Subcommands: []string{"artifacts", "component-kinds"}},
 			{Name: "Lint", Subcommands: []string{"lint-summary"}},
 			{Name: "Scan", Subcommands: []string{"scan-summary"}},
 			{Name: "Release", Subcommands: []string{"release-summary", "release-notes"}},
@@ -79,7 +79,7 @@ var subcommands = []tui.SubcommandInfo{
 	{Name: "changelog", Description: "Show changelog entries"},
 	{Name: "approval-comments", Description: "Show approval comments"},
 	{Name: "artifacts", Description: "Show artifacts"},
-	{Name: "component-types", Description: "Show component types"},
+	{Name: "component-kinds", Description: "Show component kinds"},
 	{Name: "lint-summary", Description: "Show lint summary"},
 	{Name: "scan-summary", Description: "Show scan summary"},
 	{Name: "release-summary", Description: "Show release summary"},
@@ -120,7 +120,7 @@ func Show() int {
 	// Check for valid subcommand
 	switch args[0] {
 	case "approval-comments", "approve-summary", "artifacts", "books", "build-summary",
-		"build-times", "changelog", "ci-summary", "component-types", "components", "config",
+		"build-times", "changelog", "ci-summary", "component-kinds", "components", "config",
 		"dependencies", "dependency-ci-summary", "deps-setup-summary", "environments",
 		"files", "files-changed", "files-staged", "ghosts", "help", "lint-summary", "modules",
 		"release-notes", "release-summary", "scan-summary", "specs", "suite",

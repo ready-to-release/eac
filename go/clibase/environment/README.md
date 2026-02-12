@@ -35,10 +35,13 @@ Called early in command initialization to determine how the CLI should behave. C
 ## Code Health
 
 ### Tech Debt
-- None identified; clean 85-line file with no mutable global state
+
+- None identified
 
 ### Pain Points
+
 - None identified
 
 ### Optimization Opportunities
-- None identified; compact leaf package
+
+- None identified

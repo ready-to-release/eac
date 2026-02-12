@@ -122,7 +122,7 @@ System default configurations live in `contracts/eac-core/0.1.0/defaults/`. You 
 | -------------------- | ------------------------------------------------------------------------------- | --------------------------- |
 | `ai-config.yml`      | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default) |
 | `ai-provider.yml`    | Default AI provider settings                                                    | ❌ No (uses system default) |
-| `component-types.yml`| Component type definitions (go, typescript, dockerfile, etc.)                   | ❌ No (uses system default) |
+| `blueprints.yml`     | Blueprint component kind definitions (go, typescript, dockerfile, etc.)         | ❌ No (uses system default) |
 | `tool-config.yml`    | Tool definitions and resource configuration                                     | ❌ No (uses system default) |
 | `security-tools.yml` | Security tool configurations                                                    | ❌ No (uses system default) |
 | `logging.yml`        | Logging configuration                                                           | ❌ No (uses system default) |
@@ -263,7 +263,7 @@ If you need custom AI type definitions or other advanced configurations, you can
 eac init --copy-templates
 ```
 
-This copies configuration files like `ai-config.yml`, `component-types.yml`, etc. to `.eac/`. You can then:
+This copies configuration files like `ai-config.yml`, `blueprints.yml`, etc. to `.eac/`. You can then:
 
 1. Edit the copied files to customize them
 2. Commit your customizations to version control
@@ -275,7 +275,7 @@ This copies configuration files like `ai-config.yml`, `component-types.yml`, etc
 .eac/
 ├── ai-provider.yml          (created by init)
 ├── ai-config.yml            (copied with --copy-templates)
-├── component-types.yml      (copied with --copy-templates)
+├── blueprints.yml           (copied with --copy-templates)
 └── (other copied files...)
 ```
 
@@ -299,7 +299,7 @@ For details on the file formats, see the [Init Command Reference](../../referenc
 ✅ Custom overrides (if you customized them)
 
 - `ai-config.yml` (only if you created a custom version)
-- `component-types.yml` (only if you created a custom version)
+- `blueprints.yml` (only if you created a custom version)
 - `test-suites.yml` (only if you generated/customized it)
 - `testing-tags.yml` (only if you created a custom version)
 - etc.

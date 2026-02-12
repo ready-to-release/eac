@@ -192,11 +192,12 @@ func TestServerTypeMappingConsistency(t *testing.T) {
 
 // resetGlobalCategoryResolver resets the singleton so tests start clean.
 func resetGlobalCategoryResolver() {
-	globalCategoryResolver.mu.Lock()
-	defer globalCategoryResolver.mu.Unlock()
-	globalCategoryResolver.scannerMap = nil
-	globalCategoryResolver.serverMap = nil
-	globalCategoryResolver.initialized = false
+	r := getGlobalCategoryResolver()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.scannerMap = nil
+	r.serverMap = nil
+	r.initialized = false
 }
 
 func TestDefaultScannerCategoriesMatchesResolver(t *testing.T) {

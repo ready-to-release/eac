@@ -31,6 +31,8 @@ for display before execution begins.
 |---|---|
 | `summary.go` | `Summary` and all supporting data types (`Flags`, `DepsStatus`, `IncrementalInfo`, etc.) |
 | `formatter.go` | `FormatCompact` and `FormatDetailed` rendering functions |
+| `formatter_flags.go` | Flag-specific formatting helpers extracted from formatter.go |
+| `formatter_helpers.go` | Shared section-building helpers used by both compact and detailed formatters |
 
 ## Dependencies
 
@@ -43,12 +45,14 @@ Provides the structured data layer between init-phase verification and user-faci
 ## Code Health
 
 ### Tech Debt
-- `formatter.go:139` `FormatDetailed` is ~240 lines; extracting per-section helpers (deps, incremental, artifacts) would improve readability
-- `formatter.go:10` `FormatCompact` is ~128 lines with similar section-by-section logic duplicating `FormatDetailed` patterns
+
+- None identified
 
 ### Pain Points
-- Compact and detailed formatters share structural logic but are implemented independently; changes to summary fields require parallel updates in both
+
+- `summary.go` (396 lines) and `formatter.go` (359 lines) exceed 300 lines
+- `summary_test.go` (427 lines) is a large test file
 
 ### Optimization Opportunities
-- Extract shared section-building helpers used by both `FormatCompact` and `FormatDetailed` to reduce duplication (medium effort)
-- Package is otherwise healthy: leaf dependency, good test coverage (701 test lines vs 936 source lines)
+
+- None identified

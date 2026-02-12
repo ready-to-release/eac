@@ -39,6 +39,23 @@ func EstimateFile(filePath string) (*Estimate, error) {
 
 // EstimateContent estimates token count from raw bytes.
 // This is useful for testing or when file content is already in memory.
+//
+// Heuristic limitations (char/4):
+//   - Assumes an average of 4 characters per token, which is a rough
+//     approximation derived from English prose. Actual tokenisation depends
+//     on the model's BPE vocabulary and varies by language and content type.
+//   - Code-heavy files (especially languages with long identifiers like Java
+//     or Go) tend to have fewer tokens per character, so the estimate may
+//     overcount.
+//   - JSON, YAML, and other structured data formats are more token-dense;
+//     the estimate may undercount for these.
+//   - Non-ASCII content (CJK characters, emoji) can consume multiple tokens
+//     per character, making the heuristic less reliable.
+//   - The heuristic does not account for whitespace collapsing or special
+//     token boundaries; leading/trailing whitespace is counted equally.
+//   - For precise token counts, use the model's actual tokeniser; this
+//     heuristic is intended only as a fast pre-filter to flag files that are
+//     likely to exceed context limits.
 func EstimateContent(filePath string, content []byte) *Estimate {
 	chars := len(content)
 	lines := bytes.Count(content, []byte{'\n'})
@@ -48,7 +65,7 @@ func EstimateContent(filePath string, content []byte) *Estimate {
 
 	return &Estimate{
 		FilePath:   filePath,
-		Tokens:     chars / 4, // char/4 heuristic
+		Tokens:     chars / 4, // char/4 heuristic -- see doc comment for limitations
 		Characters: chars,
 		Bytes:      int64(len(content)),
 		Lines:      lines,

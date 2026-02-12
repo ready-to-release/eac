@@ -6,7 +6,6 @@ import (
 	"os"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 )
 
 type releaseEacExtCommand struct{}
@@ -28,10 +27,9 @@ func (c *releaseEacExtCommand) Execute(_ context.Context, _ *core.CommandRequest
 }
 
 func ReleaseExtEac() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold()
+	if s == nil {
+		return exitCode
 	}
 
 	fs := flag.NewFlagSet("release eac-ext", flag.ExitOnError)

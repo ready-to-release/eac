@@ -9,21 +9,24 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/clibase/executor"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/git"
+	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
-// InitialWorkingDir stores the working directory when the program started.
-var InitialWorkingDir string
+// initialWorkingDir stores the working directory when the program started.
+var initialWorkingDir string
 
 // nl returns the platform-appropriate line ending.
 func nl() string {
@@ -34,47 +37,53 @@ func nl() string {
 }
 
 func main() {
-	// Global panic handler with full stack trace
-	defer func() {
-		if r := recover(); r != nil {
-			newline := nl()
-			fmt.Fprintf(os.Stderr, "%s=== PANIC: Unhandled Exception ===%s", newline, newline)
-			fmt.Fprintf(os.Stderr, "Error: %v%s%s", r, newline, newline)
-			fmt.Fprintf(os.Stderr, "Stack Trace:%s", newline)
+	defer recoverPanic()
+	initWorkingDir()
+	bootstrapProviders()
+	os.Exit(dispatch())
+}
 
-			// Print full stack trace
-			buf := make([]byte, 4096)
-			for {
-				n := runtime.Stack(buf, false)
-				if n < len(buf) {
-					// Replace \n with platform-appropriate line ending in stack trace
-					stackStr := strings.ReplaceAll(string(buf[:n]), "\n", newline)
-					fmt.Fprintf(os.Stderr, "%s%s", stackStr, newline)
-					break
-				}
-				buf = make([]byte, len(buf)*2)
+// recoverPanic is a deferred panic handler that prints a full stack trace.
+func recoverPanic() {
+	if r := recover(); r != nil {
+		newline := nl()
+		fmt.Fprintf(os.Stderr, "%s=== PANIC: Unhandled Exception ===%s", newline, newline)
+		fmt.Fprintf(os.Stderr, "Error: %v%s%s", r, newline, newline)
+		fmt.Fprintf(os.Stderr, "Stack Trace:%s", newline)
+
+		buf := make([]byte, 4096)
+		for {
+			n := runtime.Stack(buf, false)
+			if n < len(buf) {
+				stackStr := strings.ReplaceAll(string(buf[:n]), "\n", newline)
+				fmt.Fprintf(os.Stderr, "%s%s", stackStr, newline)
+				break
 			}
-
-			fmt.Fprintf(os.Stderr, "%s=== End Stack Trace ===%s", newline, newline)
-			os.Exit(2)
+			buf = make([]byte, len(buf)*2)
 		}
-	}()
 
-	// Check if we have an original PWD from the CLI wrapper
-	// If not, use current directory
-	InitialWorkingDir = os.Getenv(environments.EnvCLIEPWD)
-	if InitialWorkingDir == "" {
+		fmt.Fprintf(os.Stderr, "%s=== End Stack Trace ===%s", newline, newline)
+		os.Exit(2)
+	}
+}
+
+// initWorkingDir resolves the initial working directory from the CLI wrapper
+// environment variable or the current process working directory.
+func initWorkingDir() {
+	initialWorkingDir = os.Getenv(environments.EnvCLIEPWD)
+	if initialWorkingDir == "" {
 		var err error
-		InitialWorkingDir, err = os.Getwd()
+		initialWorkingDir, err = os.Getwd()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: could not determine working directory: %v\n", err)
 			os.Exit(1)
 		}
 	}
+}
 
-	// Bootstrap dependency providers before any command runs.
-	// Git remote provider: lets config package resolve remote URLs via go-git
-	// instead of exec.Command("git", ...).
+// bootstrapProviders wires dependency providers before any command runs.
+func bootstrapProviders() {
+	// Git remote provider: lets config package resolve remote URLs via go-git.
 	config.SetGitRemoteProvider(func(repoRoot, remoteName string) (string, error) {
 		repo, err := git.NewManager(nil).Open(repoRoot)
 		if err != nil {
@@ -83,15 +92,26 @@ func main() {
 		return repo.RemoteURL(remoteName)
 	})
 
-	// GitHub CLI executor: routes gh commands through the tool registry.
-	reports.SetGitHubCLIExecutor(ghexec.New(InitialWorkingDir))
-
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+	// Initialize tool system so simple commands (work, pipeline, release) that
+	// bypass cmdframework's phaseInitDeferred still get a working ToolSystem.
+	// Framework commands re-initialize in phaseInitDeferred; this is safe to call twice.
+	if repoRoot, err := repository.GetRepositoryRoot(""); err == nil {
+		configRoot := filepath.Join(repoRoot, ".eac")
+		_ = tool.InitializeGlobalBridges(repoRoot, configRoot)
 	}
 
-	// Build the command registry and executor
+	// Report dependencies: routes gh commands through the tool registry.
+	reports.InitDeps(reports.DefaultReportDeps(gh.New(tool.GlobalToolSystem(), initialWorkingDir)))
+}
+
+// dispatch resolves the command from os.Args and executes it.
+// Returns the process exit code.
+func dispatch() int {
+	if len(os.Args) < 2 {
+		printUsage()
+		return 1
+	}
+
 	reg := buildCommandRegistry()
 	exec := executor.New(reg)
 
@@ -99,14 +119,12 @@ func main() {
 	cmdName, found := resolveCommand(os.Args[1:], reg)
 
 	if found {
-		// Check if --help/-h was requested
 		if hasHelpFlag(os.Args[1:]) {
 			cmd, _ := reg.Get(cmdName)
 			printCommandHelp(cmd, reg)
-			os.Exit(0)
+			return 0
 		}
-
-		os.Exit(exec.Execute(context.Background(), cmdName, os.Args[1:]))
+		return exec.Execute(context.Background(), cmdName, os.Args[1:])
 	}
 
 	// Command not found - check if it's a parent command with subcommands
@@ -114,20 +132,19 @@ func main() {
 	subs := reg.Subcommands(prefix)
 
 	if len(subs) > 0 {
-		// Check for parent commands that are also executable (build, test)
 		cmd, hasCmd := reg.Get(prefix)
 		if hasCmd {
 			if _, isSimple := cmd.(core.SimpleCommandPort); isSimple {
-				os.Exit(exec.Execute(context.Background(), prefix, os.Args[1:]))
+				return exec.Execute(context.Background(), prefix, os.Args[1:])
 			}
 		}
 		printSubcommandHelp(prefix, subs)
-		os.Exit(0)
+		return 0
 	}
 
 	fmt.Fprintf(os.Stderr, "Error: Command not found: %s\n\n", prefix)
 	printUsage()
-	os.Exit(1)
+	return 1
 }
 
 // resolveCommand finds the longest matching command name from args.

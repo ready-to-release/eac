@@ -146,33 +146,11 @@ func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvide
 			log.Info(fmt.Sprintf("   ✓ Detected: %d module(s)", len(scanResult.Modules)))
 		}
 
-		// Generate new config from scan using strategy pattern
-		var repoYAML string
-		if aiProvider != "" {
-			log.Info(fmt.Sprintf("🤖 Regenerating configuration with AI (%s)...", aiProvider))
-			// Use AI generator with rule-based fallback
-			aiGen := newAIGenerator(aiProvider, deps)
-			ruleGen := NewRuleBasedGenerator()
-
-			// Try AI generation first
-			repoYAML, err = aiGen.Generate(workspaceRoot, scanResult)
-			if err != nil {
-				log.Warn(fmt.Sprintf("   ⚠️  AI generation failed: %v", err))
-				log.Info("   Falling back to rule-based generation")
-				repoYAML, err = ruleGen.Generate(workspaceRoot, scanResult)
-				if err != nil {
-					log.Error(fmt.Sprintf("Error generating config: %v", err))
-					return 1
-				}
-			}
-		} else {
-			log.Info("🔧 Regenerating configuration (rule-based)...")
-			generator := NewRuleBasedGenerator()
-			repoYAML, err = generator.Generate(workspaceRoot, scanResult)
-			if err != nil {
-				log.Error(fmt.Sprintf("Error generating config: %v", err))
-				return 1
-			}
+		// Generate new config from scan using shared strategy logic
+		repoYAML, err := generateRepoConfigFromScan(deps, workspaceRoot, aiProvider, scanResult)
+		if err != nil {
+			log.Error(fmt.Sprintf("Error generating config: %v", err))
+			return 1
 		}
 
 		// Parse the YAML into config struct

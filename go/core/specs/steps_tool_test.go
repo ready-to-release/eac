@@ -30,6 +30,8 @@ type toolTestState struct {
 	origContainerRoot string // Original CLIE_CONTAINER_ROOT value
 }
 
+// toolState is per-scenario state, reset in registerToolSteps Before/After hooks.
+// Godog runs scenarios sequentially, so a package-level var is safe here.
 var toolState *toolTestState
 
 // registerToolSteps registers step definitions for tool system feature specs.

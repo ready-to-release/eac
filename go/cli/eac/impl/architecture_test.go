@@ -14,7 +14,7 @@ import (
 )
 
 // TestNoDirectExecForTooledBinaries ensures that git, gh, and go commands
-// are routed through gitexec, ghexec, and goexec packages respectively,
+// are routed through the tool system (tool.GlobalToolSystem().RunTool)
 // rather than using direct exec.Command calls.
 //
 // This architectural constraint ensures consistent command routing via the
@@ -25,11 +25,11 @@ func TestNoDirectExecForTooledBinaries(t *testing.T) {
 		t.Fatalf("failed to get impl directory: %v", err)
 	}
 
-	// Binaries that must use helper packages
+	// Binaries that must use the tool system
 	tooledBinaries := map[string]string{
-		"git": "gitexec",
-		"gh":  "ghexec",
-		"go":  "goexec",
+		"git": "tool.GlobalToolSystem().RunTool",
+		"gh":  "tool.GlobalToolSystem().RunTool",
+		"go":  "tool.GlobalToolSystem().RunTool",
 	}
 
 	// Files/patterns exempt from this rule
@@ -144,10 +144,10 @@ func TestNoDirectExecForTooledBinaries(t *testing.T) {
 
 	if len(violations) > 0 {
 		t.Errorf("Found %d direct exec.Command calls for tooled binaries:\n\n%s\n\n"+
-			"Use the following packages instead:\n"+
-			"  - git commands: github.com/ready-to-release/eac/go/clibase/gitexec\n"+
-			"  - gh commands:  github.com/ready-to-release/eac/go/clibase/ghexec\n"+
-			"  - go commands:  github.com/ready-to-release/eac/go/clibase/goexec",
+			"Use the tool system instead:\n"+
+			"  tool.GlobalToolSystem().RunTool(ctx, \"git\", workDir, args...)\n"+
+			"  tool.GlobalToolSystem().RunTool(ctx, \"gh\", workDir, args...)\n"+
+			"  tool.GlobalToolSystem().RunTool(ctx, \"go\", workDir, args...)",
 			len(violations), strings.Join(violations, "\n"))
 	}
 }

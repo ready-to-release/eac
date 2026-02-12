@@ -39,14 +39,11 @@ The `docs/helper` package encapsulates MkDocs Docker container management for th
 ## Code Health
 
 ### Tech Debt
-- `startMkDocsContainer` in container.go (~104 lines) handles config generation, volume mounts, port allocation, and container start in one function
-- No unit tests; only BDD-level tests exist (bdd_test.go, steps_bdd_test.go)
-- Hardcoded container name and image constants in `getDockerImageConfig` (container.go:30)
+- No unit tests for container.go (226 lines), client.go (87 lines), or browser.go (59 lines); only BDD-level tests exist
+- Hardcoded container name and image constants in container.go
 
 ### Pain Points
-- All Docker interactions go through adapter functions making the package a thin pass-through, but container.go still contains MkDocs-specific config generation tightly coupled with Docker lifecycle
-- Browser opening in browser.go (59 lines) uses platform-specific command detection without testable abstraction
+- browser.go (59 lines) uses platform-specific command detection without testable abstraction
 
 ### Optimization Opportunities
-- Extract MkDocs config generation from `startMkDocsContainer` into a separate testable function (high feasibility, config generation is a pure data transformation)
-- Add unit tests for the config-generation logic independent of Docker (high feasibility, small scope)
+- None identified

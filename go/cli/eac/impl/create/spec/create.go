@@ -629,7 +629,7 @@ func loadModuleControlsContext(workspaceRoot, moduleName string, cfg *configpkg.
 	}
 
 	// Get profile path for module
-	profilePath := filepath.Join(cfg.Repository.RiskControlsPathAbs(workspaceRoot), moduleName+".profile.json")
+	profilePath := filepath.Join(paths.RiskControlsPath(workspaceRoot), moduleName+".profile.json")
 
 	// Check if profile exists
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
@@ -644,7 +644,7 @@ func loadModuleControlsContext(workspaceRoot, moduleName string, cfg *configpkg.
 	}
 
 	// Load catalog to get control descriptions
-	catalogPath := cfg.Repository.RiskCatalogPathAbs(workspaceRoot)
+	catalogPath := paths.RiskCatalogPath(workspaceRoot)
 	catalog, err := oscal.LoadCatalog(catalogPath)
 	if err != nil {
 		log.Errorf("Warning: Failed to load catalog: %v", err)

@@ -2,14 +2,14 @@ package get
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type getReleaseStatusCommand struct{}
@@ -110,26 +110,25 @@ func GetReleaseStatus() int {
 		}
 	}
 
-	// Output based on format
-	switch format {
-	case "shell":
+	// Shell format has special output requirements (eval-friendly variables)
+	if format == "shell" {
 		fmt.Printf("RELEASED=\"%s\"\n", strings.Join(result.Released, " "))
 		fmt.Printf("MISSING=\"%s\"\n", strings.Join(result.Missing, " "))
 		fmt.Printf("ALL_RELEASED=\"%t\"\n", len(result.Missing) == 0)
-	default:
-		if output, err := json.MarshalIndent(result, "", "  "); err == nil {
-			fmt.Println(string(output))
-		}
+		return 0
 	}
 
-	return 0
+	// Default: use shared helper for consistent YAML/JSON/TOML output
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
+		return result, nil
+	})
 }
 
 // checkModuleRelease queries GitHub for the latest release of a module.
 func checkModuleRelease(module, workspaceRoot string) ModuleReleaseStatus {
 	// Query GitHub releases for this module's tag pattern
 	// Tags are formatted as: module/version (e.g., clie/1.0.0)
-	output, err := ghexec.Run(workspaceRoot, "release", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "release", "list",
 		"--limit", "10",
 		"--json", "tagName",
 		"-q", fmt.Sprintf(".[] | select(.tagName | startswith(\"%s/\")) | .tagName", module),

@@ -20,9 +20,14 @@ Implements the `SimpleServicesPort` contract by assembling config, module, and t
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `services.go` | `Services` struct, `New()`, all private adapter structs implementing port interfaces |
+| File                       | Purpose                                                          |
+| -------------------------- | ---------------------------------------------------------------- |
+| `services.go`              | `Services` struct, `New()`, and core service initialization      |
+| `services_config.go`       | Config-domain adapter structs (configAdapter, repositoryAdapter) |
+| `services_components.go`   | Component-domain adapter structs (componentAdapter, etc.)        |
+| `services_environments.go` | Environment-domain adapter structs                               |
+| `services_tools.go`        | Tool-domain adapter structs (toolRegistryAdapter, etc.)          |
+| `services_testing.go`      | Test-domain adapter structs                                      |
 
 ## Dependencies
 
@@ -41,13 +46,17 @@ Provides the dependency injection entry point for CLI commands. Commands obtain 
 ## Code Health
 
 ### Tech Debt
-- `services.go` (571 lines) contains ~15 private adapter structs in a single file; splitting adapters into separate files would improve navigability
-- Several adapter methods return hardcoded zero values (e.g., `GetComponentTypesDisplay` returns `""`, `GetContentHash` returns `""`); these stubs may silently mask missing functionality
-- `GetComponentAmp` always returns `1.0` regardless of input
+
+- `GetComponentAmp` in `services_config.go` line 175 always returns `1.0` regardless of input
+- Multiple adapter methods return hardcoded empty values: `GetComponentTypesDisplay()`, `GetContentHash()`, `GetRoot()` in bookAdapter
+- Several methods in `services_config.go` return `nil` or empty strings without implementation
 
 ### Pain Points
-- The large number of adapter types implementing port interfaces makes the file dense; new port methods require updates across many adapters
+
+- `services_test.go` (599 lines) exceeds 300 lines and is significantly larger than any implementation file
+- `services_config.go` (224 lines) contains multiple stub adapter methods
+- New port interface methods require updates across multiple adapter files (`services_config.go`, `services_components.go`, `services_tools.go`, etc.)
 
 ### Optimization Opportunities
-- Extract adapter structs into `adapters.go` or per-domain files (e.g., `config_adapter.go`, `module_adapter.go`) (low effort)
-- Audit stub methods returning zero values and either implement or document them as intentionally unsupported (low effort)
+
+- None identified

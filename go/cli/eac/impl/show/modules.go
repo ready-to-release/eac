@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 )
 
@@ -34,12 +35,10 @@ func (c *showModulesCommand) Execute(_ context.Context, _ *core.CommandRequest) 
 }
 
 func ShowModules() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showModulesImpl)
+}
 
+func showModulesImpl() int {
 	// Parse flags
 	args := os.Args[1:]
 	withArtifacts := flags.HasFlag(args, "--with-artifacts", "")
@@ -133,7 +132,7 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, mod.Moniker)
+	buildDir := paths.BuildOutputPath(workspaceRoot, mod.Moniker)
 
 	_, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
 		module, buildDir, runtime.GOOS, runtime.GOARCH, cfg,

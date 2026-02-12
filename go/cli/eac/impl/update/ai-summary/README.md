@@ -45,10 +45,10 @@ The `ai-summary` sub-package automates the generation of AI-powered analysis doc
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- None identified.
+- No test coverage for command.go (246 lines) or framework.go (215 lines)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

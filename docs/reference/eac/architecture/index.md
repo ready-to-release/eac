@@ -108,7 +108,7 @@ All repository structure is defined in **YAML contracts** validated against **JS
 | Contract                | Schema Location               | Purpose                             |
 | ----------------------- | ----------------------------- | ----------------------------------- |
 | **repository.yml**      | `repository.schema.json`      | Repository-wide configuration       |
-| **component-types.yml** | `component-types.schema.json` | Component type definitions          |
+| **blueprints.yml**      | `blueprints.schema.json`      | Component kind definitions          |
 | **tool-config.yml**     | `tool-config.schema.json`     | Tool definitions and resources      |
 | **books.yml**           | `books.schema.json`           | Documentation book configuration    |
 | **test-suites.yml**     | `test-suites.schema.json`     | Test suite definitions              |

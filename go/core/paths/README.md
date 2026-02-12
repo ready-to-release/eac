@@ -11,6 +11,7 @@ This package has zero internal dependencies (stdlib only) to prevent import cycl
 | `EACCacheRoot`    | Root cache directory constant for all transient caches     |
 | `EACDir`          | Configuration directory constant (.eac)                    |
 | `CacheHashLength` | Character count for truncated hashes in cache filenames    |
+| `PathConfig`      | Repository-specific path conventions for config-aware functions |
 
 ## Patterns
 
@@ -29,6 +30,7 @@ This package has zero internal dependencies (stdlib only) to prevent import cycl
 | `paths_cache.go`    | Cache path helpers, cache filename sanitization              |
 | `paths_config.go`   | Configuration path builders for .eac directory structure     |
 | `paths_builders.go` | Composite path builders for specs, docs, design, templates   |
+| `paths_repo.go`     | Config-aware C-variant path functions and `PathConfig` struct |
 
 ## Dependencies
 
@@ -53,8 +55,8 @@ and Windows-safe moniker sanitization for output paths.
 
 ### Pain Points
 
-- No validation that `repoRoot` is non-empty or absolute in any builder function
+- paths_cache.go (310 lines), paths_config.go (295 lines) are approaching 300-line threshold
 
 ### Optimization Opportunities
 
-- `SanitizeForCacheName` allocates multiple intermediate strings; a `strings.Builder` approach could reduce allocations for hot-path cache lookups (low priority, measure first)
+- SanitizeForCacheName allocates multiple intermediate strings; a strings.Builder approach could reduce allocations for hot-path cache lookups (low priority, measure first)

@@ -22,14 +22,14 @@ Pull-based work unit scheduling with dependency resolution and LPT
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| doc.go | Package documentation and usage patterns |
-| scheduler.go | `WorkScheduler` interface and `Stats` type |
+| File                    | Responsibility                                          |
+| ----------------------- | ------------------------------------------------------- |
+| doc.go                  | Package documentation and usage patterns                |
+| scheduler.go            | `WorkScheduler` interface and `Stats` type              |
 | dependency_scheduler.go | `DependencyScheduler` implementation with heap and cond |
-| dependency_tracker.go | `DependencyTracker` forward/reverse dependency maps |
-| heap.go | `unitHeap` max-heap implementation for LPT |
-| validation.go | Cycle detection (Kahn's algorithm) and duplicate checks |
+| dependency_tracker.go   | `DependencyTracker` forward/reverse dependency maps     |
+| heap.go                 | `unitHeap` max-heap implementation for LPT              |
+| validation.go           | Cycle detection (Kahn's algorithm) and duplicate checks |
 
 ## Dependencies
 
@@ -46,12 +46,14 @@ ensures dependencies are respected and failures cascade correctly.
 ## Code Health
 
 ### Tech Debt
-- `scheduler.go`: `WorkScheduler` interface has 8 methods -- on the edge of interface bloat; `MarkFailed` vs `MarkFailedCascade` could be unified with an options parameter
-- `dependency_tracker.go:92`: lazy reverse-map (`blocks`) is built on first cascade call; a subtle performance cliff for the first failure in large graphs
+
+- scheduler.go: WorkScheduler interface has 8 methods on the edge of interface bloat; MarkFailed vs MarkFailedCascade could be unified with an options parameter
+- dependency_tracker.go: lazy reverse-map (blocks) is built on first cascade call; a subtle performance cliff for the first failure in large graphs
 
 ### Pain Points
-- Only 2 test files for 6 source files; `dependency_tracker.go` and `heap.go` lack dedicated unit tests (tested indirectly through scheduler tests)
+
+- Large test files: scheduler_test.go (900 lines), dependency_tracker_test.go (612 lines), heap_test.go (304 lines)
 
 ### Optimization Opportunities
-- Add direct unit tests for `DependencyTracker` and `unitHeap` to improve fault localization when scheduling bugs arise (low effort, high debug-time savings)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+
+- None identified

@@ -1,6 +1,8 @@
 package lint
 
 import (
+	"slices"
+
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -45,7 +47,7 @@ func ResolveLintUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 		}
 
 		// Check if linting is disabled for this module
-		if module.Linting != nil && containsString(module.Linting.Disabled, "all") {
+		if module.Linting != nil && slices.Contains(module.Linting.Disabled, "all") {
 			continue
 		}
 

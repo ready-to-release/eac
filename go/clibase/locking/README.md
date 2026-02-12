@@ -45,11 +45,12 @@ Commands acquire named locks before writing to shared directories, and the lock 
 
 ### Tech Debt
 
-- `locking.go:142` `AcquireWithWait` is ~114 lines with deeply nested select/ticker logic; extracting the polling loop would aid readability
+- None identified
 
 ### Pain Points
 
-- None identified
+- `locking.go` (406 lines) exceeds 300 lines
+- `locking_test.go` (506 lines) exceeds 300 lines
 
 ### Optimization Opportunities
 

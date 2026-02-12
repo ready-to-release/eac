@@ -59,15 +59,19 @@ type and environment without changing code.
 ## Code Health
 
 ### Tech Debt
-- `executor.go:231`: `executeContainer` (~200 lines) handles image resolution, mount setup, env forwarding, DinD, memory limits, and execution in a single function -- prime candidate for decomposition
-- `global.go`: multiple mutable singletons (`globalToolConfig`, `globalExecutor`, `defaultContainerProvider`) with `sync.Once` -- creates hidden coupling and test-isolation risks
-- `categories.go:13,28,44`: mutable package-level maps `DefaultScannerCategoryMap`, `DefaultServerTypeMap`, and `globalCategoryResolver` could be overwritten at runtime
+- None identified
 
 ### Pain Points
-- 42 files make this the largest `core` package; navigating between bridges (`build_bridge.go`, `lint_bridge.go`, etc.) and their tests requires significant context switching
-- `handler_adapter.go` (295 lines) defines 4 separate handler interfaces (`BuildHandler`, `LintHandler`, `TestHandler`, `ScanHandler`) with overlapping signatures
+- `types.go` is 1031 lines, largest non-test file in package
+- `executor.go` is 689 lines
+- `config.go` is 449 lines
+- `registry.go` is 536 lines
+- `handler_bridge.go` is 382 lines
+- `image.go` is 384 lines
+- `resolver.go` is 365 lines
+- `build_bridge.go` is 345 lines
+- `categories.go` is 193 lines, but well-tested (342-line test file)
 
 ### Optimization Opportunities
-- Extract `executeContainer` mount-building and env-forwarding into helper functions to bring it under 50 lines (medium effort, high readability gain)
-- Consider merging the handler interfaces into a single `Handler` interface with an action-type discriminator to reduce duplication (medium effort)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items
+- Consider splitting `types.go` into focused files (e.g., tool definitions, execution context, results)
+- Consider splitting `executor.go` by execution mode (system vs container)

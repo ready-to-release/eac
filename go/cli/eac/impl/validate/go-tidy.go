@@ -2,15 +2,16 @@ package validate
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/goexec"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type validateGoTidyCommand struct{}
@@ -103,6 +104,8 @@ func (r *goTidyReport) HasErrors() bool {
 }
 
 func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {
+	ts := tool.GlobalToolSystem()
+
 	report := &goTidyReport{
 		totalModules:  len(goModules),
 		tidyModules:   0,
@@ -112,7 +115,7 @@ func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {
 
 	for _, modulePath := range goModules {
 		// Run go mod tidy -diff
-		output, exitCode, err := goexec.RunCombined(context.Background(), modulePath, "mod", "tidy", "-diff")
+		output, exitCode, err := ts.RunToolCombined(context.Background(), "go", modulePath, "mod", "tidy", "-diff")
 		if err != nil {
 			report.untidyModules[modulePath] = err.Error()
 			continue
@@ -130,32 +133,40 @@ func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {
 }
 
 func printGoTidyReport(report *goTidyReport) {
-	log.Info("=== Go Module Tidy Validation Report ===")
-	log.Info("")
-	log.Infof("Total Go modules: %d", report.totalModules)
-	log.Infof("Tidy modules: %d", report.tidyModules)
-	log.Infof("Untidy modules: %d", len(report.untidyModules))
-	log.Info("")
-
-	if len(report.untidyModules) > 0 {
-		log.Info("❌ Modules with untidy dependencies:")
-		for modulePath, diff := range report.untidyModules {
-			relPath, relErr := filepath.Rel(report.repoRoot, modulePath)
-			if relErr != nil {
-				relPath = modulePath
-			}
-			log.Infof("\n  • %s", relPath)
-			if strings.TrimSpace(diff) != "" {
-				log.Infof("    Diff:\n%s", indentLines(diff, "    "))
-			}
+	// Build untidy module items - each item includes a leading blank line
+	// and optional diff detail, matching the original output format.
+	var untidyItems []string
+	for modulePath, diff := range report.untidyModules {
+		relPath, relErr := filepath.Rel(report.repoRoot, modulePath)
+		if relErr != nil {
+			relPath = modulePath
 		}
-		log.Info("")
-		log.Info("To fix, run: eac update go-tidy")
-		log.Info("")
-	} else {
-		log.Info("✅ All Go modules have tidy dependencies!")
-		log.Info("")
+		item := fmt.Sprintf("\n  %s", formatBullet(relPath))
+		if strings.TrimSpace(diff) != "" {
+			item += fmt.Sprintf("\n    Diff:\n%s", indentLines(diff, "    "))
+		}
+		untidyItems = append(untidyItems, item)
 	}
+
+	printValidationReportWithSummary(
+		validationReport{
+			Title: "Go Module Tidy Validation Report",
+			Sections: []validationSection{
+				{
+					Icon:    "❌",
+					Label:   "Modules with untidy dependencies:",
+					Items:   untidyItems,
+					FixHint: "To fix, run: eac update go-tidy",
+				},
+			},
+			SuccessMessage: "All Go modules have tidy dependencies!",
+		},
+		[]string{
+			fmt.Sprintf("Total Go modules: %d", report.totalModules),
+			fmt.Sprintf("Tidy modules: %d", report.tidyModules),
+			fmt.Sprintf("Untidy modules: %d", len(report.untidyModules)),
+		},
+	)
 }
 
 func indentLines(text, prefix string) string {

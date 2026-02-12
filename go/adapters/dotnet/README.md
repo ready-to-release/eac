@@ -48,11 +48,11 @@ This package is one of the pluggable test-runner adapters in the eac test orches
 ## Code Health
 
 ### Tech Debt
-- runner.go:180-202 manually pipes stdout/stderr and calls `cmd.Start`/`cmd.Wait`, while the restore step at line 144 uses the higher-level `tool.GlobalExecutor().Execute`. The test-execution step could use the same high-level API for consistency.
-- trx_parser.go:77-83 `reformatTRXDuration` does naive string splitting without validating that each part is numeric; malformed durations silently produce "0s" via the downstream `time.ParseDuration` error path, but the intent is unclear.
+- None identified
 
 ### Pain Points
-- None identified
+- runner.go is 235 lines; no immediate splitting needed but approaching threshold
+- No unit tests for the full Execute() (requires tool registry); runner_test.go covers helpers, fallback logic, and public API surface
 
 ### Optimization Opportunities
 - None identified

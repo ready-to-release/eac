@@ -6,13 +6,13 @@ The `godog-eac` module provides BDD test infrastructure for Godog integration, i
 
 Shows how godog-eac provides BDD infrastructure to test modules.
 
-<!-- structurizr:godog-eac:SystemContext -->
+<!-- structurizr:adapters:godog-eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the godog-eac packages.
 
-<!-- structurizr:godog-eac:Containers -->
+<!-- structurizr:adapters:godog-eac:Containers -->
 
 ## Component Architecture
 
@@ -20,13 +20,13 @@ High-level view of the godog-eac packages.
 
 Scenario initialization and mock configuration for BDD tests.
 
-<!-- structurizr:godog-eac:TestContextComponents -->
+<!-- structurizr:adapters:godog-eac:TestContextComponents -->
 
 ### Test Cache Components
 
 Thread-safe test result caching with CI optimization.
 
-<!-- structurizr:godog-eac:TestCacheComponents -->
+<!-- structurizr:adapters:godog-eac:TestCacheComponents -->
 
 ## Design File
 

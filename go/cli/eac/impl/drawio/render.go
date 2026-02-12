@@ -74,7 +74,7 @@ func DrawioRender() int {
 	}
 
 	// Check Docker
-	if err := CheckDockerAvailable(repoRoot); err != nil {
+	if err := CheckDockerAvailable(repoRoot, nil); err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -115,7 +115,7 @@ func DrawioRender() int {
 	cmdArgs := []string{"render", "-i", containerInput, "-o", containerOutput}
 
 	// Run command
-	_, err = RunDrawioCommandWithOutput(repoRoot, cmdArgs)
+	_, err = RunDrawioCommandWithOutput(repoRoot, cmdArgs, nil)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1

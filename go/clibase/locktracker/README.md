@@ -39,10 +39,14 @@ Provides the observability layer for concurrent resource management. The capacit
 ## Code Health
 
 ### Tech Debt
-- None identified; no TODO/FIXME markers, no oversized functions
+
+- None identified
 
 ### Pain Points
-- None identified; leaf package with zero dependencies, strong test coverage (2380 test lines vs 376 source lines)
+
+- Test files are significantly larger than implementation: `registry_test.go` (979 lines), `semaphore_test.go` (924 lines), `types_test.go` (477 lines)
+- Implementation files are appropriately sized: `registry.go` (183 lines), `semaphore.go` (138 lines), `types.go` (55 lines)
 
 ### Optimization Opportunities
-- None identified; the package is compact and well-tested
+
+- None identified

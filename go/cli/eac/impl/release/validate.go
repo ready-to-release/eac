@@ -10,11 +10,9 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/changelog"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/logging"
-	"github.com/ready-to-release/eac/go/core/repository"
 )
 
 type validateReleaseCommand struct{}
@@ -63,10 +61,9 @@ type ValidationReport struct {
 }
 
 func ReleaseValidate() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		validateLog.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold(withModules())
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -100,19 +97,8 @@ func ReleaseValidate() int {
 		return 1
 	}
 
-	// Load workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		validateLog.Errorf("failed to get workspace root: %v", err)
-		return 1
-	}
-
-	// Load module contracts
-	moduleRegistry, err := modules.LoadFromWorkspace("")
-	if err != nil {
-		validateLog.Errorf("failed to load modules: %v", err)
-		return 1
-	}
+	workspaceRoot := s.WorkspaceRoot
+	moduleRegistry := s.ModuleRegistry
 
 	// Determine which modules to validate
 	var modulesToValidate []string

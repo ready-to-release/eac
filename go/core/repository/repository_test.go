@@ -12,11 +12,10 @@ import (
 	"github.com/ready-to-release/eac/go/core/git"
 )
 
-// testRepos holds git.Repository instances for test helper functions
-var testRepos = make(map[string]*git.Repository)
-
-// createTestGitRepo creates a temporary git repository for testing using go-git
+// createTestGitRepo creates a temporary git repository for testing using go-git.
+// The repo is scoped to the test via t.TempDir() and needs no manual cleanup.
 func createTestGitRepo(t *testing.T) (string, git.GitRepository) {
+	t.Helper()
 	tmpDir := t.TempDir()
 
 	// Initialize git repo using go-git
@@ -33,9 +32,6 @@ func createTestGitRepo(t *testing.T) (string, git.GitRepository) {
 	if err := repo.ConfigSet("user", "email", "test@example.com"); err != nil {
 		t.Fatalf("Failed to set git user.email: %v", err)
 	}
-
-	// Store repo for helper functions
-	testRepos[tmpDir] = repo
 
 	return tmpDir, repo
 }

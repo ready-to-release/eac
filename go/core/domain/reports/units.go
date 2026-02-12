@@ -28,7 +28,7 @@ type UnitInfo struct {
 	// Tool is the tool/handler name
 	Tool string `json:"tool" yaml:"tool"`
 
-	// ComponentType is the component type from component-types.yml
+	// ComponentType is the component type from blueprints.yml component-kinds
 	ComponentType string `json:"component_type" yaml:"component_type"`
 
 	// Weight is the scheduling weight
@@ -193,7 +193,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 					Component:     compName,
 					ComponentType: compType,
 					Reason:        "no builder configured",
-					ConfigHint:    "add 'builders' to component-types.yml for type '" + compType + "'",
+					ConfigHint:    "add 'builders' to blueprints.yml component-kinds for type '" + compType + "'",
 				})
 			}
 
@@ -220,7 +220,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 					Component:     compName,
 					ComponentType: compType,
 					Reason:        "component type not lintable",
-					ConfigHint:    "add 'lintable: true' to component-types.yml for type '" + compType + "'",
+					ConfigHint:    "add 'lintable: true' to blueprints.yml component-kinds for type '" + compType + "'",
 				})
 			}
 
@@ -238,7 +238,7 @@ func resolveUnitsFromConfig(mod *modules.ModuleContract, framework Framework, cf
 					Component:     compName,
 					ComponentType: compType,
 					Reason:        "no scanners configured",
-					ConfigHint:    "add 'scanners' to component-types.yml for type '" + compType + "'",
+					ConfigHint:    "add 'scanners' to blueprints.yml component-kinds for type '" + compType + "'",
 				})
 			}
 

@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releaseCleanupCommand struct{}
@@ -33,10 +32,9 @@ func (c *releaseCleanupCommand) Execute(_ context.Context, _ *core.CommandReques
 }
 
 func ReleaseCleanup() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return 1
+	s, exitCode := newReleaseScaffold()
+	if s == nil {
+		return exitCode
 	}
 
 	// Parse flags
@@ -94,13 +92,13 @@ func ReleaseCleanup() int {
 
 // releaseExists checks if a GitHub release exists for the given tag.
 func releaseExists(tagName string) bool {
-	_, exitCode, err := ghexec.RunCombined(context.Background(), ".", "release", "view", tagName)
+	_, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "release", "view", tagName)
 	return err == nil && exitCode == 0
 }
 
 // deleteRelease deletes a GitHub release.
 func deleteRelease(tagName string) error {
-	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "release", "delete", tagName, "--yes")
+	output, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "release", "delete", tagName, "--yes")
 	if err != nil {
 		return err
 	}
@@ -113,7 +111,7 @@ func deleteRelease(tagName string) error {
 // deleteTag deletes a tag from the remote repository using gh api.
 func deleteTag(tagName string) error {
 	// Get repository from gh
-	repoOutput, err := ghexec.Run(".", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
+	repoOutput, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
 	if err != nil {
 		return fmt.Errorf("failed to get repository: %w", err)
 	}
@@ -121,7 +119,7 @@ func deleteTag(tagName string) error {
 
 	// Delete tag via API
 	apiPath := fmt.Sprintf("repos/%s/git/refs/tags/%s", repo, tagName)
-	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "api", "--method", "DELETE", apiPath)
+	output, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "api", "--method", "DELETE", apiPath)
 	if err != nil {
 		return err
 	}

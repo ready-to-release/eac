@@ -139,16 +139,9 @@ func AdaptModule(m *modules.ModuleContract) core.ModuleContractPort {
 	return NewModuleContractAdapter(m)
 }
 
-// AdaptModules wraps a slice of module domain.
-func AdaptModules(modules []*modules.ModuleContract) []core.ModuleContractPort {
-	if modules == nil {
-		return nil
-	}
-	result := make([]core.ModuleContractPort, len(modules))
-	for i, m := range modules {
-		result[i] = AdaptModule(m)
-	}
-	return result
+// AdaptModules wraps a slice of module contracts.
+func AdaptModules(mods []*modules.ModuleContract) []core.ModuleContractPort {
+	return AdaptSlice(mods, AdaptModule)
 }
 
 // UnwrapModule extracts the concrete ModuleContract from a port interface.

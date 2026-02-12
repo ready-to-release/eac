@@ -12,12 +12,12 @@ Feature: eac-cli_pipeline-run
 
     Scenario: Run pipeline for all modules
       Given modules exist with dependencies:
-        | moniker    | depends_on |
-        | core   |            |
-        | clie    | core   |
+        | moniker | depends_on |
+        | core    |            |
+        | eac     | core       |
       When I run "pipeline run"
       Then the exit code is 0
-      And "core" is processed before "clie"
+      And "core" is processed before "eac"
 
     Scenario: Run pipeline for specific modules
       Given modules "core" and "clie" exist

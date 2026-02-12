@@ -11,11 +11,10 @@ import (
 )
 
 // staticSiteServeAdapter wraps the internal serve package for static site serving.
-// It reads configuration from GlobalServeContext and delegates to the internal serve package.
-func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port int, logWriter io.Writer, opts tool.ServeOptions) (*tool.ServeResult, error) {
-	ctx := GlobalServeContext
+// It delegates to the internal serve package using the provided ServeContext configuration.
+// If ctx is nil, DefaultServeContext() is used.
+func staticSiteServeAdapter(ctx *ServeContext, workspaceRoot, moduleRoot, contentPath string, port int, logWriter io.Writer, opts tool.ServeOptions) (*tool.ServeResult, error) {
 	if ctx == nil {
-		// Use defaults if no context set
 		ctx = DefaultServeContext()
 	}
 

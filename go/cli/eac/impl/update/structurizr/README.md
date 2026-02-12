@@ -41,10 +41,11 @@ The `structurizr` sub-package maintains a cache of SVG renderings of architectur
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- None identified
 
 ### Pain Points
-- Requires Docker to be running for SVG export
+- update.go is 283 lines (approaching 300-line threshold)
+- No test coverage (missing update_test.go)
 
 ### Optimization Opportunities
-- None identified.
+- None identified

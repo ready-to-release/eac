@@ -30,7 +30,8 @@ all domain sub-packages build upon.
 
 | Path | Purpose |
 |------|---------|
-| `types.go` | `BaseContract`, `ModuleVersioning`, top-level domain types |
+| `types.go` | `BaseContract`, `ModuleVersioning`, `ModuleToBaseContract`, top-level domain types |
+| `types_artifacts.go` | `BaseContract` artifact and build helper methods (split from types.go) |
 | `contract.go` | `Contract` struct and `ContractType` enum |
 | `errors.go` | `ContractError` with `IsNotFound` helper |
 | `components.go` | `ModuleComponents`, `ComponentEntry`, `ComponentBuild`, `AmpConfig` |
@@ -59,14 +60,10 @@ packages avoid circular imports and share a single domain model.
 ## Code Health
 
 ### Tech Debt
-- `ModuleComponents` and `ComponentEntry` in `components.go` are near-duplicates of the same types in `config/modules.go`; the two definitions drift independently
-- `EACConfigRelPath` constant in `loader.go:16` is explicitly flagged as a duplication of `paths.EACConfigRelPath`
-- `globalRegistry` in `registry.go:14` is package-level mutable state populated via `init()` calls; no dependency injection alternative exists
+- None identified
 
 ### Pain Points
-- `BaseContract` in `types.go` has grown to 20+ methods (getters, artifact queries, book queries); splitting artifact logic into a helper would reduce surface area
-- `shared_definitions.go` validation maps (`validScannerCategories`, etc.) are package-level vars returned by reference — callers could mutate them
+- None identified
 
 ### Optimization Opportunities
-- `ValidScannerCategories()` and similar functions in `shared_definitions.go` return the map directly; returning a copy or using a frozen set would prevent accidental mutation — low effort
-- None identified for performance; the package is primarily type definitions with no hot paths
+- None identified

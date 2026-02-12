@@ -14,6 +14,11 @@ type Resolver struct {
 	// entries sorted by root specificity (most specific first).
 	// File entries come before root entries at the same depth.
 	entries []ownerEntry
+	// trie indexes non-file entries by path segments for O(depth) lookup.
+	trie *pathTrie
+	// fileIndex maps normalized file paths to their ownerEntry slices for O(1)
+	// exact-match lookup, replacing the linear scan of file entries.
+	fileIndex map[string][]ownerEntry
 }
 
 type ownerEntry struct {
@@ -71,7 +76,19 @@ func NewResolver(modules []ModuleDefinition) *Resolver {
 		return entries[i].root < entries[j].root
 	})
 
-	return &Resolver{entries: entries}
+	// Build file index for O(1) exact-match lookup of file entries.
+	fileIdx := make(map[string][]ownerEntry)
+	for _, e := range entries {
+		if e.isFile {
+			fileIdx[e.root] = append(fileIdx[e.root], e)
+		}
+	}
+
+	return &Resolver{
+		entries:   entries,
+		trie:      newPathTrie(entries),
+		fileIndex: fileIdx,
+	}
 }
 
 // Resolve returns the owner of a file path.
@@ -81,12 +98,10 @@ func NewResolver(modules []ModuleDefinition) *Resolver {
 func (r *Resolver) Resolve(filePath string) *Owner {
 	path := toSlash(filePath)
 
-	// Check for exact file matches (highest priority)
-	for i := range r.entries {
-		e := &r.entries[i]
-		if e.isFile && path == e.root {
-			return &Owner{Module: e.module, Component: e.component, Root: e.root}
-		}
+	// Check for exact file matches (highest priority) via O(1) index lookup.
+	if fileEntries, ok := r.fileIndex[path]; ok {
+		e := &fileEntries[0]
+		return &Owner{Module: e.module, Component: e.component, Root: e.root}
 	}
 
 	candidates := r.findCandidates(path)
@@ -132,20 +147,13 @@ func (r *Resolver) Validate(allFiles []string) []ValidationError {
 	for _, f := range allFiles {
 		path := toSlash(f)
 
-		// Check file entries first
-		var fileOwnerCount int
-		for i := range r.entries {
-			e := &r.entries[i]
-			if e.isFile && path == e.root {
-				fileOwnerCount++
+		// Check file entries first via O(1) index lookup.
+		if fileEntries, ok := r.fileIndex[path]; ok {
+			if len(fileEntries) > 1 {
+				errs = append(errs, ValidationError{FilePath: f, Issue: "multi-owned"})
+				continue
 			}
-		}
-		if fileOwnerCount > 1 {
-			errs = append(errs, ValidationError{FilePath: f, Issue: "multi-owned"})
-			continue
-		}
-		if fileOwnerCount == 1 {
-			continue
+			continue // single file owner, no issue
 		}
 
 		// Check root candidates for cross-module overlap
@@ -173,30 +181,9 @@ func (r *Resolver) Validate(allFiles []string) []ValidationError {
 }
 
 // findCandidates returns all root entries at the most-specific depth that match path.
-// Entries are sorted by depth (most specific first), so we collect all entries
-// at the first matching depth and stop.
+// Uses the path-prefix trie for O(depth) lookup instead of scanning all entries.
 func (r *Resolver) findCandidates(path string) []ownerEntry {
-	var bestDepth = -1
-	var candidates []ownerEntry
-
-	for i := range r.entries {
-		e := &r.entries[i]
-		if e.isFile {
-			continue
-		}
-		if !rootContains(e.root, path) {
-			continue
-		}
-		if bestDepth == -1 {
-			bestDepth = e.depth
-		}
-		if e.depth < bestDepth {
-			break
-		}
-		candidates = append(candidates, *e)
-	}
-
-	return candidates
+	return r.trie.findCandidatesTrie(path)
 }
 
 // resolveByExtension picks the best owner when multiple components share the same root.

@@ -41,6 +41,7 @@ Provides the AI generation pipeline with format-aware structured output, validat
 |------|---------|
 | `formats.go` | `StructuredFormat` enum, `PhaseConfig` type |
 | `retry.go` | `RetryConfig`, `RetryResult`, `GenerateWithRetry`, `BuildRetryConfig` factory, functional options |
+| `validator_factory.go` | `loadValidatorForFormat` with per-format loader functions |
 | `strategies.go` | `RetryStrategy` interface, `StandardStrategy`, `FocusedStrategy`, `EscalatingStrategy`, `GetRetryStrategy` |
 | `structured_generator.go` | `StructuredGenerator` with generation loop, validation, output cleanup |
 | `types.go` | AI type name constants, path constants, format-specific phase instruction strings |
@@ -64,6 +65,12 @@ The generation engine behind all `create-*` and AI commands. Commands construct 
 
 ## Code Health
 
-- **Tech Debt**: None identified.
-- **Pain Points**: The `loadValidatorForFormat` function in `retry.go` (line 373) has a large switch statement that grows with each new format. Could benefit from a registry pattern.
-- **Optimization Opportunities**: The `stripMarkdownFences` function in `structured_generator.go` (line 208) uses manual string scanning; could use `strings.TrimPrefix`/`strings.TrimSuffix` for clarity.
+### Tech Debt
+- None identified
+
+### Pain Points
+- structured_generator.go (277 lines): Heavy logging and debug output logic at lines 122-184 makes the generation loop harder to follow; consider extracting to a separate debug helper
+
+### Optimization Opportunities
+- structured_generator.go: The `stripMarkdownFences` function (lines 208-234) uses manual string scanning; could use `strings.TrimPrefix`/`strings.TrimSuffix` for improved clarity
+- Test coverage is good with test files present for strategies, retry logic, and structured generator

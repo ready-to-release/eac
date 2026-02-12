@@ -142,20 +142,79 @@ func TestResolveVersion(t *testing.T) {
 	}
 }
 
+func TestResolveBranchEndRef(t *testing.T) {
+	tests := []struct {
+		name        string
+		branch      string
+		trunkBranch string
+		expected    string
+	}{
+		{
+			name:        "empty branch with trunk configured",
+			branch:      "",
+			trunkBranch: "master",
+			expected:    "master",
+		},
+		{
+			name:        "empty branch with empty trunk defaults to main",
+			branch:      "",
+			trunkBranch: "",
+			expected:    "main",
+		},
+		{
+			name:        "explicit branch used as-is",
+			branch:      "develop",
+			trunkBranch: "main",
+			expected:    "develop",
+		},
+		{
+			name:        "HEAD resolves to HEAD",
+			branch:      "HEAD",
+			trunkBranch: "main",
+			expected:    "HEAD",
+		},
+		{
+			name:        "current resolves to HEAD",
+			branch:      "current",
+			trunkBranch: "main",
+			expected:    "HEAD",
+		},
+		{
+			name:        "explicit main branch",
+			branch:      "main",
+			trunkBranch: "master",
+			expected:    "main",
+		},
+		{
+			name:        "feature branch",
+			branch:      "feature/my-feature",
+			trunkBranch: "main",
+			expected:    "feature/my-feature",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveBranchEndRef(tt.branch, tt.trunkBranch)
+			if result != tt.expected {
+				t.Errorf("ResolveBranchEndRef(%q, %q) = %q, want %q",
+					tt.branch, tt.trunkBranch, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestResolveVersionWithValidation(t *testing.T) {
 	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	// Test with mock repository to simulate missing tags
 	t.Run("tag exists - validation passes", func(t *testing.T) {
-		// Create mock with existing tag
-		mockRepo := git.NewMockRepository(workspaceRoot).
-			WithTag("eac-ext/0.0.8", "abc123", time.Now())
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot).
+				WithTag("eac-ext/0.0.8", "abc123", time.Now()),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		info, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "0.0.8")
+		info, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
 		if err != nil {
 			t.Errorf("ResolveVersionWithValidation() unexpected error: %v", err)
 			return
@@ -166,16 +225,13 @@ func TestResolveVersionWithValidation(t *testing.T) {
 	})
 
 	t.Run("tag missing - validation fails with diagnostic message", func(t *testing.T) {
-		// Create mock WITHOUT the expected tag but WITH some other tags
-		mockRepo := git.NewMockRepository(workspaceRoot).
-			WithTag("eac-ext/0.0.7", "abc123", time.Now()).
-			WithTag("eac-ext/0.0.6", "def456", time.Now())
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot).
+				WithTag("eac-ext/0.0.7", "abc123", time.Now()).
+				WithTag("eac-ext/0.0.6", "def456", time.Now()),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		_, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "0.0.8")
+		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
 		if err == nil {
 			t.Error("ResolveVersionWithValidation() expected error for missing tag, got none")
 			return
@@ -201,14 +257,11 @@ func TestResolveVersionWithValidation(t *testing.T) {
 	})
 
 	t.Run("tag missing - no other tags available", func(t *testing.T) {
-		// Create mock with no tags at all
-		mockRepo := git.NewMockRepository(workspaceRoot)
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		_, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "0.0.8")
+		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
 		if err == nil {
 			t.Error("ResolveVersionWithValidation() expected error for missing tag, got none")
 			return
@@ -221,14 +274,11 @@ func TestResolveVersionWithValidation(t *testing.T) {
 	})
 
 	t.Run("unreleased version - bypasses tag validation", func(t *testing.T) {
-		// Create mock with no tags - unreleased should still work
-		mockRepo := git.NewMockRepository(workspaceRoot)
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		info, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "unreleased")
+		info, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "unreleased")
 		if err != nil {
 			t.Errorf("ResolveVersionWithValidation(unreleased) should not fail: %v", err)
 			return
@@ -239,14 +289,11 @@ func TestResolveVersionWithValidation(t *testing.T) {
 	})
 
 	t.Run("empty version - treated as unreleased, bypasses validation", func(t *testing.T) {
-		// Create mock with no tags
-		mockRepo := git.NewMockRepository(workspaceRoot)
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		info, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "")
+		info, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "")
 		if err != nil {
 			t.Errorf("ResolveVersionWithValidation('') should not fail: %v", err)
 			return
@@ -263,15 +310,12 @@ func TestResolveVersionWithValidation(t *testing.T) {
 			t.Skipf("Could not resolve latest version: %v", err)
 		}
 
-		// Create mock with the expected tag
-		mockRepo := git.NewMockRepository(workspaceRoot).
-			WithTag(info.GitTag, "abc123", time.Now())
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot).
+				WithTag(info.GitTag, "abc123", time.Now()),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		validatedInfo, err := ResolveVersionWithValidation(workspaceRoot, "eac-ext", "latest")
+		validatedInfo, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "latest")
 		if err != nil {
 			t.Errorf("ResolveVersionWithValidation(latest) unexpected error: %v", err)
 			return
@@ -288,14 +332,11 @@ func TestResolveVersionWithValidation(t *testing.T) {
 			t.Skipf("Could not resolve latest version: %v", err)
 		}
 
-		// Create mock WITHOUT the tag
-		mockRepo := git.NewMockRepository(workspaceRoot)
+		deps := &ReportDeps{
+			VersionResolverRepo: git.NewMockRepository(workspaceRoot),
+		}
 
-		// Inject mock
-		SetVersionResolverRepo(mockRepo)
-		defer SetVersionResolverRepo(nil)
-
-		_, err = ResolveVersionWithValidation(workspaceRoot, "eac-ext", "latest")
+		_, err = ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "latest")
 		if err == nil {
 			t.Error("ResolveVersionWithValidation(latest) should fail when tag is missing")
 			return

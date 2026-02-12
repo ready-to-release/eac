@@ -7,7 +7,7 @@ Provides the core pipeline execution engine and GitHub CLI abstraction layer use
 - **`PipelineRunner`** -- Orchestrates pipeline execution across modules with dependency ordering, wait modes, and timeout support
 - **`GitHubCLI`** -- Interface defining GitHub workflow operations: trigger, watch, get SHA, list runs, get run status
 - **`GitHubCLIImpl`** -- Production implementation of `GitHubCLI` that shells out to the `gh` CLI tool
-- **`MockGitHubCLI`** -- Mock implementation controlled by environment variables (`CLIE_MOCK_GITHUB_CLI`) for testing
+- **`MockGitHubCLI`** -- Mock implementation configured via functional options (with env-var fallback for BDD harnesses)
 - **`WorkflowRunSummary`** -- Status and conclusion of a single GitHub Actions workflow run
 
 ## Key Functions
@@ -19,11 +19,12 @@ Provides the core pipeline execution engine and GitHub CLI abstraction layer use
 - **`RunAllPipelines()`** -- Execute pipelines for all modules in dependency order
 - **`RunAllChangedPipelines()`** -- Execute pipelines only for modules with changes (via git diff)
 - **`topologicalSort()`** -- Sort modules by dependency order using topological sort for sequential execution
-- **`NewGitHubCLI()`** -- Create a production `GitHubCLI` using the `gh` CLI tool
+- **`NewGitHubCLI()`** -- Create a production `GitHubCLI` using the `gh` CLI tool (or mock when env var is set)
+- **`NewMockGitHubCLI()`** -- Create a mock `GitHubCLI` with functional options for explicit test control
 
 ## Patterns
 
-- Interface-based GitHub CLI abstraction: production `gh` CLI and environment-variable-controlled mock
+- Interface-based GitHub CLI abstraction: production `gh` CLI and DI-configurable mock with functional options
 - Topological sort for dependency-ordered execution: ensures dependent modules run after their dependencies
 - Sequential pipeline execution with per-module wait: runs one module at a time when wait mode is enabled
 - Workflow file filtering: only dispatches modules that have matching `.github/workflows/ci-{module}.yaml` files
@@ -52,12 +53,12 @@ The `helper` package is the execution backbone of the pipeline system. All pipel
 ## Code Health
 
 ### Tech Debt
-- `runner.go` (363 lines) combines pipeline orchestration, topological sort, and changed-module detection in one file
-- `github.go` (283 lines) contains both the interface, production implementation, and mock in one file
+- runner.go (367 lines) is the largest file; contains pipeline orchestration and topological sort
+- github.go (324 lines) contains GitHubCLI implementation and mock
+- runner_test.go (121 lines) provides unit tests for topological sort logic
 
 ### Pain Points
-- `MockGitHubCLI` relies on environment variables for control, making test setup implicit rather than explicit
+- None identified
 
 ### Optimization Opportunities
-- Extract `topologicalSort()` into a shared graph utility (moderate feasibility, could benefit other dependency-ordering code)
-- Consider constructor injection for `MockGitHubCLI` instead of environment variable control (moderate effort, improves testability)
+- topologicalSort() is standalone and tested; extracting to shared utility deferred due to single-use site

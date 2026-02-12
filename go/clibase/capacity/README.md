@@ -19,10 +19,10 @@ Controls concurrent resource usage across parallel command executions within a w
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `global.go` | `GlobalSemaphore` with weighted acquisition, release, and state reporting |
-| `dual_pool.go` | `DualPoolSemaphore` coordinating independent host and Docker pools |
+| File           | Purpose                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| `global.go`    | `GlobalSemaphore` with weighted acquisition, release, and state reporting |
+| `dual_pool.go` | `DualPoolSemaphore` coordinating independent host and Docker pools        |
 
 ## Dependencies
 
@@ -37,13 +37,13 @@ Prevents resource exhaustion when multiple commands run concurrently in the same
 ## Code Health
 
 ### Tech Debt
-- `global.go:21` package-level mutable `log` var; prefer injecting the logger through constructors
-- `global.go:107` signal handler goroutine has no shutdown channel -- relies on process exit rather than graceful cleanup
+
+- None identified
 
 ### Pain Points
-- `global_test.go` (128 lines) has limited coverage relative to `global.go` (401 lines); file-lock and stale-process-cleanup paths are under-tested
-- Cross-process coordination via file locks is inherently platform-sensitive; no Windows-specific integration tests exist
+
+- `global.go` is 401 lines, exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Add a test that exercises `cleanStaleFromState` with simulated dead-PID entries (low effort)
-- Consider replacing busy-wait in `Acquire` with OS-level file-lock notification to reduce CPU spin (high effort, platform-dependent)
+
+- None identified

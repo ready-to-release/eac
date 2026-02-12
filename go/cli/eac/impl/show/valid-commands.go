@@ -3,11 +3,9 @@ package show
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 )
@@ -31,12 +29,10 @@ func (c *showValidCommandsCommand) Execute(_ context.Context, _ *core.CommandReq
 }
 
 func ShowValidCommands() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showValidCommandsImpl)
+}
 
+func showValidCommandsImpl() int {
 	all := registry.Global().All()
 
 	// Extract and sort commands

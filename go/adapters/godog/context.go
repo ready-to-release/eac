@@ -190,35 +190,25 @@ func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 	return env
 }
 
-// buildMockingEnvironment adds mocking environment variables for tests.
-// Sets CLIE_CONTAINER_ROOT, CLIE_MOCK_AI_DIR, CLIE_MOCK_SECURITY, and CLIE_MOCK_STRUCTURIZR.
-func (c *TestContext) buildMockingEnvironment(env []string) []string {
-	// Set distribution root for template loading
-	// Templates are NOT copied to isolated test directories - they live in the original repo
-	// This allows AI commands to load system default templates from templates/ai/
-	env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEContainerRoot, c.OriginalRepoRoot))
-
-	// Load mock configuration from .eac/testing-mocks.yml
-	// Falls back to environment variables if config file doesn't exist (backward compatibility)
+// loadMockConfig loads the mock configuration from .eac/testing-mocks.yml.
+// Returns an empty config (not error) if the file is missing, for backward compatibility.
+func (c *TestContext) loadMockConfig() config.TestingMocksConfig {
 	mockConfigPath := filepath.Join(c.OriginalRepoRoot, ".eac", "testing-mocks.yml")
 	mockConfig, err := config.LoadTestingMocks(mockConfigPath)
 	if err != nil {
-		// Log warning but continue with empty config (will use environment variables)
-		// This ensures tests still work if config file is missing
-		fmt.Fprintf(os.Stderr, "Warning: Failed to load mock config from %s: %v\n", mockConfigPath, err)
-		fmt.Fprintf(os.Stderr, "Falling back to environment variables for mock configuration\n")
-		// Use empty config which will generate no mock env vars
-		mockConfig = config.TestingMocksConfig{}
+		log.Warnf("Failed to load mock config from %s: %v - falling back to environment variables", mockConfigPath, err)
+		return config.TestingMocksConfig{}
 	}
+	return mockConfig
+}
 
-	// Convert mock configuration to environment variables
+// resolveMockEnvVars converts mock configuration to environment variables,
+// resolving relative paths to absolute paths based on the repo root.
+func (c *TestContext) resolveMockEnvVars(mockConfig config.TestingMocksConfig) []string {
 	mockEnvVars := mockConfig.ToEnvironmentVariables()
 
-	// Process mock env vars to make relative paths absolute
-	// The mock_dir in config is relative to repo root, but subprocess runs from isolated dir
 	for i, e := range mockEnvVars {
 		if strings.HasPrefix(e, environments.EnvCLIEMockAIDir+"=") {
-			// Extract the path and make it absolute if relative
 			mockDir := strings.TrimPrefix(e, environments.EnvCLIEMockAIDir+"=")
 			if mockDir != "" && !filepath.IsAbs(mockDir) {
 				mockDir = filepath.Join(c.OriginalRepoRoot, mockDir)
@@ -227,27 +217,44 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 		}
 	}
 
-	env = append(env, mockEnvVars...)
+	return mockEnvVars
+}
 
-	// Override mock AI directory if not already set by config
-	// This ensures backward compatibility with existing tests
-	hasAIDir := false
-	for _, e := range mockEnvVars {
+// resolveAIDir returns the mock AI directory env var, or empty string if not needed.
+// This provides backward compatibility when the config file does not set the AI mock directory.
+func (c *TestContext) resolveAIDir(mockConfig config.TestingMocksConfig, existingVars []string) string {
+	for _, e := range existingVars {
 		if strings.HasPrefix(e, environments.EnvCLIEMockAIDir+"=") {
-			hasAIDir = true
-			break
+			return "" // Already set by config
 		}
 	}
-	if !hasAIDir && mockConfig.Mocks.AI.Enabled && c.AssetsPath != "" {
-		// Set mock AI directory for subprocess commands
-		// Use container root if in container, otherwise repo root
-		assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
-		if assetsRoot != "" {
-			assetsDir := filepath.Join(assetsRoot, c.AssetsPath)
-			if _, err := os.Stat(assetsDir); err == nil {
-				env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEMockAIDir, assetsDir))
-			}
-		}
+
+	if !mockConfig.Mocks.AI.Enabled || c.AssetsPath == "" {
+		return ""
+	}
+
+	assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
+	if assetsRoot == "" {
+		return ""
+	}
+	assetsDir := filepath.Join(assetsRoot, c.AssetsPath)
+	if _, err := os.Stat(assetsDir); err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%s=%s", environments.EnvCLIEMockAIDir, assetsDir)
+}
+
+// buildMockingEnvironment adds mocking environment variables for tests.
+// Sets CLIE_CONTAINER_ROOT, CLIE_MOCK_AI_DIR, CLIE_MOCK_SECURITY, and CLIE_MOCK_STRUCTURIZR.
+func (c *TestContext) buildMockingEnvironment(env []string) []string {
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvCLIEContainerRoot, c.OriginalRepoRoot))
+
+	mockConfig := c.loadMockConfig()
+	mockEnvVars := c.resolveMockEnvVars(mockConfig)
+	env = append(env, mockEnvVars...)
+
+	if aiDir := c.resolveAIDir(mockConfig, mockEnvVars); aiDir != "" {
+		env = append(env, aiDir)
 	}
 
 	return env
@@ -440,72 +447,42 @@ func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 
 // logBinaryNotFoundDiagnostics outputs comprehensive diagnostic information
 // when the commands binary cannot be found. This helps debug CI failures.
+// Uses the structured logger so output is captured by CI log aggregation.
 func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "╔══════════════════════════════════════════════════════════════════╗\n")
-	fmt.Fprintf(os.Stderr, "║  DIAGNOSTIC: Commands binary not found                           ║\n")
-	fmt.Fprintf(os.Stderr, "╚══════════════════════════════════════════════════════════════════╝\n")
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Environment:\n")
-	fmt.Fprintf(os.Stderr, "  GOOS:     %s\n", runtime.GOOS)
-	fmt.Fprintf(os.Stderr, "  GOARCH:   %s\n", runtime.GOARCH)
-	fmt.Fprintf(os.Stderr, "  PWD:      %s\n", mustGetwd())
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Paths:\n")
-	fmt.Fprintf(os.Stderr, "  Expected binary:    %s\n", binaryPath)
-	fmt.Fprintf(os.Stderr, "  OriginalRepoRoot:   %s\n", c.OriginalRepoRoot)
-	fmt.Fprintf(os.Stderr, "  IsolatedDir:        %s\n", c.IsolatedDir)
-	fmt.Fprintf(os.Stderr, "  CLIE_CONTAINER_ROOT: %s\n", os.Getenv(environments.EnvCLIEContainerRoot))
-	fmt.Fprintf(os.Stderr, "\n")
+	log.Warnf("Commands binary not found: %s", binaryPath)
+	log.Warnf("Environment: GOOS=%s GOARCH=%s PWD=%s", runtime.GOOS, runtime.GOARCH, mustGetwd())
+	log.Warnf("Paths: expected=%s repoRoot=%s isolatedDir=%s containerRoot=%s",
+		binaryPath, c.OriginalRepoRoot, c.IsolatedDir, os.Getenv(environments.EnvCLIEContainerRoot))
 
 	// Check tools directory
 	toolsDir := filepath.Join(c.OriginalRepoRoot, "out", "tools")
-	fmt.Fprintf(os.Stderr, "Tools directory contents (%s):\n", toolsDir)
 	if entries, err := os.ReadDir(toolsDir); err == nil {
-		if len(entries) == 0 {
-			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
-		}
+		names := make([]string, 0, len(entries))
 		for _, entry := range entries {
-			info, infoErr := entry.Info()
-			if infoErr == nil && info != nil {
-				fmt.Fprintf(os.Stderr, "  - %s (%d bytes, mode: %s)\n", entry.Name(), info.Size(), info.Mode())
-			} else {
-				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())
-			}
+			names = append(names, entry.Name())
 		}
+		log.Warnf("Tools directory (%s): %v", toolsDir, names)
 	} else if os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "  (directory does not exist)\n")
+		log.Warnf("Tools directory does not exist: %s", toolsDir)
 	} else {
-		fmt.Fprintf(os.Stderr, "  (error reading: %v)\n", err)
+		log.Warnf("Tools directory error: %v", err)
 	}
 
 	// Check build directory for eac
 	buildDir := filepath.Join(c.OriginalRepoRoot, "out", "build", "eac")
-	fmt.Fprintf(os.Stderr, "\nBuild directory contents (%s):\n", buildDir)
 	if entries, err := os.ReadDir(buildDir); err == nil {
-		if len(entries) == 0 {
-			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
-		}
+		names := make([]string, 0, len(entries))
 		for _, entry := range entries {
-			info, infoErr := entry.Info()
-			if infoErr == nil && info != nil {
-				fmt.Fprintf(os.Stderr, "  - %s (%d bytes)\n", entry.Name(), info.Size())
-			} else {
-				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())
-			}
+			names = append(names, entry.Name())
 		}
+		log.Warnf("Build directory (%s): %v", buildDir, names)
 	} else if os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "  (directory does not exist)\n")
+		log.Warnf("Build directory does not exist: %s", buildDir)
 	} else {
-		fmt.Fprintf(os.Stderr, "  (error reading: %v)\n", err)
+		log.Warnf("Build directory error: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Troubleshooting:\n")
-	fmt.Fprintf(os.Stderr, "  1. Ensure eac is built before running tests\n")
-	fmt.Fprintf(os.Stderr, "  2. Check that @depm:eac tag is on the test\n")
-	fmt.Fprintf(os.Stderr, "  3. In CI, verify the build artifact was downloaded\n")
-	fmt.Fprintf(os.Stderr, "\n")
+	log.Warnf("Troubleshooting: 1) Ensure eac is built before running tests 2) Check @depm:eac tag 3) In CI, verify build artifact was downloaded")
 }
 
 // mustGetwd returns the current working directory or "(unknown)" on error.

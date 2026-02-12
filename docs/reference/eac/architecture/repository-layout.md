@@ -56,15 +56,15 @@ eac/
 │   └── static-site/            # Static site hosting
 │
 ├── contracts/                  # JSON schemas and system defaults
-│   ├── eac-core/0.1.0/         # Core EAC schemas and defaults
-│   │   ├── defaults/           # System default configurations
-│   │   │   ├── component-types.yml  # Component type definitions
-│   │   │   ├── tool-config.yml      # Tool definitions and resources
-│   │   │   ├── environments.yml     # Environment configurations
-│   │   │   ├── test-suites.yml      # Test suite definitions
-│   │   │   └── ...                  # Other system defaults
+│   ├── core/0.1.0/             # Core EAC schemas and defaults
+│   │   ├── schemas/
+│   │   │   └── defaults/       # System default configurations
+│   │   │       ├── blueprints.yml    # Component kind definitions
+│   │   │       ├── tool-config.yml   # Tool definitions and resources
+│   │   │       ├── environments.yml  # Environment configurations
+│   │   │       ├── test-suites.yml   # Test suite definitions
+│   │   │       └── ...               # Other system defaults
 │   │   ├── repository.schema.json
-│   │   ├── component-types.schema.json
 │   │   └── ...
 │   ├── eac-docs/0.1.0/         # Documentation schemas
 │   ├── clie/0.1.0/          # CLI-specific schemas
@@ -166,7 +166,7 @@ modules:
 For complete module configuration reference, see:
 
 - [Modules Contract](./contracts.md#modules-contract) - Full field reference and validation rules
-- [Component Types Contract](./contracts.md#component-types-contract) - Type templates and capabilities
+- [Component Kinds Contract](./contracts.md#blueprints-contract) - Kind templates and capabilities
 - [Modules Documentation](../modules/index.md) - Module system and lifecycle
 
 ---
@@ -190,6 +190,6 @@ For comprehensive information about the EAC and CLIE system:
 ### Configuration Files
 
 - `.eac/repository.yml` - Module registry and dependencies (user config)
-- `contracts/eac-core/0.1.0/defaults/` - System default configurations
-- `contracts/eac-core/0.1.0/defaults/component-types.yml` - Component type definitions
-- `contracts/eac-core/0.1.0/` - JSON schemas for validation
+- `contracts/core/0.1.0/schemas/defaults/` - System default configurations
+- `contracts/core/0.1.0/schemas/defaults/blueprints.yml` - Component kind definitions
+- `contracts/core/0.1.0/` - JSON schemas for validation

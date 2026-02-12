@@ -12,7 +12,7 @@ import (
 type UnitID struct {
 	Action        ActionType        `json:"context"`        // build, test, lint, scan (JSON tag kept as "context" for cache compat)
 	Module        string            `json:"module"`         // module moniker (e.g., "core")
-	ComponentType string            `json:"component_type"` // from component-types.yml (e.g., "go", "gherkin")
+	ComponentType string            `json:"component_type"` // from blueprints.yml component-kinds (e.g., "go", "gherkin")
 	ComponentName string            `json:"component_name"` // instance name within module (e.g., "go", "docker")
 	Tool          string            `json:"tool"`           // handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
 	Extra         map[string]string `json:"extra,omitempty"`// context-specific (e.g., testset: "unit")
@@ -25,7 +25,7 @@ func (u UnitID) Path() string {
 	return u.Module + ":" + u.ComponentType + ":" + u.ComponentName
 }
 
-// GetComponentType returns the component type from component-types.yml.
+// GetComponentType returns the component type from blueprints.yml component-kinds.
 func (u UnitID) GetComponentType() string { return u.ComponentType }
 
 // GetComponentName returns the component instance name.
@@ -389,7 +389,7 @@ func AllocationForWeight(weight int, isContainer bool) PoolAllocation {
 // It describes what to execute and how to schedule it.
 type UnitSpec struct {
 	ID             UnitID         // Unique identifier for this work unit
-	ComponentType  string         // From component-types.yml (e.g., "go", "gherkin")
+	ComponentType  string         // From blueprints.yml component-kinds (e.g., "go", "gherkin")
 	Weight         int            // Scheduling weight for resource allocation (host pool)
 	PoolAllocation PoolAllocation // Dual pool allocation for scheduling
 	DependsOn      []UnitID       // Work units that must complete first (within module)

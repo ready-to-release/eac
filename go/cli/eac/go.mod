@@ -15,6 +15,7 @@ require (
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/dotnet v0.0.0
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
+	github.com/ready-to-release/eac/go/adapters/gh v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
 	github.com/ready-to-release/eac/go/adapters/mocha v0.0.0
@@ -172,6 +173,7 @@ replace (
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker
 	github.com/ready-to-release/eac/go/adapters/dotnet => ../../adapters/dotnet
 	github.com/ready-to-release/eac/go/adapters/eac => ../../adapters/eac
+	github.com/ready-to-release/eac/go/adapters/gh => ../../adapters/gh
 	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
 	github.com/ready-to-release/eac/go/adapters/gotest => ../../adapters/gotest
 	github.com/ready-to-release/eac/go/adapters/mocha => ../../adapters/mocha

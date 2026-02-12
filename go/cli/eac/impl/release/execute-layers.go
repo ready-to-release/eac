@@ -11,8 +11,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type releaseExecuteLayersCommand struct{}
@@ -53,59 +52,31 @@ type LayerRun struct {
 	RunID  string
 }
 
+// executeLayersFlags holds parsed CLI flags for the execute-layers command.
+type executeLayersFlags struct {
+	layersJSON string
+	layersFile string
+	timeout    int
+	dryRun     bool
+}
+
 func ReleaseExecuteLayers() int {
-	// Get workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		log.Errorf("Error: failed to find repository root: %v", err)
-		return 1
+	s, exitCode := newReleaseScaffoldNoFlags()
+	if s == nil {
+		return exitCode
+	}
+	workspaceRoot := s.WorkspaceRoot
+
+	flags := parseExecuteLayersFlags()
+
+	layersJSON, exitCode := loadLayersJSON(flags.layersJSON, flags.layersFile)
+	if exitCode != 0 {
+		return exitCode
 	}
 
-	// Parse flags
-	layersJSON := ""
-	layersFile := ""
-	timeout := 900 // 15 minutes default per release
-	dryRun := false
-
-	for i := 3; i < len(os.Args); i++ {
-		arg := os.Args[i]
-		switch {
-		case arg == "--layers" && i+1 < len(os.Args):
-			layersJSON = os.Args[i+1]
-			i++
-		case arg == "--layers-file" && i+1 < len(os.Args):
-			layersFile = os.Args[i+1]
-			i++
-		case arg == "--timeout" && i+1 < len(os.Args):
-			if v, err := strconv.Atoi(os.Args[i+1]); err == nil {
-				timeout = v
-			}
-			i++
-		case arg == "--dry-run":
-			dryRun = true
-		}
-	}
-
-	// Load layers JSON
-	if layersFile != "" {
-		data, err := os.ReadFile(layersFile)
-		if err != nil {
-			log.Errorf("Error reading layers file: %v", err)
-			return 1
-		}
-		layersJSON = string(data)
-	}
-
-	if layersJSON == "" {
-		log.Error("Error: --layers or --layers-file is required")
-		return 1
-	}
-
-	// Parse layers
-	var layers [][]LayerModule
-	if err := json.Unmarshal([]byte(layersJSON), &layers); err != nil {
-		log.Errorf("Error parsing layers JSON: %v", err)
-		return 1
+	layers, exitCode := parseReleaseLayers(layersJSON)
+	if exitCode != 0 {
+		return exitCode
 	}
 
 	if len(layers) == 0 {
@@ -116,9 +87,73 @@ func ReleaseExecuteLayers() int {
 	log.Infof("Processing %d release layer(s) in dependency order...", len(layers))
 	log.Info("")
 
-	failedModules := []string{}
+	failedModules := processAllLayers(workspaceRoot, layers, flags.timeout, flags.dryRun)
 
-	// Process each layer sequentially
+	return reportLayerResults(failedModules)
+}
+
+// parseExecuteLayersFlags extracts CLI flags from os.Args for the execute-layers command.
+func parseExecuteLayersFlags() executeLayersFlags {
+	f := executeLayersFlags{
+		timeout: 900, // 15 minutes default per release
+	}
+
+	for i := 3; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		switch {
+		case arg == "--layers" && i+1 < len(os.Args):
+			f.layersJSON = os.Args[i+1]
+			i++
+		case arg == "--layers-file" && i+1 < len(os.Args):
+			f.layersFile = os.Args[i+1]
+			i++
+		case arg == "--timeout" && i+1 < len(os.Args):
+			if v, err := strconv.Atoi(os.Args[i+1]); err == nil {
+				f.timeout = v
+			}
+			i++
+		case arg == "--dry-run":
+			f.dryRun = true
+		}
+	}
+	return f
+}
+
+// loadLayersJSON resolves the layers JSON string from either direct input or a file path.
+// Returns the JSON string and an exit code (0 on success, 1 on failure).
+func loadLayersJSON(layersJSON, layersFile string) (string, int) {
+	if layersFile != "" {
+		data, err := os.ReadFile(layersFile)
+		if err != nil {
+			log.Errorf("Error reading layers file: %v", err)
+			return "", 1
+		}
+		layersJSON = string(data)
+	}
+
+	if layersJSON == "" {
+		log.Error("Error: --layers or --layers-file is required")
+		return "", 1
+	}
+	return layersJSON, 0
+}
+
+// parseReleaseLayers unmarshals a JSON string into release layer slices.
+// Returns the parsed layers and an exit code (0 on success, 1 on failure).
+func parseReleaseLayers(layersJSON string) ([][]LayerModule, int) {
+	var layers [][]LayerModule
+	if err := json.Unmarshal([]byte(layersJSON), &layers); err != nil {
+		log.Errorf("Error parsing layers JSON: %v", err)
+		return nil, 1
+	}
+	return layers, 0
+}
+
+// processAllLayers iterates through each layer in dependency order, dispatching
+// workflows and awaiting their results. Returns the list of failed module names.
+func processAllLayers(workspaceRoot string, layers [][]LayerModule, timeout int, dryRun bool) []string {
+	var failedModules []string
+
 	for layerIdx, layer := range layers {
 		if len(layer) == 0 {
 			continue
@@ -129,66 +164,90 @@ func ReleaseExecuteLayers() int {
 		log.Infof("Layer %d/%d (%d module(s))", layerIdx+1, len(layers), len(layer))
 		log.Info("==========================================")
 
-		// Collect run IDs for this layer
-		var layerRuns []LayerRun
-
-		// Trigger all modules in this layer
-		for _, mod := range layer {
-			log.Info("")
-			log.Infof("  [%s] (%s) Releasing version: %s", mod.Module, mod.Type, mod.Version)
-
-			workflow := fmt.Sprintf("release-%s.yaml", mod.Module)
-			workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", workflow)
-
-			if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
-				log.Warnf("  [%s] No release workflow found: %s", mod.Module, workflow)
-				continue
-			}
-
-			if dryRun {
-				log.Infof("  [%s] (dry-run) Would dispatch %s with version=%s", mod.Module, workflow, mod.Version)
-				continue
-			}
-
-			// Dispatch workflow (version only for semver modules)
-			log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
-			runID, err := dispatchAndGetRunID(workspaceRoot, workflow, mod.Version, mod.Type)
-			if err != nil {
-				log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
-				failedModules = append(failedModules, mod.Module)
-				continue
-			}
-
-			if runID != "" {
-				log.Infof("  [%s] Run ID: %s", mod.Module, runID)
-				layerRuns = append(layerRuns, LayerRun{Module: mod.Module, RunID: runID})
-			}
-		}
+		layerRuns, failed := dispatchLayerModules(workspaceRoot, layer, dryRun)
+		failedModules = append(failedModules, failed...)
 
 		if dryRun {
 			continue
 		}
 
-		// Await all runs in this layer
-		if len(layerRuns) > 0 {
-			log.Info("")
-			log.Infof("  Awaiting layer %d completion...", layerIdx+1)
+		failed = awaitLayerRuns(layerRuns, layerIdx, timeout)
+		failedModules = append(failedModules, failed...)
+	}
 
-			for _, run := range layerRuns {
-				success, err := awaitWorkflowRun(run.RunID, timeout)
-				if err != nil {
-					log.Errorf("  [%s] Error awaiting: %v", run.Module, err)
-					failedModules = append(failedModules, fmt.Sprintf("%s(error)", run.Module))
-				} else if !success {
-					log.Errorf("  [%s] ❌ Failed", run.Module)
-					failedModules = append(failedModules, run.Module)
-				} else {
-					log.Infof("  [%s] ✅ Completed successfully", run.Module)
-				}
-			}
+	return failedModules
+}
+
+// dispatchLayerModules triggers release workflows for all modules in a single layer.
+// Returns the list of dispatched runs and any module names that failed to dispatch.
+func dispatchLayerModules(workspaceRoot string, layer []LayerModule, dryRun bool) ([]LayerRun, []string) {
+	var layerRuns []LayerRun
+	var failedModules []string
+
+	for _, mod := range layer {
+		log.Info("")
+		log.Infof("  [%s] (%s) Releasing version: %s", mod.Module, mod.Type, mod.Version)
+
+		workflow := fmt.Sprintf("release-%s.yaml", mod.Module)
+		workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", workflow)
+
+		if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
+			log.Warnf("  [%s] No release workflow found: %s", mod.Module, workflow)
+			continue
+		}
+
+		if dryRun {
+			log.Infof("  [%s] (dry-run) Would dispatch %s with version=%s", mod.Module, workflow, mod.Version)
+			continue
+		}
+
+		log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
+		runID, err := dispatchAndGetRunID(workspaceRoot, workflow, mod.Version, mod.Type)
+		if err != nil {
+			log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
+			failedModules = append(failedModules, mod.Module)
+			continue
+		}
+
+		if runID != "" {
+			log.Infof("  [%s] Run ID: %s", mod.Module, runID)
+			layerRuns = append(layerRuns, LayerRun{Module: mod.Module, RunID: runID})
 		}
 	}
 
+	return layerRuns, failedModules
+}
+
+// awaitLayerRuns waits for all dispatched workflow runs in a layer to complete.
+// Returns the list of module names that failed or encountered errors.
+func awaitLayerRuns(layerRuns []LayerRun, layerIdx, timeout int) []string {
+	if len(layerRuns) == 0 {
+		return nil
+	}
+
+	var failedModules []string
+
+	log.Info("")
+	log.Infof("  Awaiting layer %d completion...", layerIdx+1)
+
+	for _, run := range layerRuns {
+		success, err := awaitWorkflowRun(run.RunID, timeout)
+		if err != nil {
+			log.Errorf("  [%s] Error awaiting: %v", run.Module, err)
+			failedModules = append(failedModules, fmt.Sprintf("%s(error)", run.Module))
+		} else if !success {
+			log.Errorf("  [%s] ❌ Failed", run.Module)
+			failedModules = append(failedModules, run.Module)
+		} else {
+			log.Infof("  [%s] ✅ Completed successfully", run.Module)
+		}
+	}
+
+	return failedModules
+}
+
+// reportLayerResults logs the final outcome and returns the appropriate exit code.
+func reportLayerResults(failedModules []string) int {
 	log.Info("")
 	if len(failedModules) > 0 {
 		log.Warnf("Some releases failed: %s", strings.Join(failedModules, ", "))
@@ -207,7 +266,7 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 	if versionType == "semver" {
 		args = append(args, "-f", fmt.Sprintf("version=%s", version))
 	}
-	output, exitCode, err := ghexec.RunCombined(context.Background(), workspaceRoot, args...)
+	output, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", workspaceRoot, args...)
 	if err != nil {
 		return "", fmt.Errorf("dispatch failed: %w", err)
 	}
@@ -220,7 +279,7 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 
 	// Find the run ID - look for the most recent queued/in_progress run
 	for i := 0; i < 10; i++ {
-		output, err := ghexec.Run(workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
+		output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
 			"--json", "databaseId,status",
 			"-q", `.[0] | select(.status == "queued" or .status == "in_progress" or .status == "pending") | .databaseId`)
 		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
@@ -228,7 +287,7 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 		}
 
 		// Also check for recently completed (might have started fast)
-		output, err = ghexec.Run(workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
+		output, err = tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list", "-w", workflow, "-L", "1",
 			"--json", "databaseId,status,createdAt",
 			"-q", `.[0].databaseId`)
 		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
@@ -252,7 +311,7 @@ func awaitWorkflowRun(runID string, timeout int) (success bool, err error) {
 		}
 
 		// Get status
-		output, err := ghexec.Run(".", "run", "view", runID, "--json", "status,conclusion")
+		output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "run", "view", runID, "--json", "status,conclusion")
 		if err != nil {
 			return false, err
 		}

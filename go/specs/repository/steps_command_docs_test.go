@@ -18,6 +18,7 @@ import (
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/docsync"
+	"github.com/ready-to-release/eac/go/core/tool"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"gopkg.in/yaml.v3"
 )
@@ -29,23 +30,19 @@ type commandDocsContext struct {
 	scanResult *docsync.CommandDocSyncResult
 }
 
-var cmdDocsCtx *commandDocsContext
-
 // registerCommandDocsSteps registers command documentation coverage step definitions.
 func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
-	// Given steps
-	sc.Step(`^I load all valid commands from the CLI$`, loadAllValidCommandsFromCLI)
-	sc.Step(`^I scan docs/reference/eac/commands/ for command documentation files$`, scanDocsForCommandDocumentation)
+	// Per-scenario context -- no global mutable state.
+	cdCtx := &commandDocsContext{}
 
-	// When steps
-	sc.Step(`^I check each command for a corresponding documentation file$`, checkEachCommandForDocumentation)
-
-	// Then steps
-	sc.Step(`^every command should have a documentation file$`, everyCommandShouldHaveDocumentation)
-	sc.Step(`^if any commands are missing documentation, I should see their names$`, ifMissingShowCommandNames)
+	sc.Step(`^I load all valid commands from the CLI$`, cdCtx.loadAllValidCommandsFromCLI)
+	sc.Step(`^I scan docs/reference/eac/commands/ for command documentation files$`, cdCtx.scanDocsForCommandDocumentation)
+	sc.Step(`^I check each command for a corresponding documentation file$`, cdCtx.checkEachCommandForDocumentation)
+	sc.Step(`^every command should have a documentation file$`, cdCtx.everyCommandShouldHaveDocumentation)
+	sc.Step(`^if any commands are missing documentation, I should see their names$`, cdCtx.ifMissingShowCommandNames)
 }
 
-func loadAllValidCommandsFromCLI() error {
+func (c *commandDocsContext) loadAllValidCommandsFromCLI() error {
 	repoRoot, err := findRepoRoot()
 	if err != nil {
 		return fmt.Errorf("could not find repository root: %w", err)
@@ -60,34 +57,31 @@ func loadAllValidCommandsFromCLI() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	cmdDocsCtx = &commandDocsContext{
-		repoRoot: repoRoot,
-		cfg:      cfg,
-	}
-
+	c.repoRoot = repoRoot
+	c.cfg = cfg
 	return nil
 }
 
-func scanDocsForCommandDocumentation() error {
+func (c *commandDocsContext) scanDocsForCommandDocumentation() error {
 	// This step is now essentially a no-op since we determine expected paths
 	// from config, not by scanning the filesystem.
 	// We keep it for backwards compatibility with the Gherkin spec.
-	if cmdDocsCtx == nil {
+	if c.cfg == nil {
 		return fmt.Errorf("commands not loaded - run 'I load all valid commands from the CLI' first")
 	}
 	return nil
 }
 
-func checkEachCommandForDocumentation() error {
-	if cmdDocsCtx == nil {
+func (c *commandDocsContext) checkEachCommandForDocumentation() error {
+	if c.cfg == nil {
 		return fmt.Errorf("context not initialized")
 	}
 
 	// Use EAC adapter to get valid commands
-	commandSource := makeCommandSource(cmdDocsCtx.repoRoot)
+	commandSource := makeCommandSource(c.repoRoot)
 
 	// Use docsync to scan command documentation
-	result, err := docsync.ScanCommandDocs(commandSource, cmdDocsCtx.repoRoot, cmdDocsCtx.cfg.Commands)
+	result, err := docsync.ScanCommandDocs(commandSource, c.repoRoot, c.cfg.Commands)
 	if err != nil {
 		return fmt.Errorf("failed to scan command docs: %w", err)
 	}
@@ -96,16 +90,16 @@ func checkEachCommandForDocumentation() error {
 		return fmt.Errorf("no valid commands found from CLI")
 	}
 
-	cmdDocsCtx.scanResult = result
+	c.scanResult = result
 	return nil
 }
 
-func everyCommandShouldHaveDocumentation() error {
-	if cmdDocsCtx == nil || cmdDocsCtx.scanResult == nil {
+func (c *commandDocsContext) everyCommandShouldHaveDocumentation() error {
+	if c.scanResult == nil {
 		return fmt.Errorf("context not initialized")
 	}
 
-	result := cmdDocsCtx.scanResult
+	result := c.scanResult
 
 	if len(result.MissingDocs) > 0 {
 		var sb strings.Builder
@@ -126,7 +120,7 @@ func everyCommandShouldHaveDocumentation() error {
 	return nil
 }
 
-func ifMissingShowCommandNames() error {
+func (c *commandDocsContext) ifMissingShowCommandNames() error {
 	// Passive assertion - error messages from everyCommandShouldHaveDocumentation provide details
 	return nil
 }
@@ -134,7 +128,7 @@ func ifMissingShowCommandNames() error {
 // makeCommandSource creates a CommandSource that uses the EAC adapter.
 func makeCommandSource(repoRoot string) docsync.CommandSource {
 	return func() ([]docsync.CommandInfo, error) {
-		port := eac.New(repoRoot)
+		port := eac.New(repoRoot, tool.GlobalRegistry(), tool.GlobalExecutor())
 		result, err := port.Execute(context.Background(), []string{"get", "valid-commands"}, &eac.ExecConfig{
 			WorkspaceRoot: repoRoot,
 			FullEnv:       append(os.Environ(), "NO_COLOR=1"),

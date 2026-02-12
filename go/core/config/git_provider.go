@@ -8,8 +8,6 @@ package config
 // Falls back to directory-name inference if not set.
 type GitRemoteProvider func(repoRoot, remoteName string) (string, error)
 
-var gitRemoteProvider GitRemoteProvider
-
 // SetGitRemoteProvider configures the function used to resolve git remote URLs.
 // Must be called before LoadAll(). Typically called during CLI bootstrap:
 //
@@ -22,14 +20,17 @@ var gitRemoteProvider GitRemoteProvider
 //	    return repo.RemoteURL(remote)
 //	})
 func SetGitRemoteProvider(provider GitRemoteProvider) {
-	gitRemoteProvider = provider
+	defaultManager.SetGitRemoteProvider(provider)
+}
+
+// GetGitRemoteProvider returns the currently configured git remote provider.
+// Thread-safe: protected by the manager's mutex.
+func GetGitRemoteProvider() GitRemoteProvider {
+	return defaultManager.GetGitRemoteProvider()
 }
 
 // resolveGitRemoteURL returns the remote URL using the configured provider.
 // Returns empty string if no provider is set (caller handles fallback).
 func resolveGitRemoteURL(repoRoot, remoteName string) (string, error) {
-	if gitRemoteProvider == nil {
-		return "", nil
-	}
-	return gitRemoteProvider(repoRoot, remoteName)
+	return defaultManager.resolveGitRemoteURL(repoRoot, remoteName)
 }

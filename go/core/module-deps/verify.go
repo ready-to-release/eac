@@ -13,6 +13,21 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+// defaultPlatforms is the list of platforms to check when no explicit platforms
+// are configured on an artifact. These mirror the platform enum in
+// shared-definitions.schema.json.
+var defaultPlatforms = []string{"linux", "windows", "darwin"}
+
+// archesForPlatform returns the CPU architectures to probe for a given platform.
+// Windows currently only ships amd64 binaries; other platforms support both
+// amd64 and arm64.
+func archesForPlatform(platform string) []string {
+	if platform == "windows" {
+		return []string{"amd64"}
+	}
+	return []string{"amd64", "arm64"}
+}
+
 // Verify checks if a module dependency is available.
 func Verify(dependency string) Result {
 	result := Result{
@@ -154,16 +169,12 @@ func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDi
 	// Get platforms to check
 	platforms := artifact.Platforms
 	if len(platforms) == 0 {
-		platforms = []string{"linux", "windows", "darwin"}
+		platforms = defaultPlatforms
 	}
 
 	// Check each platform - return true if ANY exist
 	for _, platform := range platforms {
-		// Try both amd64 and arm64 for each platform
-		archs := []string{"amd64"}
-		if platform != "windows" {
-			archs = append(archs, "arm64")
-		}
+		archs := archesForPlatform(platform)
 
 		for _, arch := range archs {
 			resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, metadata)
@@ -203,73 +214,75 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 	// Get build artifacts from module-level config
 	artifacts := c.eacConfig.GetBuildArtifacts(c.moniker, true)
 	if len(artifacts) == 0 {
-		// No build artifacts: return first package root
-		roots := module.GetComponentRoots()
-		if len(roots) > 0 {
-			for _, root := range roots {
-				return fmt.Sprintf("Module source: %s", filepath.Join(c.repoRoot, root)), nil
-			}
-		}
-		return fmt.Sprintf("Module: %s (no packages)", c.moniker), nil
+		return c.versionFromSource(module)
 	}
 
 	// Return info about build artifacts
 	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
+	return c.versionFromArtifacts(artifacts, buildDir, module.Metadata)
+}
 
-	// For dependency checking, find any available artifact across platforms
+// versionFromSource returns version info when no build artifacts are defined.
+func (c *ModuleChecker) versionFromSource(module *modules.ModuleContract) (string, error) {
+	roots := module.GetComponentRoots()
+	for _, root := range roots {
+		return fmt.Sprintf("Module source: %s", filepath.Join(c.repoRoot, root)), nil
+	}
+	return fmt.Sprintf("Module: %s (no packages)", c.moniker), nil
+}
+
+// versionFromArtifacts searches build artifacts across platforms and returns
+// the path of the first found artifact.
+func (c *ModuleChecker) versionFromArtifacts(artifacts []config.Artifact, buildDir string, metadata map[string]string) (string, error) {
 	for _, artifact := range artifacts {
-		if artifact.Type == config.ArtifactTypeExecutable {
-			// Check all platforms
-			platforms := artifact.Platforms
-			if len(platforms) == 0 {
-				platforms = []string{"linux", "windows", "darwin"}
-			}
-
-			for _, platform := range platforms {
-				archs := []string{"amd64"}
-				if platform != "windows" {
-					archs = append(archs, "arm64")
-				}
-
-				for _, arch := range archs {
-					resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, module.Metadata)
-					result := resolver.VerifyArtifact(artifact)
-					if result.Exists {
-						absPath, err := filepath.Abs(result.Path)
-						if err != nil {
-							absPath = result.Path // Fallback to relative path
-						}
-						return fmt.Sprintf("Built: %s", absPath), nil
-					}
-				}
-			}
-		} else {
-			// Non-executables: check normally
-			resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
-			result := resolver.VerifyArtifact(artifact)
-			if result.Exists {
-				absPath, err := filepath.Abs(result.Path)
-				if err != nil {
-					absPath = result.Path // Fallback to relative path
-				}
-				return fmt.Sprintf("Built: %s", absPath), nil
-			}
+		path := c.findArtifactPath(artifact, buildDir, metadata)
+		if path != "" {
+			return fmt.Sprintf("Built: %s", path), nil
 		}
 	}
-
-	// No artifacts found
 	return "", fmt.Errorf("no build artifacts found in: %s", buildDir)
 }
 
-// loadModuleContract loads the module contract from the registry.
-func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
+// findArtifactPath locates the first existing artifact file across all platforms,
+// returning its absolute path or empty string if not found.
+func (c *ModuleChecker) findArtifactPath(artifact config.Artifact, buildDir string, metadata map[string]string) string {
+	if artifact.Type == config.ArtifactTypeExecutable {
+		platforms := artifact.Platforms
+		if len(platforms) == 0 {
+			platforms = defaultPlatforms
+		}
+		for _, platform := range platforms {
+			for _, arch := range archesForPlatform(platform) {
+				resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, metadata)
+				result := resolver.VerifyArtifact(artifact)
+				if result.Exists {
+					absPath, _ := filepath.Abs(result.Path)
+					if absPath == "" {
+						absPath = result.Path
+					}
+					return absPath
+				}
+			}
+		}
+	} else {
+		resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, metadata)
+		result := resolver.VerifyArtifact(artifact)
+		if result.Exists {
+			absPath, _ := filepath.Abs(result.Path)
+			if absPath == "" {
+				absPath = result.Path
+			}
+			return absPath
+		}
 	}
+	return ""
+}
 
-	// Load module registry
-	registry, err := modules.LoadFromWorkspace(repoRoot)
+// loadModuleContract loads the module contract from the registry.
+// Uses c.repoRoot which must be initialized via c.init() before calling.
+func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
+	// Load module registry using already-initialized repo root
+	registry, err := modules.LoadFromWorkspace(c.repoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load module registry: %w", err)
 	}

@@ -56,7 +56,7 @@ type ToolAssignment struct {
 	// ComponentName is the component name from the module (e.g., "go", "dockerfile")
 	ComponentName string
 
-	// ComponentType is the component type from component-types.yml
+	// ComponentType is the component type from blueprints.yml component-kinds
 	ComponentType string
 
 	// Phase is the operation phase (build, lint, test, scan)
@@ -85,7 +85,7 @@ type ToolAssignment struct {
 }
 
 // PhaseConfig holds configuration for a build/lint/test phase.
-// This mirrors the YAML structure from component-types.yml.
+// This mirrors the YAML structure from blueprints.yml component-kinds.
 type PhaseConfig struct {
 	// Default is the default tool for this phase
 	Default string `yaml:"default,omitempty" json:"default,omitempty"`
@@ -98,7 +98,7 @@ type PhaseConfig struct {
 }
 
 // ScanPhaseConfig holds scan-specific configuration with category mappings.
-// This mirrors the YAML structure from component-types.yml.
+// This mirrors the YAML structure from blueprints.yml component-kinds.
 type ScanPhaseConfig struct {
 	// Default lists default scanner categories to run
 	Default []ScanCategory `yaml:"default,omitempty" json:"default,omitempty"`

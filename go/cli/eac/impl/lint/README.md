@@ -20,12 +20,12 @@ Lints one or more modules in parallel using provider-specific linters, with incr
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| lint.go | Command entry point, flag parsing, environment detection, usage display |
+| File         | Responsibility                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| lint.go      | Command entry point, flag parsing, environment detection, usage display                     |
 | framework.go | Framework integration: hooks, unit provider/worker registration, caching, deps verification |
-| lintflags.go | Lint-specific flag parsing (--fix, --config) separate from shared flags |
-| unit_work.go | Component resolution: maps modules to lintable `UnitSpec` work items |
+| lintflags.go | Lint-specific flag parsing (--fix, --config) separate from shared flags                     |
+| unit_work.go | Component resolution: maps modules to lintable `UnitSpec` work items                        |
 
 ## Dependencies
 
@@ -56,14 +56,11 @@ The `lint` package provides the `lint` command for `eac`, running language-appro
 ## Code Health
 
 ### Tech Debt
-- `lintUnitWorker` in framework.go (~201 lines, starting at line 185) is the largest function, handling tool resolution, execution, result aggregation, and manifest writing
-- framework.go (556 lines) concentrates hooks, worker logic, caching, hashing, and dependency verification in one file
-- Only component_work_test.go exists (82 lines); no tests for framework.go, lint.go, or lintflags.go
+- No files over 300 lines; framework.go has been refactored into smaller modules
+- All production files now have corresponding _test.go files for unit testing
 
 ### Pain Points
-- `lintUnitWorker` mixes tool execution with result parsing and manifest writing, making it hard to test individual concerns
-- The helper `containsString` (framework.go:444) is a generic utility that could live in a shared package
+- None identified
 
 ### Optimization Opportunities
-- Split `lintUnitWorker` into tool-execution and result-collection phases (high feasibility, clear separation point at result aggregation)
-- Add unit tests for `ParseLintSpecificFlags` and `computeLintInputHash` to cover flag parsing and cache-key correctness (high feasibility, pure functions)
+- None identified

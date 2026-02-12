@@ -90,7 +90,7 @@ func formatDockerShm(containerMemory int64) string {
 }
 
 // getEffectiveWeight returns the scheduling weight for a component type.
-// Returns the component type's resources.cpus from component-types.yml.
+// Returns the component type's resources.cpus from blueprints.yml component-kinds.
 func getEffectiveWeight(componentType string) int {
 	cfg := config.Global()
 	if cfg != nil && cfg.ComponentKinds != nil {

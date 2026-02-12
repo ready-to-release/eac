@@ -14,16 +14,13 @@ func TestListenForLines_StopsOnDoneChan(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan, // NEW: done channel parameter
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Start listener in goroutine
 	resultChan := make(chan tea.Msg, 1)
@@ -54,16 +51,13 @@ func TestListenForStatus_StopsOnDoneChan(t *testing.T) {
 	statusChan := make(chan Status, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		nil,
-		statusChan,
-		doneChan, // NEW: done channel parameter
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		StatusChan:   statusChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Start listener in goroutine
 	resultChan := make(chan tea.Msg, 1)
@@ -94,16 +88,13 @@ func TestListenForLines_ReturnsLineWhenAvailable(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Send a line
 	expectedLine := Line{Text: "test line", Level: LevelInfo}
@@ -131,16 +122,13 @@ func TestListenForLines_BatchesMutipleLines(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Send multiple lines before calling listener
 	for i := 0; i < 5; i++ {
@@ -172,16 +160,13 @@ func TestListenForStatus_ReturnsStatusWhenAvailable(t *testing.T) {
 	statusChan := make(chan Status, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		nil,
-		statusChan,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		StatusChan:   statusChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Send a status
 	expectedStatus := Status{Phase: "test", Total: 5}
@@ -205,16 +190,12 @@ func TestListenForStatus_ReturnsStatusWhenAvailable(t *testing.T) {
 func TestListenForLines_NilLineChanReturnsImmediately(t *testing.T) {
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		nil, // nil line channel
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Start listener
 	cmd := model.listenForLines()
@@ -230,16 +211,12 @@ func TestListenForLines_NilLineChanReturnsImmediately(t *testing.T) {
 func TestListenForStatus_NilStatusChanReturnsImmediately(t *testing.T) {
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		nil,
-		nil, // nil status channel
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Start listener
 	cmd := model.listenForStatus()
@@ -352,16 +329,13 @@ func TestListenForLines_DrainsLineChanOnDoneChan(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Buffer lines BEFORE closing doneChan
 	for i := 0; i < 5; i++ {
@@ -403,16 +377,13 @@ func TestUoWCompleteMsg_NoAutoAdvanceOnFailure(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Register two UoWs
 	model.GetOrCreateUoWStateByID("build:mod1:comp1:go", "mod1-go", 1)
@@ -444,16 +415,13 @@ func TestUoWCompleteMsg_AutoAdvanceOnSuccess(t *testing.T) {
 	lineChan := make(chan Line, 10)
 	doneChan := make(chan struct{})
 
-	model := NewModel(
-		20,
-		"Test",
-		lineChan,
-		nil,
-		doneChan,
-		false,
-		true,
-		nil,
-	)
+	model := NewModel(ModelOptions{
+		Height:       20,
+		RunPhaseName: "Test",
+		LineChan:     lineChan,
+		DoneChan:     doneChan,
+		SkipTUIDelay: true,
+	})
 
 	// Register two UoWs
 	model.GetOrCreateUoWStateByID("build:mod1:comp1:go", "mod1-go", 1)

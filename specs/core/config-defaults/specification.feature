@@ -45,9 +45,9 @@ Feature: Configuration Defaults System
 
     @skip:broken
     Scenario: A3 - Missing modules in repository.yml uses default module
-      Given the repository has file ".eac/component-types.yml" with:
+      Given the repository has file ".eac/blueprints.yml" with:
         """
-        component-types:
+        component-kinds:
           custom-type:
             extensions: [".custom"]
         """
@@ -56,7 +56,7 @@ Feature: Configuration Defaults System
       And the component types config contains type "custom-type"
       And the component types config contains type "go"
 
-    Scenario: A4 - Missing component-types.yml uses default types
+    Scenario: A4 - Missing blueprints.yml uses default types
       Given the repository has file ".eac/repository.yml" with:
         """
         modules:
@@ -140,9 +140,9 @@ Feature: Configuration Defaults System
             components:
               custom: app
         """
-      And the repository has file ".eac/component-types.yml" with:
+      And the repository has file ".eac/blueprints.yml" with:
         """
-        component-types:
+        component-kinds:
           custom:
             extensions: [".custom"]
         """
@@ -279,7 +279,7 @@ Feature: Configuration Defaults System
   # Category E: Component Type Defaults Application to Modules
   # ===========================================================================
 
-  Rule: Component-type-specific defaults are applied to modules
+  Rule: Component-kind-specific defaults are applied to modules
 
     Scenario: E1 - Module gets type default source patterns
       Given the repository has file ".eac/repository.yml" with:

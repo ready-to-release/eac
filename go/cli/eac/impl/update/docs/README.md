@@ -42,13 +42,10 @@ The `docs` update package keeps documentation assets current in `eac` by renderi
 ## Code Health
 
 ### Tech Debt
-- No unit tests for mermaid.go (304 lines), drawio.go (169 lines), command_refs.go (149 lines), or update.go (214 lines)
-- prune.go has excellent test coverage (912-line test file) but rendering logic has none
+- None identified
 
 ### Pain Points
-- mermaid.go and drawio.go both shell out to external tools (mermaid-cli, drawio) without testable abstractions, making unit testing difficult
-- `runMermaidUpdate` (mermaid.go:32) orchestrates discovery, caching, and batch rendering in a single function
+- `prune_test.go` is 925 lines (exceeds 300-line threshold)
 
 ### Optimization Opportunities
-- Introduce interface wrappers for external tool invocations to enable unit testing of mermaid.go and drawio.go without Docker/CLI dependencies (moderate feasibility, requires adapter layer)
-- Split `runMermaidUpdate` into discovery, cache-check, and render phases for independent testability (high feasibility, clear pipeline stages)
+- None identified

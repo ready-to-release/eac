@@ -47,6 +47,6 @@ never accidentally deleted during cleanup operations.
 
 ## Code Health
 
-- **Tech Debt**: `package_safety.go:213,220`: compiled regexps at package level are fine, but `bundleTagPattern` and `moduleVersionPattern` lack doc comments explaining expected formats.
-- **Pain Points**: `cli_mock.go` (319 lines) duplicates significant CLI output parsing logic from `gh_client.go`; changes to JSON parsing must be mirrored in both. No clear boundary between "workflow" and "release" concerns within the `API` interface -- callers that need only releases still import workflow types.
+- **Tech Debt**: None identified -- `bundleTagPattern` and `moduleVersionPattern` regexps have doc comments explaining expected formats.
+- **Pain Points**: No clear boundary between "workflow" and "release" concerns within the `API` interface -- callers that need only releases still import workflow types.
 - **Optimization Opportunities**: No TODO/FIXME markers found -- no deferred work items in the codebase.

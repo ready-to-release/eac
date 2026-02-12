@@ -157,14 +157,57 @@ func CalculateBump(entries []Entry) BumpType {
 	return maxBump
 }
 
-// CalculateNextVersionConstrained determines the next version with a maximum bump constraint
-// maxBump limits the highest bump type allowed (e.g., BumpPatch means only patch bumps are allowed)
-// hasFileChanges indicates if module files changed (determined by file ownership, not commit message).
+// VersionCalcOptions holds the parameters for CalculateNextVersionConstrained.
+type VersionCalcOptions struct {
+	// Current is the current version string (e.g., "1.2.3" or "2025.01.15").
+	// If empty for semver, defaults to "0.0.1".
+	Current string
+
+	// VersionType selects the versioning scheme (Semver or Calver).
+	VersionType VersionType
+
+	// Entries are the changelog entries used to determine the bump level.
+	Entries []Entry
+
+	// Now is the current time, used for calver date generation.
+	Now time.Time
+
+	// ExistingVersions is the list of already-released versions, used
+	// by calver to generate collision suffixes (e.g., 2025.01.15.1).
+	ExistingVersions []string
+
+	// MaxBump limits the highest bump type allowed (e.g., BumpPatch means
+	// only patch bumps are permitted even if entries warrant a minor/major bump).
+	MaxBump BumpType
+
+	// HasFileChanges indicates whether module-owned files changed on disk
+	// (determined by file ownership, not commit message). When true and the
+	// calculated bump is BumpNone, the bump is elevated to BumpPatch so that
+	// docs/chore/test/ci/build commits still trigger releases.
+	HasFileChanges bool
+}
+
+// CalculateNextVersionConstrained determines the next version with a maximum bump constraint.
 func CalculateNextVersionConstrained(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string, maxBump BumpType, hasFileChanges bool) (string, error) {
-	if versionType == Calver {
+	return CalculateNextVersion(VersionCalcOptions{
+		Current:          current,
+		VersionType:      versionType,
+		Entries:          entries,
+		Now:              now,
+		ExistingVersions: existingVersions,
+		MaxBump:          maxBump,
+		HasFileChanges:   hasFileChanges,
+	})
+}
+
+// CalculateNextVersion determines the next version using the provided options.
+// This is the options-struct variant of CalculateNextVersionConstrained.
+func CalculateNextVersion(opts VersionCalcOptions) (string, error) {
+	current := opts.Current
+	if opts.VersionType == Calver {
 		// Calver always generates new version if there are file changes
-		if hasFileChanges {
-			return NextCalver(now, existingVersions), nil
+		if opts.HasFileChanges {
+			return NextCalver(opts.Now, opts.ExistingVersions), nil
 		}
 		return current, nil
 	}
@@ -175,11 +218,11 @@ func CalculateNextVersionConstrained(current string, versionType VersionType, en
 		current = "0.0.1"
 	}
 
-	bump := CalculateBump(entries)
+	bump := CalculateBump(opts.Entries)
 
 	// File changes always warrant at least a patch bump, regardless of commit message types
 	// This ensures that docs/chore/test/ci/build commits still trigger releases when files change
-	if hasFileChanges && bump == BumpNone {
+	if opts.HasFileChanges && bump == BumpNone {
 		bump = BumpPatch
 	}
 
@@ -188,8 +231,8 @@ func CalculateNextVersionConstrained(current string, versionType VersionType, en
 	}
 
 	// Apply constraint: limit bump to maxBump
-	if bump > maxBump {
-		bump = maxBump
+	if bump > opts.MaxBump {
+		bump = opts.MaxBump
 	}
 
 	return BumpSemver(current, bump)

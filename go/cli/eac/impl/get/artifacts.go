@@ -7,10 +7,11 @@ import (
 	"runtime"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	getinternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
+	"github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
 	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -45,7 +46,7 @@ func GetArtifacts() int {
 	args := os.Args[3:] // Skip program name, "get", and "artifacts"
 
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: get artifacts <module> [--os <os>] [--arch <arch>] [--all-platforms] [--as-json|--as-yaml]")
+		fmt.Fprintln(os.Stderr, "Usage: get artifacts <module> [--os <os>] [--arch <arch>] [--all-platforms]")
 		return 1
 	}
 
@@ -53,8 +54,6 @@ func GetArtifacts() int {
 	targetOS := runtime.GOOS
 	targetArch := runtime.GOARCH
 	allPlatforms := false
-	asJSON := false
-	asYAML := false
 
 	// Parse flags
 	for i := 1; i < len(args); i++ {
@@ -62,10 +61,6 @@ func GetArtifacts() int {
 		switch {
 		case arg == "--all-platforms":
 			allPlatforms = true
-		case arg == "--as-json":
-			asJSON = true
-		case arg == "--as-yaml" || arg == "--yaml":
-			asYAML = true
 		case arg == "--os" && i+1 < len(args):
 			targetOS = args[i+1]
 			i++
@@ -75,10 +70,10 @@ func GetArtifacts() int {
 		}
 	}
 
-	return getArtifactsForModule(moduleName, targetOS, targetArch, allPlatforms, asJSON, asYAML)
+	return getArtifactsForModule(moduleName, targetOS, targetArch, allPlatforms)
 }
 
-func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms, asJSON, asYAML bool) int {
+func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms bool) int {
 	// Get workspace root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -101,7 +96,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
+	buildDir := paths.BuildOutputPath(workspaceRoot, moduleName)
 
 	// Resolve artifacts
 	var allResults []implinternal.ResolvedArtifact
@@ -188,19 +183,10 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 		output.Arch = targetArch
 	}
 
-	// Render output
-	format := &getinternal.OutputFormat{
-		AsJSON: asJSON,
-		AsYAML: asYAML || (!asJSON), // Default to YAML
-	}
-
-	err = getinternal.RenderAndOutput(output, format, "get-artifacts")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to render output: %v\n", err)
-		return 1
-	}
-
-	return 0
+	// Use shared helper for consistent YAML/JSON/TOML output
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
+		return output, nil
+	})
 }
 
 // ArtifactBuildModes shows which artifacts are built in each mode.

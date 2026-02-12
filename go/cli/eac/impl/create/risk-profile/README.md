@@ -53,10 +53,13 @@ This package implements the `create risk-profile` command, which is the first st
 ## Code Health
 
 ### Tech Debt
-- None
 
-### Pain Points
 - None identified
 
+### Pain Points
+
+- No test coverage for `ai_generation.go`, `control_extraction.go`, `deps.go`, `risk-profile.go`
+
 ### Optimization Opportunities
+
 - None identified

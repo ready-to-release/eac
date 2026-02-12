@@ -43,10 +43,13 @@ This architecture decouples expensive container-based rendering (handled by buil
 ## Code Health
 
 ### Tech Debt
-- No test file for `drawio.go`
+
+- `diagram.go` (345 lines) exceeds 300 lines
 
 ### Pain Points
-- None identified
+
+- No test coverage for `diagram.go`, `drawio.go`
 
 ### Optimization Opportunities
+
 - None identified

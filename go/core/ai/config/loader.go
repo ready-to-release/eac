@@ -173,9 +173,15 @@ type ContractLoader struct {
 	typeName string
 }
 
-// NewContractLoader creates a backward-compatible loader
-// contractPath format: "ai/<type>" (e.g., "ai/specs", "ai/commit-message")
-// version is ignored (unified config is unversioned).
+// NewContractLoader creates a backward-compatible loader.
+// contractPath format: "ai/<type>" (e.g., "ai/specs", "ai/commit-message").
+//
+// The version parameter (third argument) is intentionally ignored and
+// discarded (blank identifier). The unified AI configuration loaded from
+// ai-config.yml is unversioned -- all callers share the same config
+// regardless of which contract version they request. This parameter is
+// retained in the signature solely for backward compatibility with callers
+// that were written against the older versioned-contract API.
 func NewContractLoader(workspaceRoot, contractPath, _ string) *ContractLoader {
 	// Extract type name from path (e.g., "ai/specs" -> "specs")
 	typeName := contractPath

@@ -44,9 +44,13 @@ func FindUnusedSteps(pairs []ImplSpecsPair, sharedStepsFile string) (*AnalysisRe
 	// Track which shared steps are used by at least one pair
 	sharedStepUsage := make(map[string]bool) // pattern -> used
 
+	// Cache parsed feature steps by specs directory path to avoid redundant parsing
+	// when multiple pairs share the same specs directory.
+	featureStepCache := make(map[string][]FeatureStep)
+
 	// Analyze each pair
 	for _, pair := range pairs {
-		pairResult, err := analyzePair(pair, sharedSteps)
+		pairResult, err := analyzePairCached(pair, sharedSteps, featureStepCache)
 		if err != nil {
 			return nil, err
 		}
@@ -79,8 +83,10 @@ func FindUnusedSteps(pairs []ImplSpecsPair, sharedStepsFile string) (*AnalysisRe
 	return result, nil
 }
 
-// analyzePair analyzes a single impl↔specs pair for unused steps.
-func analyzePair(pair ImplSpecsPair, sharedSteps []StepDefinition) (PairResult, error) {
+// analyzePairCached analyzes a single impl-specs pair, using a cache of parsed feature
+// steps keyed by specs directory path to avoid redundant parsing when multiple pairs
+// share the same specs directory.
+func analyzePairCached(pair ImplSpecsPair, sharedSteps []StepDefinition, cache map[string][]FeatureStep) (PairResult, error) {
 	result := PairResult{Pair: pair}
 
 	// Parse module-specific step definitions
@@ -90,10 +96,14 @@ func analyzePair(pair ImplSpecsPair, sharedSteps []StepDefinition) (PairResult, 
 	}
 	result.ModuleSteps = moduleSteps
 
-	// Parse feature steps
-	featureSteps, err := ParseFeatureFiles(pair.FeatureFiles)
-	if err != nil {
-		return result, err
+	// Look up cached feature steps by specs directory, parse if not cached
+	featureSteps, cached := cache[pair.SpecsPath]
+	if !cached {
+		featureSteps, err = ParseFeatureFiles(pair.FeatureFiles)
+		if err != nil {
+			return result, err
+		}
+		cache[pair.SpecsPath] = featureSteps
 	}
 	result.FeatureSteps = featureSteps
 

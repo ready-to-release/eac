@@ -229,125 +229,27 @@ func (e *DefaultExecutor) executeSystem(ctx context.Context, tool *ToolDefinitio
 
 // executeContainer runs a container tool using the ContainerPort interface.
 func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefinition, execCtx *ExecutionContext) (*ExecutionResult, error) {
-	// Ensure container runtime is initialized
 	if err := e.ensureContainer(); err != nil {
 		return nil, err
 	}
 
-	// Resolve and ensure image is available
 	imageRef, err := e.resolveContainerImage(ctx, tool, execCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build mounts using ContainerPort's MountConfig
-	var mounts []container.MountConfig
-	for _, mount := range tool.Mounts {
-		resolved := mount.ResolvePlaceholders(execCtx.Placeholders)
+	mounts := buildMounts(tool, execCtx)
+	workDir := resolveWorkDir(tool, execCtx)
+	logContainerDebug(execCtx, tool, workDir)
 
-		// Ensure mount source is an absolute path (required for bind mounts)
-		source := resolved.Source
-		if !filepath.IsAbs(source) {
-			source = filepath.Join(execCtx.WorkspaceRoot, source)
-		}
+	env := e.buildContainerEnv(tool, execCtx)
+	e.logForwardedEnvNames(execCtx, tool, env)
 
-		// DinD: Translate container path to host path for Docker daemon
-		source = execCtx.TranslatePathForMount(source)
-
-		mounts = append(mounts, container.MountConfig{
-			Source:   source,
-			Target:   resolved.Target,
-			ReadOnly: resolved.ReadOnly,
-		})
-	}
-
-	// Resolve workdir
-	workDir := tool.WorkDir
-	if workDir != "" {
-		workDir = resolvePlaceholders(workDir, execCtx.Placeholders)
-	}
-
-	// Debug: log container configuration
-	if execCtx.LogWriter != nil {
-		fmt.Fprintf(execCtx.LogWriter, "[debug] container workdir: %s\n", workDir)
-		fmt.Fprintf(execCtx.LogWriter, "[debug] container command: %v\n", tool.Command)
-		fmt.Fprintf(execCtx.LogWriter, "[debug] placeholders: %v\n", execCtx.Placeholders)
-		if execCtx.IsDinD() {
-			fmt.Fprintf(execCtx.LogWriter, "[dind] host workspace: %s\n", execCtx.HostWorkspaceRoot)
-			fmt.Fprintf(execCtx.LogWriter, "[dind] container root: %s\n", execCtx.ContainerRepoRoot)
-		}
-	}
-
-	// Build environment variables map with precedence:
-	// 1. Global credentials (host-env, ci-env) - lowest priority
-	// 2. Per-tool host-env
-	// 3. Static tool.Env from YAML
-	// 4. Per-call execCtx.EnvOverrides - highest priority
-	env := make(map[string]string)
-
-	// 1. Forward global credential env vars from host
-	if e.credentials != nil {
-		for _, name := range e.credentials.HostEnv {
-			if val := os.Getenv(name); val != "" {
-				env[name] = val
-			}
-		}
-		for _, name := range e.credentials.CIEnv {
-			if val := os.Getenv(name); val != "" {
-				env[name] = val
-			}
-		}
-	}
-
-	// 2. Forward per-tool host env vars (additive to global)
-	for _, name := range tool.HostEnv {
-		if val := os.Getenv(name); val != "" {
-			env[name] = val
-		}
-	}
-
-	// 3. Static YAML env (overrides forwarded values)
-	for k, v := range tool.Env {
-		env[k] = resolvePlaceholders(v, execCtx.Placeholders)
-	}
-
-	// 4. Per-call overrides (highest priority)
-	for k, v := range execCtx.EnvOverrides {
-		env[k] = v
-	}
-
-	// Debug: log forwarded host env var names (never values)
-	if execCtx.LogWriter != nil && (e.credentials != nil || len(tool.HostEnv) > 0) {
-		var forwarded []string
-		if e.credentials != nil {
-			for _, name := range e.credentials.HostEnv {
-				if _, ok := env[name]; ok {
-					forwarded = append(forwarded, name)
-				}
-			}
-			for _, name := range e.credentials.CIEnv {
-				if _, ok := env[name]; ok {
-					forwarded = append(forwarded, name)
-				}
-			}
-		}
-		for _, name := range tool.HostEnv {
-			if _, ok := env[name]; ok {
-				forwarded = append(forwarded, name)
-			}
-		}
-		if len(forwarded) > 0 {
-			fmt.Fprintf(execCtx.LogWriter, "[debug] forwarded host env: %v\n", forwarded)
-		}
-	}
-
-	// Build command with overrides
 	cmd := tool.Command
 	if len(execCtx.ArgsOverrides) > 0 {
 		cmd = append(cmd, execCtx.ArgsOverrides...)
 	}
 
-	// Build container config
 	config := &container.ContainerConfig{
 		Image:         imageRef,
 		Command:       cmd,
@@ -363,54 +265,161 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		StderrWriter:  execCtx.StderrWriter,
 		StdinReader:   execCtx.StdinReader,
 		ContainerName: fmt.Sprintf("eac-%s-%d", tool.ContainerSafeName(), time.Now().UnixNano()),
+		Resources:     buildResourceConfig(tool, execCtx),
 	}
 
-	// Apply resource limits from tool configuration, with optional amp multiplier.
-	// Amp values: 1.0 = no change, 2.0 = double resources, 0.5 = half resources.
-	amp := execCtx.Amp
-	if amp <= 0 {
-		amp = 1.0 // Default: no amplification
-	}
-
-	if tool.Resources != nil {
-		resources := &container.ResourceConfig{}
-		hasResources := false
-
-		if tool.Resources.Memory != "" {
-			memLimit := parseMemoryLimit(tool.Resources.Memory)
-			if memLimit > 0 {
-				// Apply amp and convert back to string
-				ampedMem := int64(float64(memLimit) * amp)
-				resources.Memory = formatMemoryBytes(ampedMem)
-				hasResources = true
-			}
-		}
-		if tool.Resources.CPUs > 0 {
-			resources.CPUs = float64(tool.Resources.CPUs) * amp
-			hasResources = true
-		}
-		if tool.Resources.ShmSize != "" {
-			shmSize := parseMemoryLimit(tool.Resources.ShmSize)
-			if shmSize > 0 {
-				ampedShm := int64(float64(shmSize) * amp)
-				resources.ShmSize = formatMemoryBytes(ampedShm)
-				hasResources = true
-			}
-		}
-
-		if hasResources {
-			config.Resources = resources
-		}
-	}
-
-	// Execute container
 	result, err := e.container.Execute(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 
-	// Workaround for tools that return exit code 0 despite errors (e.g., mkdocs 1.6.1 bug)
-	// Check both stdout and stderr for known error patterns and override exit code if found
+	exitCode := checkExitCodeOverride(result, execCtx)
+	return &ExecutionResult{
+		ExitCode: exitCode,
+		Stdout:   result.Stdout,
+		Stderr:   result.Stderr,
+		Duration: result.Duration,
+	}, nil
+}
+
+// buildMounts resolves and translates tool mount definitions for the container.
+func buildMounts(tool *ToolDefinition, execCtx *ExecutionContext) []container.MountConfig {
+	var mounts []container.MountConfig
+	for _, mount := range tool.Mounts {
+		resolved := mount.ResolvePlaceholders(execCtx.Placeholders)
+		source := resolved.Source
+		if !filepath.IsAbs(source) {
+			source = filepath.Join(execCtx.WorkspaceRoot, source)
+		}
+		source = execCtx.TranslatePathForMount(source)
+		mounts = append(mounts, container.MountConfig{
+			Source:   source,
+			Target:   resolved.Target,
+			ReadOnly: resolved.ReadOnly,
+		})
+	}
+	return mounts
+}
+
+// resolveWorkDir resolves the container working directory with placeholder substitution.
+func resolveWorkDir(tool *ToolDefinition, execCtx *ExecutionContext) string {
+	if tool.WorkDir == "" {
+		return ""
+	}
+	return resolvePlaceholders(tool.WorkDir, execCtx.Placeholders)
+}
+
+// logContainerDebug logs container configuration details when a log writer is present.
+func logContainerDebug(execCtx *ExecutionContext, tool *ToolDefinition, workDir string) {
+	if execCtx.LogWriter == nil {
+		return
+	}
+	fmt.Fprintf(execCtx.LogWriter, "[debug] container workdir: %s\n", workDir)
+	fmt.Fprintf(execCtx.LogWriter, "[debug] container command: %v\n", tool.Command)
+	fmt.Fprintf(execCtx.LogWriter, "[debug] placeholders: %v\n", execCtx.Placeholders)
+	if execCtx.IsDinD() {
+		fmt.Fprintf(execCtx.LogWriter, "[dind] host workspace: %s\n", execCtx.HostWorkspaceRoot)
+		fmt.Fprintf(execCtx.LogWriter, "[dind] container root: %s\n", execCtx.ContainerRepoRoot)
+	}
+}
+
+// buildContainerEnv builds the environment variable map with proper precedence:
+// 1. Global credentials (host-env, ci-env) - lowest
+// 2. Per-tool host-env
+// 3. Static tool.Env from YAML
+// 4. Per-call execCtx.EnvOverrides - highest
+func (e *DefaultExecutor) buildContainerEnv(tool *ToolDefinition, execCtx *ExecutionContext) map[string]string {
+	env := make(map[string]string)
+
+	if e.credentials != nil {
+		forwardHostEnvVars(env, e.credentials.HostEnv)
+		forwardHostEnvVars(env, e.credentials.CIEnv)
+	}
+	forwardHostEnvVars(env, tool.HostEnv)
+
+	for k, v := range tool.Env {
+		env[k] = resolvePlaceholders(v, execCtx.Placeholders)
+	}
+	for k, v := range execCtx.EnvOverrides {
+		env[k] = v
+	}
+	return env
+}
+
+// forwardHostEnvVars copies named environment variables from the host into the map.
+func forwardHostEnvVars(env map[string]string, names []string) {
+	for _, name := range names {
+		if val := os.Getenv(name); val != "" {
+			env[name] = val
+		}
+	}
+}
+
+// logForwardedEnvNames logs the names (never values) of forwarded host env vars.
+func (e *DefaultExecutor) logForwardedEnvNames(execCtx *ExecutionContext, tool *ToolDefinition, env map[string]string) {
+	if execCtx.LogWriter == nil || (e.credentials == nil && len(tool.HostEnv) == 0) {
+		return
+	}
+	var forwarded []string
+	if e.credentials != nil {
+		forwarded = collectPresentKeys(env, e.credentials.HostEnv, forwarded)
+		forwarded = collectPresentKeys(env, e.credentials.CIEnv, forwarded)
+	}
+	forwarded = collectPresentKeys(env, tool.HostEnv, forwarded)
+	if len(forwarded) > 0 {
+		fmt.Fprintf(execCtx.LogWriter, "[debug] forwarded host env: %v\n", forwarded)
+	}
+}
+
+// collectPresentKeys appends names that are present in the env map to result.
+func collectPresentKeys(env map[string]string, names []string, result []string) []string {
+	for _, name := range names {
+		if _, ok := env[name]; ok {
+			result = append(result, name)
+		}
+	}
+	return result
+}
+
+// buildResourceConfig creates a resource configuration with optional amp multiplier.
+func buildResourceConfig(tool *ToolDefinition, execCtx *ExecutionContext) *container.ResourceConfig {
+	if tool.Resources == nil {
+		return nil
+	}
+
+	amp := execCtx.Amp
+	if amp <= 0 {
+		amp = 1.0
+	}
+
+	resources := &container.ResourceConfig{}
+	hasResources := false
+
+	if tool.Resources.Memory != "" {
+		if memLimit := parseMemoryLimit(tool.Resources.Memory); memLimit > 0 {
+			resources.Memory = formatMemoryBytes(int64(float64(memLimit) * amp))
+			hasResources = true
+		}
+	}
+	if tool.Resources.CPUs > 0 {
+		resources.CPUs = float64(tool.Resources.CPUs) * amp
+		hasResources = true
+	}
+	if tool.Resources.ShmSize != "" {
+		if shmSize := parseMemoryLimit(tool.Resources.ShmSize); shmSize > 0 {
+			resources.ShmSize = formatMemoryBytes(int64(float64(shmSize) * amp))
+			hasResources = true
+		}
+	}
+
+	if !hasResources {
+		return nil
+	}
+	return resources
+}
+
+// checkExitCodeOverride detects error patterns in output when exit code is 0.
+func checkExitCodeOverride(result *container.ContainerResult, execCtx *ExecutionContext) int {
 	exitCode := result.ExitCode
 	if exitCode == 0 {
 		combinedOutput := string(result.Stdout) + string(result.Stderr)
@@ -421,13 +430,7 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 			exitCode = 1
 		}
 	}
-
-	return &ExecutionResult{
-		ExitCode: exitCode,
-		Stdout:   result.Stdout,
-		Stderr:   result.Stderr,
-		Duration: result.Duration,
-	}, nil
+	return exitCode
 }
 
 // containsErrorPattern checks if output contains known error patterns from buggy tools.

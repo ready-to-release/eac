@@ -44,6 +44,6 @@ produces human-readable validation summaries for CLI output.
 
 ## Code Health
 
-- **Tech Debt**: `extractCodeBlocks` and `extractSections` share near-identical AST walk boilerplate; a generic walk-and-collect helper would reduce duplication.
-- **Pain Points**: Only JSON and YAML code blocks are validated; other common languages (TOML, HCL) silently pass, which may surprise users expecting comprehensive checks. `sanitizeMessage` collapses spaces with a loop (`for strings.Contains`); a single `strings.Join(strings.Fields(...))` call would be clearer.
+- **Tech Debt**: None identified.
+- **Pain Points**: None identified.
 - **Optimization Opportunities**: `ValidateDirectory` uses `filepath.Walk` (deprecated in favor of `filepath.WalkDir`); migrating avoids an extra `os.Stat` per entry (trivial, mechanical change). Code block extraction allocates intermediate `bytes.Buffer` per block; pre-sizing the buffer from `Lines().Len()` would reduce small allocations in large files (low priority).

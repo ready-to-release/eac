@@ -50,11 +50,13 @@ The docprep package is the preprocessing engine behind documentation builds in `
 ## Code Health
 
 ### Tech Debt
-- None identified -- the pipeline is well-structured with small, focused phase functions
+
+- None identified
 
 ### Pain Points
-- `default_pipeline.go`: `executeCommandsPhase` and `commandHelpPhase` both instantiate a fresh `ToolCommandExecutor{}` rather than sharing one via the context
-- Phase ordering is implicit (sequence in `DefaultPipeline()`); reordering a phase requires understanding upstream data dependencies that are only documented in comments
+
+- Phase ordering is implicit in `DefaultPipeline()` sequence; reordering requires understanding undocumented data dependencies between phases
 
 ### Optimization Opportunities
-- None identified -- sub-packages are already parallelized (diagram processing via errgroup) and phase functions are concise
+
+- None identified

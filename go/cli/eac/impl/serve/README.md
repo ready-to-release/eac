@@ -49,14 +49,15 @@ The `serve` package provides local server capabilities for `eac`, enabling devel
 ## Code Health
 
 ### Tech Debt
-- serve.go (683 lines) with `Serve()` spanning ~223 lines handles flag parsing, module resolution, build, staleness checks, dev mode, and container lifecycle
-- Global mutable `var GlobalServeContext` in servers/context.go acts as a package-level singleton for server configuration
-- No tests for docker.go (219 lines), design/serve.go, or gource/serve.go (455 lines)
+- No test for serve.go (804 lines)
+- No test for docker.go (220 lines)
+- No test for design/serve.go (191 lines)
+- No test for gource/serve.go (540 lines)
 
 ### Pain Points
-- `Serve()` function orchestrates too many phases (parse, resolve, build, serve, browser) making it difficult to test individual steps
-- gource/serve.go (455 lines) is a large self-contained sub-command with no test coverage
+- serve.go (804 lines) exceeds 300-line guideline
+- gource/serve.go (540 lines) exceeds 300-line guideline
+- Only 3 test files for 9 non-test Go files across all subdirectories
 
 ### Optimization Opportunities
-- Split serve.go into entry-point, module-resolution, and build-management files (high feasibility, natural boundaries at `resolveModuleConfigFromEAC` and `rebuildIfNeeded`)
-- Replace `GlobalServeContext` with dependency injection through function parameters or a config struct (moderate feasibility, requires updating server registration functions)
+- None identified.

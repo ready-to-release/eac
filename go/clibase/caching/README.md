@@ -30,12 +30,12 @@ provides a general-purpose build cache for individual work items.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `incremental.go` | `IncrementalResult` and `DetectIncrementalChanges` for module-level change detection |
-| `itemcache/types.go` | `Item`, `BuildFunc`, `Result` type definitions |
-| `itemcache/cache.go` | `Cache` with content-addressable lookup and storage |
-| `itemcache/manifest.go` | `Manifest` and `CachedItem` for persistent cache state |
+| File                    | Purpose                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `incremental.go`        | `IncrementalResult` and `DetectIncrementalChanges` for module-level change detection |
+| `itemcache/types.go`    | `Item`, `BuildFunc`, `Result` type definitions                                       |
+| `itemcache/cache.go`    | `Cache` with content-addressable lookup and storage                                  |
+| `itemcache/manifest.go` | `Manifest` and `CachedItem` for persistent cache state                               |
 
 ## Dependencies
 
@@ -54,12 +54,13 @@ Enables incremental execution across CLI commands. The build command uses module
 ## Code Health
 
 ### Tech Debt
-- `incremental.go:27` and `itemcache/cache.go:13` both declare package-level mutable `log` vars; prefer constructor-injected loggers
-- `incremental.go` (193 lines) has no dedicated test file; change-detection logic is a critical path
+
+- None identified
 
 ### Pain Points
-- `itemcache/` sub-package has strong test coverage (649 test lines), but `incremental.go` is untested at the unit level
+
+- `incremental_test.go` is 728 lines, significantly exceeds 300-line threshold
 
 ### Optimization Opportunities
-- Add unit tests for `DetectIncrementalChanges` with mocked module state to cover edge cases (medium effort)
-- Inject logger via constructor rather than package-level var to improve testability (low effort)
+
+- None identified

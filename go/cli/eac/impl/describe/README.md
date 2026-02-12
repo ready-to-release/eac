@@ -38,7 +38,7 @@ This package provides machine-readable command metadata for the eac CLI. It enab
 ## Code Health
 
 ### Tech Debt
-- None
+- No unit tests for commands.go (186 lines); relies on BDD-level testing
 
 ### Pain Points
 - None identified

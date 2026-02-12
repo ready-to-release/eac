@@ -38,7 +38,7 @@ eac init --copy-templates
 This copies these files to `.eac/`:
 
 - `ai-config.yml` - AI type definitions (specs, commit-message)
-- `component-types.yml` - Component type definitions (go, typescript, etc.)
+- `blueprints.yml` - Component kind definitions (go, typescript, etc.)
 - `tool-config.yml` - Tool definitions and resource configuration
 - `security-tools.yml` - Security tool configurations
 - `logging.yml` - Logging configuration

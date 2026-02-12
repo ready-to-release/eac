@@ -16,7 +16,6 @@
 package drawio
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,6 +26,7 @@ import (
 
 	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
+	"github.com/ready-to-release/eac/go/core/iobuffer"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -39,18 +39,13 @@ const (
 
 	// ContainerWorkdir is where files are mounted in the container
 	ContainerWorkdir = "/docs"
+
+	// MaxDockerOutputSize limits Docker command output to prevent memory exhaustion.
+	MaxDockerOutputSize = 10 * 1024 * 1024 // 10MB
 )
 
 // ContainerProvider is a function that returns a ContainerPort.
 type ContainerProvider func() container.ContainerPort
-
-// defaultContainerProvider is set by the application to provide the container runtime.
-var defaultContainerProvider ContainerProvider
-
-// SetContainerProvider sets the container provider for drawio operations.
-func SetContainerProvider(provider ContainerProvider) {
-	defaultContainerProvider = provider
-}
 
 // GetDrawioImageName returns the Docker image for drawio.
 // It first checks tool-config.yml, then falls back to the default.
@@ -62,7 +57,8 @@ var log = logging.C()
 
 // EnsureDrawioImage builds the drawio-oci Docker image if needed.
 // Uses Docker's layer cache for efficiency.
-func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
+// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvider ContainerProvider) error {
 	// Get host repo root for Docker build context
 	// In DinD mode, Docker daemon runs on the host, so it needs host paths
 	hostRepoRoot, err := dockerutil.GetHostRepoRoot()
@@ -93,8 +89,8 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 	}
 
 	// Try to use ContainerPort.Build if available
-	if defaultContainerProvider != nil {
-		c := defaultContainerProvider()
+	if containerProvider != nil {
+		c := containerProvider()
 		if c != nil {
 			config := &container.BuildConfig{
 				ContextPath: contextPath,
@@ -127,11 +123,13 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 
 // RunDrawioCommand executes a drawio-oci command in the container.
 // The workspaceRoot is mounted at /docs in the container.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
 func RunDrawioCommand(
 	workspaceRoot string,
 	args []string,
 	stdin io.Reader,
 	stdout, stderr io.Writer,
+	containerProvider ContainerProvider,
 ) error {
 	// Get host repo root for Docker volume mount
 	// In DinD mode, Docker daemon runs on the host, so it needs host paths
@@ -145,8 +143,8 @@ func RunDrawioCommand(
 	}
 
 	// Try to use ContainerPort.Execute if available
-	if defaultContainerProvider != nil {
-		c := defaultContainerProvider()
+	if containerProvider != nil {
+		c := containerProvider()
 		if c != nil && c.IsAvailable() {
 			return runWithContainerPort(c, hostRepoRoot, args, stdout)
 		}
@@ -258,9 +256,12 @@ func GetRepoRoot() (string, error) {
 }
 
 // RunDrawioCommandWithOutput runs a command and returns stdout as string.
-func RunDrawioCommandWithOutput(workspaceRoot string, args []string) (string, error) {
-	var stdout, stderr bytes.Buffer
-	err := RunDrawioCommand(workspaceRoot, args, nil, &stdout, &stderr)
+// Uses a limited buffer to prevent memory exhaustion from runaway Docker output.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+func RunDrawioCommandWithOutput(workspaceRoot string, args []string, containerProvider ContainerProvider) (string, error) {
+	stdout := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
+	stderr := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
+	err := RunDrawioCommand(workspaceRoot, args, nil, stdout, stderr, containerProvider)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
@@ -268,10 +269,11 @@ func RunDrawioCommandWithOutput(workspaceRoot string, args []string) (string, er
 }
 
 // CheckDockerAvailable verifies Docker is available and the image exists.
-func CheckDockerAvailable(workspaceRoot string) error {
+// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+func CheckDockerAvailable(workspaceRoot string, containerProvider ContainerProvider) error {
 	// Check container runtime availability
-	if defaultContainerProvider != nil {
-		c := defaultContainerProvider()
+	if containerProvider != nil {
+		c := containerProvider()
 		if c != nil {
 			if !c.IsAvailable() {
 				return fmt.Errorf("container runtime not available. Ensure Docker is installed and running")
@@ -282,7 +284,7 @@ func CheckDockerAvailable(workspaceRoot string) error {
 			if !c.ImageExists(context.Background(), imageName) {
 				// Image doesn't exist, build it
 				log.Infof("Building drawio-oci Docker image...")
-				if err := EnsureDrawioImage(workspaceRoot, os.Stderr); err != nil {
+				if err := EnsureDrawioImage(workspaceRoot, os.Stderr, containerProvider); err != nil {
 					return fmt.Errorf("failed to build drawio-oci image: %w", err)
 				}
 			}
@@ -300,7 +302,7 @@ func CheckDockerAvailable(workspaceRoot string) error {
 	if err := cmd.Run(); err != nil {
 		// Image doesn't exist, build it
 		log.Infof("Building drawio-oci Docker image...")
-		if err := EnsureDrawioImage(workspaceRoot, os.Stderr); err != nil {
+		if err := EnsureDrawioImage(workspaceRoot, os.Stderr, containerProvider); err != nil {
 			return fmt.Errorf("failed to build drawio-oci image: %w", err)
 		}
 	}

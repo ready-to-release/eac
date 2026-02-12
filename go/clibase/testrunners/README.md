@@ -41,10 +41,10 @@ registers a runner implementation, and the registry resolves which runner handle
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `registry.go` | Type aliases, global registry with `Register`/`Get`/`AllDescriptors`, provider bridging via `init()` |
-| `streaming.go` | `StreamingRunner` for real-time `go test -json` output parsing and result aggregation |
+| File           | Purpose                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `registry.go`  | Type aliases, global registry with `Register`/`Get`/`AllDescriptors`, provider bridging via `init()` |
+| `streaming.go` | `StreamingRunner` for real-time `go test -json` output parsing and result aggregation                |
 
 ## Dependencies
 
@@ -53,15 +53,23 @@ registers a runner implementation, and the registry resolves which runner handle
 
 ## Role in System
 
-Decouples the test command from specific test frameworks. The test command resolves test references to their types, looks up the appropriate runner from this registry, and delegates execution. This enables adding new test frameworks (e.g., a new BDD runner) without modifying the test command itself.
+Decouples the test command from specific test frameworks.
+
+The test command resolves test references to their types, looks up the appropriate runner from this registry, and delegates execution.
+
+This enables adding new test frameworks (e.g., a new BDD runner) without modifying the test command itself.
 
 ## Code Health
 
 ### Tech Debt
-- `registry.go:29-32` four mutable package-level vars (`runners`, `descriptors`, `fallback`, `mu`); protected by mutex but still global state
+
+- None identified
 
 ### Pain Points
-- `streaming.go` has no dedicated test file; the JSON-streaming parser is a critical path that should have unit tests
+
+- `registry.go` (357 lines) exceeds 300 lines
+- Large test files: `streaming_test.go` (567 lines), `registry_test.go` (453 lines)
 
 ### Optimization Opportunities
-- Add unit tests for `StreamingRunner` JSON parsing edge cases (malformed lines, partial output) (low effort)
+
+- None identified

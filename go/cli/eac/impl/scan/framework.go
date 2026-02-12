@@ -14,6 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/caching"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/evidence"
@@ -147,35 +148,24 @@ func buildScanInitSummary(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrame
 	ctx.InitSummary = summary
 }
 
-// GetDockerImage returns the appropriate Docker image for a scanner type.
-// Uses the eac-security contract to resolve scanner images.
-func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType evidence.ScannerType) string {
-	if ctx.EACConfig == nil || ctx.EACConfig.Security == nil {
-		return ""
-	}
-
-	// Map scanner type to scanner ID in eac-security contract
-	var scannerID string
+// scannerImageConfigID maps a scanner type to its Docker image config ID.
+// Multiple scanner types may share the same Docker image (e.g., all Trivy-based
+// scanners use the "trivy-sbom" image entry in the security config).
+func scannerImageConfigID(scannerType evidence.ScannerType) string {
 	switch scannerType {
 	case evidence.ScannerSBOM:
-		scannerID = "trivy-sbom"
+		return "trivy-sbom"
 	case evidence.ScannerVuln:
-		scannerID = "trivy-vuln"
+		return "trivy-vuln"
 	case evidence.ScannerSecrets, evidence.ScannerIaC, evidence.ScannerCompliance:
-		scannerID = "trivy-sbom" // All Trivy-based scanners use same image
+		return "trivy-sbom" // All Trivy-based scanners use same image
 	case evidence.ScannerSAST:
-		scannerID = "semgrep"
+		return "semgrep"
 	case evidence.ScannerDAST:
-		scannerID = "zap"
+		return "zap"
 	default:
 		return ""
 	}
-
-	scanner, ok := ctx.EACConfig.Security.GetScanner(scannerID)
-	if !ok {
-		return ""
-	}
-	return scanner.FullImage()
 }
 
 // getScannerImage returns the Docker image for a scanner ID from Security config.
@@ -191,19 +181,29 @@ func getScannerImage(ctx *cmdframework.ExecutionContext, scannerID string) strin
 	return scanner.FullImage()
 }
 
-// getTrivyImage returns the Trivy Docker image from Security config.
-func getTrivyImage(ctx *cmdframework.ExecutionContext) string {
-	return getScannerImage(ctx, "trivy-sbom")
+// GetDockerImage returns the appropriate Docker image for a scanner type.
+// Uses the eac-security contract to resolve scanner images.
+func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType evidence.ScannerType) string {
+	configID := scannerImageConfigID(scannerType)
+	if configID == "" {
+		return ""
+	}
+	return getScannerImage(ctx, configID)
 }
 
-// getSemgrepImage returns the Semgrep Docker image from Security config.
-func getSemgrepImage(ctx *cmdframework.ExecutionContext) string {
-	return getScannerImage(ctx, "semgrep")
-}
-
-// getZAPImage returns the ZAP Docker image from Security config.
-func getZAPImage(ctx *cmdframework.ExecutionContext) string {
-	return getScannerImage(ctx, "zap")
+// GetScannerImageFromConfig returns the Docker image for a scanner type using
+// an EACConfig directly. This is useful for standalone commands (like zap)
+// that do not use the full ExecutionContext.
+func GetScannerImageFromConfig(cfg *config.EACConfig, scannerType evidence.ScannerType) string {
+	configID := scannerImageConfigID(scannerType)
+	if configID == "" || cfg == nil || cfg.Security == nil {
+		return ""
+	}
+	scanner, ok := cfg.Security.GetScanner(configID)
+	if !ok {
+		return ""
+	}
+	return scanner.FullImage()
 }
 
 // CreateCommandConfig creates a standard command config for scan commands.

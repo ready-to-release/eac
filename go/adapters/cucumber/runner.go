@@ -140,38 +140,46 @@ func extractTsFeatureFolderName(featurePath string) string {
 	return filepath.Base(dir)
 }
 
-// Execute runs TypeScript cucumber-js tests for a package.
-func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
-	start := time.Now()
+// parsedCucumberPkg holds the parsed components of a cucumber package path.
+type parsedCucumberPkg struct {
+	displayName    string
+	relPkgPath     string
+	relFeatureFile string
+}
 
-	// Parse package path - format: "featureName:moduleRoot:featurePath" or "moduleRoot"
-	var displayName, relPkgPath, relFeatureFile string
+// parseCucumberPackagePath parses a package path in "featureName:moduleRoot:featurePath" or "moduleRoot" format.
+func parseCucumberPackagePath(pkgPath string) parsedCucumberPkg {
 	parts := strings.Split(pkgPath, ":")
-	if len(parts) == 3 {
-		displayName = parts[0] + ":" + parts[1]
-		relPkgPath = parts[1]
-		relFeatureFile = parts[2]
-	} else if len(parts) == 1 {
-		displayName = parts[0]
-		relPkgPath = parts[0]
-	} else {
-		displayName = pkgPath
-		relPkgPath = pkgPath
+	switch len(parts) {
+	case 3:
+		return parsedCucumberPkg{
+			displayName:    parts[0] + ":" + parts[1],
+			relPkgPath:     parts[1],
+			relFeatureFile: parts[2],
+		}
+	case 1:
+		return parsedCucumberPkg{
+			displayName: parts[0],
+			relPkgPath:  parts[0],
+		}
+	default:
+		return parsedCucumberPkg{
+			displayName: pkgPath,
+			relPkgPath:  pkgPath,
+		}
 	}
+}
 
-	result := testrunners.RunResult{
-		PackageName:   displayName,
-		ModuleMoniker: cfg.ModuleMoniker,
-	}
-
-	moduleRoot := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
-
+// prepareCucumberNpmEnv validates the module root, creates an isolated npm environment,
+// and runs npm ci/install. Returns the isolated environment on success, or nil with
+// result.PackageFailed set on failure.
+func prepareCucumberNpmEnv(moduleRoot string, cfg testrunners.RunConfig, logWriter io.Writer, result *testrunners.RunResult) *npm.IsolatedEnv {
 	// Check if package.json exists
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "No package.json found at %s\n", packageJSON)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
 
 	// Prepare isolated npm environment keyed by UoW output dir
@@ -180,10 +188,16 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	if err != nil {
 		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
 
 	fmt.Fprintf(logWriter, "Using isolated environment: %s\n", env.WorkDir)
+
+	// Skip npm ci/install when dependencies haven't changed
+	if env.DepsUpToDate {
+		fmt.Fprintf(logWriter, "Dependencies up-to-date (cached node_modules), skipping npm install\n")
+		return env
+	}
 
 	// Run npm ci/install
 	packageLock := filepath.Join(moduleRoot, "package-lock.json")
@@ -195,25 +209,34 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	}
 
 	fmt.Fprintf(logWriter, "Installing npm dependencies (npm %s)...\n", npmCmd)
-	npm.NpmInstallMu.Lock()
-	installToolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
-	installExecCtx := &tool.ExecutionContext{
-		ModuleRoot:    env.WorkDir,
-		FullEnv:       env.Env,
-		ArgsOverrides: []string{npmCmd},
-	}
-	installResult, installErr := tool.GlobalExecutor().Execute(context.Background(), installToolDef, installExecCtx)
-	npm.NpmInstallMu.Unlock()
+	var installResult *tool.ExecutionResult
+	var installErr error
+	lockErr := npm.WithInstallLock(func() error {
+		installToolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
+		installExecCtx := &tool.ExecutionContext{
+			ModuleRoot:    env.WorkDir,
+			FullEnv:       env.Env,
+			ArgsOverrides: []string{npmCmd},
+		}
+		installResult, installErr = tool.GlobalExecutor().Execute(context.Background(), installToolDef, installExecCtx)
+		return installErr
+	})
 	if installResult != nil {
 		fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
 	}
-	if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
+	if lockErr != nil || installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
 		fmt.Fprintf(logWriter, "npm %s failed: %v\n", npmCmd, installErr)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
+	npm.MarkNpmDepsInstalled(env.WorkDir, moduleRoot)
 
-	// Build cucumber-js command
+	return env
+}
+
+// buildCucumberArgs constructs the npx cucumber-js command arguments including
+// output format, tag filters, and the specific feature file path.
+func buildCucumberArgs(cfg testrunners.RunConfig, env *npm.IsolatedEnv, relFeatureFile string) []string {
 	// Use --no-install to prevent npx from fetching packages from the registry.
 	// The @cucumber/cucumber package installs a "cucumber-js" binary locally;
 	// without --no-install, npx falls through to the npm registry and resolves
@@ -244,11 +267,12 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		}
 	}
 
-	fmt.Fprintf(logWriter, "=== Testing TypeScript cucumber specs ===\n")
-	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
-	fmt.Fprintf(logWriter, "Command: npx %s\n\n", strings.Join(args, " "))
+	return args
+}
 
-	// Execute npx cucumber-js
+// executeCucumberTests runs npx cucumber-js and checks for dependency-confusion attacks.
+// It populates result with pass/fail counts based on the execution outcome.
+func executeCucumberTests(env *npm.IsolatedEnv, args []string, tests []testing.TestReference, logWriter io.Writer, result *testrunners.RunResult) {
 	npxToolDef := tool.GlobalRegistry().GetOrAdhoc("npx")
 	npxExecCtx := &tool.ExecutionContext{
 		ModuleRoot:    env.WorkDir,
@@ -269,17 +293,47 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		failed = true
 		fmt.Fprintf(logWriter, "cucumber-js: detected unexpected package resolution (possible dependency confusion)\n")
 	}
+
+	// Report 1 passed or 1 failed as a conservative fallback.
+	// len(tests) is the feature-file count, not the scenario count, so using it
+	// would inflate metrics. Real counts come from cucumber JSON when available.
 	if failed {
 		result.PackageFailed = true
-		result.TestsFailed = len(tests)
+		result.TestsFailed = 1
 		fmt.Fprintf(logWriter, "cucumber-js failed\n")
 	} else {
-		result.TestsPassed = len(tests)
+		result.TestsPassed = 1
 		fmt.Fprintf(logWriter, "cucumber-js passed\n")
 	}
 
-	result.TestsTotal = len(tests)
-	result.Duration = time.Since(start)
+	result.TestsTotal = 1
+}
 
+// Execute runs TypeScript cucumber-js tests for a package.
+func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
+	start := time.Now()
+
+	pkg := parseCucumberPackagePath(pkgPath)
+	result := testrunners.RunResult{
+		PackageName:   pkg.displayName,
+		ModuleMoniker: cfg.ModuleMoniker,
+	}
+
+	moduleRoot := filepath.Join(cfg.WorkspaceRoot, pkg.relPkgPath)
+
+	env := prepareCucumberNpmEnv(moduleRoot, cfg, logWriter, &result)
+	if env == nil {
+		return result
+	}
+
+	args := buildCucumberArgs(cfg, env, pkg.relFeatureFile)
+
+	fmt.Fprintf(logWriter, "=== Testing TypeScript cucumber specs ===\n")
+	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
+	fmt.Fprintf(logWriter, "Command: npx %s\n\n", strings.Join(args, " "))
+
+	executeCucumberTests(env, args, tests, logWriter, &result)
+
+	result.Duration = time.Since(start)
 	return result
 }

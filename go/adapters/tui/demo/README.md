@@ -24,7 +24,8 @@ Experimental TUI layout prototype (tui3) using modular cell components for a gri
 
 | File | Responsibility |
 | --- | --- |
-| model.go | `Model` struct, `Cells` struct, `NewModel`, cell initialization, state setters, metrics refresh |
+| model.go | `Model` struct, `Cells` struct, `NewModel`, cell initialization |
+| state.go | State management: `updateCells`, `updateMetrics`, all `Set*` methods, `AddUnit`, `UpdateUnit`, `AppendOutput` |
 | update.go | `Update` method handling all message types with helper functions |
 | view.go | `View` method composing resources, command, selector, output, and summary panes |
 | messages.go | Message types for ticks, unit lifecycle, metrics, tools, summary, and quit |
@@ -40,10 +41,10 @@ The demo sub-package is an experimental redesign of the parallel TUI using a mod
 ## Code Health
 
 ### Tech Debt
-- None
+- model_test.go (401 lines) exceeds 300 lines; candidate for splitting into focused test suites
 
 ### Pain Points
-- `model.go` (~340 lines) mixes cell initialization, state setters, and metrics refresh logic; a dedicated `state` helper would reduce the file size
+- None identified
 
 ### Optimization Opportunities
 - None identified

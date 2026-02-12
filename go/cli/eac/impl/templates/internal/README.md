@@ -44,7 +44,7 @@ The `templates/internal` package is the engine behind all `templates install` su
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- No test for renderer.go (215 lines) or values.go (74 lines)
 
 ### Pain Points
 - None identified.

@@ -108,9 +108,16 @@ func (r *ReqnrollRunner) FindTestRoot(featurePath string, cfg any) string {
 		return ""
 	}
 
-	// Return the module's dotnet component root
-	for _, comp := range module.Components {
-		if comp != nil && comp.Root != "" {
+	// Return the module's reqnroll/gherkin component root (filter by type)
+	for name, comp := range module.Components {
+		if comp == nil || comp.Root == "" {
+			continue
+		}
+		compType := name
+		if comp.Type != "" {
+			compType = comp.Type
+		}
+		if compType == "reqnroll" || compType == "gherkin" {
 			return filepath.ToSlash(comp.Root)
 		}
 	}

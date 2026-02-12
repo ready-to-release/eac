@@ -40,12 +40,12 @@ to ensure tests operate in isolated temporary directories.
 ## Code Health
 
 ### Tech Debt
-- None identified
+- `workspace.go` is 366 lines
+- `workspace.go` uses process-level cache and `os.Getenv` directly, making concurrent detection tests require careful isolation
+- `MustDetect()` and `RootOrPanic()` use panics; both are now marked as deprecated with guidance to prefer `Detect()` / `Root()` with explicit error handling
 
 ### Pain Points
-- `workspace.go` uses process-level cache and `os.Getenv` directly, making concurrent detection tests require careful isolation
-- `MustDetect()` and `RootOrPanic()` use panics; callers must be aware these are unsafe in library contexts
+- None identified
 
-### Optimization Opportunities
-- Replace direct `os.Getenv` calls with an injectable environment reader to simplify testing without real env vars (low effort)
-- Package is well-tested (729-line test file) and well-structured; no major issues
+### Assessed and Accepted
+- Package is well-tested (729-line test file) and well-structured

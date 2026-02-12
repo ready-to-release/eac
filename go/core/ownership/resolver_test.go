@@ -1,6 +1,7 @@
 package ownership
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -543,5 +544,91 @@ func TestNewResolver_EmptyModules(t *testing.T) {
 	owner := r.Resolve("any/file.go")
 	if owner != nil {
 		t.Errorf("expected nil, got %s:%s", owner.Module, owner.Component)
+	}
+}
+
+// buildLargeResolver creates a resolver with numModules modules, each having
+// numComponents components with distinct roots under "mod-N/comp-M/".
+// Also creates numFileEntries file-level ownership entries.
+func buildLargeResolver(numModules, numComponents, numFileEntries int) *Resolver {
+	var modules []ModuleDefinition
+	for i := 0; i < numModules; i++ {
+		comps := make(map[string]*ComponentOwnership, numComponents)
+		for j := 0; j < numComponents; j++ {
+			comps[fmt.Sprintf("comp-%d", j)] = &ComponentOwnership{
+				Root: fmt.Sprintf("mod-%d/comp-%d", i, j),
+			}
+		}
+		modules = append(modules, ModuleDefinition{
+			Moniker:    fmt.Sprintf("mod-%d", i),
+			Components: comps,
+		})
+	}
+	// Add file entries spread across modules.
+	for i := 0; i < numFileEntries; i++ {
+		modIdx := i % numModules
+		modules[modIdx].Components[fmt.Sprintf("file-%d", i)] = &ComponentOwnership{
+			File: fmt.Sprintf("standalone/file-%d.txt", i),
+		}
+	}
+	return NewResolver(modules)
+}
+
+// generateFiles creates n synthetic file paths distributed across the module roots.
+func generateFiles(n, numModules, numComponents int) []string {
+	files := make([]string, n)
+	for i := 0; i < n; i++ {
+		modIdx := i % numModules
+		compIdx := i % numComponents
+		files[i] = fmt.Sprintf("mod-%d/comp-%d/subdir/file-%d.go", modIdx, compIdx, i)
+	}
+	return files
+}
+
+// BenchmarkValidate_LargeRepo benchmarks Validate with realistic large-repo parameters.
+// 50 modules x 10 components = 500 entries, 10_000 files.
+func BenchmarkValidate_LargeRepo(b *testing.B) {
+	const (
+		numModules     = 50
+		numComponents  = 10
+		numFileEntries = 50
+		numFiles       = 10_000
+	)
+	r := buildLargeResolver(numModules, numComponents, numFileEntries)
+	files := generateFiles(numFiles, numModules, numComponents)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = r.Validate(files)
+	}
+}
+
+// BenchmarkResolve_LargeRepo benchmarks single-file Resolve with 500 entries.
+func BenchmarkResolve_LargeRepo(b *testing.B) {
+	const (
+		numModules     = 50
+		numComponents  = 10
+		numFileEntries = 50
+	)
+	r := buildLargeResolver(numModules, numComponents, numFileEntries)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = r.Resolve("mod-25/comp-5/subdir/deep/file.go")
+	}
+}
+
+// BenchmarkResolve_FileEntry benchmarks exact file-entry lookup.
+func BenchmarkResolve_FileEntry(b *testing.B) {
+	const (
+		numModules     = 50
+		numComponents  = 10
+		numFileEntries = 200
+	)
+	r := buildLargeResolver(numModules, numComponents, numFileEntries)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = r.Resolve("standalone/file-100.txt")
 	}
 }

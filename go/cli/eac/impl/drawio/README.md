@@ -5,7 +5,7 @@ Provides commands for editing DrawIO diagram files stored as `.drawio.png` (PNG 
 ## Key Types
 
 - **`ContainerProvider`** -- Function type returning a `ContainerPort` for Docker execution
-- **`limitedBuffer`** -- Size-limited `io.Writer` preventing memory exhaustion from Docker output
+- **`limitedBuffer`** -- Size-limited `io.Writer` preventing memory exhaustion from Docker output (now in `core/iobuffer`)
 
 ## Patterns
 
@@ -44,14 +44,11 @@ The `drawio` package enables LLM-powered diagram editing in `eac` by providing a
 ## Code Health
 
 ### Tech Debt
-- Global mutable `var defaultContainerProvider` (drawio.go:48) used as package-level singleton for Docker container access
-- No unit tests for subcommand files: decode.go, encode.go, embed.go, render.go, create.go, info.go
-- drawio_test.go (119 lines) only covers path translation and image name utilities
+- drawio.go (311 lines) is the largest file; contains Docker management, path translation, and command execution
+- subcommands_test.go (163 lines) now provides unit tests for subcommand logic
 
 ### Pain Points
-- Each subcommand file (decode, encode, embed, render, create, info) follows a similar structure of flag parsing, path resolution, and Docker command execution but cannot be tested without Docker
-- `limitedBuffer` is defined inline in drawio.go; a near-identical implementation exists in design/helper/validator.go
+- drawio_test.go (119 lines) covers path translation utilities but subcommand orchestration relies on integration tests
 
 ### Optimization Opportunities
-- Deduplicate `limitedBuffer` into a shared utility package (high feasibility, identical implementation in two packages)
-- Add mock-based unit tests for subcommand orchestration logic by injecting a test `ContainerProvider` (moderate feasibility, `SetContainerProvider` already exists for this purpose)
+- None identified

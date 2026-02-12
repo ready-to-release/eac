@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	commitmessageinternal "github.com/ready-to-release/eac/go/cli/eac/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/create/aiutil"
 )
 
@@ -162,4 +163,77 @@ func FormatModuleSection(jsonOutput string) (string, error) {
 	result.WriteString(module.Body)
 
 	return result.String(), nil
+}
+
+// stripModuleSectionsFromTopLevel removes any module-like sections that appear
+// after the "Changes:" line in the top-level commit message.
+// The AI sometimes includes module summaries here despite being told not to.
+func stripModuleSectionsFromTopLevel(message string) string {
+	lines := strings.Split(message, "\n")
+	result := make([]string, 0, len(lines))
+	foundChangesLine := false
+
+	for _, line := range lines {
+		// Include all lines up to and including the "Changes:" line
+		result = append(result, line)
+
+		// Once we find "Changes:", stop including further lines if they look like module sections
+		if strings.HasPrefix(strings.TrimSpace(line), "Changes:") {
+			foundChangesLine = true
+			break
+		}
+	}
+
+	// If we found the Changes line and there's content after it, check if it's module sections
+	if foundChangesLine && len(result) < len(lines) {
+		// Look ahead to see if the next non-empty lines are module sections (starting with ---)
+		remainingLines := lines[len(result):]
+		for _, line := range remainingLines {
+			trimmed := strings.TrimSpace(line)
+
+			// Skip empty lines
+			if trimmed == "" {
+				continue
+			}
+
+			// If we hit a line that starts with "---", it's likely the start of module sections
+			// Stop here - don't include it or anything after
+			if strings.HasPrefix(trimmed, "---") {
+				break
+			}
+
+			// If it's not a separator and not empty, include it (could be additional top-level content)
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// validateAndOutput validates the commit message and outputs it.
+// Returns (exit code, should retry)
+// NOTE: This function only outputs the commit message - it does NOT perform git commit.
+// The user is expected to copy/use the message with their preferred commit workflow.
+func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
+	// Verify contract compliance
+	validationErrors := commitmessageinternal.VerifyCommitMessageContract(message, cfg.affectedModules)
+
+	errorCount, warningCount := 0, 0
+	for _, verr := range validationErrors {
+		if !verr.IsWarning() {
+			errorCount++
+		} else {
+			warningCount++
+		}
+	}
+
+	// Output marker for VSCode extension to find the start of commit message
+	// This separates progress/status messages from the actual output
+	// Write directly to stdout (not via log) for programmatic consumption
+	fmt.Println(">>>>>>OUTPUT START<<<<<<")
+
+	// Output the generated message (raw, clean output for piping/copying)
+	fmt.Println(message)
+
+	return 0, false
 }

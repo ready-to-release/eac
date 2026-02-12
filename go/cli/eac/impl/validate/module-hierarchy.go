@@ -185,55 +185,24 @@ func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyR
 }
 
 func printModuleHierarchyReport(report *moduleHierarchyReport) {
-	log.Info("=== Module Hierarchy Validation Report ===")
-	log.Info("")
-
-	hasIssues := false
-
-	// Non-existent modules
-	if len(report.nonExistentModules) > 0 {
-		hasIssues = true
-		log.Infof("❌ References to Non-Existent Modules (%d):", len(report.nonExistentModules))
-		for _, issue := range report.nonExistentModules {
-			log.Infof("  • %s", issue)
+	toBullets := func(items []string) []string {
+		out := make([]string, len(items))
+		for i, item := range items {
+			out[i] = formatBullet(item)
 		}
-		log.Info("")
+		return out
 	}
 
-	// Bidirectional inconsistencies
-	if len(report.inconsistencies) > 0 {
-		hasIssues = true
-		log.Infof("❌ Bidirectional Relationship Inconsistencies (%d):", len(report.inconsistencies))
-		for _, issue := range report.inconsistencies {
-			log.Infof("  • %s", issue)
-		}
-		log.Info("")
-	}
-
-	// Circular dependencies
-	if len(report.circularDependencies) > 0 {
-		hasIssues = true
-		log.Infof("❌ Circular Dependencies (%d):", len(report.circularDependencies))
-		for _, issue := range report.circularDependencies {
-			log.Infof("  • %s", issue)
-		}
-		log.Info("")
-	}
-
-	// Unreachable modules
-	if len(report.unreachableModules) > 0 {
-		hasIssues = true
-		log.Infof("⚠️  Unreachable Modules (%d):", len(report.unreachableModules))
-		for _, issue := range report.unreachableModules {
-			log.Infof("  • %s", issue)
-		}
-		log.Info("")
-	}
-
-	if !hasIssues {
-		log.Info("✅ All module hierarchy checks passed!")
-		log.Info("")
-	}
+	printValidationReport(validationReport{
+		Title: "Module Hierarchy Validation Report",
+		Sections: []validationSection{
+			{Icon: "❌", Label: "References to Non-Existent Modules", Items: toBullets(report.nonExistentModules)},
+			{Icon: "❌", Label: "Bidirectional Relationship Inconsistencies", Items: toBullets(report.inconsistencies)},
+			{Icon: "❌", Label: "Circular Dependencies", Items: toBullets(report.circularDependencies)},
+			{Icon: "⚠️ ", Label: "Unreachable Modules", Items: toBullets(report.unreachableModules)},
+		},
+		SuccessMessage: "All module hierarchy checks passed!",
+	})
 }
 
 func printModuleHierarchyUsage() {

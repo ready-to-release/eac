@@ -46,7 +46,7 @@ Provides Structurizr workspace validation, export, serving, and utility function
 
 | File | Responsibility |
 | --- | --- |
-| validator.go | StructurizrValidator interface, StructurizrValidatorImpl, Docker-based validation execution, output parsing, module/file discovery, limitedBuffer, and formatDockerVolume |
+| validator.go | StructurizrValidator interface, StructurizrValidatorImpl, Docker-based validation execution, output parsing, and module/file discovery |
 | validator_mock.go | MockStructurizrValidator with builder methods for configuring test behavior and fixture loading |
 | validation.go | Input validation utilities: ValidateModuleName, CleanModuleName, ValidateIdentifier |
 | validation_formatter.go | Console formatting for ValidationResult and ValidationSummary, plus JSON file writing |
@@ -73,10 +73,10 @@ This package provides the infrastructure for the `validate design`, `serve desig
 ## Code Health
 
 ### Tech Debt
-- validator_mock.go:170 contains a fragile string slice check (`contentStr[0:7] == "invalid"`) that could panic on short content
+- validation_formatter.go (269 lines) lacks dedicated unit tests for formatting and JSON output logic
 
 ### Pain Points
-- None identified
+- browser.go (49 lines), serve.go (96 lines), and constants.go (49 lines) have no unit tests; tested via BDD
 
 ### Optimization Opportunities
 - None identified

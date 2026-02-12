@@ -127,14 +127,19 @@ func isNonStepKeyword(line string) bool {
 	return false
 }
 
+// placeholderVariants are sample values used to replace Scenario Outline <placeholders>.
+// Multiple variants ensure we match different regex pattern types:
+//   - "ABC" matches ([A-Z]+), ([a-zA-Z]+), (.*), (\w+), (\S+)
+//   - "123" matches (\d+), ([0-9]+)
+//   - "abc123" matches (\w+), (.+)
+var placeholderVariants = []string{"ABC", "123", "abc123"}
+
 // NormalizeForMatching prepares a step text for regex matching.
 // It handles Scenario Outline placeholders by converting them to example values.
 func NormalizeForMatching(stepText string) string {
-	// Replace <placeholder> with a sample value that will match common regex patterns
-	// For example, <format> becomes "ABC" which matches patterns like:
-	// ([A-Z]+), ([a-zA-Z]+), (.*), (\w+), etc.
-	// This allows step definitions to match Scenario Outline steps
-	normalized := rePlaceholder.ReplaceAllString(stepText, "ABC")
+	// Replace <placeholder> with the first variant as the default normalization.
+	// MatchesStep tries all variants during matching.
+	normalized := rePlaceholder.ReplaceAllString(stepText, placeholderVariants[0])
 	return normalized
 }
 
@@ -149,10 +154,15 @@ func MatchesStep(stepDef StepDefinition, featureStep FeatureStep) bool {
 		return true
 	}
 
-	// Try with normalized placeholders (for Scenario Outline)
-	normalized := NormalizeForMatching(featureStep.Text)
-	if normalized != featureStep.Text {
-		// Only try if normalization changed something
+	// If the step has no placeholders, no further normalization will help
+	if !rePlaceholder.MatchString(featureStep.Text) {
+		return false
+	}
+
+	// Try each placeholder variant to handle different regex capture types
+	// (e.g., \d+ needs numeric placeholders, [A-Z]+ needs alpha)
+	for _, variant := range placeholderVariants {
+		normalized := rePlaceholder.ReplaceAllString(featureStep.Text, variant)
 		if stepDef.Regex.MatchString(normalized) {
 			return true
 		}

@@ -162,7 +162,7 @@ eac help <command>
 eac show modules
 
 # Module types
-eac show component-types
+eac show component-kinds
 
 # Dependency graph
 eac show dependencies
@@ -255,7 +255,7 @@ eac show test-summary src-auth acceptance >> test-report.log
 These commands execute quickly (< 1s):
 
 - `show modules`
-- `show component-types`
+- `show component-kinds`
 - `show dependencies`
 - `show config`
 - `show workspaces`

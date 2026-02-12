@@ -38,7 +38,8 @@ Provides CI-specific pipeline sub-commands for dispatching, scheduling, and moni
 | commands.go | Table-driven registration of 5 CI sub-commands via `RegisterAll()` |
 | ci.go | Parent `pipeline ci` command entry point with usage display |
 | dispatcher.go | `CIWorkflowDispatcher` interface and `gh` CLI implementation |
-| schedule.go | `CIScheduler` with concurrency control, dependency ordering, and cascade failure |
+| schedule.go | Command entry point for `pipeline ci schedule` with flag parsing, filtering, and result reporting |
+| scheduler.go | `CIScheduler` with concurrency control, dependency ordering, and cascade failure |
 | dispatch_and_wait.go | Single workflow dispatch-and-wait with run ID discovery and polling |
 | get_run_id.go | Find workflow run ID by workflow file name and commit SHA |
 | summary_link.go | Generate diagnostic markdown with CI summary links |
@@ -61,12 +62,12 @@ The `ci` sub-package handles the advanced CI orchestration workflows within the 
 ## Code Health
 
 ### Tech Debt
-- `schedule.go` is 572 lines and contains both the scheduler logic and the command entry point (`PipelineCISchedule`)
-- `get_run_id.go` defines custom error types (`simpleError`, `newError`, `sprintf`) that duplicate standard library functionality
+- github.go (324 lines) is the largest file; contains dispatcher implementation and status polling logic
+- schedule_test.go (490 lines) provides comprehensive scheduler unit tests
+- No unit tests for ci.go, commands.go, dispatch_and_wait.go, get_run_id.go, or summary_link.go
 
 ### Pain Points
-- The `CIScheduler` state machine (pending/active/completed/failed/skipped) is implicit rather than explicitly modeled
+- None identified
 
 ### Optimization Opportunities
-- Extract `PipelineCISchedule()` from `schedule.go` into a separate command file to separate CLI concerns from scheduler logic (moderate feasibility)
-- Remove custom error types in `get_run_id.go` in favor of `fmt.Errorf` (low effort)
+- None identified

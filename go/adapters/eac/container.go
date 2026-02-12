@@ -23,27 +23,15 @@ func NewContainer(workspaceRoot string, executor *tool.DefaultExecutor, toolDef 
 }
 
 func (a *containerAdapter) Execute(ctx context.Context, args []string, cfg *ExecConfig) (*Result, error) {
-	if cfg == nil {
-		cfg = &ExecConfig{}
-	}
-	ws := cfg.WorkspaceRoot
-	if ws == "" {
-		ws = a.workspaceRoot
+	execCtx, ws := buildExecContext(a.workspaceRoot, args, cfg)
+
+	// Container overrides: ModuleRoot is always the workspace root,
+	// and placeholders map {workspace} for mount path resolution.
+	execCtx.ModuleRoot = ws
+	execCtx.Placeholders = map[string]string{
+		"{workspace}": ws,
 	}
 
-	execCtx := &tool.ExecutionContext{
-		WorkspaceRoot: ws,
-		ModuleRoot:    ws,
-		StdoutWriter:  cfg.StdoutWriter,
-		StderrWriter:  cfg.StderrWriter,
-		StdinReader:   cfg.StdinReader,
-		EnvOverrides:  cfg.Env,
-		FullEnv:       cfg.FullEnv,
-		ArgsOverrides: args,
-		Placeholders: map[string]string{
-			"{workspace}": ws,
-		},
-	}
 	toolResult, err := a.executor.Execute(ctx, a.toolDef, execCtx)
 	if err != nil {
 		return nil, err

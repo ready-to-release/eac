@@ -2,13 +2,14 @@ package ci
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type pipelineCIGetRunIDCommand struct{}
@@ -87,7 +88,7 @@ func PipelineCIGetRunID() int {
 
 func findRunIDByWorkflowAndSHA(workflow, sha, workspaceRoot string) (string, error) {
 	// Get the successful run for this workflow at this commit SHA
-	output, err := ghexec.Run(workspaceRoot, "run", "list",
+	output, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", workspaceRoot, "run", "list",
 		"--workflow", workflow,
 		"--commit", sha,
 		"--status", "success",
@@ -95,12 +96,12 @@ func findRunIDByWorkflowAndSHA(workflow, sha, workspaceRoot string) (string, err
 		"-q", ".[0].databaseId",
 	)
 	if err != nil {
-		return "", newError("failed to query GitHub: %v", err)
+		return "", fmt.Errorf("failed to query GitHub: %v", err)
 	}
 
 	runID := strings.TrimSpace(string(output))
 	if runID == "" {
-		return "", newError("no successful run found for workflow %s at SHA %s", workflow, sha)
+		return "", fmt.Errorf("no successful run found for workflow %s at SHA %s", workflow, sha)
 	}
 
 	return runID, nil
@@ -121,33 +122,3 @@ func printGetRunIDUsage() {
 	log.Info("  RUN_ID=$(clie eac pipeline ci get-run-id --workflow ci-books.yaml --sha $SHA)")
 }
 
-// newError is a helper to create formatted errors.
-func newError(format string, args ...interface{}) error {
-	return &simpleError{msg: sprintf(format, args...)}
-}
-
-type simpleError struct {
-	msg string
-}
-
-func (e *simpleError) Error() string {
-	return e.msg
-}
-
-func sprintf(format string, args ...interface{}) string {
-	// Simple sprintf implementation to avoid importing fmt
-	result := format
-	for _, arg := range args {
-		switch v := arg.(type) {
-		case string:
-			result = strings.Replace(result, "%s", v, 1)
-			result = strings.Replace(result, "%v", v, 1)
-		case error:
-			result = strings.Replace(result, "%v", v.Error(), 1)
-			result = strings.Replace(result, "%w", v.Error(), 1)
-		default:
-			result = strings.Replace(result, "%v", "?", 1)
-		}
-	}
-	return result
-}

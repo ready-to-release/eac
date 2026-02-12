@@ -83,17 +83,17 @@ func DetectWithOptions(opts Options) (*Workspace, error) {
 	w := &Workspace{}
 
 	// Set container flag early (used throughout)
-	w.IsContainer = os.Getenv(environments.EnvCLIEDockerMode) == "true"
+	w.IsContainer = opts.getenv(environments.EnvCLIEDockerMode) == "true"
 
 	// Step 1: Check explicit override (unless ModeGitOnly)
 	if opts.Mode != ModeGitOnly {
-		if root := os.Getenv(environments.EnvCLIERepoRoot); root != "" {
+		if root := opts.getenv(environments.EnvCLIERepoRoot); root != "" {
 			w.Root = filepath.Clean(root)
 			w.Source = "env:CLIE_REPO_ROOT"
 			if err := validateIfRequired(w.Root, opts); err != nil {
 				return nil, err
 			}
-			w.DistRoot = resolveDistRoot(w.Root, w.IsContainer)
+			w.DistRoot = resolveDistRoot(w, opts)
 			return w, nil
 		}
 	}
@@ -115,7 +115,7 @@ func DetectWithOptions(opts Options) (*Workspace, error) {
 		if err := validateIfRequired(w.Root, opts); err != nil {
 			return nil, err
 		}
-		w.DistRoot = resolveDistRoot(w.Root, w.IsContainer)
+		w.DistRoot = resolveDistRoot(w, opts)
 		return w, nil
 	}
 
@@ -150,12 +150,13 @@ func DetectWithOptions(opts Options) (*Workspace, error) {
 	if err := validateIfRequired(w.Root, opts); err != nil {
 		return nil, err
 	}
-	w.DistRoot = resolveDistRoot(w.Root, w.IsContainer)
+	w.DistRoot = resolveDistRoot(w, opts)
 	return w, nil
 }
 
 // MustDetect is like Detect but panics on error.
-// Use only in init() or where workspace is absolutely required.
+// Deprecated: Prefer Detect() with explicit error handling in library code.
+// Use only in main() or init() where workspace is absolutely required.
 func MustDetect() *Workspace {
 	w, err := Detect()
 	if err != nil {
@@ -175,7 +176,8 @@ func Root() (string, error) {
 }
 
 // RootOrPanic returns the workspace root or panics.
-// Use only where workspace is absolutely required.
+// Deprecated: Prefer Root() with explicit error handling in library code.
+// Use only in main() or init() where workspace is absolutely required.
 func RootOrPanic() string {
 	return MustDetect().Root
 }
@@ -356,9 +358,9 @@ func validateIfRequired(root string, opts Options) error {
 }
 
 // resolveDistRoot determines the distribution root for tool assets.
-func resolveDistRoot(workspaceRoot string, _ bool) string {
-	if containerRoot := os.Getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
+func resolveDistRoot(w *Workspace, opts Options) string {
+	if containerRoot := opts.getenv(environments.EnvCLIEContainerRoot); containerRoot != "" {
 		return containerRoot
 	}
-	return workspaceRoot
+	return w.Root
 }

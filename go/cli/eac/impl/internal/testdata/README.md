@@ -45,10 +45,10 @@ The `testdata` package provides the shared data preparation layer for all test l
 ## Code Health
 
 ### Tech Debt
-- None identified.
+- No unit tests for testdata.go (123 lines) or helpers.go (35 lines); tested via integration scenarios
 
 ### Pain Points
-- None identified.
+- None identified
 
 ### Optimization Opportunities
-- None identified.
+- None identified

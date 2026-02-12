@@ -44,22 +44,22 @@ serialized console output to prevent interleaved terminal writes.
 
 ## Internal Structure
 
-| File                        | Responsibility                                   |
-| ---                         | ---                                              |
-| `types.go`                  | Core type definitions, status enum, `ModuleResultSet`, `WorkResult` |
-| `orchestrator_core.go`      | `Orchestrator` struct, `New`, `Run`, `RunLayered`, `RunUnitsParallel`, result aggregation |
-| `orchestrator_display.go`   | TUI lifecycle, observer dispatch, `SetConsole`, `StartTUI`, `StopTUI`, `AddObserver` |
-| `orchestrator_phases.go`    | Phase start/complete/write event emission         |
-| `display.go`                | `displayManager` single-writer console loop, status formatting |
-| `unit_scheduler_core.go`    | `UnitScheduler`, worker pool, LPT dispatch, `RunUnits`, result aggregation helpers |
-| `unit_scheduler_capacity.go`| Dynamic capacity calculation ticker               |
-| `unit_scheduler_display.go` | TUI status tracking, tool/container lamp state, resource status emission |
-| `unit_scheduler_execution.go`| `executeWorker`, background cache detection, log file management |
-| `weighted_semaphore.go`     | `WeightedSemaphore` with lock-tracker integration |
-| `memory_detection.go`       | Docker/WSL/host memory and CPU detection          |
-| `parser.go`                 | Log parsing (JSON events, Cucumber, CTRF)         |
-| `newline_unix.go`           | Platform line-ending constant for Unix            |
-| `newline_windows.go`        | Platform line-ending constant for Windows         |
+| File                          | Responsibility                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `types.go`                    | Core type definitions, status enum, `ModuleResultSet`, `WorkResult`                       |
+| `orchestrator_core.go`        | `Orchestrator` struct, `New`, `Run`, `RunLayered`, `RunUnitsParallel`, result aggregation |
+| `orchestrator_display.go`     | TUI lifecycle, observer dispatch, `SetConsole`, `StartTUI`, `StopTUI`, `AddObserver`      |
+| `orchestrator_phases.go`      | Phase start/complete/write event emission                                                 |
+| `display.go`                  | `displayManager` single-writer console loop, status formatting                            |
+| `unit_scheduler_core.go`      | `UnitScheduler`, worker pool, LPT dispatch, `RunUnits`, result aggregation helpers        |
+| `unit_scheduler_capacity.go`  | Dynamic capacity calculation ticker                                                       |
+| `unit_scheduler_display.go`   | TUI status tracking, tool/container lamp state, resource status emission                  |
+| `unit_scheduler_execution.go` | `executeWorker`, background cache detection, log file management                          |
+| `weighted_semaphore.go`       | `WeightedSemaphore` with lock-tracker integration                                         |
+| `memory_detection.go`         | Docker/WSL/host memory and CPU detection                                                  |
+| `parser.go`                   | Log parsing (JSON events, Cucumber, CTRF)                                                 |
+| `newline_unix.go`             | Platform line-ending constant for Unix                                                    |
+| `newline_windows.go`          | Platform line-ending constant for Windows                                                 |
 
 ## Dependencies
 
@@ -88,14 +88,15 @@ scheduling and resource concerns out of both layers.
 ## Code Health
 
 ### Tech Debt
-- `unit_scheduler_core.go:261` `RunUnits` is ~180 lines; extract dependency-failure cascade and over-capacity handling into helpers
-- `orchestrator_core.go:314` `processWorkItem` is ~108 lines; repeated error-result boilerplate could be collapsed
-- `unit_scheduler_capacity.go:61` mutable package-level `defaultDetector` var; prefer constructor injection
+
+- None identified
 
 ### Pain Points
-- Dual-pool semaphore logic mixed with cascade-failure bookkeeping makes `RunUnits` hard to follow
-- The defensive `BUG:` warn at `unit_scheduler_core.go:434` suggests scheduler drain is not fully trusted
+
+- `unit_scheduler_core.go` (722 lines) is the largest implementation file
+- Multiple files exceed 300 lines: `memory_detection.go` (384 lines), `unit_scheduler_display.go` (363 lines), `orchestrator_display.go` (357 lines), `display.go` (337 lines), `orchestrator_module_exec.go` (306 lines), `parser.go` (305 lines)
+- Large test files: `types_test.go` (822 lines), `orchestrator_test.go` (373 lines), `capacity_test.go` (360 lines), `weighted_semaphore_test.go` (320 lines), `parser_test.go` (303 lines)
 
 ### Optimization Opportunities
-- Break `RunUnits` worker-pool loop into a `dispatchLoop` method to improve testability (low effort)
-- Replace `resultsMu` mutex-guarded slice with indexed atomic writes since each worker writes to a unique index (medium effort)
+
+- None identified

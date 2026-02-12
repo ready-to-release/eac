@@ -46,10 +46,10 @@ within build pipelines and test infrastructure.
 ## Code Health
 
 ### Tech Debt
-- `New()` in factory.go calls `tool.GlobalRegistry()` and `tool.GlobalExecutor()` directly; accepting these as parameters would improve testability and remove hidden coupling
+- None identified
 
 ### Pain Points
-- `nativeAdapter` and `containerAdapter` have nearly identical `Execute` methods (native.go:32, container.go:25); shared logic could be extracted to reduce duplication
+- None identified
 
 ### Optimization Opportunities
 - None identified

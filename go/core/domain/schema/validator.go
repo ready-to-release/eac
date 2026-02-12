@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
@@ -16,12 +17,11 @@ type SchemaType string
 
 // Schema type constants for different configuration file types.
 const (
-	SchemaComponentTypes SchemaType = "component-types"
-	SchemaEnvironments   SchemaType = "environments"
+	SchemaEnvironments SchemaType = "environments"
 	SchemaTestingTags    SchemaType = "testing-tags"
 	SchemaTestSuites     SchemaType = "test-suites"
 	SchemaRepository     SchemaType = "repository"
-	SchemaEACConfig      SchemaType = "ai-provider"
+	SchemaAIProvider     SchemaType = "ai-provider"
 	SchemaBooks          SchemaType = "books"
 	SchemaCommands       SchemaType = "commands"
 	SchemaToolConfig     SchemaType = "tool-config"
@@ -30,12 +30,11 @@ const (
 
 // schemaFileNames maps schema types to their file names (without path).
 var schemaFileNames = map[SchemaType]string{
-	SchemaComponentTypes: "component-types.schema.json",
-	SchemaEnvironments:   "environments.schema.json",
+	SchemaEnvironments: "environments.schema.json",
 	SchemaTestingTags:    "testing-tags.schema.json",
 	SchemaTestSuites:     "test-suites.schema.json",
 	SchemaRepository:     "repository.schema.json",
-	SchemaEACConfig:      "ai-provider.schema.json",
+	SchemaAIProvider:     "ai-provider.schema.json",
 	SchemaBooks:          "books.schema.json",
 	SchemaCommands:       "commands.schema.json",
 	SchemaToolConfig:     "tool-config.schema.json",
@@ -184,19 +183,15 @@ func extractValidationDetails(err error) []string {
 }
 
 // GetSchemaTypes returns all available schema types.
+// The list is auto-generated from the schemaFileNames map keys to avoid
+// hand-maintained lists drifting out of sync.
 func GetSchemaTypes() []SchemaType {
-	return []SchemaType{
-		SchemaComponentTypes,
-		SchemaEnvironments,
-		SchemaTestingTags,
-		SchemaTestSuites,
-		SchemaRepository,
-		SchemaEACConfig,
-		SchemaBooks,
-		SchemaCommands,
-		SchemaToolConfig,
-		SchemaBlueprints,
+	result := make([]SchemaType, 0, len(schemaFileNames))
+	for k := range schemaFileNames {
+		result = append(result, k)
 	}
+	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
+	return result
 }
 
 // GetSchemaPath returns the path to the schema directory.

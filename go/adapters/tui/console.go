@@ -60,13 +60,8 @@ type ParallelConsole struct {
 	// Store final model state for post-exit summary
 	finalModel *console.Model
 
-	// Async message queues - TUI is pure observer, never blocks workers.
-	// Two channels: critical (state changes) and regular (output lines).
-	// Critical channel has larger buffer and is drained with priority.
-	msgChan      chan tea.Msg     // Regular messages (output lines) - may drop
-	criticalChan chan tea.Msg     // Critical messages (state changes) - large buffer
-	msgWg        sync.WaitGroup  // Track pending messages for clean shutdown
-	msgCloseOnce sync.Once       // Ensures criticalChan/msgChan closed exactly once
+	// Async message pump - delivers messages to the TUI program with priority ordering.
+	pump *messagePump
 
 	// Real terminal output - captured at creation time before any output buffering.
 	// This ensures TUI writes directly to terminal even when stdout is redirected.
@@ -121,10 +116,24 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 	// Prevent lipgloss from querying terminal background color (causes OSC escape leaks)
 	lipgloss.SetHasDarkBackground(true)
 
-	// Create the appropriate model based on demo mode
-	var model tea.Model
+	// Create the appropriate model and program
+	model := c.createModel()
+	opts := c.buildProgramOptions()
+	c.program = tea.NewProgram(model, opts...)
+
+	// Start async message pump
+	c.startMessagePump()
+
+	// Signal that TUI is ready
+	close(c.ready)
+
+	// Run with signal handling and cleanup
+	return c.runWithCleanup(ctx)
+}
+
+// createModel builds the bubbletea model based on configuration (standard vs demo).
+func (c *ParallelConsole) createModel() tea.Model {
 	if c.config.TUI3Demo {
-		// Use experimental tui3 layout
 		c.mu.Lock()
 		c.demoMode = true
 		atomic.StoreInt32(&c.atomicDemoMode, 1)
@@ -137,134 +146,54 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		if height <= 0 {
 			height = 40
 		}
-		model = demo.NewModel(width, height, c.config.RunPhaseName, c.config.ASCIIMode)
-	} else {
-		// Use standard console model
-		model = console.NewModel(
-			c.config.Height,
-			c.config.RunPhaseName,
-			c.lineChan,
-			c.statusChan,
-			c.modelDone, // Termination signal for listeners
-			c.config.ASCIIMode,
-			c.config.SkipTUIDelay,
-			c.config.TUIConfig, // Pass through TUI config (nil uses defaults)
-		)
+		return demo.NewModel(width, height, c.config.RunPhaseName, c.config.ASCIIMode)
 	}
 
-	// Build program options based on environment
+	return console.NewModel(console.ModelOptions{
+		Height:       c.config.Height,
+		RunPhaseName: c.config.RunPhaseName,
+		LineChan:     c.lineChan,
+		StatusChan:   c.statusChan,
+		DoneChan:     c.modelDone,
+		ASCIIMode:    c.config.ASCIIMode,
+		SkipTUIDelay: c.config.SkipTUIDelay,
+		TUIConfig:    c.config.TUIConfig,
+	})
+}
+
+// buildProgramOptions constructs bubbletea program options based on the environment.
+func (c *ParallelConsole) buildProgramOptions() []tea.ProgramOption {
 	opts := []tea.ProgramOption{
-		tea.WithAltScreen(),         // Take over screen, restore on exit
+		tea.WithAltScreen(),
 		tea.WithoutBracketedPaste(),
-		tea.WithoutSignalHandler(), // Let our custom signal handler catch Ctrl-C
-		// CRITICAL: Use the real stdout captured at console creation time.
-		// This ensures TUI output goes directly to terminal even when stdout
-		// is redirected by the output buffer for capturing subprocess leaks.
+		tea.WithoutSignalHandler(),
 		tea.WithOutput(c.realStdout),
 	}
 
-	// Check if stdin is a terminal - if not, disable input to prevent blocking
-	// When stdin is not a terminal (e.g., /dev/null, pipe), bubbletea's default
-	// behavior of opening a new TTY can block indefinitely
 	stdinFd := int(os.Stdin.Fd())
-	stdinIsTerminal := isTerminal(stdinFd)
-	if stdinIsTerminal {
-		// Normal terminal mode - enable mouse for scrolling and hover
+	if isTerminal(stdinFd) {
 		opts = append(opts, tea.WithMouseAllMotion())
 	} else {
-		// Non-interactive mode - disable input to prevent blocking
-		// This happens when stdin is redirected (e.g., running in background)
 		opts = append(opts, tea.WithInput(nil))
 	}
 
-	c.program = tea.NewProgram(model, opts...)
+	return opts
+}
 
-	// Start async message pump goroutine.
-	// TUI is a pure observer - workers must NEVER block on TUI.
-	// Two channels: critical (state changes, large buffer) and regular (output, may drop).
-	c.msgChan = make(chan tea.Msg, 500)        // Regular messages - output lines
-	c.criticalChan = make(chan tea.Msg, 10000) // Critical messages - state changes (large buffer)
-	c.msgWg.Add(1)
-	go func() {
-		defer c.msgWg.Done()
-		for {
-			// Priority drain: always check critical channel first
-			select {
-			case msg, ok := <-c.criticalChan:
-				if !ok {
-					// Critical channel closed, drain remaining regular messages
-					for msg := range c.msgChan {
-						c.program.Send(msg)
-					}
-					return
-				}
-				c.program.Send(msg)
-			default:
-				// No critical messages, check both channels
-				select {
-				case msg, ok := <-c.criticalChan:
-					if !ok {
-						for msg := range c.msgChan {
-							c.program.Send(msg)
-						}
-						return
-					}
-					c.program.Send(msg)
-				case msg, ok := <-c.msgChan:
-					if !ok {
-						// Regular channel closed, drain critical
-						for msg := range c.criticalChan {
-							c.program.Send(msg)
-						}
-						return
-					}
-					c.program.Send(msg)
-				}
-			}
-		}
-	}()
+// startMessagePump initializes and starts the async message pump.
+// TUI is a pure observer - workers never block on TUI rendering.
+func (c *ParallelConsole) startMessagePump() {
+	c.pump = newMessagePump(c.program)
+	c.pump.Start()
+}
 
-	// Signal that TUI is ready
-	close(c.ready)
-
-	// Set up signal handler for Ctrl-C (SIGINT)
-	// This ensures single Ctrl-C triggers immediate cleanup
+// runWithCleanup runs the TUI program with signal handling and deferred cleanup.
+func (c *ParallelConsole) runWithCleanup(ctx context.Context) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(sigChan)
 
-	// Ensure cleanup always runs on exit (normal, Ctrl-C, or error)
-	defer func() {
-		c.mu.Lock()
-		if !c.stopped {
-			c.stopped = true
-			atomic.StoreInt32(&c.atomicStopped, 1)
-
-			// Close all multi-writers first
-			for _, w := range c.writers {
-				w.Close()
-			}
-			c.writers = nil
-
-			// Close contract line channel (this stops the converter goroutine)
-			close(c.contractLineChan)
-
-			// Close internal channels to trigger TUI exit
-			close(c.lineChan)
-			close(c.statusChan)
-		}
-		c.mu.Unlock()
-
-		// Close async message channels and wait for pump goroutine.
-		// This prevents Send() calls to a completed bubbletea program,
-		// which would block indefinitely and leak the pump goroutine.
-		c.closeMsgChannelsOnce()
-		c.msgWg.Wait()
-
-		// Reset terminal state - always run this to ensure clean terminal
-		// \033[0m = reset attributes, \033[?25h = show cursor
-		fmt.Fprint(c.realStdout, "\033[0m\033[?25h")
-	}()
+	defer c.cleanup()
 
 	sigDone := make(chan struct{})
 	defer close(sigDone)
@@ -280,28 +209,51 @@ func (c *ParallelConsole) Start(ctx context.Context) error {
 		}
 	}()
 
-	// Run the TUI and capture final model state
 	finalModel, err := c.program.Run()
 	if err != nil {
 		return err
 	}
 
-	// Store final model for post-exit summary
-	// Handle both console.Model and demo.Model
+	c.handleFinalModel(finalModel)
+	return nil
+}
+
+// cleanup closes channels and resets terminal state after the TUI exits.
+func (c *ParallelConsole) cleanup() {
+	c.mu.Lock()
+	if !c.stopped {
+		c.stopped = true
+		atomic.StoreInt32(&c.atomicStopped, 1)
+
+		for _, w := range c.writers {
+			w.Close()
+		}
+		c.writers = nil
+
+		close(c.contractLineChan)
+		close(c.lineChan)
+		close(c.statusChan)
+	}
+	c.mu.Unlock()
+
+	if c.pump != nil {
+		c.pump.Close()
+	}
+
+	fmt.Fprint(c.realStdout, "\033[0m\033[?25h")
+}
+
+// handleFinalModel stores and renders the final model state after program exit.
+func (c *ParallelConsole) handleFinalModel(finalModel tea.Model) {
 	switch m := finalModel.(type) {
 	case console.Model:
 		c.mu.Lock()
 		c.finalModel = &m
 		c.mu.Unlock()
-		// Print plain-text summary after alt screen is restored
 		c.printSummary(&m)
 	case demo.Model:
-		// tui3 handles its own final view rendering in View()
-		// For now, just print completion message
 		fmt.Fprintln(c.realStdout, "Execution complete.")
 	}
-
-	return nil
 }
 
 // convertLines reads from contractLineChan and converts to console.Line or tui3 messages
@@ -405,10 +357,11 @@ func (c *ParallelConsole) Stop() {
 	close(c.lineChan)
 	close(c.statusChan)
 
-	// Close async message channels and wait for pending messages.
+	// Close async message pump and wait for pending messages.
 	// This ensures all queued TUI updates are delivered before exit.
-	c.closeMsgChannelsOnce()
-	c.msgWg.Wait()
+	if c.pump != nil {
+		c.pump.Close()
+	}
 
 	// Quit the program and wait for it to fully exit
 	if c.program != nil {
@@ -440,15 +393,6 @@ func (c *ParallelConsole) closeModelDoneOnce() {
 	default:
 		close(c.modelDone)
 	}
-}
-
-// closeMsgChannelsOnce safely closes the async message channels exactly once.
-// Safe to call from both Start() defer and Stop() without double-close panic.
-func (c *ParallelConsole) closeMsgChannelsOnce() {
-	c.msgCloseOnce.Do(func() {
-		close(c.criticalChan)
-		close(c.msgChan)
-	})
 }
 
 // NewWriter creates an io.Writer for a module's output.
@@ -494,37 +438,7 @@ func (c *ParallelConsole) UpdateStatus(status tuicontract.Status) {
 	}
 
 	// Standard console mode
-	// Convert from contract type to internal console type
-	locks := make([]console.LockStatus, len(status.Locks))
-	for i, lock := range status.Locks {
-		locks[i] = console.LockStatus{
-			Name:     lock.Name,
-			Type:     lock.Type,
-			Capacity: lock.Capacity,
-			Used:     lock.Used,
-			Waiting:  lock.Waiting,
-		}
-	}
-
-	consoleStatus := console.Status{
-		Phase:                     status.Phase,
-		Running:                   status.Running,
-		Completed:                 status.Completed,
-		Total:                     status.Total,
-		Roof:                      status.Roof,
-		PressureTarget:            status.PressureTarget,
-		Locks:                     locks,
-		ActiveContainerTools:      status.ActiveContainerTools,
-		UsedContainerTools:        status.UsedContainerTools,
-		ActiveSystemTools:         status.ActiveSystemTools,
-		UsedSystemTools:           status.UsedSystemTools,
-		DockerMemPercent:          status.DockerMemPercent,
-		DockerAvailable:           status.DockerAvailable,
-		RunningContainerCount:     status.RunningContainerCount,
-		TotalContainerCount:       status.TotalContainerCount,
-		RunningSystemCount:        status.RunningSystemCount,
-		TotalSystemCount:          status.TotalSystemCount,
-	}
+	consoleStatus := convertContractStatus(status)
 
 	select {
 	case c.statusChan <- consoleStatus:
@@ -621,19 +535,14 @@ func (c *ParallelConsole) SendError(source, text string) {
 // NOTE: Output lines may be dropped if buffer is full; use sendCritical for state changes.
 func (c *ParallelConsole) sendAsync(msg tea.Msg) {
 	c.mu.Lock()
-	if c.stopped || c.program == nil || c.msgChan == nil {
+	if c.stopped || c.program == nil || c.pump == nil {
 		c.mu.Unlock()
 		return
 	}
-	msgChan := c.msgChan
+	pump := c.pump
 	c.mu.Unlock()
 
-	select {
-	case msgChan <- msg:
-		// Queued successfully
-	default:
-		// Buffer full - drop message (TUI updates are lossy)
-	}
+	pump.SendAsync(msg)
 }
 
 // sendCritical sends a message that must not be dropped (state changes).
@@ -641,21 +550,14 @@ func (c *ParallelConsole) sendAsync(msg tea.Msg) {
 // Never blocks - relies on large buffer to avoid drops.
 func (c *ParallelConsole) sendCritical(msg tea.Msg) {
 	c.mu.Lock()
-	if c.stopped || c.program == nil || c.criticalChan == nil {
+	if c.stopped || c.program == nil || c.pump == nil {
 		c.mu.Unlock()
 		return
 	}
-	critChan := c.criticalChan
+	pump := c.pump
 	c.mu.Unlock()
 
-	select {
-	case critChan <- msg:
-		// Queued successfully
-	default:
-		// Buffer full - this should rarely happen with large buffer
-		// Fall back to regular channel as last resort (may drop)
-		c.sendAsync(msg)
-	}
+	pump.SendCritical(msg)
 }
 
 // SetPhase switches to a new phase (Init, Run, End).
@@ -796,7 +698,7 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
 	demoMode := c.demoMode
-	critChan := c.criticalChan
+	pump := c.pump
 	program := c.program
 	c.mu.Unlock()
 
@@ -824,14 +726,13 @@ func (c *ParallelConsole) SendSummary(data *SummaryData) {
 		return
 	}
 
-	// Blocking send to critical channel — guarantees delivery AND ordering
-	// after all preceding completion events already in the channel.
-	if critChan != nil {
-		critChan <- console.SummaryDataMsg{
+	// Send through critical channel for ordering after preceding completion events.
+	if pump != nil {
+		pump.SendCritical(console.SummaryDataMsg{
 			Data: (*console.SummaryData)(data),
-		}
+		})
 	} else {
-		// Fallback: direct send if channels not initialized
+		// Fallback: direct send if pump not initialized
 		program.Send(console.SummaryDataMsg{
 			Data: (*console.SummaryData)(data),
 		})
@@ -1003,6 +904,40 @@ func (c *ParallelConsole) SignalAllWorkDone() {
 	}
 
 	program.Send(console.AllWorkDoneMsg{})
+}
+
+// convertContractStatus converts a contract Status to internal console.Status.
+func convertContractStatus(status tuicontract.Status) console.Status {
+	locks := make([]console.LockStatus, len(status.Locks))
+	for i, lock := range status.Locks {
+		locks[i] = console.LockStatus{
+			Name:     lock.Name,
+			Type:     lock.Type,
+			Capacity: lock.Capacity,
+			Used:     lock.Used,
+			Waiting:  lock.Waiting,
+		}
+	}
+
+	return console.Status{
+		Phase:                 status.Phase,
+		Running:               status.Running,
+		Completed:             status.Completed,
+		Total:                 status.Total,
+		Roof:                  status.Roof,
+		PressureTarget:        status.PressureTarget,
+		Locks:                 locks,
+		ActiveContainerTools:  status.ActiveContainerTools,
+		UsedContainerTools:    status.UsedContainerTools,
+		ActiveSystemTools:     status.ActiveSystemTools,
+		UsedSystemTools:       status.UsedSystemTools,
+		DockerMemPercent:      status.DockerMemPercent,
+		DockerAvailable:       status.DockerAvailable,
+		RunningContainerCount: status.RunningContainerCount,
+		TotalContainerCount:   status.TotalContainerCount,
+		RunningSystemCount:    status.RunningSystemCount,
+		TotalSystemCount:      status.TotalSystemCount,
+	}
 }
 
 // printSummary prints a plain-text summary after the TUI exits.

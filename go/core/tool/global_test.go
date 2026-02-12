@@ -5,9 +5,6 @@ import (
 )
 
 func TestGetTestTypeComponentType(t *testing.T) {
-	// Save and restore global state using mutex-protected reset
-	defer ResetGlobalToolConfigForTesting()
-
 	tests := []struct {
 		name     string
 		config   *ToolConfig
@@ -72,15 +69,18 @@ func TestGetTestTypeComponentType(t *testing.T) {
 				},
 			},
 			testType: "unknown",
-			expected: "go", // Falls back to hardcoded default
+			expected: "go", // Falls back to builtin default
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SetGlobalToolConfigForTesting(tt.config)
+			ts := NewToolSystemForTesting()
+			if tt.config != nil {
+				ts.Config = tt.config
+			}
 
-			result := GetTestTypeComponentType(tt.testType)
+			result := ts.GetTestTypeComponentType(tt.testType)
 			if result != tt.expected {
 				t.Errorf("GetTestTypeComponentType(%q) = %q, want %q", tt.testType, result, tt.expected)
 			}

@@ -1,7 +1,7 @@
 # Component Types Reference
 
 EAC modules contain **components**, and each component has a **type** that determines its build behavior,
-file patterns, and tooling. Component types are defined in `component-types.yml` and provide the building blocks for modules.
+file patterns, and tooling. Component types are defined in `blueprints.yml` under the `component-kinds` section and provide the building blocks for modules.
 
 ## Key Concepts
 
@@ -438,12 +438,12 @@ components:
 
 To add support for a new language or build system:
 
-### 1. Define Component Type
+### 1. Define Component Kind
 
-Add to `component-types.yml`:
+Add to `blueprints.yml` under `component-kinds`:
 
 ```yaml
-component-types:
+component-kinds:
   python:
     extensions: [".py"]
     builder: python
@@ -489,8 +489,8 @@ Implement a runner in `go/adapters/` or `go/clibase/testrunners/` if the compone
 ## Commands
 
 ```bash
-# List all component types
-eac show-component-types
+# List all component kinds
+eac show-component-kinds
 
 # Show modules with their components
 eac show-modules

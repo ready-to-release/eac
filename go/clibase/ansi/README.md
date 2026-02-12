@@ -44,11 +44,11 @@ this package removes them while optionally preserving color information for disp
 
 ### Tech Debt
 
-- `writer.go:92` `badPatterns` is a package-level fixed-size array of compiled regexes; safe and immutable at runtime
+- None identified
 
 ### Pain Points
 
-- None identified; compact leaf package with good test coverage (195 test lines vs 222 source lines)
+- `writer.go` is 227 lines, approaching the 300-line threshold
 
 ### Optimization Opportunities
 

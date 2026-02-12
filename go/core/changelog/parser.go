@@ -10,25 +10,76 @@ import (
 )
 
 // Parser regular expressions.
+//
+// versionHeaderRegex: Matches version headers.
+//
+//	Examples: "## [1.2.0] - 2025-12-01", "## [Unreleased]", "## [1.0.0] - 2025-01-01 [YANKED]"
+//	Group 1: version number or "Unreleased"
+//	Group 2: optional ISO date (YYYY-MM-DD)
+//
+// sectionHeaderRegex: Matches section headers like "### Added".
+//
+//	Group 1: section name
+//
+// listItemRegex: Matches list items like "- description" (allows leading whitespace).
+//
+//	Group 1: item text after "- "
+//
+// linkDefRegex: Matches link reference definitions like "[1.0.0]: https://..."
+//
+//	Group 1: link label
+//	Group 2: URL
+//
+// conventionalEntryRegex: Matches conventional commit format in changelog entries.
+//
+//	Group 1: type (feat, fix, etc.)
+//	Group 2: optional scope in parens
+//	Group 3: optional breaking indicator "!"
+//	Group 4: description text
+//
+// calverRegex: Matches calendar versioning format (YYYY.MM.DD or YYYY.MM.DD.N).
 var (
-	// Matches version headers like "## [1.2.0] - 2025-12-01" or "## [Unreleased]".
-	versionHeaderRegex = regexp.MustCompile(`^##\s+\[([^\]]+)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}))?(?:\s+\[YANKED\])?`)
-
-	// Matches section headers like "### Added".
-	sectionHeaderRegex = regexp.MustCompile(`^###\s+(.+)$`)
-
-	// Matches list items like "- description".
-	listItemRegex = regexp.MustCompile(`^-\s+(.+)$`)
-
-	// Matches link definitions like "[1.0.0]: https://..."
-	linkDefRegex = regexp.MustCompile(`^\[([^\]]+)\]:\s+(.+)$`)
-
-	// Matches conventional commit format in entry: "feat(scope): description".
+	versionHeaderRegex     = regexp.MustCompile(`^##\s+\[([^\]]+)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}))?(?:\s+\[YANKED\])?`)
+	sectionHeaderRegex     = regexp.MustCompile(`^###\s+(.+)$`)
+	listItemRegex          = regexp.MustCompile(`^\s*-\s+(.+)$`)
+	linkDefRegex           = regexp.MustCompile(`^\[([^\]]+)\]:\s+(.+)$`)
 	conventionalEntryRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)(\([^)]+\))?(!)?:\s*(.+)$`)
-
-	// Matches calendar versioning format: YYYY.MM.DD or YYYY.MM.DD.N
-	calverRegex = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
+	calverRegex            = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 )
+
+// parseState tracks parser state during line-by-line scanning.
+// This replaces loose local variables with a struct so the state
+// is explicit and easier to reason about.
+type parseState struct {
+	changelog        *Changelog
+	currentVersion   *Version
+	currentSection   ChangeType
+	descriptionLines []string
+	inHeader         bool
+}
+
+// newParseState creates a fresh parse state.
+func newParseState() *parseState {
+	return &parseState{
+		changelog: &Changelog{
+			Title:       "Changelog",
+			VersionType: Semver,
+		},
+		inHeader: true,
+	}
+}
+
+// saveCurrentVersion appends the current version to the appropriate slot.
+func (ps *parseState) saveCurrentVersion() {
+	if ps.currentVersion == nil {
+		return
+	}
+	if ps.currentVersion.Number == "Unreleased" {
+		ps.changelog.Unreleased = ps.currentVersion
+	} else {
+		ps.changelog.Versions = append(ps.changelog.Versions, *ps.currentVersion)
+	}
+}
 
 // Parse reads and parses a CHANGELOG.md file.
 func Parse(path string) (*Changelog, error) {
@@ -49,41 +100,28 @@ func ParseString(content string) (*Changelog, error) {
 
 // ParseReader parses changelog content from a scanner.
 func ParseReader(scanner *bufio.Scanner) (*Changelog, error) {
-	changelog := &Changelog{
-		Title:       "Changelog",
-		VersionType: Semver,
-	}
-
-	var currentVersion *Version
-	var currentSection ChangeType
-	var descriptionLines []string
-	inHeader := true
+	ps := newParseState()
 
 	for scanner.Scan() {
-		line := scanner.Text()
+		// Trim trailing \r to handle Windows line endings
+		line := strings.TrimRight(scanner.Text(), "\r")
 
 		// Parse main title
 		if strings.HasPrefix(line, "# ") && !strings.HasPrefix(line, "## ") {
-			changelog.Title = strings.TrimPrefix(line, "# ")
+			ps.changelog.Title = strings.TrimSpace(strings.TrimPrefix(line, "# "))
 			continue
 		}
 
 		// Parse version headers
 		if matches := versionHeaderRegex.FindStringSubmatch(line); matches != nil {
-			inHeader = false
+			ps.inHeader = false
 
 			// Save previous version
-			if currentVersion != nil {
-				if currentVersion.Number == "Unreleased" {
-					changelog.Unreleased = currentVersion
-				} else {
-					changelog.Versions = append(changelog.Versions, *currentVersion)
-				}
-			}
+			ps.saveCurrentVersion()
 
 			// Start new version
 			versionNum := matches[1]
-			currentVersion = &Version{
+			ps.currentVersion = &Version{
 				Number: versionNum,
 				Yanked: strings.Contains(line, "[YANKED]"),
 			}
@@ -91,47 +129,47 @@ func ParseReader(scanner *bufio.Scanner) (*Changelog, error) {
 			// Parse date if present
 			if matches[2] != "" {
 				if date, err := time.Parse("2006-01-02", matches[2]); err == nil {
-					currentVersion.Date = date
+					ps.currentVersion.Date = date
 				}
 			}
 
 			// Detect calver
 			if isCalverVersion(versionNum) {
-				changelog.VersionType = Calver
+				ps.changelog.VersionType = Calver
 			}
 
-			currentSection = ""
+			ps.currentSection = ""
 			continue
 		}
 
 		// Collect description lines before first version
-		if inHeader && line != "" && !strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "[") {
-			descriptionLines = append(descriptionLines, line)
+		if ps.inHeader && line != "" && !strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "[") {
+			ps.descriptionLines = append(ps.descriptionLines, line)
 			continue
 		}
 
 		// Parse section headers (### Added, ### Changed, etc.)
 		if matches := sectionHeaderRegex.FindStringSubmatch(line); matches != nil {
-			currentSection = ChangeType(matches[1])
+			ps.currentSection = ChangeType(strings.TrimSpace(matches[1]))
 			continue
 		}
 
 		// Parse list items
-		if matches := listItemRegex.FindStringSubmatch(line); matches != nil && currentVersion != nil {
+		if matches := listItemRegex.FindStringSubmatch(line); matches != nil && ps.currentVersion != nil {
 			entry := parseEntry(matches[1])
-			addEntryToVersion(currentVersion, currentSection, entry)
+			addEntryToVersion(ps.currentVersion, ps.currentSection, entry)
 			continue
 		}
 
 		// Parse link definitions to extract repo URL
 		if matches := linkDefRegex.FindStringSubmatch(line); matches != nil {
-			if changelog.RepoURL == "" {
+			if ps.changelog.RepoURL == "" {
 				// Extract base repo URL from comparison link
 				url := matches[2]
 				if idx := strings.Index(url, "/compare/"); idx > 0 {
-					changelog.RepoURL = url[:idx]
+					ps.changelog.RepoURL = url[:idx]
 				} else if idx := strings.Index(url, "/releases/"); idx > 0 {
-					changelog.RepoURL = url[:idx]
+					ps.changelog.RepoURL = url[:idx]
 				}
 			}
 			continue
@@ -139,24 +177,18 @@ func ParseReader(scanner *bufio.Scanner) (*Changelog, error) {
 	}
 
 	// Save last version
-	if currentVersion != nil {
-		if currentVersion.Number == "Unreleased" {
-			changelog.Unreleased = currentVersion
-		} else {
-			changelog.Versions = append(changelog.Versions, *currentVersion)
-		}
-	}
+	ps.saveCurrentVersion()
 
 	// Set description
-	if len(descriptionLines) > 0 {
-		changelog.Description = strings.Join(descriptionLines, "\n")
+	if len(ps.descriptionLines) > 0 {
+		ps.changelog.Description = strings.Join(ps.descriptionLines, "\n")
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading changelog: %w", err)
 	}
 
-	return changelog, nil
+	return ps.changelog, nil
 }
 
 // parseEntry parses a list item into an Entry.

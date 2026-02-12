@@ -94,22 +94,16 @@ func (r *MochaRunner) BuildPackagePath(testRoot, testPath string) string {
 	return testRoot
 }
 
-// Execute runs TypeScript mocha tests for a package.
-func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
-	start := time.Now()
-	result := testrunners.RunResult{
-		PackageName:   pkgPath,
-		ModuleMoniker: cfg.ModuleMoniker,
-	}
-
-	moduleRoot := filepath.Dir(filepath.Join(cfg.WorkspaceRoot, pkgPath))
-
+// prepareMochaNpmEnv validates the module root, creates an isolated npm environment,
+// and runs npm ci/install. Returns the isolated environment on success, or nil with
+// result.PackageFailed set on failure.
+func prepareMochaNpmEnv(moduleRoot string, cfg testrunners.RunConfig, logWriter io.Writer, result *testrunners.RunResult) *npm.IsolatedEnv {
 	// Check if package.json exists
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "No package.json found at %s\n", packageJSON)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
 
 	// Prepare isolated npm environment keyed by UoW output dir
@@ -118,10 +112,16 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 	if err != nil {
 		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
 
 	fmt.Fprintf(logWriter, "Using isolated environment: %s\n", env.WorkDir)
+
+	// Skip npm ci/install when dependencies haven't changed
+	if env.DepsUpToDate {
+		fmt.Fprintf(logWriter, "Dependencies up-to-date (cached node_modules), skipping npm install\n")
+		return env
+	}
 
 	// Run npm ci/install
 	packageLock := filepath.Join(moduleRoot, "package-lock.json")
@@ -133,30 +133,35 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 	}
 
 	fmt.Fprintf(logWriter, "Installing npm dependencies (npm %s)...\n", npmCmd)
-	npm.NpmInstallMu.Lock()
-	installToolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
-	installExecCtx := &tool.ExecutionContext{
-		ModuleRoot:    env.WorkDir,
-		FullEnv:       env.Env,
-		ArgsOverrides: []string{npmCmd},
-	}
-	installResult, installErr := tool.GlobalExecutor().Execute(context.Background(), installToolDef, installExecCtx)
-	npm.NpmInstallMu.Unlock()
+	var installResult *tool.ExecutionResult
+	var installErr error
+	lockErr := npm.WithInstallLock(func() error {
+		installToolDef := tool.GlobalRegistry().GetOrAdhoc("npm")
+		installExecCtx := &tool.ExecutionContext{
+			ModuleRoot:    env.WorkDir,
+			FullEnv:       env.Env,
+			ArgsOverrides: []string{npmCmd},
+		}
+		installResult, installErr = tool.GlobalExecutor().Execute(context.Background(), installToolDef, installExecCtx)
+		return installErr
+	})
 	if installResult != nil {
 		fmt.Fprintf(logWriter, "%s%s\n", installResult.Stdout, installResult.Stderr)
 	}
-	if installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
+	if lockErr != nil || installErr != nil || (installResult != nil && installResult.ExitCode != 0) {
 		fmt.Fprintf(logWriter, "npm %s failed: %v\n", npmCmd, installErr)
 		result.PackageFailed = true
-		return result
+		return nil
 	}
+	npm.MarkNpmDepsInstalled(env.WorkDir, moduleRoot)
 
-	// Build npm test command with JSON reporter
+	return env
+}
+
+// runMochaCommand builds and executes the mocha test command via npm, returning the
+// raw JSON stdout, stderr output, and any execution error.
+func runMochaCommand(env *npm.IsolatedEnv, logWriter io.Writer) (jsonOutput []byte, stderrOutput []byte, runErr error) {
 	args := []string{"test", "--", "--reporter", "json"}
-
-	fmt.Fprintf(logWriter, "=== Testing TypeScript mocha tests ===\n")
-	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
-	fmt.Fprintf(logWriter, "Command: npm %s\n\n", strings.Join(args, " "))
 
 	// Use tool.BuildCommand for pipe-based stdout/stderr streaming
 	npmTool := tool.GlobalRegistry().GetOrAdhoc("npm")
@@ -168,43 +173,74 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, log
 
 	stdout, pipeErr := cmd.StdoutPipe()
 	if pipeErr != nil {
-		fmt.Fprintf(logWriter, "Failed to create stdout pipe: %v\n", pipeErr)
-		result.PackageFailed = true
-		return result
+		return nil, nil, fmt.Errorf("failed to create stdout pipe: %w", pipeErr)
 	}
 	stderr, pipeErr := cmd.StderrPipe()
 	if pipeErr != nil {
-		fmt.Fprintf(logWriter, "Failed to create stderr pipe: %v\n", pipeErr)
-		result.PackageFailed = true
-		return result
+		return nil, nil, fmt.Errorf("failed to create stderr pipe: %w", pipeErr)
 	}
 
-	runErr := cmd.Start()
-	if runErr != nil {
-		fmt.Fprintf(logWriter, "Failed to start mocha: %v\n", runErr)
-		result.PackageFailed = true
-		return result
+	if err := cmd.Start(); err != nil {
+		return nil, nil, fmt.Errorf("failed to start mocha: %w", err)
 	}
 
-	jsonOutput, _ := io.ReadAll(stdout)  //nolint:errcheck // partial data still useful
-	stderrOutput, _ := io.ReadAll(stderr) //nolint:errcheck // partial data still useful
+	jsonOutput, _ = io.ReadAll(stdout)   //nolint:errcheck // partial data still useful
+	stderrOutput, _ = io.ReadAll(stderr) //nolint:errcheck // partial data still useful
 
 	runErr = cmd.Wait()
+	return jsonOutput, stderrOutput, runErr
+}
+
+// saveMochaCTRF converts mocha JSON output to CTRF format and writes it to the output directory.
+func saveMochaCTRF(jsonOutput []byte, outputDir string, logWriter io.Writer) {
+	if len(jsonOutput) == 0 || outputDir == "" {
+		return
+	}
+	ctrfReport := convertMochaJSONToCTRF(jsonOutput)
+	if ctrfReport == nil {
+		return
+	}
+	ctrfData, err := ctrfReport.ToJSON()
+	if err != nil {
+		return
+	}
+	jsonPath := filepath.Join(outputDir, "unit.json")
+	_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
+	fmt.Fprintf(logWriter, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
+}
+
+// Execute runs TypeScript mocha tests for a package.
+func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg testrunners.RunConfig) testrunners.RunResult {
+	start := time.Now()
+	result := testrunners.RunResult{
+		PackageName:   pkgPath,
+		ModuleMoniker: cfg.ModuleMoniker,
+	}
+
+	moduleRoot := filepath.Dir(filepath.Join(cfg.WorkspaceRoot, pkgPath))
+
+	env := prepareMochaNpmEnv(moduleRoot, cfg, logWriter, &result)
+	if env == nil {
+		return result
+	}
+
+	fmt.Fprintf(logWriter, "=== Testing TypeScript mocha tests ===\n")
+	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
+	fmt.Fprintf(logWriter, "Command: npm test -- --reporter json\n\n")
+
+	jsonOutput, stderrOutput, runErr := runMochaCommand(env, logWriter)
+	if runErr != nil && jsonOutput == nil {
+		// Command failed to start (pipe or start error)
+		fmt.Fprintf(logWriter, "%v\n", runErr)
+		result.PackageFailed = true
+		return result
+	}
 
 	if len(stderrOutput) > 0 {
 		fmt.Fprintf(logWriter, "%s\n", stderrOutput)
 	}
 
-	// Convert mocha JSON to CTRF and save
-	if len(jsonOutput) > 0 && cfg.OutputDir != "" {
-		if ctrfReport := convertMochaJSONToCTRF(jsonOutput); ctrfReport != nil {
-			if ctrfData, err := ctrfReport.ToJSON(); err == nil {
-				jsonPath := filepath.Join(cfg.OutputDir, "unit.json")
-				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
-				fmt.Fprintf(logWriter, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
-			}
-		}
-	}
+	saveMochaCTRF(jsonOutput, cfg.OutputDir, logWriter)
 
 	if runErr != nil {
 		result.PackageFailed = true

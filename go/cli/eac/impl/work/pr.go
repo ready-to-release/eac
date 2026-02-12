@@ -12,9 +12,8 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/cli/eac/impl/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
-	"github.com/ready-to-release/eac/go/clibase/ghexec"
-	"github.com/ready-to-release/eac/go/clibase/gitexec"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type createPrCommand struct{}
@@ -73,7 +72,43 @@ func CreatePR() int {
 		zap.Duration("duration", time.Since(phase1Start)))
 
 	// Phase 2: Validate environment
-	phase2Start := time.Now()
+	if code := prValidateEnvironment(config); code != 0 {
+		return code
+	}
+
+	// Phase 3: Check for commits
+	commitCount, code := prCheckCommits(config)
+	if code != 0 {
+		return code
+	}
+
+	// Phase 4: Push branch to origin
+	if code := prPushBranch(config); code != 0 {
+		return code
+	}
+
+	// Phase 5: Generate PR title and description
+	title, description, code := prGenerateContent(config, commitCount)
+	if code != 0 {
+		return code
+	}
+
+	// Phase 6: Create pull request
+	prURL, code := prCreatePullRequest(config, title, description)
+	if code != 0 {
+		return code
+	}
+
+	// Phase 7: Success
+	prLogSuccess(config, prURL, cmdStart)
+
+	return 0
+}
+
+// prValidateEnvironment validates the PR environment and returns 0 to continue
+// or a non-zero exit code to abort.
+func prValidateEnvironment(config *prConfig) int {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 2: Starting environment validation",
 		zap.String("phase", "phase2"),
 		zap.String("currentBranch", config.currentBranch),
@@ -83,17 +118,21 @@ func CreatePR() int {
 		config.base.Logger.Debug("Phase 2: Failed",
 			zap.String("phase", "phase2"),
 			zap.Error(err),
-			zap.Duration("duration", time.Since(phase2Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
 	config.base.Logger.Debug("Phase 2: Completed",
 		zap.String("phase", "phase2"),
-		zap.Duration("duration", time.Since(phase2Start)))
+		zap.Duration("duration", time.Since(phaseStart)))
+	return 0
+}
 
-	// Phase 3: Check for commits
-	phase3Start := time.Now()
+// prCheckCommits verifies there are commits ahead of the target branch.
+// Returns the commit count and 0 to continue, or 0 commits and a non-zero exit code to abort.
+func prCheckCommits(config *prConfig) (int, int) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 3: Starting commit count check",
 		zap.String("phase", "phase3"),
 		zap.String("targetBranch", config.targetBranch))
@@ -104,27 +143,31 @@ func CreatePR() int {
 		config.base.Logger.Debug("Phase 3: Failed",
 			zap.String("phase", "phase3"),
 			zap.Error(err),
-			zap.Duration("duration", time.Since(phase3Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("Failed to count commits: %v", err))
-		return 1
+		return 0, 1
 	}
 	if commitCount == 0 {
 		config.base.Logger.Debug("Phase 3: Failed - no commits",
 			zap.String("phase", "phase3"),
 			zap.Int("commitCount", commitCount),
-			zap.Duration("duration", time.Since(phase3Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("No commits ahead of %s", config.targetBranch))
 		config.base.Logger.Error("Your branch has no new commits to create a PR from")
-		return 1
+		return 0, 1
 	}
 
 	config.base.Logger.Debug("Phase 3: Completed",
 		zap.String("phase", "phase3"),
 		zap.Int("commitCount", commitCount),
-		zap.Duration("duration", time.Since(phase3Start)))
+		zap.Duration("duration", time.Since(phaseStart)))
+	return commitCount, 0
+}
 
-	// Phase 4: Push branch to origin
-	phase4Start := time.Now()
+// prPushBranch pushes the current branch to origin.
+// Returns 0 to continue, or a non-zero exit code to abort.
+func prPushBranch(config *prConfig) int {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 4: Starting branch push",
 		zap.String("phase", "phase4"),
 		zap.String("branch", config.currentBranch))
@@ -134,17 +177,21 @@ func CreatePR() int {
 		config.base.Logger.Debug("Phase 4: Failed",
 			zap.String("phase", "phase4"),
 			zap.Error(err),
-			zap.Duration("duration", time.Since(phase4Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("Failed to push: %v", err))
 		return 1
 	}
 
 	config.base.Logger.Debug("Phase 4: Completed",
 		zap.String("phase", "phase4"),
-		zap.Duration("duration", time.Since(phase4Start)))
+		zap.Duration("duration", time.Since(phaseStart)))
+	return 0
+}
 
-	// Phase 5: Generate PR title and description
-	phase5Start := time.Now()
+// prGenerateContent generates the PR title and description, applying any custom title override.
+// Returns the title, description, and 0 to continue, or empty strings and a non-zero exit code to abort.
+func prGenerateContent(config *prConfig, commitCount int) (string, string, int) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 5: Starting PR content generation",
 		zap.String("phase", "phase5"),
 		zap.String("targetBranch", config.targetBranch),
@@ -156,9 +203,9 @@ func CreatePR() int {
 		config.base.Logger.Debug("Phase 5: Failed",
 			zap.String("phase", "phase5"),
 			zap.Error(err),
-			zap.Duration("duration", time.Since(phase5Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("Failed to generate PR content: %v", err))
-		return 1
+		return "", "", 1
 	}
 
 	// Use custom title if provided
@@ -173,10 +220,14 @@ func CreatePR() int {
 		zap.String("phase", "phase5"),
 		zap.String("title", title),
 		zap.Int("descriptionLength", len(description)),
-		zap.Duration("duration", time.Since(phase5Start)))
+		zap.Duration("duration", time.Since(phaseStart)))
+	return title, description, 0
+}
 
-	// Phase 6: Create pull request
-	phase6Start := time.Now()
+// prCreatePullRequest creates the pull request via gh CLI.
+// Returns the PR URL and 0 to continue, or an empty string and a non-zero exit code to abort.
+func prCreatePullRequest(config *prConfig, title, description string) (string, int) {
+	phaseStart := time.Now()
 	config.base.Logger.Debug("Phase 6: Starting pull request creation",
 		zap.String("phase", "phase6"),
 		zap.String("head", config.currentBranch),
@@ -189,17 +240,20 @@ func CreatePR() int {
 		config.base.Logger.Debug("Phase 6: Failed",
 			zap.String("phase", "phase6"),
 			zap.Error(err),
-			zap.Duration("duration", time.Since(phase6Start)))
+			zap.Duration("duration", time.Since(phaseStart)))
 		config.base.Logger.Error(fmt.Sprintf("Failed to create PR: %v", err))
-		return 1
+		return "", 1
 	}
 
 	config.base.Logger.Debug("Phase 6: Completed",
 		zap.String("phase", "phase6"),
 		zap.String("prURL", prURL),
-		zap.Duration("duration", time.Since(phase6Start)))
+		zap.Duration("duration", time.Since(phaseStart)))
+	return prURL, 0
+}
 
-	// Phase 7: Success
+// prLogSuccess logs the final success messages and timing information.
+func prLogSuccess(config *prConfig, prURL string, cmdStart time.Time) {
 	config.base.Logger.Debug("Phase 7: Finalizing",
 		zap.String("phase", "phase7"),
 		zap.String("prURL", prURL))
@@ -212,8 +266,6 @@ func CreatePR() int {
 
 	config.base.Logger.Debug("Work pr command completed successfully",
 		zap.Duration("totalDuration", time.Since(cmdStart)))
-
-	return 0
 }
 
 // prConfig holds configuration for the pr command.
@@ -331,7 +383,7 @@ func validatePREnvironment(config *prConfig) error {
 
 // checkGHCLI checks if GitHub CLI is installed and available.
 func checkGHCLI() error {
-	_, err := ghexec.Run(".", "--version")
+	_, err := tool.GlobalToolSystem().RunTool(context.Background(), "gh", ".", "--version")
 	if err != nil {
 		return fmt.Errorf("gh CLI not found\nInstall GitHub CLI: https://cli.github.com/")
 	}
@@ -375,7 +427,8 @@ func generatePRContent(config *prConfig) (string, string, error) {
 	config.base.Logger.Debug("Getting commit messages",
 		zap.String("range", fmt.Sprintf("origin/%s..HEAD", config.targetBranch)))
 
-	output, err := gitexec.Run(".", "log", fmt.Sprintf("origin/%s..HEAD", config.targetBranch), "--pretty=format:%s")
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", ".", "log", fmt.Sprintf("origin/%s..HEAD", config.targetBranch), "--pretty=format:%s")
 	if err != nil {
 		config.base.Logger.Debug("Failed to get commit messages", zap.Error(err))
 		return "", "", fmt.Errorf("failed to get commit messages: %w", err)
@@ -389,7 +442,7 @@ func generatePRContent(config *prConfig) (string, string, error) {
 	config.base.Logger.Debug("Getting diff statistics",
 		zap.String("range", fmt.Sprintf("origin/%s...HEAD", config.targetBranch)))
 
-	diffOutput, err := gitexec.Run(".", "diff", fmt.Sprintf("origin/%s...HEAD", config.targetBranch), "--stat")
+	diffOutput, err := ts.RunTool(context.Background(), "git", ".", "diff", fmt.Sprintf("origin/%s...HEAD", config.targetBranch), "--stat")
 	if err != nil {
 		config.base.Logger.Debug("Failed to get diff", zap.Error(err))
 		return "", "", fmt.Errorf("failed to get diff: %w", err)
@@ -470,7 +523,7 @@ func generatePRDescription(commits []string, diffStat string) string {
 func createPullRequest(title, description, head, base string) (string, error) {
 	log.Debugf("Executing gh pr create command: title=%s, head=%s, base=%s, descriptionLength=%d", title, head, base, len(description))
 
-	output, exitCode, err := ghexec.RunCombined(context.Background(), ".", "pr", "create",
+	output, exitCode, err := tool.GlobalToolSystem().RunToolCombined(context.Background(), "gh", ".", "pr", "create",
 		"--title", title,
 		"--body", description,
 		"--base", base,

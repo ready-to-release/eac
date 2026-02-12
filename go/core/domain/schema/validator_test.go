@@ -235,13 +235,12 @@ func TestValidator_InvalidJSON(t *testing.T) {
 
 func TestGetSchemaTypes(t *testing.T) {
 	types := schema.GetSchemaTypes()
-	assert.Len(t, types, 10)
-	assert.Contains(t, types, schema.SchemaComponentTypes)
+	assert.Len(t, types, 9)
 	assert.Contains(t, types, schema.SchemaEnvironments)
 	assert.Contains(t, types, schema.SchemaTestingTags)
 	assert.Contains(t, types, schema.SchemaTestSuites)
 	assert.Contains(t, types, schema.SchemaRepository)
-	assert.Contains(t, types, schema.SchemaEACConfig)
+	assert.Contains(t, types, schema.SchemaAIProvider)
 	assert.Contains(t, types, schema.SchemaBooks)
 	assert.Contains(t, types, schema.SchemaToolConfig)
 }

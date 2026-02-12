@@ -33,13 +33,26 @@ type Commit struct {
 	Files []string
 }
 
-// conventionalCommitRegex matches conventional commit format
-// Supports: type(scope)!: description OR type!: description OR type(scope): description.
+// conventionalCommitRegex matches the Conventional Commits specification format.
+//
+// The pattern matches messages like:
+//
+//	feat(api)!: add breaking endpoint
+//	fix: resolve memory leak
+//	docs(readme): update install guide
+//
+// Capture groups:
+//
+//	Group 1 -- type: one of the allowed commit types
+//	           (feat|fix|refactor|docs|chore|test|perf|style|ci|build|revert)
+//	Group 2 -- scope: optional parenthesized scope, e.g. "(api)" captures "api"
+//	Group 3 -- breaking indicator: optional "!" before the colon
+//	Group 4 -- description: the commit subject after ": "
 var conventionalCommitRegex = regexp.MustCompile(
-	`^(feat|fix|refactor|docs|chore|test|perf|style|ci|build|revert)` + // type
-		`(?:\(([^)]+)\))?` + // optional scope in parens
-		`(!)?` + // optional breaking indicator
-		`:\s*(.+)$`) // colon and description
+	`^(feat|fix|refactor|docs|chore|test|perf|style|ci|build|revert)` + // Group 1: type
+		`(?:\(([^)]+)\))?` + // Group 2: optional scope in parens
+		`(!)?` + // Group 3: optional breaking indicator
+		`:\s*(.+)$`) // Group 4: colon and description
 
 // ParseCommitMessage parses a commit message into a Commit struct.
 func ParseCommitMessage(message string) *Commit {

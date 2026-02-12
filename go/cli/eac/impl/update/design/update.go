@@ -55,10 +55,15 @@ func (c *updateDesignCommand) Execute(_ context.Context, _ *core.CommandRequest)
 }
 
 var log = logging.C()
+
 // Intent: Update an existing Structurizr DSL workspace by re-analyzing source code
 //
 // UpdateDesign orchestrates the architecture design update workflow.
 func UpdateDesign() int {
+	return updateDesign(defaultDeps())
+}
+
+func updateDesign(deps *Deps) int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
@@ -77,7 +82,6 @@ func UpdateDesign() int {
 		log.Warnf("Failed to configure logging: %v", err)
 		// Continue without logger - output will still work
 	}
-	defer logging.CloseLogging()
 	defer logging.CloseLogging()
 
 	// Create output handler
@@ -109,11 +113,17 @@ func UpdateDesign() int {
 		return 1
 	}
 
-	// Generate updated workspace
-	updatedWorkspace, err := generateUpdatedWorkspace(config, out, fullPrompt)
-	if err != nil {
-		out.Errorf("\n❌ Error: %v", err)
-		return 1
+	// Generate updated workspace -- short-circuit with injected response if provided
+	var updatedWorkspace string
+	if deps.AIResponse != "" {
+		updatedWorkspace = deps.AIResponse
+	} else {
+		var genErr error
+		updatedWorkspace, genErr = generateUpdatedWorkspace(config, out, fullPrompt)
+		if genErr != nil {
+			out.Errorf("\n❌ Error: %v", genErr)
+			return 1
+		}
 	}
 
 	// Write output and report success

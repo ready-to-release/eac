@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // EffectiveModule represents a module with paths resolved.
@@ -76,12 +77,12 @@ func resolvePattern(pattern, moniker string, pathVars PathVariables) string {
 
 // GetPathVariables extracts path variables from repository configuration.
 func GetPathVariables(repoConfig *config.RepositoryConfig) PathVariables {
-	vars := make(PathVariables)
-
 	if repoConfig == nil {
-		return vars
+		return make(PathVariables)
 	}
 
-	// Use the existing GetPathVariables method
-	return repoConfig.GetPathVariables()
+	// Get config-aware path variables and add out_root
+	vars := PathVariables(paths.GetPathVariablesC(repoConfig.ToPathConfig()))
+	vars["out_root"] = repoConfig.Paths.Out.Root
+	return vars
 }

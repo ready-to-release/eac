@@ -11,9 +11,9 @@ import (
 )
 
 // mkdocsLiveServeAdapter provides live-reloading MkDocs server.
-// It reads configuration from GlobalServeContext and delegates to the internal serve package.
-func mkdocsLiveServeAdapter(workspaceRoot, moduleRoot, contentPath string, port int, logWriter io.Writer, opts tool.ServeOptions) (*tool.ServeResult, error) {
-	ctx := GlobalServeContext
+// It delegates to the internal serve package using the provided ServeContext configuration.
+// If ctx is nil, DefaultServeContext() is used.
+func mkdocsLiveServeAdapter(ctx *ServeContext, workspaceRoot, moduleRoot, contentPath string, port int, logWriter io.Writer, opts tool.ServeOptions) (*tool.ServeResult, error) {
 	if ctx == nil {
 		ctx = DefaultServeContext()
 	}

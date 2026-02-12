@@ -116,7 +116,7 @@ func GetApprovalComments() int {
 
 	// Use the shared get command helper
 	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
-		return reports.GetApprovalComments(workspaceRoot, module, version, includeAllReviews, branch)
+		return reports.GetApprovalComments(reports.Deps(), workspaceRoot, module, version, includeAllReviews, branch)
 	})
 }
 

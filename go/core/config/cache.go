@@ -5,13 +5,6 @@ import (
 	"sync"
 )
 
-// Global process-level cache for EAC configuration
-// This prevents repeated file I/O and schema validation across parallel test packages
-var (
-	globalConfigCache     *ConfigCache
-	globalConfigCacheOnce sync.Once
-)
-
 // ConfigCache provides cached EAC configuration data.
 // Thread-safe for concurrent access by parallel test packages.
 // No cache invalidation - data persists for process lifetime.
@@ -33,11 +26,7 @@ func NewConfigCache() *ConfigCache {
 // ClearCache clears the global config cache.
 // This is primarily used by tests that need to reload config with different files.
 func ClearCache() {
-	if globalConfigCache != nil {
-		globalConfigCache.mu.Lock()
-		globalConfigCache.cache = make(map[string]map[bool]*EACConfig)
-		globalConfigCache.mu.Unlock()
-	}
+	defaultManager.ClearCache()
 }
 
 // Get returns cached config if available.

@@ -43,11 +43,13 @@ Hidden directories (dot-prefixed) and `assets` directories are excluded from bot
 ## Code Health
 
 ### Tech Debt
-- `generator.go`: `GenerateNavForDir` is ~109 lines (73-181) with scanning, sorting, title extraction, and YAML writing in one function
-- Single test file `navigation_test.go` covers all four source files; per-file test files would improve isolation
+
+- `generator.go` (374 lines) exceeds 300 lines
 
 ### Pain Points
-- Five compiled regex patterns spread across `macros.go` and `index.go` as package-level vars; adding a new macro pattern requires knowing which file to update
+
+- Single test file `navigation_test.go` covers all four source files; individual test files would improve isolation
 
 ### Optimization Opportunities
-- Split `GenerateNavForDir` into scan, sort, and emit steps to improve testability of each step independently -- low effort
+
+- None identified

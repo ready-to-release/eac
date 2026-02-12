@@ -119,6 +119,43 @@ func FormatCommandHelp(help *CommandHelp, headingLevel int, includeTitle bool) s
 	return sb.String()
 }
 
+// FormatTable generates a markdown table from headers and row data.
+// Each row is a slice of cell strings. Cell values are escaped automatically.
+func FormatTable(headers []string, rows [][]string) string {
+	if len(headers) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	// Header row
+	sb.WriteString("|")
+	for _, h := range headers {
+		sb.WriteString(fmt.Sprintf(" %s |", h))
+	}
+	sb.WriteString("\n")
+
+	// Separator row
+	sb.WriteString("|")
+	for range headers {
+		sb.WriteString("---------|")
+	}
+	sb.WriteString("\n")
+
+	// Data rows
+	for _, row := range rows {
+		sb.WriteString("|")
+		for i, cell := range row {
+			if i < len(headers) {
+				sb.WriteString(fmt.Sprintf(" %s |", EscapeTableCell(cell)))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
 // EscapeTableCell escapes pipe characters and newlines for markdown tables.
 func EscapeTableCell(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")

@@ -138,6 +138,18 @@ func (r *registryImpl) ListBindings() []string {
 // Global registry for static registration via init() functions.
 var globalRegistry = NewRegistry()
 
+// GlobalRegistry returns the package-level registry instance.
+// Use this to pass the registry explicitly rather than relying on
+// package-level functions, e.g., for testing with isolated registries.
+func GlobalRegistry() *registryImpl {
+	return globalRegistry
+}
+
+// SetGlobalRegistry replaces the global registry. Use only in tests.
+func SetGlobalRegistry(r *registryImpl) {
+	globalRegistry = r
+}
+
 // Register adds a TUI binding to the global registry.
 // This is typically called from init() functions in TUI implementation packages.
 func Register(pattern string, factory ConsoleFactory) {

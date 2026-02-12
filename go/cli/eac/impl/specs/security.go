@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 var reFeatureLine = regexp.MustCompile(`(?m)^Feature:\s+(.+?)$`)
@@ -151,5 +152,5 @@ func ValidateOutputPath(outputPath, templateRoot string) error {
 
 // DetermineOutputPath constructs the output file path in specs directory.
 func DetermineOutputPath(templateRoot, moduleName, featureName string, cfg *config.EACConfig) string {
-	return cfg.Repository.SpecsFeaturePathAbs(templateRoot, moduleName, featureName)
+	return paths.SpecsFeaturePath(templateRoot, moduleName, featureName)
 }

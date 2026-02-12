@@ -4,6 +4,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/ready-to-release/eac/go/adapters/ai"
@@ -15,9 +16,14 @@ import (
 const DefaultGeminiModel = "gemini-1.5-pro"
 
 // Gemini provider uses Google Gemini API with API key authentication.
+// The genai.Client is cached after first creation to reduce connection overhead
+// for repeated invocations.
 type Gemini struct {
 	apiKey string
 	model  string
+
+	mu     sync.Mutex
+	client *genai.Client
 }
 
 // NewGemini creates a Gemini provider
@@ -42,6 +48,35 @@ func (p *Gemini) Name() string {
 	return "gemini"
 }
 
+// getOrCreateClient returns the cached genai.Client, creating it on first call.
+// Thread-safe via mutex.
+func (p *Gemini) getOrCreateClient(ctx context.Context) (*genai.Client, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.client != nil {
+		return p.client, nil
+	}
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(p.apiKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gemini client: %w", err)
+	}
+	p.client = client
+	return client, nil
+}
+
+// Close releases the cached client resources. Safe to call multiple times.
+func (p *Gemini) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.client != nil {
+		p.client.Close()
+		p.client = nil
+	}
+}
+
 // Execute runs a prompt through Gemini API.
 func (p *Gemini) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// Apply options
@@ -54,12 +89,11 @@ func (p *Gemini) Execute(ctx context.Context, input string, opts ...ai.Option) (
 		opt(options)
 	}
 
-	// Create client
-	client, err := genai.NewClient(ctx, option.WithAPIKey(p.apiKey))
+	// Get or create cached client
+	client, err := p.getOrCreateClient(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to create gemini client: %w", err)
+		return "", err
 	}
-	defer client.Close()
 
 	// Get model
 	model := client.GenerativeModel(options.Model)

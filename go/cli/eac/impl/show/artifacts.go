@@ -11,6 +11,7 @@ import (
 	showinternal "github.com/ready-to-release/eac/go/cli/eac/impl/show/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -34,12 +35,10 @@ func (c *showArtifactsCommand) Execute(_ context.Context, _ *core.CommandRequest
 
 // ShowArtifacts displays resolved artifacts for a module.
 func ShowArtifacts() int {
-	// Validate flags against registry metadata
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+	return ExecuteShowCommand(showArtifactsImpl)
+}
 
+func showArtifactsImpl() int {
 	args := os.Args[3:] // Skip program name, "show", and "artifacts"
 
 	if len(args) == 0 {
@@ -102,7 +101,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
+	buildDir := paths.BuildOutputPath(workspaceRoot, moduleName)
 
 	// Resolve artifacts
 	var results []implinternal.ResolvedArtifact

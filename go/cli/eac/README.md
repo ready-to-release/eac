@@ -7,7 +7,7 @@ matching `registry.CommandFunc`.
 ## Key Types
 
 - **`CommandFunc`** -- Signature for all registered commands (via `registry`)
-- **`InitialWorkingDir`** -- Package-level var capturing launch directory
+- **`initialWorkingDir`** -- Unexported package-level var capturing launch directory
 
 ## Patterns
 
@@ -20,13 +20,13 @@ matching `registry.CommandFunc`.
 
 ## Internal Structure
 
-| File               | Responsibility                                    |
-| ---                | ---                                               |
-| main.go            | Arg parsing, longest-match dispatch, panic handler |
-| container_init.go  | Wires Docker adapter as default container provider |
-| tui_init.go        | Registers parallel and selector TUI factories      |
-| imports.go         | Blank-imports all command implementation packages   |
-| custom_renderers.go| Blank-imports custom render extensions              |
+| File                | Responsibility                                     |
+| ------------------- | -------------------------------------------------- |
+| main.go             | Arg parsing, longest-match dispatch, panic handler |
+| container_init.go   | Wires Docker adapter as default container provider |
+| tui_init.go         | Registers parallel and selector TUI factories      |
+| imports.go          | Blank-imports all command implementation packages  |
+| custom_renderers.go | Blank-imports custom render extensions             |
 
 ## Dependencies
 
@@ -51,12 +51,13 @@ under `cli/eac/impl/`. All command packages self-register via blank imports in
 ## Code Health
 
 ### Tech Debt
-- `main.go`: `main()` is ~147 lines (37-184) with inlined help-flag detection and duplicate longest-match resolution logic
-- `main.go:27`: `InitialWorkingDir` is exported mutable global state; consider injecting via a context or config struct
+
+- None identified.
 
 ### Pain Points
-- Help-flag interception logic (lines 112-138) duplicates the longest-match loop from the main dispatch path
-- Test file (`main_test.go`) is gated behind `L1 && ov` build tags, making it easy to skip inadvertently
+
+- Test file `main_test.go` is gated behind `L1 && ov` build tags, making it easy to skip inadvertently.
 
 ### Optimization Opportunities
-- Extract help resolution and dispatch into separate functions to reduce `main()` complexity -- low effort, high readability gain
+
+- None identified.

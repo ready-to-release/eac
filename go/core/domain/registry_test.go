@@ -161,3 +161,80 @@ func TestClear(t *testing.T) {
 		t.Error("Expected validator1 to be removed after clear")
 	}
 }
+
+func TestNewValidatorRegistry_Isolated(t *testing.T) {
+	// Register a validator in the default (global) registry
+	Clear()
+	Register("global-validator", &mockValidator{name: "global"})
+
+	// Create an isolated registry
+	isolated := NewValidatorRegistry()
+
+	// The isolated registry should be empty
+	if len(isolated.List()) != 0 {
+		t.Errorf("Expected isolated registry to be empty, got %d validators", len(isolated.List()))
+	}
+
+	// Register a validator in the isolated registry
+	err := isolated.Register("isolated-validator", &mockValidator{name: "isolated"})
+	if err != nil {
+		t.Fatalf("Failed to register in isolated registry: %v", err)
+	}
+
+	// The isolated registry should have 1 validator
+	if len(isolated.List()) != 1 {
+		t.Errorf("Expected 1 validator in isolated registry, got %d", len(isolated.List()))
+	}
+
+	if !isolated.Has("isolated-validator") {
+		t.Error("Expected isolated registry to have 'isolated-validator'")
+	}
+
+	if isolated.Has("global-validator") {
+		t.Error("Isolated registry should NOT have 'global-validator'")
+	}
+
+	// The default registry should still have its validator and NOT the isolated one
+	if !Has("global-validator") {
+		t.Error("Default registry should still have 'global-validator'")
+	}
+
+	if Has("isolated-validator") {
+		t.Error("Default registry should NOT have 'isolated-validator'")
+	}
+
+	// Test Get on isolated registry
+	v, err := isolated.Get("isolated-validator")
+	if err != nil {
+		t.Errorf("Expected to get validator from isolated registry, got error: %v", err)
+	}
+	if mock, ok := v.(*mockValidator); !ok || mock.name != "isolated" {
+		t.Error("Retrieved validator does not match expected")
+	}
+
+	// Test Get for missing validator on isolated registry
+	_, err = isolated.Get("nonexistent")
+	if err == nil {
+		t.Error("Expected error for nonexistent validator in isolated registry")
+	}
+
+	// Test duplicate registration on isolated registry
+	err = isolated.Register("isolated-validator", &mockValidator{name: "dup"})
+	if err == nil {
+		t.Error("Expected error for duplicate registration in isolated registry")
+	}
+
+	// Test Clear on isolated registry does not affect default
+	isolated.Clear()
+	if len(isolated.List()) != 0 {
+		t.Errorf("Expected isolated registry to be empty after Clear, got %d", len(isolated.List()))
+	}
+
+	// Default registry should be unaffected
+	if !Has("global-validator") {
+		t.Error("Default registry should still have 'global-validator' after isolated Clear")
+	}
+
+	// Clean up
+	Clear()
+}

@@ -55,7 +55,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 		}
 
 		// Get module ownership for this package path
-		// Module mapping is configured via test-impl component in component-types.yml
+		// Module mapping is configured via test-impl component in blueprints.yml component-kinds
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
 		if moduleMoniker == "" {
 			log.Warnf("ResolveTestUnitSpecs: no module found for pkgPath=%s, skipping", pkgPath)
@@ -78,9 +78,9 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 
 			// Get weight (base weight × amp, calculated internally)
 			// For tests, we find the component by mapping test type -> component type
-			compTypeName := getTestTypeComponentType(testType)
+			compTypeName := getTestTypeComponentType(ctx.ToolSystem, testType)
 			componentName := findComponentForTests(ctx, moduleMoniker, compTypeName, pkgPath)
-			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
+			weight := getTestComponentWeight(ctx.ToolSystem, moduleMoniker, componentName, typeTests)
 
 			// Compute testname - unique identifier within module:component
 			// For BDD tests: use spec name (e.g., "build-module")
@@ -112,7 +112,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			}
 
 			// Build UnitID with structure: test:module:componentType:componentName:tool:testname
-			// - ComponentType = component TYPE from component-types.yml (e.g., "go", "gherkin")
+			// - ComponentType = component TYPE from blueprints.yml component-kinds (e.g., "go", "gherkin")
 			// - ComponentName = component instance name within module (e.g., "go")
 			// - Extra["testname"] = unique test identifier within module:component
 			// This gives: Longname = test:eac:go:go:gotest:impl-build
@@ -120,7 +120,7 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			unitID := workunit.UnitID{
 				Action:        core.ActionTest,
 				Module:        moduleMoniker,
-				ComponentType: compTypeName,  // Component TYPE from component-types.yml
+				ComponentType: compTypeName,  // Component TYPE from blueprints.yml component-kinds
 				ComponentName: componentName, // Component instance name from findComponentOfType
 				Tool:          toolName,
 				Spec:          spec,
@@ -135,7 +135,10 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				isCached = true
 			}
 
-			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
+			isContainer := false
+			if ctx.ToolSystem != nil && ctx.ToolSystem.TestBridge != nil {
+				isContainer = ctx.ToolSystem.TestBridge.IsContainer(compTypeName)
+			}
 			work := workunit.UnitSpec{
 				ID:             unitID, // Use the same UnitID for consistency
 				ComponentType:  testType,
@@ -188,9 +191,15 @@ func groupTestsByType(tests []testing.TestReference) map[string][]testing.TestRe
 }
 
 // getTestTypeComponentType maps test type to component type for tool lookup.
-// Uses the global tool config's test-type-mapping, with fallback to defaults.
-func getTestTypeComponentType(testType string) string {
-	return tool.GetTestTypeComponentType(testType)
+// Uses the ToolSystem's config test-type-mapping, with fallback to defaults.
+// If ts is nil, falls back to built-in defaults via a minimal ToolSystem.
+func getTestTypeComponentType(ts *tool.ToolSystem, testType string) string {
+	if ts != nil {
+		return ts.GetTestTypeComponentType(testType)
+	}
+	// Nil ToolSystem: use a zero-config instance for built-in fallback behavior
+	empty := tool.NewToolSystemForTesting()
+	return empty.GetTestTypeComponentType(testType)
 }
 
 // findComponentOfType finds the first component of the given type in a module.
@@ -254,19 +263,18 @@ func findComponentOfType(ctx *cmdframework.ExecutionContext, moniker, compTypeNa
 
 // getTestComponentWeight returns the scheduling weight for a set of tests.
 // Weight = base tool weight × component amp (from config).
-func getTestComponentWeight(moniker, componentName string, tests []testing.TestReference) int {
+func getTestComponentWeight(ts *tool.ToolSystem, moniker, componentName string, tests []testing.TestReference) int {
 	if len(tests) == 0 {
 		return 1
 	}
 
 	// Map test type to component type for tool lookup
-	compTypeName := getTestTypeComponentType(tests[0].Type)
+	compTypeName := getTestTypeComponentType(ts, tests[0].Type)
 
 	// Get base weight from tool resources via test bridge
 	baseWeight := 1
-	bridge := tool.GlobalTestBridge()
-	if bridge != nil {
-		if t := bridge.ResolveTool(compTypeName, core.ActionTest); t != nil {
+	if ts != nil && ts.TestBridge != nil {
+		if t := ts.TestBridge.ResolveTool(compTypeName, core.ActionTest); t != nil {
 			baseWeight = t.Resources.Weight()
 		}
 	}

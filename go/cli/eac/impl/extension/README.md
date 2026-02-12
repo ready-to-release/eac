@@ -42,7 +42,7 @@ This package implements the `extension-meta` command, which is the discovery mec
 ## Code Health
 
 ### Tech Debt
-- None
+- No unit tests for meta.go (217 lines); relies on integration-level testing
 
 ### Pain Points
 - None identified

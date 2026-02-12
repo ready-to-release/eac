@@ -67,32 +67,6 @@ type GitHubCLI interface {
 	GetPR(workspaceRoot string, prNumber int) (*PRData, error)
 }
 
-// ghCLI holds the GitHub CLI executor for testing (allows mock injection).
-var ghCLI GitHubCLI
-
-// ghCLIExecutor holds the CLIExecutor for the real GitHub CLI implementation.
-// Set via SetGitHubCLIExecutor during CLI bootstrap.
-var ghCLIExecutor github.CLIExecutor
-
-// getGitHubCLI returns the GitHub CLI executor.
-func getGitHubCLI() GitHubCLI {
-	if ghCLI != nil {
-		return ghCLI
-	}
-	return &realGitHubCLI{executor: ghCLIExecutor}
-}
-
-// SetGitHubCLI allows tests to inject a mock GitHub CLI.
-func SetGitHubCLI(cli GitHubCLI) {
-	ghCLI = cli
-}
-
-// SetGitHubCLIExecutor sets the CLIExecutor used by the real GitHub CLI implementation.
-// Called during CLI bootstrap to wire through the tool registry.
-func SetGitHubCLIExecutor(executor github.CLIExecutor) {
-	ghCLIExecutor = executor
-}
-
 // realGitHubCLI implements GitHubCLI using an injected CLIExecutor.
 type realGitHubCLI struct {
 	executor github.CLIExecutor
@@ -100,7 +74,7 @@ type realGitHubCLI struct {
 
 func (r *realGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, error) {
 	if r.executor == nil {
-		return nil, fmt.Errorf("GitHub CLI executor not configured (call SetGitHubCLIExecutor during bootstrap)")
+		return nil, fmt.Errorf("GitHub CLI executor not configured (pass CLIExecutor via ReportDeps)")
 	}
 	output, err := r.executor.Exec("pr", "view", strconv.Itoa(prNumber),
 		"--json", "number,title,author,body,mergedAt,mergeCommit,files,reviews")
@@ -169,13 +143,14 @@ func (r *realGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, erro
 	return prData, nil
 }
 
-// GetApprovalComments loads PR approval comments for a module and version
-// Version can be: empty (unreleased), "latest", "unreleased", or specific version number
-// For bundle/container modules with dependencies, approvals are aggregated from all dependent modules
-// If includeAllReviews is true, includes all review states (APPROVED, CHANGES_REQUESTED, COMMENTED)
-// If includeAllReviews is false, only includes APPROVED reviews
+// GetApprovalComments loads PR approval comments for a module and version.
+// Version can be: empty (unreleased), "latest", "unreleased", or specific version number.
+// For bundle/container modules with dependencies, approvals are aggregated from all dependent modules.
+// If includeAllReviews is true, includes all review states (APPROVED, CHANGES_REQUESTED, COMMENTED).
+// If includeAllReviews is false, only includes APPROVED reviews.
 // Branch specifies which branch to query (default "main"). Use "HEAD" or "current" for current branch.
-func GetApprovalComments(workspaceRoot, module, version string, includeAllReviews bool, branch string) (*ApprovalCommentsReport, error) {
+// deps provides injectable dependencies; pass nil to use zero-value defaults (no GitHub CLI).
+func GetApprovalComments(deps *ReportDeps, workspaceRoot, module, version string, includeAllReviews bool, branch string) (*ApprovalCommentsReport, error) {
 	// Load config to get module information
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -193,8 +168,8 @@ func GetApprovalComments(workspaceRoot, module, version string, includeAllReview
 		return nil, err
 	}
 
-	// Get git repository using the standard interface pattern
-	repo, err := getGitRepo(workspaceRoot)
+	// Get git repository using injected deps
+	repo, err := deps.getGitRepo(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -203,20 +178,7 @@ func GetApprovalComments(workspaceRoot, module, version string, includeAllReview
 	var commits []git.CommitInfo
 
 	// Determine end reference based on branch parameter and version
-	endRef := branch
-	if endRef == "" {
-		// Default to configured trunk branch (usually "main" or "master")
-		endRef = cfg.Repository.Repository.TrunkBranch
-		if endRef == "" {
-			endRef = "main" // Fallback if not configured
-		}
-	}
-	// Special case: "HEAD" or "current" means use current branch
-	if endRef == "HEAD" || endRef == "current" {
-		endRef = "HEAD"
-	}
-	// Try origin/branch if local branch doesn't exist
-	// (resolveRef in git layer handles this automatically)
+	endRef := ResolveBranchEndRef(branch, cfg.Repository.Repository.TrunkBranch)
 
 	// For specific versions (not unreleased), use the version's tag as end point
 	if !versionInfo.IsUnreleased && versionInfo.GitTag != "" {
@@ -257,7 +219,7 @@ func GetApprovalComments(workspaceRoot, module, version string, includeAllReview
 	prNumbers := extractPRNumbers(commits)
 
 	// For each PR, get review data
-	cli := getGitHubCLI()
+	cli := deps.getGitHubCLI()
 	for _, prNum := range prNumbers {
 		prData, err := cli.GetPR(workspaceRoot, prNum)
 		if err != nil {

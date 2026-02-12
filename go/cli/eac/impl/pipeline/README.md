@@ -56,7 +56,9 @@ Orchestrates CI/CD pipeline operations including workflow dispatch, status polli
 | check_recent_run.go | Check for recent successful workflow runs within a time window |
 | get_artifact_id.go | Retrieve artifact IDs from workflow runs via GitHub API |
 | get_tree_files.go | Get file tree from a specific commit using GitHub Trees API |
-| download_evidence_artifacts.go | Download test/scan evidence artifacts from CI runs with directory flattening |
+| download_evidence_artifacts.go | Command definition, argument parsing, and orchestration for evidence artifact download |
+| download_evidence_ci.go | Evidence CI run lookup, module registry loading, and transitive dependency resolution |
+| download_helpers.go | Artifact download execution, directory flattening, and directory merging |
 
 ## Dependencies
 
@@ -77,10 +79,11 @@ The `pipeline` package provides CI/CD orchestration commands for `eac`, bridging
 ## Code Health
 
 ### Tech Debt
-- `download_evidence_artifacts.go` (399 lines) handles argument parsing, evidence lookup, artifact download, directory flattening, and directory merging in a single file
+- await_ci.go (303 lines) is the largest file; contains workflow polling and status checking logic
+- No unit tests for most pipeline commands; tested via BDD scenarios and helper package unit tests
 
 ### Pain Points
-- No unit tests exist outside of BDD test files; all testing relies on integration-level BDD scenarios
+- steps_bdd_test.go (449 lines) contains TODO comments: "Implement module creation" and "Implement marking module as changed"
 
 ### Optimization Opportunities
-- Extract artifact download and directory flattening from `download_evidence_artifacts.go` into a reusable helper (moderate feasibility, would also benefit CI artifact workflows)
+- None identified

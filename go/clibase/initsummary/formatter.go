@@ -55,44 +55,25 @@ func FormatCompact(s *Summary) string {
 	}
 
 	// Depm status
-	if s.DepmStatus.Skipped {
-		b.WriteString("Depm: ⏭️  skipped (--skip-depm)\n")
-	} else if s.DepmStatus.Verified && len(s.DepmStatus.Missing) > 0 {
-		b.WriteString(fmt.Sprintf("Depm: ❌ %d/%d resolved (%d missing)\n",
-			len(s.DepmStatus.Resolved),
-			s.DepmStatus.Total,
-			len(s.DepmStatus.Missing)))
-	} else if s.DepmStatus.Verified && s.DepmStatus.Total > 0 {
-		b.WriteString(fmt.Sprintf("Depm: ✅ %d/%d resolved\n",
-			len(s.DepmStatus.Resolved),
-			s.DepmStatus.Total))
+	if msg, ok := depmSummary(s.DepmStatus); ok {
+		icon := "✅"
+		if s.DepmStatus.Skipped {
+			icon = "⏭️ "
+		} else if len(s.DepmStatus.Missing) > 0 {
+			icon = "❌"
+		}
+		b.WriteString(fmt.Sprintf("Depm: %s %s\n", icon, msg))
 	}
 
 	// Deps status
-	if s.DepsStatus.Skipped {
-		b.WriteString("Deps: ⏭️  skipped (--skip-deps)\n")
-	} else if s.DepsStatus.Verified && len(s.DepsStatus.Required) > 0 {
-		available := countAvailableDeps(s.DepsStatus.Available)
-		required := len(s.DepsStatus.Required)
-		missing := len(s.DepsStatus.Missing)
-
-		// Sanity check: available + missing must equal required
-		if available+missing != required {
-			panic(fmt.Sprintf("DepsStatus invariant violated: available(%d) + missing(%d) != required(%d)",
-				available, missing, required))
+	if msg, ok := depsSummary(s.DepsStatus); ok {
+		icon := "✅"
+		if s.DepsStatus.Skipped {
+			icon = "⏭️ "
+		} else if len(s.DepsStatus.Missing) > 0 {
+			icon = "❌"
 		}
-
-		if missing > 0 {
-			b.WriteString(fmt.Sprintf("Deps: ❌ %d/%d available (%s missing)\n",
-				available,
-				required,
-				strings.Join(s.DepsStatus.Missing, ", ")))
-		} else {
-			b.WriteString(fmt.Sprintf("Deps: ✅ %d/%d available (%s)\n",
-				available,
-				required,
-				strings.Join(s.DepsStatus.Required, ", ")))
-		}
+		b.WriteString(fmt.Sprintf("Deps: %s %s\n", icon, msg))
 	}
 
 	// Artifact validation (test/scan only - build creates artifacts, doesn't need them)
@@ -375,166 +356,4 @@ func FormatDetailed(s *Summary) string {
 	b.WriteString("═══════════════════════════════\n")
 
 	return b.String()
-}
-
-// formatModuleListInline formats a list of modules for inline display.
-func formatModuleListInline(modules []string, maxLen int) string {
-	if len(modules) == 0 {
-		return ""
-	}
-	list := truncateList(modules, maxLen)
-	return " (" + list + ")"
-}
-
-// truncateList joins items with ", " and truncates with "..." if too long.
-func truncateList(items []string, maxLen int) string {
-	if len(items) == 0 {
-		return ""
-	}
-
-	result := strings.Join(items, ", ")
-	if len(result) <= maxLen {
-		return result
-	}
-
-	// Truncate and add "..."
-	for i := len(items) - 1; i >= 1; i-- {
-		result = strings.Join(items[:i], ", ") + ", ..."
-		if len(result) <= maxLen {
-			return result
-		}
-	}
-	return items[0][:min(len(items[0]), maxLen-3)] + "..."
-}
-
-// formatFlagsCompact returns a compact one-line summary of non-default flags.
-func formatFlagsCompact(f Flags) string {
-	var parts []string
-
-	if f.SkipDepm {
-		parts = append(parts, "skip-depm")
-	}
-	if f.SkipDeps {
-		parts = append(parts, "skip-deps")
-	}
-	if f.ForceRebuild {
-		parts = append(parts, "rebuild")
-	}
-	if f.DryRun {
-		parts = append(parts, "dry-run")
-	}
-	if f.ArtifactsMode == "all" {
-		parts = append(parts, "artifacts:all")
-	}
-	if f.UseExistingDepm {
-		parts = append(parts, "use-existing-depm")
-	}
-	if f.ListOnly {
-		parts = append(parts, "list-only")
-	}
-	if f.Version != "" {
-		parts = append(parts, "version="+f.Version)
-	}
-
-	return strings.Join(parts, ", ")
-}
-
-// formatFlagsDetailed formats flags with full detail for console output.
-func formatFlagsDetailed(f Flags, command string) string {
-	var lines []string
-
-	// Build-specific flags
-	if command == "build" {
-		// Tidy mode
-		if f.TidyFirst {
-			if f.TidyExplicit {
-				lines = append(lines, "  ✅ tidy-first: enabled (explicit)")
-			} else {
-				lines = append(lines, "  ✅ tidy-first: enabled (default for local)")
-			}
-		} else {
-			if f.TidyExplicit {
-				lines = append(lines, "  ⏭️  tidy-first: disabled (explicit)")
-			} else {
-				lines = append(lines, "  ⏭️  tidy-first: disabled (default for CI)")
-			}
-		}
-
-		if f.ForceRebuild {
-			lines = append(lines, "  🔄 rebuild: enabled")
-		}
-	}
-
-	// Common flags
-	if f.SkipDepm {
-		lines = append(lines, "  ⚠️  skip-depm: enabled")
-	}
-
-	if f.SkipDeps {
-		lines = append(lines, "  ⚠️  skip-deps: enabled")
-	}
-
-	if f.DryRun {
-		lines = append(lines, "  🧪 dry-run: enabled")
-	}
-
-	if f.ArtifactsMode == "all" {
-		lines = append(lines, "  📦 artifacts: all")
-	} else if f.ArtifactsMode != "" {
-		lines = append(lines, "  📦 artifacts: "+f.ArtifactsMode)
-	}
-
-	if f.UseExistingDepm {
-		lines = append(lines, "  ⏭️  use-existing-depm: enabled")
-	}
-
-	if f.ListOnly {
-		lines = append(lines, "  📋 list-only: enabled")
-	}
-
-	if f.Version != "" {
-		lines = append(lines, fmt.Sprintf("  🔧 version: %s", f.Version))
-	}
-
-	if f.ShowTimings {
-		lines = append(lines, "  ⏱️  timings: enabled")
-	}
-
-	if f.DebugMode {
-		lines = append(lines, "  🐛 debug: enabled")
-	}
-
-	if len(lines) == 0 {
-		lines = append(lines, "  (defaults)")
-	}
-
-	return strings.Join(lines, "\n") + "\n"
-}
-
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// countTotalMissingArtifacts counts total number of missing artifacts across all modules.
-func countTotalMissingArtifacts(details map[string][]string) int {
-	total := 0
-	for _, artifacts := range details {
-		total += len(artifacts)
-	}
-	return total
-}
-
-// countAvailableDeps counts the number of available dependencies from results.
-func countAvailableDeps(results []DepsResult) int {
-	count := 0
-	for _, r := range results {
-		if r.Available {
-			count++
-		}
-	}
-	return count
 }

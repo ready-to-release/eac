@@ -40,6 +40,7 @@ Extracts common execution patterns into reusable phases: init, resolve, verify, 
 | `summary.go` | `phaseSummary()`: TUI and console summary generation, exit code calculation |
 | `summary_builder.go` | `SummaryBuilder`: incremental summary accumulation during execution |
 | `manifest_assert.go` | `AssertManifestsExist()`: validates that required manifest files exist |
+| `summary_helpers.go` | Shared `moduleCache` iteration helpers for TUI and console summary paths |
 
 ## Dependencies
 
@@ -61,14 +62,19 @@ Acts as the central execution engine for all orchestrated CLI commands. Commands
 ## Code Health
 
 ### Tech Debt
-- `framework.go:28` `Run()` is ~218 lines; the phased orchestration would benefit from extracting each phase dispatch into named helpers
-- `summary.go:105` `generateComponentTUISummary` is ~258 lines and `printComponentConsoleSummary` ~144 lines; both duplicate `moduleCache` iteration logic
-- `framework.go:16` package-level `log` var initialized at import time
+
+- None identified
 
 ### Pain Points
-- `summary.go` and `summary_builder.go` together are ~1170 lines; summary logic is the largest area of the package and hard to navigate
-- `verify.go` and `resolve.go` have only minimal test coverage (`verify_test.go` 61 lines, no `resolve_test.go`)
+
+- `summary_builder.go` is 512 lines, significantly exceeds 300-line threshold
+- `summary.go` is 488 lines, significantly exceeds 300-line threshold
+- `execute.go` is 449 lines, significantly exceeds 300-line threshold
+- `framework.go` is 441 lines, significantly exceeds 300-line threshold
+- `verify.go` is 351 lines, exceeds 300-line threshold with minimal test coverage (only 61 lines in `verify_test.go`)
+- `resolve.go` is 288 lines with no dedicated test file
+- `execute_test.go` is 555 lines and `summary_builder_test.go` is 422 lines, both exceed 300-line threshold
 
 ### Optimization Opportunities
-- Extract shared `moduleCache` iteration in `summary.go` into a single helper used by both TUI and console paths (low effort)
-- Add integration tests for `resolve.go` scope-expansion logic (medium effort)
+
+- None identified

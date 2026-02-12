@@ -2,6 +2,7 @@ package dotnet
 
 import (
 	"encoding/xml"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,10 +75,46 @@ func parseTRXDuration(durationStr string) int64 {
 }
 
 // reformatTRXDuration converts "HH:MM:SS.FFFFFFF" to Go duration string "HhMmS.FFFFFFs".
+// Validates that the hours, minutes, and seconds parts are valid numbers to prevent
+// malformed input from producing invalid Go duration strings.
 func reformatTRXDuration(trxDuration string) string {
 	parts := strings.Split(trxDuration, ":")
 	if len(parts) != 3 {
 		return "0s"
 	}
+
+	// Validate hours is a valid integer
+	if _, err := strconv.Atoi(parts[0]); err != nil {
+		return "0s"
+	}
+
+	// Validate minutes is a valid integer
+	if _, err := strconv.Atoi(parts[1]); err != nil {
+		return "0s"
+	}
+
+	// Validate seconds (may contain fractional part like "1.2345678")
+	secPart := parts[2]
+	if dotIdx := strings.Index(secPart, "."); dotIdx >= 0 {
+		// Validate integer part before the dot
+		if _, err := strconv.Atoi(secPart[:dotIdx]); err != nil {
+			return "0s"
+		}
+		// Validate fractional part after the dot (must be digits only)
+		fracPart := secPart[dotIdx+1:]
+		if len(fracPart) == 0 {
+			return "0s"
+		}
+		for _, c := range fracPart {
+			if c < '0' || c > '9' {
+				return "0s"
+			}
+		}
+	} else {
+		if _, err := strconv.Atoi(secPart); err != nil {
+			return "0s"
+		}
+	}
+
 	return parts[0] + "h" + parts[1] + "m" + parts[2] + "s"
 }

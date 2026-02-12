@@ -2,11 +2,57 @@ package conf
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/cli/clie/internal/logging"
 	"github.com/spf13/viper"
 )
+
+// mergeStructFields uses reflection to merge non-zero override fields into base.
+// For strings, it overwrites if the override is non-empty. For bools, it overwrites
+// if the override is true. For slices, it overwrites if the override is non-nil and
+// non-empty. For other types, it overwrites if the override differs from the zero value.
+func mergeStructFields(base, override interface{}) {
+	baseVal := reflect.ValueOf(base).Elem()
+	overrideVal := reflect.ValueOf(override).Elem()
+
+	for i := 0; i < baseVal.NumField(); i++ {
+		baseField := baseVal.Field(i)
+		overrideField := overrideVal.Field(i)
+
+		if !baseField.CanSet() {
+			continue
+		}
+
+		switch baseField.Kind() {
+		case reflect.String:
+			if overrideField.String() != "" {
+				baseField.SetString(overrideField.String())
+			}
+		case reflect.Bool:
+			if overrideField.Bool() {
+				baseField.SetBool(true)
+			}
+		case reflect.Slice:
+			if overrideField.Len() > 0 {
+				baseField.Set(overrideField)
+			}
+		case reflect.Int, reflect.Int64:
+			if overrideField.Int() != 0 {
+				baseField.SetInt(overrideField.Int())
+			}
+		case reflect.Ptr:
+			if !overrideField.IsNil() {
+				baseField.Set(overrideField)
+			}
+		case reflect.Map:
+			if overrideField.Len() > 0 {
+				baseField.Set(overrideField)
+			}
+		}
+	}
+}
 
 type EnvVar struct {
 	Name     string `mapstructure:"name"`
@@ -270,70 +316,28 @@ func mergeConfigs(base, override *Config) {
 	}
 }
 
-// mergeExtension merges override extension fields into the base extension
+// mergeExtension merges override extension fields into the base extension.
+// Uses reflection-based mergeStructFields so new fields are automatically handled.
 // Only non-empty/non-zero override fields replace base fields.
 func mergeExtension(base, override *Extension) {
 	logging.Debugf("Merging extension details: base_name=%s base_image=%s override_name=%s override_image=%s override_load_local=%v",
 		base.Name, base.Image, override.Name, override.Image, override.LoadLocal)
 
-	// Only override non-empty string fields
-	if override.Image != "" {
-		logging.Debugf("Overriding image: old=%s new=%s", base.Image, override.Image)
-		base.Image = override.Image
-	}
-	if override.Description != "" {
-		base.Description = override.Description
-	}
-	if override.ImagePullPolicy != "" {
-		base.ImagePullPolicy = override.ImagePullPolicy
+	// Save base env for key-based merge (mergeStructFields would do full replacement)
+	baseEnv := base.Env
+	oldImage := base.Image
+
+	mergeStructFields(base, override)
+
+	if base.Image != oldImage {
+		logging.Debugf("Overriding image: old=%s new=%s", oldImage, base.Image)
 	}
 
-	// Override boolean fields only if explicitly set to true in override
-	// This allows the override to set LoadLocal to true without forcing it to false
-	if override.LoadLocal {
-		base.LoadLocal = override.LoadLocal
-	}
-
-	// Merge environment variables
+	// Restore key-based env merge instead of full slice replacement
 	if len(override.Env) > 0 {
-		base.Env = mergeEnvVars(base.Env, override.Env)
-	}
-
-	// Override resource limits if specified
-	if override.MemoryLimit != "" {
-		base.MemoryLimit = override.MemoryLimit
-	}
-	if override.CPULimit != "" {
-		base.CPULimit = override.CPULimit
-	}
-
-	// Override volumes if specified
-	if len(override.Volumes) > 0 {
-		base.Volumes = override.Volumes
-	}
-
-	// Override ports if specified
-	if len(override.Ports) > 0 {
-		base.Ports = override.Ports
-	}
-
-	// Override network mode if specified
-	if override.NetworkMode != "" {
-		base.NetworkMode = override.NetworkMode
-	}
-
-	// Override other fields if specified
-	if len(override.Command) > 0 {
-		base.Command = override.Command
-	}
-	if len(override.Entrypoint) > 0 {
-		base.Entrypoint = override.Entrypoint
-	}
-	if override.WorkingDir != "" {
-		base.WorkingDir = override.WorkingDir
-	}
-	if override.Privileged {
-		base.Privileged = override.Privileged
+		base.Env = mergeEnvVars(baseEnv, override.Env)
+	} else {
+		base.Env = baseEnv
 	}
 }
 

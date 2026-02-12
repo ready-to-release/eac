@@ -25,10 +25,10 @@ Output stream filtering and multi-writer utilities for the TUI console, handling
 
 ## Internal Structure
 
-| File | Responsibility |
-| --- | --- |
-| filter.go | `Filter` with important/noise regex patterns and deduplication tracking |
-| pipe.go | `OutputPipe` for subprocess capture, `classifyLine` for severity detection, `MultiWriter` for fan-out |
+| File      | Responsibility                                                                                        |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| filter.go | `Filter` with important/noise regex patterns and deduplication tracking                               |
+| pipe.go   | `OutputPipe` for subprocess capture, `classifyLine` for severity detection, `MultiWriter` for fan-out |
 
 ## Dependencies
 
@@ -41,10 +41,13 @@ The stream sub-package sits between subprocess execution and the TUI console, fi
 ## Code Health
 
 ### Tech Debt
-- None
+
+- pipe.go (321 lines) exceeds 300 lines; candidate for splitting output classification and multiwriter logic
 
 ### Pain Points
-- Package-level compiled regexps in filter.go (`filterImportantPatterns`, `filterNoisePatterns`) are allocated at import time; this is acceptable for a singleton but prevents customization
+
+- None identified
 
 ### Optimization Opportunities
+
 - None identified

@@ -15,7 +15,7 @@ Contracts are YAML configuration files that define how the EAC system behaves. T
 | Contract            | File                  | Location                  | Purpose                                          |
 | ------------------- | --------------------- | ------------------------- | ------------------------------------------------ |
 | **Repository**      | `repository.yml`      | `.eac/`               | Module definitions, dependencies, file ownership |
-| **Component Types** | `component-types.yml` | `contracts/.../defaults/` | Component type definitions with build behavior   |
+| **Blueprints**      | `blueprints.yml`      | `contracts/.../defaults/` | Component kind definitions with build behavior   |
 | **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/` | Tool definitions and resources                   |
 | **Environments**    | `environments.yml`    | `contracts/.../defaults/` | Test execution environments (L0-L4)              |
 | **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/` | Test suites with tag selectors                   |
@@ -30,7 +30,7 @@ repository.yml ──defines──> components
       │                          │
       │ depends_on               │ use types from
       ▼                          ▼
-  (other modules)        component-types.yml
+  (other modules)        blueprints.yml
                                  │
                                  │ use tools from
                                  ▼
@@ -93,7 +93,7 @@ contracts/
 └── eac-core/
     └── 0.1.0/
         ├── repository.schema.json
-        ├── component-types.schema.json
+        ├── blueprints.schema.json
         ├── environments.schema.json
         └── ...
 ```
@@ -116,11 +116,11 @@ modules:
 2. Add module definition with moniker and type
 3. Run `eac validate` to verify
 
-### Create a New Component Type
+### Create a New Component Kind
 
-1. Copy `contracts/eac-core/0.1.0/defaults/component-types.yml` to `.eac/component-types.yml`
-2. Define new type with builder and file patterns
-3. Reference the type in module components
+1. Copy `contracts/core/0.1.0/schemas/defaults/blueprints.yml` to `.eac/blueprints.yml`
+2. Define new kind under `component-kinds` section with builder and file patterns
+3. Reference the kind in module components
 
 ### Add Test Environment
 

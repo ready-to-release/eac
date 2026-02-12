@@ -34,6 +34,7 @@ and scheduling weights.
 | component_resolver.go | `ComponentResolver` with `ResolveForBuild`, `ResolveForLint`, `ResolveForScan` |
 | dependency.go | `DependencyGraph` with cycle detection and topological sort |
 | tool_chain.go | `expandToolChain` for multi-tool build sequences |
+| weight.go | Weight calculation: `getToolWeight`, `getWeight`, `getScanWeight` heuristics |
 | resolver_port.go | `ResolverPort` contract adapter and global singleton |
 
 ## Dependencies
@@ -57,13 +58,14 @@ contract interface for clean architecture boundaries.
 ## Code Health
 
 ### Tech Debt
-- `component_resolver.go:41`: `ResolveForBuild` (~179 lines) handles dependency graph construction, tool-chain expansion, pool allocation, and weight calculation in a single method
-- `component_resolver.go` (500 lines): high density of resolution concerns -- tool lookup, weight computation, scanner category mapping all in one file
+
+- None identified
 
 ### Pain Points
-- Three resolve methods (`ResolveForBuild`, `ResolveForLint`, `ResolveForScan`) share overlapping logic for tool lookup and weight calculation but are not factored into a common helper
-- Weight calculation is spread across three methods (`getToolWeight`, `getWeight`, `getScanWeight`) with subtly different heuristics that are hard to compare
+
+- Three resolve methods (ResolveForBuild, ResolveForLint, ResolveForScan) share overlapping logic for tool lookup and weight calculation but are not factored into a common helper
+- Large files: component_resolver_test.go (588 lines), component_resolver.go (483 lines), types.go (326 lines)
 
 ### Optimization Opportunities
+
 - Extract shared resolution logic (component iteration, tool lookup, weight assignment) into a template method to reduce duplication across build/lint/scan (medium effort, reduces ~100 lines)
-- No TODO/FIXME markers found -- codebase is clean of deferred work items

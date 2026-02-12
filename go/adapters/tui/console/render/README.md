@@ -49,7 +49,7 @@ The render sub-package extracts all stateless rendering logic from the console m
 ## Code Health
 
 ### Tech Debt
-- None
+- lamps.go (307 lines) exceeds 300 lines; candidate for splitting lamp implementations into focused files
 
 ### Pain Points
 - None identified

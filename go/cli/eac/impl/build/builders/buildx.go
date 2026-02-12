@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/tool"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
@@ -79,39 +79,10 @@ func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, out
 		return 1
 	}
 
-	// Detect CI environment and adjust build settings for local builds
-	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+	// Adjust for local builds: single platform, local tags, no push
+	isCI := environments.IsCI()
 	if !isCI {
-		Logln(logWriter, "🏠 Local build detected - adjusting build settings")
-
-		// Auto-detect current platform for local builds
-		localPlatform := detectLocalPlatform()
-		Logln(logWriter, "   Platform: %s (auto-detected)", localPlatform)
-
-		// Use :local tag plus content hash - matches tool system expectations (LocalImageTag())
-		// Content hash tag changes only when source files change
-		localTags := []string{
-			fmt.Sprintf("%s:local", dockerBuild.Container),
-		}
-		// Add content-hash tag for cache validation
-		if hash, err := module.GetContentHash(); err == nil && hash != "" {
-			localTags = append(localTags, fmt.Sprintf("%s:%s", dockerBuild.Container, hash))
-		}
-
-		// For local builds: use simple tags and local-friendly settings
-		dockerBuild = &config.DockerBuildConfig{
-			Container:  dockerBuild.Container,
-			Context:    dockerBuild.Context,     // Keep original context from config
-			Dockerfile: dockerBuild.Dockerfile,  // Keep original Dockerfile path
-			Platforms:  []string{localPlatform}, // Auto-detect platform
-			Tags:       localTags,               // Use local-friendly tags
-			Load:       true,                    // Load into local Docker instead of push
-			Push:       config.BoolPtr(false),    // Don't push to registry
-			Cache:      nil,                     // Skip registry cache for local builds
-			SBOM:       false,                   // Skip SBOM for local builds
-			Provenance: false,                   // Skip provenance for local builds
-			Registry:   "",
-		}
+		dockerBuild = adjustForLocalBuild(dockerBuild, module, logWriter)
 	}
 
 	// Expand template variables in docker_build config
@@ -166,16 +137,45 @@ func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, out
 	return 0
 }
 
+// adjustForLocalBuild creates a local-friendly docker build config.
+// Local builds: single platform, local tags, no push, no registry cache, no SBOM/provenance.
+func adjustForLocalBuild(dockerBuild *config.DockerBuildConfig, module core.ModuleContractPort, logWriter io.Writer) *config.DockerBuildConfig {
+	localPlatform := detectLocalPlatform()
+	Logln(logWriter, "🏠 Local build detected - adjusting build settings")
+	Logln(logWriter, "   Platform: %s (auto-detected)", localPlatform)
+
+	localTags := []string{
+		fmt.Sprintf("%s:local", dockerBuild.Container),
+	}
+	if hash, err := module.GetContentHash(); err == nil && hash != "" {
+		localTags = append(localTags, fmt.Sprintf("%s:%s", dockerBuild.Container, hash))
+	}
+
+	return &config.DockerBuildConfig{
+		Container:  dockerBuild.Container,
+		Context:    dockerBuild.Context,
+		Dockerfile: dockerBuild.Dockerfile,
+		Platforms:  []string{localPlatform},
+		Tags:       localTags,
+		Load:       true,
+		Push:       config.BoolPtr(false),
+		Cache:      nil,
+		SBOM:       false,
+		Provenance: false,
+		Registry:   "",
+	}
+}
+
 // buildDockerBuildArgs constructs the docker buildx build command arguments.
 func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, buildContext, dockerfilePath string, tags []string, moniker string, opts BuildOptions, logWriter io.Writer) []string {
 	args := []string{"buildx", "build"}
 
-	// Use specified builder or default to "default" (docker driver).
-	// The docker driver builds directly in Docker daemon - no slow tarball export.
-	// Use a docker-container driver only for multi-platform builds with QEMU.
+	// Use specified builder, or resolve the docker-driver builder for the active context.
+	// Always explicit — never let Docker fall back to a user-configured buildx default
+	// which may use a slower docker-container driver.
 	builder := dockerBuild.Builder
 	if builder == "" {
-		builder = "default"
+		builder = detectDockerBuilder()
 	}
 	args = append(args, "--builder", builder)
 
@@ -278,7 +278,7 @@ func buildCacheArgs(cache *config.DockerCacheConfig, moniker string) []string {
 	return args
 }
 
-// authenticateRegistry authenticates to a Docker registry.
+// authenticateRegistry authenticates to a Docker registry via the tool executor.
 func authenticateRegistry(registry string, logWriter io.Writer) int {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
@@ -293,18 +293,11 @@ func authenticateRegistry(registry string, logWriter io.Writer) int {
 
 	Logln(logWriter, "🔐 Authenticating to %s...", registry)
 
-	// TODO: migrate to tool executor once stdin support is added to ExecutionContext
-	cmd := exec.Command("docker", "login", registry, "-u", actor, "--password-stdin")
-	cmd.Stdin = strings.NewReader(token)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
-
-	if err := cmd.Run(); err != nil {
-		Logln(logWriter, "❌ Registry authentication failed: %v", err)
-		return 1
-	}
-
-	return 0
+	return RunCommandWithStdin(
+		context.Background(), "", logWriter,
+		strings.NewReader(token),
+		"docker", "login", registry, "-u", actor, "--password-stdin",
+	)
 }
 
 // detectLocalPlatform detects the current platform for local Docker builds

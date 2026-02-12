@@ -5,6 +5,8 @@ package validator
 
 import (
 	"fmt"
+	"log/slog"
+	"strings"
 
 	parser "github.com/ready-to-release/eac/go/cli/clie/internal/command-parser"
 )
@@ -107,9 +109,15 @@ func (cv *CommandValidator) addWarnings(result *CommandValidationResult, parsed 
 		}
 	}
 
-	// Warn about unrecognized flags in Viper args
-	// TODO: Check against subcommand-specific flags from EBNF
-	// For now, this is a placeholder for future enhancement
+	// Warn about unrecognized flags in Viper args that are not known global flags.
+	// The EBNF grammar does not define subcommand-specific flags, so any flag in
+	// Viper args that is not a global flag is flagged as unrecognized.
+	for _, arg := range parsed.ViperArgs {
+		if strings.HasPrefix(arg, "-") && !cv.parser.IsGlobalFlag(arg) {
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("Unrecognized flag '%s' in CLI arguments - will be passed through to Cobra", arg))
+		}
+	}
 
 	// Warn if no subcommand (will show help)
 	if parsed.Subcommand == "" && len(parsed.GlobalFlags) == 0 {
@@ -167,7 +175,12 @@ func (cv *CommandValidator) ValidateForRun(args []string) *CommandValidationResu
 		}
 
 		// Log the argument split for debugging
-		// TODO: Add debug logging infrastructure
+		slog.Debug("run command argument split",
+			"extension", result.ParsedCommand.ExtensionName,
+			"viper_args", result.ParsedCommand.ViperArgs,
+			"container_args", result.ParsedCommand.ContainerArgs,
+			"boundary", result.ParsedCommand.ArgumentBoundary,
+		)
 	}
 
 	return result
