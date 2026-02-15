@@ -207,6 +207,14 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		timeout = 5 * time.Minute
 	}
 
+	// Docker image builds need significantly more time than the generic worker timeout.
+	// Cold builds (no layer cache) involve pulling base images, installing system packages,
+	// and downloading large dependencies which easily exceed the default worker timeout.
+	// Once layers are cached, subsequent builds complete in seconds.
+	if tool == "buildx" || tool == "docker" {
+		timeout = config.DockerImageBuildTimeout()
+	}
+
 	// Create cancellable context with timeout — propagated to worker and its subprocesses
 	workerCtx, workerCancel := context.WithTimeout(context.Background(), timeout)
 	defer workerCancel()
