@@ -124,15 +124,15 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 
 // StructurizrModuleBuildOutputPath returns the path to a module's structurizr build output directory.
 // Each module with a structurizr component gets its own build output.
-// Path: out/build/{module}/structurizr-structurizr-render/structurizr/
+// Path: out/build/{module}/design-structurizr-render/structurizr/
 func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
-	return outSubPath(repoRoot, BuildDir, moduleName, "structurizr-structurizr-render", "structurizr")
+	return outSubPath(repoRoot, BuildDir, moduleName, "design-structurizr-render", "structurizr")
 }
 
 // StructurizrComponentBuildOutputPath returns the path to a per-component structurizr build output.
-// Path: out/build/{module}/structurizr-{component}-structurizr-render/structurizr/
+// Path: out/build/{module}/{component}-structurizr-render/structurizr/
 func StructurizrComponentBuildOutputPath(repoRoot, moduleName, componentName string) string {
-	unitDir := "structurizr-" + componentName + "-structurizr-render"
+	unitDir := componentName + "-structurizr-render"
 	return outSubPath(repoRoot, BuildDir, moduleName, unitDir, "structurizr")
 }
 

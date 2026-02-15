@@ -67,7 +67,8 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 			moniker:  "clie",
 			root:     "go/cli/clie",
 			source:   []string{"go.mod", "**.go"},
-			specs:    []string{"specs/clie/**"},
+			specs:    "specs/clie",
+			specsPat: []string{"**"},
 			expected: []string{"go/cli/clie/go.mod", "go/cli/clie/**.go", "specs/clie/**"},
 		},
 	}
@@ -245,10 +246,10 @@ func TestModuleContract_MatchesFile_RepoAbsolutePatterns(t *testing.T) {
 		filePath string
 		expected bool
 	}{
-		{"specs matches file", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/clie/test.feature", true},
-		{"specs matches nested", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/clie/design/workspace.dsl", true},
-		{"specs doesn't match other specs", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "specs/core/test.feature", false},
-		{"source pattern with specs", "go/cli/clie", []string{"specs/clie/**"}, []string{"go.mod"}, "go/cli/clie/go.mod", true},
+		{"specs matches file", "go/cli/clie", []string{"go.mod"}, "specs/clie", []string{"**"}, "specs/clie/test.feature", true},
+		{"specs matches nested", "go/cli/clie", []string{"go.mod"}, "specs/clie", []string{"**"}, "specs/clie/design/workspace.dsl", true},
+		{"specs doesn't match other specs", "go/cli/clie", []string{"go.mod"}, "specs/clie", []string{"**"}, "specs/core/test.feature", false},
+		{"source pattern with specs", "go/cli/clie", []string{"go.mod"}, "specs/clie", []string{"**"}, "go/cli/clie/go.mod", true},
 	}
 
 	for _, tt := range tests {
@@ -328,6 +329,75 @@ func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("MatchesFile(%s) with root=%q specs=%q source=%v = %v, expected %v",
 					tt.filePath, tt.root, tt.specs, tt.source, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModuleContract_MatchesFile_ExcludePatterns tests that exclude patterns prevent ownership
+func TestModuleContract_MatchesFile_ExcludePatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		root     string
+		excludes []string
+		filePath string
+		expected bool
+	}{
+		{
+			name:     "excluded subdirectory is not matched",
+			root:     "go/cli/eac",
+			excludes: []string{"specs/installer/**"},
+			filePath: "go/cli/eac/specs/installer/steps_test.go",
+			expected: false,
+		},
+		{
+			name:     "non-excluded file is still matched",
+			root:     "go/cli/eac",
+			excludes: []string{"specs/installer/**"},
+			filePath: "go/cli/eac/main.go",
+			expected: true,
+		},
+		{
+			name:     "multiple exclude patterns",
+			root:     "go/cli/eac",
+			excludes: []string{"specs/installer/**", "specs/implicit-cli/**"},
+			filePath: "go/cli/eac/specs/implicit-cli/test.feature",
+			expected: false,
+		},
+		{
+			name:     "exclude with different root does not affect",
+			root:     "go/cli/eac",
+			excludes: []string{"specs/installer/**"},
+			filePath: "go/cli/eac/allcmds/allcmds.go",
+			expected: true,
+		},
+		{
+			name:     "exclude pattern on component with explicit patterns",
+			root:     "go/cli/eac",
+			excludes: []string{"specs/**"},
+			filePath: "go/cli/eac/specs/test.feature",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Component with no explicit patterns (owns all files under root) + excludes
+			base := domain.BaseContract{
+				Components: config.ModuleComponents{
+					"go": &config.ComponentEntry{
+						Root: tt.root,
+						Patterns: &config.ComponentPatterns{
+							Exclude: tt.excludes,
+						},
+					},
+				},
+			}
+			module := NewModuleContract(base, "")
+
+			got := module.MatchesFile(tt.filePath)
+			if got != tt.expected {
+				t.Errorf("MatchesFile(%s) = %v, expected %v", tt.filePath, got, tt.expected)
 			}
 		})
 	}

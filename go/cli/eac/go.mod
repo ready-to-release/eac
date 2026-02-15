@@ -3,18 +3,11 @@ module github.com/ready-to-release/eac/go/cli/eac
 go 1.24.4
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cucumber/godog v0.15.1
-	github.com/defenseunicorns/go-oscal v0.7.0
-	github.com/gofrs/flock v0.13.0
-	github.com/google/uuid v1.6.0
-	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/ready-to-release/eac/go/adapters/ai v0.0.0
 	github.com/ready-to-release/eac/go/adapters/behave v0.0.0
 	github.com/ready-to-release/eac/go/adapters/cucumber v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/dotnet v0.0.0
-	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gh v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
@@ -23,23 +16,36 @@ require (
 	github.com/ready-to-release/eac/go/adapters/reqnroll v0.0.0
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
+	github.com/ready-to-release/eac/go/commands/build v0.0.0
+	github.com/ready-to-release/eac/go/commands/lint v0.0.0
+	github.com/ready-to-release/eac/go/commands/repository v0.0.0
+	github.com/ready-to-release/eac/go/commands/scan v0.0.0
+	github.com/ready-to-release/eac/go/commands/test v0.0.0
+	github.com/ready-to-release/eac/go/commands/update v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/stretchr/testify v1.11.1
-	go.uber.org/zap v1.27.1
-	golang.org/x/sync v0.19.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/clipperhouse/displaywidth v0.9.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
+	github.com/defenseunicorns/go-oscal v0.7.0 // indirect
+	github.com/gofrs/flock v0.13.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/adapters/ai v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/adapters/eac v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/npm v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/nuget v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/pip v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/commands/base v0.0.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	go.uber.org/zap v1.27.1 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
@@ -57,7 +63,6 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/bubbles v0.21.1 // indirect
 	github.com/charmbracelet/bubbletea v1.3.10 // indirect
@@ -73,7 +78,6 @@ require (
 	github.com/cucumber/gherkin/go/v26 v26.2.0 // indirect
 	github.com/cucumber/messages/go/v21 v21.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
@@ -106,7 +110,6 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/sys/sequential v0.6.0 // indirect
 	github.com/moby/term v0.5.2 // indirect
 	github.com/morikuni/aec v1.1.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
@@ -116,9 +119,8 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
@@ -148,18 +150,17 @@ require (
 	go.opentelemetry.io/otel v1.40.0 // indirect
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
+	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/api v0.262.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120174246-409b4a993575 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
@@ -184,6 +185,13 @@ replace (
 	github.com/ready-to-release/eac/go/adapters/reqnroll => ../../adapters/reqnroll
 	github.com/ready-to-release/eac/go/adapters/tui => ../../adapters/tui
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
+	github.com/ready-to-release/eac/go/commands/base => ../../commands/base
+	github.com/ready-to-release/eac/go/commands/build => ../../commands/build
+	github.com/ready-to-release/eac/go/commands/lint => ../../commands/lint
+	github.com/ready-to-release/eac/go/commands/repository => ../../commands/repository
+	github.com/ready-to-release/eac/go/commands/scan => ../../commands/scan
+	github.com/ready-to-release/eac/go/commands/test => ../../commands/test
+	github.com/ready-to-release/eac/go/commands/update => ../../commands/update
 	github.com/ready-to-release/eac/go/core => ../../core
 )
 

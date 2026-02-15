@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -34,6 +36,15 @@ type ComponentKindsConfig struct {
 
 // ComponentType defines how to process files of a certain type.
 type ComponentType struct {
+	// NamePattern is a regex used to derive component names from root paths.
+	// Capture group 1 is extracted and "/" is replaced with "-".
+	// Example: "^go/(.+)$" turns "go/commands/build" into "commands-build".
+	// If empty or no match, DefaultDeriveName is used as fallback.
+	NamePattern string `yaml:"name_pattern,omitempty" json:"name_pattern,omitempty"`
+
+	// namePatternRe is the compiled regex from NamePattern. Set by CompileNamePattern.
+	namePatternRe *regexp.Regexp `yaml:"-" json:"-"`
+
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	// Empty for non-file-based components like "book"
 	Extensions []string `yaml:"extensions" json:"extensions"`
@@ -463,4 +474,78 @@ func (c *ComponentKindsConfig) GetBuilder(componentName string) string {
 		return ""
 	}
 	return ct.Builders[0]
+}
+
+// compileNamePattern compiles a name_pattern regex and validates it has capture groups.
+func compileNamePattern(pattern string) (*regexp.Regexp, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("invalid name_pattern %q: %w", pattern, err)
+	}
+	if re.NumSubexp() < 1 {
+		return nil, fmt.Errorf("name_pattern %q must have at least one capture group", pattern)
+	}
+	return re, nil
+}
+
+// CompileNamePattern compiles the name_pattern regex. Called once during init.
+// Returns an error if the pattern is invalid or has no capture groups.
+func (c *ComponentType) CompileNamePattern() error {
+	if c == nil || c.NamePattern == "" {
+		return nil
+	}
+	re, err := compileNamePattern(c.NamePattern)
+	if err != nil {
+		return err
+	}
+	c.namePatternRe = re
+	return nil
+}
+
+// DeriveName applies the name_pattern regex to root, returns derived name.
+// Capture group 1 is extracted, "/" replaced with "-".
+// Falls back to DefaultDeriveName if no pattern or no match.
+func (c *ComponentType) DeriveName(root string) string {
+	if c != nil && c.namePatternRe != nil {
+		return deriveNameFromRe(c.namePatternRe, root)
+	}
+	return DefaultDeriveName(root)
+}
+
+// CompileNamePatterns compiles all name patterns in the kinds map.
+func CompileNamePatterns(kinds map[string]*ComponentType) error {
+	for name, ct := range kinds {
+		if ct == nil {
+			continue
+		}
+		if err := ct.CompileNamePattern(); err != nil {
+			return fmt.Errorf("component kind %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// DefaultDeriveName replaces "/" with "-" in the full root path.
+func DefaultDeriveName(root string) string {
+	return strings.ReplaceAll(root, "/", "-")
+}
+
+// DeriveNameWithPattern compiles and applies a one-off name pattern to root.
+// Used for entry-level name_pattern overrides.
+func DeriveNameWithPattern(pattern, root string) (string, error) {
+	re, err := compileNamePattern(pattern)
+	if err != nil {
+		return "", err
+	}
+	return deriveNameFromRe(re, root), nil
+}
+
+// deriveNameFromRe applies a compiled regex to root, extracting capture group 1.
+// Falls back to DefaultDeriveName if no match.
+func deriveNameFromRe(re *regexp.Regexp, root string) string {
+	m := re.FindStringSubmatch(root)
+	if len(m) >= 2 {
+		return strings.ReplaceAll(m[1], "/", "-")
+	}
+	return DefaultDeriveName(root)
 }

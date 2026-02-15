@@ -119,6 +119,13 @@ func (m *ModuleContract) GetAbsolutePaths() []string {
 func (m *ModuleContract) MatchesFile(filePath string) bool {
 	path := normalizePathSeparators(filePath)
 
+	// Pre-check: collect all exclude patterns across all components.
+	// Excludes are module-level: if any component excludes a path, the entire
+	// module relinquishes ownership of that file.
+	if m.matchesAnyExclude(path) {
+		return false
+	}
+
 	for _, comp := range m.Components {
 		if comp == nil {
 			continue
@@ -161,6 +168,24 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	return false
 }
 
+// matchesAnyExclude returns true if the file matches any exclude pattern
+// from any component in this module.
+func (m *ModuleContract) matchesAnyExclude(path string) bool {
+	for _, comp := range m.Components {
+		if comp == nil || comp.Patterns == nil || len(comp.Patterns.Exclude) == 0 {
+			continue
+		}
+		root := normalizePathSeparators(comp.Root)
+		for _, pattern := range comp.Patterns.Exclude {
+			fullPattern := joinPattern(root, pattern)
+			if matchWithFallback(path, fullPattern) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // GetDependencies returns the list of module dependencies.
 func (m *ModuleContract) GetDependencies() []string {
 	return m.DependsOn
@@ -169,6 +194,36 @@ func (m *ModuleContract) GetDependencies() []string {
 // IsDefinitionsFile returns true if this contract represents a definitions file.
 func (m *ModuleContract) IsDefinitionsFile() bool {
 	return m.Moniker == "definitions"
+}
+
+// GetAllSpecsRoots returns all specs roots for this module.
+// Includes the default specs root and all gherkin component roots.
+func (m *ModuleContract) GetAllSpecsRoots() []string {
+	seen := make(map[string]bool)
+	var roots []string
+
+	// Default specs root
+	if defaultRoot := m.GetSpecsRoot(); defaultRoot != "" {
+		roots = append(roots, defaultRoot)
+		seen[defaultRoot] = true
+	}
+
+	// Additional gherkin component roots
+	for name, comp := range m.Components {
+		if comp == nil || comp.Root == "" {
+			continue
+		}
+		compType := comp.Type
+		if compType == "" {
+			compType = name
+		}
+		if compType == "gherkin" && !seen[comp.Root] {
+			roots = append(roots, comp.Root)
+			seen[comp.Root] = true
+		}
+	}
+	sort.Strings(roots)
+	return roots
 }
 
 // GetSpecsRoot returns the specs root directory for this module.

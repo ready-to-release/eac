@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -27,8 +26,9 @@ type Module struct {
 	Components    ModuleComponents      `yaml:"components"`        // Component types for this module (required)
 	Linting       *ModuleLinting        `yaml:"linting,omitempty"` // Linting configuration overrides
 
-	// Component discovery
-	DiscoverComponents *DiscoverComponentsConfig `yaml:"discover_components,omitempty"`
+	// ComponentRoots declares multiple root paths per component kind for concise
+	// multi-component modules. Expanded into Components by expandComponentRoots.
+	ComponentRoots map[string]*ComponentRootsEntry `yaml:"component_roots,omitempty"`
 
 	ArtifactMatrixRef string `yaml:"artifact_matrix,omitempty"` // Reference to an artifact matrix name
 
@@ -70,25 +70,26 @@ func extractComponentOrder(moduleNode *yaml.Node) []string {
 	return nil
 }
 
-// DiscoverComponentsConfig configures automatic component discovery.
-type DiscoverComponentsConfig struct {
-	Type       string   `yaml:"type"`                  // "containers" triggers container component discovery
-	NameSuffix string   `yaml:"name_suffix,omitempty"` // Filter: only containers whose names end with this suffix
-	LocalOnly  []string `yaml:"local_only,omitempty"`  // Containers that should not be pushed to registry
+// ComponentRootsEntry declares multiple root paths for a component kind.
+// Supports two YAML forms:
+//   - Plain list: go: [go/commands/base, go/commands/build]
+//   - Object:     go: {name_pattern: "^contracts/(.+?)/[\\d.]+$", roots: [...]}
+type ComponentRootsEntry struct {
+	NamePattern string   `yaml:"name_pattern,omitempty"`
+	Roots       []string `yaml:"roots"`
 }
 
-// UnmarshalYAML allows DiscoverComponentsConfig to be parsed from either
-// a plain string (e.g., "containers") or a full object.
-func (d *DiscoverComponentsConfig) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		d.Type = node.Value
-		return nil
+// UnmarshalYAML allows ComponentRootsEntry to be parsed from either
+// a sequence (plain list of roots) or a mapping (object with name_pattern + roots).
+func (e *ComponentRootsEntry) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.SequenceNode {
+		return node.Decode(&e.Roots)
 	}
 	if node.Kind == yaml.MappingNode {
-		type raw DiscoverComponentsConfig
-		return node.Decode((*raw)(d))
+		type raw ComponentRootsEntry
+		return node.Decode((*raw)(e))
 	}
-	return fmt.Errorf("invalid discover_components: expected string or object")
+	return fmt.Errorf("invalid component_roots entry: expected list or object")
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -420,10 +421,11 @@ func (ce *ComponentEntry) GetComponentDeps() []string {
 
 // ComponentPatterns contains optional file pattern overrides for a component.
 type ComponentPatterns struct {
-	Source []string `yaml:"source,omitempty" json:"source,omitempty"`
-	Tests  []string `yaml:"tests,omitempty" json:"tests,omitempty"`
-	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
-	Data   []string `yaml:"data,omitempty" json:"data,omitempty"` // Owned files not processed by tools (e.g., testdata, fixtures)
+	Source  []string `yaml:"source,omitempty" json:"source,omitempty"`
+	Tests   []string `yaml:"tests,omitempty" json:"tests,omitempty"`
+	Config  []string `yaml:"config,omitempty" json:"config,omitempty"`
+	Data    []string `yaml:"data,omitempty" json:"data,omitempty"`    // Owned files not processed by tools (e.g., testdata, fixtures)
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty"` // Patterns to exclude from ownership
 }
 
 // UnmarshalYAML implements custom unmarshaling for ComponentEntry.
@@ -480,6 +482,10 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 				if entry.Patterns.Data != nil {
 					clonedEntry.Patterns.Data = make([]string, len(entry.Patterns.Data))
 					copy(clonedEntry.Patterns.Data, entry.Patterns.Data)
+				}
+				if entry.Patterns.Exclude != nil {
+					clonedEntry.Patterns.Exclude = make([]string, len(entry.Patterns.Exclude))
+					copy(clonedEntry.Patterns.Exclude, entry.Patterns.Exclude)
 				}
 			}
 			if entry.Build != nil {
@@ -995,92 +1001,3 @@ func deriveChangelogPath(m *Module) string {
 	}
 }
 
-// DiscoverContainerModules scans the containers root directory for Dockerfiles and creates
-// module definitions for any containers not explicitly defined.
-// This enables convention-over-configuration: {containersRoot}/{name}/Dockerfile automatically
-// becomes a module with moniker={name} using the "container" template.
-//
-// Parameters:
-//   - repoRoot: repository root directory
-//   - explicitMonikers: set of monikers already defined in repository.yml
-//   - containersRoot: containers root directory name (e.g., "containers")
-//
-// Returns discovered modules (empty slice if none found or on error).
-func DiscoverContainerModules(repoRoot string, explicitMonikers map[string]bool, containersRoot string) []Module {
-	if containersRoot == "" {
-		containersRoot = "containers"
-	}
-	containersDir := filepath.Join(repoRoot, containersRoot)
-
-	// Check if containers directory exists
-	if _, err := os.Stat(containersDir); os.IsNotExist(err) {
-		return nil
-	}
-
-	// Find all Dockerfiles
-	pattern := filepath.Join(containersDir, "*", "Dockerfile")
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil
-	}
-
-	var modules []Module
-	for _, dockerfile := range matches {
-		// Extract container name from path (parent directory name)
-		dir := filepath.Dir(dockerfile)
-		moniker := filepath.Base(dir)
-
-		// Skip if already explicitly declared
-		if explicitMonikers[moniker] {
-			continue
-		}
-
-		// Skip non-OCI containers (internal tools like cgo-oci, drawio-oci)
-		// Convention: only auto-discover containers with -oci suffix
-		if !strings.HasSuffix(moniker, "-oci") {
-			continue
-		}
-
-		// Create module with container template
-		modules = append(modules, Module{
-			Moniker:     moniker,
-			Name:        deriveContainerName(moniker),
-			Description: fmt.Sprintf("Auto-discovered container from %s/%s", containersRoot, moniker),
-			Template:    "container",
-			DependsOn:   []string{},
-		})
-	}
-
-	// Sort for deterministic ordering
-	sort.Slice(modules, func(i, j int) bool {
-		return modules[i].Moniker < modules[j].Moniker
-	})
-
-	return modules
-}
-
-// deriveContainerName creates a human-readable name from a container moniker.
-// Examples:
-//   - "pdf-oci" -> "PDF Container"
-//   - "nginx-oci" -> "Nginx Container"
-//   - "mkdocs-dev-oci" -> "Mkdocs Dev Container"
-func deriveContainerName(moniker string) string {
-	// Remove -oci suffix
-	name := strings.TrimSuffix(moniker, "-oci")
-
-	// Split on hyphens and title-case each word
-	parts := strings.Split(name, "-")
-	for i, part := range parts {
-		if len(part) > 0 {
-			// Special case: all caps for known acronyms
-			upper := strings.ToUpper(part)
-			if upper == "PDF" || upper == "CLI" || upper == "API" || upper == "OCI" {
-				parts[i] = upper
-			} else {
-				parts[i] = strings.ToUpper(part[:1]) + part[1:]
-			}
-		}
-	}
-
-	return strings.Join(parts, " ") + " Container"
-}

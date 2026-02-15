@@ -286,10 +286,14 @@ func inferInternalDependencyFromPath(filePath string, dc *DiscoveryConfig) strin
 		}
 	}
 
-	// Expected format: <specs_root>/<module>/...
+	// Expected format: <specs_root>/<module>/... or <specs_root>/<module>_<qualifier>/...
 	// Extract module name (the directory right after specs_root)
 	if specsIndex >= 0 && len(parts) > specsIndex+1 {
 		moduleName := parts[specsIndex+1]
+		// Handle compound spec dirs: "eac_work" → "eac"
+		if idx := strings.Index(moduleName, "_"); idx > 0 {
+			moduleName = moduleName[:idx]
+		}
 		return fmt.Sprintf("@depm:%s", moduleName)
 	}
 

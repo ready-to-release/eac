@@ -6,13 +6,13 @@ The `docker-eac` module wraps the Docker SDK to implement `ContainerPort` for co
 
 Shows how the Docker adapter provides container operations to CLI commands.
 
-<!-- structurizr:adapters:docker-eac:SystemContext -->
+<!-- structurizr:adapters:docker:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Docker adapter packages.
 
-<!-- structurizr:adapters:docker-eac:Containers -->
+<!-- structurizr:adapters:docker:Containers -->
 
 ## Component Architecture
 
@@ -20,19 +20,19 @@ High-level view of the Docker adapter packages.
 
 ContainerPort implementation with retry logic and exponential backoff.
 
-<!-- structurizr:adapters:docker-eac:ContainerAdapterComponents -->
+<!-- structurizr:adapters:docker:ContainerAdapterComponents -->
 
 ### Docker Client Components
 
 Abstracted Docker SDK client with real, mock, and factory variants.
 
-<!-- structurizr:adapters:docker-eac:DockerClientComponents -->
+<!-- structurizr:adapters:docker:DockerClientComponents -->
 
 ### Serve Components
 
 Long-running container management with port reservation and browser launching.
 
-<!-- structurizr:adapters:docker-eac:ServeComponents -->
+<!-- structurizr:adapters:docker:ServeComponents -->
 
 ## Design File
 

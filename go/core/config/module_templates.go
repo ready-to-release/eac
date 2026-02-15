@@ -2,26 +2,16 @@ package config
 
 import (
 	"fmt"
-	"path/filepath"
-	"sort"
 	"strings"
 )
 
 // ModuleTemplate defines a reusable module structure with placeholders.
 // Templates are defined in defaults and referenced by modules via the "template" field.
-// Templates provide versioning defaults and a discover list of named discovery rules
-// for auto-discovering auxiliary components (markdown, yaml, gherkin, etc.).
+// Templates provide versioning defaults and component enrichment defaults.
+// All components must be declared by the user; templates only enrich.
 type ModuleTemplate struct {
 	// Versioning provides default versioning configuration
 	Versioning *ModuleVersioning `yaml:"versioning,omitempty"`
-	// Discover lists named discovery rules to run for this template.
-	// Rules are resolved from the discovery-rules section of blueprints.yml.
-	// Each rule auto-discovers an auxiliary component if its filesystem check passes.
-	Discover []string `yaml:"discover,omitempty"`
-	// Blueprints lists component blueprint names to apply.
-	// Blueprints iterate over existing components and create per-component
-	// auxiliary entries (e.g., structurizr-{name}, gherkin-{name}).
-	Blueprints []string `yaml:"blueprints,omitempty"`
 	// DependsOn provides default dependencies
 	DependsOn []string `yaml:"depends_on,omitempty"`
 	// Components provides default component entries (e.g., docker_build defaults).
@@ -30,57 +20,12 @@ type ModuleTemplate struct {
 	Components map[string]*ComponentEntry `yaml:"components,omitempty"`
 }
 
-// ComponentBlueprint defines a per-component discovery template.
-// Blueprints iterate over each existing component in a module, substitute
-// {name} with the component's map key, and create an auxiliary component
-// if the filesystem check passes.
-type ComponentBlueprint struct {
-	// Component is the target component name pattern (e.g., "structurizr-{name}").
-	Component string `yaml:"component"`
-	// Type is the component type (e.g., "structurizr", "gherkin"). If empty, derived from component name.
-	Type string `yaml:"type,omitempty"`
-	// Root is the direct path pattern with {name} and other variable support.
-	Root string `yaml:"root,omitempty"`
-	// Patterns contains optional file pattern overrides.
-	Patterns *ComponentPatterns `yaml:"patterns,omitempty"`
-	// Discovery defines the filesystem check and optional derive_from logic.
-	Discovery *BlueprintDiscovery `yaml:"discovery,omitempty"`
-}
-
-// BlueprintDiscovery defines how to check whether a per-component blueprint
-// should create its auxiliary component.
-type BlueprintDiscovery struct {
-	// Check is the filesystem check: required_file, has_files_in_subdirs, dir_exists, has_matching_files.
-	Check string `yaml:"check,omitempty"`
-	// RequiredFile is the file that must exist (for check: required_file).
-	RequiredFile string `yaml:"required_file,omitempty"`
-	// CheckPattern is the filename to check in subdirectories (for check: has_files_in_subdirs).
-	CheckPattern string `yaml:"check_pattern,omitempty"`
-	// Patterns lists glob patterns for file matching (for check: has_matching_files).
-	Patterns []string `yaml:"patterns,omitempty"`
-	// SetPatterns copies Patterns into the component's Patterns.Source when true.
-	SetPatterns bool `yaml:"set_patterns,omitempty"`
-	// DeriveFrom lists component names to derive path from (supports {name} substitution).
-	DeriveFrom []string `yaml:"derive_from,omitempty"`
-	// DeriveSubdirs maps source component name to subdirectory suffix (supports {name}).
-	DeriveSubdirs map[string]string `yaml:"derive_subdirs,omitempty"`
-	// FallbackPath is used when no source component exists for derive_from.
-	FallbackPath string `yaml:"fallback_path,omitempty"`
-}
-
 // BlueprintsConfig holds all blueprints loaded from defaults.
-// This is the unified config: component kinds (tool bindings), module templates,
-// discovery rules, and artifact matrices — all in one file.
+// Component kinds define tool bindings, default file patterns, and resources.
+// Templates define module-level defaults. Artifact matrices define reusable build configurations.
 type BlueprintsConfig struct {
 	// ComponentKinds maps component kind name to its definition (tool bindings, default patterns, resources).
-	// Component kinds define tool bindings, default file patterns, and resources.
 	ComponentKinds map[string]*ComponentType `yaml:"component-kinds"`
-	// ComponentBlueprints maps blueprint name to its per-component discovery specification.
-	// Templates reference these by name via their "blueprints" field.
-	ComponentBlueprints map[string]ComponentBlueprint `yaml:"component-blueprints"`
-	// DiscoveryRules maps rule name to its discovery specification.
-	// Templates reference these by name via their "discover" field.
-	DiscoveryRules map[string]ComponentDiscoveryRule `yaml:"discovery-rules"`
 	// Templates maps template name to its specification
 	Templates map[string]ModuleTemplate `yaml:"module-templates"`
 	// ArtifactMatrices maps matrix name to its definition
@@ -113,11 +58,9 @@ func MergeBlueprintsConfig(base, override *BlueprintsConfig) *BlueprintsConfig {
 	}
 
 	result := &BlueprintsConfig{
-		ComponentKinds:      make(map[string]*ComponentType),
-		ComponentBlueprints: make(map[string]ComponentBlueprint),
-		DiscoveryRules:      make(map[string]ComponentDiscoveryRule),
-		Templates:           make(map[string]ModuleTemplate),
-		ArtifactMatrices:    make(map[string]*ArtifactMatrix),
+		ComponentKinds:   make(map[string]*ComponentType),
+		Templates:        make(map[string]ModuleTemplate),
+		ArtifactMatrices: make(map[string]*ArtifactMatrix),
 	}
 
 	// Copy base component kinds, then override
@@ -128,38 +71,18 @@ func MergeBlueprintsConfig(base, override *BlueprintsConfig) *BlueprintsConfig {
 		result.ComponentKinds[k] = v
 	}
 
-	// Copy base component blueprints
-	for k, v := range base.ComponentBlueprints {
-		result.ComponentBlueprints[k] = v
-	}
-	// Override component blueprints
-	for k, v := range override.ComponentBlueprints {
-		result.ComponentBlueprints[k] = v
-	}
-
-	// Copy base discovery rules
-	for k, v := range base.DiscoveryRules {
-		result.DiscoveryRules[k] = v
-	}
-	// Override discovery rules
-	for k, v := range override.DiscoveryRules {
-		result.DiscoveryRules[k] = v
-	}
-
-	// Copy base templates
+	// Copy base templates, then override
 	for k, v := range base.Templates {
 		result.Templates[k] = v
 	}
-	// Override templates
 	for k, v := range override.Templates {
 		result.Templates[k] = v
 	}
 
-	// Copy base artifact matrices
+	// Copy base artifact matrices, then override
 	for k, v := range base.ArtifactMatrices {
 		result.ArtifactMatrices[k] = v
 	}
-	// Override artifact matrices
 	for k, v := range override.ArtifactMatrices {
 		result.ArtifactMatrices[k] = v
 	}
@@ -168,56 +91,29 @@ func MergeBlueprintsConfig(base, override *BlueprintsConfig) *BlueprintsConfig {
 }
 
 // ExpandModuleFromTemplate expands a module definition using its referenced template.
-// Three steps: merge template defaults → substitute params → discover components from rules.
+// Two steps: merge template defaults → substitute params.
+// All components must already be declared; no auto-discovery is performed.
 func ExpandModuleFromTemplate(
 	mod *Module,
 	templates map[string]ModuleTemplate,
-	discoveryRules []ComponentDiscoveryRule,
-	repoRoot string,
 	discoveryVars map[string]string,
-	namedRules map[string]ComponentDiscoveryRule,
 ) error {
-	// 1. If module references a template, merge defaults and run template discovery
+	// If module references a template, merge defaults
 	if mod.Template != "" {
 		tmpl, ok := templates[mod.Template]
 		if !ok {
 			return fmt.Errorf("module %s: unknown template %q", mod.Moniker, mod.Template)
 		}
 
-		// 1a. Merge versioning + depends_on from template (module values win)
+		// Merge versioning + depends_on + component defaults from template
 		mergeTemplateIntoModule(mod, &tmpl)
-
-		// 1b. Resolve template's discover list into rules and run them
-		if len(tmpl.Discover) > 0 {
-			templateRules := resolveDiscoverList(tmpl.Discover, namedRules)
-			discoverComponentsFromRules(mod, templateRules, repoRoot, discoveryVars)
-		}
 	}
 
-	// 2. Build parameters and substitute in all fields
-	// Discovery vars provide {name_root} for every component (e.g., go_root, typescript_root)
+	// Build parameters and substitute in all fields
 	params := buildModuleParams(mod, discoveryVars)
 	substituteModuleParams(mod, params)
 
-	// 3. Discover components from global YAML-driven rules (with template filtering)
-	discoverComponentsFromRules(mod, discoveryRules, repoRoot, discoveryVars)
-
 	return nil
-}
-
-// resolveDiscoverList resolves a list of discovery rule names into actual rules.
-// Unknown names are silently skipped.
-func resolveDiscoverList(names []string, namedRules map[string]ComponentDiscoveryRule) []ComponentDiscoveryRule {
-	if len(namedRules) == 0 {
-		return nil
-	}
-	var rules []ComponentDiscoveryRule
-	for _, name := range names {
-		if rule, ok := namedRules[name]; ok {
-			rules = append(rules, rule)
-		}
-	}
-	return rules
 }
 
 // mergeTemplateIntoModule applies template defaults to module.
@@ -246,10 +142,7 @@ func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 	}
 
 	// Components: merge template component defaults into module components.
-	// Only merges into components the module already declares (template
-	// components are defaults, not auto-creation). Root is never overridden
-	// from template (it's always module-specific). DockerBuild fields from
-	// the template are applied as defaults — module fields take precedence.
+	// Only merges into components the module already declares.
 	if len(tmpl.Components) > 0 && mod.Components != nil {
 		for name, tmplComp := range tmpl.Components {
 			if tmplComp == nil {
@@ -265,10 +158,8 @@ func mergeTemplateIntoModule(mod *Module, tmpl *ModuleTemplate) {
 			}
 			if tmplComp.DockerBuild != nil {
 				if modComp.DockerBuild == nil {
-					// Module has no DockerBuild — use template's entirely
 					modComp.DockerBuild = cloneDockerBuildConfig(tmplComp.DockerBuild)
 				} else {
-					// Module has DockerBuild — merge template fields as defaults
 					mergeDockerBuildDefaults(modComp.DockerBuild, tmplComp.DockerBuild)
 				}
 			}
@@ -357,29 +248,21 @@ func mergeDockerBuildDefaults(mod, tmpl *DockerBuildConfig) {
 }
 
 // buildModuleParams creates parameter map for substitution.
-// Discovery vars already contain {name_root} for every component (e.g., go_root, core_root),
-// so no special inference is needed — component roots ARE the parameters.
 func buildModuleParams(mod *Module, discoveryVars map[string]string) map[string]string {
 	params := map[string]string{
 		"moniker": mod.Moniker,
 	}
-
-	// Merge discovery vars (provides owner, component roots, conventions)
 	for k, v := range discoveryVars {
 		params[k] = v
 	}
-
 	return params
 }
 
 // substituteModuleParams replaces {placeholder} in all string fields.
 func substituteModuleParams(mod *Module, params map[string]string) {
-	// Substitute in versioning
 	if mod.Versioning != nil {
 		mod.Versioning.Changelog = substituteParams(mod.Versioning.Changelog, params)
 	}
-
-	// Substitute in components
 	for name, comp := range mod.Components {
 		if comp == nil {
 			continue
@@ -420,154 +303,6 @@ func substituteParamsSlice(slice []string, params map[string]string) []string {
 		result[i] = substituteParams(s, params)
 	}
 	return result
-}
-
-// applyComponentBlueprints iterates blueprint names, resolves each blueprint,
-// iterates existing components (sorted snapshot), substitutes {name} with the
-// component key, computes path, runs discovery check, and creates auxiliary components.
-func applyComponentBlueprints(
-	mod *Module,
-	blueprintNames []string,
-	blueprints map[string]ComponentBlueprint,
-	repoRoot string,
-	vars map[string]string,
-) {
-	if len(blueprintNames) == 0 || len(blueprints) == 0 {
-		return
-	}
-
-	if mod.Components == nil {
-		mod.Components = make(ModuleComponents)
-	}
-
-	// Snapshot existing component keys (sorted for deterministic iteration).
-	// We iterate over the snapshot so new components added during this loop
-	// don't affect the iteration.
-	existingKeys := make([]string, 0, len(mod.Components))
-	for k, entry := range mod.Components {
-		if entry != nil && entry.Root != "" {
-			existingKeys = append(existingKeys, k)
-		}
-	}
-	sort.Strings(existingKeys)
-
-	for _, bpName := range blueprintNames {
-		bp, ok := blueprints[bpName]
-		if !ok {
-			continue // unknown blueprint name — skip silently
-		}
-
-		for _, compKey := range existingKeys {
-			// Build per-component vars: set {name} to current component key
-			compVars := make(map[string]string, len(vars)+1)
-			for k, v := range vars {
-				compVars[k] = v
-			}
-			compVars["name"] = compKey
-
-			// Resolve target component name
-			targetName := substituteParams(bp.Component, compVars)
-
-			// Skip if target component already exists with a Root
-			if existing, ok := mod.Components[targetName]; ok && existing != nil && existing.Root != "" {
-				continue
-			}
-
-			// Compute path
-			path := computeBlueprintPath(bp, mod.Components, compVars)
-			if path == "" {
-				continue
-			}
-
-			// Run filesystem check
-			if !checkBlueprintPath(bp, repoRoot, path, compVars) {
-				continue
-			}
-
-			// Create auxiliary component entry
-			entry := &ComponentEntry{Root: path}
-			if bp.Type != "" {
-				entry.Type = bp.Type
-			}
-			if bp.Patterns != nil {
-				entry.Patterns = &ComponentPatterns{}
-				if bp.Patterns.Source != nil {
-					entry.Patterns.Source = make([]string, len(bp.Patterns.Source))
-					copy(entry.Patterns.Source, bp.Patterns.Source)
-				}
-			}
-			if bp.Discovery != nil && bp.Discovery.SetPatterns && len(bp.Discovery.Patterns) > 0 {
-				if entry.Patterns == nil {
-					entry.Patterns = &ComponentPatterns{}
-				}
-				entry.Patterns.Source = make([]string, len(bp.Discovery.Patterns))
-				copy(entry.Patterns.Source, bp.Discovery.Patterns)
-			}
-
-			mod.Components[targetName] = entry
-		}
-	}
-}
-
-// computeBlueprintPath computes the filesystem path for a component blueprint.
-// Handles direct root path and derive_from with {name} substitution.
-func computeBlueprintPath(bp ComponentBlueprint, components ModuleComponents, vars map[string]string) string {
-	// Direct root path
-	if bp.Root != "" {
-		return expandVars(bp.Root, vars)
-	}
-
-	// Derive from existing components via discovery config
-	if bp.Discovery != nil && len(bp.Discovery.DeriveFrom) > 0 {
-		for _, sourceName := range bp.Discovery.DeriveFrom {
-			resolved := expandVars(sourceName, vars)
-			if entry, ok := components[resolved]; ok && entry != nil && entry.Root != "" {
-				// Check for subdirectory mapping
-				if bp.Discovery.DeriveSubdirs != nil {
-					// Try the original pattern key first (e.g., "{name}")
-					if subdir, ok := bp.Discovery.DeriveSubdirs[sourceName]; ok {
-						return filepath.ToSlash(filepath.Join(entry.Root, subdir))
-					}
-					// Then try the resolved name
-					if subdir, ok := bp.Discovery.DeriveSubdirs[resolved]; ok {
-						return filepath.ToSlash(filepath.Join(entry.Root, subdir))
-					}
-				}
-				return entry.Root
-			}
-		}
-
-		// No source found; try fallback
-		if bp.Discovery.FallbackPath != "" {
-			return expandVars(bp.Discovery.FallbackPath, vars)
-		}
-	}
-
-	return ""
-}
-
-// checkBlueprintPath applies the filesystem check specified by the blueprint.
-func checkBlueprintPath(bp ComponentBlueprint, repoRoot, path string, vars map[string]string) bool {
-	if bp.Discovery == nil {
-		// No discovery config: just verify the path exists
-		return pathExists(repoRoot, path)
-	}
-
-	switch bp.Discovery.Check {
-	case "dir_exists":
-		return pathExists(repoRoot, path)
-	case "required_file":
-		reqFile := expandVars(bp.Discovery.RequiredFile, vars)
-		return pathHasRequiredFile(repoRoot, path, reqFile)
-	case "has_files_in_subdirs":
-		pattern := expandVars(bp.Discovery.CheckPattern, vars)
-		return pathHasFilesInSubdirs(repoRoot, path, pattern)
-	case "has_matching_files":
-		return hasMatchingFiles(filepath.Join(repoRoot, path), bp.Discovery.Patterns)
-	default:
-		// No check specified: just verify the path exists
-		return pathExists(repoRoot, path)
-	}
 }
 
 // substituteDockerBuildParams substitutes parameters in DockerBuildConfig fields.

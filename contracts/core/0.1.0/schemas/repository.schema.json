@@ -490,6 +490,16 @@
               "type": "array",
               "items": { "type": "string" },
               "description": "Config file patterns (overrides component-kind defaults)"
+            },
+            "data": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Data file patterns for owned files not processed by tools"
+            },
+            "exclude": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Patterns to exclude from component ownership"
             }
           }
         },

@@ -108,46 +108,6 @@ conventions:
   template_risk_catalog_dir: risk-catalog
   design_dir: .design
   workspace_dsl: workspace.dsl
-  component_discovery:
-    - component: gherkin
-      path: "{specs_root}/{moniker}"
-      check: has_files_in_subdirs
-      check_pattern: "{specification}"
-    - component: structurizr
-      path: "{specs_root}/{moniker}/{design_dir}"
-      check: required_file
-      required_file: "{workspace_dsl}"
-    - component: godog
-      derive_from: [go]
-      derive_subdirs: { go: specs }
-      fallback_path: "go/eac/specs/{moniker}"
-      check: required_file
-      required_file: "{godog_test}"
-    - component: cucumberjs
-      derive_from: [typescript]
-      derive_subdirs: { typescript: features }
-      check: dir_exists
-    - component: markdown
-      derive_from: [go, typescript, dockerfile]
-      check: dir_exists
-    - component: yaml
-      derive_from: [go, typescript, dockerfile]
-      check: dir_exists
-    - component: testdata
-      only_templates: ["*container*"]
-      path: "{containers_root}/{moniker}"
-      check: has_matching_files
-      patterns: ["*.txt", "*.conf", "*.html", "*.sh"]
-      set_patterns: true
-    - component: containercode
-      only_templates: ["*container*"]
-      path: "{containers_root}/{moniker}"
-      check: has_matching_files
-      patterns: ["*.py", "*.js"]
-      set_patterns: true
-    # Note: Go test fixtures and assets are owned via component patterns.data
-    # (not separate components). Container testdata above is kept because
-    # containers use separate component types for different file categories.
 
 # Container Registry Defaults
 # Configure cleanup policies for container images (GHCR, Docker Hub, etc.)

@@ -51,6 +51,12 @@ func FeatureDir(moniker, feature string) string {
 	return "specs/" + moniker + "/" + feature
 }
 
+// SpecsComponentPath returns the spec directory for a module with component qualifier.
+// Pattern: specs/{moniker}_{qualifier}.
+func SpecsComponentPath(moniker, qualifier string) string {
+	return "specs/" + moniker + "_" + qualifier
+}
+
 // WorkflowCIPath returns the default CI workflow path for a moniker.
 // Pattern: .github/workflows/ci-{moniker}.yaml.
 func WorkflowCIPath(moniker string) string {

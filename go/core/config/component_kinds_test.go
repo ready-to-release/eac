@@ -563,6 +563,49 @@ func TestComponentType_GetTesters(t *testing.T) {
 	}
 }
 
+func TestDeriveName_GoPattern(t *testing.T) {
+	ct := &ComponentType{NamePattern: "^go/(.+)$"}
+	if err := ct.CompileNamePattern(); err != nil {
+		t.Fatal(err)
+	}
+
+	got := ct.DeriveName("go/commands/build")
+	if got != "commands-build" {
+		t.Errorf("DeriveName(%q) = %q, want %q", "go/commands/build", got, "commands-build")
+	}
+}
+
+func TestDeriveName_ContractsOverride(t *testing.T) {
+	got, err := DeriveNameWithPattern(`^contracts/(.+?)/[\d.]+$`, "contracts/ai-provider/0.1.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "ai-provider" {
+		t.Errorf("DeriveNameWithPattern = %q, want %q", got, "ai-provider")
+	}
+}
+
+func TestDeriveName_NoPattern(t *testing.T) {
+	var ct *ComponentType
+	got := ct.DeriveName("go/commands/build")
+	if got != "go-commands-build" {
+		t.Errorf("nil.DeriveName = %q, want %q", got, "go-commands-build")
+	}
+}
+
+func TestDeriveName_NoMatch(t *testing.T) {
+	ct := &ComponentType{NamePattern: "^go/(.+)$"}
+	if err := ct.CompileNamePattern(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pattern expects "go/" prefix; "contracts/" won't match → fallback
+	got := ct.DeriveName("contracts/core/0.1.0")
+	if got != "contracts-core-0.1.0" {
+		t.Errorf("DeriveName (no match) = %q, want %q", got, "contracts-core-0.1.0")
+	}
+}
+
 // TestComponentType_ToolChainExamples validates multi-step build configurations.
 func TestComponentType_ToolChainExamples(t *testing.T) {
 	t.Run("docs-pdf has tool chain", func(t *testing.T) {

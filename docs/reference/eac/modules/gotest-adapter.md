@@ -6,13 +6,13 @@ The `gotest-eac` module provides Go test runner integration for unit and integra
 
 Shows how the GoTest adapter integrates with the test execution framework.
 
-<!-- structurizr:adapters:gotest-eac:SystemContext -->
+<!-- structurizr:adapters:gotest:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the GoTest adapter packages.
 
-<!-- structurizr:adapters:gotest-eac:Containers -->
+<!-- structurizr:adapters:gotest:Containers -->
 
 ## Design File
 

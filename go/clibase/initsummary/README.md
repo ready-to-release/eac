@@ -27,12 +27,12 @@ for display before execution begins.
 
 ## Internal Structure
 
-| File | Purpose |
-|---|---|
-| `summary.go` | `Summary` and all supporting data types (`Flags`, `DepsStatus`, `IncrementalInfo`, etc.) |
-| `formatter.go` | `FormatCompact` and `FormatDetailed` rendering functions |
-| `formatter_flags.go` | Flag-specific formatting helpers extracted from formatter.go |
-| `formatter_helpers.go` | Shared section-building helpers used by both compact and detailed formatters |
+| File                   | Purpose                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `summary.go`           | `Summary` and all supporting data types (`Flags`, `DepsStatus`, `IncrementalInfo`, etc.) |
+| `formatter.go`         | `FormatCompact` and `FormatDetailed` rendering functions                                 |
+| `formatter_flags.go`   | Flag-specific formatting helpers extracted from formatter.go                             |
+| `formatter_helpers.go` | Shared section-building helpers used by both compact and detailed formatters             |
 
 ## Dependencies
 

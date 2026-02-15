@@ -6,13 +6,13 @@ The `mocha-eac` module provides Mocha test runner integration for TypeScript uni
 
 Shows how the Mocha adapter integrates with the test execution framework.
 
-<!-- structurizr:adapters:mocha-eac:SystemContext -->
+<!-- structurizr:adapters:mocha:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the Mocha adapter packages.
 
-<!-- structurizr:adapters:mocha-eac:Containers -->
+<!-- structurizr:adapters:mocha:Containers -->
 
 ## Design File
 

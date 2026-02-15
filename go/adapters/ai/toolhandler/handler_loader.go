@@ -33,10 +33,10 @@ func (h *AIToolHandler) loadInput(module core.ModuleContractPort, workspaceRoot,
 // loadDSLContent loads Structurizr DSL files for a module.
 // Uses the module's structurizr component root from config-driven discovery.
 func (h *AIToolHandler) loadDSLContent(module core.ModuleContractPort, workspaceRoot string) (string, error) {
-	root := module.GetComponentRoot("structurizr")
+	root := module.GetComponentRoot("design")
 	if root == "" {
-		// Fallback for modules without structurizr component
-		return "", fmt.Errorf("no structurizr component found for module %s", module.GetMoniker())
+		// Fallback for modules without design component
+		return "", fmt.Errorf("no design component found for module %s", module.GetMoniker())
 	}
 	designDir := filepath.Join(workspaceRoot, root)
 	return h.loadFilesWithExtension(designDir, ".dsl")

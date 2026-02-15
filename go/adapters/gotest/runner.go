@@ -83,7 +83,13 @@ func (r *GoTestRunner) GetTestInfo(ref testing.TestReference, workspaceRoot stri
 		if len(parts) == 0 {
 			return nil
 		}
-		info.ModuleMoniker = parts[0]
+		monikerPart := parts[0]
+
+		// Handle compound monikers: "eac_work" → moniker="eac"
+		info.ModuleMoniker = monikerPart
+		if idx := strings.Index(monikerPart, "_"); idx > 0 {
+			info.ModuleMoniker = monikerPart[:idx]
+		}
 
 		// Verify module exists
 		if eacCfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
@@ -127,6 +133,10 @@ func (r *GoTestRunner) GetTestInfo(ref testing.TestReference, workspaceRoot stri
 // For gotest, returns empty string (tests are in the same directory as source).
 // For godog, returns the path to the directory containing godog_test.go.
 // Returns empty string if module not found or no godog_test.go exists - caller must handle.
+//
+// Supports compound monikers: spec dirs named "eac_work" split into moniker="eac", qualifier="work".
+// Qualified paths use TestImplPathForQualifier to find the godog component root.
+// Unqualified paths use the original TestImplPath for backward compatibility.
 func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 	eacCfg := cfg.(*config.EACConfig)
 
@@ -148,16 +158,51 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 		return ""
 	}
 
-	// Extract moniker from first path component
-	moniker := parts[0]
+	monikerPart := parts[0] // e.g., "eac_work" or "eac" or "core"
+
+	// Split compound moniker on underscore: "eac_work" → moniker="eac", qualifier="work"
+	moniker := monikerPart
+	qualifier := ""
+	if idx := strings.Index(monikerPart, "_"); idx > 0 {
+		moniker = monikerPart[:idx]
+		qualifier = monikerPart[idx+1:]
+	}
 
 	// Verify module exists - fail early if not
 	if eacCfg.Repository.GetByMoniker(moniker) == nil {
 		goRunnerLog.Debugf("FindTestRoot: unknown module %s for %s", moniker, featurePath)
-		return "" // Unknown module, no fallback guessing
+		return ""
 	}
 
-	// Get test impl path from module contract
+	workspaceRoot := eacCfg.RepoRoot
+	godogTestFile := eacCfg.Repository.Conventions.GodogTest
+
+	if qualifier != "" {
+		// Qualified: find godog root for this component
+		basePath := eacCfg.Repository.TestImplPathForQualifier(moniker, qualifier)
+		if basePath == "" {
+			goRunnerLog.Debugf("FindTestRoot: no godog root for %s qualifier %s", moniker, qualifier)
+			return ""
+		}
+		// Direct check
+		if fileExists(filepath.Join(workspaceRoot, basePath, godogTestFile)) {
+			goRunnerLog.Debugf("FindTestRoot: found %s at qualified basePath %s", godogTestFile, basePath)
+			return basePath
+		}
+		// Subdirectory navigation for nested runners (e.g., create/commit-message)
+		for i := 1; i < len(parts)-1; i++ {
+			subPath := filepath.Join(basePath, strings.Join(parts[1:i+1], "/"))
+			subPath = filepath.ToSlash(subPath)
+			if fileExists(filepath.Join(workspaceRoot, subPath, godogTestFile)) {
+				goRunnerLog.Debugf("FindTestRoot: found %s at qualified subPath %s", godogTestFile, subPath)
+				return subPath
+			}
+		}
+		goRunnerLog.Debugf("FindTestRoot: no %s found for qualified %s/%s", godogTestFile, moniker, qualifier)
+		return ""
+	}
+
+	// Unqualified: existing single-root logic (backward compat for core, repository)
 	basePath := eacCfg.Repository.TestImplPath(moniker)
 	if basePath == "" {
 		goRunnerLog.Debugf("FindTestRoot: no test-impl path for module %s", moniker)
@@ -165,10 +210,7 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 	}
 
 	// Check if godog test file exists at base path
-	workspaceRoot := eacCfg.RepoRoot
-	godogTestFile := eacCfg.Repository.Conventions.GodogTest
-	baseCheck := filepath.Join(workspaceRoot, basePath, godogTestFile)
-	if fileExists(baseCheck) {
+	if fileExists(filepath.Join(workspaceRoot, basePath, godogTestFile)) {
 		goRunnerLog.Debugf("FindTestRoot: found %s at basePath %s", godogTestFile, basePath)
 		return basePath
 	}
@@ -177,8 +219,7 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 	for i := 1; i < len(parts)-1; i++ {
 		subPath := filepath.Join(basePath, strings.Join(parts[1:i+1], "/"))
 		subPath = filepath.ToSlash(subPath)
-		subCheck := filepath.Join(workspaceRoot, subPath, godogTestFile)
-		if fileExists(subCheck) {
+		if fileExists(filepath.Join(workspaceRoot, subPath, godogTestFile)) {
 			goRunnerLog.Debugf("FindTestRoot: found %s at subPath %s", godogTestFile, subPath)
 			return subPath
 		}

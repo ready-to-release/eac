@@ -141,9 +141,8 @@ type ConventionsConfig struct {
 	TemplateSpecsDir       string `yaml:"template_specs_dir"`
 	TemplateReportsDir     string `yaml:"template_reports_dir"`
 	TemplateRiskCatalogDir string `yaml:"template_risk_catalog_dir"`
-	DesignDir              string                   `yaml:"design_dir"`
-	WorkspaceDSL           string                   `yaml:"workspace_dsl"`
-	ComponentDiscovery     []ComponentDiscoveryRule  `yaml:"component_discovery,omitempty"`
+	DesignDir    string `yaml:"design_dir"`
+	WorkspaceDSL string `yaml:"workspace_dsl"`
 }
 
 // loadRepositoryConfigUnmerged loads repository configuration from user's YAML file only.
@@ -216,91 +215,54 @@ func (c *RepositoryConfig) buildMonikerIndex() {
 
 // ExpandModuleTemplates expands module templates for all modules that reference them.
 // This should be called after loading and merging configs but before ApplyComponentDefaults.
-// Also discovers container modules from containers/*/Dockerfile that aren't explicitly defined.
-// The blueprints parameter provides templates, blueprints, and artifact matrices.
+// All components must be explicitly declared in repository.yml; no auto-discovery is performed.
+// The blueprints parameter provides templates and artifact matrices.
 func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string, blueprints *BlueprintsConfig) error {
-	// Get templates and named discovery rules from config
 	var templates map[string]ModuleTemplate
-	var namedRules map[string]ComponentDiscoveryRule
+	var componentKinds map[string]*ComponentType
 	if blueprints != nil {
 		templates = blueprints.Templates
-		namedRules = blueprints.DiscoveryRules
+		componentKinds = blueprints.ComponentKinds
 	}
 
-	// Read discovery rules from merged config
-	discoveryRules := c.Conventions.ComponentDiscovery
+	// Compile name patterns from component kinds (once, before expansion)
+	if componentKinds != nil {
+		if err := CompileNamePatterns(componentKinds); err != nil {
+			return err
+		}
+	}
+
+	// Expand component_roots into individual components
+	for i := range c.Modules {
+		if err := expandComponentRoots(&c.Modules[i], componentKinds); err != nil {
+			return err
+		}
+	}
+
+	// Pre-resolve default roots from component kinds
+	if componentKinds != nil {
+		for i := range c.Modules {
+			preResolveDefaultRoots(&c.Modules[i], componentKinds)
+		}
+	}
 
 	// Get owner from repository config
 	owner := c.Repository.Remote.Owner
 
-	// DiscoverContainerModules defaults to "containers" if empty
-	containersRoot := c.Paths.ContainersRoot
-
-	// Collect claimed namespaces to prevent duplicate container auto-discovery.
-	// Includes module monikers, container directory names used as component roots,
-	// and all containers that will be discovered by discover_components: containers.
-	claimedNamespaces := make(map[string]bool)
-	for _, m := range c.Modules {
-		claimedNamespaces[m.Moniker] = true
-		for _, comp := range m.Components {
-			if comp == nil || comp.Root == "" {
-				continue
-			}
-			if name := extractContainerName(comp.Root); name != "" {
-				claimedNamespaces[name] = true
-			}
-		}
-		// Pre-claim all containers that will be discovered as components
-		if m.DiscoverComponents != nil && m.DiscoverComponents.Type == "containers" {
-			preClaimContainerNames(claimedNamespaces, repoRoot, containersRoot)
-		}
-	}
-
-	// Discover container modules not explicitly defined (mono repos only)
-	if c.Repository.Type == "mono" {
-		discoveredContainers := DiscoverContainerModules(repoRoot, claimedNamespaces, containersRoot)
-		if len(discoveredContainers) > 0 {
-			c.Modules = append(c.Modules, discoveredContainers...)
-		}
-	}
-
-	// Pre-resolve default roots from component kinds so that discovery rules
-	// using derive_from_type can find components whose roots come from kind
-	// defaults (e.g., dockerfile components with default_root "containers/{moniker}").
-	// Without this, findFirstComponentByType skips components with empty Root.
-	if blueprints != nil {
-		for i := range c.Modules {
-			preResolveDefaultRoots(&c.Modules[i], blueprints.ComponentKinds)
-		}
-	}
-
-	// Expand each module (including discovered ones)
+	// Expand each module
 	for i := range c.Modules {
-		// Build per-module discovery variables
-		discoveryVars := buildDiscoveryVars(&c.Modules[i], c)
+		mod := &c.Modules[i]
+
+		// Build per-module variables
+		discoveryVars := buildDiscoveryVars(mod, c)
 		discoveryVars["owner"] = owner
 
-		if err := ExpandModuleFromTemplate(&c.Modules[i], templates, discoveryRules, repoRoot, discoveryVars, namedRules); err != nil {
+		if err := ExpandModuleFromTemplate(mod, templates, discoveryVars); err != nil {
 			return err
 		}
 
-		// Apply per-component blueprints (e.g., structurizr-per-component, gherkin-per-component)
-		if blueprints != nil && len(blueprints.ComponentBlueprints) > 0 {
-			if c.Modules[i].Template != "" {
-				if tmpl, ok := templates[c.Modules[i].Template]; ok && len(tmpl.Blueprints) > 0 {
-					applyComponentBlueprints(&c.Modules[i], tmpl.Blueprints,
-						blueprints.ComponentBlueprints, repoRoot, discoveryVars)
-				}
-			}
-		}
-
-		// Discover container components for modules with discover_components: containers
-		if c.Modules[i].DiscoverComponents != nil && c.Modules[i].DiscoverComponents.Type == "containers" {
-			DiscoverContainerComponents(&c.Modules[i], repoRoot, containersRoot, owner)
-		}
-
 		// Expand artifact matrix reference into Go component artifacts
-		expandArtifactMatrixForModule(&c.Modules[i], blueprints)
+		expandArtifactMatrixForModule(mod, blueprints)
 	}
 
 	return nil
@@ -333,39 +295,6 @@ func preResolveDefaultRoots(mod *Module, kinds map[string]*ComponentType) {
 	}
 }
 
-// preClaimContainerNames scans the containers directory and adds all container
-// directory names to the claimed set. This prevents DiscoverContainerModules from
-// creating top-level modules for containers that will be discovered as components.
-func preClaimContainerNames(claimed map[string]bool, repoRoot, containersRoot string) {
-	if containersRoot == "" {
-		containersRoot = "containers"
-	}
-	pattern := filepath.Join(repoRoot, containersRoot, "*", "Dockerfile")
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return
-	}
-	for _, m := range matches {
-		dir := filepath.Dir(m)
-		name := filepath.Base(dir)
-		claimed[name] = true
-	}
-}
-
-// extractContainerName returns the container directory name from a component root
-// under "containers/", or empty string if the root is not a container path.
-// Example: "containers/pdf-oci" → "pdf-oci", "go/core" → ""
-func extractContainerName(root string) string {
-	root = filepath.ToSlash(root)
-	if !strings.HasPrefix(root, "containers/") {
-		return ""
-	}
-	name := strings.TrimPrefix(root, "containers/")
-	if idx := strings.Index(name, "/"); idx >= 0 {
-		name = name[:idx]
-	}
-	return name
-}
 
 // ToPathConfig converts RepositoryConfig path/convention values to a
 // paths.PathConfig for use with config-aware path functions.
@@ -406,6 +335,35 @@ func (c *RepositoryConfig) TestImplPath(moniker string) string {
 		}
 	}
 
+	return ""
+}
+
+// TestImplPathForQualifier returns the BDD test runner root for a specific
+// component qualifier within a module. Used when spec directories use the
+// <module>_<qualifier> naming convention.
+// Matches godog components by stripping "godog-" prefix from component name.
+func (c *RepositoryConfig) TestImplPathForQualifier(moniker, qualifier string) string {
+	module, found := c.GetModule(moniker)
+	if !found {
+		return ""
+	}
+	for name, comp := range module.Components {
+		if comp == nil || comp.Root == "" {
+			continue
+		}
+		compType := comp.Type
+		if compType == "" {
+			compType = name
+		}
+		if compType != "godog" && compType != "cucumberjs" {
+			continue
+		}
+		// Match by stripping type prefix: "godog-work" → "work"
+		compQualifier := strings.TrimPrefix(name, compType+"-")
+		if compQualifier == qualifier {
+			return comp.Root
+		}
+	}
 	return ""
 }
 

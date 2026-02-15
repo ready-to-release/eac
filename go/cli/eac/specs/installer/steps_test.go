@@ -69,7 +69,7 @@ func initializeInstallerContext() {
 	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
 	// and doesn't need to be copied to isolated test environments
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "eac")
+	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "cli-installers")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "eac-installer-test-*")
@@ -252,7 +252,7 @@ func iRunThePowerShellInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-installer-scripts", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-eac-scripts", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -295,7 +295,7 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-installer-scripts", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-eac-scripts", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -341,7 +341,7 @@ func iRunTheBashInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-installer-scripts", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-eac-scripts", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -383,7 +383,7 @@ func iRunTheBashInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-installer-scripts", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-eac-scripts", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

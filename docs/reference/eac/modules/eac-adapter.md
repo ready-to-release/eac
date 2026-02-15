@@ -6,13 +6,13 @@ The `eac-to-eac` module provides EAC command execution through both native and c
 
 Shows how the EAC adapter bridges CLI and container-based command execution.
 
-<!-- structurizr:adapters:eac-to-eac:SystemContext -->
+<!-- structurizr:adapters:eac:SystemContext -->
 
 ## Container Architecture
 
 High-level view of the EAC adapter packages.
 
-<!-- structurizr:adapters:eac-to-eac:Containers -->
+<!-- structurizr:adapters:eac:Containers -->
 
 ## Design File
 

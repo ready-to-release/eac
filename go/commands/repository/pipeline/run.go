@@ -1,0 +1,118 @@
+package pipeline
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	pipelinerunner "github.com/ready-to-release/eac/go/commands/repository/pipeline/helper"
+	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
+)
+
+type pipelineRunCommand struct{}
+
+var _ core.SimpleCommandPort = (*pipelineRunCommand)(nil)
+
+func (c *pipelineRunCommand) Name() string { return "pipeline run" }
+
+func (c *pipelineRunCommand) Metadata() core.CommandMetadata {
+	return core.CommandMetadata{
+		CanonicalName: "pipeline-run",
+		Short:         "Execute module pipelines respecting dependencies",
+		Long:          "Execute module pipelines respecting dependencies.\n\nThis command runs the full pipeline (build, test, validate) for modules in\ndependency order. If no modules are specified, all modules are processed.\n\nUse --changed-only to run pipelines only for modules with uncommitted changes,\nwhich is useful for incremental CI/CD workflows.\n\nUse --ref to specify a git reference (branch, tag, commit) to compare against\nwhen determining which modules have changed.\n\nExpected Output:\n  - Per-module pipeline execution results (build, test, validate stages)\n  - Exit code 0 if all pipelines pass\n  - Exit code 1 if any pipeline fails\n\nExample:\n  pipeline run                    # Run all modules\n  pipeline run --changed-only     # Run only changed modules\n  pipeline run core clie   # Run specific modules",
+		Flags: []core.FlagSpec{
+			{Name: "changed-only", Type: "bool", Usage: "Only run pipelines for changed modules"},
+			{Name: "ref", Type: "string", Usage: "Git ref to compare against (default: current branch)"},
+			{Name: "wait", Type: "bool", Usage: "Wait for pipeline completion before returning"},
+			{Name: "timeout", Type: "int", Usage: "Timeout in seconds when waiting (default: no timeout)"},
+		},
+	}
+}
+
+func (c *pipelineRunCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return PipelineRun()
+}
+
+func PipelineRun() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+	// Parse flags
+	changedOnly := false
+	wait := false
+	timeout := 0
+	ref := getCurrentBranch()
+	var monikers []string
+
+	for i := 3; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "--changed-only" {
+			changedOnly = true
+		} else if arg == "--wait" {
+			wait = true
+		} else if arg == "--timeout" {
+			if i+1 < len(os.Args) {
+				// Parse timeout value
+				fmt.Sscanf(os.Args[i+1], "%d", &timeout)
+				i++
+			}
+		} else if arg == "--ref" {
+			if i+1 < len(os.Args) {
+				ref = os.Args[i+1]
+				i++
+			}
+		} else if !strings.HasPrefix(arg, "--") {
+			monikers = append(monikers, arg)
+		}
+	}
+
+	// Get repository root
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		log.Errorf("Error: failed to find repository root: %v", err)
+		return 1
+	}
+
+	runner := pipelinerunner.New(workspaceRoot)
+
+	// Configure wait options
+	runner.SetWaitOptions(wait, timeout)
+
+	var pipelineErr error
+	if changedOnly {
+		// --changed-only flag → run only changed modules
+		pipelineErr = runner.RunAllChangedPipelines(ref)
+	} else if len(monikers) == 0 {
+		// No monikers specified → run ALL modules
+		pipelineErr = runner.RunAllPipelines(ref)
+	} else if len(monikers) == 1 {
+		// Single moniker → run single pipeline
+		pipelineErr = runner.RunPipeline(monikers[0], ref)
+	} else {
+		// Multiple monikers → run with dependency ordering
+		pipelineErr = runner.RunPipelines(monikers, ref)
+	}
+
+	if pipelineErr != nil {
+		log.Errorf("Error: %v", pipelineErr)
+		return 1
+	}
+
+	return 0
+}
+
+// getCurrentBranch gets the current git branch name.
+func getCurrentBranch() string {
+	ts := tool.GlobalToolSystem()
+	output, err := ts.RunTool(context.Background(), "git", ".", "branch", "--show-current")
+	if err != nil {
+		return "main"
+	}
+	return strings.TrimSpace(string(output))
+}

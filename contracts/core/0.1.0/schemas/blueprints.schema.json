@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ready-to-release.org/schemas/eac-core/blueprints/0.1.0",
   "title": "Blueprints Configuration Schema",
-  "description": "Schema for blueprints configuration. Defines component blueprints, module templates, and artifact matrices as reusable building blocks for module definitions.",
+  "description": "Schema for blueprints configuration. Defines component kinds, module templates, and artifact matrices as reusable building blocks for module definitions.",
   "type": "object",
   "properties": {
-    "component-blueprints": {
+    "component-kinds": {
       "type": "object",
-      "description": "Map of blueprint name to component blueprint definition. Blueprints define WHERE components live and WHAT files they contain.",
+      "description": "Map of kind name to component type definition. Kinds define tool bindings, file patterns, and resource hints for each component type.",
       "additionalProperties": {
-        "$ref": "#/$defs/component_blueprint"
+        "$ref": "#/$defs/component_kind"
       }
     },
     "module-templates": {
@@ -25,38 +25,90 @@
       "additionalProperties": {
         "$ref": "#/$defs/artifact_matrix"
       }
-    },
-    "conventions": {
-      "type": "object",
-      "description": "Discovery conventions documentation. Informational only - discovery rules come from repository.yml.",
-      "additionalProperties": true
     }
   },
   "$defs": {
-    "component_blueprint": {
+    "component_kind": {
       "type": "object",
-      "description": "A reusable component specification combining a component type reference with root path patterns and optional discovery rules.",
-      "required": ["component"],
+      "description": "A component type definition with tool bindings, file patterns, and resource hints.",
       "properties": {
-        "component": {
+        "name_pattern": {
           "type": "string",
-          "description": "Target component name in the module's Components map."
+          "description": "Regex pattern for deriving component names from root paths. First capture group becomes the name."
         },
-        "type": {
+        "extensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File extensions owned by this kind."
+        },
+        "builders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Build tool bindings."
+        },
+        "testers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Test tool bindings."
+        },
+        "linters": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Lint tool bindings."
+        },
+        "scanners": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Scan tool bindings."
+        },
+        "pool": {
           "type": "string",
-          "description": "Component type (from blueprints.yml component-kinds). If empty, component name is used as the type."
+          "description": "Execution pool (host or docker)."
         },
-        "root": {
+        "build_after": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Intra-module build ordering."
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Component group dependencies."
+        },
+        "component_group": {
+          "type": "string",
+          "description": "Group name for dependency resolution."
+        },
+        "default_root": {
           "type": "string",
           "description": "Default root path pattern with {placeholder} support."
         },
-        "patterns": {
-          "$ref": "#/$defs/component_patterns",
-          "description": "File pattern overrides for the component type defaults."
+        "requirements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Runtime requirements (e.g., docker)."
         },
-        "discovery": {
-          "$ref": "#/$defs/blueprint_discovery",
-          "description": "Optional filesystem-based auto-discovery. When present, the component is only created if the check passes."
+        "resources": {
+          "type": "object",
+          "description": "CPU/memory resource hints.",
+          "properties": {
+            "cpus": { "type": "integer" },
+            "memory": { "type": "string" }
+          }
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Default configuration values.",
+          "additionalProperties": true
+        },
+        "cache": {
+          "type": "object",
+          "description": "Cache configuration.",
+          "additionalProperties": true
+        },
+        "files": {
+          "$ref": "#/$defs/component_patterns",
+          "description": "Default file patterns for source, tests, and config."
         }
       }
     },
@@ -81,49 +133,6 @@
         }
       }
     },
-    "blueprint_discovery": {
-      "type": "object",
-      "description": "Filesystem-based component discovery configuration.",
-      "properties": {
-        "check": {
-          "type": "string",
-          "enum": ["dir_exists", "required_file", "has_files_in_subdirs", "has_matching_files"],
-          "description": "Filesystem check type."
-        },
-        "required_file": {
-          "type": "string",
-          "description": "Required file name for check: required_file."
-        },
-        "check_pattern": {
-          "type": "string",
-          "description": "Pattern for check: has_files_in_subdirs."
-        },
-        "patterns": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "File patterns for check: has_matching_files."
-        },
-        "set_patterns": {
-          "type": "boolean",
-          "description": "When true, copies discovery patterns into the component's Patterns.Source.",
-          "default": false
-        },
-        "derive_from": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component names to derive the path from."
-        },
-        "derive_subdirs": {
-          "type": "object",
-          "additionalProperties": { "type": "string" },
-          "description": "Maps source component name to subdirectory suffix."
-        },
-        "fallback_path": {
-          "type": "string",
-          "description": "Fallback path when no derive source matches."
-        }
-      }
-    },
     "module_template": {
       "type": "object",
       "description": "A reusable module structure with placeholders. Referenced by modules via the 'template' field.",
@@ -136,11 +145,6 @@
           "type": "object",
           "description": "Default component definitions with placeholders.",
           "additionalProperties": true
-        },
-        "blueprints": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component blueprint names to include. Resolved from the component-blueprints section."
         },
         "depends_on": {
           "type": "array",

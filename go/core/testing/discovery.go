@@ -187,18 +187,23 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 		log.Debugf("Discovery P2: %s skipped (no test-impl)", module.Moniker)
 	}
 
-	// 3. Discover Gherkin specs from specs package
+	// 3. Discover Gherkin specs from all spec roots
 	featureTestType := getFeatureTestTypeForModule(module)
-	specsRoot := module.GetSpecsRoot()
+	specsRoots := module.GetAllSpecsRoots()
 
-	log.Debugf("Discovery P3: %s specsRoot=%s type=%s", module.Moniker, specsRoot, featureTestType)
+	for _, specsRoot := range specsRoots {
+		log.Debugf("Discovery P3: %s specsRoot=%s type=%s", module.Moniker, specsRoot, featureTestType)
 
-	specPattern := filepath.Join(rootPath, specsRoot, "**/*.feature")
-	specPattern = filepath.ToSlash(specPattern)
+		specPattern := filepath.Join(rootPath, specsRoot, "**/*.feature")
+		specPattern = filepath.ToSlash(specPattern)
 
-	matches, err := doublestar.FilepathGlob(specPattern)
-	if err == nil {
-		log.Debugf("Discovery P3: %s found %d .feature files", module.Moniker, len(matches))
+		matches, err := doublestar.FilepathGlob(specPattern)
+		if err != nil {
+			log.Debugf("Discovery P3: %s glob error for %s: %v", module.Moniker, specsRoot, err)
+			continue
+		}
+		log.Debugf("Discovery P3: %s found %d .feature files in %s", module.Moniker, len(matches), specsRoot)
+
 		for _, specFile := range matches {
 			featureRefs, err := parseFeatureFile(specFile, dc)
 			if err != nil {
@@ -216,8 +221,6 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 			}
 			refs = append(refs, featureRefs...)
 		}
-	} else {
-		log.Debugf("Discovery P3: %s glob error: %v", module.Moniker, err)
 	}
 
 	log.Debugf("Discovery: %s total=%d tests discovered", module.Moniker, len(refs))

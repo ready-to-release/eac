@@ -265,9 +265,6 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Conventions.WorkspaceDSL != "" {
 		result.Conventions.WorkspaceDSL = user.Conventions.WorkspaceDSL
 	}
-	if len(user.Conventions.ComponentDiscovery) > 0 {
-		result.Conventions.ComponentDiscovery = user.Conventions.ComponentDiscovery
-	}
 
 	// Override paths for new fields
 	if user.Paths.ContainersRoot != "" {

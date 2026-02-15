@@ -4,10 +4,8 @@
 #
 # Sections:
 #   1. component-kinds: Tool bindings, default patterns, resources per component type
-#   2. component-blueprints: Reusable component specifications (discovery rules)
-#   3. module-templates: Module type definitions (versioning + discovery)
-#   4. artifact-matrices: Reusable artifact build configurations
-#   5. conventions: Discovery rules documentation (informational)
+#   2. module-templates: Module type definitions (versioning + component defaults)
+#   3. artifact-matrices: Reusable artifact build configurations
 #
 # Component kinds define the building blocks: what tools (build/lint/test/scan)
 # are attached to each component type, and what file patterns they own by default.
@@ -15,6 +13,9 @@
 #
 # Templates define common module patterns that can be instantiated with
 # the "template" field in module definitions.
+#
+# All components must be explicitly declared in repository.yml.
+# Templates only provide enrichment defaults (e.g., docker_build config).
 #
 # Usage in .eac/repository.yml:
 #   - moniker: my-service
@@ -41,6 +42,7 @@
 
 component-kinds:
   go:
+    name_pattern: "^go/(.+)$"
     extensions: [".go"]
     builders: [go]
     testers: [go]
@@ -93,7 +95,6 @@ component-kinds:
 
   # Container assets - non-Dockerfile support files in container directories.
   # Scripts, configs, templates, vendored packages, etc.
-  # Auto-discovered by container/container-multiarch templates.
   container-assets:
     extensions: []
     scanners: [secrets]
@@ -364,117 +365,11 @@ component-kinds:
       source: ["**/*.md"]
 
 # =============================================================================
-# Component Blueprints - Per-component auto-discovery
-# =============================================================================
-# Component blueprints iterate over each existing component in a module,
-# substitute {name} with the component's map key, run a filesystem discovery
-# check, and create an auxiliary component if the check passes.
-#
-# This complements module-level discovery ({moniker}) without conflict:
-#   - Single-component module (e.g., core): Module-level finds specs/core/.design/.
-#     Blueprint checks specs/go/.design/ (component name = go) which doesn't exist. No conflict.
-#   - Multi-component module (e.g., adapters): Module-level finds nothing at
-#     specs/adapters/.design/. Blueprint finds specs/godog-eac/.design/ for each adapter. Works.
-
-component-blueprints:
-  structurizr-per-component:
-    component: "structurizr-{name}"
-    type: structurizr
-    root: "{specs_root}/{name}/{design_dir}"
-    discovery:
-      check: required_file
-      required_file: "{workspace_dsl}"
-
-  gherkin-per-component:
-    component: "gherkin-{name}"
-    type: gherkin
-    root: "{specs_root}/{name}"
-    discovery:
-      check: has_files_in_subdirs
-      check_pattern: "{specification}"
-
-  godog-per-component:
-    component: "godog-{name}"
-    type: godog
-    discovery:
-      derive_from: ["{name}"]
-      derive_subdirs:
-        "{name}": specs
-      check: required_file
-      required_file: "{godog_test}"
-
-# =============================================================================
-# Discovery Rules - Named rules for auto-discovering auxiliary components
-# =============================================================================
-# Discovery rules define HOW to find auxiliary components (assets,
-# gherkin, godog, etc.) based on filesystem conventions.
-# Templates reference these by name via the "discover" field.
-#
-# Each rule auto-discovers a component if its filesystem check passes.
-# The primary components (go, typescript, dockerfile) are declared by the
-# user in their repository.yml — discovery rules find the auxiliaries.
-
-discovery-rules:
-  # --- Assets auto-discovery ---
-
-  # Assets (derived from first Go/TS/Dockerfile-typed component root)
-  # Collects all loose asset files: markdown, yaml, json, ebnf, testdata, images, etc.
-  assets-from-go:
-    component: assets
-    derive_from_type: [go, typescript, dockerfile]
-    check: dir_exists
-
-  # Container assets from container root (non-Dockerfile support files)
-  container-assets-from-container:
-    component: container-assets
-    derive_from_type: [dockerfile]
-    check: dir_exists
-
-  # Documentation assets (derived from docs-site component root)
-  # Standard MkDocs file patterns: markdown, navigation, images, diagrams, stylesheets.
-  docs-assets-from-site:
-    component: docs-assets
-    derive_from_type: [docs-site]
-    check: dir_exists
-
-  # --- Specification Components ---
-
-  # Gherkin feature specs in specs/{moniker}/
-  gherkin-specs:
-    component: gherkin
-    path: "{specs_root}/{moniker}"
-    check: has_files_in_subdirs
-    check_pattern: "{specification}"
-
-  # Structurizr architecture design in specs/{moniker}/.design/
-  structurizr-design:
-    component: structurizr
-    path: "{specs_root}/{moniker}/{design_dir}"
-    check: required_file
-    required_file: "{workspace_dsl}"
-
-  # Godog BDD test runner (derived from first Go-typed component)
-  godog-from-go:
-    component: godog
-    derive_from_type: [go]
-    derive_subdir: specs
-    fallback_path: "go/eac/specs/{moniker}"
-    check: required_file
-    required_file: "{godog_test}"
-
-  # CucumberJS test runner (derived from first TypeScript-typed component)
-  cucumberjs-from-ts:
-    component: cucumberjs
-    derive_from_type: [typescript]
-    derive_subdir: features
-    check: dir_exists
-
-# =============================================================================
 # Module Templates
 # =============================================================================
-# Templates provide versioning defaults and a discover list.
-# Primary components (go, typescript, dockerfile) come from repository.yml.
-# Auxiliary components (assets, gherkin, etc.) are auto-discovered.
+# Templates provide versioning defaults and component enrichment defaults.
+# All components must be explicitly declared in repository.yml.
+# Templates only enrich declared components (e.g., docker_build config).
 
 module-templates:
   # ==========================================================================
@@ -487,15 +382,6 @@ module-templates:
     versioning:
       scheme: Implicit
       release_type: none
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Go CLI tool (published)
   # Use for: command-line tools with releases
@@ -504,15 +390,6 @@ module-templates:
       scheme: SemVer
       changelog: "release/{moniker}/CHANGELOG.md"
       release_type: published
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Go internal CLI (not externally released)
   # Use for: internal tools, development utilities
@@ -521,15 +398,6 @@ module-templates:
       scheme: SemVer
       changelog: "{go_root}/CHANGELOG.md"
       release_type: internal
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Go MCP server module
   # Use for: MCP (Model Context Protocol) servers
@@ -538,15 +406,6 @@ module-templates:
       scheme: SemVer
       changelog: "{go_root}/CHANGELOG.md"
       release_type: internal
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Go executable module (published CLI tool)
   # Use for: CLI tools with releases, cross-platform builds
@@ -555,15 +414,6 @@ module-templates:
       scheme: SemVer
       changelog: "release/{moniker}/CHANGELOG.md"
       release_type: published
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Go contracts module (embedded contract files)
   # Use for: modules providing schemas, EBNF grammars, YAML defaults via go:embed
@@ -571,13 +421,6 @@ module-templates:
     versioning:
       scheme: Implicit
       release_type: none
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
 
   # ==========================================================================
   # CONTAINER TEMPLATES
@@ -603,8 +446,6 @@ module-templates:
           registry: ghcr.io
           cache:
             type: gha
-    discover:
-      - container-assets-from-container
 
   # Container with multi-arch support
   # Use for: containers that need to run on both amd64 and arm64
@@ -623,9 +464,6 @@ module-templates:
           registry: ghcr.io
           cache:
             type: gha
-    discover:
-      - container-assets-from-container
-      - structurizr-design
 
   # ==========================================================================
   # DOCUMENTATION TEMPLATES
@@ -633,14 +471,10 @@ module-templates:
 
   # Documentation site module (MkDocs-based)
   # Use for: main documentation sites
-  # Auto-discovers docs-assets (standard MkDocs file patterns) and structurizr design.
   docs-site:
     versioning:
       scheme: CalVer
       release_type: published
-    discover:
-      - docs-assets-from-site
-      - structurizr-design
 
   # ==========================================================================
   # EXTENSION TEMPLATES
@@ -648,16 +482,10 @@ module-templates:
 
   # VSCode extension module
   # Use for: Visual Studio Code extensions
-  # Primary components (typescript, assets) declared in repository.yml
   vscode-extension:
     versioning:
       scheme: Implicit
       release_type: internal
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - cucumberjs-from-ts
 
   # Go library bundle (multiple go.mod files under one module)
   # Use for: domain bundles containing multiple Go packages that share a lifecycle
@@ -665,15 +493,6 @@ module-templates:
     versioning:
       scheme: Implicit
       release_type: none
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # ==========================================================================
   # SCRIPT TEMPLATES
@@ -681,20 +500,10 @@ module-templates:
 
   # Installer scripts (pwsh + bash + godog)
   # Use for: installer modules with PowerShell and Bash scripts
-  # Primary components (go, pwsh, bash) declared in repository.yml
   script-installer:
     versioning:
       scheme: Implicit
       release_type: internal
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
   # Script bundles with invokers
   # Use for: script modules with PowerShell and Bash invoker scripts
@@ -702,15 +511,6 @@ module-templates:
     versioning:
       scheme: Implicit
       release_type: internal
-    discover:
-      - assets-from-go
-      - gherkin-specs
-      - structurizr-design
-      - godog-from-go
-    blueprints:
-      - structurizr-per-component
-      - gherkin-per-component
-      - godog-per-component
 
 # =============================================================================
 # Artifact Matrices
@@ -740,48 +540,3 @@ artifact-matrices:
   # Uses {ext} placeholder for platform-appropriate extension
   single-platform:
     - {id: "{moniker}", type: executable, pattern: "{moniker}{ext}"}
-
-# =============================================================================
-# Discovery Conventions
-# =============================================================================
-# Rules for auto-discovering components based on filesystem patterns
-
-conventions:
-  component_discovery:
-    # Assets: derive from primary component (go, typescript).
-    # Collects all loose asset files (markdown, yaml, json, images, etc).
-    assets:
-      derive_from:
-        - go
-        - typescript
-
-    # Container assets: derive from dockerfile component root.
-    # Collects non-Dockerfile support files (scripts, configs, templates).
-    container-assets:
-      derive_from:
-        - dockerfile
-
-    # Gherkin specs: look in specs/{moniker}/
-    gherkin:
-      path_pattern: "specs/{moniker}"
-      required_file: "specification.feature"
-
-    # Structurizr designs: look in specs/{moniker}/.design/
-    structurizr:
-      path_pattern: "specs/{moniker}/.design"
-      required_file: "workspace.dsl"
-
-    # Godog: infer from Go component location
-    # - go component at X -> steps at X/specs (godog runner)
-    # - no code component -> steps at go/eac/specs/{moniker}
-    godog:
-      derive_from_components:
-        go: "specs"
-      fallback_pattern: "go/eac/specs/{moniker}"
-      required_file: "godog_test.go"
-
-    # CucumberJS: infer from TypeScript component location
-    # - typescript component at X -> steps at X/features (cucumber-js runner)
-    cucumberjs:
-      derive_from_components:
-        typescript: "features"

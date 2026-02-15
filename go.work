@@ -28,6 +28,13 @@ use (
 	./go/cli/clie
 	./go/cli/eac
 	./go/clibase
+	./go/commands/base
+	./go/commands/build
+	./go/commands/lint
+	./go/commands/repository
+	./go/commands/scan
+	./go/commands/test
+	./go/commands/update
 	./go/core
 	./go/mcp/commands
 	./go/specs/repository

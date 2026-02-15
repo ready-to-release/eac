@@ -3,8 +3,6 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/core/workspace"
@@ -30,7 +28,7 @@ func TestModuleTemplate_VersioningFromTemplate(t *testing.T) {
 		},
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.NoError(t, err)
 
 	// Versioning should come from template
@@ -51,7 +49,7 @@ func TestModuleTemplate_UnknownTemplate(t *testing.T) {
 		Template: "nonexistent",
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown template")
 }
@@ -77,7 +75,7 @@ func TestModuleTemplate_ModuleVersioningWins(t *testing.T) {
 		},
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.NoError(t, err)
 
 	// Module's versioning should win
@@ -113,7 +111,7 @@ func TestModuleTemplate_ParameterSubstitution(t *testing.T) {
 		"moniker": "my-app",
 		"owner":   "ready-to-release",
 	}
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", vars, nil)
+	err := ExpandModuleFromTemplate(mod, templates, vars)
 	require.NoError(t, err)
 
 	dbc := mod.Components["dockerfile"].DockerBuild
@@ -140,7 +138,7 @@ func TestModuleTemplate_DependsOnMerge(t *testing.T) {
 		DependsOn: []string{"core", "utils"}, // "core" overlaps with template
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.NoError(t, err)
 
 	// Should have unique deps: core (from module), utils (from module), contracts (from template)
@@ -160,7 +158,7 @@ func TestModuleTemplate_NoTemplate(t *testing.T) {
 		},
 	}
 
-	err := ExpandModuleFromTemplate(mod, nil, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, nil, nil)
 	require.NoError(t, err)
 
 	// Should be unchanged
@@ -212,206 +210,6 @@ func TestBuildModuleParams(t *testing.T) {
 }
 
 // =============================================================================
-// Tests for Discovery Rule Resolution
-// =============================================================================
-
-// TestDiscoverList_ResolvesNamedRules verifies that template discover lists
-// resolve to actual rules from the named rules map.
-func TestDiscoverList_ResolvesNamedRules(t *testing.T) {
-	namedRules := map[string]ComponentDiscoveryRule{
-		"assets-from-go": {
-			Component:      "assets",
-			DeriveFromType: []string{"go", "typescript"},
-			Check:          "dir_exists",
-		},
-		"gherkin-specs": {
-			Component:    "gherkin",
-			Path:         "{specs_root}/{moniker}",
-			Check:        "has_files_in_subdirs",
-			CheckPattern: "{specification}",
-		},
-	}
-
-	rules := resolveDiscoverList([]string{"assets-from-go", "gherkin-specs"}, namedRules)
-	require.Len(t, rules, 2)
-
-	assert.Equal(t, "assets", rules[0].Component)
-	assert.Equal(t, "gherkin", rules[1].Component)
-}
-
-// TestDiscoverList_UnknownRulesSkipped verifies that unknown rule names are skipped.
-func TestDiscoverList_UnknownRulesSkipped(t *testing.T) {
-	namedRules := map[string]ComponentDiscoveryRule{
-		"assets-from-go": {Component: "assets"},
-	}
-
-	rules := resolveDiscoverList([]string{"assets-from-go", "nonexistent-rule"}, namedRules)
-	require.Len(t, rules, 1)
-	assert.Equal(t, "assets", rules[0].Component)
-}
-
-// TestDiscoverList_NilNamedRules verifies that nil rules map returns nil.
-func TestDiscoverList_NilNamedRules(t *testing.T) {
-	rules := resolveDiscoverList([]string{"assets-from-go"}, nil)
-	assert.Nil(t, rules)
-}
-
-// TestDiscoverList_DiscoveryPassCreatesComponent verifies that a template's
-// discover list creates components when filesystem checks pass.
-func TestDiscoverList_DiscoveryPassCreatesComponent(t *testing.T) {
-	repoRoot := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(repoRoot, "go", "mylib", "specs"), 0755))
-	writeFile(t, filepath.Join(repoRoot, "go", "mylib", "specs", "godog_test.go"), "package specs")
-
-	namedRules := map[string]ComponentDiscoveryRule{
-		"godog-from-go": {
-			Component:      "godog",
-			DeriveFromType: []string{"go"},
-			DeriveSubdir:   "specs",
-			FallbackPath:   "go/eac/specs/{moniker}",
-			Check:          "required_file",
-			RequiredFile:   "godog_test.go",
-		},
-	}
-
-	templates := map[string]ModuleTemplate{
-		"go-library": {
-			Discover: []string{"godog-from-go"},
-		},
-	}
-
-	mod := &Module{
-		Moniker:  "mylib",
-		Template: "go-library",
-		Components: ModuleComponents{
-			"go": &ComponentEntry{Root: "go/mylib"},
-		},
-	}
-
-	vars := map[string]string{"moniker": "mylib"}
-	err := ExpandModuleFromTemplate(mod, templates, nil, repoRoot, vars, namedRules)
-	require.NoError(t, err)
-
-	assert.Contains(t, mod.Components, "godog")
-	assert.Equal(t, "go/mylib/specs", mod.Components["godog"].Root)
-}
-
-// TestDiscoverList_DiscoveryFailSkipsComponent verifies that a discovery rule
-// skips the component when its filesystem check fails.
-func TestDiscoverList_DiscoveryFailSkipsComponent(t *testing.T) {
-	repoRoot := t.TempDir()
-	// Don't create the specs directory
-
-	namedRules := map[string]ComponentDiscoveryRule{
-		"godog-from-go": {
-			Component:      "godog",
-			DeriveFromType: []string{"go"},
-			DeriveSubdir:   "specs",
-			Check:          "required_file",
-			RequiredFile:   "godog_test.go",
-		},
-	}
-
-	templates := map[string]ModuleTemplate{
-		"go-library": {
-			Discover: []string{"godog-from-go"},
-		},
-	}
-
-	mod := &Module{
-		Moniker:  "mylib",
-		Template: "go-library",
-		Components: ModuleComponents{
-			"go": &ComponentEntry{Root: "go/mylib"},
-		},
-	}
-
-	vars := map[string]string{"moniker": "mylib"}
-	err := ExpandModuleFromTemplate(mod, templates, nil, repoRoot, vars, namedRules)
-	require.NoError(t, err)
-
-	assert.NotContains(t, mod.Components, "godog",
-		"godog component should not be created when specs directory does not exist")
-}
-
-// TestDiscoverList_ModuleComponentNotOverwritten verifies that a discovery rule
-// does not overwrite a user-declared component.
-func TestDiscoverList_ModuleComponentNotOverwritten(t *testing.T) {
-	repoRoot := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(repoRoot, "go", "mymod"), 0755))
-
-	namedRules := map[string]ComponentDiscoveryRule{
-		"assets-from-go": {
-			Component:      "assets",
-			DeriveFromType: []string{"go"},
-			Check:          "dir_exists",
-		},
-	}
-
-	templates := map[string]ModuleTemplate{
-		"go-library": {
-			Discover: []string{"assets-from-go"},
-		},
-	}
-
-	mod := &Module{
-		Moniker:  "mymod",
-		Template: "go-library",
-		Components: ModuleComponents{
-			"go":       &ComponentEntry{Root: "go/mymod"},
-			"assets": &ComponentEntry{Root: "docs/custom"}, // User-declared
-		},
-	}
-
-	vars := map[string]string{"moniker": "mymod"}
-	err := ExpandModuleFromTemplate(mod, templates, nil, repoRoot, vars, namedRules)
-	require.NoError(t, err)
-
-	// User's assets root should NOT be overwritten by discovery
-	assert.Equal(t, "docs/custom", mod.Components["assets"].Root)
-}
-
-// TestDiscoverList_SetPatternsFromDiscovery verifies that set_patterns copies
-// discovery patterns to the component's Patterns.Source.
-func TestDiscoverList_SetPatternsFromDiscovery(t *testing.T) {
-	repoRoot := t.TempDir()
-	containerDir := filepath.Join(repoRoot, "containers", "test-oci")
-	require.NoError(t, os.MkdirAll(containerDir, 0755))
-	writeFile(t, filepath.Join(containerDir, "config.txt"), "some config")
-
-	namedRules := map[string]ComponentDiscoveryRule{
-		"assets-from-container": {
-			Component: "assets",
-			Path:      "{containers_root}/{moniker}",
-			Check:     "dir_exists",
-		},
-	}
-
-	templates := map[string]ModuleTemplate{
-		"container": {
-			Discover: []string{"assets-from-container"},
-		},
-	}
-
-	mod := &Module{
-		Moniker:    "test-oci",
-		Template:   "container",
-		Components: make(ModuleComponents),
-	}
-
-	vars := map[string]string{
-		"moniker":         "test-oci",
-		"containers_root": "containers",
-	}
-	err := ExpandModuleFromTemplate(mod, templates, nil, repoRoot, vars, namedRules)
-	require.NoError(t, err)
-
-	assert.Contains(t, mod.Components, "assets")
-	entry := mod.Components["assets"]
-	assert.Equal(t, "containers/test-oci", entry.Root)
-}
-
-// =============================================================================
 // Tests for Template Component Merging
 // =============================================================================
 
@@ -454,7 +252,7 @@ func TestTemplateComponents_DockerBuildFromTemplate(t *testing.T) {
 		"moniker": "my-oci",
 		"owner":   "ready-to-release",
 	}
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", vars, nil)
+	err := ExpandModuleFromTemplate(mod, templates, vars)
 	require.NoError(t, err)
 
 	dbc := mod.Components["dockerfile"].DockerBuild
@@ -518,7 +316,7 @@ func TestTemplateComponents_ModuleDockerBuildOverrides(t *testing.T) {
 		"moniker": "drawio-oci",
 		"owner":   "ready-to-release",
 	}
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", vars, nil)
+	err := ExpandModuleFromTemplate(mod, templates, vars)
 	require.NoError(t, err)
 
 	dbc := mod.Components["dockerfile"].DockerBuild
@@ -565,7 +363,7 @@ func TestTemplateComponents_SkipsNonExistentModuleComponent(t *testing.T) {
 		},
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.NoError(t, err)
 
 	// Template's "dockerfile" component should NOT be created
@@ -599,7 +397,7 @@ func TestTemplateComponents_RootNotOverridden(t *testing.T) {
 		},
 	}
 
-	err := ExpandModuleFromTemplate(mod, templates, nil, "", nil, nil)
+	err := ExpandModuleFromTemplate(mod, templates, nil)
 	require.NoError(t, err)
 
 	// Module root should be preserved, not overridden by template
@@ -631,14 +429,6 @@ func TestLoadBlueprintsDefaults_Integration(t *testing.T) {
 	require.NotNil(t, goLib.Versioning)
 	assert.Equal(t, "Implicit", goLib.Versioning.Scheme)
 
-	// Verify go-library template has discover rules
-	assert.Contains(t, goLib.Discover, "assets-from-go")
-	assert.Contains(t, goLib.Discover, "gherkin-specs")
-	assert.Contains(t, goLib.Discover, "structurizr-design")
-	assert.Contains(t, goLib.Discover, "godog-from-go")
-	assert.NotContains(t, goLib.Discover, "markdown-from-go", "old discovery rule should be removed")
-	assert.NotContains(t, goLib.Discover, "yaml-from-go", "old discovery rule should be removed")
-
 	// Verify container template has docker_build component defaults
 	container := cfg.Templates["container"]
 	require.NotNil(t, container.Components, "container template should have component defaults")
@@ -652,55 +442,6 @@ func TestLoadBlueprintsDefaults_Integration(t *testing.T) {
 	// Verify new templates exist
 	assert.Contains(t, cfg.Templates, "script-installer")
 	assert.Contains(t, cfg.Templates, "scripts-bundle")
-
-	// Verify script-installer has discover rules
-	scriptInstaller := cfg.Templates["script-installer"]
-	assert.Contains(t, scriptInstaller.Discover, "gherkin-specs")
-	assert.Contains(t, scriptInstaller.Discover, "godog-from-go")
-
-	// Verify component blueprints are loaded
-	require.NotNil(t, cfg.ComponentBlueprints)
-	assert.Contains(t, cfg.ComponentBlueprints, "structurizr-per-component")
-	assert.Contains(t, cfg.ComponentBlueprints, "gherkin-per-component")
-	assert.Contains(t, cfg.ComponentBlueprints, "godog-per-component")
-
-	// Verify structurizr-per-component blueprint structure
-	structBP := cfg.ComponentBlueprints["structurizr-per-component"]
-	assert.Equal(t, "structurizr-{name}", structBP.Component)
-	assert.Equal(t, "structurizr", structBP.Type)
-	assert.Equal(t, "{specs_root}/{name}/{design_dir}", structBP.Root)
-	require.NotNil(t, structBP.Discovery)
-	assert.Equal(t, "required_file", structBP.Discovery.Check)
-
-	// Verify go-library template has blueprints
-	assert.Contains(t, goLib.Blueprints, "structurizr-per-component")
-	assert.Contains(t, goLib.Blueprints, "gherkin-per-component")
-	assert.Contains(t, goLib.Blueprints, "godog-per-component")
-
-	// Verify go-contracts template has blueprints (no godog)
-	goContracts := cfg.Templates["go-contracts"]
-	assert.Contains(t, goContracts.Blueprints, "structurizr-per-component")
-	assert.Contains(t, goContracts.Blueprints, "gherkin-per-component")
-	assert.NotContains(t, goContracts.Blueprints, "godog-per-component")
-
-	// Verify discovery rules are loaded
-	require.NotNil(t, cfg.DiscoveryRules)
-	assert.Contains(t, cfg.DiscoveryRules, "assets-from-go")
-	assert.Contains(t, cfg.DiscoveryRules, "gherkin-specs")
-	assert.Contains(t, cfg.DiscoveryRules, "structurizr-design")
-	assert.Contains(t, cfg.DiscoveryRules, "godog-from-go")
-	assert.Contains(t, cfg.DiscoveryRules, "assets-from-container")
-
-	// Verify discovery rule structure
-	mdRule := cfg.DiscoveryRules["assets-from-go"]
-	assert.Equal(t, "assets", mdRule.Component)
-	assert.Equal(t, []string{"go", "typescript", "dockerfile"}, mdRule.DeriveFromType)
-	assert.Equal(t, "dir_exists", mdRule.Check)
-
-	gherkinRule := cfg.DiscoveryRules["gherkin-specs"]
-	assert.Equal(t, "gherkin", gherkinRule.Component)
-	assert.Equal(t, "{specs_root}/{moniker}", gherkinRule.Path)
-	assert.Equal(t, "has_files_in_subdirs", gherkinRule.Check)
 }
 
 // =============================================================================
@@ -710,16 +451,14 @@ func TestLoadBlueprintsDefaults_Integration(t *testing.T) {
 func TestMergeBlueprintsConfig_BothNil(t *testing.T) {
 	result := MergeBlueprintsConfig(nil, nil)
 	require.NotNil(t, result)
-	assert.Empty(t, result.ComponentBlueprints)
-	assert.Empty(t, result.DiscoveryRules)
 	assert.Empty(t, result.Templates)
 	assert.Empty(t, result.ArtifactMatrices)
 }
 
 func TestMergeBlueprintsConfig_BaseNil(t *testing.T) {
 	override := &BlueprintsConfig{
-		DiscoveryRules: map[string]ComponentDiscoveryRule{
-			"assets-from-go": {Component: "assets"},
+		Templates: map[string]ModuleTemplate{
+			"go-lib": {},
 		},
 	}
 	result := MergeBlueprintsConfig(nil, override)
@@ -729,42 +468,17 @@ func TestMergeBlueprintsConfig_BaseNil(t *testing.T) {
 func TestMergeBlueprintsConfig_OverrideNil(t *testing.T) {
 	base := &BlueprintsConfig{
 		Templates: map[string]ModuleTemplate{
-			"go-lib": {Discover: []string{"assets-from-go"}},
+			"go-lib": {},
 		},
 	}
 	result := MergeBlueprintsConfig(base, nil)
 	assert.Equal(t, base, result)
 }
 
-func TestMergeBlueprintsConfig_ComponentBlueprints(t *testing.T) {
-	base := &BlueprintsConfig{
-		ComponentBlueprints: map[string]ComponentBlueprint{
-			"structurizr-per-component": {Component: "structurizr-{name}", Type: "structurizr"},
-		},
-	}
-	override := &BlueprintsConfig{
-		ComponentBlueprints: map[string]ComponentBlueprint{
-			"structurizr-per-component": {Component: "structurizr-{name}", Type: "custom"}, // Override
-			"gherkin-per-component":     {Component: "gherkin-{name}", Type: "gherkin"},     // Add new
-		},
-	}
-
-	result := MergeBlueprintsConfig(base, override)
-
-	// Overridden blueprint
-	assert.Equal(t, "custom", result.ComponentBlueprints["structurizr-per-component"].Type)
-	// New blueprint added
-	assert.Equal(t, "gherkin", result.ComponentBlueprints["gherkin-per-component"].Type)
-}
-
 func TestMergeBlueprintsConfig_OverrideKeys(t *testing.T) {
 	base := &BlueprintsConfig{
-		DiscoveryRules: map[string]ComponentDiscoveryRule{
-			"assets-from-go": {Component: "assets", Check: "dir_exists"},
-			"gherkin-specs":    {Component: "gherkin", Path: "{specs_root}/{moniker}"},
-		},
 		Templates: map[string]ModuleTemplate{
-			"go-lib": {Discover: []string{"assets-from-go"}},
+			"go-lib": {},
 		},
 		ArtifactMatrices: map[string]*ArtifactMatrix{
 			"cross-platform": {Entries: []ArtifactMatrixEntry{{ID: "linux-amd64"}}},
@@ -772,12 +486,8 @@ func TestMergeBlueprintsConfig_OverrideKeys(t *testing.T) {
 	}
 
 	override := &BlueprintsConfig{
-		DiscoveryRules: map[string]ComponentDiscoveryRule{
-			"assets-from-go": {Component: "assets", Check: "required_file"}, // Override existing
-			"new-rule":         {Component: "new"},                               // Add new
-		},
 		Templates: map[string]ModuleTemplate{
-			"new-template": {Discover: []string{"new-rule"}}, // Add new
+			"new-template": {}, // Add new
 		},
 		ArtifactMatrices: map[string]*ArtifactMatrix{
 			"cross-platform": {Entries: []ArtifactMatrixEntry{{ID: "override"}}}, // Override existing
@@ -785,13 +495,6 @@ func TestMergeBlueprintsConfig_OverrideKeys(t *testing.T) {
 	}
 
 	result := MergeBlueprintsConfig(base, override)
-
-	// Overridden rule
-	assert.Equal(t, "required_file", result.DiscoveryRules["assets-from-go"].Check)
-	// Preserved base rule
-	assert.Equal(t, "gherkin", result.DiscoveryRules["gherkin-specs"].Component)
-	// New rule added
-	assert.Equal(t, "new", result.DiscoveryRules["new-rule"].Component)
 
 	// Base template preserved
 	assert.Contains(t, result.Templates, "go-lib")
@@ -804,8 +507,8 @@ func TestMergeBlueprintsConfig_OverrideKeys(t *testing.T) {
 
 func TestMergeBlueprintsConfig_EmptyMaps(t *testing.T) {
 	base := &BlueprintsConfig{
-		DiscoveryRules: map[string]ComponentDiscoveryRule{
-			"assets-from-go": {Component: "assets"},
+		Templates: map[string]ModuleTemplate{
+			"go-lib": {},
 		},
 	}
 	override := &BlueprintsConfig{} // All maps nil
@@ -813,7 +516,46 @@ func TestMergeBlueprintsConfig_EmptyMaps(t *testing.T) {
 	result := MergeBlueprintsConfig(base, override)
 
 	// Base should be preserved
-	assert.Equal(t, "assets", result.DiscoveryRules["assets-from-go"].Component)
+	assert.Contains(t, result.Templates, "go-lib")
+}
+
+// TestExpandModuleTemplates_NeverCreatesUndeclaredComponents is a regression test
+// ensuring the pipeline never auto-creates components that weren't explicitly declared.
+// This guards against reintroduction of the removed discovery/blueprint creation logic.
+func TestExpandModuleTemplates_NeverCreatesUndeclaredComponents(t *testing.T) {
+	templates := map[string]ModuleTemplate{
+		"container": {
+			Components: map[string]*ComponentEntry{
+				"dockerfile": {
+					DockerBuild: &DockerBuildConfig{
+						Container: "{moniker}",
+						Push:      boolPtr(true),
+					},
+				},
+				"container-assets": {
+					Root: "containers/{moniker}",
+				},
+			},
+		},
+	}
+
+	// Module only declares "go" — NOT "dockerfile" or "container-assets"
+	mod := &Module{
+		Moniker:  "my-lib",
+		Template: "container",
+		Components: ModuleComponents{
+			"go": &ComponentEntry{Root: "go/my-lib"},
+		},
+	}
+
+	err := ExpandModuleFromTemplate(mod, templates, nil)
+	require.NoError(t, err)
+
+	// ONLY the explicitly declared "go" component should exist
+	assert.Len(t, mod.Components, 1, "only explicitly declared components should exist")
+	assert.Contains(t, mod.Components, "go")
+	assert.NotContains(t, mod.Components, "dockerfile", "undeclared template component must not be created")
+	assert.NotContains(t, mod.Components, "container-assets", "undeclared template component must not be created")
 }
 
 // TestLoadBlueprintsDefaults_ArtifactMatrices verifies that artifact matrices are loaded.
@@ -835,273 +577,4 @@ func TestLoadBlueprintsDefaults_ArtifactMatrices(t *testing.T) {
 	cp := cfg.ArtifactMatrices["cross-platform"]
 	require.NotNil(t, cp)
 	assert.Len(t, cp.Entries, 5)
-}
-
-// =============================================================================
-// Tests for Component Blueprints
-// =============================================================================
-
-// TestComponentBlueprints_StructurizrPerComponent creates temp workspace.dsl
-// for 2 of 3 adapters and verifies only those get structurizr components.
-func TestComponentBlueprints_StructurizrPerComponent(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	// Create workspace.dsl for adapter-a and adapter-c, but NOT adapter-b
-	writeFile(t, filepath.Join(repoRoot, "specs", "adapter-a", ".design", "workspace.dsl"), "workspace {}")
-	writeFile(t, filepath.Join(repoRoot, "specs", "adapter-c", ".design", "workspace.dsl"), "workspace {}")
-
-	blueprints := map[string]ComponentBlueprint{
-		"structurizr-per-component": {
-			Component: "structurizr-{name}",
-			Type:      "structurizr",
-			Root:      "{specs_root}/{name}/{design_dir}",
-			Discovery: &BlueprintDiscovery{
-				Check:        "required_file",
-				RequiredFile: "{workspace_dsl}",
-			},
-		},
-	}
-
-	mod := &Module{
-		Moniker: "adapters",
-		Components: ModuleComponents{
-			"adapter-a": &ComponentEntry{Root: "go/adapters/adapter-a"},
-			"adapter-b": &ComponentEntry{Root: "go/adapters/adapter-b"},
-			"adapter-c": &ComponentEntry{Root: "go/adapters/adapter-c"},
-		},
-	}
-
-	vars := map[string]string{
-		"moniker":       "adapters",
-		"specs_root":    "specs",
-		"design_dir":    ".design",
-		"workspace_dsl": "workspace.dsl",
-	}
-
-	applyComponentBlueprints(mod, []string{"structurizr-per-component"}, blueprints, repoRoot, vars)
-
-	// adapter-a and adapter-c should get structurizr components
-	assert.Contains(t, mod.Components, "structurizr-adapter-a")
-	assert.Equal(t, "specs/adapter-a/.design", mod.Components["structurizr-adapter-a"].Root)
-	assert.Equal(t, "structurizr", mod.Components["structurizr-adapter-a"].Type)
-
-	assert.Contains(t, mod.Components, "structurizr-adapter-c")
-	assert.Equal(t, "specs/adapter-c/.design", mod.Components["structurizr-adapter-c"].Root)
-
-	// adapter-b should NOT get a structurizr component (no workspace.dsl)
-	assert.NotContains(t, mod.Components, "structurizr-adapter-b")
-
-	// Original components should be preserved
-	assert.Contains(t, mod.Components, "adapter-a")
-	assert.Contains(t, mod.Components, "adapter-b")
-	assert.Contains(t, mod.Components, "adapter-c")
-}
-
-// TestComponentBlueprints_GodogPerComponent verifies derive_from with {name} substitution.
-func TestComponentBlueprints_GodogPerComponent(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	// Create godog_test.go for adapter-a's specs directory
-	writeFile(t, filepath.Join(repoRoot, "go", "adapters", "adapter-a", "specs", "godog_test.go"), "package specs")
-
-	blueprints := map[string]ComponentBlueprint{
-		"godog-per-component": {
-			Component: "godog-{name}",
-			Type:      "godog",
-			Discovery: &BlueprintDiscovery{
-				DeriveFrom:    []string{"{name}"},
-				DeriveSubdirs: map[string]string{"{name}": "specs"},
-				Check:         "required_file",
-				RequiredFile:  "{godog_test}",
-			},
-		},
-	}
-
-	mod := &Module{
-		Moniker: "adapters",
-		Components: ModuleComponents{
-			"adapter-a": &ComponentEntry{Root: "go/adapters/adapter-a"},
-			"adapter-b": &ComponentEntry{Root: "go/adapters/adapter-b"},
-		},
-	}
-
-	vars := map[string]string{
-		"moniker":    "adapters",
-		"godog_test": "godog_test.go",
-	}
-
-	applyComponentBlueprints(mod, []string{"godog-per-component"}, blueprints, repoRoot, vars)
-
-	// adapter-a has godog_test.go → should get godog component
-	assert.Contains(t, mod.Components, "godog-adapter-a")
-	assert.Equal(t, "go/adapters/adapter-a/specs", mod.Components["godog-adapter-a"].Root)
-	assert.Equal(t, "godog", mod.Components["godog-adapter-a"].Type)
-
-	// adapter-b does NOT have godog_test.go → should NOT get godog component
-	assert.NotContains(t, mod.Components, "godog-adapter-b")
-}
-
-// TestComponentBlueprints_DoesNotOverrideExisting verifies that a user-declared
-// component is preserved and not overwritten by blueprint discovery.
-func TestComponentBlueprints_DoesNotOverrideExisting(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	// Create the file that would trigger discovery
-	writeFile(t, filepath.Join(repoRoot, "specs", "mycomp", ".design", "workspace.dsl"), "workspace {}")
-
-	blueprints := map[string]ComponentBlueprint{
-		"structurizr-per-component": {
-			Component: "structurizr-{name}",
-			Type:      "structurizr",
-			Root:      "{specs_root}/{name}/{design_dir}",
-			Discovery: &BlueprintDiscovery{
-				Check:        "required_file",
-				RequiredFile: "{workspace_dsl}",
-			},
-		},
-	}
-
-	mod := &Module{
-		Moniker: "mymod",
-		Components: ModuleComponents{
-			"mycomp": &ComponentEntry{Root: "go/mymod/mycomp"},
-			// User already declared this component with a custom root
-			"structurizr-mycomp": &ComponentEntry{Root: "custom/path/.design"},
-		},
-	}
-
-	vars := map[string]string{
-		"specs_root":    "specs",
-		"design_dir":    ".design",
-		"workspace_dsl": "workspace.dsl",
-	}
-
-	applyComponentBlueprints(mod, []string{"structurizr-per-component"}, blueprints, repoRoot, vars)
-
-	// User-declared component should NOT be overwritten
-	assert.Equal(t, "custom/path/.design", mod.Components["structurizr-mycomp"].Root)
-}
-
-// TestComponentBlueprints_SingleComponentModuleNoConflict verifies that a
-// single-component module (like "core" with component "go") does not get
-// spurious auxiliary components when the filesystem check fails.
-func TestComponentBlueprints_SingleComponentModuleNoConflict(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	// Module-level discovery finds specs/core/.design/ (via moniker).
-	// Blueprint would check specs/go/.design/ (component name = "go") which doesn't exist.
-	// No spurious component should be created.
-
-	blueprints := map[string]ComponentBlueprint{
-		"structurizr-per-component": {
-			Component: "structurizr-{name}",
-			Type:      "structurizr",
-			Root:      "{specs_root}/{name}/{design_dir}",
-			Discovery: &BlueprintDiscovery{
-				Check:        "required_file",
-				RequiredFile: "{workspace_dsl}",
-			},
-		},
-	}
-
-	mod := &Module{
-		Moniker: "core",
-		Components: ModuleComponents{
-			"go": &ComponentEntry{Root: "go/core"},
-		},
-	}
-
-	vars := map[string]string{
-		"moniker":       "core",
-		"specs_root":    "specs",
-		"design_dir":    ".design",
-		"workspace_dsl": "workspace.dsl",
-	}
-
-	applyComponentBlueprints(mod, []string{"structurizr-per-component"}, blueprints, repoRoot, vars)
-
-	// No structurizr-go component should be created (specs/go/.design/ doesn't exist)
-	assert.NotContains(t, mod.Components, "structurizr-go")
-
-	// Original component should be preserved
-	assert.Contains(t, mod.Components, "go")
-	assert.Equal(t, "go/core", mod.Components["go"].Root)
-}
-
-// TestComponentBlueprints_EmptyAndUnknown verifies that nil/empty/unknown
-// blueprint names are silently skipped as no-ops.
-func TestComponentBlueprints_EmptyAndUnknown(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	blueprints := map[string]ComponentBlueprint{
-		"known-blueprint": {
-			Component: "aux-{name}",
-			Root:      "some/{name}",
-		},
-	}
-
-	mod := &Module{
-		Moniker: "test",
-		Components: ModuleComponents{
-			"go": &ComponentEntry{Root: "go/test"},
-		},
-	}
-
-	// Test with nil blueprints map
-	applyComponentBlueprints(mod, []string{"anything"}, nil, repoRoot, nil)
-	assert.Len(t, mod.Components, 1, "nil blueprints map should be a no-op")
-
-	// Test with empty blueprint names
-	applyComponentBlueprints(mod, nil, blueprints, repoRoot, nil)
-	assert.Len(t, mod.Components, 1, "empty blueprint names should be a no-op")
-
-	// Test with unknown blueprint name
-	applyComponentBlueprints(mod, []string{"nonexistent-blueprint"}, blueprints, repoRoot, nil)
-	assert.Len(t, mod.Components, 1, "unknown blueprint name should be a no-op")
-}
-
-// TestComponentBlueprints_GherkinPerComponent verifies has_files_in_subdirs check
-// for per-component gherkin discovery.
-func TestComponentBlueprints_GherkinPerComponent(t *testing.T) {
-	repoRoot := t.TempDir()
-
-	// Create gherkin specs for adapter-a: specs/adapter-a/some-feature/specification.feature
-	writeFile(t, filepath.Join(repoRoot, "specs", "adapter-a", "login", "specification.feature"),
-		"Feature: Login")
-
-	blueprints := map[string]ComponentBlueprint{
-		"gherkin-per-component": {
-			Component: "gherkin-{name}",
-			Type:      "gherkin",
-			Root:      "{specs_root}/{name}",
-			Discovery: &BlueprintDiscovery{
-				Check:        "has_files_in_subdirs",
-				CheckPattern: "{specification}",
-			},
-		},
-	}
-
-	mod := &Module{
-		Moniker: "adapters",
-		Components: ModuleComponents{
-			"adapter-a": &ComponentEntry{Root: "go/adapters/adapter-a"},
-			"adapter-b": &ComponentEntry{Root: "go/adapters/adapter-b"},
-		},
-	}
-
-	vars := map[string]string{
-		"moniker":       "adapters",
-		"specs_root":    "specs",
-		"specification": "specification.feature",
-	}
-
-	applyComponentBlueprints(mod, []string{"gherkin-per-component"}, blueprints, repoRoot, vars)
-
-	// adapter-a has specs → should get gherkin component
-	assert.Contains(t, mod.Components, "gherkin-adapter-a")
-	assert.Equal(t, "specs/adapter-a", mod.Components["gherkin-adapter-a"].Root)
-	assert.Equal(t, "gherkin", mod.Components["gherkin-adapter-a"].Type)
-
-	// adapter-b has no specs → should NOT get gherkin component
-	assert.NotContains(t, mod.Components, "gherkin-adapter-b")
 }
