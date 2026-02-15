@@ -19,15 +19,16 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 		return nil
 	}
 
-	// Build set of (module, component, handler) tuples that were not successfully executed.
+	// Build set of UoW longnames that were not successfully executed.
 	// ExitCode != 0 means:
 	// - ExitCode > 0: failed
 	// - ExitCode < 0: skipped/cached (e.g., -1 for cached)
-	type unitKey struct{ module, component, handler string }
-	skipManifestCheck := make(map[unitKey]bool)
+	// Uses full Longname() to distinguish between UoWs that share the same
+	// module/component/tool but differ by Extra fields (e.g., testname).
+	skipManifestCheck := make(map[string]bool)
 	for _, r := range ctx.UnitResults {
 		if r.ExitCode != 0 {
-			skipManifestCheck[unitKey{r.Module, r.Component, r.Handler}] = true
+			skipManifestCheck[r.Longname] = true
 		}
 	}
 
@@ -37,16 +38,16 @@ func AssertManifestsExist(ctx *ExecutionContext, commandName string, specs []wor
 	checked := 0
 
 	for _, spec := range specs {
-		key := unitKey{spec.ID.Module, spec.ID.ComponentName, spec.ID.Tool}
-		if skipManifestCheck[key] {
-			log.Debugf("[%s-ASSERT] Skipping manifest check for failed/cached/skipped UoW: %s", prefix, spec.ID.Longname())
+		longname := spec.ID.Longname()
+		if skipManifestCheck[longname] {
+			log.Debugf("[%s-ASSERT] Skipping manifest check for failed/cached/skipped UoW: %s", prefix, longname)
 			continue
 		}
 
 		checked++
 		if _, err := reader.GetUoW(spec.ID); err != nil {
-			missing = append(missing, spec.ID.Longname())
-			log.Debugf("[%s-ASSERT] Missing manifest for UoW: %s (error: %v)", prefix, spec.ID.Longname(), err)
+			missing = append(missing, longname)
+			log.Debugf("[%s-ASSERT] Missing manifest for UoW: %s (error: %v)", prefix, longname, err)
 		}
 	}
 

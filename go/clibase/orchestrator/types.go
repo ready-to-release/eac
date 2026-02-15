@@ -121,6 +121,9 @@ type ConfigUpdate struct {
 
 // UnitResult represents the outcome of executing a single work unit.
 type UnitResult struct {
+	// Longname is the full UoW identity (e.g., "test:eac:gherkin:specs-test:godog:get-test-results").
+	// Used by AssertManifestsExist for per-UoW skip checks.
+	Longname string
 	// Module is the module moniker
 	Module string
 	// Component is the component name

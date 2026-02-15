@@ -144,6 +144,19 @@ func runGoGenerate(ctx context.Context, pkgDir string, logWriter io.Writer) erro
 	return nil
 }
 
+// insertBeforeLast inserts an element before the last element of a slice.
+// Used to add flags before the package path in go test args.
+func insertBeforeLast(args []string, elem string) []string {
+	if len(args) == 0 {
+		return []string{elem}
+	}
+	result := make([]string, 0, len(args)+1)
+	result = append(result, args[:len(args)-1]...)
+	result = append(result, elem)
+	result = append(result, args[len(args)-1])
+	return result
+}
+
 // extractGoBuildTags extracts Go build tags from a godog-format suite tag filter string.
 // Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2" or "@deps:gh-token"
 // Output: "L0,L1" or "L0,L1,L2" or "L0,L1,deps_gh_token" (comma-separated Go build tags)

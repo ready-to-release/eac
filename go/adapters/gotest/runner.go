@@ -368,6 +368,13 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 
 	// Build environment overrides
 	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
+
+	if isGodogTest {
+		// Disable Go test caching for godog tests. Go's cache doesn't track
+		// custom env vars (GODOG_PATHS, GODOG_OUTPUT_DIR), so concurrent UoWs
+		// sharing the same godog_test.go would get stale cached results.
+		goTestArgs = insertBeforeLast(goTestArgs, "-count=1")
+	}
 	testRunID := filepath.Base(cfg.TestRunDir)
 
 	envOverrides := map[string]string{

@@ -67,20 +67,27 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 
 // findModuleByComponentRoot finds the module that owns a path by checking component roots.
 // This handles directory paths that don't match specific file patterns but are under a component root.
+// Uses longest-prefix matching for deterministic results when multiple modules share a root.
+// On ties, the alphabetically first moniker wins.
 func (m *ModuleMapper) findModuleByComponentRoot(path string) string {
+	var bestMoniker string
+	var bestRootLen int
 	for _, module := range m.registry.All() {
 		for _, root := range module.GetComponentRoots() {
 			if root == "" || root == "/" {
 				continue
 			}
 			root = filepath.ToSlash(root)
-			// Check if path is under this component root
 			if strings.HasPrefix(path, root+"/") || path == root {
-				return module.Moniker
+				rootLen := len(root)
+				if rootLen > bestRootLen || (rootLen == bestRootLen && (bestMoniker == "" || module.Moniker < bestMoniker)) {
+					bestRootLen = rootLen
+					bestMoniker = module.Moniker
+				}
 			}
 		}
 	}
-	return ""
+	return bestMoniker
 }
 
 // GetModuleForPackagePath returns the module moniker for a package path.
@@ -89,13 +96,28 @@ func (m *ModuleMapper) findModuleByComponentRoot(path string) string {
 // Returns empty string if no module found.
 func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 	// Handle godog BDD paths: "featureName:testRoot:featurePath"
-	// The testRoot (second part) is where the test runner lives and determines the module
 	parts := strings.SplitN(pkgPath, ":", 3)
-	var actualPath string
 	if len(parts) == 3 {
-		// Godog format: use testRoot (second part) for module lookup
-		actualPath = parts[1]
-	} else if len(parts) == 2 {
+		// Godog format: prefer featurePath (third part) for module lookup.
+		// The spec file unambiguously determines module ownership, while the
+		// testRoot (second part) may reside in a different module (e.g., godog
+		// runners in go/commands/ are owned by the "commands" module, but their
+		// specs in specs/eac_test/ are owned by the "eac" module).
+		if moniker := m.GetModuleForFile(parts[2]); moniker != "" {
+			return moniker
+		}
+		// Fall back to testRoot if feature path didn't resolve
+		if moniker := m.GetModuleForFile(parts[1]); moniker != "" {
+			return moniker
+		}
+		if moniker := m.GetModuleForFile(parts[1] + "/godog_test.go"); moniker != "" {
+			return moniker
+		}
+		return ""
+	}
+
+	var actualPath string
+	if len(parts) == 2 {
 		// Legacy format: "path:featurePath"
 		actualPath = parts[0]
 	} else {

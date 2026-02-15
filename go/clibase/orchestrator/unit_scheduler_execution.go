@@ -120,6 +120,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	tool := spec.ID.Tool
 
 	result := UnitResult{
+		Longname:  spec.ID.Longname(),
 		Module:    module,
 		Component: component,
 		Handler:   tool,
@@ -134,6 +135,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	if cacheInfo, ok := us.earlyCached.Load(moniker); ok {
 		info := cacheInfo.(EarlyCacheInfo)
 		return UnitResult{
+			Longname:  moniker,
 			Module:    info.Module,
 			Component: info.Component,
 			Handler:   info.Handler,

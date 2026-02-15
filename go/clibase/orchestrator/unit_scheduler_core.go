@@ -296,6 +296,7 @@ func (us *UnitScheduler) createDependencyScheduler(work []workunit.UnitSpec, res
 		logging.C().Errorf("[scheduler] Failed to create scheduler: %v", err)
 		for i, w := range work {
 			results[i] = UnitResult{
+				Longname:  w.ID.Longname(),
 				Module:    w.ID.Module,
 				Component: w.ID.ComponentName,
 				Handler:   w.ID.Tool,
@@ -462,6 +463,7 @@ func (us *UnitScheduler) executeOrSkipUnit(
 			errMsg = fmt.Sprintf("Skipped: dependency failed (%s)", strings.Join(failedMods, ", "))
 		}
 		return UnitResult{
+			Longname:  spec.ID.Longname(),
 			Module:    spec.ID.Module,
 			Component: spec.ID.ComponentName,
 			Handler:   spec.ID.Tool,
@@ -501,6 +503,7 @@ func (us *UnitScheduler) handleCompletion(
 
 		for ci := range cascaded {
 			cascadeResult := UnitResult{
+				Longname:  cascaded[ci].ID.Longname(),
 				Module:    cascaded[ci].ID.Module,
 				Component: cascaded[ci].ID.ComponentName,
 				Handler:   cascaded[ci].ID.Tool,
