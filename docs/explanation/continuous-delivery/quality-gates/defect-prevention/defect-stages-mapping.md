@@ -605,7 +605,6 @@ Stage 12 is the **third-level approval gate** (feature owner controls exposure).
 ## Next Steps
 
 - **Addressing a specific defect?** See [External Defect Catalog](https://bdfinst.github.io/ai-patterns/defect-detection-and-fixes/) for detailed lookup
-- **Offline reference?** Download [CSV](../../../assets/cd-model/cd-defect-detection-remediation.csv)
 - **Exploring AI detection?** Read [AI-Assisted Detection Strategies](ai-detection.md)
 - **Implementing quality gates?** Start with [Pre-commit Quality Gates](../precommit-gates.md)
 - **Understanding the CD Model?** Review [The 12 Stages](../../cd-model/stages.md)

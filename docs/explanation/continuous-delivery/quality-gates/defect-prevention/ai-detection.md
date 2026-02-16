@@ -27,4 +27,3 @@ AI (LLMs like GPT-4, Claude, GitHub Copilot) provides semantic analysis to detec
 - **Understanding defect categories?** See [External Defect Catalog](https://bdfinst.github.io/ai-patterns/defect-detection-and-fixes/)
 - **Stage-by-stage prevention?** Read [Stage-by-Stage Guide](defect-stages-mapping.md)
 - **Quality gates overview?** Review [Quality Gates Overview](../index.md)
-- **Offline reference?** Download [CSV](../../../assets/cd-model/cd-defect-detection-remediation.csv)
