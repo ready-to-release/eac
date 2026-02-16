@@ -122,18 +122,15 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 	return filepath.Join(StagingCachePath(repoRoot), moniker, bookName)
 }
 
-// StructurizrModuleBuildOutputPath returns the path to a module's structurizr build output directory.
-// Each module with a structurizr component gets its own build output.
-// Path: out/build/{module}/design_structurizr-render/structurizr/
-func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
-	return outSubPath(repoRoot, BuildDir, moduleName, "design_structurizr-render", "structurizr")
-}
-
-// StructurizrComponentBuildOutputPath returns the path to a per-component structurizr build output.
-// Path: out/build/{module}/{component}_structurizr-render/structurizr/
-func StructurizrComponentBuildOutputPath(repoRoot, moduleName, componentName string) string {
-	unitDir := componentName + "_structurizr-render"
-	return outSubPath(repoRoot, BuildDir, moduleName, unitDir, "structurizr")
+// DiagramBuildOutputPath returns the build output path for any diagram component.
+// This is the single generic function that replaces all hardcoded diagram path helpers.
+// componentName is the map key from ModuleComponents (e.g., "docs-mermaid", "site~design").
+// toolName is the builder tool (e.g., "mermaid-render", "structurizr-render").
+// subdir is the artifact subdirectory (e.g., "mermaid", "structurizr").
+// Path: out/build/{module}/{componentName}_{toolName}/{subdir}/
+func DiagramBuildOutputPath(repoRoot, module, componentName, toolName, subdir string) string {
+	unitDir := componentName + "_" + toolName
+	return outSubPath(repoRoot, BuildDir, module, unitDir, subdir)
 }
 
 // StructurizrAccelCachePath returns the path to the structurizr acceleration cache.
@@ -141,27 +138,6 @@ func StructurizrComponentBuildOutputPath(repoRoot, moduleName, componentName str
 // Path: .cache/eac/structurizr/
 func StructurizrAccelCachePath(repoRoot string) string {
 	return filepath.Join(CacheRootPath(repoRoot), "structurizr")
-}
-
-// MarkdownCommandsBuildOutputPath returns the markdown-commands fragment output dir.
-// Path: out/build/<module>/markdown-commands_markdown-commands/markdown-commands/
-func MarkdownCommandsBuildOutputPath(repoRoot, moduleName string) string {
-	return outSubPath(repoRoot, BuildDir, moduleName,
-		"markdown-commands_markdown-commands", "markdown-commands")
-}
-
-// DrawioBuildOutputPath returns the path to the drawio build output directory.
-// This is where rendered drawio PNGs are written by the drawio builder.
-// Path: out/build/docs/drawio_drawio-render/drawio/
-func DrawioBuildOutputPath(repoRoot string) string {
-	return outSubPath(repoRoot, BuildDir, "docs", "drawio_drawio-render", "drawio")
-}
-
-// MermaidBuildOutputPath returns the path to the mermaid build output directory.
-// This is where rendered mermaid SVGs and the index manifest are written.
-// Path: out/build/docs/mermaid_mermaid-render/mermaid/
-func MermaidBuildOutputPath(repoRoot string) string {
-	return outSubPath(repoRoot, BuildDir, "docs", "mermaid_mermaid-render", "mermaid")
 }
 
 // DrawioAccelCachePath returns the path to the drawio acceleration cache.
@@ -183,13 +159,6 @@ func MermaidAccelCachePath(repoRoot string) string {
 // Path: .cache/eac/plantuml/
 func PlantUMLAccelCachePath(repoRoot string) string {
 	return filepath.Join(CacheRootPath(repoRoot), "plantuml")
-}
-
-// PlantUMLBuildOutputPath returns the path to the plantuml build output directory.
-// This is where rendered plantuml SVGs and the index manifest are written.
-// Path: out/build/docs/plantuml-plantuml-render/plantuml/
-func PlantUMLBuildOutputPath(repoRoot string) string {
-	return outSubPath(repoRoot, BuildDir, "docs", "plantuml-plantuml-render", "plantuml")
 }
 
 // PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory.

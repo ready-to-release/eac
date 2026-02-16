@@ -1248,12 +1248,13 @@ func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfi
 		monikers[m.Moniker] = true
 	}
 
-	// Pass 1: Resolve roots, default specs, and BDD specs
+	// Pass 1: Resolve roots, default specs, BDD specs, and design components
 	for i := range c.Modules {
 		m := &c.Modules[i]
 		m.resolveComponentRoots(compTypes)
 		m.inferDefaultSpecsComponent(repoRoot)
 		m.inferBDDSpecsRoots(repoRoot, monikers)
+		m.inferDesignComponents(repoRoot)
 		m.resolveDerivedPaths()
 	}
 
@@ -1473,6 +1474,110 @@ func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[strin
 				Root: specsRoot,
 			},
 		})
+	}
+
+	sort.Slice(additions, func(i, j int) bool {
+		return additions[i].name < additions[j].name
+	})
+	for _, a := range additions {
+		m.Components[a.name] = a.entry
+		m.ComponentOrder = append(m.ComponentOrder, a.name)
+	}
+}
+
+// inferDesignComponents auto-discovers structurizr design components from
+// workspace.dsl files at conventional paths. Each module:component pair with a
+// workspace.dsl gets its own design component and builds as an independent UoW.
+//
+// Convention:
+//   - specs/{moniker}/.design/workspace.dsl     → module-level design ({moniker}~design)
+//   - specs/{moniker}_{qualifier}/.design/workspace.dsl → component-level design ({qualifier}~design)
+//
+// Components already having a design facet (from explicit declaration) are skipped.
+func (m *Module) inferDesignComponents(repoRoot string) {
+	if repoRoot == "" {
+		return
+	}
+
+	// Collect existing design component roots (from explicit facet declarations)
+	// to avoid creating duplicates pointing to the same workspace.dsl.
+	hasDesignRoot := make(map[string]bool)
+	for _, entry := range m.Components {
+		if entry != nil && entry.FacetName == "design" {
+			hasDesignRoot[entry.Root] = true
+		}
+	}
+
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+
+	addDesign := func(compName, designRoot string) {
+		if hasDesignRoot[designRoot] {
+			return
+		}
+		if _, exists := m.Components[compName]; exists {
+			return
+		}
+		additions = append(additions, addition{
+			name: compName,
+			entry: &ComponentEntry{
+				Name:      compName,
+				Type:      "structurizr",
+				Root:      designRoot,
+				FacetName: "design",
+				Patterns: &ComponentPatterns{
+					Source: []string{"workspace.dsl", "**/*.dsl"},
+				},
+			},
+		})
+	}
+
+	// 1. Module-level design: specs/{moniker}/.design/workspace.dsl
+	designRoot := path.Join("specs", m.Moniker, ".design")
+	designFile := filepath.Join(repoRoot, designRoot, "workspace.dsl")
+	if _, err := os.Stat(designFile); err == nil {
+		addDesign(m.Moniker+FacetSeparator+"design", designRoot)
+	}
+
+	// 2. Component-level design: specs/{moniker}_{qualifier}/.design/workspace.dsl
+	specsDir := filepath.Join(repoRoot, "specs")
+	prefix := m.Moniker + "_"
+	entries, err := os.ReadDir(specsDir)
+	if err == nil {
+		for _, dirEntry := range entries {
+			if !dirEntry.IsDir() {
+				continue
+			}
+			name := dirEntry.Name()
+			if !strings.HasPrefix(name, prefix) {
+				continue
+			}
+			qualifier := strings.TrimPrefix(name, prefix)
+			subDesignRoot := path.Join("specs", name, ".design")
+			subDesignFile := filepath.Join(repoRoot, subDesignRoot, "workspace.dsl")
+			if _, err := os.Stat(subDesignFile); err == nil {
+				addDesign(qualifier+FacetSeparator+"design", subDesignRoot)
+			}
+		}
+	}
+
+	// 3. Sub-component design: specs/{moniker}/{sub}/.design/workspace.dsl
+	moduleSpecsDir := filepath.Join(repoRoot, "specs", m.Moniker)
+	subEntries, err := os.ReadDir(moduleSpecsDir)
+	if err == nil {
+		for _, dirEntry := range subEntries {
+			if !dirEntry.IsDir() || dirEntry.Name() == ".design" {
+				continue
+			}
+			subDesignRoot := path.Join("specs", m.Moniker, dirEntry.Name(), ".design")
+			subDesignFile := filepath.Join(repoRoot, subDesignRoot, "workspace.dsl")
+			if _, err := os.Stat(subDesignFile); err == nil {
+				addDesign(dirEntry.Name()+FacetSeparator+"design", subDesignRoot)
+			}
+		}
 	}
 
 	sort.Slice(additions, func(i, j int) bool {

@@ -321,7 +321,10 @@ func pollForLock(ctx context.Context, lock *flock.Flock, id, lockName string, cf
 
 			locked, err := lock.TryLock()
 			if err != nil {
-				return nil, fmt.Errorf("failed to acquire lock at %s: %w", lock.Path(), err)
+				// On Windows, TryLock can return transient "Access is denied" errors
+				// when the lock file was recently released/deleted by another process.
+				// Treat as "not yet available" and keep polling.
+				continue
 			}
 			if locked {
 				// Clear waiting registration before registering as held

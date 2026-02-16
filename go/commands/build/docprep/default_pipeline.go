@@ -131,7 +131,7 @@ var defaultExecutor content.CommandExecutor = content.ToolCommandExecutor{}
 
 func executeCommandsPhase(pctx *PreprocessContext) error {
 	// Resolve pre-built fragments directory if module moniker is available
-	fragmentsDir := resolveFragmentsDir(pctx.WorkspaceRoot, pctx.Moniker)
+	fragmentsDir := resolveFragmentsDir(pctx.WorkspaceRoot, pctx.Moniker, pctx.DiagramComponents["markdown-commands"])
 
 	outputs, err := content.ExecuteCommands(
 		pctx.Ctx,
@@ -151,11 +151,11 @@ func executeCommandsPhase(pctx *PreprocessContext) error {
 
 // resolveFragmentsDir finds pre-built markdown command fragments.
 // Returns empty string if no fragments directory exists.
-func resolveFragmentsDir(workspaceRoot, moniker string) string {
-	if moniker == "" {
+func resolveFragmentsDir(workspaceRoot, moniker, mdCommandsComponent string) string {
+	if moniker == "" || mdCommandsComponent == "" {
 		return ""
 	}
-	dir := paths.MarkdownCommandsBuildOutputPath(workspaceRoot, moniker)
+	dir := paths.DiagramBuildOutputPath(workspaceRoot, moniker, mdCommandsComponent, "markdown-commands", "markdown-commands")
 	if info, err := os.Stat(dir); err == nil && info.IsDir() {
 		return dir
 	}
@@ -209,30 +209,34 @@ func navigationMacrosPhase(pctx *PreprocessContext) error {
 func diagramProcessingPhase(pctx *PreprocessContext) error {
 	var g errgroup.Group
 
-	// Mermaid: sizing + scan + replace
-	g.Go(func() error {
-		if err := diagrams.ProcessMermaidSizing(pctx.FileIndex, pctx.Log.Infof); err != nil {
-			return err
-		}
+	// Mermaid: sizing + scan + replace (skip if no mermaid component configured)
+	if mermaidComp := pctx.DiagramComponents["mermaid"]; mermaidComp != "" {
+		g.Go(func() error {
+			if err := diagrams.ProcessMermaidSizing(pctx.FileIndex, pctx.Log.Infof); err != nil {
+				return err
+			}
 
-		blocksByFile, statuses, err := diagrams.ScanForMermaidDiagrams(
-			pctx.FileIndex,
-			pctx.StagingDir,
-			pctx.WorkspaceRoot,
-			pctx.Log.Infof,
-			nil, // debugf
-		)
-		if err != nil {
-			return err
-		}
+			blocksByFile, statuses, err := diagrams.ScanForMermaidDiagrams(
+				pctx.FileIndex,
+				pctx.StagingDir,
+				pctx.WorkspaceRoot,
+				pctx.Moniker,
+				mermaidComp,
+				pctx.Log.Infof,
+				nil, // debugf
+			)
+			if err != nil {
+				return err
+			}
 
-		return diagrams.ReplaceMermaidBlocksWithImages(
-			blocksByFile,
-			statuses,
-			pctx.Mode.ExtraPathPrefix(),
-			pctx.Log.Infof,
-		)
-	})
+			return diagrams.ReplaceMermaidBlocksWithImages(
+				blocksByFile,
+				statuses,
+				pctx.Mode.ExtraPathPrefix(),
+				pctx.Log.Infof,
+			)
+		})
+	}
 
 	// Structurizr: independent of mermaid
 	g.Go(func() error {
@@ -241,32 +245,37 @@ func diagramProcessingPhase(pctx *PreprocessContext) error {
 			pctx.StagingDir,
 			pctx.WorkspaceRoot,
 			pctx.Mode.ExtraPathPrefix(),
+			pctx.DesignComponents,
 			pctx.Log.Infof,
 			pctx.Warn,
 			nil, // debugf
 		)
 	})
 
-	// PlantUML: independent of mermaid and structurizr
-	g.Go(func() error {
-		blocksByFile, statuses, err := diagrams.ScanForPlantUMLDiagrams(
-			pctx.FileIndex,
-			pctx.StagingDir,
-			pctx.WorkspaceRoot,
-			pctx.Log.Infof,
-			nil, // debugf
-		)
-		if err != nil {
-			return err
-		}
+	// PlantUML: independent of mermaid and structurizr (skip if no plantuml component configured)
+	if plantumlComp := pctx.DiagramComponents["plantuml"]; plantumlComp != "" {
+		g.Go(func() error {
+			blocksByFile, statuses, err := diagrams.ScanForPlantUMLDiagrams(
+				pctx.FileIndex,
+				pctx.StagingDir,
+				pctx.WorkspaceRoot,
+				pctx.Moniker,
+				plantumlComp,
+				pctx.Log.Infof,
+				nil, // debugf
+			)
+			if err != nil {
+				return err
+			}
 
-		return diagrams.ReplacePlantUMLBlocksWithImages(
-			blocksByFile,
-			statuses,
-			pctx.Mode.ExtraPathPrefix(),
-			pctx.Log.Infof,
-		)
-	})
+			return diagrams.ReplacePlantUMLBlocksWithImages(
+				blocksByFile,
+				statuses,
+				pctx.Mode.ExtraPathPrefix(),
+				pctx.Log.Infof,
+			)
+		})
+	}
 
 	return g.Wait()
 }

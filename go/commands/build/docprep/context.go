@@ -31,6 +31,16 @@ type PreprocessContext struct {
 	// Module context (optional, for fragment resolution)
 	Moniker string // Module moniker, set by caller if available
 
+	// DesignComponents maps module moniker → design facet component name.
+	// Used by structurizr diagram processing to locate builder output.
+	// Example: {"docs": "site~design", "templates": "templates~design"}
+	DesignComponents map[string]string
+
+	// DiagramComponents maps diagram type → component name for the current module.
+	// Used by diagram processing to locate builder output directories.
+	// Example: {"mermaid": "docs-mermaid", "drawio": "docs-drawio", "plantuml": "docs-plantuml"}
+	DiagramComponents map[string]string
+
 	// Options
 	WarnAsError bool
 }

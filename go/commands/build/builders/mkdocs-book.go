@@ -204,6 +204,17 @@ func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter 
 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
 
+	// Load config for diagram component resolution
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
+	if err != nil {
+		Logln(logWriter, "❌ Failed to load config: %v", err)
+		return "", false
+	}
+	if err := cfg.LoadRepository(false); err != nil {
+		Logln(logWriter, "❌ Failed to load repository config: %v", err)
+		return "", false
+	}
+
 	// Run preprocessing
 	var mode docprep.OutputMode
 	if pdfMode {
@@ -213,6 +224,8 @@ func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter 
 	}
 	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
 	pctx.Moniker = moniker
+	pctx.DesignComponents = cfg.Repository.DesignComponents()
+	pctx.DiagramComponents = cfg.Repository.DiagramComponents(moniker)
 	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", false
@@ -423,6 +436,9 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	if err != nil {
 		return "", false
 	}
+	if err := cfg.LoadRepository(false); err != nil {
+		return "", false
+	}
 
 	if err := cfg.LoadBooks(false); err != nil {
 		return "", false
@@ -465,6 +481,8 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
 	pctx.Moniker = moniker
+	pctx.DesignComponents = cfg.Repository.DesignComponents()
+	pctx.DiagramComponents = cfg.Repository.DiagramComponents(moniker)
 	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", true

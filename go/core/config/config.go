@@ -180,23 +180,14 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		return fmt.Errorf("core config failed - repository: %w", err)
 	}
 
-	// Ensure component kinds map is initialized (populated by LoadBlueprints)
-	if err := c.EnsureComponentKinds(validateSchemas); err != nil {
-		return fmt.Errorf("core config failed - component-kinds: %w", err)
-	}
-
 	// Build extension index for O(1) lookups by file extension
 	if c.ComponentKinds != nil {
 		c.ComponentKinds.buildExtensionIndex()
 	}
 
-	// Apply component-specific defaults after both modules and component kinds are loaded
-	// Skip if Repository is nil (can happen in test environments without contract files)
+	// Expand component groups and compute display order
+	// ApplyComponentDefaults already ran inside LoadRepository.
 	if c.Repository != nil {
-		c.Repository.ApplyComponentDefaults(c.ComponentKinds, c.RepoRoot)
-
-		// Expand component groups AFTER component defaults are applied
-		// (component-kinds may set component_group and depends_on)
 		if err := c.Repository.expandAllComponentGroups(); err != nil {
 			return fmt.Errorf("expanding component groups: %w", err)
 		}
@@ -362,13 +353,14 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 		return fmt.Errorf("deriving module deps from component_deps: %w", err)
 	}
 
-	// Step 12: Build moniker index for O(1) lookups
-	// Must happen after all module mutations are complete (parameter substitution,
-	// container discovery, group expansion, component dep derivation).
-	c.Repository.buildMonikerIndex()
+	// Step 12: Apply component defaults (resolve roots, auto-discover specs/design components)
+	// Must run after blueprints are loaded (step 9) so component kinds are available.
+	c.Repository.ApplyComponentDefaults(c.ComponentKinds, c.RepoRoot)
 
-	// Note: component group expansion moved to LoadAll, after ApplyComponentDefaults,
-	// because component-kinds may set component_group and depends_on defaults.
+	// Step 13: Build moniker index for O(1) lookups
+	// Must happen after all module mutations are complete (parameter substitution,
+	// container discovery, group expansion, component dep derivation, defaults).
+	c.Repository.buildMonikerIndex()
 
 	return nil
 }

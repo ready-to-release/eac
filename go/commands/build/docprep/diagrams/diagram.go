@@ -66,7 +66,8 @@ type DiagramConfig struct {
 	PreHashFn func(content string) string
 
 	// BuildOutputPath returns the builder output directory for this diagram type.
-	BuildOutputPath func(workspaceRoot string) string
+	// Parameters: workspaceRoot, module moniker, component name (from config).
+	BuildOutputPath func(workspaceRoot, module, componentName string) string
 
 	// IndexFilename is the name of the builder index file (e.g., "mermaid-index.json").
 	IndexFilename string
@@ -129,12 +130,12 @@ func ExtractBlocks(cfg DiagramConfig, content, absSourcePath, baseDir string) []
 }
 
 // CheckDiagramCache checks which diagrams have pre-rendered SVGs from the builder output.
-func CheckDiagramCache(cfg DiagramConfig, workspaceRoot string, blocks []DiagramBlock, debugf func(string, ...any)) ([]DiagramCacheStatus, error) {
+func CheckDiagramCache(cfg DiagramConfig, workspaceRoot, module, componentName string, blocks []DiagramBlock, debugf func(string, ...any)) ([]DiagramCacheStatus, error) {
 	if debugf == nil {
 		debugf = func(string, ...any) {}
 	}
 
-	builderOutputDir := cfg.BuildOutputPath(workspaceRoot)
+	builderOutputDir := cfg.BuildOutputPath(workspaceRoot, module, componentName)
 	indexPath := filepath.Join(builderOutputDir, cfg.IndexFilename)
 
 	indexData, err := os.ReadFile(indexPath)
@@ -267,7 +268,7 @@ func ReplaceBlocksWithImages(
 func ScanForDiagrams(
 	cfg DiagramConfig,
 	fileIndex *staging.FileIndex,
-	stagingDir, workspaceRoot string,
+	stagingDir, workspaceRoot, module, componentName string,
 	logf func(string, ...any),
 	debugf func(string, ...any),
 ) (map[string][]DiagramBlock, []DiagramCacheStatus, error) {
@@ -292,7 +293,7 @@ func ScanForDiagrams(
 		return blocksByFile, nil, nil
 	}
 
-	statuses, err := CheckDiagramCache(cfg, workspaceRoot, allBlocks, debugf)
+	statuses, err := CheckDiagramCache(cfg, workspaceRoot, module, componentName, allBlocks, debugf)
 	if err != nil {
 		return nil, nil, fmt.Errorf("checking builder output: %w", err)
 	}

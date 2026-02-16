@@ -164,10 +164,14 @@ func (h *PreprocessHandler) Build(
 		return BuildResult{ExitCode: 1}
 	}
 
-	// Load book configuration
+	// Load book and repository configuration
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
 		logln(logWriter, "❌ Failed to load config: %v", err)
+		return BuildResult{ExitCode: 1}
+	}
+	if err := cfg.LoadRepository(false); err != nil {
+		logln(logWriter, "❌ Failed to load repository config: %v", err)
 		return BuildResult{ExitCode: 1}
 	}
 	if err := cfg.LoadBooks(false); err != nil {
@@ -258,6 +262,8 @@ func (h *PreprocessHandler) Build(
 	}
 	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, mode)
 	pctx.Moniker = concrete.Moniker
+	pctx.DesignComponents = cfg.Repository.DesignComponents()
+	pctx.DiagramComponents = cfg.Repository.DiagramComponents(concrete.Moniker)
 	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return BuildResult{ExitCode: 1}

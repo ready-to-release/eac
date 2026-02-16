@@ -12,6 +12,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
+// plantumlBuildOutputPath returns the builder output directory for plantuml diagrams.
+func plantumlBuildOutputPath(workspaceRoot, module, componentName string) string {
+	return paths.DiagramBuildOutputPath(workspaceRoot, module, componentName, "plantuml-render", "plantuml")
+}
+
 // PlantUMLBlock is a type alias for DiagramBlock, preserving backward compatibility.
 type PlantUMLBlock = DiagramBlock
 
@@ -29,7 +34,7 @@ var PlantUMLConfig = DiagramConfig{
 	FilePrefix:      "plantuml",
 	HashFn:          HashPlantUMLContent,
 	PreHashFn:       nil, // PlantUML normalizes line endings inside HashPlantUMLContent
-	BuildOutputPath: paths.PlantUMLBuildOutputPath,
+	BuildOutputPath: plantumlBuildOutputPath,
 	IndexFilename:   "plantuml-index.json",
 	BuildImgTag:     defaultImgTag("PlantUML diagram"),
 	CacheSubdir:     "plantuml",
@@ -107,8 +112,8 @@ func FindStandalonePUMLFiles(docsDir string) ([]PlantUMLBlock, error) {
 }
 
 // CheckPlantUMLCache checks which diagrams have pre-rendered SVGs from the builder output.
-func CheckPlantUMLCache(workspaceRoot string, blocks []PlantUMLBlock, debugf func(string, ...any)) ([]PlantUMLCacheStatus, error) {
-	return CheckDiagramCache(PlantUMLConfig, workspaceRoot, blocks, debugf)
+func CheckPlantUMLCache(workspaceRoot, module, componentName string, blocks []PlantUMLBlock, debugf func(string, ...any)) ([]PlantUMLCacheStatus, error) {
+	return CheckDiagramCache(PlantUMLConfig, workspaceRoot, module, componentName, blocks, debugf)
 }
 
 // ReplacePlantUMLBlocksWithImages replaces plantuml code blocks with img references.
@@ -126,9 +131,9 @@ func ReplacePlantUMLBlocksWithImages(
 // Returns all plantuml blocks found (grouped by file) and their cache statuses.
 func ScanForPlantUMLDiagrams(
 	fileIndex *staging.FileIndex,
-	stagingDir, workspaceRoot string,
+	stagingDir, workspaceRoot, module, componentName string,
 	logf func(string, ...any),
 	debugf func(string, ...any),
 ) (map[string][]PlantUMLBlock, []PlantUMLCacheStatus, error) {
-	return ScanForDiagrams(PlantUMLConfig, fileIndex, stagingDir, workspaceRoot, logf, debugf)
+	return ScanForDiagrams(PlantUMLConfig, fileIndex, stagingDir, workspaceRoot, module, componentName, logf, debugf)
 }

@@ -230,7 +230,7 @@ func TestWrapMermaidBlocks(t *testing.T) {
 
 func TestCheckMermaidCache(t *testing.T) {
 	tmpDir := t.TempDir()
-	builderOutputDir := paths.MermaidBuildOutputPath(tmpDir)
+	builderOutputDir := paths.DiagramBuildOutputPath(tmpDir, "docs", "docs-mermaid", "mermaid-render", "mermaid")
 
 	block0Content := "graph TD\n    A --> B"
 	block1Content := "graph TD\n    C --> D"
@@ -260,7 +260,7 @@ func TestCheckMermaidCache(t *testing.T) {
 	noop := func(string, ...any) {}
 
 	// First check - no builder output, all should be cache misses
-	statuses, err := CheckMermaidCache(tmpDir, blocks, noop)
+	statuses, err := CheckMermaidCache(tmpDir, "docs", "docs-mermaid", blocks, noop)
 	if err != nil {
 		t.Fatalf("CheckMermaidCache failed: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestCheckMermaidCache(t *testing.T) {
 	}
 
 	// Second check - first two should be hits, third should be miss
-	statuses, err = CheckMermaidCache(tmpDir, blocks, noop)
+	statuses, err = CheckMermaidCache(tmpDir, "docs", "docs-mermaid", blocks, noop)
 	if err != nil {
 		t.Fatalf("CheckMermaidCache failed: %v", err)
 	}
@@ -335,7 +335,7 @@ func TestCheckMermaidCacheNoBuilderOutput(t *testing.T) {
 			Filename:   "test_mermaid_0.svg",
 		},
 	}
-	statuses, err := CheckMermaidCache(tmpDir, blocks, noop)
+	statuses, err := CheckMermaidCache(tmpDir, "docs", "docs-mermaid", blocks, noop)
 	if err != nil {
 		t.Fatalf("CheckMermaidCache failed: %v", err)
 	}
@@ -351,7 +351,7 @@ func TestCheckMermaidCacheNoBuilderOutput(t *testing.T) {
 
 func TestCheckMermaidCacheCorruptIndex(t *testing.T) {
 	tmpDir := t.TempDir()
-	builderOutputDir := paths.MermaidBuildOutputPath(tmpDir)
+	builderOutputDir := paths.DiagramBuildOutputPath(tmpDir, "docs", "docs-mermaid", "mermaid-render", "mermaid")
 	noop := func(string, ...any) {}
 
 	if err := os.MkdirAll(builderOutputDir, 0o755); err != nil {
@@ -367,7 +367,7 @@ func TestCheckMermaidCacheCorruptIndex(t *testing.T) {
 		{Content: "graph TD\n    A --> B", Hash: "abcdefgh", BlockIndex: 0, Filename: "test.svg"},
 	}
 
-	_, err := CheckMermaidCache(tmpDir, blocks, noop)
+	_, err := CheckMermaidCache(tmpDir, "docs", "docs-mermaid", blocks, noop)
 	if err == nil {
 		t.Errorf("Expected error for corrupt index")
 	}
@@ -629,7 +629,7 @@ func TestMermaidSizePresets(t *testing.T) {
 // TestCheckMermaidCacheMissingSVGFile verifies cache miss when index references a non-existent SVG.
 func TestCheckMermaidCacheMissingSVGFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	builderOutputDir := paths.MermaidBuildOutputPath(tmpDir)
+	builderOutputDir := paths.DiagramBuildOutputPath(tmpDir, "docs", "docs-mermaid", "mermaid-render", "mermaid")
 	noop := func(string, ...any) {}
 
 	if err := os.MkdirAll(builderOutputDir, 0o755); err != nil {
@@ -660,7 +660,7 @@ func TestCheckMermaidCacheMissingSVGFile(t *testing.T) {
 		{Content: blockContent, Hash: hash, BlockIndex: 0, Filename: "test_mermaid_0.svg"},
 	}
 
-	statuses, err := CheckMermaidCache(tmpDir, blocks, noop)
+	statuses, err := CheckMermaidCache(tmpDir, "docs", "docs-mermaid", blocks, noop)
 	if err != nil {
 		t.Fatalf("CheckMermaidCache failed: %v", err)
 	}

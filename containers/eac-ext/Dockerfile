@@ -35,7 +35,7 @@ ENV CLIE_CONTAINER_ROOT=/app
 # Copy pre-built binary from eac build output.
 # TARGETARCH is set automatically by docker buildx (amd64 or arm64).
 # The binary was cross-compiled by the eac module's go builder.
-# The Docker build context is scoped to out/build/eac/go-go/.
+# The Docker build context is scoped to out/build/eac/eac_go/.
 ARG TARGETARCH
 COPY eac-linux-${TARGETARCH} /app/out/tools/eac
 

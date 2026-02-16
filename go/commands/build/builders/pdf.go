@@ -97,10 +97,14 @@ func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 		return 1
 	}
 
-	// Load book configuration
+	// Load book and repository configuration
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
 		Logln(logWriter, "❌ Failed to load config: %v", err)
+		return 1
+	}
+	if err := cfg.LoadRepository(false); err != nil {
+		Logln(logWriter, "❌ Failed to load repository config: %v", err)
 		return 1
 	}
 	if err := cfg.LoadBooks(false); err != nil {
@@ -169,6 +173,8 @@ func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 	// Run preprocessing pipeline (PDF mode for link normalization)
 	pctx := docprep.NewPreprocessContext(context.Background(), book, workspaceRoot, stagingDir, logWriter, docprep.PDFMode{ThemeName: "dark"})
 	pctx.Moniker = concrete.Moniker
+	pctx.DesignComponents = cfg.Repository.DesignComponents()
+	pctx.DiagramComponents = cfg.Repository.DiagramComponents(concrete.Moniker)
 	if err := docprep.DefaultPipeline().Execute(pctx); err != nil {
 		Logln(logWriter, "❌ Preprocessing failed: %v", err)
 		return 1

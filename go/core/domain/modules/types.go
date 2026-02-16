@@ -397,14 +397,18 @@ func matchGlobPattern(path, pattern string) bool {
 	return matched
 }
 
-// HasComponent returns true if any component with the given type exists in this module.
-// Checks by component type (not map key name), so HasComponent("go") returns true
-// even when the go component is stored under a derived name like "commands".
-func (m *ModuleContract) HasComponent(compType string) bool {
+// HasComponent returns true if a component with the given name or type exists in this module.
+// Checks by component name (map key) first, then by component type.
+// This supports both callers that pass a derived name like "eac" and callers
+// that pass a type like "go".
+func (m *ModuleContract) HasComponent(nameOrType string) bool {
 	if m.Components == nil {
 		return false
 	}
-	return m.Components.HasComponentType(compType)
+	if m.Components.HasComponent(nameOrType) {
+		return true
+	}
+	return m.Components.HasComponentType(nameOrType)
 }
 
 // GetEnabledComponents returns the list of enabled component types for this module.

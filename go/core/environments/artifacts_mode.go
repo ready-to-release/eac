@@ -18,7 +18,7 @@ const (
 	ArtifactsModeAll ArtifactsMode = "all"
 
 	// ArtifactsModeReduced produces reduced artifacts for faster local builds.
-	// - Builds only current platform (+ linux-amd64 on Windows for WSL)
+	// - Builds only current platform (+ linux-{arch} on non-Linux for Docker)
 	// - Skips UPX-compressed variants
 	// - Excludes derived artifacts
 	// - Limited PDF pages (10)
@@ -82,8 +82,10 @@ func (m ArtifactsMode) ShouldBuildTargetWithCurrentPlatform(targetOS, targetArch
 		return true
 	}
 
-	// On Windows, also build linux-amd64 for WSL
-	if currentOS == "windows" && targetOS == "linux" && targetArch == "amd64" {
+	// On non-Linux platforms, also build the linux variant for Docker container builds.
+	// Windows: linux-amd64 (for WSL and Docker Desktop)
+	// macOS: linux-{currentArch} (for Docker Desktop)
+	if targetOS == "linux" && targetArch == currentArch && currentOS != "linux" {
 		return true
 	}
 

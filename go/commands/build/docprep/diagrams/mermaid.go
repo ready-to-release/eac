@@ -11,6 +11,11 @@ import (
 	"github.com/ready-to-release/eac/go/core/paths"
 )
 
+// mermaidBuildOutputPath returns the builder output directory for mermaid diagrams.
+func mermaidBuildOutputPath(workspaceRoot, module, componentName string) string {
+	return paths.DiagramBuildOutputPath(workspaceRoot, module, componentName, "mermaid-render", "mermaid")
+}
+
 // MermaidBlock is a type alias for DiagramBlock, preserving backward compatibility.
 type MermaidBlock = DiagramBlock
 
@@ -39,7 +44,7 @@ var MermaidConfig = DiagramConfig{
 	FilePrefix:      "mermaid",
 	HashFn:          HashContent,
 	PreHashFn:       StripSizeDirective,
-	BuildOutputPath: paths.MermaidBuildOutputPath,
+	BuildOutputPath: mermaidBuildOutputPath,
 	IndexFilename:   "mermaid-index.json",
 	BuildImgTag:     mermaidImgTag,
 	CacheSubdir:     "mermaid",
@@ -146,8 +151,8 @@ func HashContent(content string) string {
 }
 
 // CheckMermaidCache checks which diagrams have pre-rendered SVGs from the builder output.
-func CheckMermaidCache(workspaceRoot string, blocks []MermaidBlock, debugf func(string, ...any)) ([]CacheStatus, error) {
-	return CheckDiagramCache(MermaidConfig, workspaceRoot, blocks, debugf)
+func CheckMermaidCache(workspaceRoot, module, componentName string, blocks []MermaidBlock, debugf func(string, ...any)) ([]CacheStatus, error) {
+	return CheckDiagramCache(MermaidConfig, workspaceRoot, module, componentName, blocks, debugf)
 }
 
 // ReplaceMermaidBlocksWithImages replaces mermaid code blocks with img references.
@@ -165,9 +170,9 @@ func ReplaceMermaidBlocksWithImages(
 // Returns all mermaid blocks found (grouped by file) and their cache statuses.
 func ScanForMermaidDiagrams(
 	fileIndex *staging.FileIndex,
-	stagingDir, workspaceRoot string,
+	stagingDir, workspaceRoot, module, componentName string,
 	logf func(string, ...any),
 	debugf func(string, ...any),
 ) (map[string][]MermaidBlock, []CacheStatus, error) {
-	return ScanForDiagrams(MermaidConfig, fileIndex, stagingDir, workspaceRoot, logf, debugf)
+	return ScanForDiagrams(MermaidConfig, fileIndex, stagingDir, workspaceRoot, module, componentName, logf, debugf)
 }

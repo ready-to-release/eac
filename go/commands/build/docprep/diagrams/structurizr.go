@@ -79,10 +79,12 @@ func ExtractStructurizrMarkers(content string) []StructurizrMarker {
 
 // ProcessStructurizrDiagrams scans staging markdown for Structurizr markers
 // and replaces them with img tags pointing to builder output SVGs.
+// designComponents maps module moniker → design facet component name (e.g., "site~design").
 func ProcessStructurizrDiagrams(
 	fileIndex *staging.FileIndex,
 	stagingDir, workspaceRoot string,
 	extraPathPrefix string,
+	designComponents map[string]string,
 	logf func(string, ...any),
 	warnf func(string, ...any),
 	debugf func(string, ...any),
@@ -134,15 +136,21 @@ func ProcessStructurizrDiagrams(
 		var builderOutputDir string
 		var lookupKey string
 		if pair.component == "" {
-			// 2-part: module-level structurizr
-			builderOutputDir = paths.StructurizrModuleBuildOutputPath(workspaceRoot, pair.module)
+			// 2-part: module-level structurizr — marker is <!-- structurizr:MODULE:VIEW -->
+			// Look up the design facet component name from the map.
+			designComp := designComponents[pair.module]
+			if designComp == "" {
+				warnf("structurizr builder output not found for module %s (build structurizr for that module first)", pair.module)
+				continue
+			}
+			builderOutputDir = paths.DiagramBuildOutputPath(
+				workspaceRoot, pair.module, designComp, "structurizr-render", "structurizr")
 			lookupKey = pair.module
 		} else {
-			// 3-part: per-component structurizr
-			// Marker uses short name (e.g., "godog") but the component in repository.yml
-			// is "design-godog", so prepend "design-" for the build output path.
-			builderOutputDir = paths.StructurizrComponentBuildOutputPath(
-				workspaceRoot, pair.module, "design-"+pair.component)
+			// 3-part: per-component structurizr — marker is <!-- structurizr:MODULE:COMP:VIEW -->
+			// The design facet component name is "{component}~design".
+			builderOutputDir = paths.DiagramBuildOutputPath(
+				workspaceRoot, pair.module, pair.component+"~design", "structurizr-render", "structurizr")
 			lookupKey = pair.module + "/" + pair.component
 		}
 

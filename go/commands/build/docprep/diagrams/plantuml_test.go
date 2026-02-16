@@ -170,7 +170,7 @@ func TestFindStandalonePUMLFiles(t *testing.T) {
 
 func TestCheckPlantUMLCache(t *testing.T) {
 	tmpDir := t.TempDir()
-	builderOutputDir := paths.PlantUMLBuildOutputPath(tmpDir)
+	builderOutputDir := paths.DiagramBuildOutputPath(tmpDir, "docs", "docs-plantuml", "plantuml-render", "plantuml")
 
 	block0Content := "@startuml\nAlice -> Bob\n@enduml"
 	block1Content := "@startuml\nclass User\n@enduml"
@@ -191,7 +191,7 @@ func TestCheckPlantUMLCache(t *testing.T) {
 	}
 
 	// First check - no builder output, all should be cache misses
-	statuses, err := CheckPlantUMLCache(tmpDir, blocks, nil)
+	statuses, err := CheckPlantUMLCache(tmpDir, "docs", "docs-plantuml", blocks, nil)
 	if err != nil {
 		t.Fatalf("CheckPlantUMLCache failed: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestCheckPlantUMLCache(t *testing.T) {
 	}
 
 	// Second check - first should be hit, second miss
-	statuses, err = CheckPlantUMLCache(tmpDir, blocks, nil)
+	statuses, err = CheckPlantUMLCache(tmpDir, "docs", "docs-plantuml", blocks, nil)
 	if err != nil {
 		t.Fatalf("CheckPlantUMLCache failed: %v", err)
 	}

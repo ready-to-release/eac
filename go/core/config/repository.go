@@ -203,6 +203,56 @@ func (c *RepositoryConfig) AllMonikers() []string {
 	return monikers
 }
 
+// DesignComponents returns a map of module moniker → design facet component name.
+// Used by docprep to locate structurizr build output directories.
+func (c *RepositoryConfig) DesignComponents() map[string]string {
+	if c == nil {
+		return nil
+	}
+	result := make(map[string]string)
+	for _, m := range c.Modules {
+		for name, entry := range m.Components {
+			if entry != nil && entry.FacetName == "design" {
+				result[m.Moniker] = name
+				break
+			}
+		}
+	}
+	return result
+}
+
+// DiagramComponents returns a map of diagram type → component name for a module.
+// Used by docprep to locate diagram builder output directories.
+// Scans the module's components for known diagram types (docs-mermaid, docs-drawio,
+// docs-plantuml, docs-markdown-commands) and returns their component names (map keys).
+func (c *RepositoryConfig) DiagramComponents(moniker string) map[string]string {
+	if c == nil {
+		return nil
+	}
+	result := make(map[string]string)
+	mod, ok := c.GetModule(moniker)
+	if !ok {
+		return result
+	}
+	for name, entry := range mod.Components {
+		compType := name
+		if entry != nil && entry.Type != "" {
+			compType = entry.Type
+		}
+		switch compType {
+		case "docs-mermaid":
+			result["mermaid"] = name
+		case "docs-drawio":
+			result["drawio"] = name
+		case "docs-plantuml":
+			result["plantuml"] = name
+		case "docs-markdown-commands":
+			result["markdown-commands"] = name
+		}
+	}
+	return result
+}
+
 // buildMonikerIndex builds the moniker-to-index map for O(1) lookup.
 // Must be called after all modules are finalized (after parameter substitution,
 // container discovery, and group expansion).
