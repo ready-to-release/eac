@@ -79,9 +79,9 @@
 // State files are stored under .cache/eac/incremental/ (separate from output
 // artifacts in out/) so that deleting .cache/eac/ clears all incremental state:
 //
-//	id.StateFile()     // ".cache/eac/incremental/build/core/go-go/state.json"
-//	id.StateCacheDir() // ".cache/eac/incremental/build/core/go-go"
-//	id.OutDir()        // "out/build/core/go-go" (logs, results, locks)
+//	id.StateFile()     // ".cache/eac/incremental/build/core/go_go/state.json"
+//	id.StateCacheDir() // ".cache/eac/incremental/build/core/go_go"
+//	id.OutDir()        // "out/build/core/go_go" (logs, results, locks)
 //
 // See [StateManager] for cache detection and state persistence APIs.
 package workunit

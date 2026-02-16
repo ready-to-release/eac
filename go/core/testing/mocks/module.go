@@ -12,7 +12,7 @@ type MockModule struct {
 	moniker          string
 	name             string
 	description      string
-	moduleGroup      string
+	group            string
 	components       map[string]string // componentType -> root
 	componentAmps    map[string]map[string]float64 // componentType -> operation -> amp
 	componentGroups  map[string]string // componentName -> group
@@ -28,7 +28,7 @@ func NewMockModule(moniker string) *MockModule {
 	return &MockModule{
 		moniker:         moniker,
 		name:            moniker,
-		moduleGroup:     moniker,
+		group:           moniker,
 		components:      make(map[string]string),
 		componentGroups: make(map[string]string),
 		metadata:        make(map[string]interface{}),
@@ -47,9 +47,9 @@ func (m *MockModule) WithDescription(desc string) *MockModule {
 	return m
 }
 
-// WithModuleGroup sets the module group.
-func (m *MockModule) WithModuleGroup(group string) *MockModule {
-	m.moduleGroup = group
+// WithGroup sets the module group.
+func (m *MockModule) WithGroup(group string) *MockModule {
+	m.group = group
 	return m
 }
 
@@ -147,9 +147,9 @@ func (m *MockModule) GetDescription() string {
 	return m.description
 }
 
-// GetModuleGroup implements core.ModuleContractPort.
-func (m *MockModule) GetModuleGroup() string {
-	return m.moduleGroup
+// GetGroup implements core.ModuleContractPort.
+func (m *MockModule) GetGroup() string {
+	return m.group
 }
 
 // HasComponent implements core.ModuleContractPort.

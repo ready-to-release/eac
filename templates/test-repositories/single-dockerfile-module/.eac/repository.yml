@@ -1,5 +1,6 @@
 modules:
   - moniker: test-module
-    name: Test Module
     components:
-      dockerfile: containers/test-module
+      - type: container
+        name: container
+        root: containers/test-module

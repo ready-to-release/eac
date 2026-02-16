@@ -1,30 +1,36 @@
 modules:
   - moniker: api-gateway
-    name: API Gateway
     components:
-      go: go/api-gateway
+      - type: go
+        name: go
+        root: go/api-gateway
 
   - moniker: web-frontend
-    name: Web Frontend
     components:
-      typescript: typescript/web-frontend
+      - type: typescript
+        name: typescript
+        root: typescript/web-frontend
 
   - moniker: ml-engine
-    name: ML Engine
     components:
-      python: python/ml-engine
+      - type: python
+        name: python
+        root: python/ml-engine
 
   - moniker: core-services
-    name: Core Services
     components:
-      dotnet: dotnet/core-services
+      - type: dotnet
+        name: dotnet
+        root: dotnet/core-services
 
   - moniker: cli-tools
-    name: CLI Tools
     components:
-      rust: rust/cli-tools
+      - type: rust
+        name: rust
+        root: rust/cli-tools
 
   - moniker: containers
-    name: Container Images
     components:
-      dockerfile: containers/images
+      - type: container
+        name: container
+        root: containers/images

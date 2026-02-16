@@ -73,7 +73,7 @@ func (h *DockerHandler) Build(module core.ModuleContractPort, workspaceRoot, out
 	}
 
 	// Get relevant package roots (these methods are available via the port interface)
-	dockerRoot := module.GetComponentRoot("dockerfile")
+	dockerRoot := module.GetComponentRoot("container")
 	goRoot := module.GetComponentRoot("go")
 
 	// Check if module has go package type (available via port interface)

@@ -123,21 +123,34 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 	enabledComps := module.GetEnabledComponents()
 	log.Debugf("Discovery: module=%s components=%d (%v)", module.Moniker, len(module.Components), enabledComps)
 
+	// Track discovered file paths to prevent duplicates across phases
+	seenFiles := make(map[string]bool)
+
 	// 1. Discover tests from all components with test patterns
-	for pkgType, pkg := range module.Components {
+	for compName, pkg := range module.Components {
 		if pkg == nil {
-			log.Debugf("Discovery P1: %s:%s skipped (nil entry)", module.Moniker, pkgType)
+			log.Debugf("Discovery P1: %s:%s skipped (nil entry)", module.Moniker, compName)
+			continue
+		}
+		// Skip auto-BDD runners — their test patterns overlap with the parent
+		// language component and would produce duplicate test references.
+		if pkg.AutoBDDRunner {
+			log.Debugf("Discovery P1: %s:%s skipped (auto-BDD runner)", module.Moniker, compName)
 			continue
 		}
 		if pkg.Patterns == nil {
-			log.Debugf("Discovery P1: %s:%s skipped (nil patterns)", module.Moniker, pkgType)
+			log.Debugf("Discovery P1: %s:%s skipped (nil patterns)", module.Moniker, compName)
 			continue
 		}
 		if len(pkg.Patterns.Tests) == 0 {
-			log.Debugf("Discovery P1: %s:%s skipped (no test patterns)", module.Moniker, pkgType)
+			log.Debugf("Discovery P1: %s:%s skipped (no test patterns)", module.Moniker, compName)
 			continue
 		}
-		log.Debugf("Discovery P1: %s:%s root=%s patterns=%v", module.Moniker, pkgType, pkg.Root, pkg.Patterns.Tests)
+		// Resolve the component type (e.g., "go", "typescript") from the map key (name).
+		// The map key is the component name (possibly derived from root path),
+		// but discoverTestsInFile needs the actual type for framework detection.
+		compType := module.Components.GetComponentType(compName)
+		log.Debugf("Discovery P1: %s:%s (type=%s) root=%s patterns=%v", module.Moniker, compName, compType, pkg.Root, pkg.Patterns.Tests)
 		pkgRoot := filepath.Join(rootPath, pkg.Root)
 
 		for _, pattern := range pkg.Patterns.Tests {
@@ -150,7 +163,12 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 			}
 
 			for _, testFile := range matches {
-				fileRefs, err := discoverTestsInFile(testFile, module.Moniker, pkgType, dc)
+				canonical := filepath.ToSlash(testFile)
+				if seenFiles[canonical] {
+					continue
+				}
+				seenFiles[canonical] = true
+				fileRefs, err := discoverTestsInFile(testFile, module.Moniker, compType, dc)
 				if err != nil {
 					continue
 				}
@@ -160,28 +178,44 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 	}
 
 	// 2. Discover Go tests from test-impl package if specified
+	// Skip if test-impl path is already covered by a component root scanned in Phase 1.
 	testImplPath := module.GetTestImplementationPath()
 	if testImplPath != "" {
-		log.Debugf("Discovery P2: %s test-impl=%s", module.Moniker, testImplPath)
-		fullTestImplPath := filepath.Join(rootPath, testImplPath)
-		if _, err := os.Stat(fullTestImplPath); err == nil {
-			goRefs, err := discoverGoTestTagsInPath(fullTestImplPath, dc)
-			if err == nil {
-				log.Debugf("Discovery P2: %s found %d gotest from test-impl", module.Moniker, len(goRefs))
-				// Tag tests with module dependency
-				for i := range goRefs {
-					depmTag := "@depm:" + module.Moniker
-					if !slices.Contains(goRefs[i].Tags, depmTag) {
-						goRefs[i].Tags = append(goRefs[i].Tags, depmTag)
-					}
-					goRefs[i].ModuleDependencies = append(goRefs[i].ModuleDependencies, module.Moniker)
-				}
-				refs = append(refs, goRefs...)
-			} else {
-				log.Debugf("Discovery P2: %s test-impl error: %v", module.Moniker, err)
+		// Check if any Phase 1 component already scanned this root
+		alreadyCovered := false
+		for _, pkg := range module.Components {
+			if pkg == nil || pkg.AutoBDDRunner {
+				continue
 			}
+			if pkg.Root != "" && (pkg.Root == testImplPath || strings.HasPrefix(testImplPath, pkg.Root+"/")) {
+				alreadyCovered = true
+				break
+			}
+		}
+		if alreadyCovered {
+			log.Debugf("Discovery P2: %s skipped (test-impl %s covered by P1 component)", module.Moniker, testImplPath)
 		} else {
-			log.Debugf("Discovery P2: %s test-impl path not found: %s", module.Moniker, fullTestImplPath)
+			log.Debugf("Discovery P2: %s test-impl=%s", module.Moniker, testImplPath)
+			fullTestImplPath := filepath.Join(rootPath, testImplPath)
+			if _, err := os.Stat(fullTestImplPath); err == nil {
+				goRefs, err := discoverGoTestTagsInPath(fullTestImplPath, dc)
+				if err == nil {
+					log.Debugf("Discovery P2: %s found %d gotest from test-impl", module.Moniker, len(goRefs))
+					// Tag tests with module dependency
+					for i := range goRefs {
+						depmTag := "@depm:" + module.Moniker
+						if !slices.Contains(goRefs[i].Tags, depmTag) {
+							goRefs[i].Tags = append(goRefs[i].Tags, depmTag)
+						}
+						goRefs[i].ModuleDependencies = append(goRefs[i].ModuleDependencies, module.Moniker)
+					}
+					refs = append(refs, goRefs...)
+				} else {
+					log.Debugf("Discovery P2: %s test-impl error: %v", module.Moniker, err)
+				}
+			} else {
+				log.Debugf("Discovery P2: %s test-impl path not found: %s", module.Moniker, fullTestImplPath)
+			}
 		}
 	} else {
 		log.Debugf("Discovery P2: %s skipped (no test-impl)", module.Moniker)

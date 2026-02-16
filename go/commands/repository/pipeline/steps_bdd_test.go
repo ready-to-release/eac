@@ -368,8 +368,12 @@ func createTestModule(ctx *eacgodog.TestContext, moniker string, dependencies []
 			"versioning": map[string]interface{}{
 				"scheme": "SemVer",
 			},
-			"components": map[string]interface{}{
-				"go": fmt.Sprintf("go/%s", moniker),
+			"components": []interface{}{
+				map[string]interface{}{
+					"type": "go",
+					"name": "go",
+					"root": fmt.Sprintf("go/%s", moniker),
+				},
 			},
 		}
 

@@ -130,7 +130,7 @@ func ReleaseCheckPending() int {
 			continue
 		}
 
-		if mod.ReleaseBundle != nil {
+		if mod.GetReleaseBundle() != nil {
 			// Bundle release - must wait for dependencies
 			layer1 = append(layer1, p)
 		} else {

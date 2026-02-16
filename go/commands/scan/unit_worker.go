@@ -65,7 +65,7 @@ func scanUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 	}
 
 	// Acquire lock and resolve component root
-	release, componentRoot, exitCode := acquireLockAndResolveRoot(pipeline, ctx, module, moniker, compName, scannerTypeStr, logWriter)
+	release, componentRoot, exitCode := acquireLockAndResolveRoot(pipeline, ctx, module, moniker, compName, spec.ID.DirName(), logWriter)
 	if exitCode >= 0 {
 		return exitCode
 	}
@@ -142,9 +142,7 @@ func validateScanComponent(ctx *cmdframework.ExecutionContext, moniker, compName
 // acquireLockAndResolveRoot acquires the unit lock and resolves the component root path.
 // Returns (releaseFunc, componentRoot, exitCode). An exitCode of -1 means success.
 func acquireLockAndResolveRoot(pipeline *cmdframework.UnitPipeline, ctx *cmdframework.ExecutionContext,
-	module *modules.ModuleContract, moniker, compName, scannerTypeStr string, logWriter io.Writer) (func(), string, int) {
-
-	componentDir := cmdframework.UnitDir(compName, scannerTypeStr)
+	module *modules.ModuleContract, moniker, compName, componentDir string, logWriter io.Writer) (func(), string, int) {
 	release, err := pipeline.AcquireLock(ctx, moniker, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)

@@ -201,8 +201,8 @@ func BuildModuleContext(moduleName string, registry *modules.Registry, satisfied
 		componentType = "go"
 	} else if module.HasComponent("typescript") {
 		componentType = "typescript"
-	} else if module.HasComponent("dockerfile") {
-		componentType = "dockerfile"
+	} else if module.HasComponent("container") {
+		componentType = "container"
 	}
 
 	return ModuleContext{

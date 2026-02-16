@@ -350,31 +350,9 @@
           "pattern": "^[a-z][a-z0-9-]*$",
           "minLength": 1
         },
-        "name": {
-          "type": "string",
-          "description": "Human-readable module name",
-          "minLength": 1
-        },
         "description": {
           "type": "string",
-          "description": "Module description (defaults to name if not specified)"
-        },
-        "template": {
-          "type": "string",
-          "description": "Name of a module template to use as base configuration. Templates are defined in defaults/module-templates.yml.",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
-        "auto_discover": {
-          "type": "boolean",
-          "description": "Enable automatic discovery of conventional components (gherkin, structurizr, test-impl, markdown)",
-          "default": false
-        },
-        "parameters": {
-          "type": "object",
-          "description": "Template parameter values for placeholder substitution (e.g., go_root)",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "description": "Module description (defaults to moniker if not specified)"
         },
         "depends_on": {
           "type": "array",
@@ -411,14 +389,6 @@
           "$ref": "#/definitions/module_versioning",
           "description": "Module versioning configuration"
         },
-        "evidence_books": {
-          "type": "array",
-          "description": "Book names for evidence documentation, built via 'update evidence' command. Unlike regular books, these are built independently of the build command.",
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
-          }
-        },
         "build": {
           "$ref": "#/definitions/module_build",
           "description": "Per-module build configuration"
@@ -428,45 +398,33 @@
           "description": "Per-module Docker build configuration",
           "additionalProperties": true
         },
-        "release_bundle": {
-          "$ref": "#/definitions/release_bundle",
-          "description": "Release bundle configuration for modules that create aggregated releases"
-        },
         "components": {
           "$ref": "#/definitions/module_components",
           "description": "Component types for this module (required - defines what the module contains)"
         }
       },
-      "required": ["moniker", "name"]
+      "required": ["moniker"]
     },
     "module_components": {
-      "type": "object",
-      "description": "Component types for a module. Maps component type name to its root path or configuration. The first component listed becomes the default for build operations.",
-      "additionalProperties": {
-        "oneOf": [
-          {
-            "type": "string",
-            "description": "Root path for this component type (relative to repo root)"
-          },
-          {
-            "type": "null",
-            "description": "Use the default_root from blueprints.yml component-kinds (with {moniker} substitution)"
-          },
-          {
-            "$ref": "#/definitions/component_entry",
-            "description": "Full component configuration with root and optional pattern overrides"
-          }
-        ]
+      "type": "array",
+      "description": "Components as a sequence with names auto-inferred from root path.",
+      "items": {
+        "$ref": "#/definitions/component_entry"
       },
-      "minProperties": 1
+      "minItems": 1
     },
     "component_entry": {
       "type": "object",
       "description": "Full component configuration for a module",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "Explicit component name override. When using list format, names are auto-inferred from root path; use this to override the inferred name.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
         "type": {
           "type": "string",
-          "description": "Component type (e.g., 'go', 'book'). If omitted, the map key (component name) is used as the type. This allows multiple components of the same type with different names."
+          "description": "Component type (e.g., 'go', 'book'). Required in list format. In map format, the map key is used as the type if omitted."
         },
         "root": {
           "type": "string",
@@ -510,6 +468,107 @@
         "amp": {
           "$ref": "#/definitions/amp_config",
           "description": "Resource amplifier for this component's operations"
+        },
+        "specs": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Glob patterns for BDD spec files (inherits parent root)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "root": { "type": "string", "description": "Independent root path for spec files" },
+                "patterns": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns for spec files" }
+              },
+              "required": ["root", "patterns"],
+              "description": "BDD spec files with independent root"
+            }
+          ],
+          "description": "BDD specification files. Expands to a synthetic gherkin component."
+        },
+        "design": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Glob patterns for design files (inherits parent root)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "root": { "type": "string", "description": "Independent root path for design files" },
+                "patterns": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns for design files" }
+              },
+              "required": ["root", "patterns"],
+              "description": "Design files with independent root"
+            }
+          ],
+          "description": "Design files (e.g., .dsl). Expands to a synthetic structurizr component."
+        },
+        "docs": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Glob patterns for documentation files (inherits parent root)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "root": { "type": "string", "description": "Independent root path for doc files" },
+                "patterns": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns for doc files" }
+              },
+              "required": ["root", "patterns"],
+              "description": "Documentation files with independent root"
+            }
+          ],
+          "description": "Documentation files (e.g., .md). Expands to a synthetic docs-assets component."
+        },
+        "with": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Companion component types to auto-create alongside this component. Each companion shares this component's root and uses its type as name. Example: [assets, markdown, yaml]"
+        },
+        "bundle": {
+          "$ref": "#/definitions/release_bundle",
+          "description": "Release bundle configuration (for release-bundle components)"
+        },
+        "docker_build": {
+          "type": "object",
+          "description": "Docker build configuration for container components",
+          "properties": {
+            "container": { "type": "string" },
+            "context": { "type": "string" },
+            "dockerfile": { "type": "string" },
+            "platforms": { "type": "array", "items": { "type": "string" } },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "push": { "type": "boolean" },
+            "registry": { "type": "string" },
+            "load": { "type": "boolean" },
+            "sbom": { "type": "boolean" },
+            "provenance": { "type": "boolean" }
+          }
+        },
+        "config": {
+          "type": "object",
+          "description": "Component-specific key-value configuration (e.g., book name, theme)",
+          "additionalProperties": { "type": "string" }
+        },
+        "component_group": {
+          "type": "string",
+          "description": "Group name for component dependency targeting"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Intra-module component dependencies"
+        },
+        "component_deps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Inter-module component dependencies (format: module:component[:type[:tool]])"
         }
       }
     },
@@ -551,6 +610,24 @@
         "copy_to": {
           "type": "string",
           "description": "Target path to copy build output (relative to workspace root)"
+        },
+        "copy_files": {
+          "type": "array",
+          "description": "Additional files to copy after build",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Source path relative to component root"
+              },
+              "to": {
+                "type": "string",
+                "description": "Target path relative to workspace root"
+              }
+            },
+            "required": ["from", "to"]
+          }
         }
       }
     },
@@ -610,6 +687,14 @@
         "handler": {
           "type": "string",
           "description": "Explicit build handler override"
+        },
+        "binary_name": {
+          "type": "string",
+          "description": "Output binary name (used for artifact matrix expansion)"
+        },
+        "artifact_matrix": {
+          "type": "string",
+          "description": "Reference to a named artifact matrix from blueprints.yml"
         },
         "artifacts": {
           "type": "array",
@@ -973,19 +1058,16 @@
           "moniker": "eac-core",
           "name": "Core Domain Libraries",
           "description": "Core library containing contracts and repository operations",
-          "components": {
-            "go": "go/eac/core",
-            "specs": null,
-            "design": null
-          }
+          "components": [
+            {"type": "go", "root": "go/eac/core", "specs": ["**/*.feature"], "with": ["assets", "markdown", "yaml"]}
+          ]
         },
         {
           "moniker": "vscode-ext",
           "name": "VSCode Extension",
-          "components": {
-            "typescript": "typescript/vscode-ext",
-            "specs": null
-          }
+          "components": [
+            {"type": "typescript", "root": "typescript/vscode-ext", "specs": ["**/*.feature"]}
+          ]
         }
       ]
     }

@@ -21,24 +21,24 @@ func TestApplyModuleGroupDefaults_SetsMoniker(t *testing.T) {
 	cfg.applyModuleGroupDefaults()
 
 	for _, m := range cfg.Modules {
-		assert.Equal(t, m.Moniker, m.ModuleGroup, "module %q should default ModuleGroup to its Moniker", m.Moniker)
+		assert.Equal(t, m.Moniker, m.Group, "module %q should default Group to its Moniker", m.Moniker)
 	}
 }
 
 func TestApplyModuleGroupDefaults_PreservesExplicitGroup(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
+			{Moniker: "drawio-oci", Group: "oci-tools"},
 			{Moniker: "core"},
 		},
 	}
 
 	cfg.applyModuleGroupDefaults()
 
-	assert.Equal(t, "oci-tools", cfg.GetByMoniker("pdf-oci").ModuleGroup)
-	assert.Equal(t, "oci-tools", cfg.GetByMoniker("drawio-oci").ModuleGroup)
-	assert.Equal(t, "core", cfg.GetByMoniker("core").ModuleGroup)
+	assert.Equal(t, "oci-tools", cfg.GetByMoniker("pdf-oci").Group)
+	assert.Equal(t, "oci-tools", cfg.GetByMoniker("drawio-oci").Group)
+	assert.Equal(t, "core", cfg.GetByMoniker("core").Group)
 }
 
 func TestApplyModuleGroupDefaults_EmptyModules(t *testing.T) {
@@ -55,8 +55,8 @@ func TestApplyModuleGroupDefaults_IntegrationWithExpandModuleGroups(t *testing.T
 	// Simulates the full pipeline: defaults applied, then group expansion
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
+			{Moniker: "drawio-oci", Group: "oci-tools"},
 			{Moniker: "core"},                                            // No explicit group
 			{Moniker: "docs", DependsOn: []string{"core", "oci-tools"}}, // Depends on moniker + group
 		},
@@ -64,10 +64,10 @@ func TestApplyModuleGroupDefaults_IntegrationWithExpandModuleGroups(t *testing.T
 
 	cfg.applyModuleGroupDefaults()
 
-	// "core" should now have ModuleGroup == "core" (self-named default)
-	assert.Equal(t, "core", cfg.GetByMoniker("core").ModuleGroup)
-	// "docs" should now have ModuleGroup == "docs"
-	assert.Equal(t, "docs", cfg.GetByMoniker("docs").ModuleGroup)
+	// "core" should now have Group == "core" (self-named default)
+	assert.Equal(t, "core", cfg.GetByMoniker("core").Group)
+	// "docs" should now have Group == "docs"
+	assert.Equal(t, "docs", cfg.GetByMoniker("docs").Group)
 
 	err := cfg.expandModuleGroups()
 	require.NoError(t, err)
@@ -83,9 +83,9 @@ func TestApplyModuleGroupDefaults_IntegrationWithExpandModuleGroups(t *testing.T
 func TestExpandModuleGroups_BasicExpansion(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "mkdocs-render-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "mermaid-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "mkdocs-render-oci", Group: "oci-tools"},
+			{Moniker: "drawio-oci", Group: "oci-tools"},
+			{Moniker: "mermaid-oci", Group: "oci-tools"},
 			{Moniker: "docs", DependsOn: []string{"oci-tools"}},
 		},
 	}
@@ -102,8 +102,8 @@ func TestExpandModuleGroups_BasicExpansion(t *testing.T) {
 func TestExpandModuleGroups_MixedGroupAndMoniker(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
+			{Moniker: "drawio-oci", Group: "oci-tools"},
 			{Moniker: "core"},
 			{Moniker: "docs", DependsOn: []string{"core", "oci-tools"}},
 		},
@@ -121,10 +121,10 @@ func TestExpandModuleGroups_MixedGroupAndMoniker(t *testing.T) {
 func TestExpandModuleGroups_MultipleGroups(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "contract-a", ModuleGroup: "contracts"},
-			{Moniker: "contract-b", ModuleGroup: "contracts"},
-			{Moniker: "adapter-x", ModuleGroup: "adapters"},
-			{Moniker: "adapter-y", ModuleGroup: "adapters"},
+			{Moniker: "contract-a", Group: "contracts"},
+			{Moniker: "contract-b", Group: "contracts"},
+			{Moniker: "adapter-x", Group: "adapters"},
+			{Moniker: "adapter-y", Group: "adapters"},
 			{Moniker: "cli", DependsOn: []string{"contracts", "adapters"}},
 		},
 	}
@@ -141,7 +141,7 @@ func TestExpandModuleGroups_MultipleGroups(t *testing.T) {
 func TestExpandModuleGroups_Deduplication(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
 			{Moniker: "docs", DependsOn: []string{"pdf-oci", "oci-tools"}},
 		},
 	}
@@ -159,8 +159,8 @@ func TestExpandModuleGroups_Deduplication(t *testing.T) {
 func TestExpandModuleGroups_GroupNameCollidesWithMoniker(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "oci-tools", ModuleGroup: ""},        // Module with this moniker
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"}, // Group with same name
+			{Moniker: "oci-tools", Group: ""},        // Module with this moniker
+			{Moniker: "pdf-oci", Group: "oci-tools"}, // Group with same name
 		},
 	}
 
@@ -173,7 +173,7 @@ func TestExpandModuleGroups_GroupNameCollidesWithMoniker(t *testing.T) {
 func TestExpandModuleGroups_EmptyDependsOn(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
 			{Moniker: "core", DependsOn: []string{}},
 		},
 	}
@@ -189,7 +189,7 @@ func TestExpandModuleGroups_EmptyDependsOn(t *testing.T) {
 func TestExpandModuleGroups_NilDependsOn(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools"},
 			{Moniker: "core"},
 		},
 	}
@@ -241,8 +241,8 @@ func TestExpandModuleGroups_SelfReferenceViaGroup(t *testing.T) {
 	// A module depends on its own group - should not include itself
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "pdf-oci", ModuleGroup: "oci-tools", DependsOn: []string{"oci-tools"}},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "pdf-oci", Group: "oci-tools", DependsOn: []string{"oci-tools"}},
+			{Moniker: "drawio-oci", Group: "oci-tools"},
 		},
 	}
 
@@ -259,9 +259,9 @@ func TestExpandModuleGroups_SelfReferenceViaGroup(t *testing.T) {
 func TestExpandModuleGroups_PreservesOrder(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "a-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "b-oci", ModuleGroup: "oci-tools"},
-			{Moniker: "c-oci", ModuleGroup: "oci-tools"},
+			{Moniker: "a-oci", Group: "oci-tools"},
+			{Moniker: "b-oci", Group: "oci-tools"},
+			{Moniker: "c-oci", Group: "oci-tools"},
 			{Moniker: "docs", DependsOn: []string{"oci-tools"}},
 		},
 	}

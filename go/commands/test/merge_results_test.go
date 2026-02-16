@@ -107,7 +107,7 @@ func TestMergeResultsCommand_HappyPath(t *testing.T) {
 			assert.Equal(t, 0, exitCode, "command should succeed")
 
 			// Verify UoW manifest was created
-			uowManifestPath := filepath.Join(tmpDir, "out", "test", tt.module, "manual-manual-manual", "uow.manifest.json")
+			uowManifestPath := filepath.Join(tmpDir, "out", "test", tt.module, "manual_manual_manual", "uow.manifest.json")
 			require.FileExists(t, uowManifestPath, "UoW manifest should exist")
 
 			// Verify UoW manifest content
@@ -129,7 +129,7 @@ func TestMergeResultsCommand_HappyPath(t *testing.T) {
 			assert.NotEmpty(t, manifest.OutputHash)
 
 			// Verify manual-tests.json was created
-			manualTestsPath := filepath.Join(tmpDir, "out", "test", tt.module, "manual-manual-manual", "manual-tests.json")
+			manualTestsPath := filepath.Join(tmpDir, "out", "test", tt.module, "manual_manual_manual", "manual-tests.json")
 			require.FileExists(t, manualTestsPath)
 
 			// Verify manual-tests.json content
@@ -260,7 +260,7 @@ func TestMergeResultsCommand_EdgeCases(t *testing.T) {
 		exitCode := runMergeResults("test-module", "v1.0.0")
 		assert.Equal(t, 0, exitCode, "command should succeed even with empty results")
 
-		uowManifestPath := filepath.Join(tmpDir, "out", "test", "test-module", "manual-manual-manual", "uow.manifest.json")
+		uowManifestPath := filepath.Join(tmpDir, "out", "test", "test-module", "manual_manual_manual", "uow.manifest.json")
 		require.FileExists(t, uowManifestPath, "UoW manifest should exist")
 	})
 }
@@ -385,8 +385,8 @@ modules:
     name: Test Module
     description: Test module for testing
     components:
-      go:
-        type: go
+      - type: go
+        name: go
         root: /` + module + `
 `
 	repoFile := filepath.Join(clieDir, "repository.yml")

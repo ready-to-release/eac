@@ -114,7 +114,7 @@ func TestScheduledComponentsFilter_AllDepsAreBuildable(t *testing.T) {
 
 	enabledComponents := map[string]componentInfo{
 		"main":   {compType: "go", builder: "go", buildAfter: nil},
-		"docker": {compType: "dockerfile", builder: "buildx", buildAfter: []string{"go"}},
+		"docker": {compType: "container", builder: "buildx", buildAfter: []string{"go"}},
 	}
 
 	// Build scheduledComponents set

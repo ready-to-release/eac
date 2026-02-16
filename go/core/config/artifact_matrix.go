@@ -110,42 +110,37 @@ func (cfg *BlueprintsConfig) expandMatrixWithVisited(matrixName string, params m
 	return artifacts
 }
 
-// expandArtifactMatrixForModule expands a module's artifact_matrix reference into concrete
-// Go component artifacts. Only applies when:
-// 1. Module has ArtifactMatrixRef set
-// 2. Module has a Go component
-// 3. Go component doesn't already have explicit artifacts
+// expandArtifactMatrixForModule expands artifact_matrix references from Go component
+// build blocks into concrete artifacts. Only applies when:
+// 1. Module has a Go component with Build.ArtifactMatrixRef set
+// 2. Go component doesn't already have explicit artifacts
 func expandArtifactMatrixForModule(mod *Module, matrices *BlueprintsConfig) {
-	if mod.ArtifactMatrixRef == "" || matrices == nil {
+	if matrices == nil {
 		return
 	}
 
-	goComp, ok := mod.Components["go"]
-	if !ok || goComp == nil {
+	_, goComp := mod.Components.GetFirstByType("go")
+	if goComp == nil || goComp.Build == nil || goComp.Build.ArtifactMatrixRef == "" {
 		return
 	}
 
 	// Skip if explicit artifacts already defined
-	if goComp.Build != nil && len(goComp.Build.Artifacts) > 0 {
+	if len(goComp.Build.Artifacts) > 0 {
 		return
 	}
 
 	// Expand the matrix with the module's moniker and binary name from component
 	params := map[string]string{"moniker": mod.Moniker}
-	if goComp.Build != nil && goComp.Build.BinaryName != "" {
+	if goComp.Build.BinaryName != "" {
 		params["binary_name"] = goComp.Build.BinaryName
 	} else {
 		params["binary_name"] = mod.Moniker
 	}
-	artifacts := matrices.ExpandArtifactMatrix(mod.ArtifactMatrixRef, params)
+	artifacts := matrices.ExpandArtifactMatrix(goComp.Build.ArtifactMatrixRef, params)
 	if len(artifacts) == 0 {
 		return
 	}
 
-	// Set the expanded artifacts on the Go component
-	if goComp.Build == nil {
-		goComp.Build = &ModuleBuild{}
-	}
 	goComp.Build.Artifacts = artifacts
 }
 

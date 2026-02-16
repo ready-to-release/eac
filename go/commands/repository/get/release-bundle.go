@@ -363,7 +363,8 @@ func getReleaseBundleData(workspaceRoot string, withVersions bool) (*ReleaseBund
 	}
 
 	for _, mod := range report.Modules {
-		if mod.ReleaseBundle != nil {
+		rb := mod.GetReleaseBundle()
+		if rb != nil {
 			releaseBundle = &struct {
 				TitleFormat string
 				Headline    map[string]string
@@ -373,10 +374,10 @@ func getReleaseBundleData(workspaceRoot string, withVersions bool) (*ReleaseBund
 					Modules     []string
 				}
 			}{
-				TitleFormat: mod.ReleaseBundle.TitleFormat,
-				Headline:    mod.ReleaseBundle.Headline,
+				TitleFormat: rb.TitleFormat,
+				Headline:    rb.Headline,
 			}
-			for _, cat := range mod.ReleaseBundle.Categories {
+			for _, cat := range rb.Categories {
 				releaseBundle.Categories = append(releaseBundle.Categories, struct {
 					Name        string
 					Description string
@@ -426,7 +427,7 @@ func getReleaseBundleData(workspaceRoot string, withVersions bool) (*ReleaseBund
 
 		headline := HeadlineModule{
 			Moniker:    moniker,
-			Name:       mod.Name,
+			Name:       mod.Moniker,
 			Versioning: versioning,
 		}
 
@@ -481,7 +482,7 @@ func getReleaseBundleData(workspaceRoot string, withVersions bool) (*ReleaseBund
 
 			bundleMod := ReleaseBundleModule{
 				Moniker:    moniker,
-				Name:       mod.Name,
+				Name:       mod.Moniker,
 				Versioning: versioning,
 			}
 

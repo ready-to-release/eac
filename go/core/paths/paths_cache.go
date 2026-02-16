@@ -124,15 +124,15 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 
 // StructurizrModuleBuildOutputPath returns the path to a module's structurizr build output directory.
 // Each module with a structurizr component gets its own build output.
-// Path: out/build/{module}/design-structurizr-render/structurizr/
+// Path: out/build/{module}/design_structurizr-render/structurizr/
 func StructurizrModuleBuildOutputPath(repoRoot, moduleName string) string {
-	return outSubPath(repoRoot, BuildDir, moduleName, "design-structurizr-render", "structurizr")
+	return outSubPath(repoRoot, BuildDir, moduleName, "design_structurizr-render", "structurizr")
 }
 
 // StructurizrComponentBuildOutputPath returns the path to a per-component structurizr build output.
-// Path: out/build/{module}/{component}-structurizr-render/structurizr/
+// Path: out/build/{module}/{component}_structurizr-render/structurizr/
 func StructurizrComponentBuildOutputPath(repoRoot, moduleName, componentName string) string {
-	unitDir := componentName + "-structurizr-render"
+	unitDir := componentName + "_structurizr-render"
 	return outSubPath(repoRoot, BuildDir, moduleName, unitDir, "structurizr")
 }
 
@@ -144,24 +144,24 @@ func StructurizrAccelCachePath(repoRoot string) string {
 }
 
 // MarkdownCommandsBuildOutputPath returns the markdown-commands fragment output dir.
-// Path: out/build/<module>/markdown-commands-markdown-commands/markdown-commands/
+// Path: out/build/<module>/markdown-commands_markdown-commands/markdown-commands/
 func MarkdownCommandsBuildOutputPath(repoRoot, moduleName string) string {
 	return outSubPath(repoRoot, BuildDir, moduleName,
-		"markdown-commands-markdown-commands", "markdown-commands")
+		"markdown-commands_markdown-commands", "markdown-commands")
 }
 
 // DrawioBuildOutputPath returns the path to the drawio build output directory.
 // This is where rendered drawio PNGs are written by the drawio builder.
-// Path: out/build/docs/drawio-drawio-render/drawio/
+// Path: out/build/docs/drawio_drawio-render/drawio/
 func DrawioBuildOutputPath(repoRoot string) string {
-	return outSubPath(repoRoot, BuildDir, "docs", "drawio-drawio-render", "drawio")
+	return outSubPath(repoRoot, BuildDir, "docs", "drawio_drawio-render", "drawio")
 }
 
 // MermaidBuildOutputPath returns the path to the mermaid build output directory.
 // This is where rendered mermaid SVGs and the index manifest are written.
-// Path: out/build/docs/mermaid-mermaid-render/mermaid/
+// Path: out/build/docs/mermaid_mermaid-render/mermaid/
 func MermaidBuildOutputPath(repoRoot string) string {
-	return outSubPath(repoRoot, BuildDir, "docs", "mermaid-mermaid-render", "mermaid")
+	return outSubPath(repoRoot, BuildDir, "docs", "mermaid_mermaid-render", "mermaid")
 }
 
 // DrawioAccelCachePath returns the path to the drawio acceleration cache.

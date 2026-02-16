@@ -48,11 +48,11 @@ Feature: Tool Resolution for Component Types
       Then the module "test-module" has component "rust"
       And the builder for component type "rust" is "cargo"
 
-    Scenario: A6 - Dockerfile module resolves to buildx builder
+    Scenario: A6 - Container module resolves to buildx builder
       Given I copy the test layout "single-dockerfile-module"
       When I load the EAC configuration
-      Then the module "test-module" has component "dockerfile"
-      And the builder for component type "dockerfile" is "buildx"
+      Then the module "test-module" has component "container"
+      And the builder for component type "container" is "buildx"
 
   # ===========================================================================
   # Category B: Multi-Language Tool Resolution
@@ -98,7 +98,7 @@ Feature: Tool Resolution for Component Types
       And the module "ml-engine" has component "python"
       And the module "core-services" has component "dotnet"
       And the module "cli-tools" has component "rust"
-      And the module "containers" has component "dockerfile"
+      And the module "containers" has component "container"
 
   # ===========================================================================
   # Category B2: .NET Template Variants
@@ -182,10 +182,10 @@ Feature: Tool Resolution for Component Types
       And the component type "python" has scanner "trivy-secrets"
       And the component type "python" has scanner "semgrep"
 
-    Scenario: D3 - Dockerfile module has IaC scanner
+    Scenario: D3 - Container module has IaC scanner
       Given I copy the test layout "single-dockerfile-module"
       When I load the EAC configuration
-      Then the component type "dockerfile" has scanner "trivy-iac"
+      Then the component type "container" has scanner "trivy-iac"
 
   # ===========================================================================
   # Category E: Component Type File Patterns

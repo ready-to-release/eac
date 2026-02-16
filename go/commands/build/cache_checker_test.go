@@ -94,10 +94,10 @@ func TestUoWBuildCacheVerifier_FallbackToModuleCache(t *testing.T) {
 func TestUoWBuildCacheVerifier_CachedNoManifest(t *testing.T) {
 	cacheTime := time.Now().Add(-1 * time.Hour)
 	cachedUoWs := map[string]bool{
-		"build:test-module:go:go:go": true,
+		"build:test-module:go:go": true,
 	}
 	uowCacheTimes := map[string]time.Time{
-		"build:test-module:go:go:go": cacheTime,
+		"build:test-module:go:go": cacheTime,
 	}
 
 	// Non-existent workspace path means no manifest

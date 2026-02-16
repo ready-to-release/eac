@@ -697,7 +697,7 @@ func TestValidateArtifacts_SimulatedBuildOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Simulate a typical build output structure
-	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go-go")
+	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go_go")
 	err := os.MkdirAll(buildDir, 0755)
 	require.NoError(t, err)
 
@@ -724,7 +724,7 @@ func TestValidateArtifacts_SimulatedBuildOutput(t *testing.T) {
 
 		artifacts = append(artifacts, Artifact{
 			ID:     name,
-			Path:   filepath.Join("out", "build", "core", "go-go", name),
+			Path:   filepath.Join("out", "build", "core", "go_go", name),
 			SHA256: hash,
 			Size:   int64(len(content)),
 			Type:   "binary",
@@ -741,7 +741,7 @@ func TestValidateArtifacts_SimulatedPartialBuild(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Simulate partial build where one file is missing
-	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go-go")
+	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go_go")
 	err := os.MkdirAll(buildDir, 0755)
 	require.NoError(t, err)
 
@@ -755,9 +755,9 @@ func TestValidateArtifacts_SimulatedPartialBuild(t *testing.T) {
 	require.NoError(t, err)
 
 	artifacts := []Artifact{
-		{ID: "linux", Path: filepath.Join("out", "build", "core", "go-go", "eac-linux-amd64"), SHA256: hash, Size: int64(len(content)), Type: "binary"},
-		{ID: "darwin", Path: filepath.Join("out", "build", "core", "go-go", "eac-darwin-amd64"), SHA256: "sha256:missing", Size: 1000, Type: "binary"},
-		{ID: "windows", Path: filepath.Join("out", "build", "core", "go-go", "eac-windows-amd64.exe"), SHA256: "sha256:missing", Size: 1000, Type: "binary"},
+		{ID: "linux", Path: filepath.Join("out", "build", "core", "go_go", "eac-linux-amd64"), SHA256: hash, Size: int64(len(content)), Type: "binary"},
+		{ID: "darwin", Path: filepath.Join("out", "build", "core", "go_go", "eac-darwin-amd64"), SHA256: "sha256:missing", Size: 1000, Type: "binary"},
+		{ID: "windows", Path: filepath.Join("out", "build", "core", "go_go", "eac-windows-amd64.exe"), SHA256: "sha256:missing", Size: 1000, Type: "binary"},
 	}
 
 	result := ValidateArtifacts(tmpDir, artifacts)
@@ -836,7 +836,7 @@ func TestComputeOutputHash_DoesNotMutateInput(t *testing.T) {
 func TestValidateArtifacts_SimulatedCorruptedBuild(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go-go")
+	buildDir := filepath.Join(tmpDir, "out", "build", "core", "go_go")
 	err := os.MkdirAll(buildDir, 0755)
 	require.NoError(t, err)
 
@@ -850,7 +850,7 @@ func TestValidateArtifacts_SimulatedCorruptedBuild(t *testing.T) {
 	artifacts := []Artifact{
 		{
 			ID:     "eac",
-			Path:   filepath.Join("out", "build", "core", "go-go", "eac"),
+			Path:   filepath.Join("out", "build", "core", "go_go", "eac"),
 			SHA256: "sha256:expected_but_different_hash",
 			Size:   int64(len(actualContent)),
 			Type:   "binary",

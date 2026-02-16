@@ -210,7 +210,7 @@ func TestDetectUoWChanges_InvalidArtifacts_MarkedAsChanged(t *testing.T) {
 	f.saveManifest(m1)
 
 	// Now corrupt the artifact
-	artifactPath := filepath.Join(f.workspaceRoot, "out", "build", "core", "go-go", "binary")
+	artifactPath := filepath.Join(f.workspaceRoot, "out", "build", "core", "go_go", "binary")
 	err := os.WriteFile(artifactPath, []byte("modified content"), 0644)
 	require.NoError(t, err)
 
@@ -1053,7 +1053,7 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	newTime := time.Now()
 
 	// Create an OLD build manifest for eac-ext (dependent module)
-	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "container", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = oldTime
 	f.saveManifest(extManifest)
@@ -1065,7 +1065,7 @@ func TestDetectUoWChanges_BuildInvalidatedByDependencyModuleBuild(t *testing.T) 
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "container", ComponentName: "container", Tool: "buildx"},
 	}
 
 	// Hash matches - normally would be cached
@@ -1099,7 +1099,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	newTime := time.Now()
 
 	// Create a NEW build manifest for eac-ext (dependent - built after dep)
-	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "container", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = newTime
 	f.saveManifest(extManifest)
@@ -1111,7 +1111,7 @@ func TestDetectUoWChanges_BuildNotInvalidatedByOlderDependencyBuild(t *testing.T
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "container", ComponentName: "container", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1141,7 +1141,7 @@ func TestDetectUoWChanges_NilDependencyResolver_NoInvalidation(t *testing.T) {
 	newTime := time.Now()
 
 	// Create an OLD build manifest for eac-ext
-	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "dockerfile", "buildx")
+	extManifest := f.createUoWManifest(core.ActionBuild, "eac-ext", "container", "buildx")
 	extManifest.InputHash = "sha256:hash-ext"
 	extManifest.ExecutedAt = oldTime
 	f.saveManifest(extManifest)
@@ -1153,7 +1153,7 @@ func TestDetectUoWChanges_NilDependencyResolver_NoInvalidation(t *testing.T) {
 	f.saveManifest(cliManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "eac-ext", ComponentType: "container", ComponentName: "container", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {
@@ -1177,7 +1177,7 @@ func TestDetectUoWChanges_MultipleDependencies_AnyNewerInvalidates(t *testing.T)
 	newTime := time.Now()
 
 	// Create an OLD build manifest for dependent module
-	depManifest := f.createUoWManifest(core.ActionBuild, "my-image", "dockerfile", "buildx")
+	depManifest := f.createUoWManifest(core.ActionBuild, "my-image", "container", "buildx")
 	depManifest.InputHash = "sha256:hash-img"
 	depManifest.ExecutedAt = oldTime
 	f.saveManifest(depManifest)
@@ -1195,7 +1195,7 @@ func TestDetectUoWChanges_MultipleDependencies_AnyNewerInvalidates(t *testing.T)
 	f.saveManifest(depBManifest)
 
 	expectedUoWs := []workunit.UnitID{
-		{Action: core.ActionBuild, Module: "my-image", ComponentType: "dockerfile", ComponentName: "dockerfile", Tool: "buildx"},
+		{Action: core.ActionBuild, Module: "my-image", ComponentType: "container", ComponentName: "container", Tool: "buildx"},
 	}
 
 	getInputHash := func(id workunit.UnitID) (string, error) {

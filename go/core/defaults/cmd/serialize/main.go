@@ -39,7 +39,6 @@ func main() {
 	}
 	type ModuleOutput struct {
 		Moniker     string                     `yaml:"moniker"`
-		Name        string                     `yaml:"name"`
 		Type        string                     `yaml:"type"`
 		Description string                     `yaml:"description"`
 		DependsOn   []string                   `yaml:"depends_on"`
@@ -51,7 +50,6 @@ func main() {
 	for _, m := range allModules {
 		out := ModuleOutput{
 			Moniker:     m.Moniker,
-			Name:        m.Name,
 			Type:        m.GetComponentTypesDisplay(),
 			Description: m.Description,
 			DependsOn:   m.DependsOn,

@@ -47,9 +47,9 @@ modules:
   - moniker: myservice
     description: Backend service
     components:
-      go:
+      - type: go
+        name: go
         root: go/myservice
-        type: service
 `,
 			wantContains: []string{
 				"repository:",
@@ -85,18 +85,18 @@ modules:
   - moniker: api
     description: Backend API service
     components:
-      go:
+      - type: go
+        name: go
         root: services/api
-        type: service
 
   - moniker: frontend
     description: Frontend web application
     depends_on:
       - api
     components:
-      typescript:
+      - type: typescript
+        name: typescript
         root: apps/frontend
-        type: app
 `,
 			wantContains: []string{
 				"full-stack-app",

@@ -283,7 +283,7 @@ func TestOutputReader_ListUoWs_SkipsInvalidManifests(t *testing.T) {
 	f.createUoWManifest(core.ActionBuild, "test-module", "go", "go")
 
 	// Create invalid manifest (bad JSON)
-	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", "docker-docker")
+	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", "docker_docker")
 	err := os.MkdirAll(invalidDir, 0755)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(invalidDir, "uow.manifest.json"), []byte("invalid json {{{"), 0644)

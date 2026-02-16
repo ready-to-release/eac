@@ -171,7 +171,7 @@ func SetupTwoGoModulesWithEAC(ctx *TestContext, module1, module2 string, stage b
 
 // CreateModulesYml creates module definitions in repository.yml.
 // Note: Modules are now part of the unified repository.yml config.
-// moduleType is used as the component type key (e.g., "go", "typescript", "dockerfile").
+// moduleType is used as the component type key (e.g., "go", "typescript", "container").
 func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType string) error {
 	content := fmt.Sprintf(`modules:
   - moniker: %s

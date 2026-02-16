@@ -76,7 +76,7 @@ func TestOutputReader_ValidateUoW_ReturnsInvalidWhenArtifactsCorrupt(t *testing.
 	f := newTestFixture(t)
 
 	// Create UoW directory
-	dirName := "go-go"
+	dirName := "go_go"
 	uowDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(uowDir, 0755)
 	require.NoError(t, err)
@@ -422,7 +422,7 @@ func TestOutputReader_GetUoW_HandlesInvalidManifestJSON(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create directory with invalid manifest
-	dirName := "go-go"
+	dirName := "go_go"
 	manifestDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -440,7 +440,7 @@ func TestOutputReader_GetUoW_HandlesEmptyManifest(t *testing.T) {
 	f := newTestFixture(t)
 
 	// Create directory with empty manifest
-	dirName := "go-go"
+	dirName := "go_go"
 	manifestDir := filepath.Join(f.workspaceRoot, "out", "build", "test-module", dirName)
 	err := os.MkdirAll(manifestDir, 0755)
 	require.NoError(t, err)
@@ -474,7 +474,7 @@ func TestOutputReader_GetModule_HandlesMixedValidAndInvalidManifests(t *testing.
 	f.createUoWManifest(core.ActionBuild, "mixed-module", "go", "go")
 
 	// Create invalid manifest
-	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "mixed-module", "docker-docker")
+	invalidDir := filepath.Join(f.workspaceRoot, "out", "build", "mixed-module", "docker_docker")
 	err := os.MkdirAll(invalidDir, 0755)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(invalidDir, "uow.manifest.json"), []byte("invalid"), 0644)

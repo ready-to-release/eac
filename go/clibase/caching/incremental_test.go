@@ -57,7 +57,6 @@ func createModuleWithPatterns(t *testing.T, registry *modules.Registry, moniker,
 	t.Helper()
 	base := domain.BaseContract{
 		Moniker: moniker,
-		Name:    moniker,
 		Components: config.ModuleComponents{
 			"go": &config.ComponentEntry{
 				Root: root,
@@ -469,9 +468,9 @@ func TestDetectIncrementalChanges_DeduplicatesModuleFiles(t *testing.T) {
 
 	// Two UoWs for the same module (e.g., unit tests and integration tests)
 	id1 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id1.Extra = map[string]string{"testset": "unit"}
+	id1.Extra = map[string]string{"testname": "unit"}
 	id2 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id2.Extra = map[string]string{"testset": "integration"}
+	id2.Extra = map[string]string{"testname": "integration"}
 	specs := []workunit.UnitSpec{makeUnitSpec(id1), makeUnitSpec(id2)}
 
 	result := DetectIncrementalChanges(ctx, core.ActionTest, specs, "test")
@@ -494,9 +493,9 @@ func TestDetectIncrementalChanges_MultipleUoWsPerModule_AllCached(t *testing.T) 
 
 	// Two UoWs for the same module
 	id1 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id1.Extra = map[string]string{"testset": "unit"}
+	id1.Extra = map[string]string{"testname": "unit"}
 	id2 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id2.Extra = map[string]string{"testset": "integration"}
+	id2.Extra = map[string]string{"testname": "integration"}
 	specs := []workunit.UnitSpec{makeUnitSpec(id1), makeUnitSpec(id2)}
 
 	// Get hash for creating manifests
@@ -548,9 +547,9 @@ func TestDetectIncrementalChanges_MultipleUoWsPerModule_PartiallyCached(t *testi
 
 	// Two UoWs for the same module
 	id1 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id1.Extra = map[string]string{"testset": "unit"}
+	id1.Extra = map[string]string{"testname": "unit"}
 	id2 := makeUnitID(core.ActionTest, "mod-a", "go", "go", "gotest")
-	id2.Extra = map[string]string{"testset": "integration"}
+	id2.Extra = map[string]string{"testname": "integration"}
 	specs := []workunit.UnitSpec{makeUnitSpec(id1), makeUnitSpec(id2)}
 
 	// Get hash

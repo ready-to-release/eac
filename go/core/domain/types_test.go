@@ -12,7 +12,6 @@ import (
 func TestBaseContract_Getters(t *testing.T) {
 	contract := BaseContract{
 		Moniker:     "test-moniker",
-		Name:        "Test Name",
 		Description: "Test description",
 		Components: config.ModuleComponents{
 			"go": &config.ComponentEntry{Root: "test/root"},
@@ -25,7 +24,7 @@ func TestBaseContract_Getters(t *testing.T) {
 		expected string
 	}{
 		{"GetMoniker", contract.GetMoniker(), "test-moniker"},
-		{"GetName", contract.GetName(), "Test Name"},
+		{"GetName", contract.GetName(), "test-moniker"},
 		{"GetDescription", contract.GetDescription(), "Test description"},
 		{"GetComponentRoot", contract.GetComponentRoot("go"), "test/root"},
 	}

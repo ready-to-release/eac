@@ -147,9 +147,9 @@ func TestBackgroundCacheDetection_DoesNotIncrementCounter(t *testing.T) {
 	assert.Equal(t, 0, completed, "background cache detection should NOT increment tuiCompleted")
 
 	// Verify items were marked as early cached (visual state is fine)
-	// Longname format: context:module:componentType:componentName:tool (empty context and tool in this test)
-	_, ok1 := us.earlyCached.Load(":mod1:comp1:comp1:")
-	_, ok2 := us.earlyCached.Load(":mod1:comp2:comp2:")
+	// Longname format: action:module:componentName:tool (empty action and tool in this test)
+	_, ok1 := us.earlyCached.Load(":mod1:comp1:")
+	_, ok2 := us.earlyCached.Load(":mod1:comp2:")
 	assert.True(t, ok1, "comp1 should be marked as early cached")
 	assert.True(t, ok2, "comp2 should be marked as early cached")
 }

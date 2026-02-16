@@ -184,11 +184,11 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 		return cfg
 	}
 
-	// For site builds: check if module has a dockerfile package with docker_build config
+	// For site builds: check if module has a container component with docker_build config
 	// (This is rare - book modules typically use shared containers like mkdocs-render-oci)
-	dockerfilePkg := module.Components["dockerfile"]
-	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil {
-		dbCfg := dockerfilePkg.DockerBuild
+	_, containerPkg := module.Components.GetFirstByType("container")
+	if containerPkg != nil && containerPkg.DockerBuild != nil {
+		dbCfg := containerPkg.DockerBuild
 		if len(dbCfg.Tags) > 0 {
 			cfg.ImageName = dbCfg.Tags[0]
 		} else if dbCfg.Container != "" {

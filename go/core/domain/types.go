@@ -74,13 +74,10 @@ type DefaultConventions struct {
 // BaseContract represents the base structure for module domain.
 type BaseContract struct {
 	Moniker       string                  `yaml:"moniker"`
-	Name          string                  `yaml:"name"`
 	Description   string                  `yaml:"description"`
-	ModuleGroup   string                  `yaml:"module_group,omitempty"` // Group name for depends_on expansion
+	Group         string                  `yaml:"group,omitempty"`        // Group name for depends_on expansion
 	DependsOn     []string                `yaml:"depends_on"`
 	Versioning    *config.ModuleVersioning `yaml:"versioning,omitempty"`
-	EvidenceBooks []string                `yaml:"evidence_books,omitempty"` // Evidence book names
-	ReleaseBundle *config.ReleaseBundle   `yaml:"release_bundle,omitempty"`
 	Metadata      map[string]string       `yaml:"metadata,omitempty"`
 	Components     config.ModuleComponents `yaml:"components"`        // Component types mapped to their roots
 	ComponentOrder []string               `yaml:"-"`                 // YAML declaration order of component keys
@@ -94,15 +91,15 @@ func (b *BaseContract) GetMoniker() string {
 }
 
 func (b *BaseContract) GetName() string {
-	return b.Name
+	return b.Moniker
 }
 
 func (b *BaseContract) GetDescription() string {
 	return b.Description
 }
 
-func (b *BaseContract) GetModuleGroup() string {
-	return b.ModuleGroup
+func (b *BaseContract) GetGroup() string {
+	return b.Group
 }
 
 // GetComponentRoot returns the root for a specific component type.
@@ -208,21 +205,27 @@ func (b *BaseContract) GetComponentAmp(componentName, operation string) float64 
 	return comp.GetAmpForOperation(operation)
 }
 
+// GetReleaseBundle returns the release bundle config from a release-bundle component, if any.
+func (b *BaseContract) GetReleaseBundle() *config.ReleaseBundle {
+	_, comp := b.Components.GetFirstByType("release-bundle")
+	if comp == nil {
+		return nil
+	}
+	return comp.Bundle
+}
+
 // ModuleToBaseContract converts a config.Module to a BaseContract.
 // This centralizes the mapping so callers do not need field-by-field copying.
 func ModuleToBaseContract(m config.Module) BaseContract {
 	return BaseContract{
 		Moniker:        m.Moniker,
-		Name:           m.Name,
 		Description:    m.Description,
-		ModuleGroup:    m.ModuleGroup,
+		Group:          m.Group,
 		DependsOn:      m.DependsOn,
 		Metadata:       m.Metadata,
-		EvidenceBooks:  m.EvidenceBooks,
 		ComponentOrder: m.ComponentOrder,
 		Components:     m.Components,
 		Linting:        m.Linting,
 		Versioning:     m.Versioning,
-		ReleaseBundle:  m.ReleaseBundle,
 	}
 }

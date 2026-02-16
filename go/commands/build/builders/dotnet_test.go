@@ -67,7 +67,7 @@ type mockModuleForValidation struct {
 func (m *mockModuleForValidation) GetMoniker() string                              { return "test" }
 func (m *mockModuleForValidation) GetName() string                                 { return "Test" }
 func (m *mockModuleForValidation) GetDescription() string                          { return "" }
-func (m *mockModuleForValidation) GetModuleGroup() string                          { return "" }
+func (m *mockModuleForValidation) GetGroup() string                                { return "" }
 func (m *mockModuleForValidation) HasComponent(componentType string) bool          { return true }
 func (m *mockModuleForValidation) GetComponentRoot(componentType string) string     { return m.componentRoot }
 func (m *mockModuleForValidation) GetComponentRoots() map[string]string            { return nil }

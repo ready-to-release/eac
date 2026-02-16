@@ -70,8 +70,8 @@ func TestAggregateUoWChanges_AllCached_ModuleCached(t *testing.T) {
 	assert.Empty(t, result.ChangedModules)
 
 	// Both UoWs should be marked cached
-	assert.True(t, result.CachedUoWs["build:core:go:go:go"])
-	assert.True(t, result.CachedUoWs["build:core:docker:docker:docker"])
+	assert.True(t, result.CachedUoWs["build:core:go:go"])
+	assert.True(t, result.CachedUoWs["build:core:docker:docker"])
 }
 
 func TestAggregateUoWChanges_PartialCached_ModuleChanged(t *testing.T) {
@@ -105,8 +105,8 @@ func TestAggregateUoWChanges_PartialCached_ModuleChanged(t *testing.T) {
 	assert.Empty(t, result.UpToDateModules)
 
 	// Only go UoW should be cached
-	assert.True(t, result.CachedUoWs["build:core:go:go:go"])
-	assert.False(t, result.CachedUoWs["build:core:docker:docker:docker"])
+	assert.True(t, result.CachedUoWs["build:core:go:go"])
+	assert.False(t, result.CachedUoWs["build:core:docker:docker"])
 }
 
 func TestAggregateUoWChanges_MultipleModules(t *testing.T) {
@@ -218,8 +218,8 @@ func TestAggregateUoWChanges_RecordsCacheTimes(t *testing.T) {
 	require.NoError(t, err)
 
 	// UoW cache times should be recorded
-	assert.Equal(t, time1, result.UoWCacheTimes["build:core:go:go:go"])
-	assert.Equal(t, time2, result.UoWCacheTimes["build:core:docker:docker:docker"])
+	assert.Equal(t, time1, result.UoWCacheTimes["build:core:go:go"])
+	assert.Equal(t, time2, result.UoWCacheTimes["build:core:docker:docker"])
 
 	// Module cache time should be the earliest (oldest) of its UoWs
 	assert.Equal(t, time1, result.ModuleCacheTimes["core"])
@@ -249,5 +249,5 @@ func TestAggregateUoWChanges_PreservesUoWResult(t *testing.T) {
 	assert.NotNil(t, result.UoWResult)
 	assert.Len(t, result.UoWResult.Changed, 1)
 	assert.Len(t, result.UoWResult.UpToDate, 1)
-	assert.Contains(t, result.UoWResult.ChangeReasons, "build:core:docker:docker:docker")
+	assert.Contains(t, result.UoWResult.ChangeReasons, "build:core:docker:docker")
 }

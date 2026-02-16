@@ -11,6 +11,7 @@ import (
 	"github.com/cucumber/godog"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -347,22 +348,20 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return err
 	}
 
-	// Use cached module contracts for performance
-	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
-		return err
-	}
-
-	moduleReport, err := c.sharedCtx.OriginalRepoCache.ModuleReport()
+	// Load module contracts directly (bypasses port abstraction to access
+	// component type information needed for Go module discovery).
+	moduleReport, err := reports.GetModuleContracts(c.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
-	for _, module := range moduleReport.Registry().All() {
-		// In the unified type system, check if module has "go" package type
-		if module.HasComponent("go") {
-			goRoot := module.GetComponentRoot("go")
-			if goRoot != "" {
-				modulePath := filepath.Join(c.repoRoot, goRoot)
+	for _, module := range moduleReport.Registry.All() {
+		// Find Go components by type (not name), since list-format component
+		// names are derived from root paths (e.g., "eac"), not the type "go".
+		goComps := module.Components.GetComponentsByType("go")
+		for _, comp := range goComps {
+			if comp != nil && comp.Root != "" {
+				modulePath := filepath.Join(c.repoRoot, comp.Root)
 				c.discoveredModules = append(c.discoveredModules, modulePath)
 			}
 		}

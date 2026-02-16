@@ -1,5 +1,6 @@
 modules:
   - moniker: test-module
-    name: Test Module
     components:
-      typescript: typescript/test-module
+      - type: typescript
+        name: typescript
+        root: typescript/test-module

@@ -50,7 +50,6 @@ func TestModuleDefaults_Description(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: My Test Module Name
     type: test-type
     files:
       root: src/test
@@ -78,7 +77,6 @@ func TestModuleDefaults_DependsOn(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -108,7 +106,6 @@ func TestModuleDefaults_FilesChangelog(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -136,7 +133,6 @@ func TestModuleDefaults_FilesRepoSpecs(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -171,7 +167,6 @@ func TestModuleDefaults_FilesSource(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -199,7 +194,6 @@ func TestModuleDefaults_FilesConfig(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -226,7 +220,6 @@ func TestModuleDefaults_FilesAssets(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -253,7 +246,6 @@ func TestModuleDefaults_FilesTests(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -280,7 +272,6 @@ func TestModuleDefaults_FilesExclude(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -307,7 +298,6 @@ func TestModuleDefaults_FilesRepoOther(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -334,7 +324,6 @@ func TestModuleDefaults_FilesRepoExclude(t *testing.T) {
 	content := `
 modules:
   - moniker: test-module
-    name: Test Module
     type: test-type
     files:
       root: src/test
@@ -362,7 +351,7 @@ func TestModuleDefaults_AllFieldsMinimal(t *testing.T) {
 	content := `
 modules:
   - moniker: minimal-module
-    name: Minimal Module
+    description: Minimal Module
     files:
       root: src/minimal
 `
@@ -385,7 +374,6 @@ modules:
 		expected interface{}
 	}{
 		{"Moniker", module.Moniker, "minimal-module"},
-		{"Name", module.Name, "Minimal Module"},
 		{"Description", module.Description, "Minimal Module"},
 		{"Files.Root", module.Files.Root, "src/minimal"},
 		{"Files.Changelog", module.Files.Changelog, "CHANGELOG.md"},
@@ -415,7 +403,6 @@ func TestModuleDefaults_ExplicitValuesNotOverwritten(t *testing.T) {
 	content := `
 modules:
   - moniker: explicit-module
-    name: Explicit Module
     type: custom-type
     description: Custom description
     depends_on:
@@ -432,12 +419,10 @@ modules:
         specs:
           - custom/specs/**
   - moniker: dep1
-    name: Dependency One
     type: dep-type
     files:
       root: src/dep1
   - moniker: dep2
-    name: Dependency Two
     type: dep-type
     files:
       root: src/dep2
@@ -488,7 +473,6 @@ func TestModuleDefaults_OmittedFieldsGetDefaults(t *testing.T) {
 	content := `
 modules:
   - moniker: omitted-fields-module
-    name: Omitted Fields Module
     description: ""
     files:
       root: src/test

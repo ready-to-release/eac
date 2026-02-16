@@ -53,7 +53,7 @@ func DefaultScanCategories() []ScanCategory {
 
 // ToolAssignment represents a resolved tool for a component and phase.
 type ToolAssignment struct {
-	// ComponentName is the component name from the module (e.g., "go", "dockerfile")
+	// ComponentName is the component name from the module (e.g., "go", "container")
 	ComponentName string
 
 	// ComponentType is the component type from blueprints.yml component-kinds

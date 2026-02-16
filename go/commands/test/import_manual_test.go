@@ -1027,8 +1027,8 @@ modules:
     name: Test Module
     description: Test module for testing
     components:
-      go:
-        type: go
+      - type: go
+        name: go
         root: /` + module + `
 `
 	repoFile := filepath.Join(clieDir, "repository.yml")

@@ -49,7 +49,7 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 		return code
 	}
 
-	release, outputDir, moduleRoot, code := prepareLintWorkspace(ctx, params, handler, moduleContract, logWriter)
+	release, outputDir, moduleRoot, code := prepareLintWorkspace(ctx, params, unitID.DirName(), handler, moduleContract, logWriter)
 	if code != 0 {
 		return code
 	}
@@ -155,8 +155,7 @@ func resolveLintHandler(ctx *cmdframework.ExecutionContext, params *lintWorkerPa
 // resolves the component root, and validates the module for the handler.
 // Returns the lock release function, output directory, module root, and exit code.
 // The caller must defer the release function when exit code is 0.
-func prepareLintWorkspace(ctx *cmdframework.ExecutionContext, params *lintWorkerParams, handler tool.LintHandler, moduleContract core.ModuleContractPort, logWriter io.Writer) (func(), string, string, int) {
-	componentDir := cmdframework.UnitDir(params.compName, params.providerName)
+func prepareLintWorkspace(ctx *cmdframework.ExecutionContext, params *lintWorkerParams, componentDir string, handler tool.LintHandler, moduleContract core.ModuleContractPort, logWriter io.Writer) (func(), string, string, int) {
 
 	release, err := params.pipeline.AcquireLock(ctx, params.module, componentDir)
 	if err != nil {

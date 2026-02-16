@@ -1,7 +1,6 @@
 package output
 
 import (
-	"sort"
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -47,8 +46,8 @@ type Artifact struct {
 }
 
 // UoWManifest represents a Unit of Work manifest containing execution metadata.
-// This is written to out/{context}/{module}/{dirname}/uow.manifest.json
-// where dirname = component[-extra1][-extra2]... for uniqueness.
+// This is written to out/{action}/{module}/{dirname}/uow.manifest.json
+// where dirname = component_tool[_qualifier] for uniqueness.
 type UoWManifest struct {
 	// Action is the operation type: build, test, lint, or scan.
 	Action core.ActionType `json:"context"` // JSON tag kept as "context" for cache compat
@@ -103,28 +102,15 @@ type UoWManifest struct {
 }
 
 // DirName returns the unique directory name for this manifest.
-// Format: component-tool[-extraVal1][-extraVal2]...
-// Tool and extra values are appended with dashes in sorted key order for uniqueness.
+// Format: component_tool[_qualifier]
 func (m *UoWManifest) DirName() string {
-	dirName := m.Component
-	if m.Tool != "" {
-		dirName += "-" + m.Tool
-	}
-
-	// Append all Extra values with dashes in sorted key order
-	if len(m.Extra) > 0 {
-		keys := make([]string, 0, len(m.Extra))
-		for k := range m.Extra {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			if v := m.Extra[k]; v != "" {
-				dirName += "-" + v
-			}
+	base := m.Component + "_" + m.Tool
+	if m.Action == core.ActionTest {
+		if name := m.Extra["testname"]; name != "" {
+			base += "_" + name
 		}
 	}
-	return dirName
+	return base
 }
 
 // GetExtra returns context-specific discriminators (e.g., testset, category).

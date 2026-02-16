@@ -32,7 +32,7 @@ type ModuleIdentity interface {
 	GetMoniker() string
 	GetName() string
 	GetDescription() string
-	GetModuleGroup() string
+	GetGroup() string
 }
 
 // ModuleComponentProvider provides component layout information.

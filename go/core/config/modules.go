@@ -2,7 +2,11 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -12,25 +16,15 @@ import (
 // Module represents a single module definition.
 type Module struct {
 	Moniker       string                `yaml:"moniker"`
-	Name          string                `yaml:"name"`
 	Description   string                `yaml:"description"`
-	Template      string                `yaml:"template,omitempty"`      // Reference to a module template name
-	ModuleGroup   string                `yaml:"module_group,omitempty"`  // Group name for depends_on expansion
+	Group         string                `yaml:"group,omitempty"`         // Group name for depends_on expansion
 	DependsOn     []string              `yaml:"depends_on"`
 	DependsOnCI   []string              `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
 	CIDeps        []string              `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
-	EvidenceBooks []string              `yaml:"evidence_books,omitempty"` // Evidence book names, built via 'update evidence' command
-	ReleaseBundle *ReleaseBundle        `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
 	Metadata      map[string]string     `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
 	Versioning    *ModuleVersioning     `yaml:"versioning,omitempty"`
 	Components    ModuleComponents      `yaml:"components"`        // Component types for this module (required)
 	Linting       *ModuleLinting        `yaml:"linting,omitempty"` // Linting configuration overrides
-
-	// ComponentRoots declares multiple root paths per component kind for concise
-	// multi-component modules. Expanded into Components by expandComponentRoots.
-	ComponentRoots map[string]*ComponentRootsEntry `yaml:"component_roots,omitempty"`
-
-	ArtifactMatrixRef string `yaml:"artifact_matrix,omitempty"` // Reference to an artifact matrix name
 
 	// ComponentOrder preserves YAML declaration order for display purposes.
 	// Populated during UnmarshalYAML; components added later (e.g., by discovery) are appended.
@@ -50,8 +44,200 @@ func (m *Module) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// extractComponentOrder walks a Module YAML node to find the "components" mapping
-// and returns its keys in declaration order.
+// FacetSeparator is the character used to separate parent name from facet suffix
+// in synthetic component names (e.g., "godog~specs").
+const FacetSeparator = "~"
+
+// FacetConfig defines how a facet maps to a component kind.
+type FacetConfig struct {
+	Kind       string // blueprints.yml component-kind name
+	NameSuffix string // suffix appended after "~"
+}
+
+// DefaultFacetMappings returns the built-in facet-to-kind mappings.
+func DefaultFacetMappings() map[string]FacetConfig {
+	return map[string]FacetConfig{
+		"specs":  {Kind: "gherkin", NameSuffix: "specs"},
+		"design": {Kind: "structurizr", NameSuffix: "design"},
+		"docs":   {Kind: "docs-assets", NameSuffix: "docs"},
+	}
+}
+
+// FacetDeclaration represents a facet that can be either:
+//   - Simple: a list of glob patterns (inherits parent root)
+//   - Rooted: a mapping with explicit root and patterns (independent root)
+type FacetDeclaration struct {
+	Root     string   // Independent root path (empty = inherit parent root)
+	Patterns []string // Glob patterns for source files
+}
+
+// IsEmpty returns true if the facet has no patterns declared.
+func (fd *FacetDeclaration) IsEmpty() bool {
+	return fd == nil || len(fd.Patterns) == 0
+}
+
+// UnmarshalYAML handles both list and mapping forms:
+//
+//	specs: ["**/*.feature"]           -> FacetDeclaration{Patterns: [...]}
+//	design:
+//	  root: specs/foo/.design
+//	  patterns: ["**/*.dsl"]          -> FacetDeclaration{Root: "...", Patterns: [...]}
+func (fd *FacetDeclaration) UnmarshalYAML(node *yaml.Node) error {
+	// Sequence node -> simple list of patterns
+	if node.Kind == yaml.SequenceNode {
+		return node.Decode(&fd.Patterns)
+	}
+
+	// Mapping node -> rooted facet
+	if node.Kind == yaml.MappingNode {
+		type raw struct {
+			Root     string   `yaml:"root"`
+			Patterns []string `yaml:"patterns"`
+		}
+		var r raw
+		if err := node.Decode(&r); err != nil {
+			return err
+		}
+		fd.Root = r.Root
+		fd.Patterns = r.Patterns
+		return nil
+	}
+
+	return fmt.Errorf("facet: expected sequence or mapping, got %v", node.Kind)
+}
+
+// Clone creates a deep copy of FacetDeclaration.
+func (fd *FacetDeclaration) Clone() *FacetDeclaration {
+	if fd == nil {
+		return nil
+	}
+	return &FacetDeclaration{
+		Root:     fd.Root,
+		Patterns: slices.Clone(fd.Patterns),
+	}
+}
+
+// expandFacets processes all components and expands facet declarations
+// (specs, design, docs) into synthetic ComponentEntry objects.
+// For each component with non-empty facet fields, a synthetic entry is created
+// with name "{parent}~{facet}", type from FacetConfig.Kind, and source patterns
+// from the facet field. The root is either inherited from the parent or taken
+// from the facet's own Root field (for rooted facets).
+func expandFacets(components ModuleComponents) error {
+	facets := DefaultFacetMappings()
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+
+	for parentName, entry := range components {
+		if entry == nil {
+			continue
+		}
+
+		facetFields := map[string]*FacetDeclaration{
+			"specs":  entry.Specs,
+			"design": entry.Design,
+			"docs":   entry.Docs,
+		}
+
+		for facetName, decl := range facetFields {
+			if decl == nil || decl.IsEmpty() {
+				continue
+			}
+
+			cfg := facets[facetName]
+			synthName := parentName + FacetSeparator + cfg.NameSuffix
+
+			if _, exists := components[synthName]; exists {
+				return fmt.Errorf(
+					"facet expansion conflict: component %q would be created from %s.%s, "+
+						"but a component with that name already exists",
+					synthName, parentName, facetName,
+				)
+			}
+
+			// Use facet's own root if specified, otherwise inherit parent root
+			root := entry.Root
+			if decl.Root != "" {
+				root = decl.Root
+			}
+
+			additions = append(additions, addition{
+				name: synthName,
+				entry: &ComponentEntry{
+					Type: cfg.Kind,
+					Root: root,
+					Patterns: &ComponentPatterns{
+						Source: slices.Clone(decl.Patterns),
+					},
+					ParentComponent: parentName,
+					FacetName:       facetName,
+				},
+			})
+		}
+	}
+
+	for _, a := range additions {
+		components[a.name] = a.entry
+	}
+
+	return nil
+}
+
+// IsFacetComponent returns true if this component was created by facet expansion.
+func (ce *ComponentEntry) IsFacetComponent() bool {
+	return ce != nil && ce.FacetName != ""
+}
+
+// expandCompanions processes all components and creates companion ComponentEntry
+// objects from the With field. Each companion shares the parent's root and uses
+// its type as its name. Existing components with the same name are not overwritten.
+func expandCompanions(components ModuleComponents) error {
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+
+	for _, entry := range components {
+		if entry == nil || len(entry.With) == 0 {
+			continue
+		}
+		for _, companionType := range entry.With {
+			if _, exists := components[companionType]; exists {
+				continue // Skip if already declared
+			}
+			alreadyQueued := false
+			for _, a := range additions {
+				if a.name == companionType {
+					alreadyQueued = true
+					break
+				}
+			}
+			if alreadyQueued {
+				continue
+			}
+			additions = append(additions, addition{
+				name: companionType,
+				entry: &ComponentEntry{
+					Name: companionType,
+					Type: companionType,
+					Root: entry.Root,
+				},
+			})
+		}
+	}
+
+	for _, a := range additions {
+		components[a.name] = a.entry
+	}
+	return nil
+}
+
+// extractComponentOrder walks a Module YAML node to find the "components" key
+// and returns component names in declaration order.
 func extractComponentOrder(moduleNode *yaml.Node) []string {
 	if moduleNode.Kind != yaml.MappingNode {
 		return nil
@@ -59,37 +245,89 @@ func extractComponentOrder(moduleNode *yaml.Node) []string {
 	for i := 0; i < len(moduleNode.Content)-1; i += 2 {
 		keyNode := moduleNode.Content[i]
 		valNode := moduleNode.Content[i+1]
-		if keyNode.Value == "components" && valNode.Kind == yaml.MappingNode {
-			var order []string
-			for j := 0; j < len(valNode.Content)-1; j += 2 {
-				order = append(order, valNode.Content[j].Value)
-			}
-			return order
+		if keyNode.Value != "components" {
+			continue
 		}
+
+		if valNode.Kind != yaml.SequenceNode {
+			return nil
+		}
+
+		// List format: derive names from each item's name/root/type
+		facets := DefaultFacetMappings()
+		var order []string
+		for _, itemNode := range valNode.Content {
+			if itemNode.Kind != yaml.MappingNode {
+				continue
+			}
+			var entry struct {
+				Name   string            `yaml:"name"`
+				Root   string            `yaml:"root"`
+				Type   string            `yaml:"type"`
+				Specs  *FacetDeclaration `yaml:"specs"`
+				Design *FacetDeclaration `yaml:"design"`
+				Docs   *FacetDeclaration `yaml:"docs"`
+				With   []string          `yaml:"with"`
+			}
+			_ = itemNode.Decode(&entry)
+			name := entry.Name
+			if name == "" {
+				name = DefaultDeriveName(entry.Root)
+			}
+			if name == "" {
+				name = entry.Type
+			}
+			order = append(order, name)
+
+			// Append facet-derived names
+			facetFields := map[string]*FacetDeclaration{
+				"specs":  entry.Specs,
+				"design": entry.Design,
+				"docs":   entry.Docs,
+			}
+			for facetName, decl := range facetFields {
+				if decl != nil && !decl.IsEmpty() {
+					cfg := facets[facetName]
+					order = append(order, name+FacetSeparator+cfg.NameSuffix)
+				}
+			}
+
+			// Append companion-derived names
+			for _, companionType := range entry.With {
+				order = append(order, companionType)
+			}
+		}
+		return order
 	}
 	return nil
 }
 
-// ComponentRootsEntry declares multiple root paths for a component kind.
-// Supports two YAML forms:
-//   - Plain list: go: [go/commands/base, go/commands/build]
-//   - Object:     go: {name_pattern: "^contracts/(.+?)/[\\d.]+$", roots: [...]}
-type ComponentRootsEntry struct {
-	NamePattern string   `yaml:"name_pattern,omitempty"`
-	Roots       []string `yaml:"roots"`
-}
-
-// UnmarshalYAML allows ComponentRootsEntry to be parsed from either
-// a sequence (plain list of roots) or a mapping (object with name_pattern + roots).
-func (e *ComponentRootsEntry) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.SequenceNode {
-		return node.Decode(&e.Roots)
+// DefaultDeriveName infers a component name from a root path using last-segment heuristics.
+// It strips leading dots, replaces underscores with hyphens, and truncates to 16 characters.
+// Returns empty string if rootPath is empty or "/".
+//
+// Examples:
+//
+//	"go/adapters/godog"   → "godog"
+//	"specs/docs/.design"  → "design"
+//	"go/core"             → "core"
+//	"contracts/core/0.1.0" → "0-1-0"  (version paths need explicit name)
+func DefaultDeriveName(rootPath string) string {
+	if rootPath == "" || rootPath == "/" {
+		return ""
 	}
-	if node.Kind == yaml.MappingNode {
-		type raw ComponentRootsEntry
-		return node.Decode((*raw)(e))
+	// Use path.Base for forward-slash paths (YAML always uses forward slashes)
+	name := path.Base(filepath.ToSlash(rootPath))
+	name = strings.TrimLeft(name, ".")
+	name = strings.ReplaceAll(name, "_", "-")
+	// Strip dots in remaining name (e.g., "0.1.0" → "0-1-0" isn't great, but these need explicit names)
+	if len(name) > 16 {
+		name = name[:16]
 	}
-	return fmt.Errorf("invalid component_roots entry: expected list or object")
+	if name == "" {
+		return ""
+	}
+	return name
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -140,6 +378,37 @@ func (m *Module) GetBooks() []string {
 	return names
 }
 
+// GetEvidenceBooks returns the list of evidence book names from evidence-book components.
+// The book name is taken from the component's config["book"], falling back to the component name.
+// Names are sorted for consistent ordering.
+func (m *Module) GetEvidenceBooks() []string {
+	evidenceBooks := m.Components.GetComponentsByType("evidence-book")
+	if len(evidenceBooks) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(evidenceBooks))
+	for name, entry := range evidenceBooks {
+		bookName := name
+		if entry != nil && entry.GetConfig("book") != "" {
+			bookName = entry.GetConfig("book")
+		}
+		names = append(names, bookName)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetReleaseBundle returns the release bundle configuration from a release-bundle component.
+// Returns nil if no release-bundle component exists.
+func (m *Module) GetReleaseBundle() *ReleaseBundle {
+	_, comp := m.Components.GetFirstByType("release-bundle")
+	if comp == nil {
+		return nil
+	}
+	return comp.Bundle
+}
+
+
 // GetChangelog returns the changelog path. Only SemVer modules default to release/<moniker>/CHANGELOG.md.
 // CalVer modules have no changelog (auto-managed releases).
 func (m *Module) GetChangelog() string {
@@ -158,7 +427,7 @@ func (m *Module) GetChangelog() string {
 // ShouldAggregateFromDependencies returns true if this module should aggregate
 // specs/approvals from its dependencies. This is true for:
 // - Bundle modules (release_type: bundle)
-// - Container modules (template contains "container")
+// - Container modules (has container component type)
 // Regular library modules with compile-time dependencies should NOT aggregate.
 func (m *Module) ShouldAggregateFromDependencies() bool {
 	// No dependencies means nothing to aggregate
@@ -171,8 +440,8 @@ func (m *Module) ShouldAggregateFromDependencies() bool {
 		return true
 	}
 
-	// Container modules (template name contains "container")
-	if strings.Contains(m.Template, "container") {
+	// Container modules (has container component)
+	if m.Components.HasComponentType("container") {
 		return true
 	}
 
@@ -184,6 +453,33 @@ type ReleaseBundle struct {
 	TitleFormat string                  `yaml:"title_format"` // Title template, e.g., "{clie} ({clie_version}) + {eac} ({eac_version})"
 	Headline    map[string]string       `yaml:"headline"`     // Map of label -> moniker for title, e.g., {"clie": "clie", "eac": "eac-ext"}
 	Categories  []ReleaseBundleCategory `yaml:"categories"`   // Grouped modules for release notes
+}
+
+// Clone returns a deep copy of the ReleaseBundle.
+func (r *ReleaseBundle) Clone() *ReleaseBundle {
+	clone := &ReleaseBundle{
+		TitleFormat: r.TitleFormat,
+	}
+	if r.Headline != nil {
+		clone.Headline = make(map[string]string, len(r.Headline))
+		for k, v := range r.Headline {
+			clone.Headline[k] = v
+		}
+	}
+	if r.Categories != nil {
+		clone.Categories = make([]ReleaseBundleCategory, len(r.Categories))
+		for i, cat := range r.Categories {
+			clone.Categories[i] = ReleaseBundleCategory{
+				Name:        cat.Name,
+				Description: cat.Description,
+			}
+			if cat.Modules != nil {
+				clone.Categories[i].Modules = make([]string, len(cat.Modules))
+				copy(clone.Categories[i].Modules, cat.Modules)
+			}
+		}
+	}
+	return clone
 }
 
 // ReleaseBundleCategory groups modules in release notes.
@@ -206,11 +502,12 @@ type ModuleVersioning struct {
 
 // ModuleBuild contains per-module build configuration.
 type ModuleBuild struct {
-	Handler    string           `yaml:"handler,omitempty"`     // Explicit build handler override
-	BinaryName string           `yaml:"binary_name,omitempty"` // Output binary name (for artifact matrix expansion)
-	Artifacts  []ModuleArtifact `yaml:"artifacts,omitempty"`   // Artifacts to produce
-	Options    *BuildOptions    `yaml:"options,omitempty"`     // Build behavior options
-	PostBuild  *PostBuildConfig `yaml:"post_build,omitempty"`  // Post-build actions
+	Handler           string           `yaml:"handler,omitempty"`          // Explicit build handler override
+	BinaryName        string           `yaml:"binary_name,omitempty"`     // Output binary name (for artifact matrix expansion)
+	ArtifactMatrixRef string           `yaml:"artifact_matrix,omitempty"` // Reference to an artifact matrix name
+	Artifacts         []ModuleArtifact `yaml:"artifacts,omitempty"`       // Artifacts to produce
+	Options           *BuildOptions    `yaml:"options,omitempty"`         // Build behavior options
+	PostBuild         *PostBuildConfig `yaml:"post_build,omitempty"`      // Post-build actions
 }
 
 // PostBuildConfig contains post-build actions for a component.
@@ -255,8 +552,9 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 		return nil
 	}
 	clone := &ModuleBuild{
-		Handler:    b.Handler,
-		BinaryName: b.BinaryName,
+		Handler:           b.Handler,
+		BinaryName:        b.BinaryName,
+		ArtifactMatrixRef: b.ArtifactMatrixRef,
 	}
 	if b.Artifacts != nil {
 		clone.Artifacts = make([]ModuleArtifact, len(b.Artifacts))
@@ -286,13 +584,62 @@ type ModuleLinting struct {
 	Disabled []string `yaml:"disabled,omitempty"`
 }
 
-// ModuleComponents is a map of component type name to its configuration.
+// ModuleComponents is a map of component name to its configuration.
 // The first component in the map becomes the default for build operations.
-// Each entry can be:
-//   - A string: root path for the component
-//   - nil/empty: use default_root from blueprints.yml component-kinds
-//   - ComponentEntry: full configuration with root and optional pattern overrides
+// Components are declared as a YAML list; names are auto-inferred from root paths.
 type ModuleComponents map[string]*ComponentEntry
+
+// UnmarshalYAML implements custom unmarshaling for ModuleComponents.
+// Components must be declared as a YAML sequence (list format).
+// Names are auto-inferred: explicit name > last segment of root > type fallback.
+func (mc *ModuleComponents) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.SequenceNode {
+		return fmt.Errorf("components: expected sequence (list format), got %v", node.Kind)
+	}
+
+	result := make(ModuleComponents)
+	for i, itemNode := range node.Content {
+		var entry ComponentEntry
+		if itemNode.Kind == yaml.MappingNode {
+			type rawComponentEntry ComponentEntry
+			if err := itemNode.Decode((*rawComponentEntry)(&entry)); err != nil {
+				return fmt.Errorf("components[%d]: %w", i, err)
+			}
+		} else {
+			return fmt.Errorf("components[%d]: expected mapping, got %v", i, itemNode.Kind)
+		}
+
+		// Determine component name: explicit > derive from root > type fallback
+		name := entry.Name
+		if name == "" {
+			name = DefaultDeriveName(entry.Root)
+		}
+		if name == "" {
+			name = entry.Type
+		}
+		if name == "" {
+			return fmt.Errorf("components[%d]: cannot determine component name (no name, root, or type)", i)
+		}
+
+		if _, exists := result[name]; exists {
+			return fmt.Errorf("components[%d]: duplicate component name %q", i, name)
+		}
+		result[name] = &entry
+	}
+
+	// Expand facets into synthetic components
+	if err := expandFacets(result); err != nil {
+		return err
+	}
+
+	// Expand companion components from with: fields
+	if err := expandCompanions(result); err != nil {
+		return err
+	}
+
+	*mc = result
+	return nil
+}
 
 // ComponentEntry represents a component's configuration within a module.
 // It can be parsed from either a simple string (root path) or full object.
@@ -334,6 +681,10 @@ func (a *AmpConfig) GetAmp(op string) float64 {
 }
 
 type ComponentEntry struct {
+	// Name is an optional explicit name override. When components are declared in list format,
+	// the name is auto-inferred from the root path. This field allows overriding the inferred name.
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
 	// Type is the component type (e.g., "go", "book"). If omitted, the map key (name) is used as the type.
 	// This allows multiple components of the same type with different names.
 	Type string `yaml:"type,omitempty" json:"type,omitempty"`
@@ -347,8 +698,11 @@ type ComponentEntry struct {
 	// Build contains build configuration for this component (artifacts, handler override)
 	Build *ModuleBuild `yaml:"build,omitempty" json:"build,omitempty"`
 
-	// DockerBuild contains Docker build configuration (for dockerfile components)
+	// DockerBuild contains Docker build configuration (for container components)
 	DockerBuild *DockerBuildConfig `yaml:"docker_build,omitempty" json:"docker_build,omitempty"`
+
+	// Bundle contains release bundle configuration (for release-bundle components)
+	Bundle *ReleaseBundle `yaml:"bundle,omitempty" json:"bundle,omitempty"`
 
 	// Amp contains per-operation resource amplifiers
 	Amp *AmpConfig `yaml:"amp,omitempty" json:"amp,omitempty"`
@@ -371,6 +725,26 @@ type ComponentEntry struct {
 	// depends_on (which causes all-to-all fan-out), component_deps enables narrowed
 	// dependency matching: only the specified remote components are awaited.
 	ComponentDeps []string `yaml:"component_deps,omitempty" json:"component_deps,omitempty"`
+
+	// Facet fields: expand into synthetic components with type from DefaultFacetMappings.
+	// Each accepts either a list of patterns (inherits parent root) or a mapping with
+	// explicit root and patterns (independent root).
+	Specs  *FacetDeclaration `yaml:"specs,omitempty" json:"specs,omitempty"`
+	Design *FacetDeclaration `yaml:"design,omitempty" json:"design,omitempty"`
+	Docs   *FacetDeclaration `yaml:"docs,omitempty" json:"docs,omitempty"`
+
+	// With lists companion component types to auto-create alongside this component.
+	// Each companion shares this component's root and uses its type as its name.
+	// Example: with: [assets, markdown, yaml]
+	With []string `yaml:"with,omitempty" json:"with,omitempty"`
+
+	// Metadata set on facet-expanded synthetic components (not serialized to YAML).
+	ParentComponent string `yaml:"-" json:"-"` // Name of the parent component
+	FacetName       string `yaml:"-" json:"-"` // "specs", "design", or "docs"
+
+	// AutoBDDRunner indicates this component was auto-created as a BDD runner
+	// from a parent component's specs: facet. Set during ApplyComponentDefaults.
+	AutoBDDRunner bool `yaml:"-" json:"-"`
 
 	// Resolved indicates if this entry has been resolved with defaults
 	Resolved bool `yaml:"-" json:"-"`
@@ -460,10 +834,14 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 	for name, entry := range mc {
 		if entry != nil {
 			clonedEntry := &ComponentEntry{
-				Type:           entry.Type,
-				Root:           entry.Root,
-				ComponentGroup: entry.ComponentGroup,
-				Resolved:       entry.Resolved,
+				Name:            entry.Name,
+				Type:            entry.Type,
+				Root:            entry.Root,
+				ComponentGroup:  entry.ComponentGroup,
+				ParentComponent: entry.ParentComponent,
+				FacetName:       entry.FacetName,
+				AutoBDDRunner:   entry.AutoBDDRunner,
+				Resolved:        entry.Resolved,
 			}
 			if entry.Patterns != nil {
 				clonedEntry.Patterns = &ComponentPatterns{}
@@ -494,6 +872,9 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 			if entry.DockerBuild != nil {
 				clonedEntry.DockerBuild = entry.DockerBuild.Clone()
 			}
+			if entry.Bundle != nil {
+				clonedEntry.Bundle = entry.Bundle.Clone()
+			}
 			if entry.Config != nil {
 				clonedEntry.Config = make(map[string]string, len(entry.Config))
 				for k, v := range entry.Config {
@@ -507,6 +888,13 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 			if entry.ComponentDeps != nil {
 				clonedEntry.ComponentDeps = make([]string, len(entry.ComponentDeps))
 				copy(clonedEntry.ComponentDeps, entry.ComponentDeps)
+			}
+			clonedEntry.Specs = entry.Specs.Clone()
+			clonedEntry.Design = entry.Design.Clone()
+			clonedEntry.Docs = entry.Docs.Clone()
+			if entry.With != nil {
+				clonedEntry.With = make([]string, len(entry.With))
+				copy(clonedEntry.With, entry.With)
 			}
 			clone[name] = clonedEntry
 		} else {
@@ -621,6 +1009,25 @@ func (mc ModuleComponents) GetComponentsByType(typeName string) map[string]*Comp
 	return result
 }
 
+// GetFirstByType returns the first component matching the given type.
+// Returns the component name and entry, or ("", nil) if not found.
+// The type is determined by ComponentEntry.Type if set, otherwise by the map key (name).
+func (mc ModuleComponents) GetFirstByType(typeName string) (string, *ComponentEntry) {
+	if mc == nil {
+		return "", nil
+	}
+	for name, entry := range mc {
+		t := name
+		if entry != nil && entry.Type != "" {
+			t = entry.Type
+		}
+		if t == typeName {
+			return name, entry
+		}
+	}
+	return "", nil
+}
+
 // GetComponentTypes returns unique types used across all components.
 func (mc ModuleComponents) GetComponentTypes() []string {
 	if mc == nil {
@@ -689,18 +1096,31 @@ func (mc ModuleComponents) GetComponentDependsOn(compName string) []string {
 	return entry.GetDependsOn()
 }
 
+// FindPrimaryComponent returns the first primary source component (go or typescript).
+// Returns the component name and entry, or ("", nil) if none found.
+// Used by template companion expansion to determine where to attach companions.
+func (mc ModuleComponents) FindPrimaryComponent() (string, *ComponentEntry) {
+	for _, typeName := range []string{"go", "typescript", "python", "dotnet", "rust"} {
+		if name, entry := mc.GetFirstByType(typeName); entry != nil {
+			return name, entry
+		}
+	}
+	return "", nil
+}
+
 // GetBuildableRoot returns the root path of the first buildable component
 // (go or typescript). Returns empty string if none found.
+// Searches by component type, not name, to support both map and list formats.
 func (mc ModuleComponents) GetBuildableRoot() string {
 	if mc == nil {
 		return ""
 	}
-	// Prefer "go" component
-	if entry, ok := mc["go"]; ok && entry != nil && entry.Root != "" {
+	// Prefer "go" component type
+	if _, entry := mc.GetFirstByType("go"); entry != nil && entry.Root != "" {
 		return entry.Root
 	}
-	// Try "typescript"
-	if entry, ok := mc["typescript"]; ok && entry != nil && entry.Root != "" {
+	// Try "typescript" component type
+	if _, entry := mc.GetFirstByType("typescript"); entry != nil && entry.Root != "" {
 		return entry.Root
 	}
 	return ""
@@ -743,18 +1163,19 @@ func (m *Module) GetBuildHandler() string {
 	return ""
 }
 
-// GetDockerBuildConfig returns the docker_build configuration from the dockerfile component.
-// Returns nil if no dockerfile component exists or no docker_build is configured.
+// GetDockerBuildConfig returns the docker_build configuration from the container component.
+// Returns nil if no container component exists or no docker_build is configured.
+// Searches by component type to support both map and list formats.
 func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
-	dockerfileEntry := m.Components["dockerfile"]
-	if dockerfileEntry == nil || dockerfileEntry.DockerBuild == nil {
+	_, entry := m.Components.GetFirstByType("container")
+	if entry == nil || entry.DockerBuild == nil {
 		return nil
 	}
-	return dockerfileEntry.DockerBuild
+	return entry.DockerBuild
 }
 
 // GetDockerBuildConfigForComponent returns docker_build from a named component.
-// Falls back to the "dockerfile" key for backward compatibility.
+// Falls back to container type lookup.
 func (m *Module) GetDockerBuildConfigForComponent(componentName string) *DockerBuildConfig {
 	if componentName != "" {
 		if entry, ok := m.Components[componentName]; ok && entry != nil && entry.DockerBuild != nil {
@@ -771,7 +1192,7 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 		m := &c.Modules[i]
 
 		if m.Description == "" {
-			m.Description = m.Name
+			m.Description = m.Moniker
 		}
 		if m.DependsOn == nil {
 			m.DependsOn = []string{}
@@ -821,10 +1242,385 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 // ApplyComponentDefaults resolves component roots and patterns from blueprints.yml component-kinds.
 // This should be called after ComponentTypes are loaded.
 func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfig, repoRoot string) {
+	// Collect all module monikers for cross-module specs deduplication
+	monikers := make(map[string]bool, len(c.Modules))
+	for _, m := range c.Modules {
+		monikers[m.Moniker] = true
+	}
+
+	// Pass 1: Resolve roots, default specs, and BDD specs
 	for i := range c.Modules {
 		m := &c.Modules[i]
 		m.resolveComponentRoots(compTypes)
+		m.inferDefaultSpecsComponent(repoRoot)
+		m.inferBDDSpecsRoots(repoRoot, monikers)
 		m.resolveDerivedPaths()
+	}
+
+	// Pass 2: Claim unclaimed specs/{moniker}_* directories.
+	// This runs after all modules have created their gherkin components,
+	// so we can check for conflicts (e.g., specs/eac_* claimed by commands
+	// module via inferBDDSpecsRoots should not also be claimed by eac module).
+	claimedRoots := make(map[string]bool)
+	for _, m := range c.Modules {
+		for _, entry := range m.Components {
+			if entry != nil && (entry.Type == "gherkin" || entry.Type == "specs") {
+				claimedRoots[entry.Root] = true
+			}
+		}
+	}
+	for i := range c.Modules {
+		c.Modules[i].inferSubSpecsComponents(repoRoot, claimedRoots)
+	}
+}
+
+// expandBDDRunners creates BDD runner components for primary language components
+// whose component kind defines a bdd_runner.
+// The runner root is set to the parent component's root since step implementations
+// live within the source tree (e.g., godog steps live under the Go component root).
+// Default patterns from blueprints.yml component-kinds are applied during resolveComponentRoots.
+//
+// Called during resolveComponentRoots after component kinds are loaded.
+func (m *Module) expandBDDRunners(compTypes *ComponentKindsConfig) {
+	if compTypes == nil {
+		return
+	}
+
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+
+	for compName, entry := range m.Components {
+		if entry == nil {
+			continue
+		}
+
+		// Get the component's kind
+		compType := compName
+		if entry.Type != "" {
+			compType = entry.Type
+		}
+		ct := compTypes.Get(compType)
+		if ct == nil || ct.BDDRunner == "" {
+			continue
+		}
+
+		runnerKind := ct.BDDRunner
+
+		// Skip if a component of this runner type already exists
+		if m.Components.HasComponentType(runnerKind) {
+			continue
+		}
+
+		// Skip if already queued
+		alreadyQueued := false
+		for _, a := range additions {
+			if a.entry.Type == runnerKind {
+				alreadyQueued = true
+				break
+			}
+		}
+		if alreadyQueued {
+			continue
+		}
+
+		// Runner root = parent component root (steps live in the source tree).
+		// The specs facet root points to where .feature files are, NOT where
+		// step implementations are, so we always use the parent root.
+		runnerRoot := entry.Root
+
+		// Use runner kind as name, but add suffix if a component with that name
+		// already exists (e.g., adapters module has a Go component derived-named "godog"
+		// from root go/adapters/godog — avoid overwriting it).
+		runnerName := runnerKind
+		if _, exists := m.Components[runnerName]; exists {
+			runnerName = runnerKind + "-runner"
+		}
+
+		additions = append(additions, addition{
+			name: runnerName,
+			entry: &ComponentEntry{
+				Name:          runnerName,
+				Type:          runnerKind,
+				Root:          runnerRoot,
+				AutoBDDRunner: true,
+			},
+		})
+	}
+
+	for _, a := range additions {
+		m.Components[a.name] = a.entry
+		m.ComponentOrder = append(m.ComponentOrder, a.name)
+	}
+}
+
+// inferDefaultSpecsComponent creates gherkin components for specs directories
+// that belong to this module by convention:
+//   - specs/{moniker}   — the module's default specs root
+//   - specs/{moniker}_* — sub-specs directories (e.g., specs/adapters_godog for the adapters module)
+//
+// Directories that already have a gherkin/specs component are skipped.
+// Only directories that exist on disk are added.
+func (m *Module) inferDefaultSpecsComponent(repoRoot string) {
+	if repoRoot == "" {
+		return
+	}
+
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+	seen := make(map[string]bool)
+
+	// Record specs roots already declared in module components
+	for _, entry := range m.Components {
+		if entry == nil {
+			continue
+		}
+		compType := entry.Type
+		if compType == "" {
+			compType = entry.Name
+		}
+		if compType == "gherkin" || compType == "specs" || compType == "structurizr" {
+			seen[entry.Root] = true
+		}
+	}
+
+	addDir := func(specsRoot, compName string) {
+		if seen[specsRoot] {
+			return
+		}
+		absRoot := filepath.Join(repoRoot, specsRoot)
+		info, err := os.Stat(absRoot)
+		if err != nil || !info.IsDir() {
+			return
+		}
+		if _, exists := m.Components[compName]; exists {
+			compName = compName + "-specs"
+		}
+		seen[specsRoot] = true
+		additions = append(additions, addition{
+			name: compName,
+			entry: &ComponentEntry{
+				Name: compName,
+				Type: "gherkin",
+				Root: specsRoot,
+			},
+		})
+	}
+
+	// Default specs root: specs/{moniker}
+	addDir(path.Join("specs", m.Moniker), m.Moniker+"-specs")
+
+	// Sort additions by name for deterministic ordering
+	sort.Slice(additions, func(i, j int) bool {
+		return additions[i].name < additions[j].name
+	})
+
+	for _, a := range additions {
+		m.Components[a.name] = a.entry
+		m.ComponentOrder = append(m.ComponentOrder, a.name)
+	}
+}
+
+// inferSubSpecsComponents claims unclaimed specs/{moniker}_* directories.
+// This runs in pass 2 after all modules have processed their gherkin components,
+// so we skip directories already claimed by another module's inferBDDSpecsRoots.
+// Example: specs/adapters_godog belongs to the adapters module; specs/eac_create
+// belongs to the commands module (claimed via godog_test.go scanning in pass 1).
+func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[string]bool) {
+	if repoRoot == "" {
+		return
+	}
+
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+
+	specsDir := filepath.Join(repoRoot, "specs")
+	prefix := m.Moniker + "_"
+	entries, err := os.ReadDir(specsDir)
+	if err != nil {
+		return
+	}
+	for _, dirEntry := range entries {
+		if !dirEntry.IsDir() {
+			continue
+		}
+		name := dirEntry.Name()
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		specsRoot := path.Join("specs", name)
+		if claimedRoots[specsRoot] {
+			continue
+		}
+		compName := name
+		if _, exists := m.Components[compName]; exists {
+			compName = name + "-specs"
+		}
+		claimedRoots[specsRoot] = true
+		additions = append(additions, addition{
+			name: compName,
+			entry: &ComponentEntry{
+				Name: compName,
+				Type: "gherkin",
+				Root: specsRoot,
+			},
+		})
+	}
+
+	sort.Slice(additions, func(i, j int) bool {
+		return additions[i].name < additions[j].name
+	})
+	for _, a := range additions {
+		m.Components[a.name] = a.entry
+		m.ComponentOrder = append(m.ComponentOrder, a.name)
+	}
+}
+
+// reSpecsPath matches SpecsPath: "..." in godog_test.go files.
+var reSpecsPath = regexp.MustCompile(`SpecsPath:\s*"([^"]+)"`)
+
+// inferBDDSpecsRoots scans auto-BDD runner roots for test runner files and extracts
+// specs directory references to create gherkin components. This allows specs directories
+// referenced by godog_test.go SpecsPath fields to be automatically discovered as
+// owned by the module that contains the runner, without explicit YAML declarations.
+//
+// allMonikers contains all module monikers in the repository. Specs directories whose
+// name matches another module's moniker are skipped (they belong to that module's
+// default specs root, not this module).
+func (m *Module) inferBDDSpecsRoots(repoRoot string, allMonikers map[string]bool) {
+	if repoRoot == "" {
+		return
+	}
+
+	type addition struct {
+		name  string
+		entry *ComponentEntry
+	}
+	var additions []addition
+	seen := make(map[string]bool)
+
+	// Record specs roots already declared in module components
+	for _, entry := range m.Components {
+		if entry == nil {
+			continue
+		}
+		compType := entry.Type
+		if compType == "" {
+			compType = entry.Name
+		}
+		if compType == "gherkin" || compType == "specs" {
+			seen[entry.Root] = true
+		}
+	}
+
+	// Scan all Go component roots for godog_test.go files (not just the single auto-BDD runner).
+	// A module may have multiple Go components (e.g., commands module has go/commands/repository,
+	// go/commands/test, etc.), each potentially containing godog runners that reference different
+	// specs directories.
+	for _, entry := range m.Components {
+		if entry == nil || entry.Root == "" {
+			continue
+		}
+
+		// Only scan components whose type has a godog BDD runner (i.e., Go components)
+		compType := entry.Type
+		if compType == "" {
+			compType = entry.Name
+		}
+		if compType != "go" {
+			continue
+		}
+
+		absRoot := filepath.Join(repoRoot, entry.Root)
+		_ = filepath.Walk(absRoot, func(fpath string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || info.Name() != "godog_test.go" {
+				return nil
+			}
+
+			content, readErr := os.ReadFile(fpath)
+			if readErr != nil {
+				return nil
+			}
+
+			matches := reSpecsPath.FindStringSubmatch(string(content))
+			if len(matches) < 2 {
+				return nil
+			}
+
+			// Resolve relative SpecsPath to repo-relative path
+			relSpecsPath := matches[1]
+			absSpecs := filepath.Join(filepath.Dir(fpath), relSpecsPath)
+			absSpecs = filepath.Clean(absSpecs)
+
+			repoRelSpecs, relErr := filepath.Rel(repoRoot, absSpecs)
+			if relErr != nil {
+				return nil
+			}
+			repoRelSpecs = filepath.ToSlash(repoRelSpecs)
+
+			// Extract the top-level specs directory (specs/eac_design, not specs/eac_create/commit-message)
+			parts := strings.SplitN(repoRelSpecs, "/", 3)
+			if len(parts) < 2 {
+				return nil
+			}
+			specsRoot := parts[0] + "/" + parts[1] // e.g., "specs/eac_design"
+			specsDirName := parts[1]               // e.g., "eac_design"
+
+			// Skip if this specs directory is another module's default specs root.
+			// Each module's default specs root is specs/{moniker}. If the directory
+			// name matches a known moniker, it belongs to that module, not this one.
+			if specsDirName != m.Moniker && allMonikers[specsDirName] {
+				return nil
+			}
+
+			if seen[specsRoot] {
+				return nil
+			}
+
+			// Verify directory exists
+			if info, statErr := os.Stat(filepath.Join(repoRoot, specsRoot)); statErr != nil || !info.IsDir() {
+				return nil
+			}
+
+			seen[specsRoot] = true
+
+			// Use the directory base as the component name
+			compName := parts[1] // e.g., "eac_design"
+			if _, exists := m.Components[compName]; exists {
+				compName = compName + "-specs"
+			}
+
+			additions = append(additions, addition{
+				name: compName,
+				entry: &ComponentEntry{
+					Name:            compName,
+					Type:            "gherkin",
+					Root:            specsRoot,
+					ParentComponent: entry.Name,
+					FacetName:       "specs",
+				},
+			})
+
+			return nil
+		})
+	}
+
+	// Sort additions by name for deterministic ordering
+	sort.Slice(additions, func(i, j int) bool {
+		return additions[i].name < additions[j].name
+	})
+
+	for _, a := range additions {
+		m.Components[a.name] = a.entry
+		m.ComponentOrder = append(m.ComponentOrder, a.name)
 	}
 }
 
@@ -833,6 +1629,9 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 	if compTypes == nil {
 		return
 	}
+
+	// Expand BDD runners before resolving defaults so they participate in resolution
+	m.expandBDDRunners(compTypes)
 
 	for compName, entry := range m.Components {
 		// Get type (explicit or name as fallback)
@@ -871,6 +1670,9 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 		if entry.Patterns.Config == nil && ct.Files != nil {
 			entry.Patterns.Config = substituteMoniker(ct.Files.Config, m.Moniker)
 		}
+		if entry.Patterns.Data == nil && ct.Files != nil {
+			entry.Patterns.Data = substituteMoniker(ct.Files.Data, m.Moniker)
+		}
 
 		// Apply ComponentGroup from component-kind if not already set
 		if entry.ComponentGroup == "" && ct.ComponentGroup != "" {
@@ -881,6 +1683,15 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 		if len(entry.DependsOn) == 0 && len(ct.DependsOn) > 0 {
 			entry.DependsOn = make([]string, len(ct.DependsOn))
 			copy(entry.DependsOn, ct.DependsOn)
+		}
+
+		// Apply DockerBuildDefaults from component-kind if component has no docker_build
+		if ct.DockerBuildDefaults != nil {
+			if entry.DockerBuild == nil {
+				entry.DockerBuild = cloneDockerBuildConfig(ct.DockerBuildDefaults)
+			} else {
+				mergeDockerBuildDefaults(entry.DockerBuild, ct.DockerBuildDefaults)
+			}
 		}
 
 		// Apply component-kind defaults (convention-over-configuration)
@@ -991,7 +1802,7 @@ func deriveChangelogPath(m *Module) string {
 		return fmt.Sprintf("release/%s/CHANGELOG.md", m.Moniker)
 	case "internal":
 		// Check for go component to derive from its root
-		if goEntry, ok := m.Components["go"]; ok && goEntry != nil && goEntry.Root != "" {
+		if _, goEntry := m.Components.GetFirstByType("go"); goEntry != nil && goEntry.Root != "" {
 			// Use forward slashes for consistent cross-platform paths
 			return filepath.ToSlash(filepath.Join(goEntry.Root, "CHANGELOG.md"))
 		}

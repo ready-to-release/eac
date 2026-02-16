@@ -200,8 +200,12 @@ func createModuleContract(ctx *eacgodog.TestContext, module, sourcePath string) 
 		"moniker":     module,
 		"name":        fmt.Sprintf("Test Module %s", module),
 		"description": "Test module for BDD tests",
-		"components": map[string]interface{}{
-			"go": sourcePath,
+		"components": []interface{}{
+			map[string]interface{}{
+				"type": "go",
+				"name": "go",
+				"root": sourcePath,
+			},
 		},
 	}
 	modules = append(modules, testModule)

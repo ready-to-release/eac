@@ -165,7 +165,8 @@ func generateCacheRepositoryYAML(mods []cacheModuleConfig) string {
 			}
 		}
 		sb.WriteString("    components:\n")
-		sb.WriteString("      go:\n")
+		sb.WriteString("      - type: go\n")
+		sb.WriteString("        name: go\n")
 		sb.WriteString(fmt.Sprintf("        root: %s\n", mod.GoRoot))
 		sb.WriteString("        patterns:\n")
 		sb.WriteString("          source: [\"**/*.go\"]\n")
@@ -233,7 +234,7 @@ func addNewModule(ctx *eacgodog.TestContext, moniker, goRoot string) error {
     name: %s Module
     description: Test module for %s
     components:
-      go:
+      - type: go
         root: %s
         patterns:
           source: ["**/*.go"]

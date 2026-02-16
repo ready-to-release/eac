@@ -56,12 +56,13 @@ func TestGetDockerBuildConfig_NamedComponent(t *testing.T) {
 	}
 }
 
-func TestGetDockerBuildConfig_LegacyDockerfileKey(t *testing.T) {
+func TestGetDockerBuildConfig_ContainerComponent(t *testing.T) {
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "pdf-oci",
 			Components: config.ModuleComponents{
-				"dockerfile": &config.ComponentEntry{
+				"container": &config.ComponentEntry{
+					Type: "container",
 					DockerBuild: &config.DockerBuildConfig{
 						Container: "pdf-oci",
 						Context:   "containers/pdf-oci",
@@ -71,19 +72,19 @@ func TestGetDockerBuildConfig_LegacyDockerfileKey(t *testing.T) {
 		},
 	}
 
-	// With component name "dockerfile", finds via first lookup (named component)
-	cfg := getDockerBuildConfig(module, "dockerfile")
+	// With component name "container", finds via first lookup (named component)
+	cfg := getDockerBuildConfig(module, "container")
 	if cfg == nil {
-		t.Fatal("expected non-nil config for dockerfile component")
+		t.Fatal("expected non-nil config for container component")
 	}
 	if cfg.Container != "pdf-oci" {
 		t.Errorf("expected container=pdf-oci, got %s", cfg.Container)
 	}
 
-	// With empty component name, falls back to "dockerfile" key
+	// With empty component name, falls back to container type
 	cfg2 := getDockerBuildConfig(module, "")
 	if cfg2 == nil {
-		t.Fatal("expected non-nil config via fallback to 'dockerfile' key")
+		t.Fatal("expected non-nil config via fallback to container type")
 	}
 	if cfg2.Container != "pdf-oci" {
 		t.Errorf("expected container=pdf-oci, got %s", cfg2.Container)
@@ -125,9 +126,9 @@ func TestGetDockerBuildConfig_NilComponent(t *testing.T) {
 	}
 }
 
-func TestGetDockerBuildConfig_NamedComponentFallsBackToDockerfile(t *testing.T) {
-	// Module has a named component WITHOUT docker_build, but has a "dockerfile" with docker_build.
-	// Named lookup should fail, then fall back to "dockerfile" key.
+func TestGetDockerBuildConfig_NamedComponentFallsBackToContainer(t *testing.T) {
+	// Module has a named component WITHOUT docker_build, but has a "container" with docker_build.
+	// Named lookup should fail, then fall back to container type.
 	module := &modules.ModuleContract{
 		BaseContract: domain.BaseContract{
 			Moniker: "mixed-module",
@@ -135,7 +136,8 @@ func TestGetDockerBuildConfig_NamedComponentFallsBackToDockerfile(t *testing.T) 
 				"my-comp": &config.ComponentEntry{
 					// No DockerBuild here
 				},
-				"dockerfile": &config.ComponentEntry{
+				"container": &config.ComponentEntry{
+					Type: "container",
 					DockerBuild: &config.DockerBuildConfig{
 						Container: "fallback-container",
 						Context:   "containers/fallback",
@@ -145,12 +147,40 @@ func TestGetDockerBuildConfig_NamedComponentFallsBackToDockerfile(t *testing.T) 
 		},
 	}
 
-	// Looking up "my-comp" should fall back to "dockerfile" key
+	// Looking up "my-comp" should fall back to container type
 	cfg := getDockerBuildConfig(module, "my-comp")
 	if cfg == nil {
-		t.Fatal("expected fallback to 'dockerfile' key")
+		t.Fatal("expected fallback to container type")
 	}
 	if cfg.Container != "fallback-container" {
 		t.Errorf("expected container=fallback-container, got %s", cfg.Container)
+	}
+}
+
+func TestGetDockerBuildConfig_ContainerTypeFallback(t *testing.T) {
+	// Module has a "container" type component with docker_build.
+	// Empty component name should fall back to "container" type.
+	module := &modules.ModuleContract{
+		BaseContract: domain.BaseContract{
+			Moniker: "my-oci",
+			Components: config.ModuleComponents{
+				"container": &config.ComponentEntry{
+					Type: "container",
+					DockerBuild: &config.DockerBuildConfig{
+						Container: "my-oci",
+						Context:   "containers/my-oci",
+					},
+				},
+			},
+		},
+	}
+
+	// With empty component name, should fall back to "container" type
+	cfg := getDockerBuildConfig(module, "")
+	if cfg == nil {
+		t.Fatal("expected non-nil config via fallback to 'container' type")
+	}
+	if cfg.Container != "my-oci" {
+		t.Errorf("expected container=my-oci, got %s", cfg.Container)
 	}
 }

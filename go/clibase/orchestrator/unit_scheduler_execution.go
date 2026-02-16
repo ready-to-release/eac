@@ -153,7 +153,7 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 	us.addActiveTool(tool, isContainer, moniker)
 
 	// Create output directory for this component
-	// Structure: out/<context>/<module>/<dirname> (e.g., out/build/books/howto, out/test/eac/go-gotest-impl-build)
+	// Structure: out/<context>/<module>/<dirname> (e.g., out/build/books/howto, out/test/eac/go_gotest_impl-build)
 	// Uses DirName() which includes tool and Extra values for unique directory names
 	sanitizedModule := sanitizePathForFS(output.PackageDisplayName(module))
 	sanitizedDirName := sanitizePathForFS(spec.ID.DirName())

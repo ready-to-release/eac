@@ -176,7 +176,6 @@ func (r *ModuleContractReport) FormatReport() string {
 	sb.WriteString("=== Modules ===\n")
 	for i, module := range r.Modules {
 		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, module.Moniker))
-		sb.WriteString(fmt.Sprintf("   Name: %s\n", module.Name))
 		sb.WriteString(fmt.Sprintf("   Packages: %s\n", module.GetComponentTypesDisplay()))
 		sb.WriteString(fmt.Sprintf("   Description: %s\n", module.Description))
 

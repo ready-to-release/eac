@@ -79,7 +79,7 @@ func buildUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, 
 	}
 
 	// Acquire unit-level lock with wait (skip in dry-run)
-	componentDir := cmdframework.UnitDir(compName, builderName)
+	componentDir := spec.ID.DirName()
 	release, err := pipeline.AcquireLock(ctx, module, componentDir)
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
@@ -236,8 +236,8 @@ func executeBuildAndRecord(ctx *cmdframework.ExecutionContext, bctx *buildContex
 	// Use pre-computed module input hash
 	inputHash := resolveInputHash(ctx, bctx, module, moduleContract)
 
-	// Build the component using component-level output directory: out/build/<module>/<component>/<builder>
-	componentDir := cmdframework.UnitDir(compName, builderName)
+	// Build the component using component-level output directory: out/build/<module>/<component>_<builder>
+	componentDir := unitID.DirName()
 	componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
 	exitCode := handler.Build(modulePort, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
 

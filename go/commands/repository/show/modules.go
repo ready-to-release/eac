@@ -76,7 +76,7 @@ func showModulesImpl() int {
 		}
 
 		pkgDisplay := mod.GetComponentTypesDisplay()
-		group := mod.ModuleGroup
+		group := mod.Group
 
 		if withArtifacts {
 			artifactStats := getArtifactStats(mod, cfg, workspaceRoot)

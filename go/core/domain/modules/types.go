@@ -227,14 +227,20 @@ func (m *ModuleContract) GetAllSpecsRoots() []string {
 }
 
 // GetSpecsRoot returns the specs root directory for this module.
-// Uses the specs or gherkin component root, or defaults to specs/{moniker}.
+// Uses the specs or gherkin component root (by name or type), or defaults to specs/{moniker}.
 func (m *ModuleContract) GetSpecsRoot() string {
-	// Check specs component first
+	// Check specs component first (by name, then by type)
 	if comp, ok := m.Components["specs"]; ok && comp != nil && comp.Root != "" {
 		return comp.Root
 	}
-	// Check gherkin component
+	if _, comp := m.Components.GetFirstByType("specs"); comp != nil && comp.Root != "" {
+		return comp.Root
+	}
+	// Check gherkin component (by name, then by type)
 	if comp, ok := m.Components["gherkin"]; ok && comp != nil && comp.Root != "" {
+		return comp.Root
+	}
+	if _, comp := m.Components.GetFirstByType("gherkin"); comp != nil && comp.Root != "" {
 		return comp.Root
 	}
 	// Default: specs/<module-moniker>
@@ -255,11 +261,15 @@ func (m *ModuleContract) GetReleaseNotesPath() string {
 }
 
 // GetTestImplementationPath returns the BDD test runner directory path.
-// Checks for known BDD runner components (godog, cucumberjs).
+// Checks for known BDD runner components (godog, cucumberjs) by name and type.
 // Returns empty string if no BDD runner component is defined.
 func (m *ModuleContract) GetTestImplementationPath() string {
-	for _, name := range []string{"godog", "cucumberjs"} {
-		if comp, ok := m.Components[name]; ok && comp != nil && comp.Root != "" {
+	for _, compType := range []string{"godog", "cucumberjs", "behave", "reqnroll"} {
+		// Try by name first (backward compat), then by type
+		if comp, ok := m.Components[compType]; ok && comp != nil && comp.Root != "" {
+			return comp.Root
+		}
+		if _, comp := m.Components.GetFirstByType(compType); comp != nil && comp.Root != "" {
 			return comp.Root
 		}
 	}
@@ -267,9 +277,13 @@ func (m *ModuleContract) GetTestImplementationPath() string {
 }
 
 // GetDesignPath returns the design workspace directory path.
-// Uses the design component root, or defaults to specs/{moniker}/.design.
+// Uses the design component root (by name or type), or defaults to specs/{moniker}/.design.
 func (m *ModuleContract) GetDesignPath() string {
+	// Try by name first, then by type (structurizr)
 	if comp, ok := m.Components["design"]; ok && comp != nil && comp.Root != "" {
+		return comp.Root
+	}
+	if _, comp := m.Components.GetFirstByType("structurizr"); comp != nil && comp.Root != "" {
 		return comp.Root
 	}
 	// Default: specs/<module-moniker>/.design
@@ -383,12 +397,14 @@ func matchGlobPattern(path, pattern string) bool {
 	return matched
 }
 
-// HasComponent returns true if the given component type is enabled for this module.
+// HasComponent returns true if any component with the given type exists in this module.
+// Checks by component type (not map key name), so HasComponent("go") returns true
+// even when the go component is stored under a derived name like "commands".
 func (m *ModuleContract) HasComponent(compType string) bool {
 	if m.Components == nil {
 		return false
 	}
-	return m.Components.HasComponent(compType)
+	return m.Components.HasComponentType(compType)
 }
 
 // GetEnabledComponents returns the list of enabled component types for this module.
@@ -423,7 +439,7 @@ func (m *ModuleContract) GetOrderedComponentNames() []string {
 		seen := make(map[string]bool, len(m.ComponentOrder))
 		var result []string
 		for _, name := range m.ComponentOrder {
-			if m.Components.HasComponent(name) {
+			if _, ok := m.Components[name]; ok {
 				result = append(result, name)
 				seen[name] = true
 			}

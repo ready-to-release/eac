@@ -36,8 +36,8 @@ func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
 
 	// Iterate modules that have godog components
 	for _, module := range eacCfg.Repository.Modules {
-		comp, ok := module.Components["godog"]
-		if !ok || comp == nil || comp.Root == "" {
+		_, comp := module.Components.GetFirstByType("godog")
+		if comp == nil || comp.Root == "" {
 			continue
 		}
 

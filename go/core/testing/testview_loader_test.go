@@ -64,7 +64,7 @@ func TestLoadModuleTestView_WithCTRFArtifact(t *testing.T) {
 	ws := t.TempDir()
 
 	// Create CTRF report file first
-	uowDir := filepath.Join(ws, "out", "test", "core", "go-gotest-unit")
+	uowDir := filepath.Join(ws, "out", "test", "core", "go_gotest_unit")
 	require.NoError(t, os.MkdirAll(uowDir, 0755))
 
 	ctrfContent := `{
@@ -114,7 +114,7 @@ func TestLoadModuleTestView_WithCTRFArtifact(t *testing.T) {
 func TestLoadModuleTestView_WithCucumberArtifact(t *testing.T) {
 	ws := t.TempDir()
 
-	uowDir := filepath.Join(ws, "out", "test", "mymod", "go-godog-impl")
+	uowDir := filepath.Join(ws, "out", "test", "mymod", "go_godog_impl")
 	require.NoError(t, os.MkdirAll(uowDir, 0755))
 
 	cucumberContent := `[

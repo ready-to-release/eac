@@ -111,9 +111,6 @@ func (m Model) renderSelectedUoW(activeComponent string, contentWidth int) strin
 		}
 	}
 
-	// Parse component string into parts
-	parts := strings.Split(activeComponent, ":")
-
 	// Determine tool label based on operation type
 	toolLabel := "Tool"
 	switch m.Display.RunPhaseName {
@@ -127,18 +124,19 @@ func (m Model) renderSelectedUoW(activeComponent string, contentWidth int) strin
 		toolLabel = "Scanner"
 	}
 
-	// Extract unit name and tool name
+	// Use structured fields from UoWState
 	var unitName, toolName string
-	if len(parts) >= 2 {
-		if len(parts) > 2 {
-			unitName = parts[0] + ":" + strings.Join(parts[1:len(parts)-1], ":")
+	if state, exists := m.Execution.UoWStates[activeComponent]; exists {
+		if state.Module != "" && state.Component != "" {
+			unitName = state.Module + ":" + state.Component
+		} else if state.Module != "" {
+			unitName = state.Module
 		} else {
-			unitName = activeComponent
+			unitName = state.DisplayName
 		}
-		toolName = parts[len(parts)-1]
+		toolName = state.Tool
 	} else {
 		unitName = activeComponent
-		toolName = ""
 	}
 
 	// Col1: Unit

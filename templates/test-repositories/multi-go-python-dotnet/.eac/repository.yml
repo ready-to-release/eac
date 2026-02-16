@@ -1,15 +1,18 @@
 modules:
   - moniker: api-service
-    name: API Service
     components:
-      go: go/api-service
+      - type: go
+        name: go
+        root: go/api-service
 
   - moniker: ml-service
-    name: ML Service
     components:
-      python: python/ml-service
+      - type: python
+        name: python
+        root: python/ml-service
 
   - moniker: web-api
-    name: Web API
     components:
-      dotnet: dotnet/web-api
+      - type: dotnet
+        name: dotnet
+        root: dotnet/web-api

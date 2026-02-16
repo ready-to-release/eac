@@ -177,9 +177,13 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		}
 	}
 
-	// TEST_ON_WINDOWS, TEST_ON_MACOS, CROSS_COMPILE_WINDOWS: from artifact_matrix
-	if mod.ArtifactMatrixRef != "" && cfg.Blueprints != nil {
-		matrixName := mod.ArtifactMatrixRef
+	// TEST_ON_WINDOWS, TEST_ON_MACOS, CROSS_COMPILE_WINDOWS: from artifact_matrix on Go component
+	_, goComp := mod.Components.GetFirstByType("go")
+	matrixName := ""
+	if goComp != nil && goComp.Build != nil {
+		matrixName = goComp.Build.ArtifactMatrixRef
+	}
+	if matrixName != "" && cfg.Blueprints != nil {
 		result.CrossCompileWindows = strings.Contains(matrixName, "cross-platform")
 		// Check matrix entries for platform indicators
 		if matrix, ok := cfg.Blueprints.ArtifactMatrices[matrixName]; ok && matrix != nil {
@@ -227,8 +231,8 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		result.Scans = strings.Join(scanList, ",")
 	}
 
-	// BUILD_EVIDENCE: evidence_books is non-empty
-	result.BuildEvidence = len(mod.EvidenceBooks) > 0
+	// BUILD_EVIDENCE: has evidence-book components
+	result.BuildEvidence = len(mod.GetEvidenceBooks()) > 0
 
 	// BUILD_ARGS: CI always builds all components
 	result.BuildArgs = "--all"
@@ -308,7 +312,7 @@ func printCIConfigUsage() {
 	fmt.Println("  TEST_ON_MACOS          artifact_matrix includes macos")
 	fmt.Println("  SCANS                  Aggregated scanners from component kinds")
 	fmt.Println("  SCAN_FAIL_MODE         Default scan failure mode")
-	fmt.Println("  BUILD_EVIDENCE         evidence_books is non-empty")
+	fmt.Println("  BUILD_EVIDENCE         has evidence-book components")
 	fmt.Println("  CROSS_COMPILE_WINDOWS  artifact_matrix is cross-platform")
 	fmt.Println("  BUILD_ARGS             CI always builds all components")
 	fmt.Println("  DOWNLOAD_MODULES       From depends_on_ci, space-separated")

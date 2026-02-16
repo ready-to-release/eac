@@ -1,10 +1,12 @@
 modules:
   - moniker: api-service
-    name: API Service
     components:
-      go: go/api-service
+      - type: go
+        name: go
+        root: go/api-service
 
   - moniker: web-app
-    name: Web Application
     components:
-      typescript: typescript/web-app
+      - type: typescript
+        name: typescript
+        root: typescript/web-app

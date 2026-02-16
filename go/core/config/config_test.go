@@ -77,7 +77,6 @@ func TestRepositoryConfig_ModuleDefaults(t *testing.T) {
 
 	// Check that defaults are applied
 	for _, m := range cfg.Repository.Modules {
-		assert.NotEmpty(t, m.Name, "module %s should have name", m.Moniker)
 		assert.NotEmpty(t, m.Components, "module %s should have components", m.Moniker)
 		assert.NotEmpty(t, m.Description, "module %s should have description", m.Moniker)
 		assert.NotNil(t, m.DependsOn, "module %s should have depends_on", m.Moniker)
@@ -309,17 +308,21 @@ func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
 			name: "container module - should aggregate",
 			module: Module{
 				Moniker:   "my-container",
-				Template:  "container",
 				DependsOn: []string{"my-lib"},
+				Components: ModuleComponents{
+					"container": &ComponentEntry{Type: "container"},
+				},
 			},
 			expected: true,
 		},
 		{
-			name: "container-multiarch module - should aggregate",
+			name: "container module (dockerfile type) - should aggregate",
 			module: Module{
 				Moniker:   "eac-ext",
-				Template:  "container-multiarch",
 				DependsOn: []string{"eac-cli"},
+				Components: ModuleComponents{
+					"container": &ComponentEntry{Type: "container"},
+				},
 			},
 			expected: true,
 		},
@@ -370,6 +373,6 @@ func TestBlueprintsPopulatesComponentKinds(t *testing.T) {
 	// Verify well-known kinds exist
 	assert.NotNil(t, cfg.ComponentKinds.Get("go"), "go component kind should exist")
 	assert.NotNil(t, cfg.ComponentKinds.Get("typescript"), "typescript component kind should exist")
-	assert.NotNil(t, cfg.ComponentKinds.Get("dockerfile"), "dockerfile component kind should exist")
+	assert.NotNil(t, cfg.ComponentKinds.Get("container"), "container component kind should exist")
 }
 

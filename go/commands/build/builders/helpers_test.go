@@ -51,7 +51,6 @@ func TestExecutePostBuildSteps_CopyTo(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "test-module",
-					Name:    "Test Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/test-module",
@@ -123,7 +122,6 @@ func TestExecutePostBuildSteps_CleansTargetDirectory(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "test-module",
-					Name:    "Test Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/test-module",
@@ -174,7 +172,6 @@ func TestExecutePostBuildSteps_ModuleNotFound(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "other-module",
-					Name:    "Other Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/other-module",
@@ -209,7 +206,6 @@ func TestExecutePostBuildSteps_ComponentNotFound(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "test-module",
-					Name:    "Test Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/test-module",
@@ -244,7 +240,6 @@ func TestExecutePostBuildSteps_NoPostBuildConfig(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "test-module",
-					Name:    "Test Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/test-module",
@@ -308,7 +303,6 @@ func TestExecutePostBuildSteps_FallsBackToSourceWhenFrameworkDirHasOnlyManifest(
 			Modules: []config.Module{
 				{
 					Moniker: "vscode-commit",
-					Name:    "VSCode Extension - Git Commit",
 					Components: config.ModuleComponents{
 						"typescript": &config.ComponentEntry{
 							Root: "typescript/vscode-commit",
@@ -424,7 +418,6 @@ func TestExecutePostBuildSteps_PathEscapeAttempt(t *testing.T) {
 			Modules: []config.Module{
 				{
 					Moniker: "test-module",
-					Name:    "Test Module",
 					Components: config.ModuleComponents{
 						"go": &config.ComponentEntry{
 							Root: "go/test-module",

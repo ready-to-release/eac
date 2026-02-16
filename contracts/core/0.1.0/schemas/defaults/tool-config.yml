@@ -759,7 +759,7 @@ component-tools:
     tester: dotnet
     scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
 
-  dockerfile:
+  container:
     builder: buildx
     scanners: [trivy-sbom, trivy-vuln, trivy-iac]
 

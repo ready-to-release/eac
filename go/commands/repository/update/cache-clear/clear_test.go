@@ -777,8 +777,8 @@ func TestClearCache_TypeState(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create state files under .cache/eac/incremental/ (new location)
-	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
-	testDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "test", "mod1", "go-gotest-unit")
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go_go")
+	testDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "test", "mod1", "go_gotest_unit")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.MkdirAll(testDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
@@ -819,7 +819,7 @@ func TestClearCache_TypeAsset(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create state files (should NOT be deleted with --type=asset)
-	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go_go")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
 
@@ -856,7 +856,7 @@ func TestClearCache_TypeWork(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create state files (should NOT be deleted with --type=work)
-	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go-go")
+	buildDir := filepath.Join(tmpDir, ".cache", "eac", "incremental", "build", "mod1", "go_go")
 	require.NoError(t, os.MkdirAll(buildDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(buildDir, "state.json"), []byte("{}"), 0o644))
 

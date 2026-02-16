@@ -66,7 +66,7 @@ func (r *DiskOutputReader) GetComponent(ctx core.ActionType, module, component s
 		}
 		// Match directories that are exactly component or start with component-
 		dirName := entry.Name()
-		if dirName != component && !strings.HasPrefix(dirName, component+"-") {
+		if dirName != component && !strings.HasPrefix(dirName, component+"_") {
 			continue
 		}
 

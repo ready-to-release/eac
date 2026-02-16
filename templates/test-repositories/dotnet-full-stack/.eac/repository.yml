@@ -1,16 +1,20 @@
 modules:
   - moniker: core
-    name: Core Library
     components:
-      dotnet: src/Core
+      - type: dotnet
+        name: dotnet
+        root: src/Core
 
   - moniker: web-api
-    name: Web API
     depends_on:
       - core
     components:
-      dotnet: src/WebApi
-      gherkin: specs/web-api
+      - type: dotnet
+        name: dotnet
+        root: src/WebApi
+      - type: gherkin
+        name: gherkin
+        root: specs/web-api
     build:
       artifacts:
         - id: linux-x64

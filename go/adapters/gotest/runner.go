@@ -225,6 +225,22 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 		}
 	}
 
+	// Try runner_search_dirs from godog component kind (blueprints.yml convention)
+	if eacCfg.ComponentKinds != nil {
+		if godogKind := eacCfg.ComponentKinds.Get("godog"); godogKind != nil {
+			for _, dir := range godogKind.RunnerSearchDirs {
+				if dir == "." {
+					continue // Already checked basePath directly
+				}
+				searchPath := filepath.ToSlash(filepath.Join(basePath, dir))
+				if fileExists(filepath.Join(workspaceRoot, searchPath, godogTestFile)) {
+					goRunnerLog.Debugf("FindTestRoot: found %s at runner_search_dir %s", godogTestFile, searchPath)
+					return searchPath
+				}
+			}
+		}
+	}
+
 	// No test runner found - no fallback
 	goRunnerLog.Debugf("FindTestRoot: no %s found for %s (basePath=%s, parts=%v)", godogTestFile, featurePath, basePath, parts)
 	return ""

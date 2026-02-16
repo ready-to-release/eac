@@ -27,8 +27,8 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 			},
-			// category comes before testset alphabetically
-			expected: "scan:core:go:go:trivy:sbom:unit",
+			// scan gets no qualifier — extras not appended
+			expected: "scan:core:go:trivy",
 		},
 		{
 			name: "scan context with category extra field",
@@ -39,7 +39,7 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "trivy-sbom",
 				Extra:     map[string]string{"category": "sbom"},
 			},
-			expected: "scan:core:go:go:trivy-sbom:sbom",
+			expected: "scan:core:go:trivy-sbom",
 		},
 		{
 			name: "empty values in extra are skipped",
@@ -50,8 +50,8 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"category": "", "testset": "unit"},
 			},
-			// empty category should be skipped, only testset appended
-			expected: "test:core:go:go:gotest:unit",
+			// testset is not testname, so no qualifier for test action either
+			expected: "test:core:go:gotest",
 		},
 		{
 			name: "three extra fields sorted alphabetically",
@@ -62,8 +62,8 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
 			},
-			// category < testset < zone alphabetically
-			expected: "scan:core:go:go:trivy:sbom:unit:prod",
+			// scan gets no qualifier — extras not appended
+			expected: "scan:core:go:trivy",
 		},
 		{
 			name: "single non-testset extra field",
@@ -74,7 +74,7 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "vuln"},
 			},
-			expected: "scan:core:go:go:trivy:vuln",
+			expected: "scan:core:go:trivy",
 		},
 		{
 			name: "all empty extra values produce base format",
@@ -85,7 +85,7 @@ func TestUnitID_Longname_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "", "testset": ""},
 			},
-			expected: "scan:core:go:go:trivy",
+			expected: "scan:core:go:trivy",
 		},
 	}
 
@@ -112,8 +112,8 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 			},
-			// Format: component-tool-extra1-extra2 (category before testset alphabetically)
-			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-unit"),
+			// Format: componentName_tool (no extras appended for scan)
+			expected: filepath.Join("out", "scan", "core", "go_trivy"),
 		},
 		{
 			name: "scan context with category extra field",
@@ -124,7 +124,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 				Tool:      "trivy-sbom",
 				Extra:     map[string]string{"category": "sbom"},
 			},
-			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-sbom"),
+			expected: filepath.Join("out", "scan", "core", "go_trivy-sbom"),
 		},
 		{
 			name: "empty values in extra are skipped in path",
@@ -135,8 +135,8 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 				Tool:      "gotest",
 				Extra:     map[string]string{"category": "", "testset": "unit"},
 			},
-			// empty category should be skipped
-			expected: filepath.Join("out", "test", "core", "go-gotest-unit"),
+			// testset is not testname, so no qualifier appended
+			expected: filepath.Join("out", "test", "core", "go_gotest"),
 		},
 		{
 			name: "three extra fields sorted alphabetically in path",
@@ -147,8 +147,8 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"zone": "prod", "category": "sbom", "testset": "unit"},
 			},
-			// category < testset < zone alphabetically, joined with dashes
-			expected: filepath.Join("out", "scan", "core", "go-trivy-sbom-unit-prod"),
+			// scan gets no qualifier — extras not appended
+			expected: filepath.Join("out", "scan", "core", "go_trivy"),
 		},
 		{
 			name: "single non-testset extra field in path",
@@ -159,7 +159,7 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 				Tool:      "trivy",
 				Extra:     map[string]string{"category": "vuln"},
 			},
-			expected: filepath.Join("out", "scan", "core", "go-trivy-vuln"),
+			expected: filepath.Join("out", "scan", "core", "go_trivy"),
 		},
 	}
 
@@ -172,8 +172,8 @@ func TestUnitID_OutDir_AllExtraFields(t *testing.T) {
 }
 
 func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
-	// Two units differing only by category should have different Longnames
-	// This proves uniqueness for scan context where category distinguishes work units
+	// Two scan units differing only by category now produce the SAME longname
+	// because category is no longer appended to longname or dirname
 
 	sbomScan := UnitID{
 		Action:    core.ActionScan,
@@ -191,30 +191,30 @@ func TestUnitID_Uniqueness_WithDifferentExtraFields(t *testing.T) {
 		Extra:     map[string]string{"category": "vuln"},
 	}
 
-	t.Run("different categories produce different longnames", func(t *testing.T) {
-		assert.NotEqual(t, sbomScan.Longname(), vulnScan.Longname(),
-			"Units with different category values must have different Longnames for uniqueness")
+	t.Run("different categories produce same longnames", func(t *testing.T) {
+		assert.Equal(t, sbomScan.Longname(), vulnScan.Longname(),
+			"Category is no longer appended — scan units with different categories have the same Longname")
 	})
 
-	t.Run("different categories produce different output directories", func(t *testing.T) {
-		assert.NotEqual(t, sbomScan.OutDir(), vulnScan.OutDir(),
-			"Units with different category values must have different OutDirs for uniqueness")
+	t.Run("different categories produce same output directories", func(t *testing.T) {
+		assert.Equal(t, sbomScan.OutDir(), vulnScan.OutDir(),
+			"Category is no longer appended — scan units with different categories have the same OutDir")
 	})
 
 	t.Run("sbom scan has expected longname", func(t *testing.T) {
-		assert.Equal(t, "scan:core:go:go:trivy:sbom", sbomScan.Longname())
+		assert.Equal(t, "scan:core:go:trivy", sbomScan.Longname())
 	})
 
 	t.Run("vuln scan has expected longname", func(t *testing.T) {
-		assert.Equal(t, "scan:core:go:go:trivy:vuln", vulnScan.Longname())
+		assert.Equal(t, "scan:core:go:trivy", vulnScan.Longname())
 	})
 
 	t.Run("sbom scan has expected outdir", func(t *testing.T) {
-		assert.Equal(t, filepath.Join("out", "scan", "core", "go-trivy-sbom"), sbomScan.OutDir())
+		assert.Equal(t, filepath.Join("out", "scan", "core", "go_trivy"), sbomScan.OutDir())
 	})
 
 	t.Run("vuln scan has expected outdir", func(t *testing.T) {
-		assert.Equal(t, filepath.Join("out", "scan", "core", "go-trivy-vuln"), vulnScan.OutDir())
+		assert.Equal(t, filepath.Join("out", "scan", "core", "go_trivy"), vulnScan.OutDir())
 	})
 }
 
@@ -228,8 +228,8 @@ func TestUnitID_DerivedFiles_WithAllExtraFields(t *testing.T) {
 		Extra:     map[string]string{"category": "sbom", "testset": "unit"},
 	}
 
-	// Expected base: out/scan/core/go-trivy-sbom-unit (component-tool-extra1-extra2, sorted alphabetically)
-	expectedOutDir := filepath.Join("out", "scan", "core", "go-trivy-sbom-unit")
+	// Expected base: out/scan/core/go_trivy (no extras appended for scan)
+	expectedOutDir := filepath.Join("out", "scan", "core", "go_trivy")
 
 	t.Run("OutDir includes all extra fields sorted", func(t *testing.T) {
 		assert.Equal(t, expectedOutDir, unitID.OutDir())
@@ -240,7 +240,7 @@ func TestUnitID_DerivedFiles_WithAllExtraFields(t *testing.T) {
 	})
 
 	t.Run("StateFile uses StateCacheDir", func(t *testing.T) {
-		expectedStateCacheDir := filepath.Join(".cache", "eac", "incremental", "scan", "core", "go-trivy-sbom-unit")
+		expectedStateCacheDir := filepath.Join(".cache", "eac", "incremental", "scan", "core", "go_trivy")
 		assert.Equal(t, filepath.Join(expectedStateCacheDir, "state.json"), unitID.StateFile())
 	})
 

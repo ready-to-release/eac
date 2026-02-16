@@ -15,10 +15,10 @@ import (
 )
 
 // newTestModule creates a ModuleContract with the given moniker and name for testing.
-func newTestModule(moniker, name string) *modules.ModuleContract {
+func newTestModule(moniker, description string) *modules.ModuleContract {
 	return modules.NewModuleContract(domain.BaseContract{
-		Moniker: moniker,
-		Name:    name,
+		Moniker:     moniker,
+		Description: description,
 	}, ".")
 }
 
@@ -34,9 +34,8 @@ func TestModuleContractAdapter_NilInput(t *testing.T) {
 func TestModuleContractAdapter_DelegatesMethods(t *testing.T) {
 	mod := modules.NewModuleContract(domain.BaseContract{
 		Moniker:     "test-mod",
-		Name:        "Test Module",
 		Description: "A test module",
-		ModuleGroup: "core",
+		Group: "core",
 		DependsOn:   []string{"dep-a", "dep-b"},
 	}, ".")
 
@@ -48,9 +47,9 @@ func TestModuleContractAdapter_DelegatesMethods(t *testing.T) {
 		want   interface{}
 	}{
 		{"GetMoniker", func() interface{} { return adapter.GetMoniker() }, "test-mod"},
-		{"GetName", func() interface{} { return adapter.GetName() }, "Test Module"},
+		{"GetName", func() interface{} { return adapter.GetName() }, "test-mod"},
 		{"GetDescription", func() interface{} { return adapter.GetDescription() }, "A test module"},
-		{"GetModuleGroup", func() interface{} { return adapter.GetModuleGroup() }, "core"},
+		{"GetGroup", func() interface{} { return adapter.GetGroup() }, "core"},
 		{"GetDependsOn", func() interface{} { return adapter.GetDependsOn() }, []string{"dep-a", "dep-b"}},
 	}
 

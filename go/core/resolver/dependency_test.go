@@ -26,17 +26,17 @@ func TestNewDependencyGraph(t *testing.T) {
 			expectedDeps: map[string][]string{},
 		},
 		{
-			name:   "dockerfile depends on go",
+			name:   "container depends on go",
 			module: "test-module",
 			enabledComponents: map[string]string{
-				"go":         "go",
-				"dockerfile": "dockerfile",
+				"go":        "go",
+				"container": "container",
 			},
 			buildAfter: map[string][]string{
-				"dockerfile": {"go"},
+				"container": {"go"},
 			},
 			expectedDeps: map[string][]string{
-				"dockerfile": {"go"},
+				"container": {"go"},
 			},
 		},
 		{
@@ -58,11 +58,11 @@ func TestNewDependencyGraph(t *testing.T) {
 			name:   "dependency type not enabled - no edge",
 			module: "test-module",
 			enabledComponents: map[string]string{
-				"dockerfile": "dockerfile",
+				"container": "container",
 				// go is not enabled
 			},
 			buildAfter: map[string][]string{
-				"dockerfile": {"go"},
+				"container": {"go"},
 			},
 			expectedDeps: map[string][]string{},
 		},
@@ -248,16 +248,16 @@ func TestDependencyGraph_TopologicalOrder(t *testing.T) {
 
 func TestDependencyGraph_Nodes(t *testing.T) {
 	enabledComponents := map[string]string{
-		"go":         "go",
-		"dockerfile": "dockerfile",
-		"assets":     "assets",
+		"go":        "go",
+		"container": "container",
+		"assets":    "assets",
 	}
 
 	g := NewDependencyGraph("test", enabledComponents, func(string) []string { return nil })
 
 	nodes := g.Nodes()
 	assert.Len(t, nodes, 3)
-	assert.ElementsMatch(t, []string{"go", "dockerfile", "assets"}, nodes)
+	assert.ElementsMatch(t, []string{"go", "container", "assets"}, nodes)
 }
 
 func TestDependencyGraph_NilGraph(t *testing.T) {

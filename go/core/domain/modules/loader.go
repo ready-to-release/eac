@@ -91,10 +91,6 @@ func ValidateModuleContract(module *ModuleContract) error {
 		return fmt.Errorf("moniker is required")
 	}
 
-	if module.Name == "" {
-		return fmt.Errorf("name is required for module '%s'", module.Moniker)
-	}
-
 	// At least one component is required
 	if len(module.Components) == 0 {
 		return fmt.Errorf("components is required for module '%s'", module.Moniker)

@@ -1,6 +1,9 @@
 modules:
   - moniker: data-store
-    name: Data Store
     components:
-      python: python/data-store
-      specs: specs/data-store
+      - type: python
+        name: python
+        root: python/data-store
+      - type: specs
+        name: specs
+        root: specs/data-store

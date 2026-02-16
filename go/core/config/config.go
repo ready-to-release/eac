@@ -74,7 +74,7 @@ type EACConfig struct {
 	ComponentKinds *ComponentKindsConfig
 	LintProviders  *LintProvidersConfig
 
-	// Blueprints: component blueprints, module templates, artifact matrices
+	// Blueprints: component kinds, artifact matrices
 	Blueprints *BlueprintsConfig
 
 	// New contract-based configs (Phase 2.2/2.3)
@@ -340,17 +340,16 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	// Step 8: Final merge: (base + type-specific) + user
 	c.Repository = MergeRepository(mergedDefaults, userCfg)
 
-	// Step 9: Load blueprints and expand module templates
+	// Step 9: Load blueprints and expand module parameters
 	if err := c.LoadBlueprints(validateSchema); err != nil {
 		return fmt.Errorf("loading blueprints: %w", err)
 	}
 
-	if err := c.Repository.ExpandModuleTemplates(c.RepoRoot, c.Blueprints); err != nil {
-		return fmt.Errorf("expanding module templates: %w", err)
+	if err := c.Repository.ExpandModuleParams(c.RepoRoot, c.Blueprints); err != nil {
+		return fmt.Errorf("expanding module parameters: %w", err)
 	}
 
 	// Step 10: Apply module group defaults then expand module groups in depends_on
-	// Must happen after template expansion (templates can add depends_on with group names)
 	// Also validates and strips the "root" sentinel for baseline tooling modules
 	c.Repository.applyModuleGroupDefaults()
 	if err := c.Repository.expandModuleGroups(); err != nil {
@@ -364,7 +363,7 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	}
 
 	// Step 12: Build moniker index for O(1) lookups
-	// Must happen after all module mutations are complete (template expansion,
+	// Must happen after all module mutations are complete (parameter substitution,
 	// container discovery, group expansion, component dep derivation).
 	c.Repository.buildMonikerIndex()
 
@@ -427,7 +426,7 @@ func (c *EACConfig) GetModuleForBook(bookName string) string {
 }
 
 // GetEvidenceBooksByModule returns all evidence books for a module.
-// Evidence books are built via 'update evidence' command, not the build command.
+// Evidence books are declared as evidence-book component entries.
 func (c *EACConfig) GetEvidenceBooksByModule(moniker string) []*Book {
 	if c.Books == nil || c.Repository == nil {
 		return nil
@@ -436,17 +435,17 @@ func (c *EACConfig) GetEvidenceBooksByModule(moniker string) []*Book {
 	if module == nil {
 		return nil
 	}
-	return c.Books.GetBooksByNames(module.EvidenceBooks)
+	return c.Books.GetBooksByNames(module.GetEvidenceBooks())
 }
 
-// GetModulesWithEvidenceBooks returns all module monikers that have evidence_books configured.
+// GetModulesWithEvidenceBooks returns all module monikers that have evidence-book components.
 func (c *EACConfig) GetModulesWithEvidenceBooks() []string {
 	if c.Repository == nil {
 		return nil
 	}
 	var modules []string
 	for i := range c.Repository.Modules {
-		if len(c.Repository.Modules[i].EvidenceBooks) > 0 {
+		if len(c.Repository.Modules[i].GetEvidenceBooks()) > 0 {
 			modules = append(modules, c.Repository.Modules[i].Moniker)
 		}
 	}

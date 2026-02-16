@@ -363,7 +363,7 @@ func runCrossReferenceValidation(repoRoot, configRoot string, result *ConfigVali
 					}
 					// Check target component exists in target module (warning only)
 					targetMod, found := cfg.Repository.GetModule(parsed.Module)
-					if found && !targetMod.HasComponent(parsed.ComponentName) {
+					if found && !targetMod.Components.HasComponent(parsed.ComponentName) && !targetMod.Components.HasComponentType(parsed.ComponentName) {
 						result.Warnings = append(result.Warnings, ConfigIssue{
 							File:    "repository.yml",
 							Message: fmt.Sprintf("module %q component %q: component_deps entry %q references component %q not found in module %q", mod.Moniker, compName, dep, parsed.ComponentName, parsed.Module),

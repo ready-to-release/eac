@@ -1,10 +1,12 @@
 modules:
   - moniker: backend
-    name: Backend Service
     components:
-      python: python/backend
+      - type: python
+        name: python
+        root: python/backend
 
   - moniker: frontend
-    name: Frontend Application
     components:
-      typescript: typescript/frontend
+      - type: typescript
+        name: typescript
+        root: typescript/frontend

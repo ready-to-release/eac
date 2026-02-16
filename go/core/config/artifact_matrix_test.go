@@ -762,10 +762,12 @@ artifact-matrices:
 
 	t.Run("expands matrix for module with go component", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "eac",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "eac",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/eac"},
+				"go": &ComponentEntry{
+					Root:  "go/cli/eac",
+					Build: &ModuleBuild{ArtifactMatrixRef: "cross-platform"},
+				},
 			},
 		}
 
@@ -782,10 +784,12 @@ artifact-matrices:
 
 	t.Run("expands matrix with inheritance", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "clie",
-			ArtifactMatrixRef: "cross-platform-upx",
+			Moniker: "clie",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/clie"},
+				"go": &ComponentEntry{
+					Root:  "go/cli/clie",
+					Build: &ModuleBuild{ArtifactMatrixRef: "cross-platform-upx"},
+				},
 			},
 		}
 
@@ -801,12 +805,12 @@ artifact-matrices:
 
 	t.Run("does not override existing artifacts", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "my-cli",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "my-cli",
 			Components: ModuleComponents{
 				"go": &ComponentEntry{
 					Root: "go/cli/my-cli",
 					Build: &ModuleBuild{
+						ArtifactMatrixRef: "cross-platform",
 						Artifacts: []ModuleArtifact{
 							{ID: "custom", Type: "executable", Pattern: "custom-binary"},
 						},
@@ -824,10 +828,9 @@ artifact-matrices:
 
 	t.Run("skips when no go component", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "my-container",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "my-container",
 			Components: ModuleComponents{
-				"dockerfile": &ComponentEntry{Root: "containers/my-container"},
+				"container": &ComponentEntry{Root: "containers/my-container"},
 			},
 		}
 
@@ -853,32 +856,38 @@ artifact-matrices:
 
 	t.Run("skips when nil matrices", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "my-cli",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "my-cli",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/my-cli"},
+				"go": &ComponentEntry{
+					Root:  "go/cli/my-cli",
+					Build: &ModuleBuild{ArtifactMatrixRef: "cross-platform"},
+				},
 			},
 		}
 
 		expandArtifactMatrixForModule(mod, nil)
 
 		goComp := mod.Components["go"]
-		assert.Nil(t, goComp.Build)
+		require.NotNil(t, goComp.Build)
+		assert.Empty(t, goComp.Build.Artifacts)
 	})
 
 	t.Run("handles unknown matrix name", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "my-cli",
-			ArtifactMatrixRef: "nonexistent",
+			Moniker: "my-cli",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/my-cli"},
+				"go": &ComponentEntry{
+					Root:  "go/cli/my-cli",
+					Build: &ModuleBuild{ArtifactMatrixRef: "nonexistent"},
+				},
 			},
 		}
 
 		expandArtifactMatrixForModule(mod, matrices)
 
 		goComp := mod.Components["go"]
-		assert.Nil(t, goComp.Build)
+		require.NotNil(t, goComp.Build)
+		assert.Empty(t, goComp.Build.Artifacts)
 	})
 }
 
@@ -895,12 +904,11 @@ artifact-matrices:
 
 	t.Run("binary_name from Build overrides default moniker", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "eac-cli",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "eac-cli",
 			Components: ModuleComponents{
 				"go": &ComponentEntry{
 					Root:  "go/cli/eac",
-					Build: &ModuleBuild{BinaryName: "eac"},
+					Build: &ModuleBuild{BinaryName: "eac", ArtifactMatrixRef: "cross-platform"},
 				},
 			},
 		}
@@ -916,10 +924,12 @@ artifact-matrices:
 
 	t.Run("binary_name defaults to moniker when not set", func(t *testing.T) {
 		mod := &Module{
-			Moniker:           "myapp",
-			ArtifactMatrixRef: "cross-platform",
+			Moniker: "myapp",
 			Components: ModuleComponents{
-				"go": &ComponentEntry{Root: "go/cli/myapp"},
+				"go": &ComponentEntry{
+					Root:  "go/cli/myapp",
+					Build: &ModuleBuild{ArtifactMatrixRef: "cross-platform"},
+				},
 			},
 		}
 
@@ -941,12 +951,11 @@ artifact-matrices:
 		customMatrices := parseBlueprintsFromYAML(t, customYaml)
 
 		mod := &Module{
-			Moniker:           "my-tool",
-			ArtifactMatrixRef: "custom",
+			Moniker: "my-tool",
 			Components: ModuleComponents{
 				"go": &ComponentEntry{
 					Root:  "go/cli/my-tool",
-					Build: &ModuleBuild{BinaryName: "tool"},
+					Build: &ModuleBuild{BinaryName: "tool", ArtifactMatrixRef: "custom"},
 				},
 			},
 		}
@@ -1001,7 +1010,7 @@ func TestGoRootInference(t *testing.T) {
 		mod := &Module{
 			Moniker: "my-container",
 			Components: ModuleComponents{
-				"dockerfile": &ComponentEntry{Root: "containers/my-container"},
+				"container": &ComponentEntry{Root: "containers/my-container"},
 			},
 		}
 

@@ -142,9 +142,9 @@ func (a *moduleContractAdapter) GetDescription() string {
 	return a.module.GetDescription()
 }
 
-// GetModuleGroup implements core.ModuleContractPort.
-func (a *moduleContractAdapter) GetModuleGroup() string {
-	return a.module.GetModuleGroup()
+// GetGroup implements core.ModuleContractPort.
+func (a *moduleContractAdapter) GetGroup() string {
+	return a.module.GetGroup()
 }
 
 // HasComponent implements core.ModuleContractPort.

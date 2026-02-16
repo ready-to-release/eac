@@ -35,65 +35,35 @@ override, and optional **root**, **patterns**, and **build** configuration.
 ```yaml
 modules:
   - moniker: eac
-    template: go-exe
+    versioning:
+      scheme: SemVer
+      changelog: release/eac/CHANGELOG.md
+      release_type: published
     components:
-      go:
+      - type: go
         root: go/cli/eac
         build:
           binary_name: eac
-      godog:
-        root: go/cli/eac/specs
 ```
 
-### 2. Apply Blueprint Template
+### 2. Apply Component-Kind Defaults
 
-If the module declares a `template` (e.g., `go-exe`, `container-multiarch`),
-the resolver loads the template from `blueprints.yml` and merges its
-defaults with the module's explicit configuration.
+Each component type maps to a **component kind** defined in `blueprints.yml`.
+The resolver merges kind defaults into the component's configuration.
 
-Templates define:
+Component kinds define:
 
-- Default components (auto-added if not explicitly listed)
-- Default patterns for each component type
-- Build configuration (artifact matrix, docker_build settings)
+- Default file patterns for each component type
+- Docker build defaults (for container kinds)
+- Tool bindings (build, test, lint, scan)
 - Component ordering (`build_after` relationships)
 
 **Source**: `contracts/core/0.1.0/schemas/defaults/blueprints.yml`
 
-**Example** (`go-exe` template):
+Component-kind defaults are applied as fallbacks; module-declared values
+always take precedence.
 
-```yaml
-go-exe:
-  components:
-    go:
-      files:
-        source: ["**/*.go"]
-        config: ["go.mod", "go.sum"]
-    markdown: {}
-    godog: {}
-    gherkin: {}
-    structurizr: {}
-```
-
-The module's explicit components override template defaults. Components
-defined only in the template are auto-added.
-
-### 3. Auto-Discover Components
-
-Some components are **auto-discovered** based on filesystem conventions:
-
-| Component    | Discovery Rule                              |
-|-------------|---------------------------------------------|
-| `gherkin`   | `specs/{moniker}/**/*.feature` exists        |
-| `structurizr` | `specs/{moniker}/.design/workspace.dsl` exists |
-| `markdown`  | `{root}/**/*.md` exists                      |
-
-Auto-discovery runs after template merging, so explicitly defined
-components always take priority.
-
-**Source**: `go/core/config/component_discovery.go`
-
-### 4. Resolve Tool Chains
+### 3. Resolve Tool Chains
 
 Each component type maps to one or more **tools**. The tool chain
 determines what builder/runner/linter handles the component:

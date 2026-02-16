@@ -150,11 +150,3 @@ func ParseUnit(unit string) (compName, toolName string) {
 	return
 }
 
-// UnitDir returns the directory name for a component+tool unit combination.
-// Uses dash separator to match UnitID.DirName() for consistent manifest paths.
-func UnitDir(compName, toolName string) string {
-	if toolName == "" {
-		return compName
-	}
-	return compName + "-" + toolName
-}

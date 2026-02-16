@@ -141,8 +141,8 @@ func deriveReleaseConfig(cfg *config.EACConfig, moniker string) (*ReleaseConfigR
 		result.VersionType = "none"
 	}
 
-	// HAS_EVIDENCE: evidence_books non-empty
-	result.HasEvidence = len(mod.EvidenceBooks) > 0
+	// HAS_EVIDENCE: has evidence-book components
+	result.HasEvidence = len(mod.GetEvidenceBooks()) > 0
 
 	// RELEASE_TYPE: derived from versioning.release_type + components
 	result.ReleaseType = resolveReleaseType(mod)
@@ -230,7 +230,7 @@ func printReleaseConfigUsage() {
 	fmt.Println("Output variables:")
 	fmt.Println("  RELEASE_TYPE             cli-binary, container, docs-site, bundle, or none")
 	fmt.Println("  VERSION_TYPE             semver or calver")
-	fmt.Println("  HAS_EVIDENCE             evidence_books is non-empty")
+	fmt.Println("  HAS_EVIDENCE             has evidence-book components")
 	fmt.Println("  AWAIT_MODULE_RELEASES    true for bundle releases (awaits dependency releases)")
 	fmt.Println("")
 	fmt.Println("Release type resolution:")

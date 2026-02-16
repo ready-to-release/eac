@@ -27,7 +27,7 @@ Feature: Configuration Defaults System
       And the module "default" has component "go"
       And the module "default" has component root "go" as "."
       And the component types config contains type "go"
-      And the component types config contains type "dockerfile"
+      And the component types config contains type "container"
       And the component types config contains type "typescript"
       And the component types config contains type "assets"
       And the repository paths.specs_root is "specs"
@@ -63,12 +63,14 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My Application
             components:
-              go: go/myapp
+              - type: go
+                name: go
+                root: go/myapp
         """
       When I load the EAC configuration
       Then the modules config contains module "myapp"
       And the component types config contains type "go"
-      And the component types config contains type "dockerfile"
+      And the component types config contains type "container"
 
     Scenario: A5 - Repository with modules only uses default paths
       Given the repository has file ".eac/repository.yml" with:
@@ -77,7 +79,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My Application
             components:
-              go: go/myapp
+              - type: go
+                name: go
+                root: go/myapp
         """
       When I load the EAC configuration
       Then the repository paths.specs_root is "specs"
@@ -92,7 +96,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My Application
             components:
-              go: go/myapp
+              - type: go
+                name: go
+                root: go/myapp
         """
       When I load the EAC configuration
       Then the system dependencies config contains "go"
@@ -112,11 +118,15 @@ Feature: Configuration Defaults System
           - moniker: app1
             name: Application One
             components:
-              go: src/app1
+              - type: go
+                name: go
+                root: src/app1
           - moniker: app2
             name: Application Two
             components:
-              go: src/app2
+              - type: go
+                name: go
+                root: src/app2
         """
       When I load the EAC configuration
       Then the modules config contains module "app1"
@@ -138,7 +148,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My App
             components:
-              custom: app
+              - type: custom
+                name: custom
+                root: app
         """
       And the repository has file ".eac/blueprints.yml" with:
         """
@@ -215,7 +227,7 @@ Feature: Configuration Defaults System
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
-      And the component types config contains type "dockerfile"
+      And the component types config contains type "container"
 
   # ===========================================================================
   # Category D: Repository Paths Merging
@@ -232,7 +244,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My App
             components:
-              go: app
+              - type: go
+                name: go
+                root: app
         """
       When I load the EAC configuration
       Then the repository paths.specs_root is "features"
@@ -248,7 +262,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My App
             components:
-              go: app
+              - type: go
+                name: go
+                root: app
         """
       When I load the EAC configuration
       Then the repository paths.out.build is "build/output"
@@ -267,7 +283,9 @@ Feature: Configuration Defaults System
           - moniker: myapp
             name: My App
             components:
-              go: app
+              - type: go
+                name: go
+                root: app
         """
       When I load the EAC configuration
       Then the repository paths.out.root is "dist"
@@ -288,7 +306,9 @@ Feature: Configuration Defaults System
           - moniker: mylib
             name: My Library
             components:
-              go: go/mylib
+              - type: go
+                name: go
+                root: go/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
@@ -301,7 +321,8 @@ Feature: Configuration Defaults System
           - moniker: mylib
             name: My Library
             components:
-              go:
+              - type: go
+                name: go
                 root: go/mylib
                 patterns:
                   source: ["src/**/*.go"]
@@ -311,18 +332,20 @@ Feature: Configuration Defaults System
       Then the module "mylib" component "go" has source patterns containing "src/**/*.go"
       And the module "mylib" component "go" does not have source pattern "**/*.go"
 
-    Scenario: E3 - Dockerfile type gets default assets pattern
+    Scenario: E3 - Container type gets default source pattern
       Given the repository has file ".eac/repository.yml" with:
         """
         modules:
           - moniker: mycontainer
             name: My Container
             components:
-              dockerfile: containers/mycontainer
+              - type: container
+                name: container
+                root: containers/mycontainer
         """
       When I load the EAC configuration
       And I apply type defaults to modules
-      Then the module "mycontainer" component "dockerfile" has source patterns containing "Dockerfile"
+      Then the module "mycontainer" component "container" has source patterns containing "**/*"
 
     Scenario: E4 - User changelog overrides default
       Given the repository has file ".eac/repository.yml" with:
@@ -334,7 +357,9 @@ Feature: Configuration Defaults System
               scheme: SemVer
               changelog: HISTORY.md
             components:
-              go: go/mylib
+              - type: go
+                name: go
+                root: go/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
@@ -351,8 +376,12 @@ Feature: Configuration Defaults System
           - moniker: mylib
             name: My Library
             components:
-              go: go/mylib
-              gherkin: features/mylib
+              - type: go
+                name: go
+                root: go/mylib
+              - type: gherkin
+                name: gherkin
+                root: features/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
@@ -365,8 +394,12 @@ Feature: Configuration Defaults System
           - moniker: mylib
             name: My Library
             components:
-              go: go/mylib
-              gherkin: specs/mylib
+              - type: go
+                name: go
+                root: go/mylib
+              - type: gherkin
+                name: gherkin
+                root: specs/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
@@ -438,17 +471,18 @@ Feature: Configuration Defaults System
 
     # NOTE: Module type concept removed - modules have components, not types
 
-    Scenario: H3 - Module missing description defaults to name
+    Scenario: H3 - Module missing description defaults to moniker
       Given the repository has file ".eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
-            name: My Application
             components:
-              go: go/myapp
+              - type: go
+                name: go
+                root: go/myapp
         """
       When I load the EAC configuration
-      Then the module "myapp" has description "My Application"
+      Then the module "myapp" has description "myapp"
 
     Scenario: H4 - Invalid YAML returns error
       Given the repository has file ".eac/repository.yml" with:
@@ -469,7 +503,9 @@ Feature: Configuration Defaults System
           - moniker: this-is-a-very-long-module-moniker-name
             name: This Is A Very Long Module Name For Testing Purposes
             components:
-              go: go/longname
+              - type: go
+                name: go
+                root: go/longname
         """
       When I load the EAC configuration
       Then the modules config contains module "this-is-a-very-long-module-moniker-name"

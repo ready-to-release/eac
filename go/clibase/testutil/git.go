@@ -201,7 +201,6 @@ func (r *GitRepo) SetupEACConfigWithModules(modules []ModuleSpec) {
 	modulesYAML := "modules:\n"
 	for _, m := range modules {
 		modulesYAML += "  - moniker: " + m.Moniker + "\n"
-		modulesYAML += "    name: " + m.Name + "\n"
 		modulesYAML += "    type: " + m.Type + "\n"
 		if m.Description != "" {
 			modulesYAML += "    description: " + m.Description + "\n"

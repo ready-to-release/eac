@@ -136,9 +136,9 @@ type moduleAdapter struct {
 }
 
 func (a *moduleAdapter) GetMoniker() string                       { return a.module.Moniker }
-func (a *moduleAdapter) GetName() string                          { return a.module.Name }
+func (a *moduleAdapter) GetName() string                          { return a.module.Moniker }
 func (a *moduleAdapter) GetDescription() string                   { return a.module.Description }
-func (a *moduleAdapter) GetModuleGroup() string                    { return a.module.ModuleGroup }
+func (a *moduleAdapter) GetGroup() string                          { return a.module.Group }
 func (a *moduleAdapter) HasComponent(compType string) bool        { return a.module.Components != nil && a.module.Components[compType] != nil }
 func (a *moduleAdapter) GetComponentRoot(compType string) string  {
 	if a.module.Components == nil {

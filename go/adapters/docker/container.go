@@ -131,6 +131,16 @@ func (a *ContainerAdapter) executeOnce(ctx context.Context, config *containerpor
 	// Remove any existing container with the same name
 	_ = a.client.ContainerRemove(ctx, containerName, container.RemoveOptions{Force: true}) //nolint:errcheck
 
+	// Auto-pull image if not available locally
+	if !a.ImageExists(ctx, config.Image) {
+		if config.LogWriter != nil {
+			fmt.Fprintf(config.LogWriter, "[container] Pulling image %s...\n", config.Image)
+		}
+		if err := a.Pull(ctx, config.Image); err != nil {
+			return nil, fmt.Errorf("failed to pull image %s: %w", config.Image, err)
+		}
+	}
+
 	// Create container
 	resp, err := a.client.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
 	if err != nil {

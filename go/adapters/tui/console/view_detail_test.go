@@ -218,30 +218,6 @@ func TestLayoutMetricsDetailPaneHeight(t *testing.T) {
 	}
 }
 
-func TestRenderDetailPaneProgressLamps(t *testing.T) {
-	zone.NewGlobal()
-	m := newTestModelWithUoW("core:api-server:lint:golint", UoWRunning)
-	m.Execution.Total = 10
-	m.Execution.Completed = 5
-
-	result := m.renderDetailPane(100)
-	lines := strings.Split(result, "\n")
-
-	if len(lines) != detailPaneHeight {
-		t.Errorf("renderDetailPane produced %d lines, want %d", len(lines), detailPaneHeight)
-	}
-
-	// Should contain "Progress" label
-	if !strings.Contains(result, "Progress") {
-		t.Error("should contain 'Progress' label")
-	}
-
-	// Should contain progress count
-	if !strings.Contains(result, "5/10") {
-		t.Error("should contain progress count '5/10'")
-	}
-}
-
 func TestRenderDetailPaneNewCellOrder(t *testing.T) {
 	zone.NewGlobal()
 	m := newTestModelWithUoW("core:api-server:lint:golint", UoWRunning)
@@ -269,7 +245,7 @@ func TestRenderDetailPaneNewCellOrder(t *testing.T) {
 		t.Error("should contain 'UoW ID' label")
 	}
 
-	// Row 2 should contain Progress, State, Duration, Phase
+	// Row 2 should contain State, Duration, Phase
 	if !strings.Contains(result, "State") {
 		t.Error("should contain 'State' label")
 	}
@@ -309,17 +285,12 @@ func newTestModelWithUoW(moniker string, status UoWStatus) Model {
 		},
 	}
 
-	parts := strings.Split(moniker, ":")
 	state := &UoWState{
-		Moniker:   moniker,
-		Status:    status,
-		Buffer:    NewRingBuffer(50),
-		StartTime: time.Now(),
-	}
-	if len(parts) >= 3 {
-		state.Module = parts[0]
-		state.Component = parts[1]
-		state.Tool = parts[len(parts)-1]
+		Moniker:     moniker,
+		DisplayName: moniker,
+		Status:      status,
+		Buffer:      NewRingBuffer(50),
+		StartTime:   time.Now(),
 	}
 	m.Execution.UoWStates[moniker] = state
 

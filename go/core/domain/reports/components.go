@@ -365,11 +365,11 @@ func buildDependencyGraph(moduleReport *ModuleContractReport, componentIndex map
 // findPrimaryComponent finds the primary component of a module.
 func findPrimaryComponent(mod *modules.ModuleContract) string {
 	// Prefer "go" component
-	if mod.Components.HasComponent("go") {
+	if mod.Components.HasComponentType("go") {
 		return "go"
 	}
 	// Then typescript
-	if mod.Components.HasComponent("typescript") {
+	if mod.Components.HasComponentType("typescript") {
 		return "typescript"
 	}
 	// Otherwise first component

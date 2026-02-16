@@ -1,5 +1,6 @@
 modules:
   - moniker: test-module
-    name: Test Module
     components:
-      python: python/test-module
+      - type: python
+        name: python
+        root: python/test-module

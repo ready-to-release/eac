@@ -107,7 +107,9 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     name: Test Module %s
     description: Test module
     components:
-      go: .
+      - type: go
+        name: go
+        root: .
 `, module, module)
 		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -169,7 +171,9 @@ paths:
     name: Test Module %s
     description: Test module
     components:
-      go: .
+      - type: go
+        name: go
+        root: .
 `, module, module)
 			}
 		} else {
@@ -179,7 +183,9 @@ paths:
     name: Test Module %s
     description: Test module
     components:
-      go: .
+      - type: go
+        name: go
+        root: .
 `, module, module)
 		}
 
@@ -265,7 +271,9 @@ paths:
 			repositoryYml += "    name: Test Module " + module + "\n"
 			repositoryYml += "    description: Test module\n"
 			repositoryYml += "    components:\n"
-			repositoryYml += "      go: .\n"
+			repositoryYml += "      - type: go\n"
+			repositoryYml += "        name: go\n"
+			repositoryYml += "        root: .\n"
 		}
 		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -318,7 +326,9 @@ paths:
 			repositoryYml += "    name: Test Module " + module + "\n"
 			repositoryYml += "    description: Test module\n"
 			repositoryYml += "    components:\n"
-			repositoryYml += "      go: .\n"
+			repositoryYml += "      - type: go\n"
+			repositoryYml += "        name: go\n"
+			repositoryYml += "        root: .\n"
 		}
 		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {

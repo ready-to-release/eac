@@ -96,19 +96,16 @@ func (c *WidgetCatalog) RenderTab(instance TabInstance, sizing TabSizing) string
 }
 
 // HelpText returns the help text for a zone ID. Returns ("", false) if not found.
-// Also checks if the zone ID matches a UoW tab moniker pattern (4+ colon-separated parts).
+// Singleton widget IDs use dashes; tab monikers use colons — no parsing needed.
 func (c *WidgetCatalog) HelpText(zoneID string) (string, bool) {
 	// Singleton widgets first
 	w := c.widgets[zoneID]
 	if w != nil && w.HelpText != "" {
 		return w.HelpText, true
 	}
-	// Tab widget: any moniker-like zone ID
-	if c.TabWidget != nil && c.TabWidget.HelpText != "" {
-		parts := strings.Split(zoneID, ":")
-		if len(parts) >= 4 {
-			return c.TabWidget.HelpText, true
-		}
+	// Tab widget: monikers contain colons, singleton IDs don't
+	if c.TabWidget != nil && c.TabWidget.HelpText != "" && strings.Contains(zoneID, ":") {
+		return c.TabWidget.HelpText, true
 	}
 	return "", false
 }
@@ -119,12 +116,9 @@ func (c *WidgetCatalog) ElementName(zoneID string) string {
 	if w != nil {
 		return w.ElementName
 	}
-	// Tab widget: any moniker-like zone ID
-	if c.TabWidget != nil {
-		parts := strings.Split(zoneID, ":")
-		if len(parts) >= 4 {
-			return c.TabWidget.ElementName
-		}
+	// Tab widget: monikers contain colons, singleton IDs don't
+	if c.TabWidget != nil && strings.Contains(zoneID, ":") {
+		return c.TabWidget.ElementName
 	}
 	return ""
 }

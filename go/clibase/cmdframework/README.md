@@ -34,7 +34,7 @@ Extracts common execution patterns into reusable phases: init, resolve, verify, 
 | `framework.go` | Entry points `Run()` and `RunSimple()` that orchestrate the five phases |
 | `init.go` | `phaseInitEarly()` and `phaseInitDeferred()`: config loading, orchestrator setup, TUI bootstrap |
 | `resolve.go` | `phaseResolve()`: module discovery, moniker resolution, skip filters, scope expansion |
-| `pipeline.go` | `UnitPipeline`, `LockStyle`, `CheckCache`, `AcquireLock`, `RecordManifest`, `ParseUnit`, `UnitDir` |
+| `pipeline.go` | `UnitPipeline`, `LockStyle`, `CheckCache`, `AcquireLock`, `RecordManifest`, `ParseUnit` |
 | `execute.go` | `phaseExecute()`: work unit creation, dependency injection, orchestrator dispatch |
 | `verify.go` | `phaseVerify()`: dependency verification, artifact validation, incremental detection |
 | `summary.go` | `phaseSummary()`: TUI and console summary generation, exit code calculation |

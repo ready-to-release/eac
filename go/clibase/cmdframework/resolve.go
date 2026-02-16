@@ -99,24 +99,24 @@ func sendPlannedWork(ctx *ExecutionContext) {
 			continue
 		}
 
-		for _, compType := range module.GetEnabledComponents() {
-			toolIDs := getToolIDsForComponentKind(ctx.EACConfig.ComponentKinds, compType, ctx.Config.Type)
+		for _, compName := range module.GetEnabledComponents() {
+			toolIDs := getToolIDsForComponentKind(ctx.EACConfig.ComponentKinds, compName, ctx.Config.Type)
 			if len(toolIDs) == 0 {
 				continue
 			}
 
 			for _, toolID := range toolIDs {
-				// Predicted Longname: context:module:component:toolID
-				id := fmt.Sprintf("%s:%s:%s:%s", ctxName, moniker, compType, toolID)
-				displayName := moniker + ":" + compType
+				// Predicted Longname: action:module:component:tool
+				id := fmt.Sprintf("%s:%s:%s:%s", ctxName, moniker, compName, toolID)
+				displayName := moniker + ":" + compName
 
 				items = append(items, display.PlannedWorkItem{
 					ID:            id,
 					DisplayName:   displayName,
 					Weight:        1, // Approximate; enriched later
 					Module:        moniker,
-					Component:     compType,
-					ComponentType: compType,
+					Component:     compName,
+					ComponentType: compName,
 				})
 			}
 		}
@@ -128,11 +128,11 @@ func sendPlannedWork(ctx *ExecutionContext) {
 }
 
 // getToolIDsForComponentKind returns the tool IDs for a component kind and action type.
-func getToolIDsForComponentKind(kinds *config.ComponentKindsConfig, compType string, cmdType core.ActionType) []string {
+func getToolIDsForComponentKind(kinds *config.ComponentKindsConfig, compName string, cmdType core.ActionType) []string {
 	if kinds == nil || kinds.Kinds == nil {
 		return nil
 	}
-	ct, exists := kinds.Kinds[compType]
+	ct, exists := kinds.Kinds[compName]
 	if !exists || ct == nil {
 		return nil
 	}

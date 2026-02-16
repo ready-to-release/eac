@@ -44,7 +44,7 @@ func (c *RepositoryConfig) computeDisplayOrder(compTypes *ComponentKindsConfig) 
 	deps := make(map[string][]string, len(c.Modules))
 	for i, m := range c.Modules {
 		declOrder[m.Moniker] = i
-		groupOf[m.Moniker] = m.ModuleGroup
+		groupOf[m.Moniker] = m.Group
 		monikers = append(monikers, m.Moniker)
 		deps[m.Moniker] = m.DependsOn
 	}

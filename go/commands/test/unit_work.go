@@ -80,6 +80,11 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			// For tests, we find the component by mapping test type -> component type
 			compTypeName := getTestTypeComponentType(ctx.ToolSystem, testType)
 			componentName := findComponentForTests(ctx, moduleMoniker, compTypeName, pkgPath)
+			if componentName == "" {
+				// Fall back to the component type name when no matching component exists
+				// (e.g., auto-created godog runners don't have a gherkin component).
+				componentName = compTypeName
+			}
 			weight := getTestComponentWeight(ctx.ToolSystem, moduleMoniker, componentName, typeTests)
 
 			// Compute testname - unique identifier within module:component
@@ -115,8 +120,8 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			// - ComponentType = component TYPE from blueprints.yml component-kinds (e.g., "go", "gherkin")
 			// - ComponentName = component instance name within module (e.g., "go")
 			// - Extra["testname"] = unique test identifier within module:component
-			// This gives: Longname = test:eac:go:go:gotest:impl-build
-			//             DirName  = go-gotest-impl-build
+			// This gives: Longname = test:eac:go:gotest:impl-build
+			//             DirName  = go_gotest_impl-build
 			unitID := workunit.UnitID{
 				Action:        core.ActionTest,
 				Module:        moduleMoniker,

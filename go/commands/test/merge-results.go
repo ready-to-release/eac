@@ -121,7 +121,14 @@ func MergeResults() int {
 	manualTestEntries := transformToManualTestsJSON(manualResults.Results)
 
 	// Write manual-tests.json into UoW output dir
-	uowDir := filepath.Join(workspaceRoot, "out", "test", moduleFlag, "manual-manual-manual")
+	// Use UnitID.DirName() as the canonical source for output directory names.
+	manualDirName := core.UnitID{
+		Action:        core.ActionTest,
+		ComponentName: "manual",
+		Tool:          "manual",
+		Extra:         map[string]string{"testname": "manual"},
+	}.DirName()
+	uowDir := filepath.Join(workspaceRoot, "out", "test", moduleFlag, manualDirName)
 	if err := os.MkdirAll(uowDir, 0755); err != nil {
 		log.Errorf("creating UoW directory: %v", err)
 		return 1

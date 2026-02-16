@@ -19,8 +19,8 @@ func TestDisplayOrder_BaselineModulesFirst(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
 			{Moniker: "core"},
-			{Moniker: "mkdocs-render-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "mkdocs-render-oci", Group: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "drawio-oci", Group: "oci-tools", DependsOn: []string{"root"}},
 			{Moniker: "cli", DependsOn: []string{"core"}},
 		},
 	}
@@ -62,8 +62,8 @@ func TestDisplayOrder_GroupedBeforeUngrouped(t *testing.T) {
 	cfg := &RepositoryConfig{
 		Modules: []Module{
 			{Moniker: "templates"},
-			{Moniker: "contracts-core", ModuleGroup: "contracts"},
-			{Moniker: "contracts-ai", ModuleGroup: "contracts"},
+			{Moniker: "contracts-core", Group: "contracts"},
+			{Moniker: "contracts-ai", Group: "contracts"},
 		},
 	}
 	order := computeTestOrder(t, cfg, nil)
@@ -90,9 +90,9 @@ func TestDisplayOrder_GroupDeclarationOrder(t *testing.T) {
 	// Same group, same depth — should use declaration order within group
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "z-tool", ModuleGroup: "tools"},
-			{Moniker: "a-tool", ModuleGroup: "tools"},
-			{Moniker: "m-tool", ModuleGroup: "tools"},
+			{Moniker: "z-tool", Group: "tools"},
+			{Moniker: "a-tool", Group: "tools"},
+			{Moniker: "m-tool", Group: "tools"},
 		},
 	}
 	order := computeTestOrder(t, cfg, nil)
@@ -195,10 +195,10 @@ func TestDisplayOrder_FullScenario(t *testing.T) {
 		Modules: []Module{
 			{Moniker: "core", DependsOn: []string{"contracts"}},
 			{Moniker: "cli", DependsOn: []string{"core"}},
-			{Moniker: "mkdocs-render-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
-			{Moniker: "contracts-core", ModuleGroup: "contracts"},
-			{Moniker: "contracts-ai", ModuleGroup: "contracts"},
+			{Moniker: "mkdocs-render-oci", Group: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "drawio-oci", Group: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "contracts-core", Group: "contracts"},
+			{Moniker: "contracts-ai", Group: "contracts"},
 			{Moniker: "templates"},
 		},
 	}

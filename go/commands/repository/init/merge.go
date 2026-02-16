@@ -77,7 +77,6 @@ func mergeModule(existing, new *config.Module) config.Module {
 	merged := *new // Start with new AI-generated content
 
 	// Preserve user customizations
-	merged.Name = existing.Name               // User may have customized name
 	merged.Versioning = existing.Versioning   // User versioning settings
 
 	// Merge dependencies (keep user-added deps)

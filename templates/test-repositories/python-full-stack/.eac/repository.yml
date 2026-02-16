@@ -1,13 +1,19 @@
 modules:
   - moniker: mathlib
-    name: Math Library
     components:
-      python: python/mathlib
-      specs: specs/mathlib
+      - type: python
+        name: python
+        root: python/mathlib
+      - type: specs
+        name: specs
+        root: specs/mathlib
 
   - moniker: report-cli
-    name: Report CLI
     depends_on: [mathlib]
     components:
-      python: python/report-cli
-      specs: specs/report-cli
+      - type: python
+        name: python
+        root: python/report-cli
+      - type: specs
+        name: specs
+        root: specs/report-cli

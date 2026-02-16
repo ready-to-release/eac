@@ -335,7 +335,7 @@ func expandTemplate(template, moniker string) string {
 	return result
 }
 
-// getDockerBuildConfig gets docker_build config from a named component, falling back to "dockerfile".
+// getDockerBuildConfig gets docker_build config from a named component, falling back to container type.
 func getDockerBuildConfig(module *modules.ModuleContract, componentName string) *config.DockerBuildConfig {
 	// Try named component first
 	if componentName != "" {
@@ -344,10 +344,9 @@ func getDockerBuildConfig(module *modules.ModuleContract, componentName string) 
 		}
 	}
 
-	// Fall back to "dockerfile" key
-	dockerfilePackage, ok := module.Components["dockerfile"]
-	if !ok || dockerfilePackage == nil || dockerfilePackage.DockerBuild == nil {
-		return nil
+	// Fall back to first component with type "container"
+	if _, entry := module.Components.GetFirstByType("container"); entry != nil && entry.DockerBuild != nil {
+		return entry.DockerBuild
 	}
-	return dockerfilePackage.DockerBuild
+	return nil
 }

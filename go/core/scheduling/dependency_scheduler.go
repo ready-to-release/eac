@@ -44,6 +44,9 @@ func NewDependencyScheduler(units []workunit.UnitSpec, opts ...SchedulerOption) 
 	}
 
 	if !cfg.skipValidation {
+		if err := validateNoDuplicates(units); err != nil {
+			return nil, err
+		}
 		if err := validateNoCycles(units); err != nil {
 			return nil, err
 		}

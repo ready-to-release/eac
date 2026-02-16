@@ -138,7 +138,6 @@ func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 	modulesYAML := "modules:\n"
 	for _, m := range modules {
 		modulesYAML += "  - moniker: " + m.Moniker + "\n"
-		modulesYAML += "    name: " + m.Name + "\n"
 		modulesYAML += "    type: " + m.Type + "\n"
 		if m.Description != "" {
 			modulesYAML += "    description: " + m.Description + "\n"
@@ -159,7 +158,6 @@ versioning:
 // ModuleSpec defines a module for test fixtures.
 type ModuleSpec struct {
 	Moniker     string
-	Name        string
 	Type        string
 	Description string
 }

@@ -80,7 +80,7 @@ lint-providers:
       - .hadolint.yaml
       - .hadolint.yml
     system_dependency: hadolint
-    applies_to: [dockerfile]
+    applies_to: [container]
     options:
       auto_fix: false
 

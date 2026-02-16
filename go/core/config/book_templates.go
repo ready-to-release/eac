@@ -160,9 +160,9 @@ func (raw *BooksConfigRaw) generateBooks(gen BookGenerator, modules []Module) []
 	}
 
 	if gen.FromModules {
-		// Generate evidence books from modules with evidence_books field
+		// Generate evidence books from modules with evidence-book components
 		for _, mod := range modules {
-			for _, evidenceBookName := range mod.EvidenceBooks {
+			for _, evidenceBookName := range mod.GetEvidenceBooks() {
 				params := map[string]string{
 					"moniker":  mod.Moniker,
 					"site_url": gen.SiteURL,

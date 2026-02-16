@@ -1,28 +1,16 @@
 # yaml-language-server: $schema=../blueprints.schema.json
 #
-# Blueprints - Unified configuration for modules and components
+# Blueprints - Component kinds and artifact matrices
 #
 # Sections:
 #   1. component-kinds: Tool bindings, default patterns, resources per component type
-#   2. module-templates: Module type definitions (versioning + component defaults)
-#   3. artifact-matrices: Reusable artifact build configurations
+#   2. artifact-matrices: Reusable artifact build configurations
 #
 # Component kinds define the building blocks: what tools (build/lint/test/scan)
 # are attached to each component type, and what file patterns they own by default.
 # A component declaring `type: go` inherits all defaults from the `go` kind.
 #
-# Templates define common module patterns that can be instantiated with
-# the "template" field in module definitions.
-#
 # All components must be explicitly declared in repository.yml.
-# Templates only provide enrichment defaults (e.g., docker_build config).
-#
-# Usage in .eac/repository.yml:
-#   - moniker: my-service
-#     template: go-cli
-#     components:
-#       go:
-#         root: go/my-service
 #         build:
 #           binary_name: my-service
 
@@ -42,30 +30,35 @@
 
 component-kinds:
   go:
-    name_pattern: "^go/(.+)$"
     extensions: [".go"]
+    source_prefixes: [go, src]
     builders: [go]
     testers: [go]
     linters: [golangci-lint]
     scanners: [sbom, vuln, secrets, sast]
+    bdd_runner: godog
     defaults:
       artifact_pattern: "{moniker}{ext}"
     files:
       source: ["**/*.go", "**/*.go.txt", "**/*.json", "**/README.md"]
       tests: ["**/*_test.go"]
       config: ["go.mod", "go.sum"]
+      data: ["**/testdata/**", "CHANGELOG.md"]
 
   typescript:
     extensions: [".ts", ".tsx"]
+    source_prefixes: [typescript, src]
     builders: [npm]
     testers: [npm]
     linters: [eslint]
     scanners: [sbom, vuln, secrets, sast]
+    bdd_runner: cucumberjs
     pool: docker
     files:
       source: ["src/**/*.ts", "features/**/*.ts"]
       tests: ["**/*.test.ts"]
       config: ["package.json", "tsconfig.json", "*.config.js", "cucumber.js", ".mocharc.json", ".vscodeignore"]
+      data: ["CHANGELOG.md", "README.md"]
 
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
@@ -75,8 +68,9 @@ component-kinds:
     scanners: [sbom, vuln, secrets, sast]
     pool: docker
 
-  dockerfile:
-    extensions: []
+  container:
+    extensions: [".py", ".sh", ".js", ".conf", ".txt", ".html"]
+    source_prefixes: [containers]
     builders: [buildx]
     linters: [hadolint]
     scanners: [sbom, vuln, secrets, iac]
@@ -84,10 +78,24 @@ component-kinds:
     default_root: containers/{moniker}
     pool: docker
     files:
-      source: ["Dockerfile"]
+      source: ["**/*"]
+      config: ["Dockerfile"]
+    docker_build_defaults:
+      container: "{moniker}"
+      context: "containers/{moniker}"
+      dockerfile: "containers/{moniker}/Dockerfile"
+      platforms: [linux/amd64]
+      tags:
+        - "ghcr.io/{owner}/{moniker}:latest"
+        - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: gha
 
   assets:
     extensions: [".md", ".markdown", ".yml", ".yaml", ".json", ".ebnf", ".txt", ".go.txt", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
+    source_prefixes: [go, src, typescript, scripts]
     component_group: doc-assets
     scanners: [secrets]
     files:
@@ -137,6 +145,7 @@ component-kinds:
 
   structurizr:
     extensions: [".dsl"]
+    source_prefixes: [specs]
     component_group: doc-assets
     builders: [structurizr-render]
     linters: [structurizr-lint]
@@ -151,6 +160,7 @@ component-kinds:
   godog:
     extensions: [".go"]
     default_root: specs
+    runner_search_dirs: [".", "specs"]
     files:
       source: ["godog_test.go", "steps_*_test.go"]
       tests: ["*_test.go"]
@@ -163,6 +173,22 @@ component-kinds:
       source: ["**/*.steps.ts", "**/*.steps.js", "cucumber.config.*"]
       tests: ["**/*.steps.ts"]
       config: ["cucumber.config.ts", "cucumber.config.js"]
+
+  behave:
+    extensions: [".py"]
+    default_root: features
+    files:
+      source: ["**/*.py", "features/**/*.py"]
+      tests: ["features/**/*.py"]
+      config: ["pyproject.toml"]
+
+  reqnroll:
+    extensions: [".cs"]
+    default_root: specs
+    files:
+      source: ["**/*.cs"]
+      tests: ["**/*.cs"]
+      config: ["*.csproj"]
 
   workflows:
     extensions: []
@@ -280,6 +306,7 @@ component-kinds:
 
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
+    source_prefixes: [scripts]
     builders: [scripts]
     testers: [pester]
     linters: [psscriptanalyzer]
@@ -292,6 +319,7 @@ component-kinds:
 
   bash:
     extensions: [".sh", ".bash"]
+    source_prefixes: [scripts]
     builders: [scripts]
     testers: [bats]
     linters: [shellcheck]
@@ -306,6 +334,7 @@ component-kinds:
     testers: [pytest]
     linters: [ruff]
     scanners: [sbom, vuln, secrets, sast]
+    bdd_runner: behave
     files:
       source: ["**/*.py"]
       tests: ["tests/**/*.py", "**/*_test.py"]
@@ -328,6 +357,7 @@ component-kinds:
     testers: [dotnet]
     linters: [dotnet-format]
     scanners: [sbom, vuln, secrets, sast]
+    bdd_runner: reqnroll
     files:
       source: ["**/*.cs", "**/*.fs"]
       tests: ["**/*Tests.cs", "**/*.Tests/**/*.cs"]
@@ -363,154 +393,6 @@ component-kinds:
       output_format: markdown
     files:
       source: ["**/*.md"]
-
-# =============================================================================
-# Module Templates
-# =============================================================================
-# Templates provide versioning defaults and component enrichment defaults.
-# All components must be explicitly declared in repository.yml.
-# Templates only enrich declared components (e.g., docker_build config).
-
-module-templates:
-  # ==========================================================================
-  # GO MODULE TEMPLATES
-  # ==========================================================================
-
-  # Base Go library module (internal/supporting)
-  # Use for: shared libraries, core modules, internal utilities
-  go-library:
-    versioning:
-      scheme: Implicit
-      release_type: none
-
-  # Go CLI tool (published)
-  # Use for: command-line tools with releases
-  go-cli:
-    versioning:
-      scheme: SemVer
-      changelog: "release/{moniker}/CHANGELOG.md"
-      release_type: published
-
-  # Go internal CLI (not externally released)
-  # Use for: internal tools, development utilities
-  go-internal:
-    versioning:
-      scheme: SemVer
-      changelog: "{go_root}/CHANGELOG.md"
-      release_type: internal
-
-  # Go MCP server module
-  # Use for: MCP (Model Context Protocol) servers
-  go-mcp-server:
-    versioning:
-      scheme: SemVer
-      changelog: "{go_root}/CHANGELOG.md"
-      release_type: internal
-
-  # Go executable module (published CLI tool)
-  # Use for: CLI tools with releases, cross-platform builds
-  go-exe:
-    versioning:
-      scheme: SemVer
-      changelog: "release/{moniker}/CHANGELOG.md"
-      release_type: published
-
-  # Go contracts module (embedded contract files)
-  # Use for: modules providing schemas, EBNF grammars, YAML defaults via go:embed
-  go-contracts:
-    versioning:
-      scheme: Implicit
-      release_type: none
-
-  # ==========================================================================
-  # CONTAINER TEMPLATES
-  # ==========================================================================
-
-  # Standard container (pushed to GHCR)
-  # Use for: tool containers, build containers
-  # Primary dockerfile component declared in repository.yml
-  # Provides docker_build defaults using {moniker}/{owner}/{short_sha} placeholders.
-  # Modules override push: false for local-only containers.
-  container:
-    components:
-      dockerfile:
-        docker_build:
-          container: "{moniker}"
-          context: "containers/{moniker}"
-          dockerfile: "containers/{moniker}/Dockerfile"
-          platforms: [linux/amd64]
-          tags:
-            - "ghcr.io/{owner}/{moniker}:latest"
-            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
-          push: true
-          registry: ghcr.io
-          cache:
-            type: gha
-
-  # Container with multi-arch support
-  # Use for: containers that need to run on both amd64 and arm64
-  container-multiarch:
-    components:
-      dockerfile:
-        docker_build:
-          container: "{moniker}"
-          context: "containers/{moniker}"
-          dockerfile: "containers/{moniker}/Dockerfile"
-          platforms: [linux/amd64, linux/arm64]
-          tags:
-            - "ghcr.io/{owner}/{moniker}:latest"
-            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
-          push: true
-          registry: ghcr.io
-          cache:
-            type: gha
-
-  # ==========================================================================
-  # DOCUMENTATION TEMPLATES
-  # ==========================================================================
-
-  # Documentation site module (MkDocs-based)
-  # Use for: main documentation sites
-  docs-site:
-    versioning:
-      scheme: CalVer
-      release_type: published
-
-  # ==========================================================================
-  # EXTENSION TEMPLATES
-  # ==========================================================================
-
-  # VSCode extension module
-  # Use for: Visual Studio Code extensions
-  vscode-extension:
-    versioning:
-      scheme: Implicit
-      release_type: internal
-
-  # Go library bundle (multiple go.mod files under one module)
-  # Use for: domain bundles containing multiple Go packages that share a lifecycle
-  go-library-bundle:
-    versioning:
-      scheme: Implicit
-      release_type: none
-
-  # ==========================================================================
-  # SCRIPT TEMPLATES
-  # ==========================================================================
-
-  # Installer scripts (pwsh + bash + godog)
-  # Use for: installer modules with PowerShell and Bash scripts
-  script-installer:
-    versioning:
-      scheme: Implicit
-      release_type: internal
-
-  # Script bundles with invokers
-  # Use for: script modules with PowerShell and Bash invoker scripts
-  scripts-bundle:
-    versioning:
-      scheme: Implicit
-      release_type: internal
 
 # =============================================================================
 # Artifact Matrices

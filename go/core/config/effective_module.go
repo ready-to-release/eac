@@ -11,7 +11,6 @@ import (
 type EffectiveModule struct {
 	// Core fields from Module
 	Moniker     string            `json:"moniker" yaml:"moniker"`
-	Name        string            `json:"name" yaml:"name"`
 	Type        string            `json:"type" yaml:"type"`
 	Description string            `json:"description" yaml:"description"`
 	DependsOn   []string          `json:"depends_on,omitempty" yaml:"depends_on,omitempty"`
@@ -47,7 +46,6 @@ func GetEffectiveModuleConfig(
 
 	effective := &EffectiveModule{
 		Moniker:      module.Moniker,
-		Name:         module.Name,
 		Type:         module.GetComponentTypesDisplay(),
 		Description:  module.Description,
 		DependsOn:    module.DependsOn,

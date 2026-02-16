@@ -336,7 +336,7 @@ type UoWEntry struct {
 	Module        string // Module moniker (e.g., "core", "eac")
 	Component     string // Component name (e.g., "go", "gherkin")
 	Tool          string // Tool/handler name (e.g., "go", "godog", "buildx")
-	ComponentType string // From blueprints.yml component-kinds (e.g., "go", "gherkin", "dockerfile")
+	ComponentType string // From blueprints.yml component-kinds (e.g., "go", "gherkin", "container")
 	Container     bool   // true = runs in container, false = runs on host
 }
 

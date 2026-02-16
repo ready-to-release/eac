@@ -458,12 +458,12 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 		}
 
 		// Reconstruct component directory path matching build output structure.
-		// Build uses "component-handler" format (e.g., "typescript-npm-build") for the output path.
-		// Must match UnitID.DirName() which uses dash separator.
-		componentDir := compResult.Component
-		if compResult.Handler != "" {
-			componentDir = compResult.Component + "-" + compResult.Handler
-		}
+		// Must match UnitID.DirName() — the canonical source for output directory names.
+		componentDir := workunit.UnitID{
+			Action:        core.ActionBuild,
+			ComponentName: compResult.Component,
+			Tool:          compResult.Handler,
+		}.DirName()
 		componentOutputDir := paths.UnitBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
 		if exitCode := builders.ExecutePostBuildSteps(compResult.Module, compResult.Component, ctx.WorkspaceRoot, componentOutputDir, io.Discard); exitCode != 0 {
 			log.Warnf("Post-build steps warning for %s/%s: exit code %d", compResult.Module, compResult.Component, exitCode)

@@ -1,7 +1,6 @@
 package console
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -114,18 +113,14 @@ func (m Model) renderDetailPane(width int) string {
 
 	// Default to empty-state placeholders; override when state is available
 	moduleName, componentName, uowID, toolName, typeName := "---", "---", "---", "---", "---"
-	stateName, durationStr, phaseStr, progressStr := "---", "---", "---", "---"
+	stateName, durationStr, phaseStr := "---", "---", "---"
 	stateStyle, durationStyle := Styles.Dim, Styles.Dim
 
 	if state != nil {
 		moduleName = state.Module
 		componentName = state.Component
 		toolName = state.Tool
-
-		parts := strings.Split(state.Moniker, ":")
-		if len(parts) > 0 {
-			uowID = parts[len(parts)-1]
-		}
+		uowID = state.Tool
 
 		// Type: container or host
 		if m.Display.AsciiMode {
@@ -149,20 +144,6 @@ func (m Model) renderDetailPane(width int) string {
 		if phaseStr == "" {
 			phaseStr = "Run"
 		}
-		progressStr = fmt.Sprintf("%d/%d", m.Execution.Completed, m.Execution.Total)
-	}
-
-	// --- UoW progress lamps (10-lamp gradient) ---
-	const detailLampCount = 10
-	var progressLamps string
-	if state != nil && m.Execution.Total > 0 {
-		activeLamps := m.Execution.Completed * detailLampCount / m.Execution.Total
-		if m.Execution.Completed >= m.Execution.Total {
-			activeLamps = detailLampCount
-		}
-		progressLamps = render.RenderProgressGradientLamps(activeLamps, detailLampCount, m.Display.AsciiMode)
-	} else {
-		progressLamps = render.RenderProgressGradientLamps(0, detailLampCount, m.Display.AsciiMode)
 	}
 
 	// --- Cell rendering helpers ---
@@ -213,10 +194,8 @@ func (m Model) renderDetailPane(width int) string {
 		{"UoW ID", uowID, 12, amberStyle},
 	}
 
-	// Row 2: Progress, lamps(no label), State, Duration, Phase
+	// Row 2: State, Duration, Phase
 	row2 := []cell{
-		{"Progress", progressStr, 14, whiteStyle},
-		{"", progressLamps, 14, whiteStyle},
 		{"State", stateName, 14, stateStyle},
 		{"Duration", durationStr, 12, durationStyle},
 		{"Phase", phaseStr, 12, Styles.Phase},

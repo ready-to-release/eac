@@ -204,7 +204,7 @@ func (c *RepositoryConfig) AllMonikers() []string {
 }
 
 // buildMonikerIndex builds the moniker-to-index map for O(1) lookup.
-// Must be called after all modules are finalized (after template expansion,
+// Must be called after all modules are finalized (after parameter substitution,
 // container discovery, and group expansion).
 func (c *RepositoryConfig) buildMonikerIndex() {
 	c.monikerIndex = make(map[string]int, len(c.Modules))
@@ -213,30 +213,14 @@ func (c *RepositoryConfig) buildMonikerIndex() {
 	}
 }
 
-// ExpandModuleTemplates expands module templates for all modules that reference them.
+// ExpandModuleParams substitutes parameter placeholders and expands artifact matrices.
 // This should be called after loading and merging configs but before ApplyComponentDefaults.
 // All components must be explicitly declared in repository.yml; no auto-discovery is performed.
-// The blueprints parameter provides templates and artifact matrices.
-func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string, blueprints *BlueprintsConfig) error {
-	var templates map[string]ModuleTemplate
+// The blueprints parameter provides component kinds and artifact matrices.
+func (c *RepositoryConfig) ExpandModuleParams(repoRoot string, blueprints *BlueprintsConfig) error {
 	var componentKinds map[string]*ComponentType
 	if blueprints != nil {
-		templates = blueprints.Templates
 		componentKinds = blueprints.ComponentKinds
-	}
-
-	// Compile name patterns from component kinds (once, before expansion)
-	if componentKinds != nil {
-		if err := CompileNamePatterns(componentKinds); err != nil {
-			return err
-		}
-	}
-
-	// Expand component_roots into individual components
-	for i := range c.Modules {
-		if err := expandComponentRoots(&c.Modules[i], componentKinds); err != nil {
-			return err
-		}
 	}
 
 	// Pre-resolve default roots from component kinds
@@ -249,17 +233,14 @@ func (c *RepositoryConfig) ExpandModuleTemplates(repoRoot string, blueprints *Bl
 	// Get owner from repository config
 	owner := c.Repository.Remote.Owner
 
-	// Expand each module
+	// Substitute parameters and expand artifact matrices for each module
 	for i := range c.Modules {
 		mod := &c.Modules[i]
 
-		// Build per-module variables
+		// Build per-module variables and substitute placeholders
 		discoveryVars := buildDiscoveryVars(mod, c)
 		discoveryVars["owner"] = owner
-
-		if err := ExpandModuleFromTemplate(mod, templates, discoveryVars); err != nil {
-			return err
-		}
+		SubstituteModuleParams(mod, discoveryVars)
 
 		// Expand artifact matrix reference into Go component artifacts
 		expandArtifactMatrixForModule(mod, blueprints)
@@ -321,18 +302,30 @@ func (c *RepositoryConfig) ToPathConfig() paths.PathConfig {
 }
 
 // TestImplPath returns the full path to a module's BDD test implementation.
-// Checks for known BDD runner components (godog, cucumberjs).
-// Returns empty string if module not found or has no BDD runner component.
+// Checks for explicit BDD runner components (godog, cucumberjs) by type.
+// Auto-created BDD runners (from expandBDDRunners) are skipped since their root
+// points to the specs directory, not the Go test implementation directory.
+// Falls back to the primary Go component root when no explicit runner exists,
+// allowing FindTestRoot to search within the Go source tree.
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
 		return ""
 	}
 
-	for _, compName := range []string{"godog", "cucumberjs"} {
-		if comp, ok := module.Components[compName]; ok && comp != nil && comp.Root != "" {
-			return comp.Root
+	// Check for explicit (user-declared) BDD runner components
+	for _, compType := range []string{"godog", "cucumberjs"} {
+		if _, comp := module.Components.GetFirstByType(compType); comp != nil && comp.Root != "" {
+			if !comp.AutoBDDRunner {
+				return comp.Root
+			}
 		}
+	}
+
+	// Fallback: return primary Go component root.
+	// FindTestRoot will search within for godog_test.go.
+	if _, comp := module.Components.GetFirstByType("go"); comp != nil && comp.Root != "" {
+		return comp.Root
 	}
 
 	return ""

@@ -138,8 +138,24 @@ func TestBookTemplate_GeneratorFromCategories(t *testing.T) {
 
 func TestBookTemplate_GeneratorFromModules(t *testing.T) {
 	modules := []Module{
-		{Moniker: "eac-ext", EvidenceBooks: []string{"release-evidence-eac-ext"}},
-		{Moniker: "clie", EvidenceBooks: []string{"release-evidence-clie"}},
+		{
+			Moniker: "eac-ext",
+			Components: ModuleComponents{
+				"release-evidence-eac-ext": &ComponentEntry{
+					Type:   "evidence-book",
+					Config: map[string]string{"book": "release-evidence-eac-ext"},
+				},
+			},
+		},
+		{
+			Moniker: "clie",
+			Components: ModuleComponents{
+				"release-evidence-clie": &ComponentEntry{
+					Type:   "evidence-book",
+					Config: map[string]string{"book": "release-evidence-clie"},
+				},
+			},
+		},
 	}
 
 	raw := &BooksConfigRaw{

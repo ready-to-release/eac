@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ready-to-release.org/schemas/eac-core/blueprints/0.1.0",
   "title": "Blueprints Configuration Schema",
-  "description": "Schema for blueprints configuration. Defines component kinds, module templates, and artifact matrices as reusable building blocks for module definitions.",
+  "description": "Schema for blueprints configuration. Defines component kinds and artifact matrices as reusable building blocks for module definitions.",
   "type": "object",
   "properties": {
     "component-kinds": {
@@ -10,13 +10,6 @@
       "description": "Map of kind name to component type definition. Kinds define tool bindings, file patterns, and resource hints for each component type.",
       "additionalProperties": {
         "$ref": "#/$defs/component_kind"
-      }
-    },
-    "module-templates": {
-      "type": "object",
-      "description": "Map of template name to module template definition. Templates define common module patterns that can be instantiated with the 'template' field in module definitions.",
-      "additionalProperties": {
-        "$ref": "#/$defs/module_template"
       }
     },
     "artifact-matrices": {
@@ -60,6 +53,10 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Scan tool bindings."
+        },
+        "bdd_runner": {
+          "type": "string",
+          "description": "Component kind to auto-create when this component declares a specs: facet. For example, go kind has bdd_runner 'godog'."
         },
         "pool": {
           "type": "string",
@@ -130,26 +127,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Configuration file patterns."
-        }
-      }
-    },
-    "module_template": {
-      "type": "object",
-      "description": "A reusable module structure with placeholders. Referenced by modules via the 'template' field.",
-      "properties": {
-        "versioning": {
-          "$ref": "#/$defs/versioning_config",
-          "description": "Default versioning configuration."
         },
-        "components": {
-          "type": "object",
-          "description": "Default component definitions with placeholders.",
-          "additionalProperties": true
-        },
-        "depends_on": {
+        "data": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Default module dependencies."
+          "description": "Data file patterns (owned but not processed by tools)."
         }
       }
     },

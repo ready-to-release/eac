@@ -64,7 +64,7 @@ func TestResolveVersion(t *testing.T) {
 		// Implicit versioned modules (no changelog)
 		{
 			name:               "implicit module - unreleased explicit",
-			module:             "eac",
+			module:             "core",
 			versionStr:         "unreleased",
 			expectedVersion:    "Unreleased",
 			expectedUnreleased: true,
@@ -73,7 +73,7 @@ func TestResolveVersion(t *testing.T) {
 		},
 		{
 			name:               "implicit module - unreleased implicit (empty)",
-			module:             "eac",
+			module:             "core",
 			versionStr:         "",
 			expectedVersion:    "Unreleased",
 			expectedUnreleased: true,
@@ -82,14 +82,14 @@ func TestResolveVersion(t *testing.T) {
 		},
 		{
 			name:        "implicit module - latest not supported",
-			module:      "eac",
+			module:      "core",
 			versionStr:  "latest",
 			wantErr:     true,
 			errContains: "does not support version",
 		},
 		{
 			name:        "implicit module - specific version not supported",
-			module:      "eac",
+			module:      "core",
 			versionStr:  "1.0.0",
 			wantErr:     true,
 			errContains: "does not support version",

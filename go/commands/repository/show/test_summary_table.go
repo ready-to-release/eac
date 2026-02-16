@@ -251,9 +251,9 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 
 	// Test framework - derive from enabled packages
 	testFramework := "default"
-	if module.Components.HasComponent("go") {
+	if module.Components.HasComponentType("go") {
 		testFramework = "go test"
-	} else if module.Components.HasComponent("node") {
+	} else if module.Components.HasComponentType("node") {
 		testFramework = "mocha"
 	}
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Framework"), testFramework)

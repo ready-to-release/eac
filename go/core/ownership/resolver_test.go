@@ -174,8 +174,8 @@ func TestResolve_CrossDirectoryOwnership(t *testing.T) {
 		{
 			Moniker: "eac",
 			Components: map[string]*ComponentOwnership{
-				"go":         {Root: "go/cli/eac"},
-				"dockerfile": {Root: "containers/drawio-oci"},
+				"go":        {Root: "go/cli/eac"},
+				"container": {Root: "containers/drawio-oci"},
 			},
 		},
 	})
@@ -186,8 +186,8 @@ func TestResolve_CrossDirectoryOwnership(t *testing.T) {
 	}
 
 	owner = r.Resolve("containers/drawio-oci/Dockerfile")
-	if owner == nil || owner.Component != "dockerfile" {
-		t.Errorf("expected dockerfile component")
+	if owner == nil || owner.Component != "container" {
+		t.Errorf("expected container component")
 	}
 }
 

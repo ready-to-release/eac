@@ -1,5 +1,6 @@
 modules:
   - moniker: calculator
-    name: Calculator Library
     components:
-      python: python/calculator
+      - type: python
+        name: python
+        root: python/calculator

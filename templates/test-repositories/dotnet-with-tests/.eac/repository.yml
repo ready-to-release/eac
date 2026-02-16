@@ -1,5 +1,6 @@
 modules:
   - moniker: my-library
-    name: My Library
     components:
-      dotnet: src/MyLibrary
+      - type: dotnet
+        name: dotnet
+        root: src/MyLibrary

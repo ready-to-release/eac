@@ -8,7 +8,7 @@ import (
 )
 
 // UnitID uniquely identifies a unit of work.
-// Format: action:module:componentType:componentName:tool[:extra...]
+// Format: action:module:component:tool[:qualifier]
 type UnitID struct {
 	Action        ActionType        `json:"context"`        // build, test, lint, scan (JSON tag kept as "context" for cache compat)
 	Module        string            `json:"module"`         // module moniker (e.g., "core")
@@ -19,10 +19,10 @@ type UnitID struct {
 	Spec          string            `json:"spec,omitempty"` // Spec name for BDD tests (godog, tscucumber), e.g., "build-module"
 }
 
-// Path returns module:componentType:componentName for component-level identification.
+// Path returns module:component for component-level identification.
 // Note: This is NOT a unique work unit identifier - use Longname() for that.
 func (u UnitID) Path() string {
-	return u.Module + ":" + u.ComponentType + ":" + u.ComponentName
+	return u.Module + ":" + u.ComponentName
 }
 
 // GetComponentType returns the component type from blueprints.yml component-kinds.
@@ -131,20 +131,14 @@ func (u UnitID) TabLabel(maxWidth int) string {
 	return name
 }
 
-// Longname returns full ID: action:module:componentType:componentName:tool[:extra...]
+// Longname returns full ID: action:module:component:tool[:qualifier]
 func (u UnitID) Longname() string {
-	base := fmt.Sprintf("%s:%s:%s:%s:%s", u.Action, u.Module, u.ComponentType, u.ComponentName, u.Tool)
-
-	if len(u.Extra) > 0 {
-		keys := make([]string, 0, len(u.Extra))
-		for k := range u.Extra {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			if v := u.Extra[k]; v != "" {
-				base += ":" + v
-			}
+	base := string(u.Action) + ":" + u.Module + ":" + u.ComponentName + ":" + u.Tool
+	if u.Action == ActionTest {
+		if name := u.Extra["testname"]; name != "" {
+			base += ":" + name
+		} else if u.Spec != "" {
+			base += ":" + u.Spec
 		}
 	}
 	return base
@@ -156,26 +150,17 @@ func (u UnitID) String() string {
 }
 
 // DirName returns the unique directory name for this unit.
-// Format: componentName-tool[-extra1][-extra2]...
+// Format: componentName_tool[_qualifier]
 func (u UnitID) DirName() string {
-	dirName := u.ComponentName
-	if u.Tool != "" {
-		dirName += "-" + u.Tool
-	}
-
-	if len(u.Extra) > 0 {
-		keys := make([]string, 0, len(u.Extra))
-		for k := range u.Extra {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			if v := u.Extra[k]; v != "" {
-				dirName += "-" + v
-			}
+	base := u.ComponentName + "_" + u.Tool
+	if u.Action == ActionTest {
+		if name := u.Extra["testname"]; name != "" {
+			base += "_" + name
+		} else if u.Spec != "" {
+			base += "_" + u.Spec
 		}
 	}
-	return dirName
+	return base
 }
 
 // OutDir returns the unique output directory for this unit.
@@ -414,7 +399,7 @@ func (s UnitSpec) DependsOnComponents() []string {
 // DisplayName returns context-aware compact display name.
 func (s UnitSpec) DisplayName() string { return s.ID.DisplayName() }
 
-// Longname returns the full ID: action:module:componentType:componentName:tool[:extra...]
+// Longname returns the full ID: action:module:component:tool[:qualifier]
 func (s UnitSpec) Longname() string { return s.ID.Longname() }
 
 // OutDir returns the output directory for this unit.

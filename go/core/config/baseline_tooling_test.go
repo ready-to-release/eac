@@ -110,8 +110,8 @@ func TestExpandModuleGroups_WithRootSentinel(t *testing.T) {
 	// Full integration: root modules + group expansion
 	cfg := &RepositoryConfig{
 		Modules: []Module{
-			{Moniker: "mkdocs-render-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
-			{Moniker: "drawio-oci", ModuleGroup: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "mkdocs-render-oci", Group: "oci-tools", DependsOn: []string{"root"}},
+			{Moniker: "drawio-oci", Group: "oci-tools", DependsOn: []string{"root"}},
 			{Moniker: "docs", DependsOn: []string{"oci-tools"}},
 		},
 	}

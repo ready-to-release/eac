@@ -53,7 +53,7 @@ func createCTRFUoW(ctx *eacgodog.TestContext, module, component, tool string, te
 
 // createCucumberUoW creates a UoW manifest + cucumber.json artifact for a module.
 func createCucumberUoW(ctx *eacgodog.TestContext, module, component, tool string, features []cucumberFeatureJSON, durationSec float64) error {
-	uowDir := fmt.Sprintf("out/test/%s/%s-%s", module, component, tool)
+	uowDir := fmt.Sprintf("out/test/%s/%s_%s", module, component, tool)
 
 	cucumberJSON, err := json.MarshalIndent(features, "", "  ")
 	if err != nil {
@@ -344,7 +344,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 
 	sc.Step(`^module "([^"]*)" has corrupted manifest file$`, func(module string) error {
 		// Create a corrupted UoW manifest
-		corruptDir := fmt.Sprintf("out/test/%s/go-gotest", module)
+		corruptDir := fmt.Sprintf("out/test/%s/go_gotest", module)
 		if err := eacgodog.CreateFile(ctx, filepath.Join(corruptDir, "uow.manifest.json"), "{invalid json"); err != nil {
 			return err
 		}
@@ -570,27 +570,39 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
   - moniker: core
     name: EAC Core
     components:
-      go: go/eac/core
+      - type: go
+        name: go
+        root: go/eac/core
   - moniker: eac
     name: EAC Commands
     components:
-      go: go/cli/eac
+      - type: go
+        name: go
+        root: go/cli/eac
   - moniker: eac-test
     name: EAC Test
     components:
-      go: go/eac/test
+      - type: go
+        name: go
+        root: go/eac/test
   - moniker: eac-utils
     name: EAC Utils
     components:
-      go: go/eac/utils
+      - type: go
+        name: go
+        root: go/eac/utils
   - moniker: eac-types
     name: EAC Types
     components:
-      go: go/eac/types
+      - type: go
+        name: go
+        root: go/eac/types
   - moniker: eac-specs
     name: EAC Specs
     components:
-      go: go/eac/specs
+      - type: go
+        name: go
+        root: go/eac/specs
 `
 		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -803,7 +815,7 @@ paths:
 
 // createCTRFUoWWithTimestamp is like createCTRFUoW but allows custom timestamp.
 func createCTRFUoWWithTimestamp(ctx *eacgodog.TestContext, module, component, tool string, tests []ctrfTestEntry, durationSec float64, timestamp string) error {
-	uowDir := fmt.Sprintf("out/test/%s/%s-%s", module, component, tool)
+	uowDir := fmt.Sprintf("out/test/%s/%s_%s", module, component, tool)
 
 	report := buildCTRFReport(tool, tests)
 	ctrfJSON, err := json.MarshalIndent(report, "", "  ")

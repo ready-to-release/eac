@@ -39,9 +39,9 @@ func (a *ModuleContractAdapter) GetDescription() string {
 	return a.module.GetDescription()
 }
 
-// GetModuleGroup returns the module's group name.
-func (a *ModuleContractAdapter) GetModuleGroup() string {
-	return a.module.GetModuleGroup()
+// GetGroup returns the module's group name.
+func (a *ModuleContractAdapter) GetGroup() string {
+	return a.module.GetGroup()
 }
 
 // HasComponent returns true if the module has the specified component type.

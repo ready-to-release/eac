@@ -563,49 +563,6 @@ func TestComponentType_GetTesters(t *testing.T) {
 	}
 }
 
-func TestDeriveName_GoPattern(t *testing.T) {
-	ct := &ComponentType{NamePattern: "^go/(.+)$"}
-	if err := ct.CompileNamePattern(); err != nil {
-		t.Fatal(err)
-	}
-
-	got := ct.DeriveName("go/commands/build")
-	if got != "commands-build" {
-		t.Errorf("DeriveName(%q) = %q, want %q", "go/commands/build", got, "commands-build")
-	}
-}
-
-func TestDeriveName_ContractsOverride(t *testing.T) {
-	got, err := DeriveNameWithPattern(`^contracts/(.+?)/[\d.]+$`, "contracts/ai-provider/0.1.0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != "ai-provider" {
-		t.Errorf("DeriveNameWithPattern = %q, want %q", got, "ai-provider")
-	}
-}
-
-func TestDeriveName_NoPattern(t *testing.T) {
-	var ct *ComponentType
-	got := ct.DeriveName("go/commands/build")
-	if got != "go-commands-build" {
-		t.Errorf("nil.DeriveName = %q, want %q", got, "go-commands-build")
-	}
-}
-
-func TestDeriveName_NoMatch(t *testing.T) {
-	ct := &ComponentType{NamePattern: "^go/(.+)$"}
-	if err := ct.CompileNamePattern(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Pattern expects "go/" prefix; "contracts/" won't match → fallback
-	got := ct.DeriveName("contracts/core/0.1.0")
-	if got != "contracts-core-0.1.0" {
-		t.Errorf("DeriveName (no match) = %q, want %q", got, "contracts-core-0.1.0")
-	}
-}
-
 // TestComponentType_ToolChainExamples validates multi-step build configurations.
 func TestComponentType_ToolChainExamples(t *testing.T) {
 	t.Run("docs-pdf has tool chain", func(t *testing.T) {
@@ -652,4 +609,54 @@ func TestComponentType_ToolChainExamples(t *testing.T) {
 			t.Errorf("expected [go], got %v", builders)
 		}
 	})
+}
+
+func TestComponentType_DeriveName(t *testing.T) {
+	goKind := &ComponentType{SourcePrefixes: []string{"go", "src"}}
+	tsKind := &ComponentType{SourcePrefixes: []string{"typescript", "src"}}
+	structurizrKind := &ComponentType{SourcePrefixes: []string{"specs"}}
+	containerKind := &ComponentType{SourcePrefixes: []string{"containers"}}
+	bashKind := &ComponentType{SourcePrefixes: []string{"scripts"}}
+
+	tests := []struct {
+		name     string
+		ct       *ComponentType
+		rootPath string
+		moniker  string
+		want     string
+	}{
+		// Go kind
+		{"go: strip go/ and moniker", goKind, "go/adapters/godog", "adapters", "godog"},
+		{"go: strip go/ and moniker prefix", goKind, "go/commands/base", "commands", "base"},
+		{"go: exact moniker match", goKind, "go/core", "core", "core"},
+		{"go: exact moniker clibase", goKind, "go/clibase", "clibase", "clibase"},
+		{"go: no moniker prefix", goKind, "go/cli/eac", "eac", "cli-eac"},
+		{"go: strip src/", goKind, "src/adapters/godog", "adapters", "godog"},
+
+		// TypeScript kind
+		{"ts: strip typescript/", tsKind, "typescript/vscode-commit", "vscode-commit", "vscode-commit"},
+
+		// Structurizr kind
+		{"structurizr: strip specs/ and moniker", structurizrKind, "specs/docs/.design", "docs", "design"},
+
+		// Container kind
+		{"container: exact moniker", containerKind, "containers/eac-ext", "eac-ext", "eac-ext"},
+
+		// Bash kind
+		{"bash: strip scripts/", bashKind, "scripts/sh/go-invoker", "implicit-cli", "sh-go-invoker"},
+
+		// Edge cases
+		{"nil component type", nil, "go/core", "core", "go-core"},
+		{"empty root", goKind, "", "core", ""},
+		{"no source prefix match", goKind, "contracts/core/0.1.0", "contracts", "core-0.1.0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ct.DeriveName(tt.rootPath, tt.moniker)
+			if got != tt.want {
+				t.Errorf("DeriveName(%q, %q) = %q, want %q", tt.rootPath, tt.moniker, got, tt.want)
+			}
+		})
+	}
 }

@@ -1,6 +1,9 @@
 modules:
   - moniker: inventory
-    name: Inventory Service
     components:
-      dotnet: src/Inventory
-      gherkin: specs/inventory
+      - type: dotnet
+        name: dotnet
+        root: src/Inventory
+      - type: gherkin
+        name: gherkin
+        root: specs/inventory

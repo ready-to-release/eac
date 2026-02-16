@@ -30,7 +30,6 @@ func TestLoader_LoadYAML(t *testing.T) {
 	// Create test YAML file with component-based format
 	testYAML := `
 moniker: "test-module"
-name: "Test Module"
 description: "Test description"
 components:
   test-type:
@@ -54,9 +53,6 @@ components:
 	// Verify fields
 	if result.Moniker != "test-module" {
 		t.Errorf("Expected moniker 'test-module', got '%s'", result.Moniker)
-	}
-	if result.Name != "Test Module" {
-		t.Errorf("Expected name 'Test Module', got '%s'", result.Name)
 	}
 	if result.GetComponentRoot("test-type") != "test/root" {
 		t.Errorf("Expected package root 'test/root', got '%s'", result.GetComponentRoot("test-type"))

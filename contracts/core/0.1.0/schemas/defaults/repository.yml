@@ -136,7 +136,7 @@ conventions:
 # Default module (used when no modules defined in repository.yml)
 modules:
   - moniker: default
-    name: Default Module
     description: Auto-generated module for unconfigured repositories
     components:
-      go: "."
+      - type: go
+        root: "."

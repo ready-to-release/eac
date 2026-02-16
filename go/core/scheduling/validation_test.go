@@ -55,8 +55,8 @@ func TestValidateNoCycles_SimpleCycle_ReportsUnits(t *testing.T) {
 
 	// CRITICAL: The error must contain units, not be empty
 	assert.Len(t, cycleErr.Units, 2, "cycle error should contain 2 units, not empty array")
-	assert.Contains(t, cycleErr.Units, "build:m:a:a:t")
-	assert.Contains(t, cycleErr.Units, "build:m:b:b:t")
+	assert.Contains(t, cycleErr.Units, "build:m:a:t")
+	assert.Contains(t, cycleErr.Units, "build:m:b:t")
 }
 
 func TestValidateNoCycles_TripleCycle_ReportsAllMembers(t *testing.T) {
@@ -121,7 +121,7 @@ func TestValidateNoCycles_MixedCycleAndNonCycle(t *testing.T) {
 
 	// Only the cycle members should be reported (not D)
 	assert.Len(t, cycleErr.Units, 3, "only cycle members should be reported")
-	assert.NotContains(t, cycleErr.Units, "build:m:d:d:t", "D is not in the cycle")
+	assert.NotContains(t, cycleErr.Units, "build:m:d:t", "D is not in the cycle")
 }
 
 func TestJoinStrings(t *testing.T) {
@@ -170,17 +170,17 @@ func TestDuplicateUnitIDError_Error(t *testing.T) {
 	err := &DuplicateUnitIDError{
 		FirstIndex:  0,
 		SecondIndex: 3,
-		Longname:    "build:core:go:go:go",
+		Longname:    "build:core:go:go",
 	}
 	msg := err.Error()
 
 	assert.Contains(t, msg, "duplicate")
 	assert.Contains(t, msg, "0")
 	assert.Contains(t, msg, "3")
-	assert.Contains(t, msg, "build:core:go:go:go")
+	assert.Contains(t, msg, "build:core:go:go")
 
 	// Verify the exact format
-	expected := "duplicate UnitID at indices 0 and 3: build:core:go:go:go"
+	expected := "duplicate UnitID at indices 0 and 3: build:core:go:go"
 	assert.Equal(t, expected, msg)
 }
 
@@ -213,7 +213,7 @@ func TestValidateNoDuplicates_AdjacentDuplicates(t *testing.T) {
 
 	assert.Equal(t, 0, dupErr.FirstIndex, "first index should be 0")
 	assert.Equal(t, 1, dupErr.SecondIndex, "second index should be 1")
-	assert.Equal(t, "build:m:a:a:t", dupErr.Longname)
+	assert.Equal(t, "build:m:a:t", dupErr.Longname)
 }
 
 func TestValidateNoDuplicates_FindsFirstDuplicatePair(t *testing.T) {
@@ -232,7 +232,7 @@ func TestValidateNoDuplicates_FindsFirstDuplicatePair(t *testing.T) {
 
 	assert.Equal(t, 0, dupErr.FirstIndex, "should report first occurrence at index 0")
 	assert.Equal(t, 1, dupErr.SecondIndex, "should report second occurrence at index 1")
-	assert.Equal(t, "build:m:a:a:t", dupErr.Longname)
+	assert.Equal(t, "build:m:a:t", dupErr.Longname)
 }
 
 func TestValidateNoDuplicates_NonAdjacentDuplicates(t *testing.T) {
@@ -252,5 +252,5 @@ func TestValidateNoDuplicates_NonAdjacentDuplicates(t *testing.T) {
 
 	assert.Equal(t, 0, dupErr.FirstIndex, "should report first occurrence at index 0")
 	assert.Equal(t, 3, dupErr.SecondIndex, "should report second occurrence at index 3")
-	assert.Equal(t, "build:m:a:a:t", dupErr.Longname)
+	assert.Equal(t, "build:m:a:t", dupErr.Longname)
 }

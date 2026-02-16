@@ -14,13 +14,13 @@ import (
 // loading so the module ends up with no actual dependencies (Layer 0).
 const RootDependency = "root"
 
-// applyModuleGroupDefaults sets ModuleGroup to the module's Moniker for any module
-// that doesn't already have an explicit ModuleGroup. This mirrors applyComponentGroupDefaults
+// applyModuleGroupDefaults sets Group to the module's Moniker for any module
+// that doesn't already have an explicit Group. This mirrors applyComponentGroupDefaults
 // and ensures every module belongs to a group (at minimum, a group-of-one named after itself).
 func (c *RepositoryConfig) applyModuleGroupDefaults() {
 	for i := range c.Modules {
-		if c.Modules[i].ModuleGroup == "" {
-			c.Modules[i].ModuleGroup = c.Modules[i].Moniker
+		if c.Modules[i].Group == "" {
+			c.Modules[i].Group = c.Modules[i].Moniker
 		}
 	}
 }
@@ -48,20 +48,20 @@ func (c *RepositoryConfig) expandModuleGroups() error {
 	}
 
 	// Build group -> []moniker index (preserving declaration order)
-	// Skip self-named groups (where module_group == moniker) — these are
+	// Skip self-named groups (where group == moniker) — these are
 	// synthetic defaults that represent a group-of-one and should not
 	// participate in collision detection or group expansion.
 	groups := make(map[string][]string)
 	for _, m := range c.Modules {
-		if m.ModuleGroup != "" && m.ModuleGroup != m.Moniker {
-			groups[m.ModuleGroup] = append(groups[m.ModuleGroup], m.Moniker)
+		if m.Group != "" && m.Group != m.Moniker {
+			groups[m.Group] = append(groups[m.Group], m.Moniker)
 		}
 	}
 
 	// Validate: group names must not collide with module monikers
 	for groupName := range groups {
 		if monikers[groupName] {
-			return fmt.Errorf("module_group %q collides with module moniker %q", groupName, groupName)
+			return fmt.Errorf("group %q collides with module moniker %q", groupName, groupName)
 		}
 	}
 
@@ -200,7 +200,7 @@ func (c *RepositoryConfig) expandAllComponentGroups() error {
 }
 
 // expandComponentGroups resolves group names in component depends_on to individual component names.
-// Mirrors the module_group expansion logic but scoped to a single module.
+// Mirrors the module group expansion logic but scoped to a single module.
 //
 // Resolution rules:
 //  1. depends_on entries are resolved in order: exact component name match first, then group match

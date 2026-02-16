@@ -111,15 +111,15 @@ func TestUnitID_Spec_Longname(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "spec test uses standard format",
+			name: "spec test uses standard format with spec qualifier",
 			unitID: UnitID{
 				Action:        core.ActionTest,
 				Module:        "eac",
 				ComponentType: "build-module", ComponentName: "build-module",
 				Tool: "godog",
-				Spec: "build-module", // Metadata only, doesn't affect Longname
+				Spec: "build-module",
 			},
-			expected: "test:eac:build-module:build-module:godog",
+			expected: "test:eac:build-module:godog:build-module",
 		},
 		{
 			name: "spec test with different module",
@@ -130,10 +130,10 @@ func TestUnitID_Spec_Longname(t *testing.T) {
 				Tool: "godog",
 				Spec: "cache-invalidation",
 			},
-			expected: "test:core:cache-invalidation:cache-invalidation:godog",
+			expected: "test:core:cache-invalidation:godog:cache-invalidation",
 		},
 		{
-			name: "non-spec test returns standard format",
+			name: "non-spec test returns standard format (testset not appended)",
 			unitID: UnitID{
 				Action:        core.ActionTest,
 				Module:        "core",
@@ -141,7 +141,7 @@ func TestUnitID_Spec_Longname(t *testing.T) {
 				Tool:  "gotest",
 				Extra: map[string]string{"testset": "unit"},
 			},
-			expected: "test:core:go:go:gotest:unit",
+			expected: "test:core:go:gotest",
 		},
 	}
 

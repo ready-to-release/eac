@@ -56,7 +56,9 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
   - moniker: test-module
     name: Test Module
     components:
-      go: go/test-module
+      - type: go
+        name: go
+        root: go/test-module
 `
 		if err := eacgodog.CreateFile(ctx, ".eac/repository.yml", repositoryYml); err != nil {
 			return err
@@ -143,7 +145,9 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
   - moniker: test-module
     name: Test Module
     components:
-      go: go/test-module
+      - type: go
+        name: go
+        root: go/test-module
 `
 		if err := eacgodog.CreateFile(ctx, ".eac/repository.yml", repositoryYml); err != nil {
 			return err

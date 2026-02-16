@@ -41,7 +41,7 @@ func TestLoadSecurityConfig(t *testing.T) {
 
 		// Assets should have secrets scanner only
 		assetsScanners := cfg.GetDefaultScanners("assets")
-		assert.Contains(t, assetsScanners, "trivy-secret", "assets should have secrets scanner")
+		assert.Contains(t, assetsScanners, "trivy-secrets", "assets should have secrets scanner")
 	})
 
 	t.Run("skip modules", func(t *testing.T) {

@@ -23,20 +23,20 @@ func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.U
 		return manifests
 	}
 
-	// Build set of expected component-tool keys (dash separator matches UnitID.DirName())
+	// Build set of expected component-tool keys (underscore separator matches UnitID.DirName())
 	expectedSet := make(map[string]bool)
 	for _, id := range expected {
-		key := id.ComponentName + "-" + id.Tool
+		key := id.ComponentName + "_" + id.Tool
 		expectedSet[key] = true
 	}
 
 	var filtered []*coreoutput.UoWManifest
 	for _, m := range manifests {
-		key := m.Component + "-" + m.Tool
+		key := m.Component + "_" + m.Tool
 		if expectedSet[key] {
 			filtered = append(filtered, m)
 		} else {
-			log.Debugf("Filtering out orphaned manifest: %s/%s-%s", m.Module, m.Component, m.Tool)
+			log.Debugf("Filtering out orphaned manifest: %s/%s_%s", m.Module, m.Component, m.Tool)
 		}
 	}
 	return filtered
@@ -44,7 +44,7 @@ func filterToExpected(manifests []*coreoutput.UoWManifest, expected []workunit.U
 
 // ValidateBuildArtifacts validates that build artifacts exist and are up-to-date for the given modules.
 // It performs:
-// 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}-{tool}/)
+// 1. UoW manifest existence check (manifests exist in out/build/{module}/{component}_{tool}/)
 // 2. Artifact existence validation (files actually exist on disk)
 // 3. Staleness check (source files unchanged since build)
 // Returns ArtifactValidationInfo with details about missing/stale artifacts.

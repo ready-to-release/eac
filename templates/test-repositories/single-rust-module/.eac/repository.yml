@@ -1,5 +1,6 @@
 modules:
   - moniker: test-module
-    name: Test Module
     components:
-      rust: rust/test-module
+      - type: rust
+        name: rust
+        root: rust/test-module

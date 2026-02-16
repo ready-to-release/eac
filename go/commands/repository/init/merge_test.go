@@ -56,12 +56,10 @@ func TestMergeConfigs_AddNewModules(t *testing.T) {
 		Modules: []config.Module{
 			{
 				Moniker:     "core",
-				Name:        "Core Module",
 				Description: "Existing core module",
 			},
 			{
 				Moniker:     "cli",
-				Name:        "CLI Module",
 				Description: "Existing CLI module",
 			},
 		},
@@ -71,17 +69,14 @@ func TestMergeConfigs_AddNewModules(t *testing.T) {
 		Modules: []config.Module{
 			{
 				Moniker:     "core",
-				Name:        "Core",
 				Description: "AI-generated core description",
 			},
 			{
 				Moniker:     "cli",
-				Name:        "CLI",
 				Description: "AI-generated CLI description",
 			},
 			{
 				Moniker:     "api",
-				Name:        "API",
 				Description: "AI-generated API description",
 			},
 		},
@@ -104,7 +99,6 @@ func TestMergeConfigs_UpdateExistingModules(t *testing.T) {
 		Modules: []config.Module{
 			{
 				Moniker:     "core",
-				Name:        "Core Module",
 				Description: "Old description",
 			},
 		},
@@ -114,7 +108,6 @@ func TestMergeConfigs_UpdateExistingModules(t *testing.T) {
 		Modules: []config.Module{
 			{
 				Moniker:     "core",
-				Name:        "Core",
 				Description: "New AI-generated description",
 			},
 		},
@@ -135,7 +128,6 @@ func TestMergeConfigs_UpdateExistingModules(t *testing.T) {
 func TestMergeModule_PreservesUserCustomizations(t *testing.T) {
 	existing := &config.Module{
 		Moniker:     "core",
-		Name:        "User Custom Name",
 		Description: "Old description",
 		Versioning: &config.ModuleVersioning{
 			Scheme: "SemVer",
@@ -144,7 +136,6 @@ func TestMergeModule_PreservesUserCustomizations(t *testing.T) {
 
 	new := &config.Module{
 		Moniker:     "core",
-		Name:        "AI Generated Name",
 		Description: "New AI description",
 		Versioning: &config.ModuleVersioning{
 			Scheme: "CalVer",
@@ -154,7 +145,6 @@ func TestMergeModule_PreservesUserCustomizations(t *testing.T) {
 	merged := mergeModule(existing, new)
 
 	// User customizations should be preserved
-	assert.Equal(t, "User Custom Name", merged.Name)
 	assert.Equal(t, "SemVer", merged.Versioning.Scheme)
 
 	// AI-generated content should be updated
@@ -165,13 +155,11 @@ func TestMergeModule_PreservesUserCustomizations(t *testing.T) {
 func TestMergeModule_PreservesDependencies(t *testing.T) {
 	existing := &config.Module{
 		Moniker:    "api",
-		Name:       "API Module",
 		DependsOn:  []string{"core", "custom-lib"},
 	}
 
 	new := &config.Module{
 		Moniker:    "api",
-		Name:       "API",
 		DependsOn:  []string{"core", "database"},
 	}
 
@@ -516,20 +504,16 @@ func TestMergeConfigs_HandlesEmptyNew(t *testing.T) {
 func TestMergeModule_UpdatesDescription(t *testing.T) {
 	existing := &config.Module{
 		Moniker:     "core",
-		Name:        "Core Module",
 		Description: "Old basic description",
 	}
 
 	new := &config.Module{
 		Moniker:     "core",
-		Name:        "Core",
 		Description: "New comprehensive AI-generated description with details",
 	}
 
 	merged := mergeModule(existing, new)
 
-	// Name preserved (user customization)
-	assert.Equal(t, "Core Module", merged.Name)
 	// Description updated (AI enhancement)
 	assert.Equal(t, "New comprehensive AI-generated description with details", merged.Description)
 }

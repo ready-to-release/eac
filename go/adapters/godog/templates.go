@@ -40,7 +40,8 @@ const ModulesSingleGo = `modules:
   - moniker: {{MODULE_NAME}}
     name: {{MODULE_NAME}} Module
     components:
-      go: {{MODULE_PATH}}
+      - type: go
+        root: {{MODULE_PATH}}
 `
 
 // ModulesTwoGo is the modules section for repository.yml with two Go modules.
@@ -49,12 +50,14 @@ const ModulesTwoGo = `modules:
   - moniker: {{MODULE1_NAME}}
     name: {{MODULE1_NAME}} Module
     components:
-      go: {{MODULE1_PATH}}
+      - type: go
+        root: {{MODULE1_PATH}}
 
   - moniker: {{MODULE2_NAME}}
     name: {{MODULE2_NAME}} Module
     components:
-      go: {{MODULE2_PATH}}
+      - type: go
+        root: {{MODULE2_PATH}}
 `
 
 // ============================================================================
@@ -232,7 +235,7 @@ func TemplateWithOverrides(base *Template, overrides map[string]string) *Templat
 // Convenience Constants for Direct Use
 // ============================================================================
 
-// DefaultModuleParams returns default parameters for a single module template.
+// DefaultModuleParams returns default parameters for a single-module test fixture.
 func DefaultModuleParams(moduleName string) TemplateParams {
 	return TemplateParams{
 		"MODULE_NAME": moduleName,
@@ -240,7 +243,7 @@ func DefaultModuleParams(moduleName string) TemplateParams {
 	}
 }
 
-// TwoModuleParams returns parameters for a two-module template.
+// TwoModuleParams returns parameters for a two-module test fixture.
 func TwoModuleParams(module1, module2 string) TemplateParams {
 	return TemplateParams{
 		"MODULE1_NAME": module1,

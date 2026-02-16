@@ -41,12 +41,6 @@ component_scanners:
     - trivy-secrets
     - trivy-iac
 
-  dockerfile:
-    - trivy-sbom
-    - trivy-vuln
-    - trivy-secrets
-    - trivy-iac
-
   # Documentation - minimal scanning
   book:
     - trivy-secrets
@@ -55,6 +49,10 @@ component_scanners:
     - trivy-secrets
 
   pdf-render:
+    - trivy-secrets
+
+  # Assets - secrets scanning only
+  assets:
     - trivy-secrets
 
   # Static content - minimal or no scanning

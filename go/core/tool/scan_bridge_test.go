@@ -280,7 +280,7 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 			},
 			"config": &config.ComponentEntry{
 				Root: "config",
-				Type: "dockerfile",
+				Type: "container",
 			},
 		},
 	}, "/workspace")
@@ -291,7 +291,7 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 			"go": {
 				Scanners: []string{"trivy-sbom", "trivy-vuln"},
 			},
-			"dockerfile": {
+			"container": {
 				Scanners: []string{"trivy-iac", "trivy-secrets"},
 			},
 		},

@@ -1,8 +1,7 @@
 package config
 
 import (
-	"fmt"
-	"regexp"
+	"path/filepath"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -36,15 +35,6 @@ type ComponentKindsConfig struct {
 
 // ComponentType defines how to process files of a certain type.
 type ComponentType struct {
-	// NamePattern is a regex used to derive component names from root paths.
-	// Capture group 1 is extracted and "/" is replaced with "-".
-	// Example: "^go/(.+)$" turns "go/commands/build" into "commands-build".
-	// If empty or no match, DefaultDeriveName is used as fallback.
-	NamePattern string `yaml:"name_pattern,omitempty" json:"name_pattern,omitempty"`
-
-	// namePatternRe is the compiled regex from NamePattern. Set by CompileNamePattern.
-	namePatternRe *regexp.Regexp `yaml:"-" json:"-"`
-
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	// Empty for non-file-based components like "book"
 	Extensions []string `yaml:"extensions" json:"extensions"`
@@ -88,12 +78,19 @@ type ComponentType struct {
 	Defaults *ComponentTypeDefaults `yaml:"defaults,omitempty" json:"defaults,omitempty"`
 
 	// ComponentGroup is the default component_group for components of this type.
-	// Applied during resolveComponentRoots if the component doesn't already have one.
+	// Applied during component defaults resolution if the component doesn't already have one.
 	ComponentGroup string `yaml:"component_group,omitempty" json:"component_group,omitempty"`
 
 	// DependsOn is the default component depends_on for components of this type.
-	// Applied during resolveComponentRoots if the component doesn't already have depends_on.
+	// Applied during component defaults resolution if the component doesn't already have depends_on.
 	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+
+	// SourcePrefixes are directory prefixes stripped during name inference.
+	// When a component is declared in list format without an explicit name,
+	// the name is derived from the root path by stripping these prefixes
+	// and the module moniker. For example, go kind with source_prefixes [go, src]
+	// maps "go/adapters/godog" → "godog" (for module moniker "adapters").
+	SourcePrefixes []string `yaml:"source_prefixes,omitempty" json:"source_prefixes,omitempty"`
 
 	// Pool specifies which resource pool this component uses.
 	// Valid values: "host" (default), "docker".
@@ -105,6 +102,23 @@ type ComponentType struct {
 	// Multiplies the tool's base resource weight (from tool-config.yml resources.cpus).
 	// Default: 1.0 (no amplification). Values < 1.0 reduce weight, > 1.0 increase weight.
 	Amp float64 `yaml:"amp,omitempty" json:"amp,omitempty"`
+
+	// BDDRunner is the component kind to auto-create when this component declares
+	// a specs: facet. For example, "go" kind has BDDRunner "godog", meaning a go
+	// component with specs: auto-creates a godog component for BDD step implementation.
+	// Empty string means no auto-BDD runner.
+	BDDRunner string `yaml:"bdd_runner,omitempty" json:"bdd_runner,omitempty"`
+
+	// RunnerSearchDirs lists subdirectories to search for the BDD test runner file
+	// (e.g., godog_test.go) relative to the base test implementation path.
+	// Configured in blueprints.yml per BDD runner component kind.
+	// "." means check the base path directly; additional entries like "specs"
+	// search subdirectories of the base path.
+	RunnerSearchDirs []string `yaml:"runner_search_dirs,omitempty" json:"runner_search_dirs,omitempty"`
+
+	// DockerBuildDefaults provides default docker_build configuration for components of this kind.
+	// Merged as defaults into components during resolution; component values take precedence.
+	DockerBuildDefaults *DockerBuildConfig `yaml:"docker_build_defaults,omitempty" json:"docker_build_defaults,omitempty"`
 }
 
 // ComponentTypeResources defines resource requirements for a component type.
@@ -156,6 +170,7 @@ type ComponentTypeFiles struct {
 	Source []string `yaml:"source,omitempty" json:"source,omitempty"`
 	Tests  []string `yaml:"tests,omitempty" json:"tests,omitempty"`
 	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
+	Data   []string `yaml:"data,omitempty" json:"data,omitempty"` // Owned files not processed by tools
 }
 
 // GetRoot returns the root path for this component type, using the provided explicit root
@@ -169,6 +184,63 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 		return strings.ReplaceAll(c.DefaultRoot, "{moniker}", moniker)
 	}
 	return ""
+}
+
+// DeriveName infers a component name from a root path and module moniker.
+// It strips source prefixes and the moniker from the path, normalizes separators,
+// strips leading dots, and truncates to 16 characters.
+//
+// Algorithm:
+//  1. Strip the first matching source prefix (e.g., "go/" from "go/adapters/godog")
+//  2. If remaining path starts with moniker+"/", strip that prefix
+//  3. If remaining path equals moniker exactly, use moniker as name
+//  4. Replace "/" and "_" with "-"
+//  5. Strip leading dots
+//  6. Truncate to 16 characters
+//  7. If result is empty, fall back to DefaultDeriveName (last path segment)
+func (c *ComponentType) DeriveName(rootPath, moniker string) string {
+	if rootPath == "" {
+		return ""
+	}
+	p := filepath.ToSlash(rootPath)
+
+	// Strip source prefixes
+	if c != nil {
+		for _, prefix := range c.SourcePrefixes {
+			trimmed := strings.TrimPrefix(p, prefix+"/")
+			if trimmed != p {
+				p = trimmed
+				break
+			}
+		}
+	}
+
+	// Strip moniker prefix or match exact
+	if moniker != "" {
+		if strings.HasPrefix(p, moniker+"/") {
+			p = strings.TrimPrefix(p, moniker+"/")
+		} else if p == moniker {
+			return moniker
+		}
+	}
+
+	// Normalize separators
+	p = strings.ReplaceAll(p, "/", "-")
+	p = strings.ReplaceAll(p, "_", "-")
+
+	// Strip leading dots
+	p = strings.TrimLeft(p, ".")
+
+	// Truncate
+	if len(p) > 16 {
+		p = p[:16]
+	}
+
+	// Fallback
+	if p == "" {
+		return DefaultDeriveName(rootPath)
+	}
+	return p
 }
 
 // GetBuilders returns the builder tool IDs for this component type.
@@ -476,76 +548,3 @@ func (c *ComponentKindsConfig) GetBuilder(componentName string) string {
 	return ct.Builders[0]
 }
 
-// compileNamePattern compiles a name_pattern regex and validates it has capture groups.
-func compileNamePattern(pattern string) (*regexp.Regexp, error) {
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, fmt.Errorf("invalid name_pattern %q: %w", pattern, err)
-	}
-	if re.NumSubexp() < 1 {
-		return nil, fmt.Errorf("name_pattern %q must have at least one capture group", pattern)
-	}
-	return re, nil
-}
-
-// CompileNamePattern compiles the name_pattern regex. Called once during init.
-// Returns an error if the pattern is invalid or has no capture groups.
-func (c *ComponentType) CompileNamePattern() error {
-	if c == nil || c.NamePattern == "" {
-		return nil
-	}
-	re, err := compileNamePattern(c.NamePattern)
-	if err != nil {
-		return err
-	}
-	c.namePatternRe = re
-	return nil
-}
-
-// DeriveName applies the name_pattern regex to root, returns derived name.
-// Capture group 1 is extracted, "/" replaced with "-".
-// Falls back to DefaultDeriveName if no pattern or no match.
-func (c *ComponentType) DeriveName(root string) string {
-	if c != nil && c.namePatternRe != nil {
-		return deriveNameFromRe(c.namePatternRe, root)
-	}
-	return DefaultDeriveName(root)
-}
-
-// CompileNamePatterns compiles all name patterns in the kinds map.
-func CompileNamePatterns(kinds map[string]*ComponentType) error {
-	for name, ct := range kinds {
-		if ct == nil {
-			continue
-		}
-		if err := ct.CompileNamePattern(); err != nil {
-			return fmt.Errorf("component kind %q: %w", name, err)
-		}
-	}
-	return nil
-}
-
-// DefaultDeriveName replaces "/" with "-" in the full root path.
-func DefaultDeriveName(root string) string {
-	return strings.ReplaceAll(root, "/", "-")
-}
-
-// DeriveNameWithPattern compiles and applies a one-off name pattern to root.
-// Used for entry-level name_pattern overrides.
-func DeriveNameWithPattern(pattern, root string) (string, error) {
-	re, err := compileNamePattern(pattern)
-	if err != nil {
-		return "", err
-	}
-	return deriveNameFromRe(re, root), nil
-}
-
-// deriveNameFromRe applies a compiled regex to root, extracting capture group 1.
-// Falls back to DefaultDeriveName if no match.
-func deriveNameFromRe(re *regexp.Regexp, root string) string {
-	m := re.FindStringSubmatch(root)
-	if len(m) >= 2 {
-		return strings.ReplaceAll(m[1], "/", "-")
-	}
-	return DefaultDeriveName(root)
-}
