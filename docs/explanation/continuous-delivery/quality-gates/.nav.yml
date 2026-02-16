@@ -5,3 +5,4 @@ nav:
   - precommit-gates.md
   - precommit-setup.md
   - release-gates.md
+  - defect-prevention
