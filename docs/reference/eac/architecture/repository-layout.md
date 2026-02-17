@@ -34,12 +34,11 @@ eac/
 │   ├── actions/                # Reusable workflow actions
 │   └── workflows/              # CI/CD pipeline definitions
 │
-├── .clie/                       # EAC and CLIE configuration (Everything as Code)
-│   ├── cache/                  # Build cache
-│   ├── eac/                    # User configuration overrides
-│   │   ├── repository.yml      # Module contracts (central registry)
-│   │   └── books.yml           # PDF book generation config
-│   └── templates/              # Report templates
+├── .eac/                        # EAC configuration (Everything as Code)
+│   ├── repository.yml           # Module contracts (central registry)
+│   ├── books.yml                # PDF book generation config
+│   ├── ai-config.yml            # AI provider configuration
+│   └── tool-config.yml          # Tool resource overrides
 │
 ├── .vscode/                    # VSCode workspace configuration
 │   └── extensions/             # Custom VSCode extensions

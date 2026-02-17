@@ -180,10 +180,10 @@ eac validate-module-hierarchy
 ```yaml
 components:
   go:
-    root: go/core          # Base directory
+    root: go/core # Base directory
     patterns:
-      source: ["**/*.go"]      # All .go files
-      tests: ["**/*_test.go"]  # All test files
+      source: ["**/*.go"] # All .go files
+      tests: ["**/*_test.go"] # All test files
 ```
 
 **Pattern Variables**:
@@ -358,7 +358,7 @@ eac build my-new-module
 **1. Update repository.yml**:
 
 ```yaml
-depends_on: [logging-go, config-go]  # Add config-go
+depends_on: [logging-go, config-go] # Add config-go
 ```
 
 **2. Validate**:
@@ -543,35 +543,86 @@ eac update-design <module>
 
 ## Module Organization
 
-### Core System Modules
+EAC consists of **28 modules** organized into focused groups. For complete module documentation, see [Modules Reference](../modules/index.md).
 
-| Module               | Type        | Purpose                                                                  |
-| -------------------- | ----------- | ------------------------------------------------------------------------ |
-| **core**             | go-library  | Core libraries (contracts, repository, git)                              |
-| **eac**          | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
-| **godog-eac**    | go-library  | BDD test infrastructure (Godog)                                          |
-| **eac-mcp-server**   | go-mcp      | MCP server (LLM tool integration)                                        |
+### Core Framework
 
-### CLI and Extensions
+| Module        | Type       | Purpose                                              |
+| ------------- | ---------- | ---------------------------------------------------- |
+| **core**      | go-library | Core utilities (contracts, configuration, workspace) |
+| **clibase**   | go-library | CLI framework (Cobra integration, flags, output)     |
+| **contracts** | go-library | Contract definitions and schemas                     |
 
-| Module      | Type          | Purpose                              |
-| ----------- | ------------- | ------------------------------------ |
-| **clie** | go-cli        | CLI framework (Docker orchestration) |
-| **eac-ext** | clie-extension | EAC Docker extension image           |
+### CLI Tools
 
-### Libraries
+| Module             | Type           | Purpose                            |
+| ------------------ | -------------- | ---------------------------------- |
+| **eac**            | go-cli         | EAC CLI application                |
+| **eac-ext**        | clie-extension | EAC containerized extension        |
+| **eac-mcp-server** | go-mcp         | MCP server for AI tool integration |
 
-| Module            | Type       | Purpose                       |
-| ----------------- | ---------- | ----------------------------- |
-| **logging-go**    | go-library | Structured logging (Go)       |
-| **config-go**     | go-library | Configuration management (Go) |
-| **validation-go** | go-library | Validation utilities (Go)     |
+### Commands Modules (7 modules)
 
-### Documentation
+The modular command framework split by domain. See [Commands Framework](./commands-framework.md) for architecture.
 
-| Module        | Type        | Purpose                   |
-| ------------- | ----------- | ------------------------- |
-| **docs-site** | mkdocs-site | MkDocs documentation site |
+| Module                  | Purpose                                          |
+| ----------------------- | ------------------------------------------------ |
+| **commands/base**       | Base command infrastructure and shared utilities |
+| **commands/build**      | Build automation commands                        |
+| **commands/lint**       | Code quality and linting                         |
+| **commands/repository** | Repository management                            |
+| **commands/scan**       | Security scanning                                |
+| **commands/test**       | Test execution                                   |
+| **commands/update**     | Update and maintenance                           |
+
+### Adapters (16 adapters)
+
+Integration adapters for external tools and frameworks. See [Adapters System](./adapters-system.md) for architecture.
+
+**Test Frameworks**: gotest, godog, mocha, pytest, behave, reqnroll, cucumber
+
+**Package Managers**: npm, pip, nuget, dotnet
+
+**Infrastructure**: docker, gh, ai
+
+**Utilities**: tui, eac
+
+### Contracts (8 contracts)
+
+Versioned interface definitions at v0.1.0. See [Contracts](./contracts.md) for architecture.
+
+| Contract              | Purpose                            |
+| --------------------- | ---------------------------------- |
+| **ai-provider**       | AI provider integration interface  |
+| **clie**              | CLIE CLI framework configuration   |
+| **container-runtime** | Container runtime interface        |
+| **core**              | Core configuration and environment |
+| **docs**              | Documentation generation contracts |
+| **runner**            | Test runner interface              |
+| **scanner**           | Security scanner interface         |
+| **tui**               | Terminal UI component interface    |
+
+### OCI Tools (12 container images)
+
+Containerized development tools. See [OCI Tools Module](../modules/oci-tools.md).
+
+**Language SDKs**: go-oci, cgo-oci, dotnet-oci
+
+**Documentation**: mkdocs-dev-oci, mkdocs-render-oci, drawio-oci, mermaid-oci, pdf-oci, pdf-cli-oci
+
+**Infrastructure**: git-oci, nginx-oci, gource-oci
+
+### Supporting Modules
+
+| Module              | Purpose                         |
+| ------------------- | ------------------------------- |
+| **repository**      | Repository management utilities |
+| **docs**            | Documentation generation module |
+| **templates**       | Project templates               |
+| **clie-installer**  | CLIE installation scripts       |
+| **clie-eac-bundle** | Release bundle packaging        |
+| **vscode-commit**   | VS Code commit extension        |
+| **implicit-cli**    | Implicit CLI detection          |
 
 ---
 

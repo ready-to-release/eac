@@ -1,110 +1,92 @@
 # Specification Validation
 
-CLI commands for validating Gherkin specifications and tag usage.
-
-## Quick Reference
-
-```bash
-# Validate all specifications
-eac validate specs
-
-# Validate with effective tag output
-eac validate specs --show-effective-tags
-
-# Validate specific aspects
-eac validate test-tags
-eac validate control-tags
-```
+Commands for validating Gherkin specifications and tag usage.
 
 ---
 
-## `validate specs`
+## validate specs
 
 Validates Gherkin specifications against quality contracts.
 
 ```bash
-eac validate specs
+eac validate specs                    # Validate all specs
+eac validate specs --show-effective-tags  # Show tag inheritance
+eac validate specs --module <module>  # Validate specific module
 ```
 
-**Checks**:
+**Validation checks**:
 
-- Valid Gherkin syntax
-- Required tags present (test level, verification type)
-- Tag format correctness
-- Feature file naming conventions
-- Scenario structure compliance
+- ✓ Valid Gherkin syntax
+- ✓ Required tags present (test level @L0-@L4)
+- ✓ Tag format correctness
+- ✓ Feature file naming conventions
+- ✓ Scenario structure compliance
 
-### Options
-
-```bash
-# Show effective tags after inheritance
-eac validate specs --show-effective-tags
-
-# Validate specific module
-eac validate specs --module eac-commands
-```
-
----
-
-## `validate test-tags`
-
-Validates that all test tags are defined in the tag contract.
-
-```bash
-eac validate test-tags
-```
-
-**Checks**:
-
-- All `@L0`-`@L4` tags are valid test levels
-- Verification tags (`@ov`, `@iv`, `@pv`, etc.) are valid
-- Custom tags match defined patterns
-
----
-
-## `validate control-tags`
-
-Validates that `@control:` tags reference valid OSCAL catalog controls.
-
-```bash
-eac validate control-tags
-```
-
-**Checks**:
-
-- Control IDs exist in the OSCAL catalog
-- Control format is valid (`<family>-<number>` or `<family>-<number>(<enhancement>)`)
-- Reports invalid control IDs with file locations
-
-**Example output**:
+**Example output with `--show-effective-tags`**:
 
 ```text
-Validating control tags...
-  specs/auth-service/login.feature:15 - invalid: @control:ac-99 (not in catalog)
-
-Validation failed: 1 invalid control reference found
-```
-
----
-
-## Effective Tag Display
-
-When using `--show-effective-tags`, the output shows how tags accumulate through inheritance:
-
-```text
-specs/auth-service/login/specification.feature
+specs/auth/login/specification.feature
   Feature: @L2 @ov @control:ia-5
     Scenario: User login with valid credentials
       Effective: @L2, @ov, @control:ia-5, @control:au-2
       (Scenario adds: @control:au-2)
 ```
 
-This helps debug why tests are or aren't selected for specific suites.
+---
+
+## validate test-tags
+
+Validates that test tags match defined tag taxonomy.
+
+```bash
+eac validate test-tags
+```
+
+**Validation checks**:
+
+- ✓ Test level tags (@L0-@L4) are valid
+- ✓ Verification tags (@ov, @iv, @pv) are defined
+- ✓ Custom tags match allowed patterns
+
+**Example failure**:
+
+```text
+specs/api/users.feature:25 - invalid tag: @L5 (valid: @L0-@L4)
+```
+
+---
+
+## validate control-tags
+
+Validates security control tags reference valid OSCAL catalog controls.
+
+```bash
+eac validate control-tags
+```
+
+**Validation checks**:
+
+- ✓ Control IDs exist in OSCAL catalog
+- ✓ Format is valid: `@control:<family>-<number>` or `@control:<family>-<number>(<enhancement>)`
+- ✓ Reports invalid controls with file locations
+
+**Valid formats**:
+
+- `@control:ac-2` - Access Control family, control 2
+- `@control:ia-5(1)` - Identification/Authentication family, control 5, enhancement 1
+- `@control:au-2` - Audit and Accountability family, control 2
+
+**Example failure**:
+
+```text
+specs/auth/login.feature:15 - invalid: @control:ac-99 (not in catalog)
+```
 
 ---
 
 ## Related Documentation
 
-- [Tag Taxonomy (Conceptual)](../../../explanation/specifications/taxonomy/index.md) - Tag system concepts
-- [Tag Inheritance (Conceptual)](../../../explanation/specifications/taxonomy/tag-inheritance.md) - How tags accumulate
-- [Validate Command Reference](../commands/validate/index.md) - Full validation command options
+- **[Specifications Index](./index.md)** - Tag system overview
+- **[Tag Taxonomy](../../../explanation/specifications/taxonomy/index.md)** - Tag concepts
+- **[Test Suites](../testing/test-suites.md)** - How tags select tests
+- **[Validate Commands](../commands/validate/index.md)** - Full CLI reference

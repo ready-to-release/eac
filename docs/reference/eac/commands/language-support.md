@@ -87,7 +87,6 @@ All other commands work across languages via **capability-based dispatch**. Comm
   - `--scanner iac` - Infrastructure as Code scanning (Trivy)
   - `--scanner sbom` - Software Bill of Materials generation
   - `--scanner compliance` - Compliance checking (Trivy)
-- [`scan zap`](./scan/zap.md) - Dynamic application security testing (OWASP ZAP)
 
 Security tools detect languages automatically.
 

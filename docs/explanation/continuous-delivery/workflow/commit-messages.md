@@ -31,21 +31,6 @@ Semantic commit messages enable:
 
 ---
 
-## Reference Documentation
-
-For complete format specification, type keywords, and examples, see:
-
-**[Commit Messages Reference](../../../reference/eac/workflow/commit-messages.md)** - Complete specification including:
-
-- Full type keyword table
-- Scope conventions
-- Description guidelines
-- Body and footer formatting
-- Complete examples
-- Common mistakes to avoid
-
----
-
 ## Related Documentation
 
 - [Traceability Requirements](../cd-model/stages.md#stage-4-commit) - Stage 4 traceability

@@ -1,6 +1,6 @@
 # CLIE CLI Architecture
 
-Architecture documentation for the Ready-to-Release CLI framework.
+Architecture documentation for the CLIE CLI framework.
 
 ## Overview
 

@@ -489,6 +489,98 @@ eac show valid-commands
 eac get commands
 ```
 
+### 5. Parent-Only Commands
+
+Some commands serve as **parent commands** that cannot be executed directly. They only display help and list their subcommands.
+
+#### What Are Parent Commands?
+
+Parent commands organize related subcommands into logical groups. When you try to execute a parent command without a subcommand, it shows:
+
+- Brief description of the command group
+- List of available subcommands
+- Usage examples
+
+#### Which Commands Are Parent-Only?
+
+**Information Commands:**
+
+- `get` - Must use subcommands like `get modules`, `get config`, etc.
+- `show` - Must use subcommands like `show modules`, `show files`, etc.
+
+**Workflow Commands:**
+
+- `pipeline` - Must use subcommands like `pipeline run`, `pipeline status`, etc.
+- `release` - Must use subcommands like `release this`, `release pending`, etc.
+- `work` - Must use subcommands like `work create`, `work commit`, etc.
+- `templates` - Must use subcommands like `templates install`, etc.
+
+**Utility Commands:**
+
+- `drawio` - Must use subcommands like `drawio render`, `drawio create`, etc.
+- `serve` - Parent command, but also accepts module monikers: `serve docs`
+- `validate` - Parent command, but can also run all validations when used alone
+
+#### Behavior Examples
+
+**Parent-only (shows help):**
+
+```bash
+# These show help and subcommand list
+$ eac get
+command "get" is a parent command and cannot be executed directly
+
+Usage: eac get <subcommand>
+
+Available subcommands:
+  modules              List module contracts
+  dependencies         Show dependency graph
+  config               Display configuration
+  ...
+
+$ eac show
+command "show" is a parent command and cannot be executed directly
+...
+```
+
+**Hybrid commands (can run alone or with subcommands):**
+
+```bash
+# Runs all validations
+$ eac validate
+✓ Validated contracts
+✓ Validated dependencies
+✓ Validated specs
+...
+
+# Runs specific validation
+$ eac validate specs
+✓ Validated specifications
+```
+
+**Module-accepting commands:**
+
+```bash
+# Serves the "docs" module
+$ eac serve docs
+Starting MkDocs server for docs module...
+
+# Shows help if no module specified
+$ eac serve
+Usage: eac serve <module>
+```
+
+#### Why Parent-Only Commands?
+
+Parent-only commands provide:
+
+1. **Organization** - Group related commands logically
+2. **Discoverability** - Help users find the right subcommand
+3. **Consistency** - Clear command hierarchy
+4. **Safety** - Prevent accidental execution of broad operations
+
+**Design principle**: If a command group has many subcommands (get, show have 50+), make it parent-only to force intentional subcommand selection.
+
 ---
 
 ## See Also

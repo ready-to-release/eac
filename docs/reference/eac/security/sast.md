@@ -1,71 +1,72 @@
-# SAST (Static Application Security Testing)
+# Static Application Security Testing (SAST)
 
-Static analysis examines source code without executing it (white-box testing).
+Static code analysis for security vulnerabilities using Semgrep and Trivy.
 
-## What SAST Does
+---
 
-- Analyzes code structure and patterns
-- Identifies potential vulnerabilities
-- Detects insecure coding practices
-- Runs before or during build
-
-## What It Detects
-
-| Vulnerability              | Description                          |
-| -------------------------- | ------------------------------------ |
-| SQL Injection              | Unsanitized database queries         |
-| Cross-Site Scripting (XSS) | Unescaped user input in HTML         |
-| Hardcoded Secrets          | API keys, passwords in code          |
-| Insecure Cryptography      | Weak algorithms, bad implementations |
-| Path Traversal             | Unsafe file path handling            |
-| Command Injection          | Unsafe system command execution      |
-
-## Running SAST Scans
-
-Use the `scan` command with appropriate scanner types:
+## Scanners
 
 ```bash
-# SAST scan (Semgrep)
-eac scan --scanner sast
+# Static code analysis
+eac scan --scanner sast        # Semgrep code analysis
 
 # Secret detection
-eac scan --scanner secrets
+eac scan --scanner secrets     # Trivy secret scanning
 
-# Vulnerability scan
-eac scan --scanner vuln
+# Infrastructure as Code
+eac scan --scanner iac         # Trivy IaC scanning
 
-# IaC scanning (Terraform, Kubernetes)
-eac scan --scanner iac
-
-# Multiple scanners
-eac scan --scanner sast,secrets,vuln
+# All static scanners
+eac scan --scanner sast,secrets,iac
 ```
 
-Evidence is written to `out/scan/<module>/<scanner>/`.
+**Output**: `out/scan/<module>/<scanner>/`
 
-## Benefits
+---
 
-- Catches issues before code runs
-- Fast feedback (seconds to minutes)
-- Identifies exact code location
-- No runtime environment needed
+## SAST (Semgrep)
 
-## Limitations
+Detects security vulnerabilities in source code:
 
-- False positives require tuning
-- Can't detect runtime-only issues
-- Requires language-specific analyzers
-- May miss business logic flaws
+- **Injection flaws**: SQL injection, command injection, XSS
+- **Authentication**: Weak auth, session management issues
+- **Cryptography**: Weak algorithms, insecure random, hardcoded keys
+- **Input validation**: Unvalidated input, path traversal
+- **Error handling**: Information disclosure, stack traces
 
-## When to Use
+**Languages**: Go, JavaScript/TypeScript, Python, Java, Ruby, C#, PHP
 
-| Stage             | Scan Type               | Purpose             |
-| ----------------- | ----------------------- | ------------------- |
-| Pre-commit (2)    | Secrets, critical vulns | Fast gate           |
-| Merge Request (3) | Full SAST               | PR validation       |
-| Commit (4)        | Full codebase           | Comprehensive check |
+**Rulesets**: OWASP Top 10, CWE Top 25, language-specific best practices
+
+---
+
+## Secret Detection (Trivy)
+
+Finds hardcoded secrets:
+
+- **API keys**: AWS, GCP, Azure credentials
+- **Passwords**: Database passwords, service accounts
+- **Tokens**: OAuth tokens, JWT secrets, SSH keys
+- **Certificates**: Private keys, PEM files
+
+**Scan locations**: Source code, config files, commit history, container images
+
+---
+
+## Infrastructure as Code (Trivy)
+
+Scans IaC configurations for misconfigurations:
+
+- **Terraform**: AWS, GCP, Azure resource misconfigurations
+- **Kubernetes**: Pod security, RBAC, network policies
+- **Docker**: Dockerfile best practices, image security
+- **CloudFormation**: AWS resource security settings
+
+**Checks**: CIS Benchmarks, compliance frameworks
+
+---
 
 ## Related Documentation
 
-- [Shift-Left Security (Conceptual)](../../../explanation/continuous-delivery/security/shift-left.md) - Security integration principles
-- [Scan Command Reference](../commands/scan/index.md) - Full scan command options
+- **[Security Index](./index.md)** - Security scanning overview
+- **[Scan Commands](../commands/scan/index.md)** - Full scan command reference

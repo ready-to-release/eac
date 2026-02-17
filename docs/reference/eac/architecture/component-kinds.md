@@ -244,6 +244,159 @@ components:
 
 ---
 
+## AI Analysis Component Types
+
+These component types are used for AI-powered code analysis and documentation generation.
+
+### `ai-dsl` - AI Architecture Analysis
+
+**Purpose**: Analyze code and generate Structurizr DSL architecture diagrams
+**File Patterns:** `**/*.go`, `**/*.ts`, source code files
+**Builder:** AI adapter (generates workspace.dsl)
+**Use Case:** Automated C4 model diagram generation
+
+**Example**:
+```yaml
+components:
+  ai-architecture:
+    type: ai-dsl
+    root: src/
+    patterns: ["**/*.go"]
+```
+
+---
+
+### `ai-specs` - AI Specification Generation
+
+**Purpose**: Generate Gherkin BDD specifications from natural language
+**File Patterns:** None (generates .feature files)
+**Builder:** AI adapter
+**Use Case:** Convert user stories to executable specifications
+
+---
+
+### `ai-source` - AI Source Code Analysis
+
+**Purpose**: Analyze source code for patterns, complexity, and quality
+**File Patterns:** Source code files in analyzed module
+**Builder:** AI adapter
+**Use Case:** Code quality reports, refactoring suggestions
+
+---
+
+### `ai-docs` - AI Documentation Generation
+
+**Purpose**: Generate or enhance documentation from code and comments
+**File Patterns:** `**/*.md`, source files
+**Builder:** AI adapter
+**Use Case:** Automated documentation updates
+
+---
+
+## Additional Language Support
+
+### `python` - Python Modules
+
+**Purpose**: Native Python module support
+**File Patterns:** `**/*.py`
+**Builder:** pip/poetry
+**Test Frameworks:** pytest, behave
+**Package Manager:** pip, poetry
+
+**Build Configuration**:
+```yaml
+components:
+  api:
+    type: python
+    root: src/
+    build:
+      requirements_file: requirements.txt
+      venv_dir: .venv
+```
+
+---
+
+### `rust` - Rust Crates
+
+**Purpose**: Native Rust crate support
+**File Patterns:** `**/*.rs`, `Cargo.toml`
+**Builder:** cargo
+**Test Frameworks:** cargo test
+**Cross-Compile:** Supported via cargo targets
+
+**Build Configuration**:
+```yaml
+components:
+  core:
+    type: rust
+    root: src/
+    build:
+      target: x86_64-unknown-linux-gnu
+```
+
+---
+
+### `dotnet` - .NET Projects
+
+**Purpose**: Native .NET project support
+**File Patterns:** `**/*.cs`, `**/*.csproj`
+**Builder:** dotnet
+**Test Frameworks:** xUnit, NUnit, MSTest, reqnroll
+**Cross-Compile:** Supported via runtime identifiers
+
+**Build Configuration**:
+```yaml
+components:
+  service:
+    type: dotnet
+    root: src/
+    build:
+      framework: net8.0
+      runtime: linux-x64
+```
+
+---
+
+## Additional BDD Test Frameworks
+
+### `behave` - Python BDD (Gherkin)
+
+**Purpose**: Python-based BDD test execution
+**File Patterns:** `features/**/*.feature`
+**Test Runner:** behave
+**Language:** Python
+**Use Case:** Python application BDD testing
+
+**Example**:
+```yaml
+components:
+  acceptance:
+    type: python
+    test_frameworks: [behave]
+    patterns: ["features/**/*.feature"]
+```
+
+---
+
+### `reqnroll` - .NET BDD (Gherkin)
+
+**Purpose**: .NET-based BDD test execution (SpecFlow successor)
+**File Patterns:** `features/**/*.feature`
+**Test Runner:** reqnroll
+**Language:** C#
+**Use Case:** .NET application BDD testing
+
+**Example**:
+```yaml
+components:
+  specs:
+    type: dotnet
+    test_frameworks: [reqnroll]
+    patterns: ["Features/**/*.feature"]
+```
+
+---
+
 ## Language Support Matrix
 
 <!-- markdownlint-disable MD060 -->
@@ -253,8 +406,9 @@ components:
 | **Go**         | `go`           | ✅ Full    | ✅ gotest, godog      | ✅ Yes        | Native support with cross-platform builds |
 | **TypeScript** | `typescript`   | ✅ Full    | ✅ mocha, cucumber-js | ❌ No         | npm and tsc integration                   |
 | **JavaScript** | `typescript`   | ✅ npm     | ✅ mocha, cucumber-js | ❌ No         | Use typescript type, skip tsc if no TS    |
-| **Python**     | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Python base image     |
-| **Rust**       | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Rust toolchain        |
+| **Python**     | `python`       | ✅ Full    | ✅ pytest, behave     | ❌ No         | Native pip/poetry support                 |
+| **Rust**       | `rust`         | ✅ Full    | ✅ cargo test         | ✅ Yes        | Native cargo support with cross-compile   |
+| **.NET (C#)**  | `dotnet`       | ✅ Full    | ✅ xUnit, reqnroll    | ✅ Yes        | Native dotnet CLI support                 |
 | **Java**       | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Maven/Gradle          |
 | **Markdown**   | `book`         | ✅ MkDocs  | ❌ No                 | ❌ No         | Documentation generation only             |
 | **PowerShell** | `pwsh`         | ✅ Scripts | ✅ Pester             | ❌ No         | Cross-platform PowerShell 7.4+            |

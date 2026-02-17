@@ -107,4 +107,3 @@ eac scan || exit 1
 ## Related Commands
 
 - [`scan`](../../../../reference/eac/commands/scan/scan.md) - Run all scans with --scanner flag
-- [`scan zap`](../../../../reference/eac/commands/scan/zap.md) - Dynamic testing (DAST)

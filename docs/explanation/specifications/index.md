@@ -61,12 +61,6 @@ Risk-based testing and regulatory compliance.
 - Risk Controls (OSCAL integration)
 - GxP Tagging (pharmaceutical/medical device)
 
-### [Implementation Guides](./implementation/index.md)
-
-Language-specific implementation details.
-
-- [Go/Godog Implementation](./implementation/go/index.md)
-
 ---
 
 ## Quick Start

@@ -121,7 +121,6 @@ See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 - [Organizing Specifications](../organization/index.md) - File structure and naming conventions
 - [Testing Taxonomy](../taxonomy/index.md) - Tags, test levels, and execution control
 
-### Implementation
+### Quality and Maintenance
 
-- [Go Implementation Guide](../implementation/go/index.md) - Go/Godog BDD implementation
 - [Quality and Maintenance](../quality/index.md) - Review and iterate on specifications

@@ -2,659 +2,264 @@
 
 ## Overview
 
-The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management,
-and file ownership. Modules are defined in YAML contracts, validated against schemas,
-and built in topological order based on their dependencies.
+The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management, and file ownership.
 
 **Key concepts**:
 
-- **Modules** - Independently buildable units with explicit identity
-- **Module Types** - Reusable templates with build/test behavior
+- **Modules** - Independently buildable units with explicit identity and dependencies
+- **Components** - Typed components within modules (go, typescript, dockerfile, etc.)
 - **Dependencies** - Explicit declaration enables topological build ordering
-- **File Ownership** - Each file claimed by exactly one module
+- **File Ownership** - Each file claimed by exactly one module via glob patterns
 
----
-
-## Module Architectures
-
-Each module includes C4 architecture diagrams documenting its design. View them interactively:
-
-```bash
-eac serve-design
-# Opens http://localhost:8080
-```
-
-**Design files in repository:**
-
-- All modules: `specs/[module]/.design/workspace.dsl`
-- View in GitHub: [specs/\*/​.design/](https://github.com/ready-to-release/eac/tree/main/specs)
-
-See [Viewing Diagrams](../architecture/viewing-diagrams.md) for detailed instructions.
-
----
-
-## Module Registry
-
-**File**: `.eac/repository.yml`
-
-Modules are registered with:
-
-- **Moniker** - Unique identifier (e.g., `eac-core`)
-- **Type** - Module type reference (e.g., `go-library`)
-- **Dependencies** - Module dependencies (e.g., `depends_on: [logging-go]`)
-- **File Ownership** - Glob patterns defining owned files
-
-**Example**:
+**Module definition** (`.eac/repository.yml`):
 
 ```yaml
 modules:
-  - moniker: eac-core
+  - moniker: core
     name: EAC Core Libraries
-    type: go-library
-    depends_on: [logging-go]
-    files:
-      root: go/core
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
+    depends_on: [logging]
+    components:
+      - type: go
+        root: go/core
 ```
+
+All modules are registered in `.eac/repository.yml` with dependencies, component types, and file ownership patterns.
 
 ---
 
-## Component Types
+## Module Organization
 
-See [Component Types Reference](../architecture/component-kinds.md) for full documentation.
+**28 modules** organized into focused groups:
 
-**File**: `contracts/core/0.1.0/schemas/defaults/blueprints.yml` (component-kinds section)
+### Core Framework
 
-Component types define:
+| Module        | Type       | Purpose                                  | Location     |
+| ------------- | ---------- | ---------------------------------------- | ------------ |
+| **core**      | go-library | Core utilities and libraries             | `go/core`    |
+| **clibase**   | go-library | CLI framework (Cobra integration, flags) | `go/clibase` |
+| **contracts** | yaml       | Contract schemas and definitions         | `contracts/` |
 
-- **Build Dependencies** - System dependencies (go, docker, npm)
-- **Capabilities** - Type capabilities (executable, go_module, etc.)
-- **Build Artifacts** - Expected artifacts and verification
-- **Defaults** - Default values inherited by modules
+**See**: [core.md](core.md), [clibase.md](clibase.md)
 
-### Go Family
+### CLI Tools
 
-| Type            | Purpose                                    | Artifacts                                     |
-| --------------- | ------------------------------------------ | --------------------------------------------- |
-| **go-cli**      | CLI application with cross-platform builds | Platform executables (linux, windows, darwin) |
-| **go-library**  | Library package (no executable)            | Marker file                                   |
-| **go-commands** | Library with CLI invoke wrapper            | Single executable                             |
-| **go-mcp**      | MCP server module                          | MCP server executable                         |
-| **go-tests**    | Test-only module (BDD infrastructure)      | None (tests only)                             |
+| Module             | Type           | Purpose                            | Location             |
+| ------------------ | -------------- | ---------------------------------- | -------------------- |
+| **clie**           | go-cli         | CLIE CLI application               | `go/cli/clie`        |
+| **eac**            | go-cli         | EAC CLI application                | `go/cli/eac`         |
+| **eac-ext**        | clie-extension | EAC containerized extension        | `containers/eac-ext` |
+| **eac-mcp-server** | go-mcp         | MCP server for AI tool integration | `go/mcp`             |
 
-### Example (go-cli)
-
-```yaml
-- name: go-cli
-  description: "Go CLI application with cross-platform builds"
-  build_deps: [go]
-  capabilities: [go_module, executable, cross_compile]
-  build:
-    artifacts:
-      - type: executable
-        pattern: "{moniker}-{os}-amd64{ext}"
-        platforms: [linux, windows, darwin]
-        verify: current_platform
-  defaults:
-    files:
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
-```
-
-### Other Families
-
-**Docker**: `clie-extension` - Container image with multi-platform builds
-
-**Documentation**: `mkdocs-site`, `mkdocs-pdf` - MkDocs HTML/PDF generation
-
-**Infrastructure**: `configuration`, `scripts-package`, `templates` - Non-buildable modules
-
----
-
-## Dependency Management
-
-### Dependency Graph
-
-**Declaration**:
-
-```yaml
-modules:
-  - moniker: logging-go
-    type: go-library
-
-  - moniker: eac-core
-    type: go-library
-    depends_on: [logging-go]
-
-  - moniker: eac-commands
-    type: go-commands
-    depends_on: [eac-core]
-```
-
-**Build Order** (topological sort):
-
-1. `logging-go`
-2. `eac-core`
-3. `eac-commands`
+**See**: [eac.md](eac.md), [eac-ext.md](eac-ext.md), [eac-mcp-server.md](eac-mcp-server.md), [clie-eac-bundle.md](clie-eac-bundle.md)
 
 ### Commands
 
-```bash
-# Show dependency graph
-eac show-dependencies
+The **commands** module contains 7 command components:
 
-# Validate dependencies
-eac validate-dependencies
+- **base** - Command infrastructure and shared utilities
+- **build** - Build automation commands
+- **lint** - Code quality and linting
+- **repository** - Repository management
+- **scan** - Security scanning
+- **test** - Test execution
+- **update** - Update and maintenance
 
-# Check for circular dependencies
-eac validate-module-hierarchy
-```
+**Location**: `go/commands/`
 
-### Dependency Rules
+**See**: [commands.md](commands.md)
 
-- Dependencies must exist in `repository.yml`
-- No circular dependencies allowed
-- Topological sort determines build order
-- Changed modules trigger rebuild of dependents
+### Adapters
+
+The **adapters** module contains 17 adapter components:
+
+**Test Frameworks**: gotest, godog, mocha, pytest, behave, reqnroll, cucumber
+
+**Package Managers**: npm, pip, nuget, dotnet
+
+**Infrastructure**: docker, gh, ai, eac
+
+**Utilities**: tui
+
+**Location**: `go/adapters/`
+
+**See**: [adapters.md](adapters.md)
+
+### Contracts
+
+Contract schemas define interfaces between modules and external tools:
+
+| Contract              | Purpose                            | Version |
+| --------------------- | ---------------------------------- | ------- |
+| **ai-provider**       | AI provider integration interface  | 0.1.0   |
+| **clie**              | CLIE CLI framework configuration   | 0.1.0   |
+| **container-runtime** | Container runtime interface        | 0.1.0   |
+| **core**              | Core configuration and environment | 0.1.0   |
+| **docs**              | Documentation generation contracts | 0.1.0   |
+| **runner**            | Test runner interface              | 0.1.0   |
+| **scanner**           | Security scanner interface         | 0.1.0   |
+| **tui**               | Terminal UI component interface    | 0.1.0   |
+
+**Location**: `contracts/`
+
+**See**: [contracts.md](contracts.md)
+
+### OCI Tools
+
+Containerized development tools (12 container images):
+
+| OCI Tool              | Purpose                  | Registry                                   |
+| --------------------- | ------------------------ | ------------------------------------------ |
+| **cgo-oci**           | C/Go cross-compilation   | ghcr.io/ready-to-release/cgo-oci           |
+| **dotnet-oci**        | .NET SDK                 | ghcr.io/ready-to-release/dotnet-oci        |
+| **drawio-oci**        | Diagram rendering        | ghcr.io/ready-to-release/drawio-oci        |
+| **git-oci**           | Git tools                | ghcr.io/ready-to-release/git-oci           |
+| **go-oci**            | Go SDK                   | ghcr.io/ready-to-release/go-oci            |
+| **gource-oci**        | Repository visualization | ghcr.io/ready-to-release/gource-oci        |
+| **mermaid-oci**       | Mermaid diagrams         | ghcr.io/ready-to-release/mermaid-oci       |
+| **mkdocs-dev-oci**    | MkDocs dev server        | ghcr.io/ready-to-release/mkdocs-dev-oci    |
+| **mkdocs-render-oci** | MkDocs rendering         | ghcr.io/ready-to-release/mkdocs-render-oci |
+| **nginx-oci**         | NGINX server             | ghcr.io/ready-to-release/nginx-oci         |
+| **pdf-cli-oci**       | PDF generation           | ghcr.io/ready-to-release/pdf-cli-oci       |
+| **pdf-oci**           | PDF utilities            | ghcr.io/ready-to-release/pdf-oci           |
+
+**Location**: `containers/`
+
+**See**: [oci-tools.md](oci-tools.md)
+
+### Supporting Modules
+
+| Module              | Purpose                  | Location         |
+| ------------------- | ------------------------ | ---------------- |
+| **repository**      | Repository management    | `repository/`    |
+| **docs**            | Documentation generation | `docs/`          |
+| **templates**       | Project templates        | `templates/`     |
+| **clie-eac-bundle** | Release bundle packaging | `bundle/`        |
+| **cli-installers**  | CLIE installation        | `installers/`    |
+| **vscode-commit**   | VS Code commit extension | `vscode-commit/` |
+| **implicit-cli**    | Implicit CLI detection   | `implicit-cli/`  |
 
 ---
 
-## File Ownership
+## Key Features
 
-### Glob Patterns
+### Component Types
+
+Modules contain typed components that determine build behavior:
+
+- **go** - Go packages with build/test support
+- **typescript** - TypeScript/JavaScript with npm builds
+- **dockerfile** - Multi-platform container builds
+- **book** - MkDocs documentation sites
+- **pwsh** / **bash** - Script validation
+- **gherkin** / **structurizr** - Specifications and architecture
+
+**See**: [Component Types Reference](../architecture/component-kinds.md)
+
+### Dependency Management
+
+Modules declare dependencies via `depends_on` in `.eac/repository.yml`. Build system uses topological sort to determine build order and supports incremental builds based on change detection.
+
+**Commands**:
+
+```bash
+eac show-dependencies          # View dependency graph
+eac validate-dependencies      # Validate no cycles
+eac get-changed-modules-ci     # Detect changed modules
+```
+
+**See**: [Architecture: Modules](../architecture/modules.md)
+
+### File Ownership
+
+Each file is claimed by exactly one module via glob patterns:
 
 ```yaml
-files:
-  root: go/core        # Base directory
-  source: ["**/*.go"]      # All .go files
-  tests: ["**/*_test.go"]  # All test files
-  exclude: ["**/vendor/**"] # Exclude vendor
+components:
+  - type: go
+    root: go/core
+    patterns:
+      source: ["**/*.go"]
+      tests: ["**/*_test.go"]
 ```
 
-**Pattern Variables**:
-
-- `**` - Recursive match
-- `*` - Single-level match
-- `{specs_root}`, `{moniker}`, `{root}`, `{type}` - Template variables
-
-### Validation
-
-**Rule**: Each file claimed by exactly one module
-
-**Command**:
+**Commands**:
 
 ```bash
-eac validate-module-files
-```
-
-**Error Example**:
-
-```text
-❌ File 'go/util/helper.go' claimed by multiple modules:
-  - eac-core (pattern: go/**/*.go)
-  - util-lib (pattern: go/util/**/*.go)
-```
-
-**Query Commands**:
-
-```bash
-# Show all files with ownership
-eac show-files
-
-# Show changed files with ownership
-eac show-files-changed
-
-# Show staged files with ownership
-eac show-files-staged
+eac show-files                 # Show file ownership
+eac validate-module-files      # Validate no conflicts
 ```
 
 ---
 
 ## Module Lifecycle
 
-### 1. Discovery
+1. **Discovery** - Load from `.eac/repository.yml`
+2. **Build** - Topological build based on dependencies
+3. **Test** - Execute test suites with tag filtering
+4. **Validation** - Schema and dependency validation
+5. **Release** - Version tagging and changelog generation
 
-**Load contracts**:
-
-```bash
-eac get-modules
-```
-
-**Output**: All modules from `repository.yml` with resolved dependencies
-
-### 2. Build
-
-**Build single module**:
-
-```bash
-eac build <module>
-```
-
-**Build with dependencies**:
-
-```bash
-eac build <module> --deps
-```
-
-**Build Flow**:
-
-1. Load contracts from `.eac/`
-2. Resolve dependencies
-3. Topological sort
-4. Build in dependency order
-5. Verify artifacts
-6. Update cache
-
-### 3. Test
-
-**Test single module**:
-
-```bash
-eac test <module>
-```
-
-**Test suite** (multiple modules):
-
-```bash
-eac test-suite unit
-```
-
-**Test Flow**:
-
-1. Load test suites from `.eac/test-suites.yml`
-2. Select tests by tags (e.g., `@L0`, `@L1`)
-3. Run tests in parallel
-4. Collect results in `out/test/`
-
-### 4. Validation
-
-**Schema validation**:
-
-```bash
-eac validate-contracts
-```
-
-**Dependency validation**:
-
-```bash
-eac validate-dependencies
-```
-
-**File ownership validation**:
-
-```bash
-eac validate-module-files
-```
-
-### 5. Release
-
-**Check pending releases**:
-
-```bash
-eac release-pending <module>
-```
-
-**Generate changelog**:
-
-```bash
-eac release-changelog <module>
-```
-
-**Create release**:
-
-```bash
-eac release-this <module>
-```
+**See**: [Architecture: Modules](../architecture/modules.md) for detailed lifecycle documentation.
 
 ---
 
 ## Working with Modules
 
-### Creating a New Module
-
-**1. Add to repository.yml**:
-
-```yaml
-modules:
-  - moniker: my-new-module
-    name: My New Module
-    type: go-library
-    depends_on: [eac-core]
-    files:
-      root: go/my/module
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
-```
-
-**2. Validate**:
+### View Modules
 
 ```bash
-eac validate-contracts
-eac validate-module-files
+eac show-modules               # List all modules
+eac show-dependencies          # Show dependency graph
+eac get-modules                # Get modules as JSON
 ```
 
-**3. Build**:
-
-```bash
-eac build my-new-module
-```
-
-### Modifying Dependencies
-
-**1. Update repository.yml**:
-
-```yaml
-depends_on: [logging-go, config-go]  # Add config-go
-```
-
-**2. Validate**:
-
-```bash
-eac validate-dependencies
-eac validate-module-hierarchy  # Check for cycles
-```
-
-**3. Rebuild**:
-
-```bash
-eac build my-module --deps
-```
-
-### Finding Module Information
-
-```bash
-# List all modules
-eac show-modules
-
-# Show dependency graph
-eac show-dependencies
-
-# Show files owned by modules
-eac show-files
-
-# Get module details (JSON)
-eac get-modules
-
-# Get build dependencies
-eac get-build-deps my-module
-```
-
----
-
-## Build System
-
-### Artifacts
-
-Each module type defines expected artifacts:
-
-**Executable (go-cli)**:
-
-```yaml
-artifacts:
-  - type: executable
-    pattern: "{moniker}-{os}-amd64{ext}"
-    platforms: [linux, windows, darwin]
-    verify: current_platform
-```
-
-**Marker (go-library)**:
-
-```yaml
-artifacts:
-  - type: marker
-    pattern: ".built"
-    verify: existence
-```
-
-**Container Image (clie-extension)**:
-
-```yaml
-artifacts:
-  - type: image
-    pattern: "{moniker}:latest"
-```
-
-### Artifact Location
-
-**Build Artifacts**: `out/build/{module}/`
-
-**Verification**:
-
-```bash
-eac show-artifacts <module>
-eac validate-artifacts <module>
-```
-
-### Build Cache
-
-**Location**: `.clie/cache/build/`
-
-**Invalidation**:
-
-- File changes (detected via git)
-- Dependency changes
-- Force rebuild flag
-
-**Usage**:
-
-```bash
-# Use cache (default)
-eac build my-module
-
-# Force rebuild
-eac build my-module --force
-```
-
-### Incremental Builds
-
-**Changed Modules Detection**:
-
-```bash
-# Detect changed modules since last successful CI
-eac get-changed-modules-ci
-
-# Get affected modules (dependents)
-eac get-changed-modules --with-dependents
-```
-
-**CI Workflow**:
-
-```bash
-# 1. Detect changes
-CHANGED=$(eac get-changed-modules-ci)
-
-# 2. Build affected modules
-eac build $CHANGED
-
-# 3. Test affected modules
-eac test $CHANGED
-```
-
----
-
-## Module Designs (Architecture)
-
-### Structurizr C4 Diagrams
-
-**Location**: `specs/{module}/.design/workspace.dsl`
-
-**Format**: C4 model DSL (System Context → Containers → Components)
-
-### Viewing Designs
-
-**Method 1: Browser (Recommended)**:
-
-```bash
-# Start Structurizr Lite server
-eac serve-design
-
-# Access: http://localhost:8080
-
-# Stop server
-eac serve-design --stop
-```
-
-**Method 2: VS Code Extension**:
-
-- Install: `systemticks.c4-dsl-extension`
-- Open: `specs/{module}/.design/workspace.dsl`
-
-### Design Commands
-
-```bash
-# Validate design
-eac validate-design <module>
-
-# Generate design (AI-powered)
-eac create-design <module>
-
-# Update existing design (AI-powered)
-eac update-design <module>
-```
-
-### C4 Model Levels
-
-| Level                 | Focus                                    | Audience   | Diagram Type  |
-| --------------------- | ---------------------------------------- | ---------- | ------------- |
-| **1. System Context** | System boundaries, external dependencies | Everyone   | systemContext |
-| **2. Container**      | Major subsystems, applications           | Technical  | container     |
-| **3. Component**      | Internal modules, packages               | Developers | component     |
-| **4. Code**           | Classes, functions                       | Developers | (code only)   |
-
----
-
-## Module Organization
-
-### Core System Modules
-
-| Module               | Type        | Purpose                                                                  |
-| -------------------- | ----------- | ------------------------------------------------------------------------ |
-| **eac-core**         | go-library  | Core libraries (contracts, repository, git)                              |
-| **eac-commands**     | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
-| **eac-specs**        | go-library  | BDD test infrastructure (Godog)                                          |
-| **eac-mcp-commands** | go-mcp      | MCP server (LLM tool integration)                                        |
-
-### CLI and Extensions
-
-| Module      | Type          | Purpose                              |
-| ----------- | ------------- | ------------------------------------ |
-| **clie** | go-cli        | CLI framework (Docker orchestration) |
-| **eac-ext** | clie-extension | EAC Docker extension image           |
-
-### Libraries
-
-| Module            | Type       | Purpose                       |
-| ----------------- | ---------- | ----------------------------- |
-| **logging-go**    | go-library | Structured logging (Go)       |
-| **config-go**     | go-library | Configuration management (Go) |
-| **validation-go** | go-library | Validation utilities (Go)     |
-
-### Documentation
-
-| Module        | Type        | Purpose                   |
-| ------------- | ----------- | ------------------------- |
-| **docs-site** | mkdocs-site | MkDocs documentation site |
-
----
-
-## Module Commands Reference
-
-### Discovery
-
-```bash
-eac show-modules               # Module table
-eac show-dependencies          # Dependency graph
-eac show-files                 # File ownership
-eac show-component-kinds        # Component kind table
-eac get-modules                # Modules JSON
-eac get-dependencies           # Dependencies JSON
-```
-
-### Build
+### Build Modules
 
 ```bash
 eac build <module>             # Build single module
 eac build <module> --deps      # Build with dependencies
-eac get-artifacts <module>     # List artifacts
-eac show-artifacts <module>    # Show artifact status
-eac show-build-summary <module> # Build summary
+eac show-build-summary         # View build status
 ```
 
-### Test
+### Test Modules
 
 ```bash
-eac test <module>              # Test single module
+eac test <module>              # Test module
 eac test-suite <suite>         # Run test suite
-eac test-debug                 # Debug test failures
-eac show-test-summary <module> # Test summary
+eac show-test-summary          # View test results
 ```
 
-### Validation
+### Validate Modules
 
 ```bash
 eac validate                   # Validate all
 eac validate-contracts         # Schema validation
 eac validate-dependencies      # Dependency validation
-eac validate-module-files      # File ownership validation
-eac validate-module-hierarchy  # Circular dependency check
-eac validate-artifacts <module> # Artifact validation
 ```
 
-### Design
-
-```bash
-eac validate-design <module>   # Validate Structurizr DSL
-eac create-design <module>     # Generate design (AI)
-eac update-design <module>     # Update design (AI)
-eac serve-design               # Serve designs in browser
-```
-
-### Release
-
-```bash
-eac release-changelog <module> # Generate changelog
-eac release-pending <module>   # Check pending releases
-eac release-this <module>      # Create release
-```
+**For complete command reference**: [EAC Commands](../commands/index.md)
 
 ---
 
-## Module Best Practices
+## Architecture Diagrams
 
-### Module Granularity
+Each module includes C4 architecture diagrams in Structurizr DSL format:
 
-- **Small, focused modules** - Single responsibility
-- **Clear dependencies** - Explicit, minimal coupling
-- **Shared libraries** - Extract common code into libraries
-- **Avoid circular dependencies** - Refactor to break cycles
+```bash
+eac serve-design               # View all diagrams in browser
+eac serve-design --module core # View specific module
+```
 
-### Naming Conventions
+**Design files**: `specs/{module}/.design/workspace.dsl`
 
-- **Moniker**: kebab-case (e.g., `eac-core`)
-- **Type prefix**: Language or tech (e.g., `go-library`)
-- **Descriptive names**: Clear purpose (e.g., `logging-go`)
-
-### File Organization
-
-- **Module root**: `go/{namespace}/{module}/`
-- **Source**: `**/*.go`
-- **Tests**: `**/*_test.go`
-- **Specs**: `specs/{module}/`
-- **Design**: `specs/{module}/.design/`
-
-### Dependency Management
-
-- **Minimize dependencies** - Only depend on what you need
-- **Layer architecture** - Libraries → Commands → CLI
-- **Shared contracts** - Use eac-core for shared types
-- **Avoid deep chains** - Flatten dependency trees
+**See**: [Viewing Architecture Diagrams](../architecture/viewing-diagrams.md)
 
 ---
 
 ## Related Documentation
 
-- [Architecture](../architecture/index.md) - System architecture and components
-- [Contracts](../architecture/contracts.md) - Contract system and YAML schemas
-- [Dependencies](../architecture/dependencies.md) - Dependency resolution details
-- [Module Types](../architecture/component-kinds.md) - Module type specifications
+- **[Architecture: Modules](../architecture/modules.md)** - Detailed module system architecture
+- **[Architecture: Component Types](../architecture/component-kinds.md)** - Component type specifications
+- **[Architecture: Contracts](../architecture/contracts.md)** - Contract system and schemas
+- **[Commands Reference](../commands/index.md)** - CLI commands for working with modules
+- **[Repository Layout](../architecture/repository-layout.md)** - Directory structure and organization

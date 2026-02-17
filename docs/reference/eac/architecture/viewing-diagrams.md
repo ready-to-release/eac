@@ -6,7 +6,7 @@ All modules include C4 architecture diagrams defined in Structurizr DSL format.
 
 ```bash
 # Start the Structurizr Lite server
-eac serve-design
+eac serve design
 
 # Open browser to http://localhost:8080
 ```
@@ -19,25 +19,25 @@ The server starts a Docker container running Structurizr Lite, which renders all
 
 Each module maintains its architecture diagrams in `specs/[module]/.design/workspace.dsl`:
 
-| Module             | Design Location                                                                                                            | Description                                        |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| eac            | [specs/eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac/.design/)                         | CLI command implementations                        |
-| core               | [specs/core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/core/.design/)                               | Core domain libraries (config, repository, git)    |
-| clibase            | [specs/clibase/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clibase/.design/)                         | CLI base framework (orchestrator, flags, render)   |
-| eac-mcp-server     | [specs/eac-mcp-server/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-server/.design/)           | MCP server for LLM tool integration                |
-| clie           | [specs/clie/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clie/.design/)                       | Containerized workflow CLI                         |
-| eac-ext            | [specs/eac-ext/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-ext/.design/)                         | Docker extension container                         |
-| ai-eac         | [specs/ai-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ai-eac/.design/)                   | AI service integration adapter                     |
-| docker-eac     | [specs/docker-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docker-eac/.design/)           | Docker container runtime adapter                   |
-| eac-to-eac        | [specs/eac-to-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-to-eac/.design/)                 | EAC command execution adapter                      |
-| tui-eac        | [specs/tui-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/tui-eac/.design/)                 | Terminal UI adapter (Bubbletea)                     |
-| godog-eac      | [specs/godog-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/godog-eac/.design/)             | BDD test infrastructure (Godog)                    |
-| cucumber-eac   | [specs/cucumber-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/cucumber-eac/.design/)       | Cucumber test runner adapter                       |
-| gotest-eac     | [specs/gotest-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/gotest-eac/.design/)           | Go test runner adapter                             |
-| mocha-eac      | [specs/mocha-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/mocha-eac/.design/)             | Mocha test runner adapter                          |
-| npm-eac        | [specs/npm-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/npm-eac/.design/)                 | NPM dependency isolation adapter                   |
-| docs               | [specs/docs/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docs/.design/)                               | Documentation site architecture                    |
-| contracts          | [specs/contracts/.design/](https://github.com/ready-to-release/eac/tree/main/specs/contracts/.design/)                     | Combined contract modules overview                 |
+| Module         | Design Location                                                                                                  | Description                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| eac            | [specs/eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac/.design/)                       | CLI command implementations                      |
+| core           | [specs/core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/core/.design/)                     | Core domain libraries (config, repository, git)  |
+| clibase        | [specs/clibase/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clibase/.design/)               | CLI base framework (orchestrator, flags, render) |
+| eac-mcp-server | [specs/eac-mcp-server/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-server/.design/) | MCP server for LLM tool integration              |
+| clie           | [specs/clie/.design/](https://github.com/ready-to-release/eac/tree/main/specs/clie/.design/)                     | Containerized workflow CLI                       |
+| eac-ext        | [specs/eac-ext/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-ext/.design/)               | Docker extension container                       |
+| ai-eac         | [specs/ai-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ai-eac/.design/)                 | AI service integration adapter                   |
+| docker-eac     | [specs/docker-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docker-eac/.design/)         | Docker container runtime adapter                 |
+| eac-to-eac     | [specs/eac-to-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-to-eac/.design/)         | EAC command execution adapter                    |
+| tui-eac        | [specs/tui-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/tui-eac/.design/)               | Terminal UI adapter (Bubbletea)                  |
+| godog-eac      | [specs/godog-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/godog-eac/.design/)           | BDD test infrastructure (Godog)                  |
+| cucumber-eac   | [specs/cucumber-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/cucumber-eac/.design/)     | Cucumber test runner adapter                     |
+| gotest-eac     | [specs/gotest-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/gotest-eac/.design/)         | Go test runner adapter                           |
+| mocha-eac      | [specs/mocha-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/mocha-eac/.design/)           | Mocha test runner adapter                        |
+| npm-eac        | [specs/npm-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/npm-eac/.design/)               | NPM dependency isolation adapter                 |
+| docs           | [specs/docs/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docs/.design/)                     | Documentation site architecture                  |
+| contracts      | [specs/contracts/.design/](https://github.com/ready-to-release/eac/tree/main/specs/contracts/.design/)           | Combined contract modules overview               |
 
 **Full list:** Check `specs/*/​.design/` directories in the repository.
 
@@ -63,14 +63,14 @@ Not all modules include all levels - it depends on complexity.
 The `serve-design` command automatically loads all workspace.dsl files:
 
 ```bash
-eac serve-design
+eac serve design
 ```
 
 Navigate between modules using the workspace dropdown in Structurizr Lite.
 
 ### View Specific Module
 
-1. Run `eac serve-design`
+1. Run `eac serve design`
 2. Open `http://localhost:8080`
 3. Select module from workspace dropdown (top-left)
 4. Select diagram from the list
@@ -110,7 +110,7 @@ specs/
 ### AI-Generated Updates
 
 ```bash
-eac update-design <module-name>
+eac update design <module-name>
 ```
 
 Uses AI to analyze code and update the workspace.dsl file.
@@ -124,7 +124,7 @@ Uses AI to analyze code and update the workspace.dsl file.
 ### Validate Syntax
 
 ```bash
-eac validate-design
+eac validate design
 ```
 
 Checks all workspace.dsl files for syntax errors using Structurizr CLI.
@@ -136,7 +136,7 @@ Checks all workspace.dsl files for syntax errors using Structurizr CLI.
 For new modules:
 
 ```bash
-eac create-design <module-name>
+eac create design <module-name>
 ```
 
 Generates a workspace.dsl file based on code analysis.
@@ -191,7 +191,7 @@ Generates a workspace.dsl file based on code analysis.
 
 **Diagrams not appearing:**
 
-- Check workspace.dsl syntax with `eac validate-design`
+- Check workspace.dsl syntax with `eac validate design`
 - Look for error messages in browser console
 - Verify .design folder contains workspace.dsl
 

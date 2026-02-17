@@ -2,7 +2,27 @@
 
 > Migrated from `go/clibase/orchestrator/README.md`.
 
-A shared parallel execution orchestrator for build and test commands that solves the Windows terminal output interleaving problem.
+A low-level parallel execution orchestrator that manages concurrent execution of work items with clean terminal output.
+
+## Relationship to Build System
+
+**Important**: This document describes the **low-level orchestrator infrastructure** (`go/clibase/orchestrator/`). For the high-level build execution system, see [Build Execution System](./build-execution.md).
+
+**Orchestration Levels**:
+
+1. **High-level (Build Execution)**: Operates on **Units of Work (UoWs)** with identity `action:module:component:tool`
+   - Resolves components to UoW specs
+   - Manages UoW dependencies and ordering
+   - Creates execution phases
+   - Documented in [build-execution.md](./build-execution.md)
+
+2. **Low-level (This Document)**: Generic **work item** orchestrator
+   - Manages parallel goroutine execution
+   - Handles terminal output serialization
+   - Provides capacity-aware scheduling
+   - Works with any type of work item (modules, UoWs, tests, etc.)
+
+In the build system context, the high-level system converts UoWs into work items that this orchestrator executes.
 
 ## Problem Statement
 
@@ -165,14 +185,14 @@ The orchestrator uses a dynamic capacity system that automatically adjusts paral
 
 ### Capacity Calculation
 
-```
+```text
 Capacity = (Available RAM / 256MB) x turbo
 ```
 
-| Mode | Formula | Example (6GB RAM) |
-|------|---------|-------------------|
-| Normal | RAM / 256MB x 1 | 22 slots |
-| Turbo 2x | RAM / 256MB x 2 | 44 slots |
+| Mode     | Formula         | Example (6GB RAM) |
+| -------- | --------------- | ----------------- |
+| Normal   | RAM / 256MB x 1 | 22 slots          |
+| Turbo 2x | RAM / 256MB x 2 | 44 slots          |
 | Turbo 4x | RAM / 256MB x 4 | 64 slots (capped) |
 
 The capacity is recalculated every 2 seconds to adapt to changing system conditions.
@@ -203,6 +223,7 @@ eac build --turbo=8    # Uses 8x multiplier
 ```
 
 Use turbo mode when:
+
 - Builds are I/O-bound (waiting on network, disk)
 - Running lightweight containerized builds
 - You want faster builds and have headroom
@@ -211,22 +232,23 @@ Use turbo mode when:
 
 Each build logs memory usage before and after execution:
 
-```
+```text
 [memory] before: used=2.89GB avail=2.89GB total=5.78GB (50.0%)
 [memory] after: used=3.10GB avail=2.68GB total=5.78GB (53.6%) delta=+210MB
 ```
 
 This data can be used to:
+
 - Tune the 256MB slot size if needed
 - Identify memory-hungry builds
 - Validate that containerized builds have low memory impact
 
 ### Configuration
 
-| Setting | Description | Default |
-|---------|-------------|---------|
+| Setting          | Description                | Default     |
+| ---------------- | -------------------------- | ----------- |
 | `MaxConcurrency` | Hard ceiling (0 = dynamic) | 0 (dynamic) |
-| `Turbo` | Capacity multiplier | 1 (normal) |
+| `Turbo`          | Capacity multiplier        | 1 (normal)  |
 
 ## LPT Scheduling Algorithm
 
@@ -235,6 +257,7 @@ The orchestrator uses **LPT (Longest Processing Time First)** scheduling to opti
 ### Problem
 
 Without intelligent scheduling, jobs might execute in arbitrary order, causing:
+
 - All heavy jobs running at the end (poor parallelism)
 - Light jobs finishing early, leaving heavy jobs queued
 - Suboptimal resource utilization
@@ -243,7 +266,7 @@ Without intelligent scheduling, jobs might execute in arbitrary order, causing:
 
 LPT sorts jobs by weight (processing time) in descending order before execution:
 
-```
+```text
 Before LPT: [docs, core, cli, books(heavy), tests(medium)]
 After LPT:  [books(heavy), tests(medium), docs, core, cli]
 ```

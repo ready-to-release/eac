@@ -16,11 +16,9 @@ The scan command supports multiple scanner types via the `--scanner` flag:
 | `sast`       | Static Application Security Testing  | Semgrep                          |
 | `zap`        | Dynamic Application Security Testing | OWASP ZAP (see subcommand below) |
 
-## Subcommands
+## Overview
 
-| Command              | Purpose                                      |
-| -------------------- | -------------------------------------------- |
-| [scan zap](./zap.md) | Dynamic testing (DAST) - requires URL target |
+The scan command runs security scanners with automatic detection and configuration.
 
 ## Usage Examples
 
@@ -58,6 +56,5 @@ eac scan zap eac-api --target http://localhost:8080
 
 ## See Also
 
-- [scan zap](./zap.md) - Dynamic Application Security Testing
 - [scan Commands Category](../categories/scan.md)
 - [validate control-tags](../validate/control-tags.md) - Validate security control mappings

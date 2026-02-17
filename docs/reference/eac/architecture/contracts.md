@@ -16,20 +16,20 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 ## All Contracts
 
-| Contract            | File                  | Location                             | Purpose                                          |
-| ------------------- | --------------------- | ------------------------------------ | ------------------------------------------------ |
-| **Repository**      | `repository.yml`      | `.eac/`                          | Module definitions, dependencies, file ownership |
-| **Blueprints**      | `blueprints.yml`      | `contracts/.../defaults/`            | Component kind definitions with build behavior   |
-| **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/`            | Tool definitions and resource configuration      |
-| **Registries**      | `registries.yml`      | `contracts/.../defaults/`            | Container registry definitions                   |
-| **Environments**    | `environments.yml`    | `contracts/.../defaults/`            | Test execution environments (L0-L4)              |
-| **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/`            | Test suites with tag selectors                   |
-| **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/`            | Valid test tag definitions                       |
-| **Books**           | `books.yml`           | `.eac/`                          | Documentation book configuration                 |
-| **Security Tools**  | `security-tools.yml`  | `contracts/.../defaults/`            | Security scanning tool configuration             |
-| **AI Config**       | `ai-config.yml`       | `contracts/.../defaults/`            | AI type definitions                              |
-| **AI Provider**     | `ai-provider.yml`     | `contracts/.../defaults/`            | Default AI provider settings                     |
-| **Logging**         | `logging.yml`         | `contracts/.../defaults/`            | Logging configuration                            |
+| Contract           | File                 | Location                  | Purpose                                          |
+| ------------------ | -------------------- | ------------------------- | ------------------------------------------------ |
+| **Repository**     | `repository.yml`     | `.eac/`                   | Module definitions, dependencies, file ownership |
+| **Blueprints**     | `blueprints.yml`     | `contracts/.../defaults/` | Component kind definitions with build behavior   |
+| **Tool Config**    | `tool-config.yml`    | `contracts/.../defaults/` | Tool definitions and resource configuration      |
+| **Registries**     | `registries.yml`     | `contracts/.../defaults/` | Container registry definitions                   |
+| **Environments**   | `environments.yml`   | `contracts/.../defaults/` | Test execution environments (L0-L4)              |
+| **Test Suites**    | `test-suites.yml`    | `contracts/.../defaults/` | Test suites with tag selectors                   |
+| **Testing Tags**   | `testing-tags.yml`   | `contracts/.../defaults/` | Valid test tag definitions                       |
+| **Books**          | `books.yml`          | `.eac/`                   | Documentation book configuration                 |
+| **Security Tools** | `security-tools.yml` | `contracts/.../defaults/` | Security scanning tool configuration             |
+| **AI Config**      | `ai-config.yml`      | `contracts/.../defaults/` | AI type definitions                              |
+| **AI Provider**    | `ai-provider.yml`    | `contracts/.../defaults/` | Default AI provider settings                     |
+| **Logging**        | `logging.yml`        | `contracts/.../defaults/` | Logging configuration                            |
 
 **Location**: User configs in `.eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`, schemas in `contracts/eac-core/0.1.0/`
 
@@ -75,24 +75,24 @@ modules:
 
 ### Key Fields
 
-| Field         | Type   | Required | Description                                   |
-| ------------- | ------ | -------- | --------------------------------------------- |
-| `moniker`     | string | ✅       | Unique module identifier (kebab-case)         |
-| `type`        | string | ❌       | Deprecated; use `components` instead          |
-| `name`        | string | ❌       | Human-readable name                           |
-| `description` | string | ❌       | Module purpose                                |
-| `depends_on`  | array  | ❌       | Module dependencies (monikers)                |
-| `files`       | object | ❌       | File ownership patterns (glob)                |
-| `versioning`  | object | ❌       | Versioning configuration (semver/calver)      |
-| `metadata`    | object | ❌       | Custom key-value pairs                        |
+| Field         | Type   | Required | Description                              |
+| ------------- | ------ | -------- | ---------------------------------------- |
+| `moniker`     | string | ✅       | Unique module identifier (kebab-case)    |
+| `type`        | string | ❌       | Deprecated; use `components` instead     |
+| `name`        | string | ❌       | Human-readable name                      |
+| `description` | string | ❌       | Module purpose                           |
+| `depends_on`  | array  | ❌       | Module dependencies (monikers)           |
+| `files`       | object | ❌       | File ownership patterns (glob)           |
+| `versioning`  | object | ❌       | Versioning configuration (semver/calver) |
+| `metadata`    | object | ❌       | Custom key-value pairs                   |
 
 ### File Ownership
 
 ```yaml
 files:
-  root: go/core        # Base directory
-  source: ["**/*.go"]      # Source patterns (glob)
-  tests: ["**/*_test.go"]  # Test patterns
+  root: go/core # Base directory
+  source: ["**/*.go"] # Source patterns (glob)
+  tests: ["**/*_test.go"] # Test patterns
   exclude: ["**/vendor/**"] # Exclusions
 ```
 
@@ -174,7 +174,7 @@ types:
 | `capabilities` | array  | ❌       | Type capabilities (executable, go_module, etc.) |
 | `build`        | object | ❌       | Build artifacts configuration                   |
 | `defaults`     | object | ❌       | Default values inherited by modules             |
-| `docker_build` | object | ❌       | Docker build config (clie-extension only)        |
+| `docker_build` | object | ❌       | Docker build config (clie-extension only)       |
 
 ### Capabilities
 
@@ -191,10 +191,10 @@ types:
 ```yaml
 build:
   artifacts:
-    - type: executable          # Artifact type
-      pattern: "{moniker}-{os}-amd64{ext}"  # Path pattern
-      platforms: [linux, windows, darwin]   # Target platforms
-      verify: current_platform  # Verification mode
+    - type: executable # Artifact type
+      pattern: "{moniker}-{os}-amd64{ext}" # Path pattern
+      platforms: [linux, windows, darwin] # Target platforms
+      verify: current_platform # Verification mode
 ```
 
 **Artifact Types**: `executable`, `library`, `marker`, `image`, `site`
@@ -478,7 +478,7 @@ YAML Language Server support via schema reference:
 ```yaml
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/modules.schema.json
 modules:
-  - moniker: |  # IDE provides auto-completion
+  - moniker: | # IDE provides auto-completion
 ```
 
 **Features**:
@@ -494,19 +494,110 @@ modules:
 
 ## Schema Versioning
 
-**Schema organization**:
+EAC uses **semantic versioning** for contracts to enable backward-compatible evolution and multiple version support.
+
+### Versioned Contract Structure
+
+All contracts follow a standardized directory structure with version directories:
 
 ```text
 contracts/
-└── eac-core/
+├── ai-provider/
+│   └── 0.1.0/
+│       ├── ai-provider.schema.json
+│       ├── defaults/
+│       │   └── base.yml
+│       └── examples/ (optional)
+├── clie/
+│   └── 0.1.0/
+│       ├── clie.schema.json
+│       └── defaults/
+│           └── base.yml
+├── container-runtime/
+│   └── 0.1.0/
+│       ├── container-runtime.schema.json
+│       └── defaults/
+├── core/
+│   └── 0.1.0/
+│       ├── core.schema.json
+│       └── defaults/
+│           ├── base.yml
+│           ├── blueprints.yml
+│           ├── tool-config.yml
+│           └── ...
+├── docs/
+│   └── 0.1.0/
+│       ├── docs.schema.json
+│       └── defaults/
+├── runner/
+│   └── 0.1.0/
+│       ├── runner.schema.json
+│       └── defaults/
+├── scanner/
+│   └── 0.1.0/
+│       ├── scanner.schema.json
+│       └── defaults/
+└── tui/
     └── 0.1.0/
-        ├── repository.schema.json
-        ├── blueprints.schema.json
-        ├── environments.schema.json
-        └── ...
+        ├── tui.schema.json
+        └── defaults/
 ```
 
-**Future**: Schema versioning with migration tools for contract upgrades
+### Contract Modules (8 contracts at v0.1.0)
+
+| Contract              | Purpose                            | Go Module                         |
+| --------------------- | ---------------------------------- | --------------------------------- |
+| **ai-provider**       | AI provider integration interface  | `go/contracts/ai-provider/`       |
+| **clie**              | CLIE CLI framework configuration   | `go/contracts/clie/`              |
+| **container-runtime** | Container runtime interface        | `go/contracts/container-runtime/` |
+| **core**              | Core configuration and environment | `go/contracts/core/`              |
+| **docs**              | Documentation generation contracts | `go/contracts/docs/`              |
+| **runner**            | Test runner interface              | `go/contracts/runner/`            |
+| **scanner**           | Security scanner interface         | `go/contracts/scanner/`           |
+| **tui**               | Terminal UI component interface    | `go/contracts/tui/`               |
+
+See [Contracts Module](../modules/contracts.md) for detailed documentation.
+
+### Version Naming Convention
+
+Contracts use **semantic versioning** (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Breaking changes (incompatible schema changes)
+- **MINOR**: New features (backward-compatible additions)
+- **PATCH**: Bug fixes (clarifications, documentation)
+
+### Current Version
+
+All contracts are currently at **version 0.1.0**, indicating pre-release stability.
+
+### Future Versioning
+
+As contracts evolve:
+
+```text
+contracts/runner/
+├── 0.1.0/          # Initial version
+├── 0.2.0/          # Added new optional fields
+├── 1.0.0/          # Stable release
+└── 2.0.0/          # Breaking changes
+```
+
+**Migration**: Schema versioning with migration tools for contract upgrades will be added in future releases.
+
+### Loading Versioned Contracts
+
+Go code references specific contract versions:
+
+```go
+import "github.com/ready-to-release/eac/go/contracts/runner/0.1.0/runner"
+
+// Use v0.1.0 runner interface
+func runTests(r runner.Runner) error {
+    // Implementation
+}
+```
+
+This allows multiple contract versions to coexist during migration periods
 
 ---
 

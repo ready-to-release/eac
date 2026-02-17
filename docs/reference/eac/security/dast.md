@@ -1,72 +1,62 @@
-# DAST (Dynamic Application Security Testing)
+# Dynamic Application Security Testing (DAST)
 
-Dynamic analysis tests running applications (black-box testing).
+Runtime security testing using OWASP ZAP (black-box testing).
 
-## What DAST Does
+---
 
-- Interacts with application via APIs/UI
-- Simulates attacker behavior
-- Tests actual runtime behavior
-- No source code access needed
+## Command
+
+```bash
+# DAST scan with OWASP ZAP
+eac scan zap --url <target-url>
+
+# Scan specific module
+eac scan zap --url http://localhost:8080 --module api-service
+```
+
+**Tool**: OWASP ZAP
+
+**Output**: `out/scan/<module>/zap/`
+
+---
 
 ## What It Detects
 
-| Vulnerability              | Description                             |
-| -------------------------- | --------------------------------------- |
-| Authentication Flaws       | Weak auth, session issues               |
-| Authorization Bypasses     | Privilege escalation                    |
-| Injection Attacks          | SQL, command, LDAP injection at runtime |
-| Security Misconfigurations | Default credentials, open ports         |
-| Sensitive Data Exposure    | Unencrypted data, information leakage   |
-| Business Logic Flaws       | Workflow bypasses                       |
+Tests running application for:
 
-## Running DAST Scans
+- **Authentication flaws**: Weak auth, session management issues
+- **Authorization bypasses**: Privilege escalation, access control
+- **Injection attacks**: SQL, command, LDAP injection at runtime
+- **Security misconfigurations**: Default credentials, open ports, headers
+- **Sensitive data exposure**: Unencrypted data, information leakage
+- **Business logic flaws**: Workflow bypasses, race conditions
 
-Use the `scan` command with the `zap` scanner:
-
-```bash
-# DAST scan using OWASP ZAP
-eac scan --scanner zap
-
-# Scan specific module
-eac scan eac-core --scanner zap
-```
-
-Evidence is written to `out/scan/<module>/zap/`.
+---
 
 ## Scan Modes
 
 | Mode     | Duration  | Use Case         | Environment |
 | -------- | --------- | ---------------- | ----------- |
-| Baseline | 5-10 min  | Quick validation | Any (safe)  |
+| Baseline | 5-10 min  | Quick validation | Test (safe) |
 | Full     | 1-4 hours | Comprehensive    | Test only   |
 | API      | 10-30 min | API-focused      | Test only   |
 
-## Benefits
+**Baseline mode**: Passive scanning, no active attacks (safe for production-like environments)
 
-- Tests actual application behavior
-- Finds runtime-only vulnerabilities
-- Language-agnostic
-- Tests real attack scenarios
+**Full mode**: Active scanning with simulated attacks (test environments only)
 
-## Limitations
+---
 
-- Slower than SAST (minutes to hours)
-- Requires running application
-- May miss code-level issues
-- Can have false positives
+## Requirements
 
-## When to Use
+- **Running application**: Target must be deployed and accessible
+- **Test data**: Application should be seeded with test data
+- **Network access**: Scanner must reach target URL
+- **Safe environment**: Active scans should only run in test environments
 
-| Stage           | Scan Type | Purpose               |
-| --------------- | --------- | --------------------- |
-| Acceptance (5)  | Baseline  | Quick validation      |
-| Extended (6)    | Full scan | Comprehensive testing |
-| Production (11) | Baseline  | Continuous monitoring |
+---
 
 ## Related Documentation
 
-- [Shift-Left Security (Conceptual)](../../../explanation/continuous-delivery/security/shift-left.md)
-  Security integration principles
-- [Scan Command Reference](../commands/scan/index.md)
-  Full scan command options
+- **[Security Index](./index.md)** - Security scanning overview
+- **[Scan Commands](../commands/scan/index.md)** - Full scan command reference

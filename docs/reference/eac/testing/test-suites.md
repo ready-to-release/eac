@@ -1,446 +1,109 @@
-# Test Suites
+# Test Suites Reference
 
-> **Unit, integration, acceptance, and production verification suites**
-
-Test suites select tests by tags for execution at specific CD Model stages.
-
-**Note**: All test suites automatically exclude tests tagged with `@ignore`.
+Test suite definitions from `contracts/core/0.1.0/schemas/defaults/test-suites.yml`.
 
 ---
 
 ## unit
 
-**Selects**: `@L0`, `@L1`
-**Excludes**: `@L2`, `@L3`, `@L4`, `@ignore`
-**Time**: 2-5 minutes
+**Tags**: Include `@L0` or `@L1`, exclude `@L2`, `@L3`, `@L4`
 **Purpose**: Fast module-level validation
+**Time**: 2-5 minutes
 **Environment**: DevBox or Build Agent
-**Run**: `eac test <module> --suite unit`
-
-### What It Tests
-
-- Very fast unit tests with no I/O (L0)
-- Fast unit tests with minimal I/O (L1)
-
-### Example
+**Stage**: 2-4 (Pre-commit, MR, Commit)
 
 ```bash
-# Run unit suite
-eac test unit
-
-# Runs all scenarios with:
-# - @L0 or @L1
-# - Excludes @L2, @L3, @L4, @ignore
+eac test <module> --suite unit
 ```
 
 ---
 
 ## integration
 
-**Selects**: `@L2`
-**Excludes**: `@L0`, `@L1`, `@L3`, `@L4`, `@ignore`
-**Time**: 5-15 minutes
+**Tags**: Include `@L2`, exclude `@L0`, `@L1`, `@L3`, `@L4`
 **Purpose**: Emulated system tests with Docker
+**Time**: 5-15 minutes
 **Environment**: Build Agent with Docker
-**Run**: `eac test <module> --suite integration`
-
-### What It Tests
-
-- Emulated system tests (L2)
-- Docker-based integration tests
-- Tests requiring containers or network simulation
-
-### Example
+**Stage**: 5 (Continuous Build)
 
 ```bash
-# Run integration suite
-eac test integration
-
-# Runs all scenarios with:
-# - @L2
-# - Excludes @L0, @L1, @L3, @L4, @ignore
+eac test <module> --suite integration
 ```
 
 ---
 
 ## acceptance
 
-**Selects**: `@L3`
-**Excludes**: `@L0`, `@L1`, `@L2`, `@L4`, `@ignore`
+**Tags**: Include `@L3`, exclude `@L0`, `@L1`, `@L2`, `@L4`
+**Purpose**: Production-like system tests
 **Time**: 1-2 hours
-**Purpose**: Production-like system tests in PLTE
 **Environment**: PLTE (Production-Like Test Environment)
-**Run**: `eac test <module> --suite acceptance`
-
-### What It Tests
-
-- Installation verification (@iv) - deployment succeeded
-- Operational verification (@ov) - features work in production-like environment
-- Performance verification (@pv) - meets SLA/SLI/SLO's
-
-### Example
+**Stage**: 6 (PLTE Deployment)
+**Extended Suite**: Yes
 
 ```bash
-# Run acceptance suite in PLTE
-eac test acceptance
-
-# Runs all scenarios with:
-# - @L3
-# - Excludes @L0, @L1, @L2, @L4, @ignore
+eac test <module> --suite acceptance
 ```
+
+Acceptance tests verify:
+
+- **@iv** - Installation verification (deployment succeeded)
+- **@ov** - Operational verification (features work)
+- **@pv** - Performance verification (meets SLA/SLI/SLO)
 
 ---
 
 ## production-verification
 
-**Selects**: `@L4` AND `@piv`
-**Excludes**: `@ignore`
-**Time**: Continuous
+**Tags**: Require `@L4` and `@piv`
 **Purpose**: Production smoke tests
+**Time**: 5-15 minutes
 **Environment**: Production
-**Run**: `eac test <module> --suite production-verification`
-
-### What It Tests
-
-- Production installation verification (@piv)
-- Production performance verification (@ppv)
-- Continuous monitoring
-- Post-deployment validation
-
-### Example
+**Stage**: 11-12 (Production Deployment)
+**Extended Suite**: Yes
 
 ```bash
-# Run production verification suite
-eac test production-verification
-
-# Runs all scenarios with:
-# - @L4 AND @piv
-# - Excludes @ignore
+eac test <module> --suite production-verification
 ```
 
----
-
-## Test Suite Selection Logic
-
-### unit Suite
-
-```gherkin
-@L0 @ov
-Scenario: Very fast unit test
-  # SELECTED (L0)
-
-@L1 @ov
-Scenario: Fast unit test
-  # SELECTED (L1)
-
-@L2 @ov
-Scenario: Docker-based test
-  # NOT SELECTED (L2 excluded)
-
-@ignore @L1 @ov
-Scenario: Ignored test
-  # NOT SELECTED (@ignore)
-```
-
-### integration Suite
-
-```gherkin
-@L2 @ov
-Scenario: Docker integration test
-  # SELECTED (L2)
-
-@L1 @ov
-Scenario: Unit test
-  # NOT SELECTED (L1 excluded)
-
-@L3 @iv
-Scenario: PLTE deployment
-  # NOT SELECTED (L3 excluded)
-
-@ignore @L2 @ov
-Scenario: Ignored test
-  # NOT SELECTED (@ignore)
-```
-
-### acceptance Suite
-
-```gherkin
-@L3 @ov
-Scenario: Production-like functional test
-  # SELECTED (@L3)
-
-@L3 @iv
-Scenario: Deployment check
-  # SELECTED (@L3)
-
-@L2 @ov
-Scenario: Emulated test
-  # NOT SELECTED (L2 excluded)
-
-@ignore @L3 @ov
-Scenario: Ignored test
-  # NOT SELECTED (@ignore)
-```
-
-### production-verification Suite
-
-```gherkin
-@L4 @piv
-Scenario: Production smoke test
-  # SELECTED (@L4 + @piv)
-
-@L4 @ppv
-Scenario: Production monitoring
-  # SELECTED (@L4 + @ppv)
-
-@L3 @iv
-Scenario: PLTE test
-  # NOT SELECTED (L3, not production)
-
-@ignore @L4 @piv
-Scenario: Ignored test
-  # NOT SELECTED (@ignore)
-```
-
----
-
-## Running Default Suites
-
-```bash
-# Run all suites (single init, single summary)
-eac test
-
-# Run all suites for a specific module
-eac test my-module
-```
-
-This runs tests from all three suites while routing output to the module's test folder:
-
-- `out/test/<module>/` - All test results for the module (unit, integration, acceptance)
-
-Benefits:
-
-- Single initialization phase
-- Single summary showing all results
-- Faster than running three separate commands
-- Useful for local development comprehensive testing
-
-!!! note "CI Pipelines"
-
-    CI pipelines typically run suites separately (`--suite unit`, `--suite integration`, etc.),
-    for better failure isolation and parallel job distribution.
-
----
-
-## CD Model Stage Mapping
-
-| CD Stage                 | Test Suite              | Tags Selected  | Environment    |
-| ------------------------ | ----------------------- | -------------- | -------------- |
-| **Pre-commit/MR/Commit** | unit                    | `@L0`, `@L1`   | DevBox/Agent   |
-| **Integration**          | integration             | `@L2`          | Agent + Docker |
-| **Acceptance**           | acceptance              | `@L3`          | PLTE           |
-| **Production**           | production-verification | `@L4` + `@piv` | Production     |
-
----
-
-## Best Practices
-
-### Test Suite Organization
-
-**DO**:
-
-- Run unit tests before every commit (fast feedback)
-- Run integration tests before merging (Docker validation)
-- Run acceptance tests in PLTE after deployment
-- Run production-verification continuously in production
-- Keep unit suite < 5 minutes
-- Keep integration suite < 15 minutes
-
-**DON'T**:
-
-- Skip unit tests (catch issues early)
-- Skip integration tests (Docker issues caught here)
-- Run production tests in PLTE (environment mismatch)
-- Run PLTE tests in production (excessive load)
-- Include slow tests in commit suite (breaks feedback loop)
-
-### Tag Selection
-
-**DO**:
-
-- Use appropriate test levels (@L0-L4)
-- Use verification tags (@ov, @iv, @pv, @piv, @ppv)
-- Let test suites select automatically by tags
-- Review test distribution across suites
-
-**DON'T**:
-
-- Manually filter test suites (use tags)
-- Mix test levels inappropriately
-- Forget verification tags (required)
-- Over-tag tests (complicates selection)
-
----
-
-## Custom Test Suites
-
-You can create custom test suites with specific tag combinations:
-
-```bash
-# Run all L2 tests with Docker dependency
-godog run --tags="@L2 && @deps:docker"
-
-# Run all control tests for AC family
-godog run --tags="@control:ac-"
-
-# Run operational tests excluding manual
-godog run --tags="@ov && !@Manual"
-```
-
----
-
-## Test Suite Execution Time Guidelines
-
-### commit (Target: < 5 minutes)
-
-- **L0**: < 30 seconds (microseconds per test)
-- **L1**: 2-4 minutes (milliseconds per test)
-- **Total**: 5 minutes maximum
-
-**If exceeding 5 minutes**:
-
-- Move slow L1 tests to integration suite (change to @L2)
-- Optimize test doubles and mocks
-- Run tests in parallel
-- Review test necessity
-
-### integration (Target: < 15 minutes)
-
-- **L2**: 5-15 minutes (seconds per test)
-- **Total**: 15 minutes maximum
-
-**If exceeding 15 minutes**:
-
-- Parallelize Docker container tests
-- Optimize container startup
-- Review test coverage (remove redundant tests)
-- Consider pre-built test containers
-
-### acceptance (Target: 1-2 hours)
-
-- **Installation** (@iv): 10-20 minutes
-- **Operational** (@ov): 40-60 minutes
-- **Performance** (@pv): 20-40 minutes
-- **Total**: 70-120 minutes
-
-**If exceeding 2 hours**:
-
-- Parallelize test execution
-- Optimize test data setup
-- Review test coverage (remove redundant tests)
-- Consider splitting into multiple acceptance environments
-
-### production-verification (Continuous)
-
-- **Smoke tests** (@piv): 2-5 minutes per run
-- **Monitoring** (@ppv): Every 5-15 minutes
-- **Frequency**: Continuous (24/7)
-
-**If tests are too slow**:
-
-- Simplify smoke tests (only critical paths)
-- Reduce monitoring frequency for non-critical checks
-- Use read-only operations only
+Production Installation Verification (@piv) confirms:
+
+- Deployment succeeded
+- Core functionality operational
+- System health checks pass
 
 ---
 
 ## manual
 
-**Selects**: `@Manual`
-**Excludes**: None (manual tests run separately from automated suites)
-**Time**: Variable (human execution)
-**Purpose**: Manual verification requiring human judgment
-**Environment**: Any (typically staging or production-like)
-**Workflow**: Export → Execute → Import → Merge
+**Tags**: Require `@Manual`, exclude `@L0`, `@L1`, `@L2`, `@L3`, `@L4`
+**Purpose**: Human-executed tests requiring manual verification
+**Environment**: As required by test
+**Extended Suite**: Yes
 
-### What It Tests
-
-- Hardware integration (physical device interaction)
-- Usability/UX evaluation (subjective assessment)
-- Third-party system integration (no test API available)
-- Regulatory compliance sign-off (human approval required)
-
-### Workflow
-
-Manual tests do not run with `eac test <module> --suite manual`. Instead, use the manual testing workflow:
-
-1. **Export** scenarios: `eac test export-manual --module <module> --release <version>`
-2. **Execute** tests: Human tester fills in results file
-3. **Import** results: `eac test import-manual --input results.json --release <version>`
-4. **Merge** into manifest: `eac test merge-results --module <module> --version <version>`
-
-### Example
+Manual tests are exported, executed by humans, then results imported:
 
 ```bash
-# Export manual test scenarios
-eac test export-manual --module eac-commands --release v1.2.0
-
-# (Human executes tests and creates results.json)
-
-# Import and merge results
-eac test import-manual --input results.json --release v1.2.0
-eac test merge-results --module eac-commands --version v1.2.0
-
-# View results
-eac show suite manual --module eac-commands
+eac test-export-manual <module>          # Export scenarios
+# ... human execution ...
+eac test-import-manual <module> --results results.json
 ```
-
-### See Also
-
-- [Manual Testing Reference](./manual-tests.md) - Complete technical reference
-- [Execute Manual Tests](../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Step-by-step guide
-- [Execution Control Tags](../../../explanation/specifications/taxonomy/execution-control-tags.md) - @Manual tag concepts
 
 ---
 
-## Debugging Test Suite Selection
+## Suite Configuration
 
-### Check which tests are selected
+All suites automatically exclude tests tagged with `@ignore`.
 
-```bash
-# Dry run - show which tests would run
-eac test commit --dry-run
-eac test integration --dry-run
-eac test acceptance --dry-run
-eac test production-verification --dry-run
+**Extended suites** (`acceptance`, `production-verification`, `manual`) are not run by default in CI/CD pipelines unless explicitly requested.
 
-# Show test count by suite
-eac test commit --count
-eac test integration --count
-eac test acceptance --count
-eac test production-verification --count
-```
-
-### Common Issues
-
-**Issue**: Test not running in expected suite
-
-**Solution**: Check effective tags (see [Tag Inheritance](../../../explanation/specifications/taxonomy/tag-inheritance.md))
-
-**Issue**: Test running in multiple suites
-
-**Solution**: Review tag combinations - may be intentional or need refinement
-
-**Issue**: Test not running in any suite
-
-**Solution**: Verify test has required tags (test level + verification tag)
+**YAML Definition**: `contracts/core/0.1.0/schemas/defaults/test-suites.yml`
+**JSON Schema**: `contracts/core/0.1.0/schemas/test-suites.schema.json`
 
 ---
 
 ## Related Documentation
 
-- [Test Levels (Conceptual)](../../../explanation/specifications/taxonomy/test-levels.md) - L0-L4 execution environments
-- [Verification Tags (Conceptual)](../../../explanation/specifications/taxonomy/verification-tags.md) - @ov, @iv, @pv, @piv, @ppv
-- [Tag Inheritance (Conceptual)](../../../explanation/specifications/taxonomy/tag-inheritance.md) - How tags accumulate
-- [Execution Control (Conceptual)](../../../explanation/specifications/taxonomy/execution-control-tags.md) - @ignore and @Manual
-- [Test Command Reference](../commands/test/index.md) - Full test command options
+- [Test Levels Explanation](../../../explanation/specifications/taxonomy/test-levels.md) - L0-L4 environment concepts
+- [Test Commands](../commands/test/index.md) - CLI command reference
+- [Manual Testing](./manual-tests.md) - Manual test workflow

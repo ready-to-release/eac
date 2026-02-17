@@ -67,26 +67,95 @@ graph TB
 
 ## EAC Components
 
-### Core Modules
+EAC consists of **28 modules** organized into focused groups:
 
-| Module               | Purpose                                                                  | Type        |
-| -------------------- | ------------------------------------------------------------------------ | ----------- |
-| **eac**          | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
-| **core**             | Domain libraries, contract system, dependency graph                      | go-library  |
-| **godog-eac**    | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
-| **eac-mcp-server**   | MCP server for LLM tool integration                                      | go-mcp      |
+### Core Framework
 
-See [Modules Reference](../modules/index.md) for detailed module documentation.
+| Module        | Purpose                                              | Type       |
+| ------------- | ---------------------------------------------------- | ---------- |
+| **core**      | Core utilities (contracts, configuration, workspace) | go-library |
+| **clibase**   | CLI framework (Cobra integration, flags, output)     | go-library |
+| **contracts** | Contract definitions and schemas                     | go-library |
+
+### CLI Tools
+
+| Module             | Purpose                            | Type           |
+| ------------------ | ---------------------------------- | -------------- |
+| **eac**            | EAC CLI application                | go-cli         |
+| **eac-ext**        | EAC containerized extension        | clie-extension |
+| **eac-mcp-server** | MCP server for AI tool integration | go-mcp         |
+
+### Commands Module (7 components)
+
+The commands module contains 7 specialized components organized by domain:
+
+| Module                  | Purpose                     |
+| ----------------------- | --------------------------- |
+| **commands/base**       | Base command infrastructure |
+| **commands/build**      | Build automation commands   |
+| **commands/lint**       | Code quality and linting    |
+| **commands/repository** | Repository management       |
+| **commands/scan**       | Security scanning           |
+| **commands/test**       | Test execution              |
+| **commands/update**     | Update and maintenance      |
+
+See [Commands Framework](./commands-framework.md) for architecture details.
+
+### Adapters (16 adapters)
+
+Integration with external tools and frameworks:
+
+| Category             | Adapters                                                 |
+| -------------------- | -------------------------------------------------------- |
+| **Test Frameworks**  | gotest, godog, mocha, pytest, behave, reqnroll, cucumber |
+| **Package Managers** | npm, pip, nuget, dotnet                                  |
+| **Infrastructure**   | docker, gh, ai                                           |
+| **Utilities**        | tui, eac                                                 |
+
+See [Adapters System](./adapters-system.md) for architecture details.
+
+### Contracts (8 contracts at v0.1.0)
+
+Versioned interface definitions:
+
+| Contract              | Purpose                    |
+| --------------------- | -------------------------- |
+| **ai-provider**       | AI provider integration    |
+| **clie**              | CLIE CLI framework         |
+| **container-runtime** | Container runtime          |
+| **core**              | Core configuration         |
+| **docs**              | Documentation generation   |
+| **runner**            | Test runner interface      |
+| **scanner**           | Security scanner interface |
+| **tui**               | Terminal UI components     |
+
+See [Contracts Module](../modules/contracts.md) for details.
+
+### OCI Tools (12 container images)
+
+Containerized development tools:
+
+| Tool Category      | Images                                                                           |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Language SDKs**  | go-oci, cgo-oci, dotnet-oci                                                      |
+| **Documentation**  | mkdocs-dev-oci, mkdocs-render-oci, drawio-oci, mermaid-oci, pdf-oci, pdf-cli-oci |
+| **Infrastructure** | git-oci, nginx-oci, gource-oci                                                   |
+
+See [OCI Tools Module](../modules/oci-tools.md) for details.
 
 ### Supporting Modules
 
-| Module                | Purpose                                            |
-| --------------------- | -------------------------------------------------- |
-| **docs**              | MkDocs documentation site generation               |
-| **templates**         | Template management for specs, reports, AI prompts |
-| **vscode-commit**     | VS Code commit message extension                   |
+| Module              | Purpose                         |
+| ------------------- | ------------------------------- |
+| **repository**      | Repository management utilities |
+| **docs**            | Documentation generation module |
+| **templates**       | Project templates               |
+| **clie-installer**  | CLIE installation scripts       |
+| **clie-eac-bundle** | Release bundle packaging        |
+| **vscode-commit**   | VS Code commit extension        |
+| **implicit-cli**    | Implicit CLI detection          |
 
-See [Modules Reference](../modules/index.md) for details on all modules.
+See [Modules Reference](../modules/index.md) for complete module documentation.
 
 ### Container Structure
 
@@ -105,13 +174,13 @@ eac-ext:latest
 
 All repository structure is defined in **YAML contracts** validated against **JSON schemas**:
 
-| Contract                | Schema Location               | Purpose                             |
-| ----------------------- | ----------------------------- | ----------------------------------- |
-| **repository.yml**      | `repository.schema.json`      | Repository-wide configuration       |
-| **blueprints.yml**      | `blueprints.schema.json`      | Component kind definitions          |
-| **tool-config.yml**     | `tool-config.schema.json`     | Tool definitions and resources      |
-| **books.yml**           | `books.schema.json`           | Documentation book configuration    |
-| **test-suites.yml**     | `test-suites.schema.json`     | Test suite definitions              |
+| Contract            | Schema Location           | Purpose                          |
+| ------------------- | ------------------------- | -------------------------------- |
+| **repository.yml**  | `repository.schema.json`  | Repository-wide configuration    |
+| **blueprints.yml**  | `blueprints.schema.json`  | Component kind definitions       |
+| **tool-config.yml** | `tool-config.schema.json` | Tool definitions and resources   |
+| **books.yml**       | `books.schema.json`       | Documentation book configuration |
+| **test-suites.yml** | `test-suites.schema.json` | Test suite definitions           |
 
 Contracts are loaded by `core` at runtime and validated before any operation. This ensures:
 
@@ -188,7 +257,7 @@ func (h *BuildHandler) Execute(args []string) error {
 }
 ```
 
-See [Creating Commands](./creating-commands.md) for command development guide.
+See [Command Implementation Guide](./command-implementation.md) for command development guide.
 
 ---
 
