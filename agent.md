@@ -197,9 +197,9 @@ Each Claude session works independently. The user handles all git coordination.
 
 ## Claude Code Tools
 
-This repository has a complete Claude Code setup with specialized agents, skills, and commands for Go CLI development.
+This repository has a complete Claude Code setup with specialized agents and skills for Go CLI development.
 
-### Available Sub-Agents
+### Available Agents
 
 Specialized agents for specific tasks (invoke via Task tool):
 
@@ -214,75 +214,22 @@ Specialized agents for specific tasks (invoke via Task tool):
 
 ### Available Skills
 
-Orchestrated workflows combining multiple agents. See `.claude/skills/` for detailed documentation.
+Task-focused skills for common development activities:
 
-| Skill                       | Purpose                                     | Key Agents                                | When to Use                                |
-| --------------------------- | ------------------------------------------- | ----------------------------------------- | ------------------------------------------ |
-| **go-cli-feature**          | End-to-end feature development (TDD)        | go-architect, go-cli-ux, go-test-engineer | Building new CLI commands or features      |
-| **go-cli-refactor-safe**    | Safe refactoring with continuous validation | go-architect, go-test-engineer            | Refactoring code without breaking behavior |
-| **go-cli-release-check**    | Pre-release validation checklist            | go-security-release                       | Before tagging releases or deployment      |
-| **go-comprehensive-review** | Multi-perspective code review               | All agents                                | Important features, security changes       |
-| **drawio-editor**           | DrawIO diagram editing                      | None (standalone)                         | Architecture diagrams, visualizations      |
+| Skill             | Purpose                            | When to Use                           |
+| ----------------- | ---------------------------------- | ------------------------------------- |
+| `/boot`           | Initialize session                 | Start every session                   |
+| `/go:plan`        | Plan feature or change             | Before implementing                   |
+| `/go:implement`   | Implement using TDD                | After planning                        |
+| `/go:test`        | Write or debug tests               | Testing phase                         |
+| `/go:review`      | Review code (runs code-simplifier) | Before committing                     |
+| `/go:cli-docs`    | Update CLI documentation           | When CLI surface changes              |
+| `/go:release`     | Prepare for release                | Release readiness check               |
+| `/go:debug`       | Debug issues                       | When things break                     |
+| `/go:session-end` | **End session cleanup**            | **MANDATORY at end of every session** |
+| `/drawio`         | Edit DrawIO diagrams               | Architecture diagrams                 |
 
-**Workflows**:
-
-- `go-cli-feature`: Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document
-- `go-cli-refactor-safe`: Baseline → Plan → Refactor → Test → Simplify
-- `go-cli-release-check`: CI → Security → Build → Changelog → Dependencies → Tests → Docs → Final Check
-- `go-comprehensive-review`: Context → Multi-Agent Analysis → Aggregate Findings
-- `drawio-editor`: Decode → Edit → Encode → Embed
-
-**Quick Selection**:
-
-- New features → `go-cli-feature`
-- Refactoring → `go-cli-refactor-safe`
-- Release prep → `go-cli-release-check`
-- Code review → `go-comprehensive-review`
-- Diagrams → `drawio-editor`
-
-### How to Use Skills
-
-**Method 1: Via Slash Commands** (Recommended)
-
-Use slash commands that automatically load skill instructions:
-
-```text
-/go:plan          # Loads go-plan skill
-/go:implement     # Loads go-implement skill
-/go:review        # Loads go-review skill
-```
-
-**Method 2: Reference Workflow Skills**:
-
-Request Claude to follow a specific workflow skill:
-
-```text
-Follow the go-cli-feature skill to implement the new command
-```
-
-**Method 3: Agent Delegation**:
-
-Commands delegate to agents, which may use workflow skills:
-
-```text
-/go:release → go-security-release agent → go-cli-release-check workflow
-```
-
-### Available Slash Commands
-
-Quick-access commands for common workflows:
-
-| Command               | Purpose                            | Use Case                              |
-| --------------------- | ---------------------------------- | ------------------------------------- |
-| `/boot`               | Initialize session                 | Start every session                   |
-| `/go:plan`            | Plan feature or change             | Before implementing                   |
-| `/go:implement`       | Implement using TDD                | After planning                        |
-| `/go:test`            | Write or debug tests               | Testing phase                         |
-| `/go:review`          | Review code (runs code-simplifier) | Before committing                     |
-| `/go:cli-docs`        | Update CLI documentation           | When CLI surface changes              |
-| `/go:release`         | Prepare for release                | Release readiness check               |
-| `/go:debug`           | Debug issues                       | When things break                     |
-| **`/go:session-end`** | **End session cleanup**            | **MANDATORY at end of every session** |
+**How to use**: Simply type the skill name (e.g., `/go:plan`) to invoke it. Skills may delegate to specialized agents as needed.
 
 ### Recommended Workflows
 
@@ -292,17 +239,54 @@ Quick-access commands for common workflows:
 /boot → /go:plan → /go:implement → /go:test → /go:review → /go:session-end
 ```
 
+**Process**:
+
+1. **Plan** - Delegate to go-architect for architecture design
+2. **Implement** - Write specs first, then tests, then code (TDD)
+3. **Test** - Delegate to go-test-engineer for comprehensive tests
+4. **Review** - Run code-simplifier before committing
+5. **Session End** - Cleanup and final validation
+
 #### Bug Fix
 
 ```text
 /boot → /go:debug → /go:test (regression) → /go:implement → /go:review → /go:session-end
 ```
 
+**Process**:
+
+1. **Debug** - Delegate to go-debugger to investigate root cause
+2. **Test** - Write failing test that reproduces the bug
+3. **Implement** - Fix the bug to make test pass
+4. **Review** - Validate fix and simplify code
+5. **Session End** - Cleanup and final validation
+
+#### Safe Refactoring
+
+```text
+/boot → Baseline tests → /go:plan refactoring → Small changes + tests → /go:review → /go:session-end
+```
+
+**Process**:
+
+1. **Baseline** - Run all tests to establish current state
+2. **Plan** - Design target structure with go-architect
+3. **Refactor incrementally** - Make ONE change, run tests, commit, repeat
+4. **Review** - Run code-simplifier to polish changes
+5. **Session End** - Cleanup and final validation
+
 #### Release Preparation
 
 ```text
 /boot → /go:release → Address issues → Ready to tag
 ```
+
+**Process**:
+
+1. **Release Check** - Delegate to go-security-release for comprehensive validation
+2. **Address Issues** - Fix any identified problems
+3. **Final Validation** - All checks passing
+4. **Tag Release** - User tags the release
 
 ### Code-Simplifier Integration
 
@@ -312,9 +296,8 @@ Quick-access commands for common workflows:
 
 The code-simplifier is invoked via Task tool with `subagent_type="code-simplifier:code-simplifier"`. It runs automatically in:
 
-1. `/go:review` command (before commit/PR)
-2. `/go:session-end` command (end of session)
-3. Skills: `go-cli-feature` (step 7), `go-cli-refactor-safe` (step 5)
+1. `/go:review` skill (before commit/PR)
+2. `/go:session-end` skill (end of session)
 
 **What it does**:
 
@@ -351,22 +334,16 @@ You are an AI coding agent contributing Go code to this repository following the
 2. **Test-Driven Development**: Write tests before implementation
 3. **Validation**: Run all tests before reporting complete
 
-**For detailed guidance**:
+**For specialized tasks, delegate to agents**:
 
-- Architecture & Design → Use **go-architect** agent
-- CLI UX Design → Use **go-cli-ux** agent
-- Test Writing → Use **go-test-engineer** agent
-- Debugging → Use **go-debugger** agent
-- Security & Release → Use **go-security-release** agent
-- Workflow & CI/CD Analysis → Use **go-workflow-engineer** agent
+- Architecture & Design → **go-architect** agent
+- CLI UX Design → **go-cli-ux** agent
+- Test Writing → **go-test-engineer** agent
+- Debugging → **go-debugger** agent
+- Security & Release → **go-security-release** agent
+- Workflow & CI/CD Analysis → **go-workflow-engineer** agent
 
-**For complete workflows**:
-
-- Feature development → Use **go-cli-feature** skill
-- Safe refactoring → Use **go-cli-refactor-safe** skill
-- Release readiness → Use **go-cli-release-check** skill
-
-**Or use slash commands**:
+**For common workflows, use skills**:
 
 - `/go:plan` → `/go:implement` → `/go:test` → `/go:review` → `/go:session-end`
 
