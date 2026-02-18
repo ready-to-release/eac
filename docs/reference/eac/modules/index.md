@@ -203,44 +203,6 @@ eac validate-module-files      # Validate no conflicts
 
 ---
 
-## Working with Modules
-
-### View Modules
-
-```bash
-eac show-modules               # List all modules
-eac show-dependencies          # Show dependency graph
-eac get-modules                # Get modules as JSON
-```
-
-### Build Modules
-
-```bash
-eac build <module>             # Build single module
-eac build <module> --deps      # Build with dependencies
-eac show-build-summary         # View build status
-```
-
-### Test Modules
-
-```bash
-eac test <module>              # Test module
-eac test-suite <suite>         # Run test suite
-eac show-test-summary          # View test results
-```
-
-### Validate Modules
-
-```bash
-eac validate                   # Validate all
-eac validate-contracts         # Schema validation
-eac validate-dependencies      # Dependency validation
-```
-
-**For complete command reference**: [EAC Commands](../commands/index.md)
-
----
-
 ## Architecture Diagrams
 
 Each module includes C4 architecture diagrams in Structurizr DSL format:

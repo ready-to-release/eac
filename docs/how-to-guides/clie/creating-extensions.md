@@ -927,5 +927,5 @@ git commit -m "release(my-extension): 1.2.0"
 - [Local Development Workflows](../local-setup/local-dev-workflows.md) - Develop and test extensions locally
 - [Testing in External Repositories](./testing-in-external-repos.md) - Test extensions in different repositories
 - [CLIE CLI install command](../../reference/clie/commands/install.md) - Installing extensions
-- [CLIE CLI Configuration](../../reference/clie/commands/configuration.md) - Extension configuration reference
+- [CLIE CLI Configuration](../../reference/clie/configuration.md) - Extension configuration reference
 - [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the system

@@ -6,7 +6,7 @@
 
 Is a comprehensive collection of commands designed to streamline **everything-as-code** workflows across your development lifecycle.
 
-It helps teams codify and version-control all aspects of software development—configuration, contracts, architecture,
+It helps teams codify and version-control all aspects of software development - configuration, contracts, architecture,
 specifications, tests, security policies, and infrastructure.
 
 **Key principle**: If it can be defined, it should be code. If it's code, it can be validated, versioned, and automated.
@@ -81,113 +81,9 @@ See the [Command Reference](./commands/index.md) for the complete list of availa
 
 ## Repository Structure
 
-The repository is organized as a **modular monorepo** with 26+ independently buildable modules:
+The repository is organized as a **modular monorepo** with 28 independently buildable modules across six groups (Core Framework, CLI Tools, Commands, Adapters, OCI Tools, Supporting).
 
-```text
-eac/                            # Repository root
-├── .eac/                       # Configuration directory
-│   ├── repository.yml          # Module registry and dependencies
-│   └── test-suites.yml         # Test suite definitions
-│
-├── contracts/                  # Versioned contract schemas (v0.1.0)
-│   ├── ai-provider/            # AI provider contract
-│   ├── clie/                   # CLIE CLI contract
-│   ├── container-runtime/      # Container runtime contract
-│   ├── core/                   # Core configuration contract
-│   ├── docs/                   # Documentation contract
-│   ├── runner/                 # Test runner contract
-│   ├── scanner/                # Security scanner contract
-│   └── tui/                    # Terminal UI contract
-│
-├── go/                         # Go source code
-│   ├── cli/
-│   │   ├── clie/               # CLIE CLI application
-│   │   └── eac/                # EAC CLI application
-│   ├── core/                   # Core utilities and libraries
-│   ├── clibase/                # CLI framework
-│   ├── mcp/                    # MCP server
-│   ├── specs/                  # Specification infrastructure
-│   │
-│   ├── commands/               # Modular commands (7 modules)
-│   │   ├── base/               # Command infrastructure
-│   │   ├── build/              # Build commands
-│   │   ├── lint/               # Lint commands
-│   │   ├── repository/         # Repository commands
-│   │   ├── scan/               # Scan commands
-│   │   ├── test/               # Test commands
-│   │   └── update/             # Update commands
-│   │
-│   └── adapters/               # Tool adapters (17 modules)
-│       ├── ai/                 # AI provider adapter
-│       ├── behave/             # Python BDD adapter
-│       ├── cucumber/           # Ruby BDD adapter
-│       ├── docker/             # Docker adapter
-│       ├── dotnet/             # .NET adapter
-│       ├── eac/                # EAC-to-EAC adapter
-│       ├── gh/                 # GitHub adapter
-│       ├── godog/              # Go BDD adapter
-│       ├── gotest/             # Go test adapter
-│       ├── mocha/              # JavaScript test adapter
-│       ├── npm/                # npm adapter
-│       ├── nuget/              # NuGet adapter
-│       ├── pip/                # pip adapter
-│       ├── pytest/             # pytest adapter
-│       ├── reqnroll/           # .NET BDD adapter
-│       └── tui/                # Terminal UI adapter
-│
-├── containers/                 # OCI tool images (12 containers)
-│   ├── cgo-oci/                # C/Go cross-compilation
-│   ├── dotnet-oci/             # .NET SDK
-│   ├── drawio-oci/             # Diagram rendering
-│   ├── eac-ext/                # EAC extension image
-│   ├── git-oci/                # Git tools
-│   ├── go-oci/                 # Go SDK
-│   ├── gource-oci/             # Repository visualization
-│   ├── mermaid-oci/            # Mermaid diagrams
-│   ├── mkdocs-dev-oci/         # MkDocs dev server
-│   ├── mkdocs-render-oci/      # MkDocs rendering
-│   ├── nginx-oci/              # NGINX server
-│   ├── pdf-cli-oci/            # PDF generation
-│   └── pdf-oci/                # PDF utilities
-│
-├── specs/                      # BDD specifications
-│   ├── {module}/.design/       # Structurizr C4 diagrams per module
-│   └── {module}/features/      # Gherkin features per module
-│
-├── docs/                       # MkDocs documentation
-│   ├── reference/              # Technical reference
-│   ├── how-to-guides/          # Task-based guides
-│   ├── explanation/            # Conceptual documentation
-│   └── tutorials/              # Learning-oriented guides
-│
-├── out/                        # Build artifacts (gitignored)
-│   ├── build/                  # Compiled binaries and images
-│   ├── test/                   # Test results
-│   └── evidence/               # Compliance evidence
-│
-├── .github/workflows/          # CI/CD pipelines
-├── go.work                     # Go workspace definition
-└── mkdocs.yml                  # Documentation configuration
-```
-
-### Module Organization
-
-**28 modules** organized into focused groups. See [Modules Reference](./modules/index.md) for complete documentation.
-
-**Core Framework** (3): core, clibase, contracts
-
-**CLI Tools** (4): clie, eac, eac-ext, eac-mcp-server
-
-**Framework Modules** (2):
-
-- **commands** - Single module with 7 components: base, build, lint, repository, scan, test, update
-- **adapters** - Single module with 17 components: ai, behave, cucumber, docker, dotnet, eac, gh, godog, gotest, mocha, npm, nuget, pip, pytest, reqnroll, tui, and more
-
-**OCI Tools** (12): cgo-oci, dotnet-oci, drawio-oci, git-oci, go-oci, gource-oci, mermaid-oci, mkdocs-dev-oci, mkdocs-render-oci, nginx-oci, pdf-cli-oci, pdf-oci
-
-**Supporting** (7): repository, docs, templates, clie-eac-bundle, cli-installers, vscode-commit, implicit-cli
-
-All modules defined in `.eac/repository.yml` with explicit dependencies and file ownership.
+See [Repository Layout](./architecture/repository-layout.md) for the full directory structure and [Modules Reference](./modules/index.md) for the complete module catalog.
 
 ---
 
@@ -202,45 +98,6 @@ All modules defined in `.eac/repository.yml` with explicit dependencies and file
 | [Contracts](./architecture/contracts.md)                   | YAML contracts, schemas, and validation system        |
 | [Repository Layout](./architecture/repository-layout.md)   | Directory structure and file organization             |
 | [Command Implementation](./architecture/command-implementation.md)   | Developer guide for implementing EAC commands   |
-
-## Detailed Documentation
-
-### System Architecture
-
-**[Architecture](./architecture/index.md)**
-
-Complete system architecture including component layers, execution models (Docker CLI, MCP Server, Fallback),
-integration patterns, data flow, security architecture, and technology stack.
-
-### Module System
-
-**[Modules](./architecture/modules.md)**
-
-Module system and dependency management including module registry,
-dependency graph, file ownership patterns, module lifecycle (discovery, build, test, validation, release),
-build system with caching, and Structurizr C4 architecture diagrams.
-
-### Contract System
-
-**[Contracts](./architecture/contracts.md)**
-
-Contract-driven configuration including all 14 YAML contract files, modules contract (registry, dependencies, file ownership),
-module types contract (templates, capabilities, artifacts), environments contract (L0-L4 testing pyramid),
-validation system (schema, cross-reference), and configuration precedence.
-
-### Repository Organization
-
-**[Repository Layout](./architecture/repository-layout.md)**
-
-Detailed repository structure with complete directory tree, module categories (deployable vs supporting),
-module configuration examples, file ownership patterns, and navigation to related documentation.
-
-### Extending EAC
-
-**[Command Implementation](./architecture/command-implementation.md)**
-
-Developer guide for implementing new commands in the EAC CLI including command structure, help system integration,
-flag definitions, registry integration, and best practices.
 
 ## Related Documentation
 

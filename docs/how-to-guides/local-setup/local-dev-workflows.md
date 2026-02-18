@@ -528,7 +528,7 @@ cat .clie\clie.local.yml
 ## See Also
 
 - [CLIE CLI init command](../../reference/clie/commands/init.md) - Initialize CLIE configuration
-- [CLIE CLI Configuration](../../reference/clie/commands/configuration.md) - Configuration file reference
+- [CLIE CLI Configuration](../../reference/clie/configuration.md) - Configuration file reference
 - [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the two-tier system
 
 {{ diataxis_footer() }}

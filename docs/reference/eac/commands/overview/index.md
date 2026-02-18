@@ -11,30 +11,9 @@ Conceptual documentation explaining the design, organization, and usage patterns
 | [Common Flags](./common-flags.md)             | Global options available across all commands and flag usage patterns                | 603   |
 | [Output Formats](./output-formats.md)         | Understanding JSON vs human-readable output, when to use each format                | 678   |
 
-## Key Concepts
-
-### Command Organization
-
-Commands are organized by **verb-noun** patterns into 14 categories:
-
-- **Information Commands**: `get` (JSON) and `show` (formatted)
-- **Creation Commands**: `create` (AI-powered generation)
-- **Validation Commands**: `validate` (contract checking)
-- **Workflow Commands**: `work`, `test`, `build`, `pipeline`, `release`
-- **Security Commands**: `scan`
-- **Utility Commands**: `serve`, `templates`, `update`
-
-### Design Principles
+## Design Principles
 
 1. **Consistency**: Similar commands follow similar patterns
 2. **Predictability**: Command names clearly indicate their purpose
 3. **Duality**: Information available in both JSON and human-readable formats
 4. **Composability**: Commands designed to work together in pipelines
-
-### Quick Reference
-
-For immediate command usage, see:
-
-- [All Commands by Category](../categories/index.md)
-- [Command Quick Reference](../index.md#command-categories)
-- [Common Workflows](../index.md#common-workflows)

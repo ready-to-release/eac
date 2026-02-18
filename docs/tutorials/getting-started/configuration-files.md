@@ -72,7 +72,7 @@ extensions:
 
 **Should you commit it?** ✅ Yes - team needs to know which extensions are used
 
-For complete reference, see [CLIE CLI Configuration Guide](../../reference/clie/commands/configuration.md).
+For complete reference, see [CLIE CLI Configuration Guide](../../reference/clie/configuration.md).
 
 ## EAC Extension Configuration
 

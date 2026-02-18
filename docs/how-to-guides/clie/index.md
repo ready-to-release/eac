@@ -29,7 +29,7 @@ For a complete, production-ready example, see [ext-env-check](https://github.com
 ## See Also
 
 - [CLIE CLI Command Reference](../../reference/clie/commands/index.md) - Complete command documentation
-- [CLIE CLI Configuration](../../reference/clie/commands/configuration.md) - Configuration file reference
+- [CLIE CLI Configuration](../../reference/clie/configuration.md) - Configuration file reference
 - [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the two-tier system
 
 {{ diataxis_footer() }}

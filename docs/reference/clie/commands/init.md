@@ -120,6 +120,6 @@ extensions:
 
 - [CLIE CLI Overview](index.md) - Command overview and architecture
 - [install command](install.md) - Install extensions after init
-- [Configuration Reference](configuration.md) - Detailed configuration options
+- [Configuration Reference](../configuration.md) - Detailed configuration options
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Complete setup guide
 - [CLI vs Extensions](../../eac/architecture/cli-integration.md) - Understanding the architecture

@@ -136,5 +136,5 @@ After installing the extension:
 - [init command](init.md) - Initialize configuration before install
 - [list command](list.md) - Browse available extensions
 - [cleanup command](cleanup.md) - Remove old images to free space
-- [Configuration Reference](configuration.md) - Detailed configuration options
+- [Configuration Reference](../configuration.md) - Detailed configuration options
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Complete setup guide

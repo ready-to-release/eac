@@ -1,19 +1,5 @@
 # EAC Extension Architecture
 
-## Overview
-
-**EAC (Everything-as-Code)** is a containerized CLIE extension providing automation commands for build,
-test, validation, security scanning, and release management in modular Go repositories.
-
-**Purpose**: Command collection for everything-as-code workflows
-**Package**: `eac-ext:latest` Docker container
-**Integration**: CLIE CLI extension, MCP server for AI tools
-
-The EAC extension implements a **contract-driven, module-based architecture** where all repository structure,
-modules, dependencies, and configurations are defined in YAML contracts validated against JSON schemas.
-
----
-
 ## Viewing Architecture Diagrams
 
 All architecture diagrams referenced in this document can be viewed interactively using Structurizr:
@@ -67,97 +53,11 @@ graph TB
 
 ## EAC Components
 
-EAC consists of **28 modules** organized into focused groups:
+EAC consists of 28 modules across six groups: **Core Framework** (core, clibase, contracts), **CLI Tools** (eac, eac-ext, eac-mcp-server), **Commands** (7 domain components), **Adapters** (16 tool integrations), **OCI Tools** (12 container images), and **Supporting** (docs, templates, bundle, installers, etc.).
 
-### Core Framework
+See [Modules Reference](../modules/index.md) for the complete module catalog and per-module documentation.
 
-| Module        | Purpose                                              | Type       |
-| ------------- | ---------------------------------------------------- | ---------- |
-| **core**      | Core utilities (contracts, configuration, workspace) | go-library |
-| **clibase**   | CLI framework (Cobra integration, flags, output)     | go-library |
-| **contracts** | Contract definitions and schemas                     | go-library |
-
-### CLI Tools
-
-| Module             | Purpose                            | Type           |
-| ------------------ | ---------------------------------- | -------------- |
-| **eac**            | EAC CLI application                | go-cli         |
-| **eac-ext**        | EAC containerized extension        | clie-extension |
-| **eac-mcp-server** | MCP server for AI tool integration | go-mcp         |
-
-### Commands Module (7 components)
-
-The commands module contains 7 specialized components organized by domain:
-
-| Module                  | Purpose                     |
-| ----------------------- | --------------------------- |
-| **commands/base**       | Base command infrastructure |
-| **commands/build**      | Build automation commands   |
-| **commands/lint**       | Code quality and linting    |
-| **commands/repository** | Repository management       |
-| **commands/scan**       | Security scanning           |
-| **commands/test**       | Test execution              |
-| **commands/update**     | Update and maintenance      |
-
-See [Commands Framework](./commands-framework.md) for architecture details.
-
-### Adapters (16 adapters)
-
-Integration with external tools and frameworks:
-
-| Category             | Adapters                                                 |
-| -------------------- | -------------------------------------------------------- |
-| **Test Frameworks**  | gotest, godog, mocha, pytest, behave, reqnroll, cucumber |
-| **Package Managers** | npm, pip, nuget, dotnet                                  |
-| **Infrastructure**   | docker, gh, ai                                           |
-| **Utilities**        | tui, eac                                                 |
-
-See [Adapters System](./adapters-system.md) for architecture details.
-
-### Contracts (8 contracts at v0.1.0)
-
-Versioned interface definitions:
-
-| Contract              | Purpose                    |
-| --------------------- | -------------------------- |
-| **ai-provider**       | AI provider integration    |
-| **clie**              | CLIE CLI framework         |
-| **container-runtime** | Container runtime          |
-| **core**              | Core configuration         |
-| **docs**              | Documentation generation   |
-| **runner**            | Test runner interface      |
-| **scanner**           | Security scanner interface |
-| **tui**               | Terminal UI components     |
-
-See [Contracts Module](../modules/contracts.md) for details.
-
-### OCI Tools (12 container images)
-
-Containerized development tools:
-
-| Tool Category      | Images                                                                           |
-| ------------------ | -------------------------------------------------------------------------------- |
-| **Language SDKs**  | go-oci, cgo-oci, dotnet-oci                                                      |
-| **Documentation**  | mkdocs-dev-oci, mkdocs-render-oci, drawio-oci, mermaid-oci, pdf-oci, pdf-cli-oci |
-| **Infrastructure** | git-oci, nginx-oci, gource-oci                                                   |
-
-See [OCI Tools Module](../modules/oci-tools.md) for details.
-
-### Supporting Modules
-
-| Module              | Purpose                         |
-| ------------------- | ------------------------------- |
-| **repository**      | Repository management utilities |
-| **docs**            | Documentation generation module |
-| **templates**       | Project templates               |
-| **clie-installer**  | CLIE installation scripts       |
-| **clie-eac-bundle** | Release bundle packaging        |
-| **vscode-commit**   | VS Code commit extension        |
-| **implicit-cli**    | Implicit CLI detection          |
-
-See [Modules Reference](../modules/index.md) for complete module documentation.
-
-### Container Structure
+The EAC extension container packages the compiled commands binary:
 
 ```text
 eac-ext:latest
@@ -172,23 +72,9 @@ eac-ext:latest
 
 ### Contract-Driven Architecture
 
-All repository structure is defined in **YAML contracts** validated against **JSON schemas**:
+All repository structure is defined in YAML contracts validated against JSON schemas. Contracts are loaded by `core` at runtime and validated before any operation, ensuring type safety with clear error messages and schema-based documentation.
 
-| Contract            | Schema Location           | Purpose                          |
-| ------------------- | ------------------------- | -------------------------------- |
-| **repository.yml**  | `repository.schema.json`  | Repository-wide configuration    |
-| **blueprints.yml**  | `blueprints.schema.json`  | Component kind definitions       |
-| **tool-config.yml** | `tool-config.schema.json` | Tool definitions and resources   |
-| **books.yml**       | `books.schema.json`       | Documentation book configuration |
-| **test-suites.yml** | `test-suites.schema.json` | Test suite definitions           |
-
-Contracts are loaded by `core` at runtime and validated before any operation. This ensures:
-
-- **Type safety**: Invalid configurations fail fast with clear error messages
-- **Documentation**: Schemas serve as machine-readable documentation
-- **Evolution**: Schema versioning enables backward compatibility
-
-See [Contracts System](./contracts.md) for detailed specification.
+See [Contracts System](./contracts.md) for the complete contract field reference.
 
 ### Module System
 

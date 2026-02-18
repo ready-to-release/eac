@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The CD Model doesn't just detect defects—it systematically **prevents** them through architectural design.
+The CD Model doesn't just detect defects - it systematically **prevents** them through architectural design.
 
 By distributing validation across 12 purpose-built stages, the CD Model creates multiple defensive layers that catch different types of defects at the point where they're cheapest and easiest to fix.
 

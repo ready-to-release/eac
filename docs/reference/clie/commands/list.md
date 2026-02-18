@@ -80,5 +80,5 @@ Extensions are hosted in the GitHub Container Registry (GHCR):
 
 - [CLIE CLI Overview](index.md) - Command overview
 - [install command](install.md) - Install extensions from the list
-- [Configuration Reference](configuration.md) - Extension configuration
+- [Configuration Reference](../configuration.md) - Extension configuration
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Getting started guide

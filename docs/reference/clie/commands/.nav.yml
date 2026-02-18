@@ -3,11 +3,12 @@ nav:
   - index.md
   - init.md
   - install.md
+  - run.md
   - list.md
   - validate.md
   - verify.md
   - cleanup.md
-  - configuration.md
   - interactive.md
   - metadata.md
+  - update.md
   - version.md

@@ -359,5 +359,5 @@ eac build             # Use extension
 
 - [CLIE CLI Overview](https://ready-to-release.github.io/eac/reference/clie/) - Framework commands
 - [EAC Commands Reference](../commands/index.md) - Extension commands
-- [Configuration Guide](https://ready-to-release.github.io/eac/reference/clie/commands/configuration/) - Detailed configuration
+- [Configuration Guide](https://ready-to-release.github.io/eac/reference/clie/configuration/) - Detailed configuration
 - [Quick Start Tutorial](https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start/) - Getting started

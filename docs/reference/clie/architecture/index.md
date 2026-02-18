@@ -13,6 +13,45 @@ The architecture focuses on:
 - **Git-aware workflows** - Automatic repository detection and mounting
 - **Cross-platform support** - Windows, macOS, Linux compatibility
 
+## Ecosystem Overview
+
+![CLIE CLI Ecosystem Overview](../../../assets/clie/clie-overview.drawio.png)
+
+The diagram above shows the CLIE CLI ecosystem end-to-end. The lettered zones map to these steps:
+
+| Zone    | Label               | What happens                                                                                                 |
+| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **A**   | binary release      | The `clie` binary is built and published as a GitHub Release                                                 |
+| **B**   | distribute cli      | Platform-specific installers deliver the binary to Windows, macOS, and Linux                                 |
+| **C**   | install cli         | The user installs `clie` locally, adds it to PATH, and can self-update via `clie update self`                |
+| **D**   | command             | The user types a command such as `clie eac show modules` in their shell                                      |
+| **E**   | cli loader          | The Go binary (Cobra/Viper) loads `.clie/clie.yml`, discovers configured extensions, and routes the command  |
+| **F**   | container registry  | The extension image is fetched from GitHub Container Registry — pinned to a specific SHA for reproducibility |
+| **G**   | cli extension       | The command executes inside the extension container; output streams back to the host shell                   |
+| **H/N** | host docker service | Docker manages the container lifecycle on the host                                                           |
+| **I**   | host shell          | The user's shell (bash, zsh, pwsh) is the entry point                                                        |
+| **J**   | host repository     | The repository on disk is mounted into the container at `/workspace`                                         |
+
+The bottom row of language icons indicates that extensions can be written in any language — the container boundary means the host only needs Docker and `clie`.
+
+The circled numbers trace two execution sequences through the diagram:
+
+**Setup sequence** (one-time, zones A → B → C):
+
+1. Binary is built and released (A)
+2. Installer delivers it to the host machine (B)
+3. User installs `clie`, adds it to PATH (C)
+
+**Run sequence** (every command, zones D → E → F → H → G):
+
+1. User types a command in the shell — e.g. `clie eac show modules` (D)
+2. CLI loads `.clie/clie.yml`, resolves the extension, checks the registry for the image (E → F)
+3. Docker pulls the image if needed, creates and starts the container with the repository mounted (H → G)
+
+Output streams back from the container (G) through the host shell (I) to the user.
+
+---
+
 ## Core Design Principles
 
 ### 1. Container Isolation

@@ -4,7 +4,7 @@ Technical reference for **EAC** (Everything-as-Code) and **CLIE** (CLI Extender)
 
 ## Overview
 
-**EAC** automates quality engineering workflows—build, test, scan, validate, document, and release—for modular codebases. All configuration, architecture, and specifications are defined as code using YAML contracts validated against JSON schemas.
+**EAC** automates quality engineering workflows - build, test, scan, validate, document, and release - for modular codebases. All configuration, architecture, and specifications are defined as code using YAML contracts validated against JSON schemas.
 
 **CLIE** is the containerized CLI framework that runs EAC in isolated Docker containers, providing reproducible, platform-independent execution. EAC can also run independently via the MCP server for AI tool integration.
 
