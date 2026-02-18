@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -62,6 +63,11 @@ func Run(cfg *CommandConfig, worker CommandWorkerFunc, hooks *Hooks) int {
 
 	// Publish init summary to console and TUI
 	publishInitSummary(ctx)
+
+	// Gate: check system dependencies (docker, etc.)
+	if code := checkSystemDependencies(ctx); code >= 0 {
+		return code
+	}
 
 	// Gate: check required build artifacts
 	if code := checkRequiredArtifacts(ctx); code >= 0 {
@@ -264,6 +270,33 @@ func publishInitSummary(ctx *ExecutionContext) {
 	}
 }
 
+// checkSystemDependencies verifies that required system dependencies are available.
+// Returns a non-negative exit code on failure; returns -1 to continue.
+func checkSystemDependencies(ctx *ExecutionContext) int {
+	if ctx.InitSummary == nil || ctx.Config.SkipDeps {
+		return -1
+	}
+	ds := ctx.InitSummary.DepsStatus
+	if ds.Skipped || len(ds.Missing) == 0 {
+		return -1
+	}
+
+	ctx.WriteInit("")
+	ctx.WriteInit("❌ Required system dependencies are not available: %s", strings.Join(ds.Missing, ", "))
+	ctx.WriteInit("   Use --skip-deps to proceed anyway")
+	if ctx.Orchestrator != nil && ctx.Config.UseTUI {
+		ctx.Orchestrator.SignalAllWorkDone()
+		ctx.Orchestrator.SendSummary(&display.SummaryData{
+			Success:   false,
+			TotalTime: time.Since(ctx.StartTime),
+			Details:   []string{"Missing system dependencies: " + strings.Join(ds.Missing, ", ")},
+		})
+		ctx.Orchestrator.WaitTUI()
+		ctx.Orchestrator.StopTUI()
+	}
+	return 1
+}
+
 // checkRequiredArtifacts verifies that build artifacts required by test/scan
 // commands are present. Returns a non-negative exit code on failure; returns -1
 // to continue.
@@ -284,6 +317,12 @@ func checkRequiredArtifacts(ctx *ExecutionContext) int {
 	ctx.WriteInit("❌ Missing required artifacts from: %v", av.MissingFrom)
 	ctx.WriteInit("   Run 'build' command first, or use --skip-depm to skip validation")
 	if ctx.Orchestrator != nil && cfg.UseTUI {
+		ctx.Orchestrator.SignalAllWorkDone()
+		ctx.Orchestrator.SendSummary(&display.SummaryData{
+			Success:   false,
+			TotalTime: time.Since(ctx.StartTime),
+			Details:   []string{fmt.Sprintf("Missing required artifacts from: %v", av.MissingFrom)},
+		})
 		ctx.Orchestrator.WaitTUI()
 		ctx.Orchestrator.StopTUI()
 	}

@@ -170,7 +170,7 @@ func RegisterAllWidgets(catalog *WidgetCatalog) {
 
 	catalog.Register(&Widget{
 		ID:          "res-dmem",
-		ElementName: "Docker Mem",
+		ElementName: "Mem",
 		HelpText:    "Docker memory pool: green <37%, yellow 37-68%, orange 68-87%, red >87% (containers may OOM)",
 		ZoneEnabled: true,
 		Render: func(snap WidgetSnapshot) string {
@@ -194,7 +194,7 @@ func RegisterAllWidgets(catalog *WidgetCatalog) {
 
 	catalog.Register(&Widget{
 		ID:          "res-docker",
-		ElementName: "Docker",
+		ElementName: "Pressure",
 		HelpText:    "Docker scheduler pressure: green <37%, yellow 37-68%, orange 68-87%, red >87% queuing containers",
 		ZoneEnabled: true,
 		Render: func(snap WidgetSnapshot) string {

@@ -17,9 +17,10 @@ import (
 	"github.com/ready-to-release/eac/go/core/testing"
 
 	// Register test type descriptors so discovery assigns correct types
-	// (e.g., tscucumber for TypeScript modules, gotest for Go unit tests).
+	// (e.g., tscucumber for TypeScript modules, gotest for Go unit tests, mocha for TS unit tests).
 	_ "github.com/ready-to-release/eac/go/adapters/cucumber"
 	_ "github.com/ready-to-release/eac/go/adapters/gotest"
+	_ "github.com/ready-to-release/eac/go/adapters/mocha"
 )
 
 // testDiscoveryCache holds cached test discovery results shared across scenarios.

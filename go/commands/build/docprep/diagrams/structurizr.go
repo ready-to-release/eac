@@ -80,6 +80,11 @@ func ExtractStructurizrMarkers(content string) []StructurizrMarker {
 // ProcessStructurizrDiagrams scans staging markdown for Structurizr markers
 // and replaces them with img tags pointing to builder output SVGs.
 // designComponents maps module moniker → design facet component name (e.g., "site~design").
+//
+// Missing diagrams (from cross-module references or not-yet-built modules) are
+// stripped from the output and logged as informational messages, not errors.
+// Structurizr markers are HTML comments that are invisible in rendered output,
+// so missing diagrams are a cosmetic issue rather than a build-breaking one.
 func ProcessStructurizrDiagrams(
 	fileIndex *staging.FileIndex,
 	stagingDir, workspaceRoot string,
@@ -140,7 +145,7 @@ func ProcessStructurizrDiagrams(
 			// Look up the design facet component name from the map.
 			designComp := designComponents[pair.module]
 			if designComp == "" {
-				warnf("structurizr builder output not found for module %s (build structurizr for that module first)", pair.module)
+				debugf("structurizr: no design component for module %s (not built yet)", pair.module)
 				continue
 			}
 			builderOutputDir = paths.DiagramBuildOutputPath(
@@ -158,11 +163,7 @@ func ProcessStructurizrDiagrams(
 
 		indexData, err := os.ReadFile(indexPath)
 		if err != nil {
-			if pair.component != "" {
-				warnf("structurizr builder output not found for %s component %s (build structurizr for that module first)", pair.module, pair.component)
-			} else {
-				warnf("structurizr builder output not found for module %s (build structurizr for that module first)", pair.module)
-			}
+			debugf("structurizr: builder output not found at %s", indexPath)
 			continue
 		}
 
@@ -211,13 +212,9 @@ func ProcessStructurizrDiagrams(
 			lookupKey := lookupPrefix + ":" + marker.ViewKey
 			svgFilename, found := svgLookup[lookupKey]
 			if !found {
-				if marker.Component != "" {
-					warnf("structurizr SVG not found in builder output for %s:%s:%s",
-						marker.Module, marker.Component, marker.ViewKey)
-				} else {
-					warnf("structurizr SVG not found in builder output for %s:%s",
-						marker.Module, marker.ViewKey)
-				}
+				// Strip the marker — structurizr markers are HTML comments and
+				// invisible in rendered output, so missing diagrams are cosmetic.
+				modified = modified[:marker.StartPos] + modified[marker.EndPos:]
 				missing++
 				continue
 			}
@@ -226,7 +223,9 @@ func ProcessStructurizrDiagrams(
 			stagingPath := filepath.Join(cacheDir, svgFilename)
 
 			if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-				warnf("structurizr SVG file missing: %s", srcPath)
+				debugf("structurizr: SVG file missing: %s", srcPath)
+				// Strip the marker
+				modified = modified[:marker.StartPos] + modified[marker.EndPos:]
 				missing++
 				continue
 			}
@@ -259,10 +258,6 @@ func ProcessStructurizrDiagrams(
 	}
 
 	logf("    Replaced %d marker(s), %d missing", replaced, missing)
-
-	if missing > 0 {
-		return fmt.Errorf("%d structurizr diagram(s) not found in builder output (run structurizr build first)", missing)
-	}
 
 	return nil
 }

@@ -402,6 +402,21 @@ func (c *ComponentKindsConfig) Get(name string) *ComponentType {
 	return c.Kinds[name]
 }
 
+// GetBDDRunnerTypes returns all component kind names that have a bdd_runner set.
+// These are the BDD runner component types (e.g., "godog", "cucumberjs", "behave").
+func (c *ComponentKindsConfig) GetBDDRunnerTypes() []string {
+	if c == nil || c.Kinds == nil {
+		return nil
+	}
+	var types []string
+	for _, kind := range c.Kinds {
+		if kind.BDDRunner != "" {
+			types = append(types, kind.BDDRunner)
+		}
+	}
+	return types
+}
+
 // GetByExtension returns the component type for a given file extension.
 // Returns nil if no component type matches the extension.
 // Uses a pre-built index for O(1) lookup when available.

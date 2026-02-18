@@ -20,10 +20,18 @@ import (
 func init() {
 	testrunners.Register(&TsCucumberRunner{})
 	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
-		TestType:      "tscucumber",
-		IsBDD:         true,
-		ComponentType: "gherkin",
-		MonikerStyle:  "feature",
+		TestType:            "tscucumber",
+		IsBDD:               true,
+		ComponentType:       "gherkin",
+		MonikerStyle:        "feature",
+		Language:            "ts",
+		ParentComponentType: "typescript",
+		ModuleManifestFile:  "package.json",
+		DefaultLevel:        "@L2",
+		DefaultDepTag:       "@deps:npm",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "cucumber-report", Pattern: "cucumber.json", Type: "cucumber-report"},
+		},
 		FeatureTestTypeResolver: func(info testrunners.FeatureModuleInfo) bool {
 			// TypeScript Cucumber owns features for TypeScript modules
 			return info.HasTypeScript
@@ -55,7 +63,12 @@ func (r *TsCucumberRunner) GetTestInfo(ref testing.TestReference, workspaceRoot 
 	}
 	relPath = filepath.ToSlash(relPath)
 
-	info := &testrunners.TestInfo{Language: "ts"}
+	// Language from descriptor — no hardcoded string
+	lang := "ts"
+	if desc := testrunners.GetDescriptor("tscucumber"); desc != nil && desc.Language != "" {
+		lang = desc.Language
+	}
+	info := &testrunners.TestInfo{Language: lang}
 
 	// Extract module moniker from specs path
 	specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
@@ -112,12 +125,19 @@ func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg any) string {
 		return ""
 	}
 
-	// Return the module's typescript package root where cucumber-js should be
-	tsRoot := module.Components.GetComponentRoot("typescript")
-	if tsRoot == "" {
-		return ""
+	// Return the module's parent component root where cucumber-js should be.
+	// Use GetFirstByType (not GetComponentRoot) because the component's map key
+	// is derived from the root path, not the type (e.g., key="vscode-commit"
+	// for root="typescript/vscode-commit").
+	// ParentComponentType comes from the descriptor (e.g., "typescript").
+	parentType := "typescript"
+	if desc := testrunners.GetDescriptor("tscucumber"); desc != nil && desc.ParentComponentType != "" {
+		parentType = desc.ParentComponentType
 	}
-	return filepath.ToSlash(tsRoot)
+	if _, comp := module.Components.GetFirstByType(parentType); comp != nil && comp.Root != "" {
+		return filepath.ToSlash(comp.Root)
+	}
+	return ""
 }
 
 // BuildPackagePath constructs the package path for test grouping.
@@ -147,26 +167,13 @@ type parsedCucumberPkg struct {
 	relFeatureFile string
 }
 
-// parseCucumberPackagePath parses a package path in "featureName:moduleRoot:featurePath" or "moduleRoot" format.
+// parseCucumberPackagePath parses a package path using the BDDPackagePath protocol.
 func parseCucumberPackagePath(pkgPath string) parsedCucumberPkg {
-	parts := strings.Split(pkgPath, ":")
-	switch len(parts) {
-	case 3:
-		return parsedCucumberPkg{
-			displayName:    parts[0] + ":" + parts[1],
-			relPkgPath:     parts[1],
-			relFeatureFile: parts[2],
-		}
-	case 1:
-		return parsedCucumberPkg{
-			displayName: parts[0],
-			relPkgPath:  parts[0],
-		}
-	default:
-		return parsedCucumberPkg{
-			displayName: pkgPath,
-			relPkgPath:  pkgPath,
-		}
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	return parsedCucumberPkg{
+		displayName:    p.DisplayName(),
+		relPkgPath:     p.TestRoot,
+		relFeatureFile: p.FeaturePath,
 	}
 }
 
@@ -174,8 +181,12 @@ func parseCucumberPackagePath(pkgPath string) parsedCucumberPkg {
 // and runs npm ci/install. Returns the isolated environment on success, or nil with
 // result.PackageFailed set on failure.
 func prepareCucumberNpmEnv(moduleRoot string, cfg testrunners.RunConfig, logWriter io.Writer, result *testrunners.RunResult) *npm.IsolatedEnv {
-	// Check if package.json exists
-	packageJSON := filepath.Join(moduleRoot, "package.json")
+	// Check if module manifest file exists (from descriptor: "package.json")
+	manifestFile := "package.json"
+	if desc := testrunners.GetDescriptor("tscucumber"); desc != nil && desc.ModuleManifestFile != "" {
+		manifestFile = desc.ModuleManifestFile
+	}
+	packageJSON := filepath.Join(moduleRoot, manifestFile)
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "No package.json found at %s\n", packageJSON)
 		result.PackageFailed = true

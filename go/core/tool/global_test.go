@@ -12,34 +12,16 @@ func TestGetTestTypeComponentType(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "gotest defaults to go",
-			config:   nil,
-			testType: "gotest",
-			expected: "go",
-		},
-		{
-			name:     "godog defaults to gherkin",
-			config:   nil,
-			testType: "godog",
-			expected: "gherkin",
-		},
-		{
-			name:     "mocha defaults to typescript",
-			config:   nil,
-			testType: "mocha",
-			expected: "typescript",
-		},
-		{
-			name:     "tscucumber defaults to gherkin",
-			config:   nil,
-			testType: "tscucumber",
-			expected: "gherkin",
-		},
-		{
-			name:     "unknown defaults to go",
+			name:     "unknown returns itself (no hardcoded fallback)",
 			config:   nil,
 			testType: "unknown",
-			expected: "go",
+			expected: "unknown",
+		},
+		{
+			name:     "unregistered type returns itself",
+			config:   nil,
+			testType: "gotest",
+			expected: "gotest",
 		},
 		{
 			name: "config overrides gotest",
@@ -62,14 +44,14 @@ func TestGetTestTypeComponentType(t *testing.T) {
 			expected: "javascript",
 		},
 		{
-			name: "config with mapping falls back for unknown",
+			name: "config mapping does not cover unknown",
 			config: &ToolConfig{
 				TestTypeMapping: map[string]string{
 					"gotest": "go",
 				},
 			},
 			testType: "unknown",
-			expected: "go", // Falls back to builtin default
+			expected: "unknown",
 		},
 	}
 

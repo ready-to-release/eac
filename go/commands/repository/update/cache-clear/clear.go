@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/cache"
+	"github.com/ready-to-release/eac/go/core/fileutil"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -142,56 +144,60 @@ func formatSpecs(specs []cache.Spec) string {
 	return strings.Join(parts, ",")
 }
 
-// clearTargetsWithCategories clears targets and groups results by type and cacheset.
+// clearTargetsWithCategories clears targets in parallel and groups results by type.
 func clearTargetsWithCategories(targets []CacheTarget, repoRoot string, dryRun, verbose bool) []CategoryResult {
-	// Group targets by type
-	byType := make(map[cache.Type][]CacheTarget)
-	for _, target := range targets {
-		byType[target.Dir.Type] = append(byType[target.Dir.Type], target)
+	// Clear all targets in parallel
+	type targetResult struct {
+		count int
+		bytes int64
+		items []string
 	}
 
-	var results []CategoryResult
+	results := make([]targetResult, len(targets))
+	var wg sync.WaitGroup
 
-	// Process each type in order
+	for i, target := range targets {
+		wg.Add(1)
+		go func(idx int, t CacheTarget) {
+			defer wg.Done()
+			switch t.Dir.Mode {
+			case ClearContents:
+				results[idx].count, results[idx].bytes, results[idx].items = clearDirectoryContentsWithDetails(t.FullPath, t.Dir.RelPath, dryRun, verbose)
+			case ClearDocker:
+				results[idx].count, results[idx].bytes, results[idx].items = clearDockerCache(t.Dir.Type, dryRun, verbose)
+			case ClearSemaphore:
+				results[idx].count, results[idx].bytes, results[idx].items = clearSemaphoreFiles(t.FullPath, repoRoot, dryRun, verbose)
+			}
+		}(i, target)
+	}
+
+	wg.Wait()
+
+	// Group by type for display
+	byType := make(map[cache.Type][]CacheSetResult)
+	for i, target := range targets {
+		r := results[i]
+		if r.count > 0 || len(r.items) > 0 {
+			byType[target.Dir.Type] = append(byType[target.Dir.Type], CacheSetResult{
+				Description:  target.Dir.Description,
+				DeletedCount: r.count,
+				DeletedBytes: r.bytes,
+				Items:        r.items,
+			})
+		}
+	}
+
+	var categoryResults []CategoryResult
 	typeOrder := []cache.Type{cache.TypeState, cache.TypeWork, cache.TypeAsset, cache.TypeRegistry, cache.TypeLayer}
 	for _, cacheType := range typeOrder {
-		typeTargets, ok := byType[cacheType]
-		if !ok || len(typeTargets) == 0 {
+		sets, ok := byType[cacheType]
+		if !ok || len(sets) == 0 {
 			continue
 		}
-
-		result := CategoryResult{Type: cacheType}
-
-		for _, target := range typeTargets {
-			var count int
-			var bytes int64
-			var items []string
-
-			switch target.Dir.Mode {
-			case ClearContents:
-				count, bytes, items = clearDirectoryContentsWithDetails(target.FullPath, target.Dir.RelPath, dryRun, verbose)
-			case ClearDocker:
-				count, bytes, items = clearDockerCache(target.Dir.Type, dryRun, verbose)
-			case ClearSemaphore:
-				count, bytes, items = clearSemaphoreFiles(target.FullPath, repoRoot, dryRun, verbose)
-			}
-
-			if count > 0 || len(items) > 0 {
-				result.CacheSets = append(result.CacheSets, CacheSetResult{
-					Description:  target.Dir.Description,
-					DeletedCount: count,
-					DeletedBytes: bytes,
-					Items:        items,
-				})
-			}
-		}
-
-		if len(result.CacheSets) > 0 {
-			results = append(results, result)
-		}
+		categoryResults = append(categoryResults, CategoryResult{Type: cacheType, CacheSets: sets})
 	}
 
-	return results
+	return categoryResults
 }
 
 // printCategorySummary prints per-category results and total summary.
@@ -248,6 +254,9 @@ func categoryBytes(r CategoryResult) int64 {
 }
 
 // clearDirectoryContentsWithDetails deletes all entries in a directory, returning details.
+// File sizes come from DirEntry metadata (no recursive walk). Directory entries
+// report only their name — this avoids the expensive subtree traversal that was
+// the primary performance bottleneck.
 func clearDirectoryContentsWithDetails(fullPath, relPath string, dryRun, verbose bool) (int, int64, []string) {
 	var deleted int
 	var bytes int64
@@ -265,28 +274,21 @@ func clearDirectoryContentsWithDetails(fullPath, relPath string, dryRun, verbose
 		entryPath := filepath.Join(fullPath, entry.Name())
 		entryRelPath := filepath.Join(relPath, entry.Name())
 
-		// Get size
+		// File size from DirEntry metadata (no recursive walk for directories)
 		var entrySize int64
-		info, err := entry.Info()
-		if err == nil {
-			if info.IsDir() {
-				// Walk directory to get total size
-				_ = filepath.Walk(entryPath, func(_ string, fi os.FileInfo, _ error) error {
-					if fi != nil && !fi.IsDir() {
-						entrySize += fi.Size()
-					}
-					return nil
-				})
-			} else {
-				entrySize = info.Size()
-			}
+		if info, err := entry.Info(); err == nil && !info.IsDir() {
+			entrySize = info.Size()
+		}
+		bytes += entrySize
+
+		if entrySize > 0 {
+			items = append(items, fmt.Sprintf("%s (%s)", entryRelPath, formatBytes(entrySize)))
+		} else {
+			items = append(items, entryRelPath)
 		}
 
-		bytes += entrySize
-		items = append(items, fmt.Sprintf("%s (%s)", entryRelPath, formatBytes(entrySize)))
-
 		if !dryRun {
-			if err := os.RemoveAll(entryPath); err != nil {
+			if err := fileutil.RemoveAllWithRetry(entryPath); err != nil {
 				log.Errorf("Failed to delete %s: %v", entryRelPath, err)
 				continue
 			}

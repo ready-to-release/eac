@@ -157,6 +157,30 @@ type TestTypeDescriptor struct {
 	// Empty string means no runner file convention.
 	RunnerFileConvention string
 
+	// Language is the programming language identifier for TestInfo.Language
+	// (e.g., "go", "ts", "python").
+	Language string
+
+	// ParentComponentType is the parent component type used for cross-module
+	// search when finding test roots (e.g., godog searches "go" component roots).
+	// Empty for test types that don't need cross-module runner search.
+	ParentComponentType string
+
+	// ModuleManifestFile is the module manifest file that must exist for test
+	// execution (e.g., "pyproject.toml" for behave, "package.json" for tscucumber).
+	// Empty means no manifest file check is needed.
+	ModuleManifestFile string
+
+	// DefaultLevel is the default test level tag (e.g., "@L1", "@L2").
+	DefaultLevel string
+
+	// DefaultDepTag is the default dependency tag (e.g., "@deps:go", "@deps:python").
+	DefaultDepTag string
+
+	// OutputArtifacts declares the test output artifact patterns for this test type.
+	// Used by collectTestArtifacts to discover output files declaratively.
+	OutputArtifacts []ArtifactPattern
+
 	// FeatureTestTypeResolver determines which BDD test type to assign
 	// to .feature files discovered for a given module.
 	// Only set for BDD types. The registry uses this to resolve
@@ -167,6 +191,16 @@ type TestTypeDescriptor struct {
 	// DefaultInferences are tag inference rules contributed by this test type.
 	// These are merged into the global inference set.
 	DefaultInferences []Inference
+}
+
+// ArtifactPattern describes a test output artifact.
+type ArtifactPattern struct {
+	// ID is the artifact identifier (e.g., "cucumber-report", "ctrf-report").
+	ID string
+	// Pattern is the filename or glob pattern (e.g., "cucumber.json", "*.cucumber.json").
+	Pattern string
+	// Type is the artifact type identifier (e.g., "cucumber-report", "coverage").
+	Type string
 }
 
 // FeatureModuleInfo provides module metadata for BDD type resolution.

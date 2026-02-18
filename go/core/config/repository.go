@@ -11,6 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// BDDComponentNamesFunc is set by the test runner registry to provide BDD component
+// names without creating an import cycle (config -> testing -> config).
+// When nil, falls back to checking all BDD-runner component types from ComponentKinds.
+var BDDComponentNamesFunc func() []string
+
 // RepositoryFileName is the config file for all repository settings.
 const RepositoryFileName = "repository.yml"
 
@@ -352,11 +357,11 @@ func (c *RepositoryConfig) ToPathConfig() paths.PathConfig {
 }
 
 // TestImplPath returns the full path to a module's BDD test implementation.
-// Checks for explicit BDD runner components (godog, cucumberjs) by type.
+// Checks for explicit BDD runner components by type (queried from the adapter registry).
 // Auto-created BDD runners (from expandBDDRunners) are skipped since their root
 // points to the specs directory, not the Go test implementation directory.
-// Falls back to the primary Go component root when no explicit runner exists,
-// allowing FindTestRoot to search within the Go source tree.
+// Falls back to the primary component root when no explicit runner exists,
+// allowing FindTestRoot to search within the source tree.
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
@@ -364,7 +369,7 @@ func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	}
 
 	// Check for explicit (user-declared) BDD runner components
-	for _, compType := range []string{"godog", "cucumberjs"} {
+	for _, compType := range getBDDComponentNames() {
 		if _, comp := module.Components.GetFirstByType(compType); comp != nil && comp.Root != "" {
 			if !comp.AutoBDDRunner {
 				return comp.Root
@@ -372,9 +377,8 @@ func (c *RepositoryConfig) TestImplPath(moniker string) string {
 		}
 	}
 
-	// Fallback: return primary Go component root.
-	// FindTestRoot will search within for godog_test.go.
-	if _, comp := module.Components.GetFirstByType("go"); comp != nil && comp.Root != "" {
+	// Fallback: return primary component root (FindTestRoot searches within).
+	if _, comp := module.Components.FindPrimaryComponent(); comp != nil && comp.Root != "" {
 		return comp.Root
 	}
 
@@ -384,11 +388,15 @@ func (c *RepositoryConfig) TestImplPath(moniker string) string {
 // TestImplPathForQualifier returns the BDD test runner root for a specific
 // component qualifier within a module. Used when spec directories use the
 // <module>_<qualifier> naming convention.
-// Matches godog components by stripping "godog-" prefix from component name.
+// Matches BDD runner components by stripping type prefix from component name.
 func (c *RepositoryConfig) TestImplPathForQualifier(moniker, qualifier string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
 		return ""
+	}
+	bddTypes := make(map[string]bool)
+	for _, t := range getBDDComponentNames() {
+		bddTypes[t] = true
 	}
 	for name, comp := range module.Components {
 		if comp == nil || comp.Root == "" {
@@ -398,7 +406,7 @@ func (c *RepositoryConfig) TestImplPathForQualifier(moniker, qualifier string) s
 		if compType == "" {
 			compType = name
 		}
-		if compType != "godog" && compType != "cucumberjs" {
+		if !bddTypes[compType] {
 			continue
 		}
 		// Match by stripping type prefix: "godog-work" → "work"
@@ -408,6 +416,22 @@ func (c *RepositoryConfig) TestImplPathForQualifier(moniker, qualifier string) s
 		}
 	}
 	return ""
+}
+
+// getBDDComponentNames returns BDD component names from the adapter registry
+// or falls back to querying ComponentKinds for types with bdd_runner set.
+func getBDDComponentNames() []string {
+	if BDDComponentNamesFunc != nil {
+		if names := BDDComponentNamesFunc(); len(names) > 0 {
+			return names
+		}
+	}
+	// Fallback: query ComponentKinds for BDD runner types
+	cfg := Global()
+	if cfg != nil && cfg.ComponentKinds != nil {
+		return cfg.ComponentKinds.GetBDDRunnerTypes()
+	}
+	return nil
 }
 
 // EffectiveParallelism returns the maximum number of parallel workers

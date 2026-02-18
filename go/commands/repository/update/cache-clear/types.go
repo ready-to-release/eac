@@ -260,6 +260,7 @@ func ClearTargets(targets []CacheTarget, dryRun, verbose bool) ClearResult {
 }
 
 // clearDirectoryContents deletes all entries in a directory.
+// File sizes come from DirEntry metadata (no recursive walk for directories).
 func clearDirectoryContents(fullPath string, dryRun bool) (int, int64) {
 	deleted := 0
 	var bytes int64
@@ -272,20 +273,9 @@ func clearDirectoryContents(fullPath string, dryRun bool) (int, int64) {
 	for _, entry := range entries {
 		entryPath := filepath.Join(fullPath, entry.Name())
 
-		// Get file info for size
-		info, err := entry.Info()
-		if err == nil {
-			if info.IsDir() {
-				// For directories, walk to get total size
-				_ = filepath.Walk(entryPath, func(_ string, fi os.FileInfo, _ error) error {
-					if fi != nil && !fi.IsDir() {
-						bytes += fi.Size()
-					}
-					return nil
-				})
-			} else {
-				bytes += info.Size()
-			}
+		// File size from DirEntry metadata (no recursive walk for directories)
+		if info, err := entry.Info(); err == nil && !info.IsDir() {
+			bytes += info.Size()
 		}
 
 		if dryRun {

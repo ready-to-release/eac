@@ -5,9 +5,47 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// registerTestDescriptors registers descriptors that provide artifact patterns.
+// This mirrors the real adapter registrations (gotest, godog, mocha, etc.).
+func registerTestDescriptors(t *testing.T) {
+	t.Helper()
+	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+		TestType:      "gotest",
+		ComponentType: "go",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "ctrf-report", Pattern: "unit.json", Type: "ctrf-report"},
+			{ID: "coverage", Pattern: "coverage.out", Type: "coverage"},
+		},
+	})
+	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+		TestType:      "godog",
+		IsBDD:         true,
+		ComponentType: "go",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "cucumber-report", Pattern: "*.cucumber.json", Type: "cucumber-report"},
+		},
+	})
+	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+		TestType:      "mocha",
+		ComponentType: "typescript",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "ctrf-report", Pattern: "unit.json", Type: "ctrf-report"},
+		},
+	})
+	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
+		TestType:      "tscucumber",
+		IsBDD:         true,
+		ComponentType: "typescript",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "cucumber-report", Pattern: "cucumber.json", Type: "cucumber-report"},
+		},
+	})
+}
 
 func TestCollectTestArtifacts_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -21,6 +59,10 @@ func TestCollectTestArtifacts_NonexistentDir(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_KnownFiles(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	// Create known test output files (test.log excluded — owned by orchestrator)
@@ -54,6 +96,10 @@ func TestCollectTestArtifacts_KnownFiles(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_IgnoresTestLog(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	// test.log should NOT be collected as a tracked artifact
@@ -64,6 +110,10 @@ func TestCollectTestArtifacts_IgnoresTestLog(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_SkipsManifest(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "uow.manifest.json"), []byte("{}"), 0644))
@@ -75,6 +125,10 @@ func TestCollectTestArtifacts_SkipsManifest(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_SkipsUnknownFiles(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "random.txt"), []byte("data"), 0644))
@@ -86,6 +140,10 @@ func TestCollectTestArtifacts_SkipsUnknownFiles(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_CucumberJsonSuffix(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "godog.cucumber.json"), []byte("[]"), 0644))
@@ -97,6 +155,10 @@ func TestCollectTestArtifacts_CucumberJsonSuffix(t *testing.T) {
 }
 
 func TestCollectTestArtifacts_SkipsDirectories(t *testing.T) {
+	testrunners.ResetForTesting()
+	defer testrunners.ResetForTesting()
+	registerTestDescriptors(t)
+
 	tmpDir := t.TempDir()
 
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, "subdir"), 0755))

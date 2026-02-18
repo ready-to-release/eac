@@ -182,13 +182,13 @@ func TestLayoutMetricsDetailPaneHeight(t *testing.T) {
 		},
 		{
 			name:         "active phase, tiny terminal",
-			height:       14, // RemainingHeight = 9, which is < detailPaneHeight+5=11
+			height:       16, // RemainingHeight = 9, which is < detailPaneHeight+5=11
 			phaseStatus:  PhaseActive,
 			expectDetail: 0,
 		},
 		{
 			name:         "active phase, borderline height",
-			height:       16, // RemainingHeight = 11, which == detailPaneHeight+5=11
+			height:       18, // RemainingHeight = 11, which == detailPaneHeight+5=11
 			phaseStatus:  PhaseActive,
 			expectDetail: detailPaneHeight,
 		},

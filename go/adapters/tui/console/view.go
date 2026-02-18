@@ -27,7 +27,7 @@ func (m Model) calculateLayoutMetrics() render.LayoutMetrics {
 // computeLayoutMetrics computes layout dimensions based on current model state.
 func (m Model) computeLayoutMetrics() render.LayoutMetrics {
 	metrics := render.LayoutMetrics{}
-	metrics.SummaryLines = 5    // header + data + help + lamps + footer
+	metrics.SummaryLines = 7    // top bar (4) + bottom bar (3)
 	metrics.ComponentsStart = 1 // panel header only (no resources pane)
 	metrics.RemainingHeight = m.Display.Height - metrics.SummaryLines
 	if metrics.RemainingHeight < 5 {
@@ -95,7 +95,7 @@ func (m Model) ViewFinal() string {
 
 func stripMarkdownPipes(line string) string { return render.StripMarkdownPipes(line) }
 
-// viewPanes renders the 2-section layout: side-by-side (top), status bar (bottom).
+// viewPanes renders the 3-section layout: top bar, side-by-side (middle), bottom bar.
 // Uses the same render path for both init and active phases — init data is zero/OFF,
 // active-phase renderers handle empty state gracefully.
 // IMPORTANT: Layout calculations use calculateLayoutMetrics() as single source of truth.
@@ -103,14 +103,18 @@ func (m Model) viewPanes() string {
 	var b strings.Builder
 	metrics := m.calculateLayoutMetrics()
 
-	// === Top (dynamic): Side-by-side fills RemainingHeight ===
+	// === Top (fixed): Dashboard bar (4 rows) ===
+	b.WriteString(m.renderTopBar())
+	b.WriteString("\n")
+
+	// === Middle (dynamic): Side-by-side fills RemainingHeight ===
 	tabs := m.GetVisibleTabs()
 	sideBySide := m.renderSideBySideLayout(tabs, metrics)
 	b.WriteString(sideBySide)
 	b.WriteString("\n")
 
-	// === Bottom (fixed): Status bar (5 rows) ===
-	b.WriteString(m.renderStatusBar())
+	// === Bottom (fixed): Help bar (3 rows) ===
+	b.WriteString(m.renderBottomBar())
 
 	return b.String()
 }

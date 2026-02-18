@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -16,85 +15,6 @@ import (
 // writeln writes a formatted string with platform-specific line ending to the writer.
 func writeln(w io.Writer, format string, args ...interface{}) {
 	output.Writeln(w, format, args...)
-}
-
-// extractModuleFromPath extracts the module moniker from a test file path
-// Handles go/eac/<module>/..., go/clie/<module>/..., and specs/<module>/... formats
-// Supports both absolute and relative paths.
-func extractModuleFromPath(filePath string) string {
-	// Normalize path separators to forward slashes
-	normalizedPath := filepath.ToSlash(filePath)
-
-	// Special case: go/eac/specs/impl/<module>/... or go/clie/specs/impl/<module>/...
-	// These are test implementations that belong to <module>, not eac-specs/clie-specs
-	// Must check this BEFORE the general /go/eac/ or /go/clie/ boundary check
-	for _, implPattern := range []string{"/go/eac/specs/impl/", "/go/clie/specs/impl/", "go/eac/specs/impl/", "go/clie/specs/impl/"} {
-		idx := strings.Index(normalizedPath, implPattern)
-		if idx >= 0 {
-			// Extract module name after impl/
-			relativePath := normalizedPath[idx+len(implPattern):]
-			parts := strings.Split(relativePath, "/")
-			if len(parts) >= 1 && parts[0] != "" {
-				return parts[0] // Return module name directly (e.g., "core", "clie")
-			}
-		}
-	}
-
-	// Find "/go/eac/" in the path (handles both absolute and relative paths)
-	// For paths like /project/go/cli/eac/..., extract "eac-cli"
-	for _, boundary := range []string{"/go/eac/", "/go/clie/"} {
-		idx := strings.Index(normalizedPath, boundary)
-		if idx >= 0 {
-			// Extract module name from path after boundary
-			relativePath := normalizedPath[idx+len(boundary):]
-			parts := strings.Split(relativePath, "/")
-			if len(parts) >= 1 && parts[0] != "" {
-				// Return as eac-<part1> or clie-<part1>
-				prefix := "eac"
-				if boundary == "/go/clie/" {
-					prefix = "clie"
-				}
-				return prefix + "-" + parts[0]
-			}
-		}
-	}
-
-	// Check if path contains "/specs/" (handles specs/eac-*, specs/github, specs/repository, etc.)
-	specsIndex := strings.Index(normalizedPath, "/specs/")
-	if specsIndex >= 0 {
-		// Extract from "/specs/" onwards
-		relativePath := normalizedPath[specsIndex+1:]
-		// Format: specs/<module>/...
-		parts := strings.Split(strings.TrimPrefix(relativePath, "specs/"), "/")
-		if len(parts) >= 1 && parts[0] != "" {
-			// Return the first part (e.g., "eac-cli", "github", "repository")
-			return parts[0]
-		}
-	}
-
-	// Also check for paths starting with "go/eac/" or "go/clie/" (relative paths)
-	for _, prefix := range []string{"go/eac/", "go/clie/"} {
-		if strings.HasPrefix(normalizedPath, prefix) {
-			parts := strings.Split(normalizedPath[len(prefix):], "/")
-			if len(parts) >= 1 && parts[0] != "" {
-				monikerPrefix := "eac"
-				if prefix == "go/clie/" {
-					monikerPrefix = "clie"
-				}
-				return monikerPrefix + "-" + parts[0]
-			}
-		}
-	}
-
-	if strings.HasPrefix(normalizedPath, "specs/") {
-		parts := strings.Split(strings.TrimPrefix(normalizedPath, "specs/"), "/")
-		if len(parts) >= 1 && parts[0] != "" {
-			return parts[0]
-		}
-	}
-
-	// Fallback: return empty string
-	return ""
 }
 
 // mapGOOSToDepTag maps runtime.GOOS values to dependency tag names.

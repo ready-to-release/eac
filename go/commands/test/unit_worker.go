@@ -12,6 +12,7 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/hash"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
@@ -115,11 +116,12 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 		return cacheResult
 	}
 
-	// Look up pkgPath from component mapping using testname
-	// testname is the unique identifier within module:componentType (e.g., "impl-build")
-	pkgPath, ok := testCfg.ComponentToPkgPath[testname]
+	// Look up pkgPath from component mapping using module:testname composite key.
+	// testname alone is not globally unique (e.g., both eac and clie have "cli-installation").
+	componentKey := module + ":" + testname
+	pkgPath, ok := testCfg.ComponentToPkgPath[componentKey]
 	if !ok {
-		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for testname %s\n", testname)
+		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for %s\n", componentKey)
 		return 1
 	}
 
@@ -216,21 +218,36 @@ func computeTestInputHash(ctx *cmdframework.ExecutionContext, contract interface
 
 // collectTestArtifacts scans the UoW output directory for test output files
 // and returns them as artifacts for the UoW manifest.
+// Artifact patterns are declared in TestTypeDescriptor.OutputArtifacts.
 func collectTestArtifacts(uowDir string) []coreoutput.Artifact {
 	var artifacts []coreoutput.Artifact
 
+	// Build known files map from all registered descriptors
 	type artifactSpec struct {
 		id      string
 		artType string
 	}
+	knownFiles := make(map[string]artifactSpec)
+	var suffixPatterns []struct {
+		suffix string
+		spec   artifactSpec
+	}
 
-	knownFiles := map[string]artifactSpec{
-		// test.log is excluded — it is owned by the orchestrator which appends
-		// [memory] after: instrumentation after the worker has already hashed it,
-		// causing every cache check to see a hash mismatch and re-execute.
-		"cucumber.json": {id: "cucumber-report", artType: "cucumber-report"},
-		"unit.json":     {id: "ctrf-report", artType: "ctrf-report"},
-		"coverage.out":  {id: "coverage", artType: "coverage"},
+	for _, desc := range testrunners.AllDescriptors() {
+		for _, ap := range desc.OutputArtifacts {
+			if strings.HasPrefix(ap.Pattern, "*") {
+				// Suffix pattern like "*.cucumber.json"
+				suffixPatterns = append(suffixPatterns, struct {
+					suffix string
+					spec   artifactSpec
+				}{
+					suffix: strings.TrimPrefix(ap.Pattern, "*"),
+					spec:   artifactSpec{id: ap.ID, artType: ap.Type},
+				})
+			} else {
+				knownFiles[ap.Pattern] = artifactSpec{id: ap.ID, artType: ap.Type}
+			}
+		}
 	}
 
 	entries, err := os.ReadDir(uowDir)
@@ -248,11 +265,17 @@ func collectTestArtifacts(uowDir string) []coreoutput.Artifact {
 
 		spec, known := knownFiles[entry.Name()]
 		if !known {
-			if strings.HasSuffix(entry.Name(), ".cucumber.json") {
-				spec = artifactSpec{id: "cucumber-report", artType: "cucumber-report"}
-			} else {
-				continue
+			// Check suffix patterns (e.g., "*.cucumber.json")
+			for _, sp := range suffixPatterns {
+				if strings.HasSuffix(entry.Name(), sp.suffix) {
+					spec = sp.spec
+					known = true
+					break
+				}
 			}
+		}
+		if !known {
+			continue
 		}
 
 		fullPath := filepath.Join(uowDir, entry.Name())

@@ -132,10 +132,10 @@ func TestResolveFeatureTestTypeFallback(t *testing.T) {
 	ResetForTesting()
 	defer ResetForTesting()
 
-	// No descriptors registered - should fall back to "godog"
+	// No descriptors registered - returns empty (no hardcoded fallback)
 	got := ResolveFeatureTestType(FeatureModuleInfo{HasGo: true})
-	if got != "godog" {
-		t.Errorf("ResolveFeatureTestType with no descriptors = %q, want %q", got, "godog")
+	if got != "" {
+		t.Errorf("ResolveFeatureTestType with no descriptors = %q, want %q", got, "")
 	}
 }
 
@@ -239,12 +239,12 @@ func TestBDDComponentNamesFallback(t *testing.T) {
 	ResetForTesting()
 	defer ResetForTesting()
 
-	// No BDD types registered
+	// No BDD types registered - returns empty (no hardcoded fallback)
 	RegisterDescriptor(&TestTypeDescriptor{TestType: "gotest", IsBDD: false})
 
 	got := BDDComponentNames()
-	if len(got) != 1 || got[0] != "godog" {
-		t.Errorf("BDDComponentNames with no BDD types = %v, want [godog]", got)
+	if len(got) != 0 {
+		t.Errorf("BDDComponentNames with no BDD types = %v, want []", got)
 	}
 }
 
@@ -252,10 +252,10 @@ func TestBDDComponentNamesEmpty(t *testing.T) {
 	ResetForTesting()
 	defer ResetForTesting()
 
-	// No descriptors at all
+	// No descriptors at all - returns empty (no hardcoded fallback)
 	got := BDDComponentNames()
-	if len(got) != 1 || got[0] != "godog" {
-		t.Errorf("BDDComponentNames with no descriptors = %v, want [godog]", got)
+	if len(got) != 0 {
+		t.Errorf("BDDComponentNames with no descriptors = %v, want []", got)
 	}
 }
 
