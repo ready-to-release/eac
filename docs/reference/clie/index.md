@@ -1,17 +1,10 @@
 # CLIE CLI Reference
 
-Technical reference for the CLIE CLI framework.
-
-![CLIE CLI Ecosystem Overview](../../assets/clie/clie-overview.drawio.png)
-
-The diagram above shows the CLIE CLI ecosystem architecture: the Agent/DevBox environment, the distributed CLI binary, container registry integration, and language-specific integrations.
-
 ## What is CLIE CLI?
 
-CLIE is a cross-platform CLI framework for containerized workflow execution.
+CLIE is a cross-platform CLI framework for containerized workflow execution. It provides a foundation for building modular command-line tools with support for Docker-based workflows, extension systems, and template management.
 
-It provides a foundation for building modular command-line tools with support for Docker-based workflows, extension systems,
-and template management.
+CLIE acts as a **containerized extension framework** that runs tools in isolated Docker containers, providing reproducible, platform-independent environments. EAC is the primary extension for CLIE, offering automation commands for quality engineering workflows including build, test, scan, and release management.
 
 ## In This Section
 

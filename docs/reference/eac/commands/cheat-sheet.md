@@ -94,6 +94,25 @@ eac test debug
 eac show test-timings
 ```
 
+### Lint Commands
+
+```bash
+# Lint a single module
+eac lint src-auth
+
+# Lint multiple modules
+eac lint src-auth src-api
+
+# Auto-fix issues where possible
+eac lint src-auth --fix
+
+# Force full lint (skip cache)
+eac lint src-auth --skip-cache
+
+# Show lint results summary
+eac show lint-summary
+```
+
 ---
 
 ## Git Workflow
@@ -318,6 +337,28 @@ clie templates install reports
 clie templates install specs
 ```
 
+### Maintenance Commands
+
+```bash
+# Update documentation content and navigation
+eac update docs
+
+# Update evidence artifacts from test/scan results
+eac update evidence
+
+# Regenerate PDF screenshots for documentation
+eac update pdf-screenshots
+
+# Update Go module dependencies
+eac update go-tidy
+
+# Clear build and test caches
+eac update cache-clear
+
+# Update AI-generated documentation summaries
+eac update ai-summary
+```
+
 ---
 
 ## Security Scanning
@@ -423,16 +464,79 @@ alias clie-changed='eac get changed-modules'
 ```bash
 # 1. Make changes
 # 2. Validate
-eac validate
+eac validate || { echo "Validation failed"; exit 1; }
 
 # 3. Build affected modules
-eac get changed-modules | xargs -L1 eac build
+CHANGED=$(eac get changed-modules)
+if [ -z "$CHANGED" ]; then
+  echo "No modules changed"
+  exit 0
+fi
+
+echo "$CHANGED" | jq -r '.changed_modules[]' | while read -r module; do
+  eac build "$module" || { echo "Build failed for $module"; exit 1; }
+done
 
 # 4. Run tests
-eac get changed-modules | xargs -L1 eac test
+echo "$CHANGED" | jq -r '.changed_modules[]' | while read -r module; do
+  eac test "$module" || { echo "Tests failed for $module"; exit 1; }
+done
 
 # 5. Commit with AI
 eac work commit
+```
+
+### Build and Test Cycle with Error Handling
+
+```bash
+# Robust workflow with proper error checking
+set -e  # Exit on any error
+
+# Validate first
+if ! eac validate; then
+  echo "❌ Validation failed - fix issues before proceeding"
+  exit 1
+fi
+
+# Get changed modules
+CHANGED=$(eac get changed-modules)
+if [ $? -ne 0 ]; then
+  echo "❌ Failed to detect changed modules"
+  exit 1
+fi
+
+# Check if any modules changed
+MODULES=$(echo "$CHANGED" | jq -r '.changed_modules[]')
+if [ -z "$MODULES" ]; then
+  echo "✅ No modules changed - nothing to build"
+  exit 0
+fi
+
+# Build each module
+echo "Building modules..."
+for module in $MODULES; do
+  echo "  Building $module..."
+  if eac build "$module"; then
+    echo "  ✅ $module built successfully"
+  else
+    echo "  ❌ $module build failed"
+    exit 1
+  fi
+done
+
+# Run tests for each module
+echo "Running tests..."
+for module in $MODULES; do
+  echo "  Testing $module..."
+  if eac test "$module"; then
+    echo "  ✅ $module tests passed"
+  else
+    echo "  ❌ $module tests failed"
+    exit 1
+  fi
+done
+
+echo "✅ All modules built and tested successfully"
 ```
 
 ### Release Workflow
@@ -454,6 +558,60 @@ eac release check-ci $(git rev-parse HEAD)
 eac release this
 ```
 
+### Release Workflow with Error Handling
+
+```bash
+# Robust release workflow with checks
+set -e  # Exit on any error
+
+# Check for pending changes
+echo "Checking for pending changes..."
+PENDING=$(eac release pending)
+if [ -z "$PENDING" ]; then
+  echo "✅ No pending changes to release"
+  exit 0
+fi
+
+echo "Pending changes detected:"
+echo "$PENDING"
+
+# Generate changelog
+echo "Generating changelog..."
+if ! eac release changelog; then
+  echo "❌ Changelog generation failed"
+  exit 1
+fi
+echo "✅ Changelog generated"
+
+# Validate changelog format
+echo "Validating changelog..."
+if ! eac validate release; then
+  echo "❌ Changelog validation failed"
+  echo "   Fix changelog format and try again"
+  exit 1
+fi
+echo "✅ Changelog validated"
+
+# Check CI status
+echo "Checking CI status..."
+HEAD_SHA=$(git rev-parse HEAD)
+if ! eac release check-ci "$HEAD_SHA"; then
+  echo "❌ CI checks not passing at HEAD"
+  echo "   Wait for CI to complete or fix failures"
+  exit 1
+fi
+echo "✅ CI checks passed"
+
+# Create release tag
+echo "Creating release tag..."
+if eac release this; then
+  echo "✅ Release created successfully"
+else
+  echo "❌ Release creation failed"
+  exit 1
+fi
+```
+
 ### CI Build Workflow
 
 ```bash
@@ -469,6 +627,47 @@ done
 eac pipeline wait
 ```
 
+### CI Build Workflow with Error Handling
+
+```bash
+# Robust CI workflow with timeout and error handling
+set -e
+
+# Get changed modules
+echo "Detecting changed modules..."
+CHANGED_JSON=$(eac get changed-modules-ci)
+if [ $? -ne 0 ]; then
+  echo "❌ Failed to detect changed modules"
+  exit 1
+fi
+
+CHANGED_MODULES=$(echo "$CHANGED_JSON" | jq -r '.changed_modules[]')
+INVALIDATED_MODULES=$(echo "$CHANGED_JSON" | jq -r '.invalidated_modules[]')
+
+if [ -z "$CHANGED_MODULES" ] && [ -z "$INVALIDATED_MODULES" ]; then
+  echo "✅ No modules changed - skipping CI build"
+  exit 0
+fi
+
+echo "Changed modules: $CHANGED_MODULES"
+echo "Invalidated modules: $INVALIDATED_MODULES"
+
+# Schedule CI with concurrency control
+echo "Scheduling CI workflows..."
+if eac pipeline ci schedule \
+  --directly-changed "$CHANGED_MODULES" \
+  --invalidated "$INVALIDATED_MODULES" \
+  --head-sha "$(git rev-parse HEAD)" \
+  --max-concurrent 10 \
+  --timeout 3600; then
+  echo "✅ All CI workflows completed successfully"
+else
+  echo "❌ Some CI workflows failed"
+  echo "   Check pipeline status: eac pipeline status"
+  exit 1
+fi
+```
+
 ---
 
 ## Quick Reference Tables
@@ -480,6 +679,7 @@ eac pipeline wait
 | `show modules`        | List all modules     |
 | `build <module>`      | Build a module       |
 | `test <module>`       | Test a module        |
+| `lint <module>`       | Lint a module        |
 | `validate`            | Validate everything  |
 | `work commit`         | Commit with AI       |
 | `get changed-modules` | Find changed modules |
@@ -505,6 +705,18 @@ eac pipeline wait
 | `validate specs`        | Gherkin specifications |
 | `validate markdown`     | Markdown syntax        |
 | `validate design`       | Architecture diagrams  |
+
+### Update Commands
+
+| Command                  | What It Updates                    |
+| ------------------------ | ---------------------------------- |
+| `update docs`            | Documentation content & navigation |
+| `update evidence`        | Test & security evidence artifacts |
+| `update design`          | Architecture diagrams              |
+| `update go-tidy`         | Go module dependencies             |
+| `update cache-clear`     | Clear build/test caches            |
+| `update ai-summary`      | AI-generated summaries             |
+| `update pdf-screenshots` | PDF documentation screenshots      |
 
 ---
 

@@ -4,10 +4,9 @@ Security scanning and evidence collection for audit compliance.
 
 ## Commands in this Category
 
-| Command              | Purpose                                     |
-| -------------------- | ------------------------------------------- |
-| [scan](./scan.md)    | Run security scans with --scanner flag      |
-| [scan zap](./zap.md) | Dynamic Application Security Testing (DAST) |
+| Command           | Purpose                                |
+| ----------------- | -------------------------------------- |
+| [scan](./scan.md) | Run security scans with --scanner flag |
 
 ## Scanner Types
 
@@ -31,9 +30,6 @@ eac scan --scanner vuln,secrets
 
 # Multiple modules with specific scanners
 eac scan eac-core eac-commands --scanner sbom,vuln
-
-# Dynamic testing (separate subcommand)
-eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## See Also

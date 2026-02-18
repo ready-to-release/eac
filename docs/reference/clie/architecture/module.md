@@ -1,6 +1,6 @@
 # clie
 
-The `clie` module is the Ready-to-Release command-line interface for executing containerized development workflows.
+The `clie` module is the CLIE command-line interface for executing containerized development workflows.
 
 It manages Docker-based extensions that provide isolated, reproducible development environments.
 

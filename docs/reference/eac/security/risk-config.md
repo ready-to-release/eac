@@ -1,30 +1,32 @@
 # Risk Configuration Reference
 
-Technical reference for EAC risk configuration, including OSCAL profile references and scoring settings.
+Risk scoring and OSCAL profile configuration for security assessments.
 
-## Configuration File
+---
 
-Risk configuration is defined in `contracts/eac-security/0.1.0/defaults/risk-config.yml` with user overrides in `.eac/risk-config.yml`.
+## Configuration Files
 
-### Location Priority
+**Contract default**: `contracts/scanner/0.1.0/schemas/defaults/risk-config.yml`
 
-1. `.eac/risk-config.yml` - User/team overrides (highest priority)
-2. `contracts/eac-security/0.1.0/defaults/risk-config.yml` - Contract defaults
+**User override**: `.eac/risk-config.yml` (highest priority)
+
+**Schema**: `contracts/scanner/0.1.0/schemas/risk-config.schema.json`
+
+---
 
 ## Configuration Structure
 
 ```yaml
-# Risk and compliance configuration
-
 # OSCAL profile reference
 profile:
-  path: risk-profile.json          # Path to OSCAL profile (relative to this file)
-  catalog_url: https://...         # NIST catalog URL for control validation
+  path: risk-profile.json  # Path to OSCAL profile (relative)
+  catalog_url: https://...  # NIST SP 800-53 catalog URL
 
-# Risk scoring configuration
+# Risk scoring
 scoring:
+  # Impact ratings (1-5 scale)
   impact:
-    api: 4                         # Impact rating 1-5
+    api: 4
     service: 4
     gateway: 4
     library: 3
@@ -32,11 +34,11 @@ scoring:
     cli: 2
     tool: 2
     docs: 1
-    config: 1
-    _default: 3                    # Fallback for unknown types
+    _default: 3
 
+  # Criticality levels (high/medium/low)
   criticality:
-    api: high                      # Criticality: high/medium/low
+    api: high
     gateway: high
     service: high
     core: medium
@@ -45,8 +47,9 @@ scoring:
     tool: low
     _default: medium
 
+  # Severity weights for likelihood
   severity_weights:
-    critical: 4                    # Likelihood increment per severity
+    critical: 4
     high: 3
     medium: 2
     low: 1
@@ -57,151 +60,108 @@ module_profiles:
     path: billing-service.profile.json
 ```
 
-## Profile Configuration
+---
 
-### Profile Path
+## Impact Ratings
 
-The `profile.path` field references an OSCAL profile JSON file:
+**Scale**: 1 (minimal) to 5 (catastrophic)
 
-```yaml
-profile:
-  path: risk-profile.json  # Relative to config file location
+| Rating | Meaning                                      | Examples      |
+| ------ | -------------------------------------------- | ------------- |
+| **5**  | Catastrophic - System-wide failure           | N/A (reserved) |
+| **4**  | High - Major service disruption              | api, gateway  |
+| **3**  | Moderate - Feature impairment                | library, core |
+| **2**  | Low - Minor degradation                      | cli, tool     |
+| **1**  | Minimal - Documentation/config only          | docs, config  |
+
+---
+
+## Criticality Levels
+
+**Levels**: high, medium, low
+
+| Level      | Meaning                   | Examples      |
+| ---------- | ------------------------- | ------------- |
+| **high**   | Mission-critical services | api, gateway  |
+| **medium** | Important infrastructure  | core, library |
+| **low**    | Developer tools           | cli, tool     |
+
+---
+
+## OSCAL Profile
+
+OSCAL (Open Security Controls Assessment Language) profile defines selected security controls from NIST SP 800-53.
+
+**Location**: Path specified in `profile.path` (e.g., `risk-profile.json`)
+
+**Generate from markdown**:
+
+```bash
+eac create risk-profile assessment.md
 ```
 
-For absolute paths, specify the full path:
+**Validate profile**:
 
-```yaml
-profile:
-  path: /etc/oscal/enterprise-profile.json
+```bash
+eac validate risk-profile profile.json
+eac validate risk-catalog  # Validate against NIST catalog
 ```
 
-### Catalog URL
+**Profile structure** (simplified):
 
-The catalog URL is used for control validation:
-
-```yaml
-profile:
-  catalog_url: https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
-```
-
-## Scoring Configuration
-
-### Impact Ratings
-
-Impact ratings determine potential damage severity (1-5 scale):
-
-| Rating | Meaning | Examples |
-|--------|---------|----------|
-| 5 | Critical | Payment processing, authentication |
-| 4 | High | APIs, gateways, core services |
-| 3 | Medium | Libraries, shared components |
-| 2 | Low | CLI tools, utilities |
-| 1 | Minimal | Documentation, configuration |
-
-### Criticality Levels
-
-Criticality determines operational importance:
-
-| Level | Meaning | Protection Level |
-|-------|---------|------------------|
-| high | Business critical | Maximum security controls |
-| medium | Important | Standard security controls |
-| low | Supporting | Basic security controls |
-
-### Severity Weights
-
-Severity weights increment likelihood scores per finding:
-
-```yaml
-severity_weights:
-  critical: 4  # Each critical finding adds 4 to likelihood
-  high: 3      # Each high finding adds 3
-  medium: 2    # Each medium finding adds 2
-  low: 1       # Each low finding adds 1
-```
-
-## Module-Specific Profiles
-
-For modules requiring different control sets:
-
-```yaml
-module_profiles:
-  billing-service:
-    path: billing-service.profile.json
-
-  internal-tools:
-    path: minimal-profile.json
-```
-
-Module profiles override the solution-wide profile for specific modules.
-
-## User Overrides
-
-Create `.eac/risk-config.yml` to customize for your organization:
-
-```yaml
-# Override default scoring for your organization
-scoring:
-  impact:
-    gateway: 5        # Our gateways are business-critical
-    docs: 2           # Our docs contain sensitive info
-
-  criticality:
-    gateway: high
-    docs: medium
-
-# Custom profile location
-profile:
-  path: specs/.risk-controls/risk-profile.json
-```
-
-## Programmatic Access
-
-### Go API
-
-```go
-import "github.com/ready-to-release/eac/go/core/config"
-
-// Load risk configuration
-cfg, err := config.LoadRiskConfig(repoRoot, configRoot)
-if err != nil {
-    return err
+```json
+{
+  "profile": {
+    "uuid": "...",
+    "metadata": {
+      "title": "System Risk Profile",
+      "version": "1.0.0"
+    },
+    "imports": [
+      {
+        "href": "<nist-catalog-url>",
+        "include-controls": [
+          { "control-id": "ac-2" },
+          { "control-id": "ia-5" }
+        ]
+      }
+    ]
+  }
 }
-
-// Access scoring
-scoring := cfg.GetScoring()
-impact := scoring.GetImpact("api")           // Returns 4
-criticality := scoring.GetCriticality("api") // Returns "high"
-
-// Access profile
-profile, err := cfg.GetProfile()
-if err == nil {
-    controls := profile.ControlIDs()
-    hasControl := profile.HasControl("ac-1")
-}
-
-// Access catalog URL
-catalogURL := cfg.GetCatalogURL()
 ```
 
-### Interface Definitions
+---
 
-The configuration implements these interfaces from `contracts/eac-security/0.1.0/interfaces`:
+## Risk Score Calculation
 
-- `RiskConfigPort` - Main configuration access
-- `ProfilePort` - OSCAL profile access
-- `RiskScoringPort` - Scoring configuration access
+**Formula**: `Risk = Impact × Likelihood`
 
-## Related Commands
+**Likelihood** is calculated from scan findings:
 
-| Command | Description |
-|---------|-------------|
-| `create risk-profile` | Generate OSCAL profile from risk assessment |
-| `create risk-assess` | Create assessment results from evidence |
-| `validate risk-profile` | Validate OSCAL profile document |
+```text
+Likelihood = Base + (Critical × 4) + (High × 3) + (Medium × 2) + (Low × 1)
+```
+
+Where:
+- **Base**: Starting likelihood value
+- **Critical/High/Medium/Low**: Count of findings at each severity
+- **Weights**: From `severity_weights` configuration
+
+---
+
+## Commands
+
+| Command                                     | Purpose                   |
+| ------------------------------------------- | ------------------------- |
+| `eac create risk-profile <markdown>`        | Generate OSCAL profile    |
+| `eac create risk-assess --profile <json>`   | Create assessment results |
+| `eac validate risk-profile <json>`          | Validate OSCAL profile    |
+| `eac validate risk-catalog`                 | Validate catalog ref      |
+
+---
 
 ## Related Documentation
 
-- [Scan Command Reference](../commands/scan/index.md) - Security scanning
-- [OSCAL Compliance](../compliance/index.md) - OSCAL framework overview
-- [Shift-Left Security](../../../explanation/continuous-delivery/security/shift-left.md) - Security integration
+- **[Security Index](./index.md)** - Security scanning overview
+- **[Create Commands](../commands/create/index.md)** - Risk creation commands
+- **[Validate Commands](../commands/validate/index.md)** - Validation commands

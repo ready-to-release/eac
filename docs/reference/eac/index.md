@@ -1,4 +1,4 @@
-# EAC and CLIE System Overview
+# EAC System Overview
 
 ## What is EAC?
 
@@ -6,7 +6,7 @@
 
 Is a comprehensive collection of commands designed to streamline **everything-as-code** workflows across your development lifecycle.
 
-It helps teams codify and version-control all aspects of software development—configuration, contracts, architecture,
+It helps teams codify and version-control all aspects of software development - configuration, contracts, architecture,
 specifications, tests, security policies, and infrastructure.
 
 **Key principle**: If it can be defined, it should be code. If it's code, it can be validated, versioned, and automated.
@@ -15,26 +15,30 @@ specifications, tests, security policies, and infrastructure.
 
 ## Language Support
 
-**Currently Supported:**
+**Native Component Types:**
 
-- ✅ **Go** - Full build, test, cross-compilation, and validation support
-- ✅ **TypeScript/npm** - Build via npm/tsc, testing via Mocha and Cucumber
-- ✅ **Docker** - Multi-platform container builds via buildx
-- ✅ **MkDocs** - Documentation site generation
+- ✅ **Go** - Component type with full build, test (gotest/godog), and cross-compilation support
+- ✅ **TypeScript/JavaScript** - Component type with npm builds and test support (mocha, cucumber-js)
+- ✅ **Docker** - Component type for multi-platform container builds via buildx
+- ✅ **MkDocs** - Component type for documentation site and PDF generation
+- ✅ **PowerShell** - Component type for script validation
+- ✅ **Bash** - Component type for shell scripts
 
-**Extensible Architecture:**
+**Adapter Support:**
 
-EAC uses a capability-based dispatch system where commands delegate to language-specific handlers and runners.
+EAC includes adapters for package management and testing across multiple ecosystems:
 
-While the current implementation focuses on Go and TypeScript projects,
-the architecture is designed to support additional languages through custom handlers.
+- **Python** - pip adapter, pytest/behave test runners
+- **.NET** - dotnet/nuget adapters, reqnroll test runner
+- **Ruby** - cucumber test runner
+- **Infrastructure** - GitHub CLI, AI providers, terminal UI
 
-**Other Languages:**
+**Extensibility:**
 
-Languages like Python, Rust, and Java can use the `container` or `static` component types with custom build scripts,
-but lack native build/test handlers.
+Languages without native component types (Rust, Java, etc.) can use `dockerfile` components with custom build scripts.
+The architecture supports adding new component types and adapters as needed.
 
-See [Component Types Reference](./architecture/component-kinds.md) for detailed language support per component type.
+See [Component Types Reference](./architecture/component-kinds.md) for complete component type documentation.
 
 ---
 
@@ -52,7 +56,7 @@ See [Component Types Reference](./architecture/component-kinds.md) for detailed 
 **The EAC extension** (`eac-ext:latest`) provides:
 
 - **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
-- **Three execution models**: Docker CLI (`eac <command>`), MCP server for LLM tools, and fallback mode for debugging
+- **Dual operation modes**: Run as a CLIE extension for containerized developer environments, or independently via the eac-mcp-server for AI tool integration using the Model Context Protocol (MCP)
 - **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
 - **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
 
@@ -77,132 +81,23 @@ See the [Command Reference](./commands/index.md) for the complete list of availa
 
 ## Repository Structure
 
-The repository is organized as a **modular monorepo** with clearly defined module boundaries:
+The repository is organized as a **modular monorepo** with 28 independently buildable modules across six groups (Core Framework, CLI Tools, Commands, Adapters, OCI Tools, Supporting).
 
-```text
-cli/
-├── .clie/                       # EAC and CLIE configuration
-│   ├── cache/                  # Build cache
-│   └── eac/                    # User configuration overrides
-│       ├── repository.yml      # Module registry
-│       └── books.yml           # Book configuration
-│
-├── contracts/                  # JSON schemas and system defaults
-│   └── core/0.1.0/             # Versioned schemas and defaults
-│       ├── schemas/
-│       │   └── defaults/       # System default configurations
-│       │       ├── blueprints.yml
-│       │       ├── tool-config.yml
-│       │       └── ...
-│       ├── repository.schema.json
-│       └── ...
-│
-├── go/                         # Go source code
-│   ├── eac/                    # EAC modules
-│   │   ├── commands/           # eac-commands (hundreds of commands with AI integrations)
-│   │   ├── core/               # eac-core (domain libraries)
-│   │   ├── mcp/                # eac-mcp-commands (MCP server)
-│   │   └── specs/              # eac-specs (BDD infrastructure)
-│   └── clie/                    # CLIE CLI
-│       └── cli/                # clie (CLI application)
-│
-├── specs/                      # Gherkin BDD specifications
-│   ├── eac-commands/           # Specs for commands module
-│   │   └── .design/            # Structurizr architecture
-│   ├── eac-core/               # Specs for core module
-│   └── ...
-│
-├── docs/                       # MkDocs documentation site
-│   ├── reference/              # Technical reference
-│   ├── how-to-guides/          # Task-based guides
-│   ├── explanation/            # Conceptual docs
-│   └── tutorials/              # Learning-oriented
-│
-├── out/                        # Generated artifacts (not in Git)
-│   ├── build/                  # Build artifacts
-│   ├── test/                   # Test results
-│   ├── logs/                   # Execution logs
-│   └── evidence/               # Compliance evidence
-│
-├── containers/                 # Docker container definitions
-│   └── eac-ext/                # EAC extension Dockerfile
-│
-├── .github/                    # GitHub Actions workflows
-│   └── workflows/              # CI/CD pipelines
-│
-├── go.work                     # Go workspace definition
-└── mkdocs.yml                  # Documentation site config
-```
-
-### Module Categories
-
-**Deployable Modules** - Independently built, versioned, and deployed:
-
-- **clie** - Go CLI application with cross-platform executables
-- **eac-ext** - Docker extension for CLIE CLI
-- **docs-site** - MkDocs documentation site (GitHub Pages)
-
-**Supporting Modules** - Shared code and infrastructure:
-
-- **eac-core** - Core domain libraries (contracts, repository, git)
-- **eac-commands** - Command implementations (hundreds of commands) with integrated AI providers (Anthropic, OpenAI)
-- **eac-specs** - BDD test infrastructure (Godog)
-- **eac-mcp-commands** - MCP server for LLM tools
-
-All modules defined in `.eac/repository.yml` with explicit dependencies and file ownership.
+See [Repository Layout](./architecture/repository-layout.md) for the full directory structure and [Modules Reference](./modules/index.md) for the complete module catalog.
 
 ---
 
 ## In This Section
 
-| Document                                                 | Description                                           |
-| -------------------------------------------------------- | ----------------------------------------------------- |
-| [Architecture](./architecture/index.md)                  | System architecture, components, and execution models |
+| Document                                                   | Description                                           |
+| ---------------------------------------------------------- | ----------------------------------------------------- |
+| [Architecture](./architecture/index.md)                    | System architecture, components, and execution models |
 | [Viewing Architecture](./architecture/viewing-diagrams.md) | How to view and work with C4 architecture diagrams    |
-| [Modules](./architecture/modules.md)                     | Module system, dependencies, and build management     |
-| [Component Types](./architecture/component-kinds.md)     | Language support and component type specifications    |
-| [Contracts](./architecture/contracts.md)                 | YAML contracts, schemas, and validation system        |
-| [Repository Layout](./architecture/repository-layout.md) | Directory structure and file organization             |
-| [Creating Commands](./architecture/creating-commands.md) | Developer guide for extending EAC with new commands   |
-
-## Detailed Documentation
-
-### System Architecture
-
-**[Architecture](./architecture/index.md)**
-
-Complete system architecture including component layers, execution models (Docker CLI, MCP Server, Fallback),
-integration patterns, data flow, security architecture, and technology stack.
-
-### Module System
-
-**[Modules](./architecture/modules.md)**
-
-Module system and dependency management including module registry,
-dependency graph, file ownership patterns, module lifecycle (discovery, build, test, validation, release),
-build system with caching, and Structurizr C4 architecture diagrams.
-
-### Contract System
-
-**[Contracts](./architecture/contracts.md)**
-
-Contract-driven configuration including all 14 YAML contract files, modules contract (registry, dependencies, file ownership),
-module types contract (templates, capabilities, artifacts), environments contract (L0-L4 testing pyramid),
-validation system (schema, cross-reference), and configuration precedence.
-
-### Repository Organization
-
-**[Repository Layout](./architecture/repository-layout.md)**
-
-Detailed repository structure with complete directory tree, module categories (deployable vs supporting),
-module configuration examples, file ownership patterns, and navigation to related documentation.
-
-### Extending EAC
-
-**[Creating Commands](./architecture/creating-commands.md)**
-
-Developer guide for contributing new commands to the EAC CLI including command structure, help system integration,
-flag definitions, registry integration, and best practices.
+| [Modules](./architecture/modules.md)                       | Module system, dependencies, and build management     |
+| [Component Types](./architecture/component-kinds.md)       | Language support and component type specifications    |
+| [Contracts](./architecture/contracts.md)                   | YAML contracts, schemas, and validation system        |
+| [Repository Layout](./architecture/repository-layout.md)   | Directory structure and file organization             |
+| [Command Implementation](./architecture/command-implementation.md)   | Developer guide for implementing EAC commands   |
 
 ## Related Documentation
 

@@ -3,7 +3,7 @@
 This section documents **EAC extension commands** - the automation tools provided by the EAC extension.
 
 !!! info "Looking for CLIE CLI commands?"
-For framework commands like `clie init`, `clie install`, and `clie list`, see:
+    For framework commands like `clie init`, `clie install`, and `clie list`, see:
 
     **[CLIE CLI Command Reference](https://ready-to-release.github.io/eac/reference/clie/commands/)**
 
@@ -172,56 +172,6 @@ $ eac show modules
 ```
 
 **See**: [Show Commands](./categories/show.md), [Output Formats](./overview/output-formats.md)
-
-## Category Highlights
-
-### AI-Powered Commands (create)
-
-Generate content using AI:
-
-- **[create commit-message](./create/commit-message.md)** - Semantic commit messages from staged changes
-- **[create pr](./create/pr.md)** - Pull request descriptions from branch diff
-- **[create spec](./create/spec.md)** - Gherkin specifications from natural language
-- **[create design](./create/design.md)** - Architecture diagrams with AI assistance
-
-**Setup**: Run `eac init` to configure your AI provider
-
-**See**: [Create Commands Category](./categories/create.md), [Init Command]../init/init.md)
-
-### Information Commands (get/show)
-
-Retrieve repository information:
-
-- **get/show modules** - Module contracts and metadata
-- **get/show dependencies** - Dependency graphs
-- **get/show files** - File-to-module ownership mappings
-- **get/show config** - EAC configuration
-
-**Rule**: Use `get` for JSON (automation), `show` for tables (interactive)
-
-**See**: [Get Commands](./categories/get.md), [Show Commands](./categories/show.md)
-
-### Quality Commands (validate/scan/test)
-
-Ensure code quality and security:
-
-- **validate** - Check contracts, dependencies, and specifications
-- **scan** - Security scans (secrets, vulnerabilities, SAST, IaC)
-- **test** - Run unit, integration, and acceptance tests
-
-**Use in**: Pre-commit hooks, CI/CD pipelines, release gates
-
-**See**: [Validate Commands](./categories/validate.md), [Scan Commands](./categories/scan.md), [Test Commands](./categories/test.md)
-
-### Workflow Commands (work/release/pipeline)
-
-Manage development workflows:
-
-- **work** - Git worktree workspace management for parallel development
-- **release** - Release preparation, changelogs, and versioning
-- **pipeline** - CI/CD orchestration and monitoring
-
-**See**: [Work Commands](./categories/work.md), [Release Commands](./categories/release.md), [Pipeline Commands](./categories/pipeline.md)
 
 ## Integration Examples
 

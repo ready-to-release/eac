@@ -150,5 +150,5 @@ extensions:
 - [CLIE CLI Overview](index.md) - Command overview
 - [init command](init.md) - Initialize configuration
 - [install command](install.md) - Install extensions
-- [Configuration Reference](../configuration/index.md) - Detailed configuration guide
+- [Configuration Reference](../configuration.md) - Detailed configuration guide
 - [verify command](verify.md) - Verify system prerequisites

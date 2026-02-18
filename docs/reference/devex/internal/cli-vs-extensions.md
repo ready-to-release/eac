@@ -5,8 +5,6 @@ This guide explains the two-tier architecture of CLIE:
 1. The core CLI framework
 2. The containerized extensions.
 
-test
-
 ## Overview
 
 CLIE uses a two-tier command structure that separates framework management from automation tools:
@@ -159,11 +157,11 @@ User runs: eac build
 ```text
 Project Root/
 ├── .clie/
-│   ├── clie.yml              ← Tier 1: Framework config
-│   │                                (Which extensions to use)
-│   └── eac/                     ← Tier 2: Extension config
-│       ├── ai-provider.yml          (How EAC behaves)
-│       └── repository.yml
+│   └── clie.yml              ← Tier 1: Framework config
+│                                      (Which extensions to use)
+└── .eac/                     ← Tier 2: EAC extension config
+    ├── ai-provider.yml              (How EAC behaves)
+    └── repository.yml
 ```
 
 ### Configuration Purposes
@@ -364,5 +362,5 @@ eac build             # Use extension
 
 - [CLIE CLI Overview](../../clie/index.md) - Framework commands
 - [EAC Commands Reference](../../eac/commands/index.md) - Extension commands
-- [Configuration Guide](../../clie/configuration/index.md) - Detailed configuration
+- [Configuration Guide](../../clie/configuration.md) - Detailed configuration
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Getting started

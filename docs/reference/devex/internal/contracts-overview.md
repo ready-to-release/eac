@@ -12,16 +12,9 @@ Contracts are YAML configuration files that define how the EAC system behaves. T
 
 ## Core Contracts
 
-| Contract            | File                  | Location                  | Purpose                                          |
-| ------------------- | --------------------- | ------------------------- | ------------------------------------------------ |
-| **Repository**      | `repository.yml`      | `.eac/`               | Module definitions, dependencies, file ownership |
-| **Blueprints**      | `blueprints.yml`      | `contracts/.../defaults/` | Component kind definitions with build behavior   |
-| **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/` | Tool definitions and resources                   |
-| **Environments**    | `environments.yml`    | `contracts/.../defaults/` | Test execution environments (L0-L4)              |
-| **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/` | Test suites with tag selectors                   |
-| **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/` | Valid test tag definitions                       |
+EAC uses six core contract files: `repository.yml`, `blueprints.yml`, `tool-config.yml`, `environments.yml`, `test-suites.yml`, and `testing-tags.yml`. User-specific configs live in `.eac/`; system defaults are in `contracts/eac-core/0.1.0/defaults/`.
 
-**Location**: User configs in `.eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`
+For the complete contract field reference and schema details, see [Contracts Reference](../../eac/architecture/contracts.md).
 
 ## Contract Relationships
 

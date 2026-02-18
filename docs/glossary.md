@@ -85,8 +85,6 @@ See [Understanding Through Cynefin](./explanation/everything-as-code/cynefin-fra
 
 Security testing that analyzes running applications to find vulnerabilities through simulated attacks.
 
-Command: [scan zap](./reference/eac/commands/scan/zap.md).
-
 ### Dependency Graph
 
 A representation of module dependencies showing which modules depend on others.

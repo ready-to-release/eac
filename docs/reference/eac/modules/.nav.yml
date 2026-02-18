@@ -1,23 +1,31 @@
 title: Modules
 nav:
   - index.md
-  - eac.md
-  - core.md
-  - clibase.md
-  - eac-mcp-server.md
-  - eac-ext.md
-  - ai-eac.md
-  - docker-eac.md
-  - eac-to-eac.md
-  - tui-eac.md
-  - godog-eac.md
-  - cucumber-eac.md
-  - gotest-eac.md
-  - mocha-eac.md
-  - npm-eac.md
-  - repository.md
-  - docs.md
-  - templates.md
-  - clie-installer.md
-  - vscode-commit.md
-  - implicit-cli.md
+
+  # Core Framework
+  - Core Framework:
+      - core.md
+      - clibase.md
+
+  # CLI Tools
+  - CLI Tools:
+      - eac.md
+      - eac-ext.md
+      - eac-mcp-server.md
+      - clie-eac-bundle.md
+
+  # Commands
+  - Commands:
+      - commands.md
+
+  # Adapters
+  - Adapters:
+      - adapters.md
+
+  # Contracts
+  - Contracts:
+      - contracts.md
+
+  # OCI Tools
+  - OCI Tools:
+      - oci-tools.md

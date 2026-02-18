@@ -42,21 +42,6 @@ Fixing trunk first is the preferred approach because:
 
 ---
 
-## Reference Documentation
-
-For complete git commands and step-by-step procedures, see:
-
-**[Cherry-Picking Reference](../../../reference/eac/workflow/cherry-picking.md)**
-
-Complete guide including:
-
-- Fix on trunk first procedure
-- Emergency fix on release branch procedure
-- Git commands with examples
-- PR creation commands
-
----
-
 ## Related Documentation
 
 - [Branch Types](branch-types.md) - Understanding release branches

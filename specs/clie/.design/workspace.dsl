@@ -23,7 +23,7 @@ workspace "CLIE CLI Architecture" "Enterprise-grade containerized workflow execu
                 extension_aliases = component "Extension Aliases" "Registers extension name aliases for convenience" "Go"
                 verify_cmd = component "Verify Command" "Validates extension configurations" "Go"
                 validate_cmd = component "Validate Command" "Validates configuration schema" "Go"
-                update_cmd = component "Update Command" "Updates extension image tags" "Go"
+                update_cmd = component "Update Command" "Updates the clie CLI binary to the latest version from GitHub releases" "Go"
                 cleanup_cmd = component "Cleanup Command" "Removes stopped containers" "Go"
                 list_cmd = component "List Command" "Lists available extensions" "Go"
                 metadata_cmd = component "Metadata Command" "Extracts extension metadata" "Go"

@@ -415,4 +415,3 @@ Feature: Production Smoke Tests
 
 - [Verification Tags](./verification-tags.md) - Types of validation (@ov, @iv, @pv, etc.)
 - [Test Suites](./test-suites.md) - How test levels map to test suites
-- [Go Implementation](../implementation/go/test-levels.md) - Build tags in Go

@@ -9,10 +9,10 @@ Minimal setup for any project:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie.yml              # CLIE CLI configuration
-│   └── eac/
-│       └── repository.yml        # Module definitions
-├── .gitignore                    # Include .clie/**/*.personal.yml
+│   └── clie.yml              # CLIE CLI configuration
+├── .eac/
+│   └── repository.yml        # Module definitions
+├── .gitignore                # Include .eac/*.personal.yml
 └── ... (your code)
 ```
 
@@ -25,11 +25,11 @@ your-project/
 ├── .clie/
 │   ├── clie.yml              # CLIE CLI configuration
 │   ├── clie.local.yml        # Local overrides (gitignored)
-│   ├── cache/                   # Build cache (gitignored)
-│   └── eac/
-│       ├── repository.yml        # Module definitions
-│       ├── ai-provider.yml       # AI configuration
-│       └── ai-provider.personal.yml  # Personal AI config (gitignored)
+│   └── cache/                # Build cache (gitignored)
+├── .eac/
+│   ├── repository.yml        # Module definitions
+│   ├── ai-provider.yml       # AI configuration
+│   └── ai-provider.personal.yml  # Personal AI config (gitignored)
 │
 ├── specs/                       # Gherkin specifications (optional)
 │   ├── my-module/
@@ -71,8 +71,8 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 ```gitignore
 # CLIE/EAC local configuration
 .clie/clie.local.yml
-.eac/*.personal.yml
 .clie/cache/
+.eac/*.personal.yml
 ```
 
 ## Module Organization

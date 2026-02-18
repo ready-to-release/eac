@@ -99,46 +99,6 @@ clie release validate --all
 
 ---
 
-## Release Workflow
-
-```text
-Developer
-    │
-    ▼
-┌──────────────────┐
-│ release pending  │  Check for unreleased changes
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ release this     │  Update changelog with new version
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Commit & PR      │  Create PR for review
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Merge to main    │  After approval
-└────────┬─────────┘
-         │
-─────────┼─────────────────────────────────────────
-         │  CI/CD (automated)
-         ▼
-┌──────────────────┐
-│ release-auto.yml │  Detects new version, creates git tag
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ release-*.yml    │  Builds and publishes artifacts
-└──────────────────┘
-```
-
----
-
 ## Directory Structure
 
 ```text
@@ -153,20 +113,12 @@ release/
 
 ---
 
-## GitHub Workflows
+## Release Workflows and Tagging
 
-| Workflow              | Trigger                                            | Action                                      |
-| --------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `release-auto.yml`    | Push to main with `release/*/CHANGELOG.md` changes | Creates git tag                             |
-| `release-clie.yml` | `clie/*` tag                                    | Builds CLI binaries, creates GitHub release |
-| `release-eac-ext.yml` | `eac-ext/*` tag                                    | Retags container images                     |
+For GitHub workflow triggers and tag format details, see:
 
-### Tag Format
-
-Tags follow the pattern `<module>/<version>`:
-
-- `clie/0.1.0`
-- `eac-ext/1.0.0`
+- [Release Workflows Reference](../workflows/release-workflows.md) — GitHub Actions workflow files and triggers
+- [Versioning Reference](./versioning.md) — Tag format (`<module>/<version>`) and version constraints
 
 ---
 

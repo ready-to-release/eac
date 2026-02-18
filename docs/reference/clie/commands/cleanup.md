@@ -101,4 +101,4 @@ docker images | grep ready-to-release
 - [CLIE CLI Overview](index.md) - Command overview
 - [install command](install.md) - Install extensions
 - [verify command](verify.md) - Verify system health
-- [Configuration Reference](../configuration/index.md) - Extension configuration
+- [Configuration Reference](../configuration.md) - Extension configuration

@@ -1,19 +1,5 @@
 # EAC Extension Architecture
 
-## Overview
-
-**EAC (Everything-as-Code)** is a containerized CLIE extension providing automation commands for build,
-test, validation, security scanning, and release management in modular Go repositories.
-
-**Purpose**: Command collection for everything-as-code workflows
-**Package**: `eac-ext:latest` Docker container
-**Integration**: CLIE CLI extension, MCP server for AI tools
-
-The EAC extension implements a **contract-driven, module-based architecture** where all repository structure,
-modules, dependencies, and configurations are defined in YAML contracts validated against JSON schemas.
-
----
-
 ## Viewing Architecture Diagrams
 
 All architecture diagrams referenced in this document can be viewed interactively using Structurizr:
@@ -67,28 +53,11 @@ graph TB
 
 ## EAC Components
 
-### Core Modules
+EAC consists of 28 modules across six groups: **Core Framework** (core, clibase, contracts), **CLI Tools** (eac, eac-ext, eac-mcp-server), **Commands** (7 domain components), **Adapters** (16 tool integrations), **OCI Tools** (12 container images), and **Supporting** (docs, templates, bundle, installers, etc.).
 
-| Module               | Purpose                                                                  | Type        |
-| -------------------- | ------------------------------------------------------------------------ | ----------- |
-| **eac**          | Command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
-| **core**             | Domain libraries, contract system, dependency graph                      | go-library  |
-| **godog-eac**    | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
-| **eac-mcp-server**   | MCP server for LLM tool integration                                      | go-mcp      |
+See [Modules Reference](../modules/index.md) for the complete module catalog and per-module documentation.
 
-See [Modules Reference](../modules/index.md) for detailed module documentation.
-
-### Supporting Modules
-
-| Module                | Purpose                                            |
-| --------------------- | -------------------------------------------------- |
-| **docs**              | MkDocs documentation site generation               |
-| **templates**         | Template management for specs, reports, AI prompts |
-| **vscode-commit**     | VS Code commit message extension                   |
-
-See [Modules Reference](../modules/index.md) for details on all modules.
-
-### Container Structure
+The EAC extension container packages the compiled commands binary:
 
 ```text
 eac-ext:latest
@@ -103,23 +72,9 @@ eac-ext:latest
 
 ### Contract-Driven Architecture
 
-All repository structure is defined in **YAML contracts** validated against **JSON schemas**:
+All repository structure is defined in YAML contracts validated against JSON schemas. Contracts are loaded by `core` at runtime and validated before any operation, ensuring type safety with clear error messages and schema-based documentation.
 
-| Contract                | Schema Location               | Purpose                             |
-| ----------------------- | ----------------------------- | ----------------------------------- |
-| **repository.yml**      | `repository.schema.json`      | Repository-wide configuration       |
-| **blueprints.yml**      | `blueprints.schema.json`      | Component kind definitions          |
-| **tool-config.yml**     | `tool-config.schema.json`     | Tool definitions and resources      |
-| **books.yml**           | `books.schema.json`           | Documentation book configuration    |
-| **test-suites.yml**     | `test-suites.schema.json`     | Test suite definitions              |
-
-Contracts are loaded by `core` at runtime and validated before any operation. This ensures:
-
-- **Type safety**: Invalid configurations fail fast with clear error messages
-- **Documentation**: Schemas serve as machine-readable documentation
-- **Evolution**: Schema versioning enables backward compatibility
-
-See [Contracts System](./contracts.md) for detailed specification.
+See [Contracts System](./contracts.md) for the complete contract field reference.
 
 ### Module System
 
@@ -188,7 +143,7 @@ func (h *BuildHandler) Execute(args []string) error {
 }
 ```
 
-See [Creating Commands](./creating-commands.md) for command development guide.
+See [Command Implementation Guide](./command-implementation.md) for command development guide.
 
 ---
 

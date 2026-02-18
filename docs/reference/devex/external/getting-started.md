@@ -100,9 +100,9 @@ After setup, your project includes:
 ```text
 your-project/
 ├── .clie/
-│   ├── clie.yml          # CLIE CLI configuration
-│   └── eac/
-│       └── repository.yml    # Module definitions
+│   └── clie.yml          # CLIE CLI configuration
+├── .eac/
+│   └── repository.yml    # Module definitions
 └── ... (your code)
 ```
 

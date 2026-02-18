@@ -29,8 +29,8 @@ Adopting EAC in your repository? The [External](./external/index.md) section cov
 
 ## Quick Navigation
 
-| Audience         | Section                 | Key Topics                              |
-| ---------------- | ----------------------- | --------------------------------------- |
+| Audience         | Section                         | Key Topics                              |
+| ---------------- | ------------------------------- | --------------------------------------- |
 | **Contributors** | [Internal](./internal/index.md) | Repository layout, contracts, workflows |
 | **Adopters**     | [External](./external/index.md) | Setup, configuration, structure         |
 

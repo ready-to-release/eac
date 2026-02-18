@@ -329,12 +329,9 @@ For validation and test commands, see:
 - `eac validate specs` - Validate specification syntax
 - `eac test <module> --suite pre-commit` - Run tests
 
-**[Go Testing Reference](../../../reference/eac/testing/go/index.md)** - Go-specific implementation details
-
 ---
 
 ## Related Documentation
 
 - [Organizing Rules](./organizing-rules.md) - Creating acceptance criteria
 - [Organizing Scenarios](./organizing-scenarios.md) - Scenario structure
-- [Go Implementation](../implementation/go/file-organization.md) - Go-specific file structure

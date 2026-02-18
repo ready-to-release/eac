@@ -14,12 +14,3 @@ Day-to-day development workflow practices that enable Continuous Integration and
 | [Ghost Tracking](ghost-tracking.md)                   | Naming conventions for discoverable dark launch code |
 | [Dependency Management](dependency-management.md)     | Implicit vs pinned dependencies              |
 | [Commit Messages](commit-messages.md)                 | Semantic commit format for traceability      |
-
-## Reference Documentation
-
-For git commands and format specifications, see:
-
-**[Workflow Reference](../../../reference/eac/workflow/index.md)** - Implementation details including:
-
-- [Commit Messages](../../../reference/eac/workflow/commit-messages.md) - Full conventional commit specification
-- [Cherry-Picking](../../../reference/eac/workflow/cherry-picking.md) - Git commands for moving fixes

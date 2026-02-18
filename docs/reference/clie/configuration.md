@@ -50,12 +50,12 @@ clie eac [command] [args...]
 
 Values resolved in priority order (highest to lowest):
 
-| Priority | Source                | Description                             |
-| -------- | --------------------- | --------------------------------------- |
-| 1        | Environment Variables | Runtime overrides via `CLIE_*` variables |
-| 2        | User-Specific Config  | `.clie/clie.local.yml` (gitignored)   |
-| 3        | Repository Config     | `.clie/clie.yml` (committed)          |
-| 4        | Built-in Defaults     | Programmed into CLI                     |
+| Priority   | Source                | Description                             |
+| ---------- | --------------------- | --------------------------------------- |
+| 1          | Environment Variables | Runtime overrides via `CLIE_*` variables |
+| 2          | User-Specific Config  | `.clie/clie.local.yml` (gitignored)   |
+| 3          | Repository Config     | `.clie/clie.yml` (committed)          |
+| 4          | Built-in Defaults     | Programmed into CLI                     |
 
 ### Configuration Layering
 
@@ -291,7 +291,7 @@ extensions:
 ## See Also
 
 - [CLIE CLI Overview](index.md) - Command overview
-- [init command](init.md) - Initialize configuration
-- [install command](install.md) - Install extensions
-- [validate command](validate.md) - Validate configuration
-- [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Getting started guide
+- [init command](commands/init.md) - Initialize configuration
+- [install command](commands/install.md) - Install extensions
+- [validate command](commands/validate.md) - Validate configuration
+- [Quick Start Tutorial](../../tutorials/getting-started/quick-start.md) - Getting started guide

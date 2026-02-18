@@ -323,13 +323,11 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 
 ## Reference Documentation
 
-For CLI commands, tool configurations, and evidence formats, see:
+For implementation details, see:
 
-**[Quality Gates Reference](../../../reference/eac/quality-gates/index.md)** - Implementation details including:
-
-- Pre-commit setup scripts and configurations
-- Check category tool references
-- Evidence collection formats (JUnit, SARIF, Cobertura)
+- **[Pre-commit Setup](./precommit-setup.md)** - Setup scripts and configurations
+- **[EAC Commands](../../../reference/eac/commands/index.md)** - CLI commands for testing and scanning
+- **[Security Reference](../../../reference/eac/security/index.md)** - Scanner configuration and evidence formats
 
 ---
 

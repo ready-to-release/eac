@@ -15,7 +15,7 @@ The pre-commit stage operates in two environments:
 Both environments run the same checks to ensure consistency, but the DevBox execution provides the fastest possible feedback loop.
 
 > **Implementation Details**:
-> For tool configurations, scripts, and setup instructions, see the [Pre-commit Reference](../../../reference/eac/quality-gates/index.md).
+> For tool configurations, scripts, and setup instructions, see [Pre-commit Setup](./precommit-setup.md).
 
 ---
 
@@ -152,8 +152,6 @@ Pre-commit gates typically include these categories of checks:
 | Dependency Scanning | Vulnerability detection      | 10-60 seconds   |
 | Build Verification  | Compilation check            | 30s - 3 minutes |
 
-> **Tool Details**:
-> For specific tool configurations, commands, and examples, see the [Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md).
 
 ---
 
@@ -179,9 +177,6 @@ Pre-commit gates run in two distinct environments:
 
 Even though DevBox runs checks, CI repeats them because developers might skip local checks, environments differ,
 and it creates a formal quality gate record.
-
-> **Setup Instructions**:
-> For git hooks, Makefile targets, and CI workflow configurations, see the [Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md).
 
 ---
 

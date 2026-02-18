@@ -17,28 +17,6 @@ Pre-commit hooks provide the fastest feedback loop in the CD Model. When properl
 
 ---
 
-## Reference Documentation
-
-For complete setup instructions, tool configurations, and scripts, see:
-
-**[Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md)** - Complete implementation guide including:
-
-- Git hook script template
-- Pre-commit framework configuration
-- Time budget optimization strategies
-- Tool reference table
-- Emergency bypass options
-
-**[Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md)** - Detailed check categories including:
-
-- Code formatting tools
-- Linting configuration
-- Unit test execution
-- Secret detection
-- Dependency scanning
-- CI workflow examples
-
----
 
 ## Related Documentation
 

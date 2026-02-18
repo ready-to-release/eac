@@ -58,22 +58,6 @@ Scenario: Account creation requires approval
 
 ---
 
-## Reference Documentation
-
-For complete CLI commands, OSCAL integration, and validation details, see:
-
-**[Control Tags Reference](../../../reference/eac/compliance/control-tags.md)**
-
-Complete implementation guide including:
-
-- Validation commands (`eac validate control-tags`)
-- Evidence collection commands
-- OSCAL profile integration
-- Migration from old formats
-- Common NIST 800-53 control families
-
----
-
 ## Related Documentation
 
 - [Risk Controls](../compliance/risk-controls.md) - Complete risk control documentation

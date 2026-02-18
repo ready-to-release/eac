@@ -180,10 +180,10 @@ eac validate-module-hierarchy
 ```yaml
 components:
   go:
-    root: go/core          # Base directory
+    root: go/core # Base directory
     patterns:
-      source: ["**/*.go"]      # All .go files
-      tests: ["**/*_test.go"]  # All test files
+      source: ["**/*.go"] # All .go files
+      tests: ["**/*_test.go"] # All test files
 ```
 
 **Pattern Variables**:
@@ -358,7 +358,7 @@ eac build my-new-module
 **1. Update repository.yml**:
 
 ```yaml
-depends_on: [logging-go, config-go]  # Add config-go
+depends_on: [logging-go, config-go] # Add config-go
 ```
 
 **2. Validate**:
@@ -543,35 +543,7 @@ eac update-design <module>
 
 ## Module Organization
 
-### Core System Modules
-
-| Module               | Type        | Purpose                                                                  |
-| -------------------- | ----------- | ------------------------------------------------------------------------ |
-| **core**             | go-library  | Core libraries (contracts, repository, git)                              |
-| **eac**          | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
-| **godog-eac**    | go-library  | BDD test infrastructure (Godog)                                          |
-| **eac-mcp-server**   | go-mcp      | MCP server (LLM tool integration)                                        |
-
-### CLI and Extensions
-
-| Module      | Type          | Purpose                              |
-| ----------- | ------------- | ------------------------------------ |
-| **clie** | go-cli        | CLI framework (Docker orchestration) |
-| **eac-ext** | clie-extension | EAC Docker extension image           |
-
-### Libraries
-
-| Module            | Type       | Purpose                       |
-| ----------------- | ---------- | ----------------------------- |
-| **logging-go**    | go-library | Structured logging (Go)       |
-| **config-go**     | go-library | Configuration management (Go) |
-| **validation-go** | go-library | Validation utilities (Go)     |
-
-### Documentation
-
-| Module        | Type        | Purpose                   |
-| ------------- | ----------- | ------------------------- |
-| **docs-site** | mkdocs-site | MkDocs documentation site |
+For the complete module catalog organized by group, see [Modules Reference](../modules/index.md).
 
 ---
 

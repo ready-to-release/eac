@@ -1,85 +1,70 @@
 # Supply Chain Security
 
-Protecting against vulnerabilities in dependencies and container images.
+Dependency and container vulnerability scanning using Trivy.
 
-## Dependency Scanning
+---
 
-Identifies known vulnerabilities in third-party dependencies.
-
-### What It Detects
-
-| Risk                  | Description                               |
-| --------------------- | ----------------------------------------- |
-| Known CVEs            | Published vulnerabilities in dependencies |
-| Outdated Dependencies | Old versions with known issues            |
-| License Compliance    | Incompatible or problematic licenses      |
-| Supply Chain Attacks  | Compromised or malicious packages         |
-
-### Running Dependency Scans
+## Scanners
 
 ```bash
-# Vulnerability scan
-eac scan --scanner vuln
+# Vulnerability scanning
+eac scan --scanner vuln        # CVE detection in dependencies
 
-# Software Bill of Materials (SBOM)
-eac scan --scanner sbom
+# Software Bill of Materials
+eac scan --scanner sbom        # Generate SBOM
 
-# Compliance checking
-eac scan --scanner compliance
+# License compliance
+eac scan --scanner compliance  # Check license compatibility
 
 # All supply chain scanners
-eac scan --scanner sbom,vuln,compliance
+eac scan --scanner vuln,sbom,compliance
 ```
 
-Evidence is written to `out/scan/<module>/<scanner>/`.
+**Tool**: Trivy
 
-## Container Security
+**Output**: `out/scan/<module>/<scanner>/`
 
-Multi-layer scanning of container images.
+---
 
-### What It Scans
+## Vulnerability Scanning
 
-| Layer               | Examples                   |
-| ------------------- | -------------------------- |
-| OS Layer            | Base image vulnerabilities |
-| Application Layer   | Application dependencies   |
-| Configuration Layer | Misconfigurations, secrets |
+Detects known CVEs in:
 
-### What It Detects
+- **Language dependencies**: Go modules, npm packages, Python packages, etc.
+- **OS packages**: Alpine apk, Ubuntu apt, RHEL yum, etc.
+- **Container images**: Base image and application layer vulnerabilities
 
-- OS package vulnerabilities
-- Application dependency vulnerabilities
-- Running as root
-- Hardcoded secrets in image layers
-- Exposed ports
+**Severity levels**: Critical, High, Medium, Low, Unknown
 
-### Running Container Scans
+---
 
-Container scanning is included in the vulnerability scanner:
+## SBOM Generation
 
-```bash
-# Scan module containers
-eac scan --scanner vuln
-```
+Generates Software Bill of Materials in:
 
-## Container Best Practices
+- **CycloneDX** format (JSON/XML)
+- **SPDX** format (JSON/XML)
 
-- Use specific version tags (not `latest`)
-- Run containers as non-root user
-- Use multi-stage builds for minimal attack surface
-- Scan before every deployment
-- Remove unnecessary packages
+**Contents**:
 
-## When to Use
+- All direct and transitive dependencies
+- Version information
+- License information
+- Package URLs (purl)
 
-| Stage             | Activity             | Scanner    |
-| ----------------- | -------------------- | ---------- |
-| Pre-commit (2)    | Scan changed deps    | vuln       |
-| Merge Request (3) | Full dependency scan | vuln, sbom |
-| Commit (4)        | Container image scan | vuln       |
-| Deployment (10)   | Final image scan     | vuln       |
+---
+
+## Compliance Checking
+
+Validates licenses against policy:
+
+- **Allowed licenses**: MIT, Apache-2.0, BSD-3-Clause, etc.
+- **Prohibited licenses**: GPL-3.0, AGPL-3.0, etc.
+- **Unknown licenses**: Flagged for review
+
+---
 
 ## Related Documentation
 
-- [Shift-Left Security (Conceptual)](../../../explanation/continuous-delivery/security/shift-left.md) - Security integration principles
-- [Scan Command Reference](../commands/scan/index.md) - Full scan command options
+- **[Security Index](./index.md)** - Security scanning overview
+- **[Scan Commands](../commands/scan/index.md)** - Full scan command reference
