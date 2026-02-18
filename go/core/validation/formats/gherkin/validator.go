@@ -105,6 +105,24 @@ func (v *Validator) parseGherkinStructure(lines []string, state *gherkinValidati
 		lineNum := i + 1
 		trimmed := strings.TrimSpace(line)
 
+		// Phase 0: Detect ACD artifact comments (must appear before Feature:)
+		if !state.seenFeature {
+			if strings.HasPrefix(trimmed, "# Intent:") {
+				if !state.intentFound {
+					content := strings.TrimSpace(strings.TrimPrefix(trimmed, "# Intent:"))
+					state.intentFound = len(content) > 0
+				}
+				continue
+			}
+			if strings.HasPrefix(trimmed, "# Architecture:") {
+				if !state.architectureFound {
+					content := strings.TrimSpace(strings.TrimPrefix(trimmed, "# Architecture:"))
+					state.architectureFound = len(content) > 0
+				}
+				continue
+			}
+		}
+
 		// Skip empty lines and comments
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
@@ -308,6 +326,53 @@ func (v *Validator) validateRequiredElements(state *gherkinValidationState, outp
 		))
 	}
 
+	if !state.intentFound {
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingIntentComment,
+			"Missing '# Intent:' comment — specification must declare its purpose on line 1",
+			"",
+			"# Intent: <one sentence describing why this change exists>",
+			`# Intent: Enforce API validation so that breaking changes are caught before deployment
+# Architecture: Affects eac-cli validate command; reads OpenAPI specs; depends on validation adapter
+
+@deps:go @ov
+Feature: eac-cli_api-contract-validation
+
+  Rule: Contract validation gates merges
+
+    @L2 @ov
+    Scenario: Breaking change is rejected
+      Given a spec with a removed endpoint
+      When validation runs
+      Then the merge is blocked`,
+			"Add '# Intent: <why this change exists>' as the very first line of the file, before any tags or Feature: declaration.",
+			1,
+		))
+	}
+	if !state.architectureFound {
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingArchitectureComment,
+			"Missing '# Architecture:' comment — specification must declare the components it affects",
+			"",
+			"# Architecture: <affected components, systems, or constraints>",
+			`# Intent: Enforce API validation so that breaking changes are caught before deployment
+# Architecture: Affects eac-cli validate command; reads OpenAPI specs; depends on validation adapter
+
+@deps:go @ov
+Feature: eac-cli_api-contract-validation
+
+  Rule: Contract validation gates merges
+
+    @L2 @ov
+    Scenario: Breaking change is rejected
+      Given a spec with a removed endpoint
+      When validation runs
+      Then the merge is blocked`,
+			"Add '# Architecture: <components affected>' on line 2, before any tags or Feature: declaration.",
+			1,
+		))
+	}
+
 	return errors
 }
 
@@ -380,6 +445,8 @@ type gherkinValidationState struct {
 	seenFeature          bool
 	seenRule             bool
 	seenScenario         bool
+	intentFound          bool           // # Intent: comment found before Feature:
+	architectureFound    bool           // # Architecture: comment found before Feature:
 	currentRuleIndex     int            // Track which Rule we're currently in
 	rulesWithScenarios   map[int]bool   // Track which Rules have scenarios
 	scenariosOutsideRule []int          // Track line numbers of scenarios not under any Rule

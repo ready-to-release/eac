@@ -1,3 +1,6 @@
+# Intent: Ensure module dependency contracts are consistent and enforceable across the entire repository
+# Architecture: Affects repository module dependency validation; invokes validate dependencies command; reads all module contracts and checks dependency reference integrity
+
 @deps:go @control:si-7 @control:sa-10
 Feature: repository_validate-dependencies
 

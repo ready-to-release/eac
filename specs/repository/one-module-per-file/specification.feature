@@ -1,3 +1,6 @@
+# Intent: Ensure ownership is clear and modules do not overlap by requiring each file to belong to exactly one module
+# Architecture: Affects repository file ownership validation; reads module contracts; detects files claimed by multiple module patterns
+
 @control:sa-3
 Feature: repository_one-module-per-file
 

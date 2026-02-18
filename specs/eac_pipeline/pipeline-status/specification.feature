@@ -1,3 +1,6 @@
+# Intent: Allow developers to verify builds are passing before releases by viewing CI pipeline status for commits
+# Architecture: Affects eac-cli pipeline status command; queries GitHub Actions workflow runs via gh CLI; displays workflow names and pass/fail status; supports --ref and --commit flags; depends on git and GitHub remote
+
 @L2 @deps:go @deps:git @deps:gh @ov @env:isolated-test-project
 Feature: eac-cli_pipeline-status
 

@@ -1,3 +1,6 @@
+# Intent: Ensure BDD tests run without requiring special build flags by preventing Go build tags in godog step files
+# Architecture: Affects repository BDD test file validation; scans all godog_test.go files under go/; detects //go:build and // +build directives that would prevent test discovery
+
 @L0 @ov @control:sa-3
 Feature: repository_no-build-tags-in-steps
 

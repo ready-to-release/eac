@@ -1,3 +1,6 @@
+# Intent: Ensure OSCAL profile documents conform to the OSCAL 1.1.2 schema before use in security control definitions
+# Architecture: Affects eac-cli validate risk-profile command; reads OSCAL profile JSON file; validates against OSCAL 1.1.2 schema; checks for valid JSON structure and required profile fields
+
 @deps:go @L2 @ov @env:isolated-test-project
 Feature: eac-cli_validate-risk-profile
 

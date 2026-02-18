@@ -1,3 +1,6 @@
+# Intent: Test warning display so that developers can verify warning output is correctly shown
+# Architecture: Affects eac-cli validation command; validates spec structure; shows warnings for non-critical issues
+
 @deps:go @ov
 Feature: test_feature-with-warnings
 

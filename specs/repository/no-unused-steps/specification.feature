@@ -1,3 +1,6 @@
+# Intent: Keep the test codebase clean and maintainable by ensuring no step definitions are left unused
+# Architecture: Affects repository BDD step definition validation; invokes get specs unused-steps command; depends on Gherkin feature file and step definition scanning
+
 @control:sa-3
 Feature: repository_no-unused-steps
 

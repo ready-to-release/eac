@@ -1,3 +1,6 @@
+# Intent: Allow security engineers to track control satisfaction status with evidence by creating OSCAL assessment-results from existing test and security evidence
+# Architecture: Affects eac-cli create risk-assess command; reads existing test results from out/test/ and scan results from out/scan/; validates evidence freshness (24h max age); writes OSCAL assessment-results to out/risk/; supports parallel multi-module assessment
+
 @deps:go @L2 @ov @env:isolated-test-project
 Feature: eac-cli_create-risk-assess
 

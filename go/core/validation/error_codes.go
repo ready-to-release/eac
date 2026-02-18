@@ -193,6 +193,24 @@ var (
 		Description: "Scenarios must be nested under Rule blocks",
 	}
 
+	// ErrMissingIntentComment indicates missing # Intent: comment before Feature:.
+	ErrMissingIntentComment = ErrorCode{
+		Code:        "MISSING_INTENT_COMMENT",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "specification.feature is missing '# Intent:' comment before Feature:",
+	}
+
+	// ErrMissingArchitectureComment indicates missing # Architecture: comment before Feature:.
+	ErrMissingArchitectureComment = ErrorCode{
+		Code:        "MISSING_ARCHITECTURE_COMMENT",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "specification.feature is missing '# Architecture:' comment before Feature:",
+	}
+
 	// ErrMissingVerificationTag indicates scenario missing verification tag.
 	ErrMissingVerificationTag = ErrorCode{
 		Code:        "MISSING_VERIFICATION_TAG",
@@ -865,9 +883,11 @@ var errorCodeRegistry = map[string]*ErrorCode{
 	"SCENARIO_BEFORE_FEATURE":   &ErrScenarioBeforeFeature,
 	"BACKGROUND_BEFORE_FEATURE": &ErrBackgroundBeforeFeature,
 	"EXAMPLES_WITHOUT_SCENARIO": &ErrExamplesWithoutScenario,
-	"RULE_WITHOUT_SCENARIOS":    &ErrRuleWithoutScenarios,
-	"SCENARIOS_OUTSIDE_RULE":    &ErrScenariosOutsideRule,
-	"MISSING_VERIFICATION_TAG":  &ErrMissingVerificationTag,
+	"RULE_WITHOUT_SCENARIOS":         &ErrRuleWithoutScenarios,
+	"SCENARIOS_OUTSIDE_RULE":         &ErrScenariosOutsideRule,
+	"MISSING_INTENT_COMMENT":         &ErrMissingIntentComment,
+	"MISSING_ARCHITECTURE_COMMENT":   &ErrMissingArchitectureComment,
+	"MISSING_VERIFICATION_TAG":       &ErrMissingVerificationTag,
 	"MISSING_REQUIRED_ELEMENT":  &ErrMissingRequiredElement,
 	"INVALID_SEMANTIC_TYPE":     &ErrInvalidSemanticType,
 

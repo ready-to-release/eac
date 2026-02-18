@@ -1,3 +1,6 @@
+# Intent: Ensure releases are properly documented by managing changelog updates as part of the release process
+# Architecture: Affects eac-cli release this command; reads module commits since last release; manages per-module release notes at release/<module>/RELEASE-NOTES.md; supports dry-run to skip validation; prevents cross-module contamination
+
 @deps:go @env:isolated-test-project
 Feature: eac-cli_release-this
 

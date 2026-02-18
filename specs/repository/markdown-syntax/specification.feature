@@ -1,3 +1,6 @@
+# Intent: Ensure documentation renders correctly and is readable by enforcing valid Markdown syntax across all files
+# Architecture: Affects all Markdown files in the repository; validates syntax, links, and headers; depends on markdown linting tooling
+
 @L1 @control:sa-3
 Feature: repository_markdown-syntax
 

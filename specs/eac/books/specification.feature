@@ -1,3 +1,6 @@
+# Intent: Produce comprehensive documentation with up-to-date reference material by building books that aggregate static and generated content
+# Architecture: Affects eac-cli books command; reads books.yml configuration; invokes show books and validate books commands; depends on docs module and book aggregation pipeline
+
 @deps:go @L2 @ov
 Feature: eac-cli_books
 

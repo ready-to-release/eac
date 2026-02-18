@@ -1,3 +1,6 @@
+# Intent: Keep the codebase organized and scripts easy to find by ensuring scripts are only in designated locations
+# Architecture: Affects repository script location validation; scans for .sh, .ps1, .psm1, .bat, .cmd files; enforces approved locations (scripts/pwsh, scripts/sh, scripts/cmd packages, .claude/hooks, containers, root importers); validates package naming convention
+
 @L1 @ov @control:sa-3
 Feature: repository_no-scattered-scripts
 

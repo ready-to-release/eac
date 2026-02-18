@@ -1,3 +1,6 @@
+# Intent: Enable developers to compile and prepare modules efficiently by building one or more modules identified by moniker
+# Architecture: Affects eac-cli build command; looks up module moniker in registry; supports dry-run mode; depends on go/core module contracts and build toolchain
+
 @deps:go @L1 @ov @sequential
 Feature: eac-cli_build
 

@@ -1,3 +1,6 @@
+# Intent: Allow developers to quickly run Go commands from their shell session by importing the Go command invoker module using platform-specific scripts
+# Architecture: Affects implicit-cli importer scripts (importer.ps1 and importer.sh); loads go-invoker module from scripts/pwsh/go-invoker/ or scripts/sh/go-invoker/; supports --no-alias flag; handles missing module gracefully
+
 @env:isolated-test-project
 @ov @depm:eac
 Feature: implicit-cli_importer

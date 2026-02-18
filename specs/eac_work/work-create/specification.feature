@@ -1,3 +1,6 @@
+# Intent: Allow developers to work on multiple branches simultaneously with separate Claude Code sessions by creating isolated workspaces for different features
+# Architecture: Affects eac-cli work create command; creates git worktrees with standard naming convention; validates branch name is provided; depends on git worktree functionality and isolated test project
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_work-create
 

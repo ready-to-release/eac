@@ -1,3 +1,6 @@
+# Intent: Allow developers to quickly set up their project and optionally configure AI features by initializing EAC project configuration with a simple command
+# Architecture: Affects eac-cli init command; creates .eac/ directory with repository.yml, books.yml, environments.yml, and optional ai-provider.yml; supports smart re-initialization preserving user customizations; handles claude-api, openai, and gemini providers
+
  @L3 @iv @env:isolated-test-project
 Feature: eac-cli_init
   As a developer

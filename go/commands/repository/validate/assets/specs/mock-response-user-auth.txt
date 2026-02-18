@@ -1,3 +1,6 @@
+# Intent: Secure the application by authenticating users so that only authorized users can access protected resources
+# Architecture: Affects eac-commands user-auth container; validates credentials; creates sessions; depends on authentication adapter
+
 @deps:go @ov
 Feature: eac-commands_user-auth
 

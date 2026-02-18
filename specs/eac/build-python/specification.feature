@@ -1,3 +1,6 @@
+# Intent: Allow developers to verify Python code compiles and packages correctly by building Python modules identified by moniker
+# Architecture: Affects eac-cli build command for Python modules; uses isolated test project layouts (python-with-tests, python-with-bdd, python-full-stack); depends on Python build toolchain and module contracts
+
 @deps:python @L1 @env:isolated-test-project
 Feature: eac-cli_build-python
 

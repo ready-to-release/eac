@@ -1,3 +1,6 @@
+# Intent: Prevent Gherkin tag inheritance conflicts so tests are not assigned multiple contradictory taxonomy tags
+# Architecture: Affects repository-wide Gherkin validation; scans all .feature files; validates L-level and verification tag exclusivity between Feature and Scenario levels
+
 @L1 @control:sa-3
 Feature: repository_feature-level-tags
 

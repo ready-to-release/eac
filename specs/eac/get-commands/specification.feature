@@ -1,3 +1,6 @@
+# Intent: Enable shell integrations and tooling to be built by providing structured command information from the eac platform
+# Architecture: Affects eac-cli get commands subcommand; outputs JSON or YAML with command list, tree, modules, and argument types; reads command registry and module contracts
+
 @L2 @deps:go @ov
 Feature: eac-cli_get-commands
 

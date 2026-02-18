@@ -1,3 +1,6 @@
+# Intent: Allow developers to understand diagram structure without full decoding by viewing metadata about DrawIO diagrams
+# Architecture: Affects eac-cli drawio info command; invokes drawio-oci Docker image; reads .drawio.png file; displays diagram count and page names; depends on Docker availability
+
 @L2 @deps:docker @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_drawio-info
 

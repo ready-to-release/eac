@@ -44,6 +44,10 @@ Stages 1-7 cover code authoring through comprehensive verification, emphasizing 
 - Collaborate on requirements (Three Amigos approach)
 - Express requirements as executable specifications (Gherkin)
 - Run local tests before sharing
+- For AI-assisted changes: run `create spec` with a clear description —
+  the AI derives Intent and Architecture from your description and the C4
+  model, writing them into the spec file before generating scenarios.
+  See [ACD and the CD Model](../agentic-cd/acd-and-cd-model.md).
 
 **Best Practices:**
 

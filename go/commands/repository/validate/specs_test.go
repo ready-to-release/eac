@@ -21,7 +21,10 @@ func TestValidateGherkinFile_ValidFile(t *testing.T) {
 	}{
 		{
 			name: "valid specification with all required elements",
-			content: `@deps:go @ov
+			content: `# Intent: Ensure specification files follow required structure and conventions
+# Architecture: Affects eac-cli validation command; reads specification.feature files; calls gherkin validator
+
+@deps:go @ov
 Feature: eac-cli_test-feature
 
   As a developer
@@ -35,12 +38,23 @@ Feature: eac-cli_test-feature
       Given a precondition
       When an action occurs
       Then a result is expected
+
+  Rule: Second rule
+
+    @L2 @ov
+    Scenario: Another scenario
+      Given another precondition
+      When another action occurs
+      Then another result is expected
 `,
 			wantErrs: 0,
 		},
 		{
 			name: "valid specification with multiple rules and scenarios",
-			content: `@deps:go @ov
+			content: `# Intent: Enable thorough testing coverage with multiple scenarios across multiple rules
+# Architecture: Affects eac-cli multi-test feature; validates rule and scenario structure; depends on gherkin validator
+
+@deps:go @ov
 Feature: eac-cli_multi-test
 
   As a developer
@@ -197,6 +211,77 @@ Feature: eac-cli_test-feature
 `,
 			wantErrorCode: "RULE_BEFORE_FEATURE",
 		},
+		{
+			name: "missing intent comment",
+			content: `# Architecture: Affects eac-cli validation command; reads specification.feature files; calls gherkin validator
+
+@deps:go @ov
+Feature: eac-cli_test-feature
+
+  As a developer
+  I want to test validation
+  So that I can ensure quality
+
+  Rule: Test rule
+
+    @L2 @ov
+    Scenario: Test scenario
+      Given a precondition
+`,
+			wantErrorCode: "MISSING_INTENT_COMMENT",
+		},
+		{
+			name: "missing architecture comment",
+			content: `# Intent: Ensure specification files follow required structure and conventions
+
+@deps:go @ov
+Feature: eac-cli_test-feature
+
+  As a developer
+  I want to test validation
+  So that I can ensure quality
+
+  Rule: Test rule
+
+    @L2 @ov
+    Scenario: Test scenario
+      Given a precondition
+`,
+			wantErrorCode: "MISSING_ARCHITECTURE_COMMENT",
+		},
+		{
+			name: "both acd comments missing",
+			content: `@deps:go @ov
+Feature: eac-cli_test-feature
+
+  As a developer
+  I want to test validation
+  So that I can ensure quality
+
+  Rule: Test rule
+
+    @L2 @ov
+    Scenario: Test scenario
+      Given a precondition
+`,
+			wantErrorCode: "MISSING_INTENT_COMMENT",
+		},
+		{
+			name: "intent comment appears after feature declaration",
+			content: `@deps:go @ov
+Feature: eac-cli_test-feature
+
+  # Intent: This appears too late — after the Feature: declaration
+  # Architecture: This also appears too late
+
+  Rule: Test rule
+
+    @L2 @ov
+    Scenario: Test scenario
+      Given a precondition
+`,
+			wantErrorCode: "MISSING_INTENT_COMMENT",
+		},
 	}
 
 	for _, tt := range tests {
@@ -222,7 +307,7 @@ Feature: eac-cli_test-feature
 			// Check for expected error code
 			found := false
 			for _, e := range errors {
-				if e.Code == tt.wantErrorCode {
+				if e.GetCode() == tt.wantErrorCode {
 					found = true
 					break
 				}
@@ -241,7 +326,10 @@ func TestValidateDirectory_AllValid(t *testing.T) {
 	setupContractFiles(t, tmpDir)
 
 	// Create multiple valid files
-	validContent := `@deps:go @ov
+	validContent := `# Intent: Ensure specification files follow required structure and conventions
+# Architecture: Affects eac-cli validation command; reads specification.feature files; calls gherkin validator
+
+@deps:go @ov
 Feature: eac-cli_test-feature
 
   As a developer
@@ -255,6 +343,14 @@ Feature: eac-cli_test-feature
       Given a precondition
       When an action occurs
       Then a result is expected
+
+  Rule: Second rule
+
+    @L2 @ov
+    Scenario: Another scenario
+      Given another precondition
+      When another action occurs
+      Then another result is expected
 `
 
 	specsDir := filepath.Join(tmpDir, "specs")
@@ -275,7 +371,7 @@ Feature: eac-cli_test-feature
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false, true)
+	results, err := validateDirectory(specsDir, tmpDir, false, true, "text")
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -299,7 +395,10 @@ func TestValidateDirectory_MixedResults(t *testing.T) {
 	specsDir := filepath.Join(tmpDir, "specs")
 
 	// Create valid file
-	validContent := `@deps:go @ov
+	validContent := `# Intent: Ensure specification files follow required structure and conventions
+# Architecture: Affects eac-cli validation command; reads specification.feature files; calls gherkin validator
+
+@deps:go @ov
 Feature: eac-cli_valid-test
 
   As a developer
@@ -313,6 +412,14 @@ Feature: eac-cli_valid-test
       Given a precondition
       When an action occurs
       Then a result is expected
+
+  Rule: Second rule
+
+    @L2 @ov
+    Scenario: Another scenario
+      Given another precondition
+      When another action occurs
+      Then another result is expected
 `
 
 	validFile := filepath.Join(specsDir, "valid", "spec.feature")
@@ -345,7 +452,7 @@ Feature: eac-cli_invalid-test
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false, true)
+	results, err := validateDirectory(specsDir, tmpDir, false, true, "text")
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -380,7 +487,10 @@ func TestValidateDirectory_SkipNonFeatureFiles(t *testing.T) {
 	specsDir := filepath.Join(tmpDir, "specs")
 
 	// Create .feature file
-	featureContent := `@deps:go @ov
+	featureContent := `# Intent: Ensure specification files follow required structure and conventions
+# Architecture: Affects eac-cli validation command; reads specification.feature files; calls gherkin validator
+
+@deps:go @ov
 Feature: eac-cli_test-feature
 
   As a developer
@@ -414,7 +524,7 @@ Feature: eac-cli_test-feature
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false, true)
+	results, err := validateDirectory(specsDir, tmpDir, false, true, "text")
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -922,10 +1032,27 @@ structure:
 		"  - \"Here is\"\n" +
 		"  - \"Here's\"\n" +
 		"\n" +
-		"content_start_marker: \"Feature:\"\n"
+		"content_start_marker: \"# Intent:\"\n"
 
 	antiCorruptionFile := filepath.Join(contractDir, "anti-corruption.yml")
 	if err := os.WriteFile(antiCorruptionFile, []byte(antiCorruptionYAML), 0644); err != nil {
 		t.Fatalf("failed to write anti-corruption.yml: %v", err)
+	}
+
+	// Create ai-config.yml in the contracts defaults location so validateGherkinFile
+	// can load the contract loader without failing on a missing ai-config.
+	aiConfigDir := filepath.Join(tmpDir, "contracts", "core", "0.1.0", "schemas", "defaults")
+	if err := os.MkdirAll(aiConfigDir, 0755); err != nil {
+		t.Fatalf("failed to create ai-config directory: %v", err)
+	}
+	aiConfigYAML := `version: "0.1.0"
+types:
+  specs:
+    name: "Gherkin Specifications"
+    output_format: gherkin
+`
+	aiConfigFile := filepath.Join(aiConfigDir, "ai-config.yml")
+	if err := os.WriteFile(aiConfigFile, []byte(aiConfigYAML), 0644); err != nil {
+		t.Fatalf("failed to write ai-config.yml: %v", err)
 	}
 }

@@ -1,3 +1,6 @@
+# Intent: Ensure specifications follow the required structure and conventions by validating existing Gherkin specifications against contracts
+# Architecture: Affects eac-cli validate specs command; reads .feature files from path or directory recursively; uses contract-based Gherkin validator; checks Rule blocks, verification tags, and structure; supports JSON and quiet output modes; enforces path traversal security
+
 @deps:go @env:isolated-test-project
 Feature: eac-cli_validate-specs
 

@@ -1,3 +1,6 @@
+# Intent: Ensure control definitions conform to OSCAL 1.1.3 specification by validating OSCAL catalogs against the official schema
+# Architecture: Affects eac-cli validate risk-catalog command; reads OSCAL catalog JSON file; validates using go-oscal types against OSCAL 1.1.3 schema; checks UUID, metadata, and group/control structure
+
 @deps:go @L2 @ov @env:isolated-test-project
 Feature: eac-cli_validate-risk-catalog
 
