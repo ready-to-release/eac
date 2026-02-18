@@ -1,3 +1,6 @@
+# Intent: Allow developers to quickly understand test status and coverage by displaying test execution results in human-readable format
+# Architecture: Affects eac-cli show test-results command; reads test manifests from out/test/; renders markdown output using template with module overview, specification coverage, control summaries, and per-module breakdowns with status icons
+
 @L2 @ov @deps:go @control:sa-3 @env:isolated-test-project
 Feature: eac-cli_show-test-results
   As a developer

@@ -1,3 +1,6 @@
+# Intent: Show commit progress smoothly without flickering by managing display updates correctly through a progress frame buffer
+# Architecture: Affects vscode-commit progress buffer component; manages a bounded circular buffer of progress messages; filters empty, short, and special-character-only messages; normalizes whitespace; supports priority event override with clear fallback
+
 @ov @depm:vscode-commit
 Feature: vscode-commit_progress-buffer
 

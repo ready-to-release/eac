@@ -1,3 +1,6 @@
+# Intent: Allow developers to verify architecture designs are correct by validating Structurizr DSL workspace files against design rules
+# Architecture: Affects eac-cli validate design command; reads workspace DSL from specs/<module>/.design/; invokes Structurizr Docker container for validation; writes results to out/design/validation-results.json; supports batch validation with --all flag
+
 @L2 @deps:docker @ov @env:isolated-test-project
 Feature: eac-cli_validate-design
 

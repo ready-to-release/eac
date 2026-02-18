@@ -1,3 +1,6 @@
+# Intent: Allow projects to work out of the box while allowing full customization by providing sensible defaults for all EAC configuration
+# Architecture: Affects go/core configuration defaults system; loads defaults from contracts/core/0.1.0/defaults/*.yml; merges with user config from .eac/*.yml at field level; supports module, blueprint, path, and system dependency overrides with user values taking precedence
+
 @L1 @ov @depm:core
 Feature: Configuration Defaults System
 

@@ -1,3 +1,6 @@
+# Intent: Allow developers to keep their repository organized by safely removing workspaces and cleaning up associated branches
+# Architecture: Affects eac-cli work remove command; removes git worktree and switches to main branch; deletes local branch unless --keep-branch is specified; validates no uncommitted changes and not removing main workspace; depends on git worktree context
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_work_remove
 

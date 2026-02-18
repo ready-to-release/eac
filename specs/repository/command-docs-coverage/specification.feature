@@ -1,3 +1,6 @@
+# Intent: Ensure users can discover and learn about all available commands by requiring reference documentation for every CLI command
+# Architecture: Affects repository documentation validation; reads valid commands from CLI and docs/reference/eac/commands/; depends on command registry and file system scan
+
 @control:sa-3
 Feature: repository_command-docs-coverage
 

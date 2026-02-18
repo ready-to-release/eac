@@ -1,3 +1,6 @@
+# Intent: Allow developers to understand what work is in progress across branches by seeing all active workspaces and their status
+# Architecture: Affects eac-cli show workspaces command; reads git worktrees via git worktree list; displays PATH, BRANCH, STATUS table; shows clean/dirty status; supports --verbose for commit SHA; writes debug logs to out/commands.log
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_show-workspaces
 

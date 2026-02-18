@@ -1,3 +1,6 @@
+# Intent: Allow developers to create a cohesive commit message for GitHub PR squash merge by generating it from branch commits using AI
+# Architecture: Affects eac-cli create squash-message command; reads branch commits ahead of base via git; invokes AI with .eac/ai/commit-message config; outputs conventional commit format; defaults base to main branch
+
 @L2 @deps:go @deps:git @ov @env:isolated-test-project @control:ai-2
 Feature: eac-cli_create-squash-message
 

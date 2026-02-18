@@ -1,3 +1,6 @@
+# Intent: Allow security engineers to define security controls for their solution by creating OSCAL profiles from risk assessment documents
+# Architecture: Affects eac-cli create risk-profile command; reads assessment markdown file; generates OSCAL profile JSON at specs/.risk-controls/; requires AI provider configuration; validates force flag for overwrite protection
+
 @deps:go @L2 @ov @env:isolated-test-project
 Feature: eac-cli_create-risk-profile
 

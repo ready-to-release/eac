@@ -1,3 +1,6 @@
+# Intent: Allow the build system to correctly order module builds and detect circular dependencies by ensuring the module dependency graph is valid
+# Architecture: Affects repository module registry; validates bidirectional depends_on and used_by relationships; checks DAG acyclicity across all module contracts
+
 @L1 @control:sa-3
 Feature: Module Hierarchy Validation
   As a repository maintainer

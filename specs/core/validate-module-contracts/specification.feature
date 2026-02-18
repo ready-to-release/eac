@@ -1,3 +1,6 @@
+# Intent: Ensure the repository maintains a valid architecture with clear module boundaries and dependencies by validating module contracts are well-formed and consistent
+# Architecture: Affects go/core module contract validation; validates JSON schema, dependency resolution, DAG acyclicity, file ownership, type defaults, and bidirectional relationships across all module contracts in .eac/repository.yml
+
 @skip:broken
 Feature: core_validate-module-contracts
 

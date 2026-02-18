@@ -1,3 +1,6 @@
+# Intent: Generate specifications from natural language descriptions so developers can document features efficiently
+# Architecture: Affects eac-cli create-spec command; invokes AI generation; writes to specs/ directory; depends on gherkin validator
+
 @deps:go @ov
 Feature: src-commands_mock-feature
 

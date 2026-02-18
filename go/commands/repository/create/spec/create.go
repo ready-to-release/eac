@@ -607,6 +607,19 @@ func buildUserInputSection(config *SpecsConfig) string {
 		prompt.WriteString("Use the naming format: ")
 		prompt.WriteString(config.Module)
 		prompt.WriteString("_<feature-name>\n\n")
+
+		// Architecture context from C4 model (workspace.dsl)
+		dslPath := filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
+		if dslContent, err := os.ReadFile(dslPath); err == nil {
+			prompt.WriteString("## Architecture Context\n\n")
+			prompt.WriteString("The following C4 model defines the system architecture for this module.\n")
+			prompt.WriteString("Use it to derive the `# Architecture:` comment — identify which specific\n")
+			prompt.WriteString("containers and components this change touches, plus any constraints:\n\n")
+			prompt.WriteString("```\n")
+			prompt.WriteString(string(dslContent))
+			prompt.WriteString("\n```\n\n")
+		}
+		// If workspace.dsl not found, the AI derives Architecture from description alone
 	} else {
 		prompt.WriteString("## Module Inference\n\n")
 		prompt.WriteString("No specific module was provided. Please infer the most appropriate module based on the description.\n")
@@ -615,8 +628,14 @@ func buildUserInputSection(config *SpecsConfig) string {
 
 	// Final instruction
 	prompt.WriteString("## Generate Now\n\n")
-	prompt.WriteString("Generate the complete Gherkin specification now.\n")
-	prompt.WriteString("Return ONLY the Gherkin content starting with 'Feature:' - no markdown fences, no explanations.\n")
+	prompt.WriteString("Your output MUST begin with exactly these two lines with real derived content:\n\n")
+	prompt.WriteString("  # Intent: <one sentence — the specific problem this change solves>\n")
+	prompt.WriteString("  # Architecture: <components affected, constraints, and dependencies>\n\n")
+	prompt.WriteString("Derive `# Intent:` from the Description above.\n")
+	prompt.WriteString("Derive `# Architecture:` from Description + Architecture Context above.\n")
+	prompt.WriteString("Both MUST have real content. No placeholders. No angle brackets.\n\n")
+	prompt.WriteString("Then output the complete Gherkin starting with tags and Feature:.\n")
+	prompt.WriteString("Return ONLY this content — no markdown fences, no explanations.\n")
 
 	return prompt.String()
 }

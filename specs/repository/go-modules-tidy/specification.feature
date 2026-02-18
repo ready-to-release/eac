@@ -1,3 +1,6 @@
+# Intent: Ensure builds are reproducible and dependencies are consistent by keeping all Go module dependencies tidy
+# Architecture: Affects all Go modules in the repository; runs go mod tidy -diff per module; depends on module contracts for discovery
+
 @deps:go @control:sa-10
 Feature: repository_go-modules-tidy
 

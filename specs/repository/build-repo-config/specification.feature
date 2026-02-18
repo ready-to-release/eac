@@ -1,3 +1,6 @@
+# Intent: Ensure repository configuration files are valid so the build system can use them reliably
+# Architecture: Affects repository module build pipeline; invokes build command with dry-run; depends on module contract and build tooling
+
 @deps:go @control:cm-2 @control:sa-10
 Feature: repository_build-repo-config
 

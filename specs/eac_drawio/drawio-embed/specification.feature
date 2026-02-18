@@ -1,3 +1,6 @@
+# Intent: Allow developers to update diagram content while preserving the PNG format by embedding encoded XML into PNG files
+# Architecture: Affects eac-cli drawio embed command; invokes drawio-oci Docker image; reads existing .drawio.png and encoded XML file; writes updated PNG in-place or to explicit output path; creates PNG if target does not exist
+
 @L2 @deps:docker @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_drawio-embed
 

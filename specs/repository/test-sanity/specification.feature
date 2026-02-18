@@ -1,3 +1,6 @@
+# Intent: Ensure all tests are being discovered so developers can trust the test suite is complete
+# Architecture: Affects repository test discovery validation; compares filesystem scans against godog, Go unit, and TypeScript test discovery; validates counts for all test types
+
 @deps:go @L1 @ov @control:sa-11
 Feature: repository_test-sanity
 

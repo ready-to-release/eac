@@ -114,6 +114,8 @@ var (
 	ErrContractNameMismatch      = validation.ErrContractNameMismatch
 	ErrNoTagContract             = validation.ErrNoTagContract
 	ErrContractVersionMismatch   = validation.ErrContractVersionMismatch
+	ErrMissingIntentComment      = validation.ErrMissingIntentComment
+	ErrMissingArchitectureComment = validation.ErrMissingArchitectureComment
 
 	// Commit message validation error codes
 	ErrEmptyMessage            = validation.ErrEmptyMessage

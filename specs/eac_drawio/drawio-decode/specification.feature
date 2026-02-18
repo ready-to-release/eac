@@ -1,3 +1,6 @@
+# Intent: Allow developers to view and edit diagram content programmatically by decoding DrawIO diagrams to human-readable XML
+# Architecture: Affects eac-cli drawio decode command; invokes drawio-oci Docker image; reads .drawio.png input files; outputs mxGraphModel XML to stdout or file; depends on Docker availability
+
 @L2 @deps:docker @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_drawio-decode
 

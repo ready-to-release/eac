@@ -1,3 +1,6 @@
+# Intent: Ensure CI and local environments use the same Node.js version to avoid npm compatibility issues
+# Architecture: Affects repository Node.js version consistency checks; reads system-dependencies.yml and GitHub Actions workflow files; validates node-version defaults match across all actions
+
 @deps:npm @control:cm-2
 Feature: repository_node-version-consistency
 

@@ -1,3 +1,6 @@
+# Intent: Organize specifications by allowing developers to specify custom output paths
+# Architecture: Affects eac-cli create-spec command; validates output path security; writes to user-specified path; depends on filesystem and path validation
+
 @deps:go @ov
 Feature: src-commands_custom-path
 

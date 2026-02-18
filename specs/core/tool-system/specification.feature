@@ -1,3 +1,6 @@
+# Intent: Ensure builds, tests, and scans use the appropriate tools for each language by resolving the correct tools for each component type
+# Architecture: Affects go/core tool system; maps component types from blueprints.yml component-kinds to specific tools in tool-config.yml; resolves builders, testers, and scanners per language (go, typescript, python, dotnet, rust, container); supports single and multi-language repository layouts
+
 @L1 @ov @depm:core
 Feature: Tool Resolution for Component Types
 

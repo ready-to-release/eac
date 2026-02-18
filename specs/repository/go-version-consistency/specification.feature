@@ -1,3 +1,6 @@
+# Intent: Ensure CI and local environments use the same Go version to avoid module resolution differences
+# Architecture: Affects repository Go version consistency checks; reads system-dependencies.yml, go.work, and GitHub Actions workflow files; validates version alignment across all configuration layers
+
 @deps:go @control:cm-2
 Feature: repository_go-version-consistency
 
