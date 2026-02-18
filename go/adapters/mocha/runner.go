@@ -22,10 +22,18 @@ import (
 func init() {
 	testrunners.Register(&MochaRunner{})
 	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
-		TestType:      "mocha",
-		IsBDD:         false,
-		ComponentType: "typescript",
-		MonikerStyle:  "file",
+		TestType:            "mocha",
+		IsBDD:               false,
+		ComponentType:       "typescript",
+		MonikerStyle:        "file",
+		Language:            "ts",
+		ParentComponentType: "typescript",
+		ModuleManifestFile:  "package.json",
+		DefaultLevel:        "@L1",
+		DefaultDepTag:       "@deps:npm",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "ctrf-report", Pattern: "unit.json", Type: "ctrf-report"},
+		},
 	})
 }
 

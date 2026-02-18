@@ -9,11 +9,11 @@ import (
 	"sync"
 
 	test "github.com/ready-to-release/eac/contracts/runner/0.1.0/test"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/testing"
 )
 
-// Type aliases for backward compatibility during migration.
-// New code should import directly from contracts/runner/0.1.0/test.
+// Type aliases — new code should import directly from contracts/runner/0.1.0/test.
 type (
 	TestInfo           = test.TestInfo
 	RunResult          = test.RunResult
@@ -23,6 +23,8 @@ type (
 	FeatureModuleInfo  = test.FeatureModuleInfo
 	Inference          = test.Inference
 	TestReference      = test.TestReference
+	ArtifactPattern    = test.ArtifactPattern
+	BDDPackagePath     = test.BDDPackagePath
 )
 
 // Registry holds test runner registrations. Use NewRegistry() to create an
@@ -157,7 +159,7 @@ func (r *Registry) GetRunnerFileConventions() map[string]bool {
 
 // ResolveFeatureTestType determines which BDD test type should own
 // .feature files for a module with the given characteristics.
-// Returns "godog" as ultimate fallback if no resolver matches.
+// Returns the first registered BDD type as fallback, or empty string if none registered.
 func (r *Registry) ResolveFeatureTestType(info FeatureModuleInfo) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -168,13 +170,13 @@ func (r *Registry) ResolveFeatureTestType(info FeatureModuleInfo) string {
 			}
 		}
 	}
-	// Default to first registered BDD type, or "godog" as ultimate fallback
+	// Default to first registered BDD type
 	for _, d := range r.descriptors {
 		if d.IsBDD {
 			return d.TestType
 		}
 	}
-	return "godog"
+	return ""
 }
 
 // GetMonikerStyle returns the moniker generation style for a test type.
@@ -204,7 +206,7 @@ func (r *Registry) CollectInferences() []Inference {
 }
 
 // BDDComponentNames returns the component names used by BDD test types.
-// Used to find test implementation paths without hardcoding "godog".
+// Used to find test implementation paths without hardcoding specific types.
 func (r *Registry) BDDComponentNames() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -215,9 +217,6 @@ func (r *Registry) BDDComponentNames() []string {
 			seen[d.TestType] = true
 			names = append(names, d.TestType)
 		}
-	}
-	if len(names) == 0 {
-		return []string{"godog"}
 	}
 	return names
 }
@@ -297,7 +296,6 @@ func GetRunnerFileConventions() map[string]bool {
 
 // ResolveFeatureTestType determines which BDD test type should own
 // .feature files for a module with the given characteristics.
-// Returns "godog" as ultimate fallback if no resolver matches.
 func ResolveFeatureTestType(info FeatureModuleInfo) string {
 	return defaultRegistry.ResolveFeatureTestType(info)
 }
@@ -324,10 +322,16 @@ func ResetForTesting() {
 	defaultRegistry.ResetForTesting()
 }
 
+// ParseBDDPackagePath parses a colon-delimited package path.
+func ParseBDDPackagePath(raw string) BDDPackagePath {
+	return test.ParseBDDPackagePath(raw)
+}
+
 func init() {
-	// Wire testrunners registry as provider for go/core/testing.
+	// Wire testrunners registry as provider for go/core/testing and go/core/config.
 	// This bridges the dependency gap: core defines the provider interface,
 	// clibase/testrunners implements it with the actual registry.
+	config.BDDComponentNamesFunc = BDDComponentNames
 	testing.SetSupportedTypesProvider(SupportedTypes)
 	testing.SetComponentTypeProvider(GetComponentType)
 	testing.SetMonikerStyleProvider(GetMonikerStyle)
@@ -354,4 +358,13 @@ func init() {
 		return result
 	})
 	testing.SetBDDComponentNamesProvider(BDDComponentNames)
+	testing.SetTestFrameworkProvider(func(componentType string) string {
+		// Build reverse mapping: component type → first non-BDD test type
+		for _, d := range defaultRegistry.AllDescriptors() {
+			if !d.IsBDD && d.ComponentType == componentType {
+				return d.TestType
+			}
+		}
+		return componentType
+	})
 }

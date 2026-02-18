@@ -30,6 +30,10 @@ var (
 
 	// bddComponentNamesProvider returns component names for BDD test types.
 	bddComponentNamesProvider func() []string
+
+	// testFrameworkProvider maps component type to its first tester tool.
+	// Set by the config/tool layer at init time.
+	testFrameworkProvider func(componentType string) string
 )
 
 // SetSupportedTypesProvider sets the provider for supported test types.
@@ -82,18 +86,15 @@ func SetBDDComponentNamesProvider(fn func() []string) {
 }
 
 // getSupportedTypes returns all registered test types from the provider.
-// Falls back to hardcoded defaults if no provider is set.
+// Returns nil if no provider is set (adapters must register).
 func getSupportedTypes() []string {
 	providerMu.RLock()
 	fn := supportedTypesProvider
 	providerMu.RUnlock()
 	if fn != nil {
-		types := fn()
-		if len(types) > 0 {
-			return types
-		}
+		return fn()
 	}
-	return []string{"gotest", "godog", "mocha", "tscucumber"}
+	return nil
 }
 
 // getComponentTypeFromProvider returns the component type for a test type.
@@ -109,7 +110,7 @@ func getComponentTypeFromProvider(testType string) string {
 }
 
 // getMonikerStyle returns the moniker style for a test type.
-// Falls back to "file" if no provider is set.
+// Returns "file" if no provider is set (default for unit tests).
 func getMonikerStyle(testType string) string {
 	providerMu.RLock()
 	fn := monikerStyleProvider
@@ -117,30 +118,23 @@ func getMonikerStyle(testType string) string {
 	if fn != nil {
 		return fn(testType)
 	}
-	// Fallback: BDD types use "feature", everything else uses "file"
-	if testType == "godog" || testType == "tscucumber" {
-		return "feature"
-	}
 	return "file"
 }
 
 // getRunnerFileConventions returns runner file conventions from the provider.
-// Falls back to {"godog_test.go": true} if no provider is set.
+// Returns empty map if no provider is set (adapters must register).
 func getRunnerFileConventions() map[string]bool {
 	providerMu.RLock()
 	fn := runnerFileConventionsProvider
 	providerMu.RUnlock()
 	if fn != nil {
-		result := fn()
-		if len(result) > 0 {
-			return result
-		}
+		return fn()
 	}
-	return map[string]bool{"godog_test.go": true}
+	return nil
 }
 
 // resolveFeatureTestType determines which BDD test type owns features.
-// Falls back to hardcoded logic if no provider is set.
+// Delegates to the provider (adapter registry). Returns empty string if no provider is set.
 func resolveFeatureTestType(hasTypeScript, hasGo, hasPython, hasDotnet bool) string {
 	providerMu.RLock()
 	fn := featureTestTypeProvider
@@ -148,16 +142,7 @@ func resolveFeatureTestType(hasTypeScript, hasGo, hasPython, hasDotnet bool) str
 	if fn != nil {
 		return fn(hasTypeScript, hasGo, hasPython, hasDotnet)
 	}
-	if hasDotnet {
-		return "reqnroll"
-	}
-	if hasPython {
-		return "behave"
-	}
-	if hasTypeScript {
-		return "tscucumber"
-	}
-	return "godog"
+	return ""
 }
 
 // getAdapterInferences returns inference rules from registered adapters.
@@ -173,18 +158,15 @@ func getAdapterInferences() []Inference {
 }
 
 // getBDDComponentNames returns component names for BDD test types.
-// Falls back to ["godog"] if no provider is set.
+// Returns nil if no provider is set (adapters must register).
 func getBDDComponentNames() []string {
 	providerMu.RLock()
 	fn := bddComponentNamesProvider
 	providerMu.RUnlock()
 	if fn != nil {
-		names := fn()
-		if len(names) > 0 {
-			return names
-		}
+		return fn()
 	}
-	return []string{"godog"}
+	return nil
 }
 
 // GetComponentTypeFromRegistry returns the component type for a test type from the adapter registry.
@@ -199,6 +181,13 @@ func GetBDDComponentNames() []string {
 	return getBDDComponentNames()
 }
 
+// SetTestFrameworkProvider sets the provider for component type -> test framework mapping.
+func SetTestFrameworkProvider(fn func(componentType string) string) {
+	providerMu.Lock()
+	defer providerMu.Unlock()
+	testFrameworkProvider = fn
+}
+
 // ResetProvidersForTesting clears all providers. Use only in tests.
 func ResetProvidersForTesting() {
 	providerMu.Lock()
@@ -210,4 +199,5 @@ func ResetProvidersForTesting() {
 	featureTestTypeProvider = nil
 	inferenceProvider = nil
 	bddComponentNamesProvider = nil
+	testFrameworkProvider = nil
 }

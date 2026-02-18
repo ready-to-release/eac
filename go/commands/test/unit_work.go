@@ -7,6 +7,7 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/testing"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -92,7 +93,11 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 			// For unit tests: use path-based name (e.g., "impl-build")
 			spec := ""
 			testname := ""
-			if testType == "godog" || testType == "tscucumber" {
+			isBDD := false
+			if desc := testrunners.GetDescriptor(testType); desc != nil {
+				isBDD = desc.IsBDD
+			}
+			if isBDD {
 				spec = extractSpecName(pkgPath)
 				testname = spec
 			} else {
@@ -156,9 +161,11 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) []workunit.UnitSpe
 				Tags:           tagSummary,
 			}
 
-			// Store mapping from testname to pkgPath for worker lookup
-			// Key is testname (unique within module:component)
-			testCfg.ComponentToPkgPath[testname] = pkgPath
+			// Store mapping from module:testname to pkgPath for worker lookup.
+			// Key must include module moniker because testname is only unique
+			// within a module (e.g., both eac and clie can have "cli-installation").
+			componentKey := moduleMoniker + ":" + testname
+			testCfg.ComponentToPkgPath[componentKey] = pkgPath
 
 			// Store tag summary keyed by UoW longname for manifest writing
 			testCfg.UoWTags[unitID.Longname()] = tagSummary
@@ -221,9 +228,9 @@ func findComponentForTests(ctx *cmdframework.ExecutionContext, moniker, compType
 	}
 
 	// For BDD tests, extract the feature file path and match against component roots
-	parts := strings.SplitN(pkgPath, ":", 3)
-	if len(parts) == 3 {
-		featurePath := filepath.ToSlash(parts[2])
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	if p.IsBDD() {
+		featurePath := filepath.ToSlash(p.FeaturePath)
 		var bestName string
 		var bestLen int
 		for name := range module.Components {
@@ -305,16 +312,19 @@ func getTestComponentWeight(ts *tool.ToolSystem, moniker, componentName string, 
 }
 
 // extractSpecName extracts the spec name from a BDD pkgPath.
-// For godog tests, pkgPath format is: "specname:testRoot:featurePath"
-// Example: "build-module:go/eac/specs/impl/eac:specs/eac/build-module/specification.feature"
-// Returns the spec name (first part before colon), or empty string if not found.
+// Uses the BDDPackagePath protocol: "specname:testRoot:featurePath".
+// Returns the spec name (FeatureName), or empty string if not found.
 // The result is sanitized for use in file paths.
 func extractSpecName(pkgPath string) string {
-	parts := strings.SplitN(pkgPath, ":", 2)
-	if len(parts) >= 1 && parts[0] != "" {
-		return sanitizeTestname(parts[0])
+	if pkgPath == "" {
+		return ""
 	}
-	return ""
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	if p.IsBDD() {
+		return sanitizeTestname(p.FeatureName)
+	}
+	// Non-BDD path: use whole string as spec name
+	return sanitizeTestname(pkgPath)
 }
 
 // sanitizeTestname makes a testname safe for use in filesystem paths.

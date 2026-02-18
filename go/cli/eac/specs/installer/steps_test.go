@@ -22,13 +22,13 @@ import (
 
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
-	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 // installerContext holds state between steps for installer tests.
 type installerContext struct {
 	sharedCtx      *eacgodog.TestContext
-	scriptsRoot    string
+	pwshScript     string // Full path to PowerShell install script
+	bashScript     string // Full path to bash install script
 	tempInstallDir string
 }
 
@@ -65,11 +65,12 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 }
 
 func initializeInstallerContext() {
-	// Find scripts from build output using repository path conventions
-	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
-	// and doesn't need to be copied to isolated test environments
+	// Find installer scripts from source tree using repository path conventions.
+	// Use OriginalRepoRoot (not IsolatedDir) because source scripts are read-only
+	// and don't need to be copied to isolated test environments.
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "cli-installers")
+	instCtx.pwshScript = filepath.Join(repoRoot, "scripts", "pwsh", "eac", "install.ps1")
+	instCtx.bashScript = filepath.Join(repoRoot, "scripts", "sh", "eac", "install.sh")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "eac-installer-test-*")
@@ -252,7 +253,7 @@ func iRunThePowerShellInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-eac-scripts", "install.ps1")
+	scriptPath := instCtx.pwshScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -295,7 +296,7 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh-eac-scripts", "install.ps1")
+	scriptPath := instCtx.pwshScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -341,7 +342,7 @@ func iRunTheBashInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-eac-scripts", "install.sh")
+	scriptPath := instCtx.bashScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -383,7 +384,7 @@ func iRunTheBashInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash-eac-scripts", "install.sh")
+	scriptPath := instCtx.bashScript
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

@@ -10,9 +10,18 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
+
+// godogParentComponentType returns the parent component type from the godog descriptor.
+func godogParentComponentType() string {
+	if desc := testrunners.GetDescriptor("godog"); desc != nil && desc.ParentComponentType != "" {
+		return desc.ParentComponentType
+	}
+	return "go"
+}
 
 // tagLevelRe matches positive (non-negated) @L0..@L4 tags.
 var tagLevelRe = regexp.MustCompile(`(?:^|[^~])@(L[0-4])`)
@@ -54,6 +63,110 @@ func extractFeatureFolderName(featurePath string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// findGodogRootAcrossModules searches all modules' Go component roots for a
+// directory matching the qualifier that contains (or has subdirectories with)
+// the godog test file. This handles the case where spec directories are named
+// after the CLI (e.g., "eac_work") but the godog runners live in a different
+// module (e.g., "commands" module at go/commands/repository/work/).
+//
+// Returns the candidate path (e.g., "go/commands/repository/work") so that
+// FindTestRoot can check for godog_test.go directly or in subdirectories.
+func findGodogRootAcrossModules(cfg *config.EACConfig, qualifier, godogTestFile, workspaceRoot string) string {
+	parentType := godogParentComponentType()
+	// First pass: find exact matches (godog_test.go directly in the candidate dir)
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		for _, comp := range module.Components {
+			if comp == nil || comp.Root == "" || comp.Type != parentType {
+				continue
+			}
+			// Check <componentRoot>/<qualifier>/godogTestFile
+			candidate := filepath.ToSlash(filepath.Join(comp.Root, qualifier))
+			if fileExists(filepath.Join(workspaceRoot, candidate, godogTestFile)) {
+				goRunnerLog.Debugf("findGodogRootAcrossModules: found %s at %s (module %s)", godogTestFile, candidate, module.Moniker)
+				return candidate
+			}
+			// Check if the component root itself matches the qualifier
+			// (e.g., root="go/commands/test" and qualifier="test")
+			if filepath.Base(comp.Root) == qualifier {
+				if fileExists(filepath.Join(workspaceRoot, comp.Root, godogTestFile)) {
+					goRunnerLog.Debugf("findGodogRootAcrossModules: root matches qualifier %s at %s (module %s)", qualifier, comp.Root, module.Moniker)
+					return comp.Root
+				}
+			}
+		}
+	}
+	// Second pass: find directory matches (qualifier dir exists but godog_test.go
+	// is in subdirectories — e.g., eac_create where runners are in create/commit-message/)
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		for _, comp := range module.Components {
+			if comp == nil || comp.Root == "" || comp.Type != parentType {
+				continue
+			}
+			candidate := filepath.ToSlash(filepath.Join(comp.Root, qualifier))
+			if dirExists(filepath.Join(workspaceRoot, candidate)) {
+				goRunnerLog.Debugf("findGodogRootAcrossModules: dir exists at %s (module %s), deferring to subdirectory search", candidate, module.Moniker)
+				return candidate
+			}
+		}
+	}
+	return ""
+}
+
+// dirExists checks if a directory exists.
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// getRunnerSearchDirs returns the runner_search_dirs from the godog component kind.
+func getRunnerSearchDirs(cfg *config.EACConfig) []string {
+	if cfg.ComponentKinds == nil {
+		return nil
+	}
+	godogKind := cfg.ComponentKinds.Get("godog")
+	if godogKind == nil {
+		return nil
+	}
+	return godogKind.RunnerSearchDirs
+}
+
+// findGodogRootForMoniker searches all modules' Go component roots and their
+// runner_search_dirs for a directory matching the moniker that contains
+// godog_test.go. Handles modules with no Go components whose godog tests live
+// in another module (e.g., implicit-cli specs tested at go/cli/eac/specs/implicit-cli/).
+func findGodogRootForMoniker(cfg *config.EACConfig, moniker, godogTestFile, workspaceRoot string) string {
+	parentType := godogParentComponentType()
+	searchDirs := getRunnerSearchDirs(cfg)
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		for _, comp := range module.Components {
+			if comp == nil || comp.Root == "" || comp.Type != parentType {
+				continue
+			}
+			// Check <componentRoot>/<moniker>/godogTestFile
+			candidate := filepath.ToSlash(filepath.Join(comp.Root, moniker))
+			if fileExists(filepath.Join(workspaceRoot, candidate, godogTestFile)) {
+				goRunnerLog.Debugf("findGodogRootForMoniker: found %s at %s (module %s)", godogTestFile, candidate, module.Moniker)
+				return candidate
+			}
+			// Check runner_search_dirs: <componentRoot>/<searchDir>/<moniker>/godogTestFile
+			for _, dir := range searchDirs {
+				if dir == "." {
+					continue
+				}
+				candidate = filepath.ToSlash(filepath.Join(comp.Root, dir, moniker))
+				if fileExists(filepath.Join(workspaceRoot, candidate, godogTestFile)) {
+					goRunnerLog.Debugf("findGodogRootForMoniker: found %s at %s via search dir %s (module %s)", godogTestFile, candidate, dir, module.Moniker)
+					return candidate
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // findModuleRoot walks up from dir to find the directory containing go.mod.

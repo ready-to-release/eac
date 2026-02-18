@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/clibase/testrunners"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
 
@@ -48,14 +50,17 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 		return moniker
 	}
 
-	// Fallback: handle specs/ directory by convention (specs/<moniker>/**)
+	// Fallback: handle specs directory by convention (<specsRoot>/<moniker>/**)
 	// This maps spec files to their module even if the module doesn't have a specs: component
-	if strings.HasPrefix(relPath, "specs/") {
-		// Extract the moniker from specs/<moniker>/...
-		afterSpecs := strings.TrimPrefix(relPath, "specs/")
+	specsRoot := "specs"
+	if cfg := config.Global(); cfg != nil {
+		specsRoot = cfg.Repository.Paths.SpecsRoot
+	}
+	specsPrefix := specsRoot + "/"
+	if strings.HasPrefix(relPath, specsPrefix) {
+		afterSpecs := strings.TrimPrefix(relPath, specsPrefix)
 		if idx := strings.Index(afterSpecs, "/"); idx > 0 {
 			potentialMoniker := afterSpecs[:idx]
-			// Verify this moniker exists in the registry
 			if _, exists := m.registry.Get(potentialMoniker); exists {
 				return potentialMoniker
 			}
@@ -91,93 +96,77 @@ func (m *ModuleMapper) findModuleByComponentRoot(path string) string {
 }
 
 // GetModuleForPackagePath returns the module moniker for a package path.
-// Package paths are like "go/eac/core/contracts" or for godog:
-// "featureName:go/eac/specs/impl/eac-cli:specs/eac-cli/..."
+// Package paths are like "go/eac/core/contracts" or for BDD:
+// "featureName:testRoot:featurePath" (using the BDDPackagePath protocol).
 // Returns empty string if no module found.
 func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
-	// Handle godog BDD paths: "featureName:testRoot:featurePath"
-	parts := strings.SplitN(pkgPath, ":", 3)
-	if len(parts) == 3 {
-		// Godog format: prefer featurePath (third part) for module lookup.
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+
+	// Runner file convention from godog descriptor for synthetic file matching
+	runnerFile := ""
+	for _, desc := range testrunners.AllDescriptors() {
+		if desc.RunnerFileConvention != "" {
+			runnerFile = desc.RunnerFileConvention
+			break
+		}
+	}
+
+	if p.IsBDD() {
+		// BDD format: prefer featurePath for module lookup.
 		// The spec file unambiguously determines module ownership, while the
-		// testRoot (second part) may reside in a different module (e.g., godog
-		// runners in go/commands/ are owned by the "commands" module, but their
-		// specs in specs/eac_test/ are owned by the "eac" module).
-		if moniker := m.GetModuleForFile(parts[2]); moniker != "" {
+		// testRoot may reside in a different module.
+		if moniker := m.GetModuleForFile(p.FeaturePath); moniker != "" {
 			return moniker
 		}
 		// Fall back to testRoot if feature path didn't resolve
-		if moniker := m.GetModuleForFile(parts[1]); moniker != "" {
+		if moniker := m.GetModuleForFile(p.TestRoot); moniker != "" {
 			return moniker
 		}
-		if moniker := m.GetModuleForFile(parts[1] + "/godog_test.go"); moniker != "" {
-			return moniker
+		if runnerFile != "" {
+			if moniker := m.GetModuleForFile(p.TestRoot + "/" + runnerFile); moniker != "" {
+				return moniker
+			}
 		}
 		return ""
 	}
 
-	var actualPath string
-	if len(parts) == 2 {
-		// Legacy format: "path:featurePath"
-		actualPath = parts[0]
-	} else {
-		actualPath = pkgPath
-	}
-
-	// Try to find module via registry lookup
-	if moniker := m.GetModuleForFile(actualPath); moniker != "" {
+	// Unit test path (single part)
+	if moniker := m.GetModuleForFile(p.TestRoot); moniker != "" {
 		return moniker
 	}
 
-	// Try with synthetic test file to trigger pattern matching
-	if moniker := m.GetModuleForFile(actualPath + "/godog_test.go"); moniker != "" {
-		return moniker
+	// Try with synthetic runner file to trigger pattern matching
+	if runnerFile != "" {
+		if moniker := m.GetModuleForFile(p.TestRoot + "/" + runnerFile); moniker != "" {
+			return moniker
+		}
 	}
 
 	return ""
 }
 
 // BuildModuleOutputPath constructs the output path for a module's test results.
-// Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for godog
-// The new structure is: out/test/<module>/packages/<package>/.
+// Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for BDD.
+// The structure is: out/test/<module>/packages/<package>/.
 func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) string {
 	if moduleMoniker == "" {
-		// No module found, use sanitized package path under "unknown" module
 		return filepath.ToSlash(filepath.Join("unknown", "packages", sanitizePathForLog(pkgPath)))
 	}
 
-	// Handle godog paths: "featureName:testRoot:featurePath"
-	parts := strings.SplitN(pkgPath, ":", 3)
-	if len(parts) == 3 {
-		// Godog format: use module/packages/featureName for cleaner output
-		featureName := parts[0]
-		return filepath.ToSlash(filepath.Join(moduleMoniker, "packages", featureName))
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	if p.IsBDD() {
+		return filepath.ToSlash(filepath.Join(moduleMoniker, "packages", p.FeatureName))
 	}
 
-	// Extract the suffix after the module's directory
-	// e.g., for "go/eac/core/contracts" and module "core", return "core/packages/contracts"
+	// Unit test: extract the suffix after the module's component root
 	normalizedPath := filepath.ToSlash(pkgPath)
-
-	// Handle legacy two-part paths
-	featureSuffix := ""
-	if idx := strings.Index(normalizedPath, ":"); idx >= 0 {
-		featureSuffix = normalizedPath[idx+1:]
-		normalizedPath = normalizedPath[:idx]
-	}
-
-	// Try to find the module root in the path
 	suffix := extractPathSuffix(normalizedPath, moduleMoniker)
 
-	// Build path with packages/ directory
 	result := filepath.Join(moduleMoniker, "packages")
 	if suffix != "" {
 		result = filepath.Join(result, suffix)
 	} else {
-		// If no suffix, use "root" to avoid empty path
 		result = filepath.Join(result, "root")
-	}
-	if featureSuffix != "" {
-		result = filepath.Join(result, sanitizePathForLog(featureSuffix))
 	}
 
 	return filepath.ToSlash(result)

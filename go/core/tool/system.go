@@ -147,7 +147,7 @@ func (ts *ToolSystem) ServerToolIDForType(serverType string) string {
 
 // GetTestTypeComponentType returns the component type for a test type.
 // Uses the tool config's test-type-mapping first, then falls back
-// to the adapter registry, then to built-in defaults.
+// to the adapter registry.
 func (ts *ToolSystem) GetTestTypeComponentType(testType string) string {
 	// 1. Try tool config (data-driven from YAML)
 	if ts.Config != nil && ts.Config.TestTypeMapping != nil {
@@ -161,13 +161,8 @@ func (ts *ToolSystem) GetTestTypeComponentType(testType string) string {
 		return compType
 	}
 
-	// 3. Built-in fallback for well-known types
-	if compType, ok := builtinTestTypeMapping[testType]; ok {
-		return compType
-	}
-
-	// 4. Ultimate fallback
-	return "go"
+	// 3. Return the test type itself as component type (no hardcoded fallback)
+	return testType
 }
 
 // FilterPlatformSupported filters tool IDs to only those supported on the current platform.

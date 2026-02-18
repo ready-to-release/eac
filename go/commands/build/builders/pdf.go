@@ -286,9 +286,20 @@ func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 		return 1
 	}
 
+	// ━━━ Step 5: Copy PDF to module output root ━━━
+	// The old MkDocs handler moved PDFs to the module root (out/build/{module}/)
+	// for easy access. Replicate that behavior here.
+	moduleOutputDir := paths.BuildOutputPath(workspaceRoot, concrete.Moniker)
+	dstPdf := filepath.Join(moduleOutputDir, fmt.Sprintf("%s-%s.pdf", bookName, theme))
+	if err := copyFile(pdfPath, dstPdf); err != nil {
+		Logln(logWriter, "⚠️  Failed to copy PDF to module root: %v", err)
+	} else {
+		Logln(logWriter, "   📄 %s-%s.pdf → module output root", bookName, theme)
+	}
+
 	totalDuration := time.Since(startTime)
 	Logln(logWriter, "✅ PDF build complete (%s theme)", theme)
-	Logln(logWriter, "   PDF Output: %s", pdfPath)
+	Logln(logWriter, "   PDF Output: %s", dstPdf)
 	Logln(logWriter, "   Duration: %v", totalDuration.Round(time.Millisecond))
 
 	return 0

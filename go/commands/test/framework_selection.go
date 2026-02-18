@@ -47,12 +47,26 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	// Verify system dependencies using tool registry
 	registry := tool.GlobalRegistry()
 	sysResults := registry.VerifyAll(toolIDs)
-	var missing []string
+	missingSet := make(map[string]bool)
 	for _, result := range sysResults {
-		if !result.Available {
-			missing = append(missing, result.ToolID)
+		if result.Available || result.Skipped {
+			continue
 		}
+		// When a tool resolves to a container variant (via auto fallback or
+		// explicit container binding), its real dependency is docker, not the
+		// tool itself. Report "docker" instead of the tool name.
+		resolvedTool, ok := registry.Get(result.ToolID)
+		if ok && resolvedTool.Type == tool.ToolTypeContainer {
+			missingSet["docker"] = true
+			continue
+		}
+		missingSet[result.ToolID] = true
 	}
+	missing := make([]string, 0, len(missingSet))
+	for dep := range missingSet {
+		missing = append(missing, dep)
+	}
+	sort.Strings(missing)
 
 	if len(missing) > 0 {
 		ctx.WriteInit("❌ Required system dependencies are missing: %s", strings.Join(missing, ", "))

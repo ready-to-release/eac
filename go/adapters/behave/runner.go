@@ -26,10 +26,18 @@ func init() {
 func RegisterWith(reg *testrunners.Registry) {
 	reg.Register(&BehaveRunner{})
 	reg.RegisterDescriptor(&testrunners.TestTypeDescriptor{
-		TestType:      "behave",
-		IsBDD:         true,
-		ComponentType: "gherkin",
-		MonikerStyle:  "feature",
+		TestType:            "behave",
+		IsBDD:               true,
+		ComponentType:       "gherkin",
+		MonikerStyle:        "feature",
+		Language:            "python",
+		ParentComponentType: "python",
+		ModuleManifestFile:  "pyproject.toml",
+		DefaultLevel:        "@L2",
+		DefaultDepTag:       "@deps:python",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "behave-report", Pattern: "behave.json", Type: "behave-report"},
+		},
 		FeatureTestTypeResolver: func(info testrunners.FeatureModuleInfo) bool {
 			return info.HasPython
 		},
@@ -71,7 +79,12 @@ func (r *BehaveRunner) GetTestInfo(ref testing.TestReference, workspaceRoot stri
 	}
 	relPath = filepath.ToSlash(relPath)
 
-	info := &testrunners.TestInfo{Language: "python"}
+	// Language from descriptor — no hardcoded string
+	lang := "python"
+	if desc := testrunners.GetDescriptor("behave"); desc != nil && desc.Language != "" {
+		lang = desc.Language
+	}
+	info := &testrunners.TestInfo{Language: lang}
 
 	// Extract module moniker from specs path
 	specsPrefix := eacCfg.Repository.Paths.SpecsRoot + "/"
@@ -127,12 +140,18 @@ func (r *BehaveRunner) FindTestRoot(featurePath string, cfg any) string {
 		return ""
 	}
 
-	// Return the module's Python component root
-	pyRoot := module.Components.GetComponentRoot("python")
-	if pyRoot == "" {
-		return ""
+	// Return the module's parent component root.
+	// Use GetFirstByType (not GetComponentRoot) because the component's map key
+	// is derived from the root path, not the type.
+	// ParentComponentType comes from the descriptor (e.g., "python").
+	parentType := "python"
+	if desc := testrunners.GetDescriptor("behave"); desc != nil && desc.ParentComponentType != "" {
+		parentType = desc.ParentComponentType
 	}
-	return filepath.ToSlash(pyRoot)
+	if _, comp := module.Components.GetFirstByType(parentType); comp != nil && comp.Root != "" {
+		return filepath.ToSlash(comp.Root)
+	}
+	return ""
 }
 
 // BuildPackagePath constructs the package path for test grouping.
@@ -161,27 +180,13 @@ type parsedPackagePath struct {
 	relFeatureFile string
 }
 
-// parsePackagePath parses a package path in the format "featureName:moduleRoot:featurePath"
-// or "moduleRoot" into its component parts.
+// parsePackagePath parses a package path using the BDDPackagePath protocol.
 func parsePackagePath(pkgPath string) parsedPackagePath {
-	parts := strings.Split(pkgPath, ":")
-	switch len(parts) {
-	case 3:
-		return parsedPackagePath{
-			displayName:    parts[0] + ":" + parts[1],
-			relPkgPath:     parts[1],
-			relFeatureFile: parts[2],
-		}
-	case 1:
-		return parsedPackagePath{
-			displayName: parts[0],
-			relPkgPath:  parts[0],
-		}
-	default:
-		return parsedPackagePath{
-			displayName: pkgPath,
-			relPkgPath:  pkgPath,
-		}
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	return parsedPackagePath{
+		displayName:    p.DisplayName(),
+		relPkgPath:     p.TestRoot,
+		relFeatureFile: p.FeaturePath,
 	}
 }
 
@@ -230,8 +235,12 @@ func (r *BehaveRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 
 	moduleRoot := filepath.Join(cfg.WorkspaceRoot, pkg.relPkgPath)
 
-	// Check if pyproject.toml exists
-	pyprojectToml := filepath.Join(moduleRoot, "pyproject.toml")
+	// Check if module manifest file exists (from descriptor: "pyproject.toml")
+	manifestFile := "pyproject.toml"
+	if desc := testrunners.GetDescriptor("behave"); desc != nil && desc.ModuleManifestFile != "" {
+		manifestFile = desc.ModuleManifestFile
+	}
+	pyprojectToml := filepath.Join(moduleRoot, manifestFile)
 	if _, err := os.Stat(pyprojectToml); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "No pyproject.toml found at %s\n", pyprojectToml)
 		result.PackageFailed = true

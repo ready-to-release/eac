@@ -39,9 +39,9 @@ func TestRenderSelectedHelp(t *testing.T) {
 		{"CPU", "CPU pressure lamps", "CPU:"},
 		{"Progress", "Overall progress bar", "Progress:"},
 		{"Memory", "Memory usage", "Memory:"},
-		{"Docker Mem", "Docker memory pool", "Docker Mem:"},
+		{"Mem", "Docker memory pool", "Mem:"},
 		{"Host", "Host scheduler lamps", "Host:"},
-		{"Docker", "Docker scheduler lamps", "Docker:"},
+		{"Pressure", "Docker scheduler lamps", "Pressure:"},
 		{"Slots", "Scheduler slots", "Slots:"},
 		{"Counters", "Progress counters", "Counters:"},
 		{"Freeze", "Click to pause auto-exit", "Freeze:"},
@@ -125,7 +125,7 @@ func TestGetModuleName(t *testing.T) {
 }
 
 // TestLayoutMetricsConsistency validates that calculateLayoutMetrics() produces
-// correct fixed values for the 2-section layout (side-by-side + status bar).
+// correct fixed values for the 3-section layout (top bar + side-by-side + bottom bar).
 func TestLayoutMetricsConsistency(t *testing.T) {
 	// Initialize bubblezone manager (required for rendering)
 	zone.NewGlobal()
@@ -164,13 +164,13 @@ func TestLayoutMetricsConsistency(t *testing.T) {
 				t.Errorf("ComponentsStart should always be 1, got %d", metrics.ComponentsStart)
 			}
 
-			// SummaryLines is always 5 (header + data + help + lamps + footer)
-			if metrics.SummaryLines != 5 {
-				t.Errorf("SummaryLines should be 5, got %d", metrics.SummaryLines)
+			// SummaryLines is always 7 (top bar 4 + bottom bar 3)
+			if metrics.SummaryLines != 7 {
+				t.Errorf("SummaryLines should be 7, got %d", metrics.SummaryLines)
 			}
 
 			// RemainingHeight = height - SummaryLines, min 5
-			expectedRemaining := tt.height - 5
+			expectedRemaining := tt.height - 7
 			if expectedRemaining < 5 {
 				expectedRemaining = 5
 			}

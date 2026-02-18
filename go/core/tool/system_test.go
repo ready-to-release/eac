@@ -111,14 +111,15 @@ func TestToolSystem_GetToolImageWithDefault(t *testing.T) {
 func TestToolSystem_GetTestTypeComponentType(t *testing.T) {
 	ts := NewToolSystemForTesting()
 
+	// Without adapters registered, unregistered types return themselves
 	tests := []struct {
 		testType string
 		want     string
 	}{
-		{"gotest", "go"},
-		{"godog", "gherkin"},
-		{"mocha", "typescript"},
-		{"unknown", "go"}, // fallback
+		{"gotest", "gotest"},
+		{"godog", "godog"},
+		{"mocha", "mocha"},
+		{"unknown", "unknown"},
 	}
 
 	for _, tt := range tests {

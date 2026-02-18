@@ -27,10 +27,18 @@ func init() {
 
 	// Register descriptor for gotest type
 	testrunners.RegisterDescriptor(&testrunners.TestTypeDescriptor{
-		TestType:      "gotest",
-		IsBDD:         false,
-		ComponentType: "go",
-		MonikerStyle:  "file",
+		TestType:            "gotest",
+		IsBDD:               false,
+		ComponentType:       "go",
+		MonikerStyle:        "file",
+		Language:            "go",
+		ParentComponentType: "go",
+		DefaultLevel:        "@L1",
+		DefaultDepTag:       "@deps:go",
+		OutputArtifacts: []testrunners.ArtifactPattern{
+			{ID: "ctrf-report", Pattern: "unit.json", Type: "ctrf-report"},
+			{ID: "coverage", Pattern: "coverage.out", Type: "coverage"},
+		},
 		DefaultInferences: []testrunners.Inference{
 			{
 				TestTypes:   []string{"gotest"},
@@ -70,7 +78,12 @@ func (r *GoTestRunner) GetTestInfo(ref testing.TestReference, workspaceRoot stri
 	}
 	relPath = filepath.ToSlash(relPath)
 
-	info := &testrunners.TestInfo{Language: "go"}
+	// Language from descriptor — no hardcoded string
+	lang := "go"
+	if desc := testrunners.GetDescriptor(ref.Type); desc != nil && desc.Language != "" {
+		lang = desc.Language
+	}
+	info := &testrunners.TestInfo{Language: lang}
 
 	if ref.Type == "godog" {
 		// BDD test: extract from specs path
@@ -181,6 +194,13 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 		// Qualified: find godog root for this component
 		basePath := eacCfg.Repository.TestImplPathForQualifier(moniker, qualifier)
 		if basePath == "" {
+			// Fallback: search all modules' Go component roots for a directory
+			// matching the qualifier. This handles the common case where spec dirs
+			// are named after the CLI (e.g., "eac_work") but the godog runners
+			// live in a different module (e.g., "commands" at go/commands/repository/work).
+			basePath = findGodogRootAcrossModules(eacCfg, qualifier, godogTestFile, workspaceRoot)
+		}
+		if basePath == "" {
 			goRunnerLog.Debugf("FindTestRoot: no godog root for %s qualifier %s", moniker, qualifier)
 			return ""
 		}
@@ -205,6 +225,12 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 	// Unqualified: existing single-root logic (backward compat for core, repository)
 	basePath := eacCfg.Repository.TestImplPath(moniker)
 	if basePath == "" {
+		// Fallback: search all modules for a godog runner matching this moniker.
+		// Handles modules with no Go components whose godog tests live in another
+		// module (e.g., implicit-cli specs tested by go/cli/eac/specs/implicit-cli/).
+		if found := findGodogRootForMoniker(eacCfg, moniker, godogTestFile, workspaceRoot); found != "" {
+			return found
+		}
 		goRunnerLog.Debugf("FindTestRoot: no test-impl path for module %s", moniker)
 		return ""
 	}
@@ -226,17 +252,23 @@ func (r *GoTestRunner) FindTestRoot(featurePath string, cfg any) string {
 	}
 
 	// Try runner_search_dirs from godog component kind (blueprints.yml convention)
-	if eacCfg.ComponentKinds != nil {
-		if godogKind := eacCfg.ComponentKinds.Get("godog"); godogKind != nil {
-			for _, dir := range godogKind.RunnerSearchDirs {
-				if dir == "." {
-					continue // Already checked basePath directly
-				}
-				searchPath := filepath.ToSlash(filepath.Join(basePath, dir))
-				if fileExists(filepath.Join(workspaceRoot, searchPath, godogTestFile)) {
-					goRunnerLog.Debugf("FindTestRoot: found %s at runner_search_dir %s", godogTestFile, searchPath)
-					return searchPath
-				}
+	searchDirs := getRunnerSearchDirs(eacCfg)
+	for _, dir := range searchDirs {
+		if dir == "." {
+			continue // Already checked basePath directly
+		}
+		searchPath := filepath.ToSlash(filepath.Join(basePath, dir))
+		if fileExists(filepath.Join(workspaceRoot, searchPath, godogTestFile)) {
+			goRunnerLog.Debugf("FindTestRoot: found %s at runner_search_dir %s", godogTestFile, searchPath)
+			return searchPath
+		}
+		// Also try subdirectories within the search dir
+		// (e.g., go/cli/eac/specs/installer/ for specs/eac/installer/...)
+		for i := 1; i < len(parts)-1; i++ {
+			subPath := filepath.ToSlash(filepath.Join(searchPath, strings.Join(parts[1:i+1], "/")))
+			if fileExists(filepath.Join(workspaceRoot, subPath, godogTestFile)) {
+				goRunnerLog.Debugf("FindTestRoot: found %s at runner_search_dir subPath %s", godogTestFile, subPath)
+				return subPath
 			}
 		}
 	}
@@ -264,29 +296,13 @@ type parsedGoTestPkg struct {
 	relFeatureFile string
 }
 
-// parseGoTestPackagePath parses a package path in "featureName:testRoot:featurePath" or "testRoot" format.
+// parseGoTestPackagePath parses a package path using the BDDPackagePath protocol.
 func parseGoTestPackagePath(pkgPath string) parsedGoTestPkg {
-	parts := strings.Split(pkgPath, ":")
-	switch len(parts) {
-	case 3:
-		// BDD format: featureName:testRoot:featurePath
-		return parsedGoTestPkg{
-			displayName:    parts[0] + ":" + parts[1],
-			relPkgPath:     parts[1],
-			relFeatureFile: parts[2],
-		}
-	case 1:
-		// Unit test format: just the package path
-		return parsedGoTestPkg{
-			displayName: parts[0],
-			relPkgPath:  parts[0],
-		}
-	default:
-		// Fallback for unexpected format
-		return parsedGoTestPkg{
-			displayName: pkgPath,
-			relPkgPath:  pkgPath,
-		}
+	p := testrunners.ParseBDDPackagePath(pkgPath)
+	return parsedGoTestPkg{
+		displayName:    p.DisplayName(),
+		relPkgPath:     p.TestRoot,
+		relFeatureFile: p.FeaturePath,
 	}
 }
 
@@ -382,8 +398,13 @@ func (r *GoTestRunner) Execute(pkgPath string, tests []testing.TestReference, lo
 
 	goTestArgs := buildGoTestArgs(suiteTagFilterStr, cfg)
 
-	// Build environment overrides
-	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
+	// Build environment overrides — use convention from config, not hardcoded filename
+	eacCfg := config.Global()
+	godogTestFile := "godog_test.go"
+	if eacCfg != nil {
+		godogTestFile = eacCfg.Repository.Conventions.GodogTest
+	}
+	isGodogTest := fileExists(filepath.Join(actualPkgDir, godogTestFile))
 
 	if isGodogTest {
 		// Disable Go test caching for godog tests. Go's cache doesn't track

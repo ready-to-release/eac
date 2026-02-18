@@ -336,19 +336,19 @@ func discoverTestsInFile(filePath, moniker, packageType string, dc *DiscoveryCon
 }
 
 // getTestFrameworkForPackage returns the test framework for a package type.
-// Used when inferring test framework from module packages:
-// - go → "go" (go test)
-// - typescript → "mocha"
-// - Returns empty string if not configured - caller must handle.
+// Uses the testFrameworkProvider (set by config layer) to map component types
+// to their first tester from blueprints.yml. Falls back to component type = tool type.
 func getTestFrameworkForPackage(packageType string) string {
-	switch packageType {
-	case "go":
-		return "go"
-	case "typescript":
-		return "mocha"
-	default:
-		return ""
+	providerMu.RLock()
+	fn := testFrameworkProvider
+	providerMu.RUnlock()
+	if fn != nil {
+		if result := fn(packageType); result != "" {
+			return result
+		}
 	}
+	// Fallback: component type equals tool type (e.g., "go" -> "go")
+	return packageType
 }
 
 // getFeatureTestTypeForModule returns the test type for Gherkin feature files.

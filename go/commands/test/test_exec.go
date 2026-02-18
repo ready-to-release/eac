@@ -88,10 +88,18 @@ func (ctx *TestExecutionContext) runPackageTests(goCtx context.Context, modulePa
 	testType := getPackageTestType(tests)
 	testRunner := testrunners.Get(testType)
 
-	// Extract module moniker from modulePath (format: "<moniker>/<subpath>" or just "<moniker>")
-	moduleMoniker := modulePath
-	if idx := strings.Index(modulePath, "/"); idx > 0 {
-		moduleMoniker = modulePath[:idx]
+	// Extract module moniker using the module mapper which correctly handles
+	// godog BDD paths (format: "featureName:testRoot:featurePath")
+	moduleMoniker := ""
+	if ctx.moduleMapper != nil {
+		moduleMoniker = ctx.moduleMapper.GetModuleForPackagePath(originalPkgPath)
+	}
+	if moduleMoniker == "" {
+		// Fallback: simple extraction from modulePath
+		moduleMoniker = modulePath
+		if idx := strings.Index(modulePath, "/"); idx > 0 {
+			moduleMoniker = modulePath[:idx]
+		}
 	}
 
 	// Get effective test run dir (routes to correct suite folder for composite suites)

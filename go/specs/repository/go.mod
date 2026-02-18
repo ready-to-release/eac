@@ -9,6 +9,7 @@ require (
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
+	github.com/ready-to-release/eac/go/adapters/mocha v0.0.0-20260218114849-0df2617bed4c
 	github.com/ready-to-release/eac/go/core v0.0.0
 	gopkg.in/yaml.v3 v3.0.1
 )

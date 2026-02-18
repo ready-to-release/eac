@@ -1242,6 +1242,11 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 // ApplyComponentDefaults resolves component roots and patterns from blueprints.yml component-kinds.
 // This should be called after ComponentTypes are loaded.
 func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfig, repoRoot string) {
+	specsRoot := c.Paths.SpecsRoot
+	if specsRoot == "" {
+		specsRoot = "specs"
+	}
+
 	// Collect all module monikers for cross-module specs deduplication
 	monikers := make(map[string]bool, len(c.Modules))
 	for _, m := range c.Modules {
@@ -1252,13 +1257,13 @@ func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfi
 	for i := range c.Modules {
 		m := &c.Modules[i]
 		m.resolveComponentRoots(compTypes)
-		m.inferDefaultSpecsComponent(repoRoot)
+		m.inferDefaultSpecsComponent(repoRoot, specsRoot)
 		m.inferBDDSpecsRoots(repoRoot, monikers)
-		m.inferDesignComponents(repoRoot)
+		m.inferDesignComponents(repoRoot, specsRoot)
 		m.resolveDerivedPaths()
 	}
 
-	// Pass 2: Claim unclaimed specs/{moniker}_* directories.
+	// Pass 2: Claim unclaimed <specsRoot>/{moniker}_* directories.
 	// This runs after all modules have created their gherkin components,
 	// so we can check for conflicts (e.g., specs/eac_* claimed by commands
 	// module via inferBDDSpecsRoots should not also be claimed by eac module).
@@ -1271,7 +1276,7 @@ func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentKindsConfi
 		}
 	}
 	for i := range c.Modules {
-		c.Modules[i].inferSubSpecsComponents(repoRoot, claimedRoots)
+		c.Modules[i].inferSubSpecsComponents(repoRoot, specsRoot, claimedRoots)
 	}
 }
 
@@ -1364,7 +1369,7 @@ func (m *Module) expandBDDRunners(compTypes *ComponentKindsConfig) {
 //
 // Directories that already have a gherkin/specs component are skipped.
 // Only directories that exist on disk are added.
-func (m *Module) inferDefaultSpecsComponent(repoRoot string) {
+func (m *Module) inferDefaultSpecsComponent(repoRoot, specsRoot string) {
 	if repoRoot == "" {
 		return
 	}
@@ -1413,8 +1418,8 @@ func (m *Module) inferDefaultSpecsComponent(repoRoot string) {
 		})
 	}
 
-	// Default specs root: specs/{moniker}
-	addDir(path.Join("specs", m.Moniker), m.Moniker+"-specs")
+	// Default specs root: <specsRoot>/{moniker}
+	addDir(path.Join(specsRoot, m.Moniker), m.Moniker+"-specs")
 
 	// Sort additions by name for deterministic ordering
 	sort.Slice(additions, func(i, j int) bool {
@@ -1432,7 +1437,7 @@ func (m *Module) inferDefaultSpecsComponent(repoRoot string) {
 // so we skip directories already claimed by another module's inferBDDSpecsRoots.
 // Example: specs/adapters_godog belongs to the adapters module; specs/eac_create
 // belongs to the commands module (claimed via godog_test.go scanning in pass 1).
-func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[string]bool) {
+func (m *Module) inferSubSpecsComponents(repoRoot, specsRoot string, claimedRoots map[string]bool) {
 	if repoRoot == "" {
 		return
 	}
@@ -1443,7 +1448,7 @@ func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[strin
 	}
 	var additions []addition
 
-	specsDir := filepath.Join(repoRoot, "specs")
+	specsDir := filepath.Join(repoRoot, specsRoot)
 	prefix := m.Moniker + "_"
 	entries, err := os.ReadDir(specsDir)
 	if err != nil {
@@ -1457,21 +1462,21 @@ func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[strin
 		if !strings.HasPrefix(name, prefix) {
 			continue
 		}
-		specsRoot := path.Join("specs", name)
-		if claimedRoots[specsRoot] {
+		specsPath := path.Join(specsRoot, name)
+		if claimedRoots[specsPath] {
 			continue
 		}
 		compName := name
 		if _, exists := m.Components[compName]; exists {
 			compName = name + "-specs"
 		}
-		claimedRoots[specsRoot] = true
+		claimedRoots[specsPath] = true
 		additions = append(additions, addition{
 			name: compName,
 			entry: &ComponentEntry{
 				Name: compName,
 				Type: "gherkin",
-				Root: specsRoot,
+				Root: specsPath,
 			},
 		})
 	}
@@ -1494,7 +1499,7 @@ func (m *Module) inferSubSpecsComponents(repoRoot string, claimedRoots map[strin
 //   - specs/{moniker}_{qualifier}/.design/workspace.dsl → component-level design ({qualifier}~design)
 //
 // Components already having a design facet (from explicit declaration) are skipped.
-func (m *Module) inferDesignComponents(repoRoot string) {
+func (m *Module) inferDesignComponents(repoRoot, specsRoot string) {
 	if repoRoot == "" {
 		return
 	}
@@ -1535,15 +1540,15 @@ func (m *Module) inferDesignComponents(repoRoot string) {
 		})
 	}
 
-	// 1. Module-level design: specs/{moniker}/.design/workspace.dsl
-	designRoot := path.Join("specs", m.Moniker, ".design")
+	// 1. Module-level design: <specsRoot>/{moniker}/.design/workspace.dsl
+	designRoot := path.Join(specsRoot, m.Moniker, ".design")
 	designFile := filepath.Join(repoRoot, designRoot, "workspace.dsl")
 	if _, err := os.Stat(designFile); err == nil {
 		addDesign(m.Moniker+FacetSeparator+"design", designRoot)
 	}
 
-	// 2. Component-level design: specs/{moniker}_{qualifier}/.design/workspace.dsl
-	specsDir := filepath.Join(repoRoot, "specs")
+	// 2. Component-level design: <specsRoot>/{moniker}_{qualifier}/.design/workspace.dsl
+	specsDir := filepath.Join(repoRoot, specsRoot)
 	prefix := m.Moniker + "_"
 	entries, err := os.ReadDir(specsDir)
 	if err == nil {
@@ -1556,7 +1561,7 @@ func (m *Module) inferDesignComponents(repoRoot string) {
 				continue
 			}
 			qualifier := strings.TrimPrefix(name, prefix)
-			subDesignRoot := path.Join("specs", name, ".design")
+			subDesignRoot := path.Join(specsRoot, name, ".design")
 			subDesignFile := filepath.Join(repoRoot, subDesignRoot, "workspace.dsl")
 			if _, err := os.Stat(subDesignFile); err == nil {
 				addDesign(qualifier+FacetSeparator+"design", subDesignRoot)
@@ -1564,15 +1569,15 @@ func (m *Module) inferDesignComponents(repoRoot string) {
 		}
 	}
 
-	// 3. Sub-component design: specs/{moniker}/{sub}/.design/workspace.dsl
-	moduleSpecsDir := filepath.Join(repoRoot, "specs", m.Moniker)
+	// 3. Sub-component design: <specsRoot>/{moniker}/{sub}/.design/workspace.dsl
+	moduleSpecsDir := filepath.Join(repoRoot, specsRoot, m.Moniker)
 	subEntries, err := os.ReadDir(moduleSpecsDir)
 	if err == nil {
 		for _, dirEntry := range subEntries {
 			if !dirEntry.IsDir() || dirEntry.Name() == ".design" {
 				continue
 			}
-			subDesignRoot := path.Join("specs", m.Moniker, dirEntry.Name(), ".design")
+			subDesignRoot := path.Join(specsRoot, m.Moniker, dirEntry.Name(), ".design")
 			subDesignFile := filepath.Join(repoRoot, subDesignRoot, "workspace.dsl")
 			if _, err := os.Stat(subDesignFile); err == nil {
 				addDesign(dirEntry.Name()+FacetSeparator+"design", subDesignRoot)
