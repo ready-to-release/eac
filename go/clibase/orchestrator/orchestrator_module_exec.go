@@ -297,7 +297,7 @@ func (o *Orchestrator) markWorkItemCompleted(moniker string, result *WorkResult)
 	if o.display != nil {
 		o.display.markCompleted(result)
 	}
-	o.tuiMarkCompleted(moniker, result.ExitCode)
+	o.tuiMarkCompleted(moniker, result.ExitCode, result.Duration)
 }
 
 // sanitizedMoniker returns a filesystem-safe display name for a moniker.

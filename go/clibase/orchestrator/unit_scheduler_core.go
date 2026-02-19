@@ -543,7 +543,7 @@ func (us *UnitScheduler) markUnitComplete(spec workunit.UnitSpec, result *UnitRe
 	// which may trigger OnComplete → SendSummary → TUI exit.
 	// Use Longname() to match the ID format used in SetInitSummary
 	moniker := spec.ID.Longname()
-	us.tuiMarkCompleted(moniker, result.ExitCode)
+	us.tuiMarkCompleted(moniker, result.ExitCode, result.Duration)
 
 	// Send result to summary builder for incremental summary computation
 	if us.summaryBuilder != nil {

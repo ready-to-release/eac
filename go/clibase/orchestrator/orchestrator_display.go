@@ -134,7 +134,7 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 }
 
 // tuiMarkCompleted removes a module from running, increments completed count, and reports exit code.
-func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int) {
+func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int, duration time.Duration) {
 	o.tuiMu.Lock()
 	// Remove from running list
 	for i, m := range o.tuiRunning {
@@ -155,6 +155,7 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int) {
 		Time:     time.Now(),
 		ID:       moniker,
 		ExitCode: exitCode,
+		Duration: duration,
 	})
 	o.emit(core.ProgressUpdateEvent{
 		Time:      time.Now(),

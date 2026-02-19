@@ -43,7 +43,7 @@ func TestTuiMarkCompleted_AlwaysIncrements(t *testing.T) {
 	}
 
 	// Test 1: Normal completion (not early cached)
-	us.tuiMarkCompleted("mod1:comp1", 0)
+	us.tuiMarkCompleted("mod1:comp1", 0, 0)
 	us.tuiMu.Lock()
 	assert.Equal(t, 1, us.tuiCompleted, "counter should increment for normal completion")
 	us.tuiMu.Unlock()
@@ -54,13 +54,13 @@ func TestTuiMarkCompleted_AlwaysIncrements(t *testing.T) {
 		Module:    "mod1",
 		Component: "comp2",
 	})
-	us.tuiMarkCompleted("mod1:comp2", -1) // -1 = cached
+	us.tuiMarkCompleted("mod1:comp2", -1, 0) // -1 = cached
 	us.tuiMu.Lock()
 	assert.Equal(t, 2, us.tuiCompleted, "counter should increment even for early-cached items")
 	us.tuiMu.Unlock()
 
 	// Test 3: Another normal completion
-	us.tuiMarkCompleted("mod1:comp3", 0)
+	us.tuiMarkCompleted("mod1:comp3", 0, 0)
 	us.tuiMu.Lock()
 	assert.Equal(t, 3, us.tuiCompleted, "counter should be 3 after all completions")
 	us.tuiMu.Unlock()
@@ -76,7 +76,7 @@ func TestTuiMarkCompleted_RemovesFromRunning(t *testing.T) {
 	}
 
 	// Complete first item
-	us.tuiMarkCompleted("mod1:comp1", 0)
+	us.tuiMarkCompleted("mod1:comp1", 0, 0)
 
 	us.tuiMu.Lock()
 	assert.Equal(t, 1, us.tuiCompleted)
@@ -84,7 +84,7 @@ func TestTuiMarkCompleted_RemovesFromRunning(t *testing.T) {
 	us.tuiMu.Unlock()
 
 	// Complete second item
-	us.tuiMarkCompleted("mod1:comp2", 0)
+	us.tuiMarkCompleted("mod1:comp2", 0, 0)
 
 	us.tuiMu.Lock()
 	assert.Equal(t, 2, us.tuiCompleted)

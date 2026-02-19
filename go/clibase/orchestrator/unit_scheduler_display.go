@@ -322,7 +322,7 @@ func (us *UnitScheduler) tuiMarkRunning(moniker string) {
 // Counter updates happen regardless of observer presence - workers are the sole source of truth.
 // moniker is the globally unique ID (Longname) for matching.
 // Emits UnitCompletedEvent and ProgressUpdateEvent to observers.
-func (us *UnitScheduler) tuiMarkCompleted(moniker string, exitCode int) {
+func (us *UnitScheduler) tuiMarkCompleted(moniker string, exitCode int, duration time.Duration) {
 	// Update counters under lock (always)
 	// Workers are the sole source of truth for completion counting.
 	// Background cache detection marks items visually but does NOT count.
@@ -347,6 +347,7 @@ func (us *UnitScheduler) tuiMarkCompleted(moniker string, exitCode int) {
 		Time:     time.Now(),
 		ID:       moniker,
 		ExitCode: exitCode,
+		Duration: duration,
 	})
 	pressureTarget := 0
 	if us.semaphore != nil {

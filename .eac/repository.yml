@@ -408,6 +408,7 @@ modules:
   - moniker: cli-installers
     description: Cross-platform installer scripts and specs for the EAC and CLIE CLI tools
     depends_on: [eac, clie]
+    depends_on_ci: [eac]
     components:
       - type: bash
         root: scripts/sh/eac
