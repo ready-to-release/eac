@@ -4,15 +4,14 @@ package tool
 
 import (
 	"os/exec"
-	"syscall"
 )
 
-// SetProcessGroup puts the command in a new process group on Windows.
-// CREATE_NEW_PROCESS_GROUP allows terminating the group independently.
+// SetProcessGroup is a no-op on Windows.
+// Go 1.21+ uses job objects via exec.CommandContext for child process termination,
+// making CREATE_NEW_PROCESS_GROUP unnecessary. That flag also breaks grandchild
+// processes (e.g., go test spawning PowerShell) by causing exit code 0xFFFFFFFF.
 func SetProcessGroup(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-	}
+	// no-op: job objects handle process tree cleanup on Windows
 }
 
 // KillProcessGroup kills the process on Windows.
