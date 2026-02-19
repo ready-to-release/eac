@@ -159,9 +159,9 @@ func TestLayoutMetricsConsistency(t *testing.T) {
 			}
 			metrics := m.calculateLayoutMetrics()
 
-			// ComponentsStart is always 1 (panel header only, no resources pane)
-			if metrics.ComponentsStart != 1 {
-				t.Errorf("ComponentsStart should always be 1, got %d", metrics.ComponentsStart)
+			// ComponentsStart is always 5: top bar (4 rows, last has no trailing \n) + panel header (1)
+			if metrics.ComponentsStart != 5 {
+				t.Errorf("ComponentsStart should always be 5, got %d", metrics.ComponentsStart)
 			}
 
 			// SummaryLines is always 7 (top bar 4 + bottom bar 3)

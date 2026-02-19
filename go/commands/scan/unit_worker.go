@@ -160,15 +160,13 @@ func acquireLockAndResolveRoot(pipeline *cmdframework.UnitPipeline, ctx *cmdfram
 }
 
 // dispatchSingleScanner handles the 3-part key case where a specific scanner type is specified.
+// The scannerTypeStr is already a resolved tool ID (e.g., "trivy-sbom", "semgrep") from
+// ComponentResolver.ResolveForScan, not a category name.
 func dispatchSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract,
 	moniker, compName, componentRoot, scannerTypeStr string, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 
-	toolID := tool.ScannerToolIDForCategory(scannerTypeStr)
-	if toolID == "" {
-		output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
-		return 1
-	}
-	return runUnitScanner(ctx, module, moniker, compName, componentRoot, evidence.ScannerType(toolID), multiCfg, logWriter)
+	// scannerTypeStr is already the tool ID from spec.ID.Tool (resolved by ComponentResolver)
+	return runUnitScanner(ctx, module, moniker, compName, componentRoot, evidence.ScannerType(scannerTypeStr), multiCfg, logWriter)
 }
 
 // dispatchAllScanners handles the 2-part key case where all scanners from the component type
@@ -290,7 +288,7 @@ func computeScanInputHash(ctx *cmdframework.ExecutionContext, module *modules.Mo
 
 // writeUoWScanManifest writes a UoW manifest for a successful scan.
 func writeUoWScanManifest(ctx *cmdframework.ExecutionContext, sctx *scanContext, moniker, compType, component, tool, inputHash string, startTime time.Time) {
-	// Initialize tracker if needed
+	// Tracker is initialized in multiScanAfterInit; fallback for safety
 	sctx.mu.Lock()
 	if sctx.tracker == nil {
 		sctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, core.ActionScan)
@@ -425,138 +423,6 @@ func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewor
 	return outputPath, nil
 }
 
-// multiScanWorker runs all configured scanners for a single module.
-func multiScanWorker(_ context.Context, ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	multiCfg, ok := ctx.Config.MultiScanConfig.(*MultiScanConfig)
-	if !ok {
-		output.Writeln(logWriter, "Error: multiScanConfig not found or wrong type")
-		return 1
-	}
-
-	// Get module to determine its type
-	module, exists := ctx.ModuleRegistry.Get(moniker)
-	if !exists {
-		output.Writeln(logWriter, "Error: module not found: %s", moniker)
-		return 1
-	}
-
-	// Acquire lock for this module with wait
-	lockCfg := locking.ScanConfig(moniker, paths.OutSecurityRelPath) // OutSecurityRelPath = "out/scan"
-	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
-	if err != nil {
-		output.Writeln(logWriter, "Error: %v", err)
-		return 1
-	}
-	defer locking.ReleaseTracked(lockFile)
-
-	// Determine which scanners to run
-	var scannersList []evidence.ScannerType
-	if len(multiCfg.Scanners) > 0 {
-		scannersList = multiCfg.Scanners
-	} else {
-		// Get scanners from component types for each of the module's components
-		seenScanners := make(map[string]bool)
-		for _, componentName := range module.GetEnabledComponents() {
-			compTypeName := module.Components.GetComponentType(componentName)
-			compType := ctx.EACConfig.ComponentKinds.Get(compTypeName)
-			if compType == nil || !compType.IsScannable() {
-				continue // Skip non-scannable component types
-			}
-			for _, s := range compType.GetScanners() {
-				if !seenScanners[s] {
-					if toolID := tool.ScannerToolIDForCategory(s); toolID != "" {
-						scannersList = append(scannersList, evidence.ScannerType(toolID))
-						seenScanners[s] = true
-					}
-				}
-			}
-		}
-	}
-
-	if len(scannersList) == 0 {
-		output.Writeln(logWriter, "⚠️  No scannable components in module: %s", module.GetComponentTypesDisplay())
-		return 0
-	}
-
-	// Run each scanner sequentially
-	exitCode := 0
-	for _, scannerType := range scannersList {
-		result := runSingleScanner(ctx, module, scannerType, multiCfg, logWriter)
-		if result != 0 {
-			exitCode = 1 // Mark as failed but continue with other scanners
-		}
-	}
-
-	return exitCode
-}
-
-// runSingleScanner runs a single scanner for a module.
-func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType evidence.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
-	emoji := getScannerEmoji(scannerType)
-
-	// Parallelism controlled by orchestrator's weighted semaphore via component weights
-	output.Writeln(logWriter, "%s Running %s scanner...", emoji, scannerType)
-	scanStart := time.Now()
-
-	// Create scan config for this scanner
-	scanCfg := &ScanFrameworkConfig{
-		ScannerType:  scannerType,
-		ScannerName:  string(scannerType),
-		ScannerEmoji: emoji,
-		ScanOutDir:   ctx.EACConfig.Repository.Paths.Out.Scan,
-		GitCommit:    getGitCommit(ctx.WorkspaceRoot),
-	}
-
-	// Run the appropriate scanner
-	findings, err := runScanner(ctx, module, scannerType, multiCfg, logWriter)
-	if err != nil {
-		handleScanFailure(ctx, scanCfg, module, module.Moniker, "", scanStart, err, logWriter)
-		return 1
-	}
-
-	// Write evidence and update manifest
-	_, writeErr := handleScanSuccess(ctx, scanCfg, module, module.Moniker, "", scanStart, findings, logWriter)
-	if writeErr != nil {
-		return 1
-	}
-
-	return 0
-}
-
-// runScanner dispatches to the appropriate scanner implementation using the scanner registry.
-func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType evidence.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
-	// Get the module's scannable root (buildable package root or first available)
-	moduleRoot := module.Components.GetBuildableRoot()
-	if moduleRoot == "" {
-		for _, root := range module.GetComponentRoots() {
-			moduleRoot = root
-			break
-		}
-	}
-	if moduleRoot == "" {
-		return nil, fmt.Errorf("no package root found for module %s", module.Moniker)
-	}
-
-	// ZAP requires special handling (target URL)
-	if scannerType == evidence.ScannerDAST {
-		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
-	}
-
-	// Log scanner-specific configuration
-	logScannerConfig(scannerType, logWriter, multiCfg, ctx)
-
-	// Get scanner from registry (YAML-defined tools)
-	scanFn := tool.GlobalScanBridge().GetScannerByToolID(string(scannerType))
-	if scanFn == nil {
-		return nil, fmt.Errorf("no scanner found for type: %s", scannerType)
-	}
-
-	// Execute scanner
-	return scanFn(ctx.WorkspaceRoot, moduleRoot, "", logWriter, tool.ScanOptions{
-		ScanType: string(scannerType),
-	})
-}
 
 // getScannerEmoji returns the emoji for a scanner type.
 func getScannerEmoji(scannerType evidence.ScannerType) string {

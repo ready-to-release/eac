@@ -55,8 +55,14 @@ func lintUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 	}
 	defer release()
 
-	// prepareLintWorkspace returns empty moduleRoot when no component root is found (non-error skip)
+	// prepareLintWorkspace returns empty moduleRoot when no component root is found (non-error skip).
+	// Record a skip manifest so assertLintManifestsExist doesn't fail for this UoW.
 	if moduleRoot == "" {
+		params.pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
+			ExitCode:   0,
+			ExecutedAt: time.Now().UTC(),
+			Version:    "1.0.0",
+		})
 		return 0
 	}
 

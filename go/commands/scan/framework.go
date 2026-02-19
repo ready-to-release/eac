@@ -29,6 +29,7 @@ func init() {
 	// Register scan component-level execution support
 	cmdframework.RegisterUnitProvider(core.ActionScan, ResolveScanUnitSpecs)
 	cmdframework.RegisterUnitWorker(core.ActionScan, scanUnitWorker)
+	cmdframework.SetUoWCountProvider(getScanUoWCount)
 }
 
 // NOTE: Scanner-specific semaphores removed - parallelism is now controlled by
@@ -247,7 +248,7 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 		AfterExecute: scanAfterExecute,
 	}
 
-	return cmdframework.Run(cmdCfg, multiScanWorker, hooks)
+	return cmdframework.Run(cmdCfg, nil, hooks)
 }
 
 // multiScanAfterInit resolves scanners to run based on module types and sets up skip list.
@@ -283,6 +284,13 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Otherwise, we'll determine scanners per-module based on type
 	// For init summary, show "default" as the scanner mode
 	buildMultiScanInitSummary(ctx, nil)
+
+	// Initialize UoW tracker for manifest generation
+	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
+	if sctx != nil {
+		sctx.tracker = coreoutput.NewTracker(ctx.WorkspaceRoot, core.ActionScan)
+	}
+
 	return nil
 }
 
@@ -290,6 +298,28 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 // It also handles incremental scan detection.
 func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	sctx, _ := ctx.Config.ScanCmdContext.(*scanContext)
+
+	// Re-apply security skip filter now that ModuleRegistry is populated.
+	// The AfterInit hook sets SkipMonikers but ModuleRegistry may have been nil
+	// at that point, resulting in an empty skip list. Re-filter here to ensure
+	// skipped modules are removed from ScopeMonikers.
+	if ctx.EACConfig != nil && ctx.EACConfig.Security != nil && ctx.ModuleRegistry != nil {
+		skipSet := make(map[string]bool)
+		for _, moniker := range ctx.ModuleRegistry.AllMonikers() {
+			if ctx.EACConfig.Security.ShouldSkipModule(moniker) {
+				skipSet[moniker] = true
+			}
+		}
+		if len(skipSet) > 0 {
+			var filtered []string
+			for _, m := range ctx.ScopeMonikers {
+				if !skipSet[m] {
+					filtered = append(filtered, m)
+				}
+			}
+			ctx.ScopeMonikers = filtered
+		}
+	}
 
 	// Now that ModuleRegistry is available, calculate and set UoW count
 	if ctx.InitSummary != nil && ctx.ModuleRegistry != nil {
@@ -312,9 +342,64 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Also run in dry-run mode to show which modules would be scanned/skipped
 	if !environments.IsCI() && sctx != nil {
 		detectUoWIncrementalScanChanges(ctx, sctx)
+
+		// Pass cache times to orchestrator for TUI display
+		if len(sctx.cacheTimes) > 0 && ctx.Orchestrator != nil {
+			ctx.Orchestrator.SetCacheTimes(sctx.cacheTimes)
+		}
+
+		// Enable early cache detection for fast TUI feedback
+		// Tabs will progressively "light up" blue as cache hits are detected
+		if (len(sctx.cachedUoWs) > 0 || len(sctx.cachedModules) > 0) && ctx.Orchestrator != nil {
+			verifier := &ScanCacheVerifier{
+				cachedUoWs:    sctx.cachedUoWs,
+				uowCacheTimes: sctx.uowCacheTimes,
+				cachedModules: sctx.cachedModules,
+			}
+			ctx.Orchestrator.SetCacheDetection(verifier, sctx.cachedModules)
+		}
+	}
+
+	// Pre-compute module input hashes if not already set by incremental detection.
+	// In CI mode, incremental detection is skipped, so hashes are never computed.
+	// Pre-computing ensures all workers for the same module get a consistent hash.
+	if sctx != nil {
+		preComputeScanModuleInputHashes(ctx, sctx)
 	}
 
 	return nil
+}
+
+// preComputeScanModuleInputHashes pre-computes input hashes for all execution modules.
+// Skips modules that already have hashes from incremental detection.
+func preComputeScanModuleInputHashes(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
+	if ctx.ModuleRegistry == nil {
+		return
+	}
+
+	if sctx.moduleInputHashes == nil {
+		sctx.moduleInputHashes = make(map[string]string)
+	}
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		// Skip if already pre-computed by incremental detection
+		if _, ok := sctx.moduleInputHashes[moniker]; ok {
+			continue
+		}
+
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		h, err := computeScanInputHash(ctx, module)
+		if err != nil {
+			log.Debugf("Failed to compute input hash for %s: %v", moniker, err)
+			continue
+		}
+
+		sctx.moduleInputHashes[moniker] = h
+	}
 }
 
 // detectUoWIncrementalScanChanges performs UoW-level incremental scan detection.

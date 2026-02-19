@@ -44,7 +44,7 @@ func (m Model) detectTabAt(x, y int) string {
 	}
 
 	// Use shared layout metrics - single source of truth for Y offset calculation
-	// ComponentsStart already includes: init + resources + selected + panel header
+	// ComponentsStart already includes: top bar (4) + newline (1) + panel header (1)
 	metrics := m.calculateLayoutMetrics()
 
 	// Content starts at ComponentsStart (0-indexed Y coordinate)

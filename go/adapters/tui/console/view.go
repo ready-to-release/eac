@@ -28,7 +28,7 @@ func (m Model) calculateLayoutMetrics() render.LayoutMetrics {
 func (m Model) computeLayoutMetrics() render.LayoutMetrics {
 	metrics := render.LayoutMetrics{}
 	metrics.SummaryLines = 7    // top bar (4) + bottom bar (3)
-	metrics.ComponentsStart = 1 // panel header only (no resources pane)
+	metrics.ComponentsStart = 5 // top bar (4 rows, last has no trailing \n) + panel header (1)
 	metrics.RemainingHeight = m.Display.Height - metrics.SummaryLines
 	if metrics.RemainingHeight < 5 {
 		metrics.RemainingHeight = 5

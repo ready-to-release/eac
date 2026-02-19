@@ -4,11 +4,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/clibase/cmdframework"
-	coreoutput "github.com/ready-to-release/eac/go/core/output"
-
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/core/environments"
+	"github.com/ready-to-release/eac/go/core/hash"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 )
 
 // lintAfterInit handles lint-specific initialization.
@@ -46,9 +46,65 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		if len(lctx.cacheTimes) > 0 && ctx.Orchestrator != nil {
 			ctx.Orchestrator.SetCacheTimes(lctx.cacheTimes)
 		}
+
+		// Enable early cache detection for fast TUI feedback
+		// Tabs will progressively "light up" blue as cache hits are detected
+		if (len(lctx.cachedUoWs) > 0 || len(lctx.cachedModules) > 0) && ctx.Orchestrator != nil {
+			verifier := &LintCacheVerifier{
+				cachedUoWs:    lctx.cachedUoWs,
+				uowCacheTimes: lctx.uowCacheTimes,
+				cachedModules: lctx.cachedModules,
+			}
+			ctx.Orchestrator.SetCacheDetection(verifier, lctx.cachedModules)
+		}
 	}
 
+	// Pre-compute module input hashes if not already set by incremental detection.
+	// In CI mode, incremental detection is skipped, so hashes are never computed.
+	// Pre-computing ensures all workers for the same module get a consistent hash,
+	// preventing divergence when parallel workers modify shared files.
+	preComputeModuleInputHashes(ctx, lctx)
+
 	return nil
+}
+
+// preComputeModuleInputHashes pre-computes input hashes for all execution modules.
+// Skips modules that already have hashes from incremental detection.
+func preComputeModuleInputHashes(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
+	if ctx.ModuleRegistry == nil {
+		return
+	}
+
+	if lctx.moduleInputHashes == nil {
+		lctx.moduleInputHashes = make(map[string]string)
+	}
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		// Skip if already pre-computed by incremental detection
+		if _, ok := lctx.moduleInputHashes[moniker]; ok {
+			continue
+		}
+
+		contract, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		patterns := contract.GetGlobPatterns()
+		files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+		if err != nil {
+			log.Debugf("Failed to expand patterns for input hash of %s: %v", moniker, err)
+			continue
+		}
+
+		h, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to compute input hash for %s: %v", moniker, err)
+			continue
+		}
+
+		lctx.moduleInputHashes[moniker] = h
+	}
 }
 
 // lintAfterExecute handles post-lint tasks.

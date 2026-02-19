@@ -79,7 +79,7 @@ runs:
         fi
 
     - name: Setup Go
-      if: contains(steps.resolve.outputs.deps, 'go') && steps.go-check.outputs.available != 'true'
+      if: contains(steps.resolve.outputs.deps, 'go')
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}

@@ -16,6 +16,13 @@ func init() {
 	// Register component-level execution support for lint
 	cmdframework.RegisterUnitProvider(core.ActionLint, ResolveLintUnitSpecs)
 	cmdframework.RegisterUnitWorker(core.ActionLint, lintUnitWorker)
+	cmdframework.SetUoWCountProvider(getLintUoWCount)
+}
+
+// getLintUoWCount returns the total number of lintable UoWs (units of work).
+func getLintUoWCount(ctx *cmdframework.ExecutionContext) int {
+	specs := ResolveLintUnitSpecs(ctx)
+	return CountLintComponents(specs)
 }
 
 // LintConfig holds lint-specific configuration.
