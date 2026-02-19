@@ -1,3 +1,6 @@
+# Intent: Manage storage costs and keep the container registry clean by pruning old container image versions from GHCR
+# Architecture: Affects eac-cli release prune-packages command; queries GHCR package versions; applies preserve patterns (v*), min_age_days, GitHub release association, and keep-N policies; defaults to dry-run for safety; depends on mock GitHub environment
+
 @deps:go @env:mock-github @pending
 Feature: eac-cli_release-prune-packages
 

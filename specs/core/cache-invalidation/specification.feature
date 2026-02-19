@@ -1,3 +1,6 @@
+# Intent: Prevent wasted time on unnecessary builds or missed required builds by correctly detecting when modules need rebuilding
+# Architecture: Affects go/core cache invalidation system; operates at component-level (file hash tracking via get changed-modules-local) and macro-level (CI dependency chain via get changed-modules-ci); uses build state files and isolated test repositories
+
 @L1 @ov @depm:core @deps:go @env:isolated-test-project
 Feature: Cache Invalidation System
 

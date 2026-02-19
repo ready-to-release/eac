@@ -1,3 +1,6 @@
+# Intent: Allow developers to view and navigate project documentation locally by serving it through a local web server
+# Architecture: Affects eac-cli serve docs command; manages MkDocs Docker container lifecycle (start, stop, port management); depends on Docker service and docs module configuration
+
 @L2 @ov @deps:docker @env:isolated-test-project @pending
 Feature: eac-cli_serve-docs
 

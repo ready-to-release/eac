@@ -1,3 +1,6 @@
+# Intent: Allow security auditors to identify and remediate risks by scanning modules for exposed secrets and credentials
+# Architecture: Affects eac-cli scan command with --scanner secrets flag; invokes Docker-based secrets scanner; supports dry-run mode; depends on Docker availability and isolated test project
+
 @L2 @ov @deps:go @deps:docker @env:isolated-test-project
 Feature: security_secrets
 

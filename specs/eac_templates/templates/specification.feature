@@ -1,3 +1,6 @@
+# Intent: Allow developers to bootstrap project structure efficiently by installing project templates
+# Architecture: Affects eac-cli templates install command; copies template files from local repository directories to target project; supports docs, ai, specs, and reports template sets; uses temporary directories for test isolation; supports custom --destination and --debug flags
+
 @L2 @ov @deps:go @env:isolated-test-project
 Feature: eac-cli_templates
 

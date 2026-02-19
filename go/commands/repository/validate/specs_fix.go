@@ -53,7 +53,41 @@ func fixGherkinFile(filePath string, errors []domain.ValidationError) (*FixResul
 	lines := strings.Split(string(content), "\n")
 	modified := false
 
-	// First pass: fix feature naming (do this first as it doesn't change line numbers)
+	// First pass: prepend missing ACD comment lines to the top of the file.
+	// Both must be added before any other content, in order: # Intent: then # Architecture:.
+	hasMissingIntent := false
+	hasMissingArch := false
+	for _, e := range errors {
+		switch e.GetCode() {
+		case "MISSING_INTENT_COMMENT":
+			hasMissingIntent = true
+		case "MISSING_ARCHITECTURE_COMMENT":
+			hasMissingArch = true
+		}
+	}
+	if hasMissingIntent || hasMissingArch {
+		var prefix []string
+		if hasMissingIntent {
+			prefix = append(prefix, "# Intent: <describe why this change exists — update before committing>")
+			result.Fixes = append(result.Fixes, FixedIssue{
+				Line:        1,
+				Code:        "MISSING_INTENT_COMMENT",
+				Description: "Added placeholder '# Intent:' comment — update with actual intent",
+			})
+		}
+		if hasMissingArch {
+			prefix = append(prefix, "# Architecture: <components, systems, or constraints affected — update before committing>")
+			result.Fixes = append(result.Fixes, FixedIssue{
+				Line:        2,
+				Code:        "MISSING_ARCHITECTURE_COMMENT",
+				Description: "Added placeholder '# Architecture:' comment — update with actual architecture",
+			})
+		}
+		lines = append(prefix, lines...)
+		modified = true
+	}
+
+	// Second pass: fix feature naming (do this after prepending as it doesn't change line numbers relative to its target)
 	for _, e := range errors {
 		if e.GetCode() == "INVALID_FEATURE_NAMING" && e.Line > 0 {
 			idx := e.Line - 1

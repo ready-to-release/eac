@@ -1,3 +1,6 @@
+# Intent: Allow developers to learn how to use the available eac platform functionality by displaying command help information
+# Architecture: Affects eac-cli show help command; reads command registry; displays grouped and sorted command list; supports single command detail, verbose mode, and multi-word command lookup
+
 @L2 @deps:go @ov
 Feature: eac-cli_show-help
 

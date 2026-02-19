@@ -1,3 +1,6 @@
+# Intent: Allow developers to create consistent, well-structured commit messages by generating them using AI from staged changes
+# Architecture: Affects eac-cli create commit-message command; reads staged git diff; invokes AI with .eac/ai/commit-message config; outputs conventional commit format; includes module context from file-to-module mapping
+
 @L2 @deps:go @deps:git @ov @env:isolated-test-project @control:ai-2
 Feature: eac-cli_create-commit-message
 

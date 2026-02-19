@@ -1,3 +1,6 @@
+# Intent: Allow users to quickly set up the CLIE CLI on their system without manual steps using platform-specific installer scripts
+# Architecture: Affects clie installer scripts for Windows (PowerShell) and Linux (bash/curl); downloads binary from GitHub releases API; installs to platform-specific local bin directories
+
 @env:isolated-test-project
 @ov @depm:clie
 Feature: clie-installer_cli-installation

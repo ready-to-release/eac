@@ -1,3 +1,6 @@
+# Intent: Keep the architecture clean and modules independently buildable by enforcing module dependency rules across all Go modules
+# Architecture: Affects repository Go module isolation validation; scans import statements in production .go files; enforces that go/core has no local deps, go/cli/clie is fully isolated, go/cli/eac depends only on go/core and go/clibase, and go/mcp/commands depends only on go/core; verifies DAG acyclicity
+
 @L0 @ov @control:ac-6 @control:sa-3
 Feature: repository_module-isolation
 

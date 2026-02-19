@@ -1,3 +1,6 @@
+# Intent: Allow developers to see test status, timing, and coverage by retrieving structured test execution results from manifests
+# Architecture: Affects eac-cli get test-results command; reads test manifests from out/test/; aggregates results across modules; includes specification coverage, control tag summaries, and timing data; outputs YAML or JSON
+
 @L2 @ov @deps:go @control:sa-3 @env:isolated-test-project
 Feature: eac-cli_get-test-results
   As a developer

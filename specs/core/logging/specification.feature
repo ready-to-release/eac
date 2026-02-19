@@ -1,3 +1,6 @@
+# Intent: Enable developers to see important messages on console and persist all logs when debugging by routing logs to console and/or file based on debug mode
+# Architecture: Affects go/core logging module; uses Zap logger with Tee multi-core output; writes to console stdout/stderr and unified out/commands.log; controlled by --debug flag
+
 @deps:go @L2 @ov @control:au-2 @control:au-3 @control:au-12
 Feature: core_logging
   As a developer

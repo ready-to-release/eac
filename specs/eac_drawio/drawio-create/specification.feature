@@ -1,3 +1,6 @@
+# Intent: Allow developers to start new diagrams programmatically by creating new DrawIO diagram files with EAC visual defaults
+# Architecture: Affects eac-cli drawio create command; invokes drawio-oci Docker image; outputs .drawio.png files with embedded mxGraphModel XML; applies default gray background and shadow settings; supports custom XML and name
+
 @L2 @deps:docker @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_drawio-create
 

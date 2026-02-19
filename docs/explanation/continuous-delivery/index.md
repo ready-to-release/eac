@@ -16,3 +16,4 @@ from development through production with quality, traceability, and compliance b
 | [Release Management](./release-management/index.md) | Release documentation and approval patterns (RA vs CDe)                      |
 | [Environments](./environments/index.md)             | Environment types and network security zones                                 |
 | [Security](./security/index.md)                     | Security integration using open-source tools                                 |
+| [Agentic CD](./agentic-cd/index.md)                 | ACD extension for AI-agent contributors — how the six artifacts map to this project |

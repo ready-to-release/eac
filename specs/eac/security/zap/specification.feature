@@ -1,3 +1,6 @@
+# Intent: Allow security auditors to identify and remediate risks by scanning modules for web application vulnerabilities using ZAP
+# Architecture: Affects eac-cli scan command with --scanner zap flag; invokes Docker-based ZAP scanner; supports dry-run mode; depends on Docker availability and isolated test project
+
 @L2 @ov @deps:go @deps:docker @env:isolated-test-project
 Feature: security_zap
 

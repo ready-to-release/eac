@@ -1,3 +1,6 @@
+# Intent: Allow developers to view architecture designs by serving Structurizr workspace files through a local Structurizr container
+# Architecture: Affects eac-cli serve design command; reads workspace DSL from specs/<module>/.design/; manages Structurizr Docker container per module with unique ports; supports multi-instance concurrent serving
+
 @L2 @deps:docker @ov @env:isolated-test-project
 Feature: eac-cli_serve-design
 

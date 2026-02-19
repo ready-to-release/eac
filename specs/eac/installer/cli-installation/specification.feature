@@ -1,3 +1,6 @@
+# Intent: Allow users to quickly set up the EAC CLI on their system without manual steps using platform-specific installer scripts
+# Architecture: Affects eac installer scripts for Windows (PowerShell) and Linux (bash/curl); downloads binary from GitHub releases API; installs to platform-specific local bin directories
+
 @env:isolated-test-project
 @ov @depm:eac
 Feature: eac-installer_cli-installation

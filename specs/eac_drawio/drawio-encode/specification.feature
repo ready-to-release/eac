@@ -1,3 +1,6 @@
+# Intent: Allow developers to prepare diagram content for embedding in PNG files by encoding human-readable XML to DrawIO format
+# Architecture: Affects eac-cli drawio encode command; invokes drawio-oci Docker image; reads mxGraphModel XML from file or stdin; outputs mxfile-wrapped encoded XML to stdout or file; depends on Docker availability
+
 @L2 @deps:docker @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_drawio-encode
 

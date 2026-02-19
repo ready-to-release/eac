@@ -1,3 +1,6 @@
+# Intent: Keep the codebase organized and maintainable by ensuring no files are left without module ownership
+# Architecture: Affects repository file ownership validation; reads module contracts; checks for orphan files not claimed by any module
+
 @control:sa-3
 Feature: repository_no-unordered-files
 

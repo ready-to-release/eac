@@ -1,3 +1,6 @@
+# Intent: Allow security auditors to identify and remediate risks by scanning modules to generate a software bill of materials
+# Architecture: Affects eac-cli scan command with --scanner sbom flag; invokes Docker-based SBOM scanner; supports dry-run mode; depends on Docker availability and isolated test project
+
 @L2 @ov @deps:go @deps:docker @env:isolated-test-project
 Feature: security_sbom
 

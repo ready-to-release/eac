@@ -1,3 +1,6 @@
+# Intent: Enable changes to be reviewed before merging to main by creating a pull request with an AI-generated description
+# Architecture: Affects eac-cli create-pr command; validates workspace state (no uncommitted changes, not on main branch); invokes AI to generate PR description; depends on git and GitHub integration
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project @control:ai-2
 Feature: eac-cli_create-pr
 

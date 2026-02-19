@@ -1,3 +1,6 @@
+# Intent: Prevent release automation failures by ensuring the release folder contains only valid module changelogs with no orphan directories
+# Architecture: Affects release/ directory validation; reads module contracts; validates each subdirectory corresponds to a registered module with a correctly formatted changelog
+
 @L1 @ov @control:cm-2
 Feature: repository_release-folder-valid
 

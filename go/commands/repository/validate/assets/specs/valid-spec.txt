@@ -1,3 +1,6 @@
+# Intent: Verify the validator works correctly so that specification quality is enforced
+# Architecture: Affects test validation command; reads specification.feature files; calls gherkin validator
+
 @deps:go @ov
 Feature: test_valid-feature
 

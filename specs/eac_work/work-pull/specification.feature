@@ -1,3 +1,6 @@
+# Intent: Allow developers to keep their work up to date and avoid merge conflicts by syncing their branch with the latest changes from main
+# Architecture: Affects eac-cli work pull command; fetches origin/main and rebases current branch; validates no uncommitted changes exist and not on main branch; depends on git worktree context and isolated test project
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_work_pull
 

@@ -201,7 +201,13 @@ Scenario: Create user account with approval workflow
 - Generate ONLY valid Gherkin syntax
 - No markdown code fences (no ```gherkin)
 - No explanations or commentary before/after the Gherkin
-- Just pure Gherkin starting with Feature: declaration
+- Output MUST begin with exactly two comment lines:
+    # Intent: <one sentence — the specific problem this change solves>
+    # Architecture: <components affected, constraints, and dependencies derived from the architecture model>
+  Then the Gherkin starting with tags and Feature: declaration.
+- Both comment lines MUST have real derived content (not placeholders, not empty).
+- `# Intent:` is derived from the Description.
+- `# Architecture:` is derived from Description + Architecture Context.
 - Follow proper indentation (2 spaces per level)
 - Every scenario MUST have at least one verification tag (@ov, @iv, @pv, etc.)
 - Use domain language in step text - no technical jargon
@@ -212,6 +218,9 @@ Scenario: Create user account with approval workflow
 ### Example Gherkin Output
 
 ```gherkin
+# Intent: Initialize a new project with EAC configuration so developers can start using EAC commands
+# Architecture: Affects eac-cli init command container; reads git repository state; creates .eac/, specs/, templates/ directories; depends on filesystem and git detection components
+
 @L2 @ov
 Feature: eac-commands_init
   Initialize project structure with EAC configuration
@@ -262,6 +271,7 @@ Feature: eac-commands_init
 - Tag security/compliance scenarios with appropriate @control or @controls tags
 - Use proper Gherkin syntax - no JSON, no markdown fences
 - Follow proper indentation (2 spaces per level)
-- Start with Feature: declaration, include user story, organize by Rules
+- Output MUST begin with `# Intent:` and `# Architecture:` comment lines containing real content
+- Then tags and Feature: declaration, user story, organize by Rules
 
 Generate Gherkin now based on the description below:

@@ -1,3 +1,6 @@
+# Intent: Allow developers to create Structurizr DSL workspace files from source code analysis using AI-powered architecture design generation
+# Architecture: Affects eac-cli create design command; reads module contracts and source code; invokes AI with design contracts at contracts/ai/design/0.1.0; writes workspace DSL to specs/<module>/.design/; requires --force to overwrite; depends on Docker
+
 @L2 @deps:docker @ov @env:isolated-test-project @control:ai-2
 Feature: eac-cli_create-design
 

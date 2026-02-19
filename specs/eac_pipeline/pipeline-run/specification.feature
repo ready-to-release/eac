@@ -1,3 +1,6 @@
+# Intent: Allow developers to build and test modules in the correct order by executing module pipelines that respect dependency ordering
+# Architecture: Affects eac-cli pipeline run command; resolves module dependency graph; supports changed-only filtering, specific ref comparison, wait polling, and timeout; depends on git and EAC module contracts
+
 @L2 @deps:go @deps:git @ov @env:isolated-test-project
 Feature: eac-cli_pipeline-run
 

@@ -1,3 +1,6 @@
+# Intent: Allow developers to create Gherkin feature files from natural language descriptions using AI-powered specification generation
+# Architecture: Affects eac-cli create spec command; invokes AI to generate Gherkin content; writes to specs/ directory; enforces path traversal security and requires --force to overwrite existing files; depends on git repository context
+
 @deps:go @env:isolated-test-project @control:ai-2 @control:si-10
 Feature: eac-cli_create-spec
 

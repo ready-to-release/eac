@@ -1,3 +1,6 @@
+# Intent: Allow features to appear as a single, well-documented commit by merging changes back to main using squash merge
+# Architecture: Affects eac-cli work merge command; validates workspace state (no uncommitted changes, not on main branch); performs squash merge into main; depends on git worktree context and isolated test project
+
 @L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: eac-cli_work_merge
 
