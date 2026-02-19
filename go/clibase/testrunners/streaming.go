@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -62,32 +63,40 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 	start := time.Now()
 	result := TestResult{}
 
-	// Create pipes for stdout and stderr
-	stdout, err := cmd.StdoutPipe()
+	// Create pipes manually instead of cmd.StdoutPipe/StderrPipe.
+	// StdoutPipe registers the read end in cmd's closeAfterWait list, so
+	// cmd.Wait() closes it immediately after the process exits — before
+	// reader goroutines can drain remaining buffered data. By creating our
+	// own pipes, cmd.Wait() leaves our read ends open, and readers can
+	// finish consuming all output before we close them.
+	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
 		return result, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
-
-	stderr, err := cmd.StderrPipe()
+	stderrR, stderrW, err := os.Pipe()
 	if err != nil {
+		stdoutR.Close()
+		stdoutW.Close()
 		return result, fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
+	cmd.Stdout = stdoutW
+	cmd.Stderr = stderrW
+
 	// Start the command
 	if err := cmd.Start(); err != nil {
+		stdoutR.Close()
+		stdoutW.Close()
+		stderrR.Close()
+		stderrW.Close()
 		return result, fmt.Errorf("failed to start command: %w", err)
 	}
 
-	// Wait for process exit in a goroutine. cmd.Wait() closes the pipes,
-	// which unblocks the reader goroutines. This ordering prevents a deadlock
-	// on Windows where grandchild processes (e.g., PowerShell spawned by tests)
-	// can inherit pipe handles, keeping them open after the main process exits.
-	var cmdErr error
-	waitDone := make(chan struct{})
-	go func() {
-		cmdErr = cmd.Wait()
-		close(waitDone)
-	}()
+	// Close write ends in the parent process. The child has its own copies
+	// from handle inheritance. When the child exits, its copies close too,
+	// giving readers EOF — unless a grandchild also inherited them.
+	stdoutW.Close()
+	stderrW.Close()
 
 	// Process stdout (JSON events) in a goroutine
 	var wg sync.WaitGroup
@@ -95,18 +104,44 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 
 	go func() {
 		defer wg.Done()
-		r.processJSONOutput(stdout)
+		r.processJSONOutput(stdoutR)
 	}()
 
 	// Process stderr (error messages) in a goroutine
 	go func() {
 		defer wg.Done()
-		r.processStderr(stderr)
+		r.processStderr(stderrR)
 	}()
 
-	// Wait for process to exit (closes pipes) then wait for readers to drain
-	<-waitDone
-	wg.Wait()
+	// Wait for the child process to exit. Since we created our own pipes
+	// (not StdoutPipe/StderrPipe), cmd.Wait() does NOT close our read
+	// ends, so readers can keep draining buffered data.
+	cmdErr := cmd.Wait()
+
+	// Wait for reader goroutines to finish. Normally they get EOF once all
+	// write-end copies are closed (child exited, no grandchild holds them).
+	// On Windows, grandchild processes (e.g., PowerShell spawned by tests)
+	// can inherit pipe handles, keeping the write end open indefinitely.
+	// Use a timeout to prevent an indefinite hang in that case.
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Readers finished normally
+	case <-time.After(10 * time.Second):
+		// Force-close read ends to unblock stuck readers
+		stdoutR.Close()
+		stderrR.Close()
+		<-done
+	}
+
+	// Clean up read ends (no-op if already closed by timeout path)
+	stdoutR.Close()
+	stderrR.Close()
 
 	result.Duration = time.Since(start)
 	result.Events = r.events
