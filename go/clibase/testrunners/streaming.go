@@ -116,7 +116,9 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 	// Wait for the child process to exit. Since we created our own pipes
 	// (not StdoutPipe/StderrPipe), cmd.Wait() does NOT close our read
 	// ends, so readers can keep draining buffered data.
+	fmt.Fprintf(os.Stderr, "[streaming-debug] cmd.Wait() blocking pid=%d\n", cmd.Process.Pid)
 	cmdErr := cmd.Wait()
+	fmt.Fprintf(os.Stderr, "[streaming-debug] cmd.Wait() returned err=%v events=%d\n", cmdErr, len(r.events))
 
 	// Wait for reader goroutines to finish. Normally they get EOF once all
 	// write-end copies are closed (child exited, no grandchild holds them).
@@ -131,9 +133,10 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 
 	select {
 	case <-done:
-		// Readers finished normally
+		fmt.Fprintf(os.Stderr, "[streaming-debug] readers drained normally events=%d\n", len(r.events))
 	case <-time.After(10 * time.Second):
 		// Force-close read ends to unblock stuck readers
+		fmt.Fprintf(os.Stderr, "[streaming-debug] readers TIMEOUT after 10s, force-closing pipes\n")
 		stdoutR.Close()
 		stderrR.Close()
 		<-done
