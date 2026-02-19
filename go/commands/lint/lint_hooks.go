@@ -37,9 +37,9 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		return nil
 	}
 
-	// Incremental lint detection (devbox only, not CI)
-	// Also run in dry-run mode to show which modules would be linted/skipped
-	if !environments.IsCI() {
+	// Incremental lint detection (devbox only, not CI — unless dry-run)
+	// Dry-run always checks cache to correctly report skip/execute status
+	if !environments.IsCI() || ctx.Config.DryRun {
 		detectUoWIncrementalLintChanges(ctx, lctx)
 
 		// Pass cache times to orchestrator for TUI display

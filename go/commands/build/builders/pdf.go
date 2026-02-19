@@ -218,6 +218,15 @@ func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 	Logln(logWriter, "   Theme: %s", theme)
 	Logln(logWriter, "   Concurrency: %d (environment: %s)", pdfConcurrency, environments.DetectRuntime())
 
+	// Ensure the pdf-oci container image is available.
+	// In devbox: builds from Dockerfile if stale. In CI: pulls from GHCR and tags as local.
+	pdfImageName := "pdf-oci:local"
+	contextPath := filepath.Join(workspaceRoot, "containers", "pdf-oci")
+	if err := ensureMkDocsImage(pdfImageName, workspaceRoot, contextPath, logWriter); err != nil {
+		Logln(logWriter, "❌ Failed to ensure pdf-oci image: %v", err)
+		return 1
+	}
+
 	bridge := tool.GlobalHandlerToolBridge()
 
 	// Get weight for resource scaling
