@@ -128,9 +128,9 @@ function Install-Binary {
 
             # Use the actual built eac binary from the build output
             # This is available because eac-installer depends on eac module
-            # When running from build output: out/build/eac-installer/pwsh-scripts/
-            # Go up 2 levels to out/build, then access eac/go-go/
-            $builtBinary = Join-Path $PSScriptRoot "..\..\eac\go-go\eac-windows-amd64.exe"
+            # Script lives at scripts/pwsh/eac/ — go up 3 levels to repo root,
+            # then into out/build/eac/eac_go/ where the Go build places binaries
+            $builtBinary = Join-Path $PSScriptRoot "..\..\..\out\build\eac\eac_go\eac-windows-amd64.exe"
 
             if (-not (Test-Path $builtBinary)) {
                 Write-ColorOutput "Test mode: Pre-built binary not found at $builtBinary" "Red"

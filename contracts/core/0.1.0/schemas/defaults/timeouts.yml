@@ -40,7 +40,7 @@ long_operations:
   build: 30m            # Build operation timeout
   test: 30m             # Test execution timeout
   evidence_max_age: 24h # Evidence validity period
-  worker_timeout: 3m    # Kill workers that hang (fail fast) - UoW should never take >3m
+  worker_timeout: 5m    # Kill workers that hang (fail fast) — allows cold-cache Go module downloads in CI
 
 # TUI and interactive operations
 tui:

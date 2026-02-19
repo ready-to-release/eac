@@ -174,10 +174,10 @@ install_binary() {
 
         # Use the actual built eac binary from the build output
         # This is available because eac-installer depends on eac module
-        # When running from build output: out/build/eac-installer/bash-scripts/
-        # Go up 2 levels to out/build, then access eac/go-go/
+        # Script lives at scripts/sh/eac/ — go up 3 levels to repo root,
+        # then into out/build/eac/eac_go/ where the Go build places binaries
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        built_binary="${script_dir}/../../eac/go-go/eac-${OS}-${ARCH}"
+        built_binary="${script_dir}/../../../out/build/eac/eac_go/eac-${OS}-${ARCH}"
 
         if [[ ! -f "$built_binary" ]]; then
             echo -e "${RED}Test mode: Pre-built binary not found at ${built_binary}${NC}"

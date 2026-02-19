@@ -151,7 +151,7 @@ func DefaultTimeoutConfig() *TimeoutConfig {
 			Build:          Duration(30 * time.Minute),
 			Test:           Duration(30 * time.Minute),
 			EvidenceMaxAge: Duration(24 * time.Hour),
-			WorkerTimeout:  Duration(3 * time.Minute),
+			WorkerTimeout:  Duration(5 * time.Minute),
 		},
 		TUI: TUITimeouts{
 			AutoScrollResume: Duration(8 * time.Second),
