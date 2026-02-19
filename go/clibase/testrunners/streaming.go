@@ -78,6 +78,17 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 		return result, fmt.Errorf("failed to start command: %w", err)
 	}
 
+	// Wait for process exit in a goroutine. cmd.Wait() closes the pipes,
+	// which unblocks the reader goroutines. This ordering prevents a deadlock
+	// on Windows where grandchild processes (e.g., PowerShell spawned by tests)
+	// can inherit pipe handles, keeping them open after the main process exits.
+	var cmdErr error
+	waitDone := make(chan struct{})
+	go func() {
+		cmdErr = cmd.Wait()
+		close(waitDone)
+	}()
+
 	// Process stdout (JSON events) in a goroutine
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -93,11 +104,9 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 		r.processStderr(stderr)
 	}()
 
-	// Wait for output processing to complete
+	// Wait for process to exit (closes pipes) then wait for readers to drain
+	<-waitDone
 	wg.Wait()
-
-	// Wait for command to finish
-	cmdErr := cmd.Wait()
 
 	result.Duration = time.Since(start)
 	result.Events = r.events
