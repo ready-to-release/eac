@@ -191,9 +191,10 @@ func TestAggregateUoWChanges_RecordsCacheTimes(t *testing.T) {
 	f := newTestFixture(t)
 	reader := NewReader(f.workspaceRoot)
 
-	// Create manifests with specific times
-	time1 := time.Now().Add(-2 * time.Hour).Truncate(time.Second)
-	time2 := time.Now().Add(-1 * time.Hour).Truncate(time.Second)
+	// Create manifests with specific times (use UTC to match JSON round-trip behavior:
+	// time.Time JSON marshals with timezone offset, and unmarshals Z-suffix as UTC)
+	time1 := time.Now().UTC().Add(-2 * time.Hour).Truncate(time.Second)
+	time2 := time.Now().UTC().Add(-1 * time.Hour).Truncate(time.Second)
 
 	m1 := f.createUoWManifest(core.ActionBuild, "core", "go", "go")
 	m1.InputHash = "sha256:hash"

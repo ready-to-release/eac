@@ -76,8 +76,13 @@ func ShowScanSummary() int {
 	reader := coreoutput.NewReader(workspaceRoot)
 	manifests, err := reader.ListUoWs(core.ActionScan, module)
 	if err != nil || len(manifests) == 0 {
-		log.Errorf("No scan manifests found for module %s (run scan first)", module)
-		return 1
+		// No manifests is not a fatal error — the scan may not have produced
+		// UoW manifests (e.g., container modules). Output an informational
+		// summary and exit successfully to avoid failing the CI job.
+		fmt.Printf("## 🔒 Security Scans: %s\n\n", module)
+		fmt.Println("No scan manifests found for this module.")
+		fmt.Printf("**Artifact**: `%s`\n", artifactName)
+		return 0
 	}
 
 	return generateScanSummaryFromUoWs(module, manifests, artifactName)

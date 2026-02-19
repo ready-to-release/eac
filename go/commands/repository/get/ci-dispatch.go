@@ -198,7 +198,7 @@ func FilterCIDispatch(directlyChangedStr, invalidatedStr, headSHA string, checke
 	var ciDeps map[string][]string
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err == nil && cfg.Repository != nil {
-		ciDeps = buildCIArtifactDeps(cfg.Repository)
+		ciDeps = buildCIArtifactDeps(cfg.Repository, workspaceRoot)
 	}
 
 	return filterCIDispatchWithDeps(directlyChangedStr, invalidatedStr, headSHA, checker, workspaceRoot, ciDeps)
@@ -358,17 +358,28 @@ func computeCIDispatchOrder(modules []string, ciArtifactDeps map[string][]string
 // buildCIArtifactDeps builds a map of module -> CI artifact dependencies from config.
 // Uses both CIDeps (from depends_on_ci) AND DependsOn (from depends_on) for modules
 // that have CI workflows. This enables full dependency-aware wave computation.
-func buildCIArtifactDeps(cfg *config.RepositoryConfig) map[string][]string {
-	// Build a set of modules that have CI workflows
+//
+// CI module detection uses actual workflow file existence (ci-{moniker}.yaml) when
+// workspaceRoot is available, falling back to a versioning-based heuristic otherwise.
+func buildCIArtifactDeps(cfg *config.RepositoryConfig, workspaceRoot string) map[string][]string {
+	// Build a set of modules that have CI workflows.
+	// Prefer filesystem check (authoritative) over config heuristics.
 	ciModules := make(map[string]bool)
-	for i := range cfg.Modules {
-		m := &cfg.Modules[i]
-		// Modules with versioning (non-Implicit) or explicit CIDeps likely have CI
-		if m.Versioning != nil && m.Versioning.Scheme != "Implicit" {
-			ciModules[m.Moniker] = true
+	if workspaceRoot != "" {
+		if validModules, err := getValidCIModules(workspaceRoot); err == nil {
+			ciModules = validModules
 		}
-		if len(m.CIDeps) > 0 {
-			ciModules[m.Moniker] = true
+	}
+	// Fallback: if filesystem check failed or workspaceRoot empty, use heuristics
+	if len(ciModules) == 0 {
+		for i := range cfg.Modules {
+			m := &cfg.Modules[i]
+			if m.Versioning != nil && m.Versioning.Scheme != "Implicit" {
+				ciModules[m.Moniker] = true
+			}
+			if len(m.CIDeps) > 0 {
+				ciModules[m.Moniker] = true
+			}
 		}
 	}
 
