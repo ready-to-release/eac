@@ -48,7 +48,7 @@ component-kinds:
   typescript:
     extensions: [".ts", ".tsx"]
     source_prefixes: [typescript, src]
-    builders: [npm]
+    builders: [npm-build]
     testers: [npm]
     linters: [eslint]
     scanners: [sbom, vuln, secrets, sast]
@@ -62,7 +62,7 @@ component-kinds:
 
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
-    builders: [npm]
+    builders: [npm-build]
     testers: [npm]
     linters: [eslint]
     scanners: [sbom, vuln, secrets, sast]

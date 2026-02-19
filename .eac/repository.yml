@@ -467,7 +467,7 @@ modules:
       changelog: release/eac-ext/CHANGELOG.md
       release_type: published
     depends_on: [eac, oci-tools]
-    depends_on_ci: [clie]
+    depends_on_ci: [clie, eac]
     components:
       - type: container
         docker_build:
