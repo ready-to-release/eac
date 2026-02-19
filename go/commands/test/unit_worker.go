@@ -165,10 +165,7 @@ func testUnitWorker(goCtx context.Context, ctx *cmdframework.ExecutionContext, s
 	// Run tests - UoW manages log file, we just write to logWriter
 	// Use the testname as result key for aggregation (unique within module:componentType)
 	resultKey := testname
-	fmt.Fprintf(os.Stderr, "[worker-debug] running tests for %s:%s\n", module, testname)
 	result := testCfg.ExecCtx.runPackageTestsDirect(goCtx, pkgPath, tests, logWriter, outputDir)
-	fmt.Fprintf(os.Stderr, "[worker-debug] tests done for %s:%s passed=%d failed=%d pkgFailed=%v\n",
-		module, testname, result.TestsPassed, result.TestsFailed, result.PackageFailed)
 
 	testCfg.ExecCtx.mu.Lock()
 	testCfg.ExecCtx.results[resultKey] = result

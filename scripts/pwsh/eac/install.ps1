@@ -173,8 +173,10 @@ function Install-Binary {
         $targetPath = Join-Path $InstallDir $BinaryName
         Write-ColorOutput "Installing to $targetPath..." "Cyan"
 
-        # Stop any running instances
-        Get-Process -Name "eac" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        # Stop any running instances (skip in test mode to avoid killing the test orchestrator)
+        if ($env:__EAC_TEST_MOCK -ne "1") {
+            Get-Process -Name "eac" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        }
 
         Move-Item -Path $tempFile -Destination $targetPath -Force
 
