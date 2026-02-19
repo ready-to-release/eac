@@ -143,7 +143,7 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         # CI tests THIS module only:
-        # --retest: force full test run (no incremental detection, CI handles orchestration)
+        # --skip-cache: force full test run (no incremental detection, CI handles orchestration)
         # --skip-depm: skip module dependency build artifact validation (deps compiled from source)
         test_failed=0
         SKIP_DEPM_FLAG=""
@@ -154,7 +154,7 @@ runs:
         for suite in "${SUITE_ARRAY[@]}"; do
           suite=$(echo "$suite" | xargs)  # trim whitespace
           echo "Running test suite: $suite"
-          if ! ${COMMANDS:?COMMANDS not set} test $MODULE --suite $suite --retest $SKIP_DEPM_FLAG $EXTRA_ARGS; then
+          if ! ${COMMANDS:?COMMANDS not set} test $MODULE --suite $suite --skip-cache $SKIP_DEPM_FLAG $EXTRA_ARGS; then
             test_failed=1
           fi
         done

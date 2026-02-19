@@ -2,6 +2,7 @@
 package tool
 
 import (
+	"fmt"
 	"sync"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -323,7 +324,8 @@ func InitializeGlobalBridges(repoRoot, configRoot string) error {
 	ts, err := NewToolSystem(repoRoot, configRoot, defaultContainerProvider)
 	if err != nil {
 		// Tool config is optional — no tool-config.yml is expected in many repos.
-		return nil
+		// Return the error so callers can log it for diagnostic purposes.
+		return fmt.Errorf("tool system init: %w", err)
 	}
 
 	globalToolSystem = ts

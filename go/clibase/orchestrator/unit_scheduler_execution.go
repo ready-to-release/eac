@@ -215,6 +215,12 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		timeout = config.DockerImageBuildTimeout()
 	}
 
+	// Go cross-compilation builds (e.g., 5+ platform targets) need more time than the
+	// generic worker timeout. Cold compilation without cache easily exceeds 3 minutes.
+	if tool == "go" && spec.ID.Action == core.ActionBuild {
+		timeout = config.BuildTimeout()
+	}
+
 	// Create cancellable context with timeout — propagated to worker and its subprocesses
 	workerCtx, workerCancel := context.WithTimeout(context.Background(), timeout)
 	defer workerCancel()

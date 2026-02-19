@@ -1,4 +1,4 @@
-name: "CI: clie-installer"
+name: "CI: cli-installers"
 
 on:
   workflow_call:
@@ -21,7 +21,7 @@ jobs:
   ci:
     uses: ./.github/workflows/_module-ci.yaml
     with:
-      module: clie-installer
+      module: cli-installers
       ref: ${{ inputs.ref }}
       sha: ${{ inputs.sha }}
       trigger_run_id: ${{ inputs.trigger_run_id }}

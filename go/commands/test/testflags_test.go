@@ -63,6 +63,18 @@ func TestParseTestSpecificFlags(t *testing.T) {
 			wantCoverage:  true,
 			wantRemaining: []string{"module-a"},
 		},
+		{
+			name:          "CI pattern: module suite and skip-cache",
+			args:          []string{"mymodule", "--suite", "unit", "--skip-cache"},
+			wantSuite:     "unit",
+			wantRemaining: []string{"mymodule", "--skip-cache"},
+		},
+		{
+			name:          "CI pattern: suite value not confused with next flag",
+			args:          []string{"--suite", "integration", "--skip-depm"},
+			wantSuite:     "integration",
+			wantRemaining: []string{"--skip-depm"},
+		},
 	}
 
 	for _, tt := range tests {

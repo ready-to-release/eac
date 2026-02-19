@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -219,55 +221,73 @@ func classifyInput(positional []string) (inputType, string) {
 	return inputAuto, ""
 }
 
-// getCIResultsForSHA queries CI runs across all module workflows at the given SHA.
+// GetCIResultsForSHA queries CI runs across all module workflows at the given SHA.
+// All module lookups and enrichments run concurrently for fast results.
 func GetCIResultsForSHA(sha string, modules []string, api *github.GHClient, repo, workspaceRoot string) (*CIResultsSummary, error) {
-	// Discover CI modules
 	ciModules, err := discoverCIModules(modules, workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	summary := &CIResultsSummary{
-		HeadSHA: sha,
-		Runs:    []CIRunResult{},
+	type moduleResult struct {
+		orchestrator bool
+		result       *CIRunResult
 	}
 
-	// Lookup the orchestrator run at this SHA
-	orchRun, err := api.FindRunBySHA(orchestratorWorkflow, sha, 20)
-	if err == nil {
-		orch, _ := enrichRunResult("ci-orchestrator", orchestratorWorkflow, orchRun, api, repo)
-		if orch != nil {
-			summary.Orchestrator = orch
-		}
-	}
+	var (
+		mu        sync.Mutex
+		wg        sync.WaitGroup
+		collected []moduleResult
+	)
 
-	for _, module := range ciModules {
-		workflow := fmt.Sprintf("ci-%s.yaml", module)
+	// processWorkflow finds and enriches a CI run for one workflow.
+	processWorkflow := func(module, workflow string, isOrchestrator bool) {
+		defer wg.Done()
 
-		// Find run at this SHA
 		run, err := api.FindRunBySHA(workflow, sha, 20)
 		if err != nil {
-			// No run found for this module - skip
-			continue
+			return // no run found for this workflow
 		}
 
-		result, err := enrichRunResult(module, workflow, run, api, repo)
-		if err != nil {
-			// Partial failure - include what we have
-			result = &CIRunResult{
-				Module:     module,
-				Workflow:   workflow,
-				RunID:      run.ID,
-				HeadSHA:    run.HeadSHA,
-				Status:     run.Status,
-				Conclusion: run.Conclusion,
-				CreatedAt:  run.CreatedAt.Format(time.RFC3339),
-				Links:      buildRunLinks(run.ID, repo),
-			}
+		result, _ := enrichRunResult(module, workflow, run, api, repo)
+		if result == nil {
+			return
 		}
 
-		summary.Runs = append(summary.Runs, *result)
+		mu.Lock()
+		collected = append(collected, moduleResult{orchestrator: isOrchestrator, result: result})
+		mu.Unlock()
 	}
+
+	// Launch orchestrator + all module lookups concurrently
+	wg.Add(1)
+	go processWorkflow("ci-orchestrator", orchestratorWorkflow, true)
+
+	for _, module := range ciModules {
+		wg.Add(1)
+		go processWorkflow(module, fmt.Sprintf("ci-%s.yaml", module), false)
+	}
+
+	wg.Wait()
+
+	// Assemble summary
+	summary := &CIResultsSummary{
+		HeadSHA: sha,
+		Runs:    make([]CIRunResult, 0, len(collected)),
+	}
+
+	for _, r := range collected {
+		if r.orchestrator {
+			summary.Orchestrator = r.result
+		} else {
+			summary.Runs = append(summary.Runs, *r.result)
+		}
+	}
+
+	// Sort by module name for deterministic output
+	sort.Slice(summary.Runs, func(i, j int) bool {
+		return summary.Runs[i].Module < summary.Runs[j].Module
+	})
 
 	// Compute totals
 	summary.TotalRuns = len(summary.Runs)
@@ -351,6 +371,7 @@ func GetCIResultsForRunID(runID int, api *github.GHClient, repo, workspaceRoot s
 }
 
 // enrichRunResult adds job details and artifacts to a run result.
+// Jobs and artifacts are fetched concurrently.
 func enrichRunResult(module, workflow string, run *github.WorkflowRun, api *github.GHClient, repo string) (*CIRunResult, error) {
 	result := &CIRunResult{
 		Module:     module,
@@ -363,18 +384,29 @@ func enrichRunResult(module, workflow string, run *github.WorkflowRun, api *gith
 		Links:      buildRunLinks(run.ID, repo),
 	}
 
-	// Fetch jobs
-	jobs, err := fetchRunJobs(run.ID, api)
-	if err == nil {
-		result.Jobs = jobs
-	}
+	var (
+		wg        sync.WaitGroup
+		jobs      []CIJobResult
+		artifacts []CIArtifact
+	)
 
-	// Fetch artifacts
-	artifacts, err := fetchRunArtifacts(run.ID, api)
-	if err == nil {
-		result.Artifacts = artifacts
-	}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if j, err := fetchRunJobs(run.ID, api); err == nil {
+			jobs = j
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if a, err := fetchRunArtifacts(run.ID, api); err == nil {
+			artifacts = a
+		}
+	}()
+	wg.Wait()
 
+	result.Jobs = jobs
+	result.Artifacts = artifacts
 	return result, nil
 }
 
@@ -485,8 +517,7 @@ func discoverCIModules(modules []string, workspaceRoot string) ([]string, error)
 		for m := range validModules {
 			result = append(result, m)
 		}
-		// Sort for deterministic output
-		sortStrings(result)
+		sort.Strings(result)
 		return result, nil
 	}
 
@@ -497,15 +528,6 @@ func discoverCIModules(modules []string, workspaceRoot string) ([]string, error)
 		}
 	}
 	return modules, nil
-}
-
-// sortStrings sorts a string slice in place.
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
 }
 
 // formatDuration formats a duration into a human-readable string.

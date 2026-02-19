@@ -157,6 +157,73 @@ func TestGetDockerBuildConfig_NamedComponentFallsBackToContainer(t *testing.T) {
 	}
 }
 
+func TestExpandTemplate(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		moniker  string
+		envVars  map[string]string
+		want     string
+	}{
+		{
+			name:     "moniker expansion",
+			template: "ghcr.io/org/{moniker}:latest",
+			moniker:  "pdf-oci",
+			want:     "ghcr.io/org/pdf-oci:latest",
+		},
+		{
+			name:     "container defaults to moniker",
+			template: "{container}:latest",
+			moniker:  "pdf-oci",
+			want:     "pdf-oci:latest",
+		},
+		{
+			name:     "owner expansion from env",
+			template: "ghcr.io/{owner}/{moniker}:latest",
+			moniker:  "pdf-oci",
+			envVars:  map[string]string{"GITHUB_REPOSITORY_OWNER": "my-org"},
+			want:     "ghcr.io/my-org/pdf-oci:latest",
+		},
+		{
+			name:     "short_sha expansion from env",
+			template: "ghcr.io/org/{moniker}:sha-{short_sha}",
+			moniker:  "pdf-oci",
+			envVars:  map[string]string{"GITHUB_SHA": "abc1234567890"},
+			want:     "ghcr.io/org/pdf-oci:sha-abc1234",
+		},
+		{
+			name:     "all variables combined",
+			template: "ghcr.io/{owner}/{moniker}:sha-{short_sha}",
+			moniker:  "mkdocs-render-oci",
+			envVars: map[string]string{
+				"GITHUB_REPOSITORY_OWNER": "ready-to-release",
+				"GITHUB_SHA":              "deadbeef1234567",
+			},
+			want: "ghcr.io/ready-to-release/mkdocs-render-oci:sha-deadbee",
+		},
+		{
+			name:     "unexpanded owner without env",
+			template: "ghcr.io/{owner}/{moniker}:latest",
+			moniker:  "pdf-oci",
+			want:     "ghcr.io/{owner}/pdf-oci:latest",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set env vars for this test
+			for k, v := range tt.envVars {
+				t.Setenv(k, v)
+			}
+
+			got := expandTemplate(tt.template, tt.moniker)
+			if got != tt.want {
+				t.Errorf("expandTemplate() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetDockerBuildConfig_ContainerTypeFallback(t *testing.T) {
 	// Module has a "container" type component with docker_build.
 	// Empty component name should fall back to "container" type.

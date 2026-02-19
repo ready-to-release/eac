@@ -321,11 +321,16 @@ func detectLocalPlatform() string {
 }
 
 // expandTemplate expands template variables in a string
-// Supported variables: {moniker}, {container}, {short_sha}.
+// Supported variables: {moniker}, {container}, {owner}, {short_sha}.
 func expandTemplate(template, moniker string) string {
 	result := template
 	result = strings.ReplaceAll(result, "{moniker}", moniker)
 	result = strings.ReplaceAll(result, "{container}", moniker) // container defaults to moniker
+
+	// Expand {owner} from CI environment
+	if owner := os.Getenv("GITHUB_REPOSITORY_OWNER"); owner != "" {
+		result = strings.ReplaceAll(result, "{owner}", owner)
+	}
 
 	// Get short SHA if available
 	if sha := os.Getenv("GITHUB_SHA"); sha != "" && len(sha) >= 7 {

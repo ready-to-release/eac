@@ -107,14 +107,3 @@ func TestBuildRunLinks(t *testing.T) {
 		t.Errorf("DownloadAll = %q", links.DownloadAll)
 	}
 }
-
-func TestSortStrings(t *testing.T) {
-	input := []string{"clie", "core", "clibase", "eac-ext", "docs"}
-	sortStrings(input)
-	expected := []string{"clibase", "clie", "core", "docs", "eac-ext"}
-	for i, got := range input {
-		if got != expected[i] {
-			t.Errorf("sortStrings: index %d = %q, want %q", i, got, expected[i])
-		}
-	}
-}

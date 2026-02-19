@@ -140,22 +140,24 @@ func parseTestArgs(args []string) *TestConfig {
 	// Detect execution environment for TUI defaults
 	env := environment.Detect()
 
-	// Parse shared flags using flag sets
-	shared, err := flags.ParseSharedFlagsWithEnv(flags.TestConfig(), args, env)
+	// Parse test-specific flags FIRST (before shared flags).
+	// This ensures --suite <value> is consumed before the shared parser
+	// separates the value into positional args (same pattern as scan.go:78).
+	testFlags, remainingAfterTest, err := ParseTestSpecificFlags(args)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return nil
 	}
 
-	// Parse test-specific flags from remaining args
-	testFlags, unknownArgs, err := ParseTestSpecificFlags(shared.Remaining)
+	// Parse shared flags from remaining args
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.TestConfig(), remainingAfterTest, env)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return nil
 	}
 
 	// Check for unknown flags
-	for _, arg := range unknownArgs {
+	for _, arg := range shared.Remaining {
 		if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
 			log.Errorf("unknown flag: %s", arg)
 			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --turbo, --roof, --skip-cache, --dry-run")
