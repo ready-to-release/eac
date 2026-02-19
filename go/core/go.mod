@@ -10,7 +10,7 @@ require (
 	github.com/cucumber/godog v0.15.1
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/defenseunicorns/go-oscal v0.7.0
-	github.com/go-git/go-git/v5 v5.16.4
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/gofrs/flock v0.13.0
 	github.com/huandu/go-clone/generic v1.7.3
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
