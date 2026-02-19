@@ -388,10 +388,12 @@ func (c *repositoryContext) runGoModTidyDiffInEachModule() error {
 		cmd.Stderr = &stderr
 
 		err := cmd.Run()
-		output := stdout.String() + stderr.String()
-		c.tidyResults[modulePath] = output
+		// Only use stdout for the diff — stderr contains "go: downloading" noise
+		// that doesn't indicate an untidy module.
+		diff := stdout.String()
+		c.tidyResults[modulePath] = diff
 
-		if err != nil || strings.TrimSpace(output) != "" {
+		if err != nil || strings.TrimSpace(diff) != "" {
 			c.failedModules = append(c.failedModules, modulePath)
 		}
 	}
