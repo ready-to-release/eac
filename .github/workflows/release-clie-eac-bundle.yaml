@@ -1,14 +1,17 @@
-# Release Bundle - Creates the "Latest" GitHub release
+# Release clie-eac-bundle - Bundle Release Workflow
 #
-# Aggregates links to all module releases into a single "Latest" release.
-# Release type (bundle), version type (calver), and await behavior are
-# all derived from core config.
+# Aggregates links to all module releases into a single release.
+# Release type (bundle) and await behavior are derived from core config.
 
 name: "Release: clie-eac-bundle"
 
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Version to release (semver format: x.y.z)'
+        required: true
+        type: string
       ci_run_id:
         description: 'CI workflow run ID (passed from CI)'
         required: false
@@ -25,6 +28,7 @@ jobs:
     uses: ./.github/workflows/_module-release.yaml
     with:
       module: clie-eac-bundle
+      version: ${{ inputs.version }}
       ci_run_id: ${{ inputs.ci_run_id }}
       skip-ci-check: ${{ inputs.skip-ci-check }}
     permissions:
