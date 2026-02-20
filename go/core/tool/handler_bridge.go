@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
+	"github.com/ready-to-release/eac/go/core/environments"
 )
 
 // HandlerToolBridge adapts tool definitions for handler execution.
@@ -106,6 +107,20 @@ func (b *HandlerToolBridge) ExecuteTool(ctx context.Context, toolName string, tc
 
 	// Build container configuration from tool definition
 	config := b.buildContainerConfig(tool, tc)
+
+	// For local containers, ensure image is available via ImageManager.
+	// Local containers use "{name}:local" tags that can't be pulled from a registry.
+	// ImageManager handles: local Dockerfile build (dev) or GHCR pull with build fallback (CI).
+	if tool.IsLocalContainer() {
+		imgMgr := NewImageManager(tc.WorkspaceRoot, environments.IsCI(), "ready-to-release", tc.LogWriter)
+		resolvedImage, err := imgMgr.EnsureImage(ctx, tool)
+		if err != nil {
+			return 1, fmt.Errorf("failed to ensure image for %s: %w", toolName, err)
+		}
+		if resolvedImage != "" {
+			config.Image = resolvedImage
+		}
+	}
 
 	// Execute via container port
 	result, err := c.Execute(ctx, config)

@@ -138,9 +138,18 @@ func (m *ImageManager) verifyDockerAvailable() error {
 }
 
 // ensureLocalImageWithOptions handles local containers (have LocalPath) with options.
+// In CI: tries GHCR pull first, falls back to local Dockerfile build if pull fails.
+// Locally: builds from Dockerfile (with staleness check).
 func (m *ImageManager) ensureLocalImageWithOptions(ctx context.Context, tool *ToolDefinition, opts ImageOptions) (string, error) {
 	if m.isCI {
-		return m.pullCIImageWithOptions(ctx, tool, opts)
+		ref, err := m.pullCIImageWithOptions(ctx, tool, opts)
+		if err == nil {
+			return ref, nil
+		}
+		// Fallback: build from Dockerfile when GHCR images are unavailable.
+		// This handles cases where OCI tool images haven't been published yet.
+		m.log("GHCR pull failed (%v), building from Dockerfile", err)
+		return m.buildLocalImageWithOptions(ctx, tool, opts)
 	}
 	return m.buildLocalImageWithOptions(ctx, tool, opts)
 }
