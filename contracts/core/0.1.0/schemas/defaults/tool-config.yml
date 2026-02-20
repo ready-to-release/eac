@@ -549,10 +549,11 @@ container-tools:
     description: "Structurizr CLI for export/validation"
     image: structurizr/cli
     tag: "2025.11.09"
+    command: ["validate", "-w", "workspace.dsl"]
     mounts:
       - source: "{workspace}"
         target: /workspace
-    workdir: /workspace
+    workdir: /workspace/{module-rel}
     requirements: [docker]
 
   structurizr-export:
