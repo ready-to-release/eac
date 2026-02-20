@@ -352,7 +352,7 @@ modules:
       scheme: SemVer
       changelog: release/eac/CHANGELOG.md
       release_type: published
-    depends_on: [core, clibase, adapters, oci-tools]
+    depends_on: [commands, oci-tools]
     components:
       - type: go
         root: go/cli/eac

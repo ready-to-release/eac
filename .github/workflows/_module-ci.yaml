@@ -151,12 +151,13 @@ jobs:
 
       # Binary build (default)
       - name: Build Module
+        id: build-binary
         if: needs.config.outputs.is-container != 'true'
         uses: ./.github/actions/build-module
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          upload-artifact: 'true'
+          upload-artifact: 'false'
           extra-args: ${{ needs.config.outputs.build-args }}
           cross-compile-windows: ${{ needs.config.outputs.cross-compile-windows }}
 
@@ -175,6 +176,51 @@ jobs:
           registry: ghcr.io
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload Build Artifacts
+        if: needs.config.outputs.is-container != 'true'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: build-artifacts-${{ inputs.module }}
+          path: out/build/${{ inputs.module }}/
+          if-no-files-found: error
+
+      - name: Build Summary
+        if: always() && needs.config.outputs.is-container != 'true'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.build-binary.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+            echo "## ⚠️ Build Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          ${COMMANDS:?COMMANDS not set} show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+
+      - name: Container Build Summary
+        if: always() && needs.config.outputs.is-container == 'true'
+        shell: bash
+        env:
+          MODULE: ${{ inputs.module }}
+          IMAGE_NAME: ${{ steps.container-build.outputs.image-name }}
+          IMAGE_TAG: ${{ steps.container-build.outputs.image-tag }}
+        run: |
+          echo "### Container Build: \`$MODULE\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`$IMAGE_NAME\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Container image pushed and verified." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Container build failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
 
   # ===========================================================================
   # Job B: Test (Linux) - parallel with scan
@@ -210,6 +256,7 @@ jobs:
           fi
 
       - name: Test Module
+        id: test
         uses: ./.github/actions/test-module
         with:
           module: ${{ inputs.module }}
@@ -218,6 +265,39 @@ jobs:
           results-artifact-name: test-results-${{ inputs.module }}-linux
           skip-depm: ${{ needs.config.outputs.download-modules == '' }}
           download-artifact: true
+
+      - name: Upload Test Results
+        if: always() && steps.test.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: test-results-${{ inputs.module }}-linux
+          path: ${{ steps.test.outputs.results-artifact-path }}
+          if-no-files-found: ignore
+
+      - name: Test Summary
+        if: always() && steps.test.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.test.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SUITES: ${{ steps.suites.outputs.suites }}
+          RUN_ID: ${{ github.run_id }}
+          TEST_FAILED: ${{ steps.test.outputs.test-failed }}
+          GH_TOKEN: ${{ github.token }}
+          RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-linux
+        run: |
+          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          if [ "$TEST_FAILED" = "0" ]; then
+            STATUS="success"
+          else
+            STATUS="failure"
+          fi
+          PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
+          ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Job B2: Test (Windows) - optional, parallel with scan
@@ -253,6 +333,7 @@ jobs:
           fi
 
       - name: Test Module
+        id: test
         uses: ./.github/actions/test-module
         with:
           module: ${{ inputs.module }}
@@ -261,6 +342,39 @@ jobs:
           results-artifact-name: test-results-${{ inputs.module }}-windows
           skip-depm: ${{ needs.config.outputs.download-modules == '' }}
           download-artifact: true
+
+      - name: Upload Test Results
+        if: always() && steps.test.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: test-results-${{ inputs.module }}-windows
+          path: ${{ steps.test.outputs.results-artifact-path }}
+          if-no-files-found: ignore
+
+      - name: Test Summary
+        if: always() && steps.test.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.test.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SUITES: ${{ steps.suites.outputs.suites }}
+          RUN_ID: ${{ github.run_id }}
+          TEST_FAILED: ${{ steps.test.outputs.test-failed }}
+          GH_TOKEN: ${{ github.token }}
+          RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-windows
+        run: |
+          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          if [ "$TEST_FAILED" = "0" ]; then
+            STATUS="success"
+          else
+            STATUS="failure"
+          fi
+          PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
+          ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Job B3: Test (macOS) - optional, parallel with scan
@@ -296,6 +410,7 @@ jobs:
           fi
 
       - name: Test Module
+        id: test
         uses: ./.github/actions/test-module
         with:
           module: ${{ inputs.module }}
@@ -304,6 +419,39 @@ jobs:
           results-artifact-name: test-results-${{ inputs.module }}-macos
           skip-depm: ${{ needs.config.outputs.download-modules == '' }}
           download-artifact: true
+
+      - name: Upload Test Results
+        if: always() && steps.test.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: test-results-${{ inputs.module }}-macos
+          path: ${{ steps.test.outputs.results-artifact-path }}
+          if-no-files-found: ignore
+
+      - name: Test Summary
+        if: always() && steps.test.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.test.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SUITES: ${{ steps.suites.outputs.suites }}
+          RUN_ID: ${{ github.run_id }}
+          TEST_FAILED: ${{ steps.test.outputs.test-failed }}
+          GH_TOKEN: ${{ github.token }}
+          RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-macos
+        run: |
+          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          if [ "$TEST_FAILED" = "0" ]; then
+            STATUS="success"
+          else
+            STATUS="failure"
+          fi
+          PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
+          ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Job C: Scan - parallel with test
@@ -320,12 +468,31 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Scan Module
+        id: scan-step
         uses: ./.github/actions/scan-module
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           scans: ${{ needs.config.outputs.scans }}
           fail-on-error: ${{ needs.config.outputs.scan-fail-mode }}
+
+      - name: Upload Scan Results
+        if: always() && steps.scan-step.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: scan-results-${{ inputs.module }}
+          path: out/scan/
+          if-no-files-found: warn
+
+      - name: Scan Summary
+        if: always() && steps.scan-step.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.scan-step.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          ARTIFACT_NAME: scan-results-${{ inputs.module }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Job D: Container Test - for container modules with test scripts

@@ -66,6 +66,9 @@ outputs:
   artifact-name:
     description: 'Name of the uploaded scan results artifact'
     value: ${{ steps.vars.outputs.scan-artifact-name }}
+  commands-path:
+    description: 'Path to the commands binary used'
+    value: ${{ steps.commands.outputs.commands-path }}
   scan-failed:
     description: 'true if any scan failed'
     value: ${{ steps.scan.outputs.scan-failed }}
@@ -176,23 +179,3 @@ runs:
           exit 1
         fi
 
-    - name: Upload Scan Results
-      if: inputs.upload-artifact == 'true' && always()
-      uses: ./.github/actions/upload-artifact-retry
-      with:
-        name: ${{ steps.vars.outputs.scan-artifact-name }}
-        path: out/scan/
-        if-no-files-found: warn
-
-    - name: Scan Summary
-      if: always()
-      shell: bash
-      env:
-        COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        MODULE: ${{ inputs.module }}
-        ARTIFACT_NAME: ${{ steps.vars.outputs.scan-artifact-name }}
-      run: |
-        # Generate summary using Go command
-        # Status is derived from scan manifest (success if all scans passed)
-        # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY

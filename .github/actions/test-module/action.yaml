@@ -56,9 +56,15 @@ outputs:
   artifact-name:
     description: Name of the uploaded test results artifact
     value: ${{ steps.vars.outputs.results-artifact-name }}
+  results-artifact-path:
+    description: Path pattern for test results to upload
+    value: ${{ steps.vars.outputs.results-artifact-path }}
   commands-path:
     description: Path to the commands binary used
     value: ${{ steps.commands.outputs.commands-path }}
+  test-failed:
+    description: Whether the test failed (0 or 1)
+    value: ${{ steps.test.outputs.test-failed }}
 
 runs:
   using: composite
@@ -162,44 +168,3 @@ runs:
         if [ "$test_failed" -eq 1 ]; then
           exit 1
         fi
-
-    - name: Upload Test Results
-      if: always()
-      uses: ./.github/actions/upload-artifact-retry
-      with:
-        name: ${{ steps.vars.outputs.results-artifact-name }}
-        path: ${{ steps.vars.outputs.results-artifact-path }}
-        if-no-files-found: ignore
-
-    - name: Test Summary
-      if: always()
-      shell: bash
-      env:
-        COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        MODULE: ${{ inputs.module }}
-        SUITES: ${{ inputs.suites }}
-        RUN_ID: ${{ github.run_id }}
-        TEST_FAILED: ${{ steps.test.outputs.test-failed }}
-        GH_TOKEN: ${{ github.token }}
-        RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
-      run: |
-        # Validate COMMANDS is set
-        if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-          echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
-          echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
-          exit 0
-        fi
-
-        # Determine status from test result
-        if [ "$TEST_FAILED" = "0" ]; then
-          STATUS="success"
-        else
-          STATUS="failure"
-        fi
-
-        # Extract primary suite (first in comma-separated list)
-        PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
-
-        # Generate comprehensive summary using Go command
-        # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY

@@ -43,6 +43,9 @@ outputs:
   commands-path:
     description: Path to the commands binary used
     value: ${{ steps.commands.outputs.commands-path }}
+  build-failed:
+    description: Whether the build failed (0 or 1)
+    value: ${{ steps.build.outputs.build-failed }}
 
 runs:
   using: composite
@@ -102,23 +105,3 @@ runs:
         path: out/build/${{ inputs.module }}/
         if-no-files-found: error
 
-    - name: Build Summary
-      if: always()
-      shell: bash
-      env:
-        COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        MODULE: ${{ inputs.module }}
-        RUN_ID: ${{ github.run_id }}
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        # Validate COMMANDS is set
-        if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-          echo "## ⚠️ Build Summary Unavailable" >> $GITHUB_STEP_SUMMARY
-          echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
-          exit 0
-        fi
-
-        # Generate comprehensive summary using Go command
-        # Status is derived from build manifest (success if artifacts exist)
-        # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        ${COMMANDS:?COMMANDS not set} show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
