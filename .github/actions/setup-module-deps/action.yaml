@@ -185,7 +185,7 @@ runs:
         exit 1
 
     - name: Setup Docker Buildx Builder
-      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && runner.os == 'Linux'
       uses: docker/setup-buildx-action@v3
 
     - name: Check if UPX is available
