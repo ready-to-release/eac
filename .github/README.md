@@ -5,8 +5,8 @@
 <p align="center">
   <img src="../docs/assets/logo/eac-logo.png" width="200" /><br><br>
   <strong style="font-size: 1.5em;">Ready to Release</strong><br>
-  <em>Agent-ready continuous delivery for regulated industries</em><br><br>
-  <sub>The <strong>Everything as Code</strong> framework — compliance, traceability, and release automation<br>
+  <em>Agent-ready continuous delivery for regulated industries - and every AI-native team.</em><br><br>
+  <sub>The <strong>Everything as Code</strong> framework - compliance, traceability, and release automation<br>
   governed by code, operated by humans and AI agents alike.</sub>
 </p>
 
@@ -21,8 +21,6 @@
   <a href="https://github.com/ready-to-release/eac/releases?q=eac"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac/*&style=for-the-badge&logo=gnubash&logoColor=white&label=eac&color=22c55e" alt="eac"></a>
   &nbsp;
   <a href="https://github.com/ready-to-release/eac/pkgs/container/eac-ext"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-ext/*&style=for-the-badge&logo=docker&logoColor=white&label=eac-ext&color=8b5cf6" alt="eac-ext"></a>
-  &nbsp;
-  <a href="https://github.com/ready-to-release/eac/releases?q=eac-mcp-server"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=eac-mcp-server/*&style=for-the-badge&logo=gnubash&logoColor=white&label=mcp-server&color=f97316" alt="mcp-server"></a>
   &nbsp;
   <a href="https://github.com/ready-to-release/eac/releases?q=clie"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=clie/*&style=for-the-badge&logo=gnubash&logoColor=white&label=clie&color=64748b" alt="clie"></a>
   &nbsp;
@@ -50,7 +48,7 @@ Up and running in under 5 minutes.
 <summary><b>View install commands</b></summary>
 <br>
 
-**EAC CLI** (standalone, no Docker required)
+**EAC CLI** - specs, builds, compliance, AI commits, and release automation. Start here.
 
 > **Linux / macOS**
 
@@ -66,7 +64,7 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac
 
 ---
 
-**CLIE** (extension manager — adds Docker-based extensions to EAC)
+**CLIE** *(optional)* - extensible CLI platform. Install if you want to run EAC alongside other Docker-based tools as managed extensions.
 
 > **Linux / macOS**
 
@@ -102,7 +100,7 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 
 <p align="center">
 <strong>Everything as Code</strong> turns compliance from a bottleneck into a byproduct.<br>
-<sub>Specifications · Documentation · Compliance · Traceability — all version-controlled, executable, automated.</sub>
+<sub>Specifications · Documentation · Compliance · Traceability - all version-controlled, executable, automated.</sub>
 </p>
 
 <p align="center">
@@ -111,7 +109,8 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <sub><del>Manual checklists</del> → <strong>Automated gates</strong></sub><br>
 <sub><del>Audit spreadsheets</del> → <strong>Git history</strong></sub><br>
 <sub><del>Months of release/audit prep</del> → <strong>Always ready</strong></sub><br>
-<sub><del>Documents agents can't read</del> → <strong>Machine-enforceable infrastructure</strong></sub>
+<sub><del>Documents agents can't read</del> → <strong>Machine-enforceable infrastructure</strong></sub><br>
+<sub><del>Docs that confuse agents</del> → <strong>Specs agents can reason over</strong></sub>
 </p>
 
 <p align="center">
@@ -133,11 +132,19 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <h2 align="center">AI-Native</h2>
 
 <p align="center">
+<em>Built for compliance. Perfect for AI.</em>
+</p>
+
+<p align="center">
+The rigor regulated industries require - machine-readable specs, versioned decisions, automated gates - turns out to be exactly what AI agents need to participate safely and effectively in your SDLC.<br>
+<sub>When your repository is structured code, AI can read it, validate against it, and act on it with confidence.</sub>
+</p>
+
+<p align="center">
 <a href="https://ready-to-release.github.io/eac/reference/eac/modules/eac-mcp-server/"><img src="https://img.shields.io/badge/🤖-MCP_Server-f97316?style=for-the-badge" alt="MCP Server"></a>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/local-setup/configure-claude-code/"><img src="https://img.shields.io/badge/🧠-Claude_Code-8b5cf6?style=for-the-badge" alt="Claude Code"></a>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/development-workflow/make-commits-with-ai/"><img src="https://img.shields.io/badge/✍️-AI_Commits-22c55e?style=for-the-badge" alt="AI Commits"></a>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/local-setup/configure-ai/"><img src="https://img.shields.io/badge/📋-AI_Specs-3b82f6?style=for-the-badge" alt="AI Specs"></a>
-<a href="https://ready-to-release.github.io/eac/reference/eac/modules/vscode-commit/"><img src="https://img.shields.io/badge/💻-VS_Code-14b8a6?style=for-the-badge" alt="VS Code"></a>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/documentation/create-specifications/"><img src="https://img.shields.io/badge/📋-AI_Specs-3b82f6?style=for-the-badge" alt="AI Specs"></a>
 </p>
 
 ---
@@ -183,13 +190,21 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 </p>
 
 <p align="center">
+<a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/"><img src="https://img.shields.io/badge/🤖_THE_AI_PARADOX-AI_accelerates_development._Unstructured_repos_create_chaos.-f97316?style=for-the-badge&labelColor=c2410c" alt="The AI Paradox"></a>
+</p>
+
+<p align="center">
+EAC resolves both - the same principles that enforce compliance make AI agents trustworthy contributors.
+</p>
+
+<p align="center">
 <a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/208×-Faster_Deploys-22c55e?style=for-the-badge" alt="208x Faster Deploys"></a>
 <a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/106×-Faster_Lead_Time-3b82f6?style=for-the-badge" alt="106x Faster Lead Time"></a>
 <a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/7×-Lower_Failure_Rate-8b5cf6?style=for-the-badge" alt="7x Lower Failure Rate"></a>
 </p>
 
 <p align="center">
-The difference isn't less compliance—it's <strong>automated compliance</strong>.<br>
+The difference isn't less compliance-it's <strong>automated compliance</strong>.<br>
 <sub>Small validated changes · Continuous evidence capture · Traceability in every commit</sub>
 </p>
 
@@ -209,14 +224,14 @@ Traditional approaches create friction:
 
 <br>
 
-**EAC replaces friction with flow** — everything versioned, traced, and automated in git.
+**EAC replaces friction with flow** - everything versioned, traced, and automated in git.
 
 </details>
 </p>
 
 <p align="center">
 <a href="https://github.com/ready-to-release/eac"><img src="https://img.shields.io/badge/🐕-Dogfooding-f97316?style=flat-square" alt="Dogfooding"></a><br>
-<sub>This repository uses EAC to build itself — living proof of the framework's efficacy.</sub>
+<sub>This repository uses EAC to build itself - living proof of the framework's efficacy.</sub>
 </p>
 
 <p align="center">
@@ -228,14 +243,14 @@ Traditional approaches create friction:
 <h2 align="center">Extend & Learn</h2>
 
 <p align="center">
-<a href="https://ready-to-release.github.io/eac/how-to-guides/clie/creating-extensions/"><img src="https://img.shields.io/badge/CLIE_Extensions-64748b?style=for-the-badge" alt="CLIE Extensions"></a>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules"><img src="https://img.shields.io/badge/EAC_Modules-8b5cf6?style=for-the-badge" alt="EAC Modules"></a>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/clie/creating-extensions/"><img src="https://img.shields.io/badge/CLIE_Extensions-64748b?style=for-the-badge" alt="CLIE Extensions"></a>
 <br>
-<sub><a href="https://ready-to-release.github.io/eac/how-to-guides/clie/creating-extensions/">Build Docker-based CLI extensions →</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules">Add custom automation modules →</a></sub>
+<sub><a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules">Add custom automation modules to EAC →</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/clie/creating-extensions/">Build Docker-based CLIE extensions →</a></sub>
 </p>
 
 <p align="center">
-<strong>Your standards. Your tooling. One CLI.</strong>
+<strong>Your standards. Your tooling. Your way.</strong>
 </p>
 
 <p align="center">
