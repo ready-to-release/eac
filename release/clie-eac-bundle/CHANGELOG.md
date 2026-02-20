@@ -1,19 +1,12 @@
 # Changelog
 
-All notable changes to **Release Bundle** will be documented in this file.
+All notable changes to **clie-eac-bundle** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Calendar Versioning](https://calver.org/).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-<!-- Release Highlights (since 2026.0115.2045)
-
-  Bundle:
-  - Includes first eac release (see release/eac/CHANGELOG.md)
-  - EAC Installer Scripts: install.ps1 (PowerShell) + install.sh (Bash) with BDD specs
-  - Aggregate release with all module releases included
-
--->
+## [0.0.1] - 2026-02-20
 
 ### Added
 
@@ -22,3 +15,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 - Headline modules: clie, eac-ext, eac
 - Core Tools category: clie, eac-ext, eac
 - Documentation category: docs, books
+- Includes first eac release (see release/eac/CHANGELOG.md)
+- EAC Installer Scripts: install.ps1 (PowerShell) + install.sh (Bash) with BDD specs
+
+[Unreleased]: https://github.com/ready-to-release/eac/compare/clie-eac-bundle/0.0.1...HEAD
+[0.0.1]: https://github.com/ready-to-release/eac/releases/tag/clie-eac-bundle/0.0.1
