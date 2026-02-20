@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # Setup clie for integration testing
-cp out/build/clie/go/clie-linux-amd64 ./clie 2>/dev/null || true
+cp out/build/clie/clie_go/clie-linux-amd64 ./clie 2>/dev/null || true
 chmod +x ./clie 2>/dev/null || true
 
 # Test via clie CLI
