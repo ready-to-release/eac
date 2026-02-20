@@ -58,7 +58,7 @@ Before testing in external repositories:
 
    ```powershell
    cd C:\source\ready-to-release\eac
-   .\scripts\pwsh\importer.ps1
+   .\importer.ps1
    ```
 
 2. **Build local Docker image** when ready for external testing:
@@ -222,31 +222,31 @@ clie eac show modules
 # Initialize repository analysis
 clie eac init
 
-# Analyze modules
-clie eac analyze modules
-
-# View results
+# View modules
 clie eac show modules
+
+# View available commands
+clie eac help
 ```
 
 ### 2. Test AI Integration
 
 ```powershell
 # Create specification with AI
-clie eac create spec <module-name>
+clie eac create-spec "description of feature"
 
 # Generate changelog
-clie eac create changelog <module-name>
+clie eac release-changelog
 ```
 
-### 3. Test Release Management
+### 3. Test Build and Validation
 
 ```powershell
-# Show release information
-clie eac show releases
+# Validate dependencies
+clie eac validate-dependencies
 
-# Check module releases
-clie eac show module-releases
+# Run tests
+clie eac test <module-name>
 ```
 
 ## Multiple External Repositories
@@ -300,9 +300,11 @@ When you make changes to the EAC extension:
    ```powershell
    cd C:\source\ready-to-release\eac
 
-   # Make code changes, then reload
-   clie load-commands
-   clie eac <command>
+   # Run importer to set up session
+   .\importer.ps1
+
+   # Make code changes, then test immediately
+   eac <command>
    ```
 
 2. **Rebuild the Docker image** when ready to test in external repos:
@@ -329,10 +331,9 @@ flowchart LR
     subgraph eac["EAC Repo<br/>(importer.ps1)<br/>Fast - seconds"]
         direction TB
         edit["1. Edit code"]
-        reload["2. clie load-cmds"]
-        test["3. Test quickly"]
-        iterate["4. Iterate..."]
-        edit --> reload --> test --> iterate
+        test["2. Test quickly"]
+        iterate["3. Iterate..."]
+        edit --> test --> iterate
         iterate -.-> edit
     end
 

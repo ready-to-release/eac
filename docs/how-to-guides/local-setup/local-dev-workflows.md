@@ -19,13 +19,10 @@ When developing in the EAC repository itself, use `importer.ps1` to load command
 
 ```powershell
 # In the EAC repository
-.\scripts\pwsh\importer.ps1
+.\importer.ps1
 
 # Set commands path
 $env:CLIE_COMMANDS_PATH = '.\go\cli\eac'
-
-# Load commands
-clie load-commands
 
 # Test your changes immediately
 eac <command>
@@ -78,13 +75,10 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 cd C:\source\ready-to-release\eac
 
 # Run importer to install/update clie binary
-.\scripts\pwsh\importer.ps1
+.\importer.ps1
 
 # Set commands path
 $env:CLIE_COMMANDS_PATH = '.\go\cli\eac'
-
-# Load commands directly from source
-clie load-commands
 
 # Test immediately
 eac help
@@ -93,9 +87,8 @@ eac help
 ### Development Iteration
 
 1. **Make code changes** in `go/cli/eac/`
-2. **Reload commands**: `clie load-commands`
-3. **Test immediately**: `eac <command>`
-4. **No Docker rebuild needed**
+2. **Test immediately**: `eac <command>`
+3. **No Docker rebuild needed**
 
 ## External Repository Testing
 
@@ -208,10 +201,10 @@ This creates `.clie/clie.local.yml` with:
 load_local: true
 
 extensions:
-  - name: 'eac'
-    image: 'eac-ext:dev'
+  - name: "eac"
+    image: "eac-ext:dev"
     load_local: true
-    image_pull_policy: 'Never'
+    image_pull_policy: "Never"
     auto_remove_children: false
 ```
 
@@ -255,14 +248,14 @@ Local files override base configuration for development.
 For local development, these fields are critical:
 
 ```yaml
-load_local: true                    # Skip registry pulls (global)
+load_local: true # Skip registry pulls (global)
 
 extensions:
-  - name: 'eac'
-    image: 'eac-ext:dev'           # Local Docker image tag
-    load_local: true               # Skip registry pulls (per-extension)
-    image_pull_policy: 'Never'     # Fail if image not found locally
-    auto_remove_children: false    # Keep containers for debugging
+  - name: "eac"
+    image: "eac-ext:dev" # Local Docker image tag
+    load_local: true # Skip registry pulls (per-extension)
+    image_pull_policy: "Never" # Fail if image not found locally
+    auto_remove_children: false # Keep containers for debugging
 ```
 
 ### Debug Configuration
@@ -277,13 +270,13 @@ This adds debug environment variables:
 
 ```yaml
 extensions:
-  - name: 'eac'
+  - name: "eac"
     # ... other config ...
     env:
-      - name: 'EAC_DEBUG'
-        value: 'true'
-      - name: 'CLIE_LOCAL_DEV'
-        value: 'true'
+      - name: "EAC_DEBUG"
+        value: "true"
+      - name: "CLIE_LOCAL_DEV"
+        value: "true"
 ```
 
 ### Workspace Mounting
@@ -298,14 +291,14 @@ This adds volume mounts:
 
 ```yaml
 extensions:
-  - name: 'eac'
+  - name: "eac"
     # ... other config ...
     volumes:
-      - host: '.'
-        container: '/workspace'
+      - host: "."
+        container: "/workspace"
         readonly: false
-      - host: '.git'
-        container: '/.git'
+      - host: ".git"
+        container: "/.git"
         readonly: true
 ```
 
@@ -340,10 +333,10 @@ When developing and testing in external repositories:
 
 ### Comparison: importer.ps1 vs Docker
 
-| Workflow                | Code Changes | Test Changes        | Iteration Time |
-| ----------------------- | ------------ | ------------------- | -------------- |
-| importer.ps1 (EAC repo) | Edit code    | `clie load-commands` | Seconds        |
-| Docker (external repo)  | Edit code    | Rebuild image       | Minutes        |
+| Workflow                | Code Changes | Test Changes    | Iteration Time |
+| ----------------------- | ------------ | --------------- | -------------- |
+| importer.ps1 (EAC repo) | Edit code    | `eac <command>` | Seconds        |
+| Docker (external repo)  | Edit code    | Rebuild image   | Minutes        |
 
 **Recommendation**: Develop and debug in EAC repo with `importer.ps1`, then validate in external repos with Docker.
 
@@ -419,9 +412,9 @@ Ensure it contains:
 ```yaml
 load_local: true
 extensions:
-  - name: 'eac'
+  - name: "eac"
     load_local: true
-    image_pull_policy: 'Never'
+    image_pull_policy: "Never"
 ```
 
 ### Wrong Repository Root
@@ -503,21 +496,21 @@ cat .clie\clie.local.yml
 | Build Script   | Build local Docker images    | `scripts/pwsh/local-dev/build-local.ps1` |
 | Init Script    | Create local config          | `scripts/pwsh/cli/init-local.ps1`        |
 | Setup Script   | Complete setup orchestration | `scripts/pwsh/local-dev/setup.ps1`       |
-| Install Script | Install clie binary           | `scripts/pwsh/cli/install.ps1`           |
+| Install Script | Install clie binary          | `scripts/pwsh/cli/install.ps1`           |
 
 ### Configuration Files
 
-| File                     | Purpose            | Committed       |
-| ------------------------ | ------------------ | --------------- |
+| File                   | Purpose            | Committed       |
+| ---------------------- | ------------------ | --------------- |
 | `.clie/clie.yml`       | Base configuration | Yes             |
 | `.clie/clie.local.yml` | Local overrides    | No (gitignored) |
 
 ### Environment Variables
 
-| Variable        | Purpose                    | Example                          |
-| --------------- | -------------------------- | -------------------------------- |
+| Variable         | Purpose                    | Example                          |
+| ---------------- | -------------------------- | -------------------------------- |
 | `CLIE_REPO_ROOT` | Repository root path       | `C:\source\ready-to-release\eac` |
-| `EAC_DEBUG`     | Enable debug logging       | `true`                           |
+| `EAC_DEBUG`      | Enable debug logging       | `true`                           |
 | `CLIE_LOCAL_DEV` | Flag for local development | `true`                           |
 
 ## Related Guides
