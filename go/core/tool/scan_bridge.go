@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
 	"sync"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -278,7 +277,7 @@ func (b *ScanBridge) createExecutionContext(workspaceRoot, moduleRoot, outputDir
 		Operation:     core.ActionScan,
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
-			"{module}":    filepath.Join(workspaceRoot, moduleRoot),
+			"{module}":    moduleRoot,
 			"{output}":    outputDir,
 		},
 	}

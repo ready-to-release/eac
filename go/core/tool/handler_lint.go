@@ -40,6 +40,10 @@ func NewLintHandlerAdapter(tool *ToolDefinition, executor Executor) *LintHandler
 
 // Lint executes the tool for a lint operation.
 func (a *LintHandlerAdapter) Lint(moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts LintOptions) int {
+	// Compute relative module path for container workdir resolution.
+	// {module} is the absolute host path (for bind mounts).
+	// {module-rel} is the workspace-relative path (for container workdir).
+	moduleRel, _ := filepath.Rel(workspaceRoot, moduleRoot)
 	execCtx := &ExecutionContext{
 		WorkspaceRoot: workspaceRoot,
 		ModuleRoot:    moduleRoot,
@@ -48,9 +52,10 @@ func (a *LintHandlerAdapter) Lint(moduleRoot, workspaceRoot, outputDir string, l
 		Operation:     core.ActionLint,
 		Files:         opts.Files,
 		Placeholders: map[string]string{
-			"{workspace}": workspaceRoot,
-			"{module}":    filepath.Join(workspaceRoot, moduleRoot),
-			"{output}":    outputDir,
+			"{workspace}":  workspaceRoot,
+			"{module}":     moduleRoot,
+			"{module-rel}": filepath.ToSlash(moduleRel),
+			"{output}":     outputDir,
 		},
 	}
 
