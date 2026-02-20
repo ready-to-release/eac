@@ -140,9 +140,18 @@ func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targe
 	targetName := resolver.ResolvePatternWithMetadata(art.Pattern, &art)
 	targetPath := filepath.Join(buildDir, targetName)
 
-	// Verify source exists
+	// Verify source exists - check module level first, then component subdirectories
 	if _, err := os.Stat(sourcePath); err != nil {
-		return fmt.Errorf("source artifact not found: %s", sourcePath)
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("source artifact not found: %s", sourcePath)
+		}
+		// Search component subdirectories (e.g., out/build/clie/clie_go/)
+		foundDir := findSourceInComponentSubdirs(buildDir, sourceName)
+		if foundDir == "" {
+			return fmt.Errorf("source artifact not found: %s", sourcePath)
+		}
+		sourcePath = filepath.Join(buildDir, foundDir, sourceName)
+		targetPath = filepath.Join(buildDir, foundDir, targetName)
 	}
 
 	fmt.Fprintf(logWriter, "  Deriving %s from %s\n", filepath.Base(targetPath), filepath.Base(sourcePath))
@@ -241,6 +250,25 @@ func upxCompressArtifact(targetPath string, logWriter io.Writer) error {
 	}
 
 	return nil
+}
+
+// findSourceInComponentSubdirs searches for an artifact in component subdirectories of buildDir.
+// Returns the subdirectory name if found, or empty string if not found.
+func findSourceInComponentSubdirs(buildDir, fileName string) string {
+	entries, err := os.ReadDir(buildDir)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(buildDir, entry.Name(), fileName)
+		if _, err := os.Stat(candidate); err == nil {
+			return entry.Name()
+		}
+	}
+	return ""
 }
 
 // copyFile copies a file from src to dst.

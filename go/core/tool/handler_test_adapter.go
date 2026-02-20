@@ -3,7 +3,6 @@ package tool
 import (
 	"context"
 	"io"
-	"path/filepath"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
@@ -39,15 +38,16 @@ func NewTestHandlerAdapter(tool *ToolDefinition, executor Executor) *TestHandler
 
 // Test executes the tool for a test operation.
 func (a *TestHandlerAdapter) Test(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int {
+	moduleRoot := module.GetComponentRoot("")
 	execCtx := &ExecutionContext{
 		WorkspaceRoot: workspaceRoot,
-		ModuleRoot:    module.GetComponentRoot(""),
+		ModuleRoot:    moduleRoot,
 		OutputDir:     outputDir,
 		LogWriter:     logWriter,
 		Operation:     core.ActionTest,
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
-			"{module}":    filepath.Join(workspaceRoot, module.GetComponentRoot("")),
+			"{module}":    moduleRoot,
 			"{output}":    outputDir,
 		},
 	}

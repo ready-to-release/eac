@@ -3,7 +3,6 @@ package tool
 import (
 	"context"
 	"io"
-	"path/filepath"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
@@ -46,7 +45,7 @@ func (a *ScanHandlerAdapter) Scan(moduleRoot, workspaceRoot, outputDir string, l
 		Operation:     core.ActionScan,
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
-			"{module}":    filepath.Join(workspaceRoot, moduleRoot),
+			"{module}":    moduleRoot,
 			"{output}":    outputDir,
 		},
 	}

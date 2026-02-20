@@ -322,14 +322,14 @@ container-tools:
   golangci-lint:
     description: "Go linter aggregator"
     image: golangci/golangci-lint
-    tag: "v1.62.2"
-    command: ["golangci-lint", "run", "--out-format=json"]
+    tag: "v2.1.6"
+    command: ["golangci-lint", "run", "--output.json.path", "stdout"]
     mounts:
-      - source: "{module}"
-        target: /app
+      - source: "{workspace}"
+        target: /workspace
       - source: "{workspace}/.cache/golangci-lint"
         target: /root/.cache/golangci-lint
-    workdir: /app
+    workdir: /workspace/{module-rel}
     resources:
       cpus: 2
     requirements: [docker]
