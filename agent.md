@@ -11,9 +11,10 @@
    - Read `./.junie/README.md` and all files in `./.junie/` following the load order defined in `.junie/README.md`
    - Apply `./.junie/` instructions as overrides to this file (`agent.md`) where contradictions exist
 5. **Verify MCP server availability**:
-   - Check your available tool list for `mcp__commands__*` tools (Commands Server)
-   - Check your available tool list for `mcp__github__*` tools (GitHub Server)
-   - Determine connection status for each: CONNECTED or NOT CONNECTED
+   - MCP tools are **deferred** and will NOT appear in your immediate tool list — use `ToolSearch` to probe them
+   - Call `ToolSearch` with query `mcp__commands__show-valid-commands` → if returned, Commands Server is CONNECTED
+   - Call `ToolSearch` with query `mcp__github__get_me` → if returned, GitHub Server is CONNECTED
+   - Run both searches in parallel
    - Set execution mode accordingly (MCP-First or CLI Fallback)
 6. **Internalize all constraints and guidelines** defined below
 7. **Apply these instructions** throughout the entire session
