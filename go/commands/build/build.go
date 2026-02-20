@@ -18,7 +18,6 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/environment"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/output"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -504,45 +503,6 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	// framework.go calls runModuleBuild() as its worker.
 
 	return 0
-}
-
-// verifyBuildDependenciesQuiet checks build dependencies silently and returns status for summary.
-// No output is written - the caller is responsible for displaying the results via InitSummary.
-// Docker is verified from the bootstrap namespace - it's the only true system dependency.
-// Tool-level dependencies are handled by the tool system at execution time.
-func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.ModuleContractReport) (int, initsummary.DepsStatus) {
-	status := initsummary.DepsStatus{Verified: true}
-
-	// Get bootstrap tools from the tool registry
-	registry := tool.GlobalRegistry()
-	bootstrapTools := registry.GetBootstrapTools()
-
-	if len(bootstrapTools) == 0 {
-		// No bootstrap tools configured, skip verification
-		return 0, status
-	}
-
-	status.Required = bootstrapTools
-
-	// Verify bootstrap tools
-	results := registry.VerifyAll(bootstrapTools)
-
-	for _, result := range results {
-		status.Available = append(status.Available, initsummary.DepsResult{
-			Name:      result.ToolID,
-			Available: result.Available,
-			Version:   result.Version,
-		})
-		if !result.Available {
-			status.Missing = append(status.Missing, result.ToolID)
-		}
-	}
-
-	if len(status.Missing) > 0 {
-		return 1, status
-	}
-
-	return 0, status
 }
 
 func printBuildUsage() {

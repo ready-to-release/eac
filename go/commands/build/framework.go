@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -486,9 +487,82 @@ func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.Art
 }
 
 // buildDepsVerifier verifies system dependencies for build.
+// Collects actual requirements from build handlers for modules in scope,
+// so only tools that are truly needed are checked (e.g., Docker is not required for Python builds).
 func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
-	_, status := verifyBuildDependenciesQuiet(ctx.GetExecutionMonikers(), ctx.ModuleReport)
-	return &status
+	status := &initsummary.DepsStatus{Verified: true}
+
+	// ModuleRegistry may not be populated yet (async deps check starts before phaseResolve).
+	// If unavailable, fall back to checking bootstrap tools (safe default).
+	if ctx.ModuleRegistry == nil {
+		registry := tool.GlobalRegistry()
+		bootstrapTools := registry.GetBootstrapTools()
+		if len(bootstrapTools) == 0 {
+			return status
+		}
+		status.Required = bootstrapTools
+		results := registry.VerifyAll(bootstrapTools)
+		for _, result := range results {
+			status.Available = append(status.Available, initsummary.DepsResult{
+				Name:      result.ToolID,
+				Available: result.Available,
+				Version:   result.Version,
+			})
+			if !result.Available {
+				status.Missing = append(status.Missing, result.ToolID)
+			}
+		}
+		return status
+	}
+
+	// Collect unique requirements from build handlers for modules in scope
+	depsMap := make(map[string]bool)
+	bridge := tool.GlobalBuildBridge()
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+		handlers := bridge.GetHandlersForModule(module)
+		for _, ch := range handlers {
+			for _, req := range ch.Handler.Requirements() {
+				depsMap[req] = true
+			}
+		}
+	}
+
+	if len(depsMap) == 0 {
+		return status
+	}
+
+	// Convert to sorted slice for consistent output
+	deps := make([]string, 0, len(depsMap))
+	for dep := range depsMap {
+		deps = append(deps, dep)
+	}
+	sort.Strings(deps)
+
+	// Filter out platform-incompatible tools before verification
+	deps = tool.FilterPlatformSupported(deps)
+	status.Required = deps
+
+	// Verify dependencies using tool registry
+	registry := tool.GlobalRegistry()
+	results := registry.VerifyAll(deps)
+
+	for _, result := range results {
+		status.Available = append(status.Available, initsummary.DepsResult{
+			Name:      result.ToolID,
+			Available: result.Available,
+			Version:   result.Version,
+		})
+		if !result.Available {
+			status.Missing = append(status.Missing, result.ToolID)
+		}
+	}
+
+	return status
 }
 
 // getGitCommit retrieves git commit SHA.
