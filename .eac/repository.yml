@@ -494,7 +494,7 @@ modules:
     components:
       - type: release-bundle
         bundle:
-          title_format: "clie-({clie_version}) ∞ eac-({eac_version}) ∞ eac-({eac-ext_version})"
+          title_format: "clie {clie_version} + eac {eac_version} + eac-ext {eac-ext_version}"
           headline:
             clie: clie
             eac: eac

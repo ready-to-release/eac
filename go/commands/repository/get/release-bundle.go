@@ -281,6 +281,7 @@ func formatAsMarkdown(data *ReleaseBundleOutput) string {
 		}
 
 		tb := render.NewTableBuilder().
+			WithMarkdown().
 			WithHeaders("Module", "Version", "Link")
 
 		for _, mod := range cat.Modules {
