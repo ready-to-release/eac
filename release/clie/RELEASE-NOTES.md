@@ -1,13 +1,7 @@
-# Release release_notes
+# Release Notes
 
-## [0.0.24] - 2025-12-29
-
-### Summary
-
-Dependecy mgmt.
-
-## [0.0.23] - 2025-12-18
+## [0.0.1] - 2026-02-20
 
 ### Summary
 
-First end 2 end test of the release system
+Initial release with core CLI functionality, cross-platform binaries, and unified multi-module release system.
