@@ -11,8 +11,8 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
+	"github.com/ready-to-release/eac/go/core/paths"
 )
 
 type showModulesCommand struct{}
@@ -25,7 +25,11 @@ func (c *showModulesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-modules",
 		Short:         "Display all module contracts in a human-readable table",
-		Long:          "The show modules command displays all module contracts defined in the repository,\nincluding each module's moniker (identifier), group, and component types.\nModules are sorted by dependency depth, then by group, then by declaration order.\nThis information helps understand the modular structure and build order of the repository.\nUse --with-artifacts to include artifact statistics (count, missing, overrides) in the output.\n\nExpected Output:\n- Markdown table with columns: Moniker, Group, Components\n- If --with-artifacts flag is used: additional columns for Artifacts (count), Missing (count), Overrides (count)\n- Each row represents one module in the repository",
+		Long:          "The show modules command displays all module contracts defined in the repository,\nincluding each module's moniker (identifier), group, and component types.\nModules are sorted by dependency depth, then by group, then by declaration order.\nThis information helps understand the modular structure and build order of the repository.\nUse --with-artifacts to include artifact statistics (count, missing, overrides) in the output.\nUse --markdown to output a pipe-separated Markdown table instead of the default console table.\n\nExpected Output:\n- Console table with columns: Moniker, Group, Components\n- If --markdown flag is used: pipe-separated Markdown table\n- If --with-artifacts flag is used: additional columns for Artifacts (count), Missing (count), Overrides (count)\n- Each row represents one module in the repository",
+		Flags: []core.FlagSpec{
+			{Name: "with-artifacts", Type: "bool", DefaultValue: "false", Usage: "Include artifact statistics (count, missing, overrides)"},
+			{Name: "markdown", Type: "bool", DefaultValue: "false", Usage: "Output a pipe-separated Markdown table instead of the console table"},
+		},
 	}
 }
 
@@ -41,6 +45,7 @@ func showModulesImpl() int {
 	// Parse flags
 	args := os.Args[1:]
 	withArtifacts := flags.HasFlag(args, "--with-artifacts", "")
+	markdown := flags.HasFlag(args, "--markdown", "")
 
 	// Load config (always needed for DisplayOrder; also used for artifacts)
 	cfg, err := config.Load(config.DefaultLoadOptions())
@@ -93,7 +98,11 @@ func showModulesImpl() int {
 		}
 	}
 
-	fmt.Println(tb.Build())
+	if markdown {
+		fmt.Println(tb.BuildMarkdown())
+	} else {
+		fmt.Println(tb.Build())
+	}
 	return 0
 }
 

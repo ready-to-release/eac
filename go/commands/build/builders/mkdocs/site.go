@@ -172,12 +172,18 @@ func (h *SiteRenderHandler) Build(
 		return BuildResult{ExitCode: 1}
 	}
 
+	// Read site_name and site_url from the base-site manifest.
+	// preprocess.go stores these when it generates the config, so render
+	// handlers don't need to re-load book config.
+	siteName := baseManifest.Metadata["site_name"]
+	siteURL := baseManifest.Metadata["site_url"]
+
 	// Generate mkdocs.yml config
-	// Use container mount path /staging (where staging dir is mounted in Docker)
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 	configOpts := ConfigOptions{
-		SiteName:     "Documentation",
-		DocsDir:      "/staging", // Container mount path for staging directory
+		SiteName:     siteName,
+		SiteURL:      siteURL,
+		DocsDir:      containerStagingDir,
 		OutputFormat: "site",
 	}
 	if err := WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {

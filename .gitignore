@@ -44,6 +44,7 @@ profile.cov
 
 # Node.js (for VSCode extension)
 node_modules/
+.npm-install-platform
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

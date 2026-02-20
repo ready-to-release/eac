@@ -171,7 +171,7 @@ func (h *PDFRenderHandler) Build(
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
 		BookTitle:       bookTitle,
 		BookDescription: bookDescription,
-		DocsDir:         "/staging", // Container mount path for staging directory
+		DocsDir:         containerStagingDir,
 		Theme:           theme,
 		OutputFormat:    fmt.Sprintf("pdf-%s", theme),
 		PDFConcurrency:  pdfConcurrency,

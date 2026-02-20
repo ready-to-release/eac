@@ -282,8 +282,13 @@ func (h *PreprocessHandler) Build(
 		outputFormat = "pdf-dark" // default theme for preprocessing
 	}
 
+	siteName := book.Title
+	if siteName == "" {
+		siteName = book.Name
+	}
 	configOpts := ConfigOptions{
-		SiteName:     book.Name,
+		SiteName:     siteName,
+		SiteURL:      book.SiteURL,
 		DocsDir:      relStagingDir,
 		OutputFormat: outputFormat,
 	}
@@ -312,8 +317,10 @@ func (h *PreprocessHandler) Build(
 		Duration:   time.Since(startTime),
 		Artifacts:  []string{"staged/", "mkdocs.yml"},
 		Metadata: map[string]string{
-			"book":     book.Name,
-			"pdf_mode": fmt.Sprintf("%v", pdfMode),
+			"book":      book.Name,
+			"site_name": siteName,
+			"site_url":  book.SiteURL,
+			"pdf_mode":  fmt.Sprintf("%v", pdfMode),
 		},
 	}
 

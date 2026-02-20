@@ -211,16 +211,16 @@ func TestResolveVersionWithValidation(t *testing.T) {
 	t.Run("tag exists - validation passes", func(t *testing.T) {
 		deps := &ReportDeps{
 			VersionResolverRepo: git.NewMockRepository(workspaceRoot).
-				WithTag("eac-ext/0.0.8", "abc123", time.Now()),
+				WithTag("eac-ext/0.0.1", "abc123", time.Now()),
 		}
 
-		info, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
+		info, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.1")
 		if err != nil {
 			t.Errorf("ResolveVersionWithValidation() unexpected error: %v", err)
 			return
 		}
-		if info.VersionNumber != "0.0.8" {
-			t.Errorf("VersionNumber = %v, want 0.0.8", info.VersionNumber)
+		if info.VersionNumber != "0.0.1" {
+			t.Errorf("VersionNumber = %v, want 0.0.1", info.VersionNumber)
 		}
 	})
 
@@ -231,7 +231,7 @@ func TestResolveVersionWithValidation(t *testing.T) {
 				WithTag("eac-ext/0.0.6", "def456", time.Now()),
 		}
 
-		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
+		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.1")
 		if err == nil {
 			t.Error("ResolveVersionWithValidation() expected error for missing tag, got none")
 			return
@@ -239,7 +239,7 @@ func TestResolveVersionWithValidation(t *testing.T) {
 
 		// Verify error message contains diagnostic information
 		errStr := err.Error()
-		if !strings.Contains(errStr, "eac-ext/0.0.8") {
+		if !strings.Contains(errStr, "eac-ext/0.0.1") {
 			t.Errorf("Error should mention the missing tag, got: %v", errStr)
 		}
 		if !strings.Contains(errStr, "not found") {
@@ -261,7 +261,7 @@ func TestResolveVersionWithValidation(t *testing.T) {
 			VersionResolverRepo: git.NewMockRepository(workspaceRoot),
 		}
 
-		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.8")
+		_, err := ResolveVersionWithValidation(deps, workspaceRoot, "eac-ext", "0.0.1")
 		if err == nil {
 			t.Error("ResolveVersionWithValidation() expected error for missing tag, got none")
 			return

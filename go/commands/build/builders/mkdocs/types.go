@@ -95,6 +95,10 @@ type BuildResult struct {
 // This is distinct from success (0) to signal the TUI for different display.
 const ExitCodeSkipped = -1
 
+// containerStagingDir is the path where staging content is mounted inside Docker containers.
+// Both site-render and pdf-render containers mount the host staging directory here.
+const containerStagingDir = "/staging"
+
 // ManifestStore manages component manifests in the cache directory.
 type ManifestStore struct {
 	cacheDir string

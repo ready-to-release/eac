@@ -124,7 +124,7 @@ books:
   # Documentation Site - Full docs directory as HTML site
   # ============================================================================
   - name: site
-    title: "Documentation Site"
+    title: "Documentation"
     description: "HTML documentation site from /docs directory"
     output: site
     site_url: "https://ready-to-release.github.io/eac/"
@@ -146,7 +146,7 @@ books:
         target: "index.md"
         inserts:
           - marker: "modules-overview"
-            command: "show modules"
+            command: "show modules --markdown"
 
   # ============================================================================
   # Repository Report - Structure report using show commands

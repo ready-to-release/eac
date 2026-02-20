@@ -66,7 +66,7 @@ func TestGetSpecs(t *testing.T) {
 
 	// Set up deps with mock git repo and version resolver mock
 	versionMock := git.NewMockRepository(workspaceRoot).
-		WithTag("eac-ext/0.0.9", "abc123", time.Now())
+		WithTag("eac-ext/0.0.1", "abc123", time.Now())
 
 	deps := &ReportDeps{
 		GitRepo: &mockGitRepo{

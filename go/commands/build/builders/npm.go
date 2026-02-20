@@ -11,10 +11,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
+
+// installPlatformMarker is written next to package.json after each managed install.
+// It records the OS so a cross-platform mismatch triggers a clean reinstall on the next build.
+// Listed in .gitignore so it is never committed.
+const installPlatformMarker = ".npm-install-platform"
 
 func init() {
 	tool.GlobalBuildBridge().RegisterNativeHandler(&NpmHandler{})
@@ -51,9 +58,10 @@ func (h *NpmHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 
 	Logln(logWriter, "\n=== Building npm: %s ===", module.GetMoniker())
 
-	// Step 1: Install dependencies if node_modules is missing
-	nodeModules := filepath.Join(moduleRoot, "node_modules")
-	if _, err := os.Stat(nodeModules); os.IsNotExist(err) {
+	// Step 1: Install dependencies when needed.
+	// Reinstalls if node_modules is missing, was installed on a different OS,
+	// or package-lock.json has changed since the last managed install.
+	if needsNpmInstall(moduleRoot) {
 		lockFile := filepath.Join(moduleRoot, "package-lock.json")
 		if _, err := os.Stat(lockFile); err == nil {
 			Logln(logWriter, "Running: npm ci")
@@ -68,6 +76,9 @@ func (h *NpmHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 				return exitCode
 			}
 		}
+		if err := writeInstallMarker(moduleRoot); err != nil {
+			Logln(logWriter, "⚠️  Failed to write install marker: %v (next build will reinstall)", err)
+		}
 	}
 
 	// Step 2: Run build
@@ -79,4 +90,39 @@ func (h *NpmHandler) Build(module core.ModuleContractPort, workspaceRoot, output
 
 	Logln(logWriter, "✅ npm build completed successfully")
 	return 0
+}
+
+// needsNpmInstall reports whether npm dependencies must be installed before building.
+// Returns true when:
+//   - node_modules does not exist
+//   - the platform marker is missing or records a different OS (cross-platform mismatch)
+//   - package-lock.json is newer than the marker (lock file changed since last install)
+func needsNpmInstall(moduleRoot string) bool {
+	if _, err := os.Stat(filepath.Join(moduleRoot, "node_modules")); os.IsNotExist(err) {
+		return true
+	}
+	markerPath := filepath.Join(moduleRoot, installPlatformMarker)
+	markerInfo, err := os.Stat(markerPath)
+	if err != nil {
+		return true // marker absent — node_modules was not installed by this tool
+	}
+	markerOS, err := os.ReadFile(markerPath)
+	if err != nil || strings.TrimSpace(string(markerOS)) != runtime.GOOS {
+		return true // installed on a different platform
+	}
+	lockFile := filepath.Join(moduleRoot, "package-lock.json")
+	if lockInfo, err := os.Stat(lockFile); err == nil {
+		return lockInfo.ModTime().After(markerInfo.ModTime())
+	}
+	return false
+}
+
+// writeInstallMarker records the current OS next to package.json so the next build
+// can detect a cross-platform mismatch or a stale install.
+func writeInstallMarker(moduleRoot string) error {
+	return os.WriteFile(
+		filepath.Join(moduleRoot, installPlatformMarker),
+		[]byte(runtime.GOOS),
+		0o644,
+	)
 }
