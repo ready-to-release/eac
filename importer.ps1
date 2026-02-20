@@ -81,8 +81,8 @@ git:
 }
 
 # Create clie alias pointing to the OS-specific binary
-# Binary is now at out/build/clie/go/ (component-level output structure)
-$ClieBinaryPath = Join-Path $PSScriptRoot "out\build\clie\go-go"
+# Binary is now at out/build/clie/clie_go/ (component-level output structure)
+$ClieBinaryPath = Join-Path $PSScriptRoot "out\build\clie\clie_go"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
     $ClieBinary = Join-Path $ClieBinaryPath "clie-windows-amd64.exe"
 } elseif ($IsMacOS) {

@@ -57,13 +57,13 @@ runs:
       uses: actions/attest-build-provenance@v3
       with:
         subject-path: |
-          out/build/clie/go/clie-linux-amd64
-          out/build/clie/go/clie-linux-amd64-upx
-          out/build/clie/go/clie-linux-arm64
-          out/build/clie/go/clie-darwin-amd64
-          out/build/clie/go/clie-darwin-arm64
-          out/build/clie/go/clie-windows-amd64.exe
-          out/build/clie/go/clie-windows-amd64-upx.exe
+          out/build/clie/clie_go/clie-linux-amd64
+          out/build/clie/clie_go/clie-linux-amd64-upx
+          out/build/clie/clie_go/clie-linux-arm64
+          out/build/clie/clie_go/clie-darwin-amd64
+          out/build/clie/clie_go/clie-darwin-arm64
+          out/build/clie/clie_go/clie-windows-amd64.exe
+          out/build/clie/clie_go/clie-windows-amd64-upx.exe
 
     - name: Setup Commands Binary
       id: commands
@@ -111,13 +111,13 @@ runs:
             --notes-file release_notes.md \
             --target "${{ github.sha }}" \
             --latest=false \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/clie/go/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/clie/go/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-windows-amd64-upx.exe"
         else
           echo "Tag trigger: using existing tag"
           gh release create "$TAG_NAME" \
@@ -125,13 +125,13 @@ runs:
             --notes-file release_notes.md \
             --verify-tag \
             --latest=false \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/clie/go/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/clie/go/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/clie/go/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/clie/go/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/clie/clie_go/${BINARY_PREFIX}-windows-amd64-upx.exe"
         fi
 
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"

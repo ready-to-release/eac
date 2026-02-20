@@ -231,7 +231,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: out/build/${{ inputs.module }}/site/site
+          path: out/build/${{ inputs.module }}/site_site/site
 
       - name: Deploy to GitHub Pages
         id: deployment

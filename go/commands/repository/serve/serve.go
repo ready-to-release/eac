@@ -549,7 +549,7 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 }
 
 // resolveComponentBuildDir finds the actual build output directory for a component.
-// Build directories use component-tool naming (e.g., "site-site" for component=site, tool=site).
+// Build directories use component_tool naming (e.g., "site_site" for component=site, tool=site).
 // Falls back to the component name if no manifest is found.
 func resolveComponentBuildDir(workspaceRoot, moduleMoniker, componentName string) string {
 	reader := coreoutput.NewReader(workspaceRoot)
@@ -559,7 +559,7 @@ func resolveComponentBuildDir(workspaceRoot, moduleMoniker, componentName string
 			if m.Component == componentName {
 				dirName := m.Component
 				if m.Tool != "" {
-					dirName += "-" + m.Tool
+					dirName += "_" + m.Tool
 				}
 				return dirName
 			}
