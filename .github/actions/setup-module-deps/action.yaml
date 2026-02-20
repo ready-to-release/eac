@@ -147,7 +147,7 @@ runs:
 
     - name: Check if QEMU is available
       id: qemu-check
-      if: contains(steps.resolve.outputs.deps, 'buildx') && runner.os == 'Linux'
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && runner.os == 'Linux'
       shell: bash
       run: |
         if docker run --rm --privileged multiarch/qemu-user-static --version &>/dev/null 2>&1; then
@@ -159,7 +159,7 @@ runs:
         fi
 
     - name: Setup QEMU
-      if: contains(steps.resolve.outputs.deps, 'buildx') && steps.qemu-check.outputs.available == 'false'
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && steps.qemu-check.outputs.available == 'false'
       shell: bash
       run: |
         # Setup QEMU with retry logic (Docker Hub can have transient 500 errors)

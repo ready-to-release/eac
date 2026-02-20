@@ -28,7 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # SECURITY: Checkout BASE branch (trusted code), NOT the PR head
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.ref }}
 

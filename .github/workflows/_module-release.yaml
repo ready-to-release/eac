@@ -83,7 +83,8 @@ jobs:
       has-evidence: ${{ steps.release-config.outputs.has-evidence }}
       await-module-releases: ${{ steps.release-config.outputs.await-module-releases }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
@@ -114,7 +115,8 @@ jobs:
       ci_run_id: ${{ inputs.ci_run_id }}
       releases: ${{ steps.await.outputs.releases }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -147,7 +149,8 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -171,7 +174,8 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -200,7 +204,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -321,7 +326,8 @@ jobs:
       contents: write
       actions: read
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -387,7 +393,8 @@ jobs:
     outputs:
       evidence-count: ${{ steps.evidence.outputs.evidence-count }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -412,7 +419,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Cleanup failed release
         uses: ./.github/actions/cleanup-failed-release
@@ -434,7 +442,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Cleanup old releases
         uses: ./.github/actions/cleanup-pre-releases
@@ -453,7 +462,8 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands

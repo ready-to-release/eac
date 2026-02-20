@@ -47,7 +47,8 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         uses: ./.github/actions/setup-commands
@@ -69,7 +70,8 @@ jobs:
       changed_file_count: ${{ steps.detect.outputs.changed_file_count }}
       files_by_module: ${{ steps.detect.outputs.files_by_module }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -232,7 +234,8 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
@@ -285,7 +288,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
@@ -371,7 +375,8 @@ jobs:
       && needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
