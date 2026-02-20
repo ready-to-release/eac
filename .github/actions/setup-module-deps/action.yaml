@@ -184,6 +184,10 @@ runs:
         echo "❌ Failed to setup QEMU after $MAX_RETRIES attempts"
         exit 1
 
+    - name: Setup Docker Buildx Builder
+      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')
+      uses: docker/setup-buildx-action@v3
+
     - name: Check if UPX is available
       id: upx-check
       if: contains(steps.resolve.outputs.deps, 'upx')

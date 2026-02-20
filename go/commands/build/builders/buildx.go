@@ -170,14 +170,19 @@ func adjustForLocalBuild(dockerBuild *config.DockerBuildConfig, module core.Modu
 func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, buildContext, dockerfilePath string, tags []string, moniker string, opts BuildOptions, logWriter io.Writer) []string {
 	args := []string{"buildx", "build"}
 
-	// Use specified builder, or resolve the docker-driver builder for the active context.
-	// Always explicit — never let Docker fall back to a user-configured buildx default
-	// which may use a slower docker-container driver.
+	// Resolve builder:
+	// - Explicit config: always use it
+	// - CI: omit --builder so docker uses the default buildx builder
+	//   (set up by docker/setup-buildx-action with docker-container driver for multi-platform)
+	// - Local: resolve the docker-driver builder for the active Docker context
+	//   to avoid user-configured buildx defaults that may use a slower docker-container driver
 	builder := dockerBuild.Builder
-	if builder == "" {
+	if builder == "" && !environments.IsCI() {
 		builder = detectDockerBuilder()
 	}
-	args = append(args, "--builder", builder)
+	if builder != "" {
+		args = append(args, "--builder", builder)
+	}
 
 	// Apply cache flags from CacheConfig
 	if opts.CacheConfig != nil {
