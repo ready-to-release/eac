@@ -1,0 +1,34 @@
+# Release eac - CLI Binary Release Workflow
+#
+# Builds, attests, and publishes eac CLI binaries to GitHub Releases.
+# Release type (cli-binary) is derived from core config.
+
+name: "Release: eac"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (semver format: x.y.z)'
+        required: true
+        type: string
+      skip-ci-check:
+        description: 'Skip CI verification (dangerous - testing only)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    uses: ./.github/workflows/_module-release.yaml
+    with:
+      module: eac
+      version: ${{ inputs.version }}
+      skip-ci-check: ${{ inputs.skip-ci-check }}
+    permissions:
+      contents: write
+      packages: write
+      pages: write
+      id-token: write
+      attestations: write
+      actions: read
