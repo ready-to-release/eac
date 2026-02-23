@@ -15,6 +15,7 @@ repository:
 modules:
   - moniker: contracts
     description: Domain contracts including ports, schemas, and defaults for all contract modules
+    depends_on_ci: [oci-tools]
     components:
       - type: go
         root: contracts/core/0.1.0
@@ -188,6 +189,7 @@ modules:
 
   - moniker: templates
     description: Templates for e2e testing, repository initialization, reports etc.
+    depends_on_ci: [oci-tools]
     components:
       - type: templates
         root: templates
