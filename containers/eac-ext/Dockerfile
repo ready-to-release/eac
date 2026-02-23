@@ -4,7 +4,7 @@
 # The eac module cross-compiles the binary during its own build phase.
 # We consume the pre-built binary instead of recompiling from source,
 # eliminating ~60s of redundant Go compilation per architecture.
-FROM golang:1.25-alpine
+FROM golang:1.26-alpine
 
 # Install runtime dependencies
 # Note: github-cli requires community repo. We detect Alpine version dynamically.
