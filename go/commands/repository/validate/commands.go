@@ -12,6 +12,7 @@ func Commands() []core.CommandPort {
 		&validateBooksCommand{},
 		&validateConfigCommand{},
 		&validateContractsCommand{},
+		&validateDependabotCommand{},
 		&validateControlTagsCommand{},
 		&validateDependenciesCommand{},
 		&validateDesignCommand{},

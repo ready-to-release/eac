@@ -182,51 +182,7 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		result.ContainerComponents = string(jsonBytes)
 	}
 
-	// HAS_TESTS: Any component has testers defined in its component kind
-	if cfg.ComponentKinds != nil {
-		for compName, entry := range mod.Components {
-			if entry == nil {
-				continue
-			}
-			compType := compName
-			if entry.Type != "" {
-				compType = entry.Type
-			}
-			ct := cfg.ComponentKinds.Get(compType)
-			if ct != nil && ct.IsTestable() {
-				result.HasTests = true
-				break
-			}
-		}
-	}
-
-	// TEST_ON_WINDOWS, TEST_ON_MACOS, CROSS_COMPILE_WINDOWS: from artifact_matrix on Go component
-	_, goComp := mod.Components.GetFirstByType("go")
-	matrixName := ""
-	if goComp != nil && goComp.Build != nil {
-		matrixName = goComp.Build.ArtifactMatrixRef
-	}
-	if matrixName != "" && cfg.Blueprints != nil {
-		result.CrossCompileWindows = strings.Contains(matrixName, "cross-platform")
-		// Check matrix entries for platform indicators
-		if matrix, ok := cfg.Blueprints.ArtifactMatrices[matrixName]; ok && matrix != nil {
-			for _, entry := range matrix.Entries {
-				if strings.Contains(entry.ID, "windows") || strings.Contains(entry.Pattern, "windows") {
-					result.TestOnWindows = true
-					result.CrossCompileWindows = true
-				}
-				if strings.Contains(entry.ID, "darwin") || strings.Contains(entry.Pattern, "darwin") {
-					result.TestOnMacos = true
-				}
-			}
-		}
-		// Also check parent matrices
-		if result.CrossCompileWindows {
-			result.TestOnWindows = true
-		}
-	}
-
-	// SCANS: Union of scanners from all component kinds, deduplicated
+	// HAS_TESTS + SCANS: derive from component kinds in a single pass
 	scanSet := make(map[string]bool)
 	if cfg.ComponentKinds != nil {
 		for compName, entry := range mod.Components {
@@ -238,10 +194,14 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 				compType = entry.Type
 			}
 			ct := cfg.ComponentKinds.Get(compType)
-			if ct != nil {
-				for _, s := range ct.GetScanners() {
-					scanSet[s] = true
-				}
+			if ct == nil {
+				continue
+			}
+			if !result.HasTests && ct.IsTestable() {
+				result.HasTests = true
+			}
+			for _, s := range ct.GetScanners() {
+				scanSet[s] = true
 			}
 		}
 	}
@@ -252,6 +212,31 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		}
 		sort.Strings(scanList)
 		result.Scans = strings.Join(scanList, ",")
+	}
+
+	// TEST_ON_WINDOWS, TEST_ON_MACOS, CROSS_COMPILE_WINDOWS: from artifact_matrix on Go component
+	_, goComp := mod.Components.GetFirstByType("go")
+	matrixName := ""
+	if goComp != nil && goComp.Build != nil {
+		matrixName = goComp.Build.ArtifactMatrixRef
+	}
+	if matrixName != "" && cfg.Blueprints != nil {
+		if matrix, ok := cfg.Blueprints.ArtifactMatrices[matrixName]; ok && matrix != nil {
+			for _, entry := range matrix.Entries {
+				if strings.Contains(entry.ID, "windows") || strings.Contains(entry.Pattern, "windows") {
+					result.TestOnWindows = true
+					result.CrossCompileWindows = true
+				}
+				if strings.Contains(entry.ID, "darwin") || strings.Contains(entry.Pattern, "darwin") {
+					result.TestOnMacos = true
+				}
+			}
+		}
+		// A "cross-platform" matrix implies Windows support even if no explicit windows entry exists
+		if strings.Contains(matrixName, "cross-platform") {
+			result.CrossCompileWindows = true
+			result.TestOnWindows = true
+		}
 	}
 
 	// BUILD_EVIDENCE: has evidence-book components

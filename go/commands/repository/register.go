@@ -35,6 +35,7 @@ import (
 	templatesreports "github.com/ready-to-release/eac/go/commands/repository/templates/install/reports"
 	templatesspecs "github.com/ready-to-release/eac/go/commands/repository/templates/install/specs"
 	updateaisummary "github.com/ready-to-release/eac/go/commands/repository/update/ai-summary"
+	updatedependabot "github.com/ready-to-release/eac/go/commands/repository/update/dependabot"
 	updatecacheclear "github.com/ready-to-release/eac/go/commands/repository/update/cache-clear"
 	updatedesign "github.com/ready-to-release/eac/go/commands/repository/update/design"
 	updatedocsmanifest "github.com/ready-to-release/eac/go/commands/repository/update/docs-manifest"
@@ -95,6 +96,7 @@ func Commands() []core.CommandPort {
 
 		// Update subpackages
 		updateaisummary.Commands(),
+		updatedependabot.Commands(),
 		updatecacheclear.Commands(),
 		updatedesign.Commands(),
 		updatedocsmanifest.Commands(),

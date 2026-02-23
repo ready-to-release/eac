@@ -13,6 +13,270 @@ updates:
       - "dependencies"
       - "github-actions"
 
+  # Go modules - contracts/ai-provider/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/ai-provider/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/clie/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/clie/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/container-runtime/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/container-runtime/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/core/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/core/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/docs/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/docs/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/runner/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/runner/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/scanner/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/scanner/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - contracts/tui/0.1.0
+  - package-ecosystem: "gomod"
+    directory: "/contracts/tui/0.1.0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/ai
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/ai"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/behave
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/behave"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/cucumber
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/cucumber"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/docker
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/dotnet
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/dotnet"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/eac
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/eac"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/gh
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/gh"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/godog
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/godog"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/gotest
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/gotest"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/mocha
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/mocha"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/npm
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/npm"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/nuget
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/nuget"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/pip
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/pip"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/pytest
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/pytest"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/reqnroll
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/reqnroll"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/adapters/tui
+  - package-ecosystem: "gomod"
+    directory: "/go/adapters/tui"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
   # Go modules - go/cli/clie
   - package-ecosystem: "gomod"
     directory: "/go/cli/clie"
@@ -24,7 +288,6 @@ updates:
     labels:
       - "dependencies"
       - "go"
-
   # Go modules - go/cli/eac
   - package-ecosystem: "gomod"
     directory: "/go/cli/eac"
@@ -36,19 +299,6 @@ updates:
     labels:
       - "dependencies"
       - "go"
-
-  # Go modules - go/core
-  - package-ecosystem: "gomod"
-    directory: "/go/core"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "go"
-
   # Go modules - go/clibase
   - package-ecosystem: "gomod"
     directory: "/go/clibase"
@@ -60,10 +310,9 @@ updates:
     labels:
       - "dependencies"
       - "go"
-
-  # Go modules - go/godog
+  # Go modules - go/commands/base
   - package-ecosystem: "gomod"
-    directory: "/go/godog"
+    directory: "/go/commands/base"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -72,7 +321,83 @@ updates:
     labels:
       - "dependencies"
       - "go"
-
+  # Go modules - go/commands/build
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/build"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/commands/lint
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/lint"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/commands/repository
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/repository"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/commands/scan
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/scan"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/commands/test
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/test"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/commands/update
+  - package-ecosystem: "gomod"
+    directory: "/go/commands/update"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+  # Go modules - go/core
+  - package-ecosystem: "gomod"
+    directory: "/go/core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
   # Go modules - go/mcp/commands
   - package-ecosystem: "gomod"
     directory: "/go/mcp/commands"
@@ -84,8 +409,30 @@ updates:
     labels:
       - "dependencies"
       - "go"
+  # Go modules - go/specs/repository
+  - package-ecosystem: "gomod"
+    directory: "/go/specs/repository"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
 
-  # npm - VSCode extension
+  # npm - containers/mermaid-oci
+  - package-ecosystem: "npm"
+    directory: "/containers/mermaid-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # npm - typescript/vscode-commit
   - package-ecosystem: "npm"
     directory: "/typescript/vscode-commit"
     schedule:
@@ -97,11 +444,40 @@ updates:
       - "dependencies"
       - "npm"
 
-  # ============================================================================
-  # Containers - Docker base images
-  # ============================================================================
-
-  # Docker - eac-ext container (golang base image)
+  # Docker - containers/cgo-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/cgo-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/dotnet-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/dotnet-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/drawio-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/drawio-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/eac-ext
   - package-ecosystem: "docker"
     directory: "/containers/eac-ext"
     schedule:
@@ -112,8 +488,62 @@ updates:
     labels:
       - "dependencies"
       - "docker"
-
-  # Docker - mkdocs-render-oci container (python base image)
+  # Docker - containers/git-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/git-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/go-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/go-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/gource-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/gource-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/mermaid-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/mermaid-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/mkdocs-dev-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/mkdocs-dev-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/mkdocs-render-oci
   - package-ecosystem: "docker"
     directory: "/containers/mkdocs-render-oci"
     schedule:
@@ -124,8 +554,29 @@ updates:
     labels:
       - "dependencies"
       - "docker"
-
-  # Docker - pdf-oci container (python base image)
+  # Docker - containers/nginx-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/nginx-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/pdf-cli-oci
+  - package-ecosystem: "docker"
+    directory: "/containers/pdf-cli-oci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+  # Docker - containers/pdf-oci
   - package-ecosystem: "docker"
     directory: "/containers/pdf-oci"
     schedule:
@@ -137,9 +588,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mermaid-oci container (node base image)
-  - package-ecosystem: "docker"
-    directory: "/containers/mermaid-oci"
+  # Python - containers/drawio-oci
+  - package-ecosystem: "pip"
+    directory: "/containers/drawio-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -147,11 +598,10 @@ updates:
       prefix: "chore(deps)"
     labels:
       - "dependencies"
-      - "docker"
-
-  # npm - mermaid-oci container
-  - package-ecosystem: "npm"
-    directory: "/containers/mermaid-oci"
+      - "python"
+  # Python - containers/mkdocs-dev-oci
+  - package-ecosystem: "pip"
+    directory: "/containers/mkdocs-dev-oci"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -159,13 +609,8 @@ updates:
       prefix: "chore(deps)"
     labels:
       - "dependencies"
-      - "docker"
-
-  # ============================================================================
-  # Containers - Python dependencies (pip)
-  # ============================================================================
-
-  # Python - mkdocs-render-oci container
+      - "python"
+  # Python - containers/mkdocs-render-oci
   - package-ecosystem: "pip"
     directory: "/containers/mkdocs-render-oci"
     schedule:
@@ -176,8 +621,7 @@ updates:
     labels:
       - "dependencies"
       - "python"
-
-  # Python - pdf-oci container
+  # Python - containers/pdf-oci
   - package-ecosystem: "pip"
     directory: "/containers/pdf-oci"
     schedule:

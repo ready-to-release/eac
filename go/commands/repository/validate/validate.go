@@ -26,7 +26,7 @@ func (c *validateCommand) Metadata() core.CommandMetadata {
 		IsParent:      true,
 		SubcommandGroups: []core.SubcommandGroup{
 			{Name: "Contracts", Subcommands: []string{"contracts", "dependencies", "books"}},
-			{Name: "Code Quality", Subcommands: []string{"go-tidy", "markdown", "module-files", "module-hierarchy"}},
+			{Name: "Code Quality", Subcommands: []string{"dependabot", "go-tidy", "markdown", "module-files", "module-hierarchy"}},
 			{Name: "Documentation", Subcommands: []string{"docs"}},
 			{Name: "Specifications", Subcommands: []string{"specs", "test-tags"}},
 			{Name: "Risk", Subcommands: []string{"risk-catalog", "risk-profile"}},
@@ -48,6 +48,7 @@ var subcommands = []tui.SubcommandInfo{
 	{Name: "books", Description: "Validate books.yml configuration"},
 	{Name: "config", Description: "Validate effective configuration from all sources"},
 	{Name: "contracts", Description: "Validate repository contracts against JSON schemas"},
+	{Name: "dependabot", Description: "Validate dependabot.yml covers all dependency sources"},
 	{Name: "dependencies", Description: "Validate module dependency contracts"},
 	{Name: "docs", Description: "Validate documentation for obsolete references"},
 	{Name: "go-tidy", Description: "Validate Go module dependencies are tidy"},
@@ -99,10 +100,10 @@ func Validate() int {
 
 	// Check for valid subcommand
 	switch args[0] {
-	case "artifacts", "books", "config", "contracts", "control-tags", "dependencies",
-		"design", "docs", "go-tidy", "markdown", "module-files", "module-hierarchy",
-		"release", "release-version", "risk", "risk-catalog", "risk-profile",
-		"specs", "test-tags", "version":
+	case "artifacts", "books", "config", "contracts", "control-tags", "dependabot",
+		"dependencies", "design", "docs", "go-tidy", "markdown", "module-files",
+		"module-hierarchy", "release", "release-version", "risk", "risk-catalog",
+		"risk-profile", "specs", "test-tags", "version":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
