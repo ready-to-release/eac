@@ -6,6 +6,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0-20260212193151-8cee6ee89b6b
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
@@ -64,7 +65,6 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

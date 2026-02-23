@@ -11,6 +11,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -56,7 +57,8 @@ func (h *DockerHandler) ListArtifacts(module core.ModuleContractPort, workspaceR
 	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *DockerHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *DockerHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	moniker := module.GetMoniker()
 	Logln(logWriter, "\n=== Building dockerfile: %s ===", moniker)
 
@@ -309,3 +311,5 @@ func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tag
 
 	return 0
 }
+
+var _ build.BuilderPort = (*DockerHandler)(nil)

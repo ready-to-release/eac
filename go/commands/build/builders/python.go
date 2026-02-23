@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -53,7 +54,8 @@ func (h *PythonHandler) ListArtifacts(module core.ModuleContractPort, workspaceR
 	return listPythonModuleArtifacts(concrete)
 }
 
-func (h *PythonHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *PythonHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -160,3 +162,5 @@ func executePythonTool(moduleRoot, workspaceRoot, outputDir string, logWriter io
 
 	return result.ExitCode
 }
+
+var _ build.BuilderPort = (*PythonHandler)(nil)

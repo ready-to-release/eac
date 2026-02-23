@@ -30,7 +30,7 @@ Generate a JSON object matching this schema:
   "type": "feat",
   "scope": "multi-module",
   "subject": "overall feature or change description",
-  "auditorSummary": "One sentence describing the overall change across all commits",
+  "auditor_summary": "One sentence describing the overall change across all commits",
   "body": "2-4 sentences explaining what this branch does and why",
   "changes": [
     {"type": "feat", "scope": "module-name", "description": "add new feature X"},
@@ -60,7 +60,7 @@ Generate a JSON object matching this schema:
 - Lowercase first letter
 - Synthesize from all commits into cohesive description
 
-**auditorSummary** (required): One clear sentence summarizing the essential change
+**auditor_summary** (required): One clear sentence summarizing the essential change
 
 - Summarize across ALL commits, not just one
 - Focus on business value or technical outcome
@@ -120,7 +120,7 @@ Generate a JSON object matching this schema:
   "type": "feat",
   "scope": "multi-module",
   "subject": "multiple authentication changes",
-  "auditorSummary": "Made several commits to add authentication.",
+  "auditor_summary": "Made several commits to add authentication.",
   "body": "First added user model, then implemented JWT tokens, then added\nmiddleware, and finally integrated with API. Fixed some bugs along\nthe way and updated tests.",
   "changes": [
     {"type": "feat", "description": "added user model"},
@@ -139,7 +139,7 @@ Generate a JSON object matching this schema:
   "type": "feat",
   "scope": "multi-module",
   "subject": "implement JWT-based authentication system",
-  "auditorSummary": "Added complete authentication with secure token handling and route protection across user and API modules.",
+  "auditor_summary": "Added complete authentication with secure token handling and route protection across user and API modules.",
   "body": "Implemented JWT token generation and validation with bcrypt password\nhashing for secure credential storage. Added authentication middleware\nfor route protection and integrated with existing user management.\nThe system follows security best practices for token handling.",
   "changes": [
     {"type": "feat", "scope": "auth", "description": "add JWT token generation and validation"},
@@ -158,7 +158,7 @@ The JSON will be automatically converted to conventional commit format:
 ```text
 type(scope): subject
 
-Auditor-Summary: auditorSummary
+Auditor-Summary: auditor_summary
 
 body
 

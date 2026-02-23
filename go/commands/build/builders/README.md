@@ -4,7 +4,6 @@ Registry of build handler implementations that compile, render, or package modul
 
 ## Key Types
 
-- **`Handler`** -- Type alias for `tool.BuildHandler` interface
 - **`GoHandler`** -- Builds Go modules (libraries, CLIs, cross-platform)
 - **`DockerHandler`** -- Builds Docker container images
 - **`SiteHandler`** -- Unified docs-site handler (preprocessing + HTML render)
@@ -16,7 +15,7 @@ Registry of build handler implementations that compile, render, or package modul
 ## Patterns
 
 - Self-registration: Each handler calls `tool.GlobalBuildBridge().RegisterNativeHandler()` in `init()`
-- Adapter pattern: MkDocs sub-package handlers are adapted to the `Handler` interface via lazy adapters
+- Adapter pattern: MkDocs sub-package handlers are adapted to the `build.BuilderPort` interface via lazy adapters
 - Container delegation: Site and PDF handlers run preprocessing natively, then invoke container tools for rendering
 - Content-hash caching: `BookBuildState` enables incremental builds by tracking staging directory hashes
 
@@ -56,7 +55,7 @@ Registry of build handler implementations that compile, render, or package modul
 
 ## Role in System
 
-The builders package provides all concrete `BuildHandler` implementations used by the build command in `eac`. When the build framework dispatches a component work unit, it looks up the appropriate handler from the global build bridge, validates the module, and invokes `Build()`. The mkdocs sub-package further decomposes documentation builds into preprocessing and container-based rendering steps.
+The builders package provides all concrete `build.BuilderPort` implementations used by the build command in `eac`. When the build framework dispatches a component work unit, it looks up the appropriate handler from the global build bridge, validates the module, and invokes `Build()`. The mkdocs sub-package further decomposes documentation builds into preprocessing and container-based rendering steps.
 
 ## Code Health
 

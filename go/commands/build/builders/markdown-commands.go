@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/docprep/content"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -49,8 +50,9 @@ func (h *MarkdownCommandsHandler) ListArtifacts(
 
 func (h *MarkdownCommandsHandler) Build(
 	module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions,
+	logWriter io.Writer, rawOpts any,
 ) int {
+	opts, _ := rawOpts.(BuildOptions)
 	Logln(logWriter, "=== Executing markdown commands ===")
 
 	// Discover command sources from book config
@@ -206,3 +208,5 @@ func formatCommandFragment(cmd CommandSource, output string) string {
 
 	return buf.String()
 }
+
+var _ build.BuilderPort = (*MarkdownCommandsHandler)(nil)

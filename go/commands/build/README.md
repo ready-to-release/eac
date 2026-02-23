@@ -45,7 +45,7 @@ Implements the `build` command, which compiles one or more modules by moniker us
 
 ## Role in System
 
-The build package is the largest command implementation in `eac`, orchestrating multi-module parallel builds with per-component granularity. It delegates actual compilation to registered `BuildHandler` implementations in the builders sub-package, while managing incremental caching, artifact derivation, and manifest tracking through the command framework. The docprep sub-package handles MkDocs-specific preprocessing before documentation builds.
+The build package is the largest command implementation in `eac`, orchestrating multi-module parallel builds with per-component granularity. It delegates actual compilation to registered `build.BuilderPort` implementations in the builders sub-package, while managing incremental caching, artifact derivation, and manifest tracking through the command framework. The docprep sub-package handles MkDocs-specific preprocessing before documentation builds.
 
 ## Code Health
 

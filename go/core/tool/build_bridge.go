@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
@@ -16,7 +17,7 @@ type BuildBridge struct {
 	mu sync.RWMutex
 
 	// Native handlers (registered from commands/impl/build/builders)
-	nativeHandlers map[string]BuildHandler
+	nativeHandlers map[string]build.BuilderPort
 
 	// Tool system integration
 	registry Registry
@@ -27,17 +28,25 @@ type BuildBridge struct {
 // NewBuildBridge creates a new build bridge.
 func NewBuildBridge() *BuildBridge {
 	return &BuildBridge{
-		nativeHandlers: make(map[string]BuildHandler),
+		nativeHandlers: make(map[string]build.BuilderPort),
 	}
 }
 
 // RegisterNativeHandler registers a native build handler.
 // Native handlers take precedence over tool-config.yml handlers.
 // Call this from init() in builder files.
-func (b *BuildBridge) RegisterNativeHandler(h BuildHandler) {
+func (b *BuildBridge) RegisterNativeHandler(h build.BuilderPort) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.nativeHandlers[h.Name()] = h
+}
+
+// ResetForTesting clears all native handler registrations.
+// Use only in tests that need a clean bridge state.
+func (b *BuildBridge) ResetForTesting() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.nativeHandlers = make(map[string]build.BuilderPort)
 }
 
 // SetToolSystem configures the tool system for tool-config.yml defined tools.
@@ -51,7 +60,7 @@ func (b *BuildBridge) SetToolSystem(registry Registry, resolver *DefaultResolver
 
 // GetHandler returns a build handler by name.
 // Checks native handlers first, then falls back to tool registry.
-func (b *BuildBridge) GetHandler(name string) BuildHandler {
+func (b *BuildBridge) GetHandler(name string) build.BuilderPort {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -71,11 +80,11 @@ func (b *BuildBridge) GetHandler(name string) BuildHandler {
 }
 
 // GetAllHandlers returns all available handlers (native + tool registry).
-func (b *BuildBridge) GetAllHandlers() map[string]BuildHandler {
+func (b *BuildBridge) GetAllHandlers() map[string]build.BuilderPort {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	result := make(map[string]BuildHandler)
+	result := make(map[string]build.BuilderPort)
 
 	// Add tool registry handlers first
 	if b.registry != nil && b.executor != nil {
@@ -95,7 +104,7 @@ func (b *BuildBridge) GetAllHandlers() map[string]BuildHandler {
 // ComponentBuildHandler pairs a component name with its build handler.
 type ComponentBuildHandler struct {
 	Component string
-	Handler   BuildHandler
+	Handler   build.BuilderPort
 }
 
 // GetHandlersForModule returns build handlers for all buildable components in a module.
@@ -164,7 +173,7 @@ func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []Com
 }
 
 // getHandlerUnlocked returns a handler by name (must be called with lock held).
-func (b *BuildBridge) getHandlerUnlocked(name string) BuildHandler {
+func (b *BuildBridge) getHandlerUnlocked(name string) build.BuilderPort {
 	// Check native handlers first
 	if h, ok := b.nativeHandlers[name]; ok {
 		return h
@@ -235,7 +244,7 @@ func (b *BuildBridge) GetToolForComponent(componentType string) *ToolDefinition 
 // This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build).
 // Native handlers take precedence over tool registry definitions.
 // Falls back to blueprints.yml component-kinds builder field when resolver is unavailable.
-func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler {
+func (b *BuildBridge) GetHandlerForComponent(componentType string) build.BuilderPort {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

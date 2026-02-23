@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -61,8 +62,9 @@ type DependencyGraphIndexEntry struct {
 
 func (h *DependencyGraphHandler) Build(
 	module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions,
+	logWriter io.Writer, rawOpts any,
 ) int {
+	opts, _ := rawOpts.(BuildOptions)
 	Logln(logWriter, "=== Generating repository dependency graph ===")
 
 	cacheDir := filepath.Join(paths.PlantUMLAccelCachePath(workspaceRoot), module.GetMoniker(), filepath.Base(outputDir))
@@ -187,3 +189,5 @@ func (h *DependencyGraphHandler) renderGraph(
 
 	return 1, nil
 }
+
+var _ build.BuilderPort = (*DependencyGraphHandler)(nil)

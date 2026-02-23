@@ -15,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/tool"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 )
 
 func init() {
@@ -51,7 +52,8 @@ func (h *BuildxHandler) ListArtifacts(module core.ModuleContractPort, workspaceR
 	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *BuildxHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -360,3 +362,5 @@ func getDockerBuildConfig(module *modules.ModuleContract, componentName string) 
 	}
 	return nil
 }
+
+var _ build.BuilderPort = (*BuildxHandler)(nil)

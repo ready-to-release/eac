@@ -8,7 +8,7 @@
   "properties": {
     "type": {
       "type": "string",
-      "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style"],
+      "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style", "ci", "build"],
       "description": "Primary semantic commit type for the entire PR"
     },
     "scope": {
@@ -46,7 +46,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style"]
+            "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style", "ci", "build"]
           },
           "scope": {
             "type": "string"

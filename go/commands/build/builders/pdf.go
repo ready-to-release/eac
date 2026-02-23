@@ -11,6 +11,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/commands/build/docprep"
 	"github.com/ready-to-release/eac/go/core/adapters"
@@ -88,7 +89,8 @@ func (h *PDFHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot
 }
 
 // Build executes the unified PDF build: preprocessing + container rendering.
-func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *PDFHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	startTime := time.Now()
 
 	concrete := adapters.UnwrapModule(module)
@@ -344,3 +346,5 @@ func resolveBookNameForPDF(module core.ModuleContractPort, componentName string)
 	// Fall back to component name as book name
 	return componentName
 }
+
+var _ build.BuilderPort = (*PDFHandler)(nil)

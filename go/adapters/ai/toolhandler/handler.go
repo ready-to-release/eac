@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/adapters/ai"
 	"github.com/ready-to-release/eac/go/adapters/ai/providers"
 	coreai "github.com/ready-to-release/eac/go/core/ai/generation"
@@ -34,7 +35,7 @@ const (
 	AIAnalysisTypeDocs AIAnalysisType = "docs"
 )
 
-// AIToolHandler implements BuildHandler for AI analysis tools.
+// AIToolHandler implements build.BuilderPort for AI analysis tools.
 // It bridges the tool system to the AI adapter for automated analysis.
 type AIToolHandler struct {
 	toolDef      *tool.ToolDefinition
@@ -88,7 +89,8 @@ func (h *AIToolHandler) Name() string {
 // Build executes the AI analysis for a module.
 // Returns exit code (0 = success, non-zero = failure).
 func (h *AIToolHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts tool.BuildOptions) int {
+	logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(tool.BuildOptions)
 
 	// Create AI executor
 	executor := ai.NewExecutor(workspaceRoot)
@@ -194,3 +196,5 @@ func (h *AIToolHandler) GetWeight() int {
 	}
 	return 3 // Default weight for AI tools
 }
+
+var _ build.BuilderPort = (*AIToolHandler)(nil)

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
@@ -71,7 +72,8 @@ func (h *DotnetHandler) ListArtifacts(module core.ModuleContractPort, workspaceR
 	return listDotnetArtifacts(concrete)
 }
 
-func (h *DotnetHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *DotnetHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -227,3 +229,5 @@ func listDotnetArtifacts(module *modules.ModuleContract) []string {
 	}
 	return artifacts
 }
+
+var _ build.BuilderPort = (*DotnetHandler)(nil)

@@ -4,13 +4,13 @@ import (
 	"io"
 	"testing"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
-	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
-// mockBuildHandler implements BuildHandler for testing.
+// mockBuildHandler implements build.BuilderPort for testing.
 type mockBuildHandler struct {
 	name         string
 	buildResult  int
@@ -20,7 +20,7 @@ type mockBuildHandler struct {
 
 func (m *mockBuildHandler) Name() string { return m.name }
 
-func (m *mockBuildHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (m *mockBuildHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts any) int {
 	return m.buildResult
 }
 
@@ -35,6 +35,9 @@ func (m *mockBuildHandler) Requirements() []string {
 func (m *mockBuildHandler) ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error {
 	return nil
 }
+
+func (m *mockBuildHandler) IsContainer() bool     { return false }
+func (m *mockBuildHandler) IsHostInstalled() bool { return true }
 
 func TestBuildBridge_GetHandler_YAMLTool(t *testing.T) {
 	bridge := NewBuildBridge()
