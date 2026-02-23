@@ -29,135 +29,6 @@ func TestExecutePostBuildSteps_NoConfig(t *testing.T) {
 	}
 }
 
-func TestExecutePostBuildSteps_CopyTo(t *testing.T) {
-	// Setup: create temp workspace with output files
-	tmpDir := t.TempDir()
-	outputDir := filepath.Join(tmpDir, "out", "build", "test-module", "go")
-	targetDir := filepath.Join(tmpDir, "target")
-
-	// Create output directory with test files
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		t.Fatalf("failed to create output dir: %v", err)
-	}
-	testFile := filepath.Join(outputDir, "app.exe")
-	if err := os.WriteFile(testFile, []byte("test binary"), 0o755); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	// Create a mock config with post_build configuration
-	cfg := &config.EACConfig{
-		RepoRoot: tmpDir,
-		Repository: &config.RepositoryConfig{
-			Modules: []config.Module{
-				{
-					Moniker: "test-module",
-					Components: config.ModuleComponents{
-						"go": &config.ComponentEntry{
-							Root: "go/test-module",
-							Build: &config.ModuleBuild{
-								PostBuild: &config.PostBuildConfig{
-									CopyTo: "target",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	config.SetGlobalForTesting(cfg)
-	defer config.ResetGlobalForTesting()
-
-	var logBuf bytes.Buffer
-	exitCode := ExecutePostBuildSteps("test-module", "go", tmpDir, outputDir, &logBuf)
-
-	if exitCode != 0 {
-		t.Errorf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
-	}
-
-	// Verify file was copied
-	copiedFile := filepath.Join(targetDir, "app.exe")
-	if _, err := os.Stat(copiedFile); os.IsNotExist(err) {
-		t.Errorf("expected file %s to exist after copy", copiedFile)
-	}
-
-	// Verify content is correct
-	content, err := os.ReadFile(copiedFile)
-	if err != nil {
-		t.Fatalf("failed to read copied file: %v", err)
-	}
-	if string(content) != "test binary" {
-		t.Errorf("expected content 'test binary', got %s", string(content))
-	}
-}
-
-func TestExecutePostBuildSteps_CleansTargetDirectory(t *testing.T) {
-	// Setup: create temp workspace with existing stale files in target
-	tmpDir := t.TempDir()
-	outputDir := filepath.Join(tmpDir, "out", "build", "test-module", "go")
-	targetDir := filepath.Join(tmpDir, "target")
-
-	// Create output directory with new file
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		t.Fatalf("failed to create output dir: %v", err)
-	}
-	newFile := filepath.Join(outputDir, "new.exe")
-	if err := os.WriteFile(newFile, []byte("new binary"), 0o755); err != nil {
-		t.Fatalf("failed to create new file: %v", err)
-	}
-
-	// Create target directory with stale file
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		t.Fatalf("failed to create target dir: %v", err)
-	}
-	staleFile := filepath.Join(targetDir, "stale.exe")
-	if err := os.WriteFile(staleFile, []byte("stale binary"), 0o755); err != nil {
-		t.Fatalf("failed to create stale file: %v", err)
-	}
-
-	// Create mock config
-	cfg := &config.EACConfig{
-		RepoRoot: tmpDir,
-		Repository: &config.RepositoryConfig{
-			Modules: []config.Module{
-				{
-					Moniker: "test-module",
-					Components: config.ModuleComponents{
-						"go": &config.ComponentEntry{
-							Root: "go/test-module",
-							Build: &config.ModuleBuild{
-								PostBuild: &config.PostBuildConfig{
-									CopyTo: "target",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	config.SetGlobalForTesting(cfg)
-	defer config.ResetGlobalForTesting()
-
-	var logBuf bytes.Buffer
-	exitCode := ExecutePostBuildSteps("test-module", "go", tmpDir, outputDir, &logBuf)
-
-	if exitCode != 0 {
-		t.Errorf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
-	}
-
-	// Verify stale file was removed
-	if _, err := os.Stat(staleFile); !os.IsNotExist(err) {
-		t.Errorf("expected stale file %s to be removed", staleFile)
-	}
-
-	// Verify new file was copied
-	copiedFile := filepath.Join(targetDir, "new.exe")
-	if _, err := os.Stat(copiedFile); os.IsNotExist(err) {
-		t.Errorf("expected file %s to exist after copy", copiedFile)
-	}
-}
-
 func TestExecutePostBuildSteps_ModuleNotFound(t *testing.T) {
 	// When module doesn't exist in config, should return 0 (no-op)
 	tmpDir := t.TempDir()
@@ -264,22 +135,11 @@ func TestExecutePostBuildSteps_NoPostBuildConfig(t *testing.T) {
 	}
 }
 
-func TestExecutePostBuildSteps_FallsBackToSourceWhenFrameworkDirHasOnlyManifest(t *testing.T) {
-	// Regression: in-place builders (npm) write output to <component_root>/out/,
-	// while the tracker writes uow.manifest.json to the framework output dir.
-	// findBuildOutputDir must ignore the manifest and fall back to component source output.
+func TestExecutePostBuildSteps_GlobPattern(t *testing.T) {
+	// Glob copy_files entry copies matched files into target directory
 	tmpDir := t.TempDir()
 
-	// Framework output dir: only contains uow.manifest.json (written by tracker)
-	frameworkOutputDir := filepath.Join(tmpDir, "out", "build", "vscode-commit", "typescript-npm-build")
-	if err := os.MkdirAll(frameworkOutputDir, 0o755); err != nil {
-		t.Fatalf("failed to create framework output dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(frameworkOutputDir, "uow.manifest.json"), []byte(`{"exit_code":0}`), 0o644); err != nil {
-		t.Fatalf("failed to create manifest: %v", err)
-	}
-
-	// Component source output: the real compiled files (npm builds in-place)
+	// Create component source with out/ directory containing compiled files
 	componentRoot := filepath.Join(tmpDir, "typescript", "vscode-commit")
 	sourceOutputDir := filepath.Join(componentRoot, "out")
 	if err := os.MkdirAll(sourceOutputDir, 0o755); err != nil {
@@ -290,11 +150,6 @@ func TestExecutePostBuildSteps_FallsBackToSourceWhenFrameworkDirHasOnlyManifest(
 	}
 	if err := os.WriteFile(filepath.Join(sourceOutputDir, "extension.js.map"), []byte("source map"), 0o644); err != nil {
 		t.Fatalf("failed to create source map: %v", err)
-	}
-
-	// Also create package.json in the component root (for copy_files)
-	if err := os.WriteFile(filepath.Join(componentRoot, "package.json"), []byte(`{"name":"vscode-commit"}`), 0o644); err != nil {
-		t.Fatalf("failed to create package.json: %v", err)
 	}
 
 	cfg := &config.EACConfig{
@@ -308,8 +163,211 @@ func TestExecutePostBuildSteps_FallsBackToSourceWhenFrameworkDirHasOnlyManifest(
 							Root: "typescript/vscode-commit",
 							Build: &config.ModuleBuild{
 								PostBuild: &config.PostBuildConfig{
-									CopyTo: ".vscode/extensions/vscode-commit/out",
 									CopyFiles: []config.CopyFileEntry{
+										{
+											From: "out/**/*",
+											To:   ".vscode/extensions/vscode-commit/out",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	config.SetGlobalForTesting(cfg)
+	defer config.ResetGlobalForTesting()
+
+	outputDir := filepath.Join(tmpDir, "out", "build", "vscode-commit", "typescript")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("failed to create output dir: %v", err)
+	}
+
+	var logBuf bytes.Buffer
+	exitCode := ExecutePostBuildSteps("vscode-commit", "typescript", tmpDir, outputDir, &logBuf)
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
+	}
+
+	targetDir := filepath.Join(tmpDir, ".vscode", "extensions", "vscode-commit", "out")
+	content, err := os.ReadFile(filepath.Join(targetDir, "extension.js"))
+	if err != nil {
+		t.Fatalf("extension.js not found in target: %v", err)
+	}
+	if string(content) != "compiled js" {
+		t.Errorf("expected 'compiled js', got %q", string(content))
+	}
+
+	mapContent, err := os.ReadFile(filepath.Join(targetDir, "extension.js.map"))
+	if err != nil {
+		t.Fatalf("extension.js.map not found in target: %v", err)
+	}
+	if string(mapContent) != "source map" {
+		t.Errorf("expected 'source map', got %q", string(mapContent))
+	}
+}
+
+func TestExecutePostBuildSteps_GlobPreservesSubdirs(t *testing.T) {
+	// Glob should preserve subdirectory structure under the static prefix
+	tmpDir := t.TempDir()
+
+	componentRoot := filepath.Join(tmpDir, "typescript", "mymodule")
+	if err := os.MkdirAll(filepath.Join(componentRoot, "out", "sub", "deep"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(componentRoot, "out", "index.js"), []byte("root"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(componentRoot, "out", "sub", "helper.js"), []byte("helper"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(componentRoot, "out", "sub", "deep", "util.js"), []byte("util"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.EACConfig{
+		RepoRoot: tmpDir,
+		Repository: &config.RepositoryConfig{
+			Modules: []config.Module{
+				{
+					Moniker: "mymodule",
+					Components: config.ModuleComponents{
+						"typescript": &config.ComponentEntry{
+							Root: "typescript/mymodule",
+							Build: &config.ModuleBuild{
+								PostBuild: &config.PostBuildConfig{
+									CopyFiles: []config.CopyFileEntry{
+										{From: "out/**/*", To: "target/out"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	config.SetGlobalForTesting(cfg)
+	defer config.ResetGlobalForTesting()
+
+	outputDir := filepath.Join(tmpDir, "out", "build", "mymodule", "typescript")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	var logBuf bytes.Buffer
+	exitCode := ExecutePostBuildSteps("mymodule", "typescript", tmpDir, outputDir, &logBuf)
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
+	}
+
+	targetDir := filepath.Join(tmpDir, "target", "out")
+
+	// Check files at each level
+	for _, tc := range []struct {
+		path    string
+		content string
+	}{
+		{"index.js", "root"},
+		{filepath.Join("sub", "helper.js"), "helper"},
+		{filepath.Join("sub", "deep", "util.js"), "util"},
+	} {
+		got, err := os.ReadFile(filepath.Join(targetDir, tc.path))
+		if err != nil {
+			t.Errorf("file %s not found: %v", tc.path, err)
+			continue
+		}
+		if string(got) != tc.content {
+			t.Errorf("file %s: expected %q, got %q", tc.path, tc.content, string(got))
+		}
+	}
+}
+
+func TestExecutePostBuildSteps_GlobNoMatches(t *testing.T) {
+	// Glob with no matches should succeed (0 files copied)
+	tmpDir := t.TempDir()
+
+	componentRoot := filepath.Join(tmpDir, "typescript", "mymodule")
+	if err := os.MkdirAll(componentRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// No out/ directory — glob should match nothing
+
+	cfg := &config.EACConfig{
+		RepoRoot: tmpDir,
+		Repository: &config.RepositoryConfig{
+			Modules: []config.Module{
+				{
+					Moniker: "mymodule",
+					Components: config.ModuleComponents{
+						"typescript": &config.ComponentEntry{
+							Root: "typescript/mymodule",
+							Build: &config.ModuleBuild{
+								PostBuild: &config.PostBuildConfig{
+									CopyFiles: []config.CopyFileEntry{
+										{From: "out/**/*", To: "target/out"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	config.SetGlobalForTesting(cfg)
+	defer config.ResetGlobalForTesting()
+
+	outputDir := filepath.Join(tmpDir, "out", "build", "mymodule", "typescript")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	var logBuf bytes.Buffer
+	exitCode := ExecutePostBuildSteps("mymodule", "typescript", tmpDir, outputDir, &logBuf)
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
+	}
+
+	if !strings.Contains(logBuf.String(), "copied 0 files") {
+		t.Errorf("expected log to mention 0 files, got: %s", logBuf.String())
+	}
+}
+
+func TestExecutePostBuildSteps_GlobWithLiteralCopyFiles(t *testing.T) {
+	// Test the vscode-commit scenario: glob for out/**/* plus literal for package.json
+	tmpDir := t.TempDir()
+
+	componentRoot := filepath.Join(tmpDir, "typescript", "vscode-commit")
+	sourceOutputDir := filepath.Join(componentRoot, "out")
+	if err := os.MkdirAll(sourceOutputDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceOutputDir, "extension.js"), []byte("compiled js"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(componentRoot, "package.json"), []byte(`{"name":"vscode-commit"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.EACConfig{
+		RepoRoot: tmpDir,
+		Repository: &config.RepositoryConfig{
+			Modules: []config.Module{
+				{
+					Moniker: "vscode-commit",
+					Components: config.ModuleComponents{
+						"typescript": &config.ComponentEntry{
+							Root: "typescript/vscode-commit",
+							Build: &config.ModuleBuild{
+								PostBuild: &config.PostBuildConfig{
+									CopyFiles: []config.CopyFileEntry{
+										{
+											From: "out/**/*",
+											To:   ".vscode/extensions/vscode-commit/out",
+										},
 										{
 											From: "package.json",
 											To:   ".vscode/extensions/vscode-commit/package.json",
@@ -326,123 +384,143 @@ func TestExecutePostBuildSteps_FallsBackToSourceWhenFrameworkDirHasOnlyManifest(
 	config.SetGlobalForTesting(cfg)
 	defer config.ResetGlobalForTesting()
 
+	outputDir := filepath.Join(tmpDir, "out", "build", "vscode-commit", "typescript")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
 	var logBuf bytes.Buffer
-	exitCode := ExecutePostBuildSteps("vscode-commit", "typescript", tmpDir, frameworkOutputDir, &logBuf)
+	exitCode := ExecutePostBuildSteps("vscode-commit", "typescript", tmpDir, outputDir, &logBuf)
 	if exitCode != 0 {
 		t.Fatalf("expected exit code 0, got %d; log: %s", exitCode, logBuf.String())
 	}
 
-	// Verify extension.js was copied from source output, not the manifest
-	targetDir := filepath.Join(tmpDir, ".vscode", "extensions", "vscode-commit", "out")
-	content, err := os.ReadFile(filepath.Join(targetDir, "extension.js"))
+	// Verify glob result
+	content, err := os.ReadFile(filepath.Join(tmpDir, ".vscode", "extensions", "vscode-commit", "out", "extension.js"))
 	if err != nil {
-		t.Fatalf("extension.js not found in target: %v", err)
+		t.Fatalf("extension.js not found: %v", err)
 	}
 	if string(content) != "compiled js" {
 		t.Errorf("expected 'compiled js', got %q", string(content))
 	}
 
-	// Verify uow.manifest.json was NOT copied to target
-	if _, err := os.Stat(filepath.Join(targetDir, "uow.manifest.json")); !os.IsNotExist(err) {
-		t.Errorf("uow.manifest.json should not be copied to post-build target")
-	}
-
-	// Verify copy_files: package.json
+	// Verify literal result
 	pkgContent, err := os.ReadFile(filepath.Join(tmpDir, ".vscode", "extensions", "vscode-commit", "package.json"))
 	if err != nil {
-		t.Fatalf("package.json not found in target: %v", err)
+		t.Fatalf("package.json not found: %v", err)
 	}
 	if string(pkgContent) != `{"name":"vscode-commit"}` {
 		t.Errorf("unexpected package.json content: %q", string(pkgContent))
 	}
 }
 
-func TestHasNonLogFiles_IgnoresUoWManifest(t *testing.T) {
-	// Regression: hasNonLogFiles must not count uow.manifest.json as real build output
-	tmpDir := t.TempDir()
-
-	// Dir with only uow.manifest.json
-	manifestOnly := filepath.Join(tmpDir, "manifest-only")
-	if err := os.MkdirAll(manifestOnly, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(manifestOnly, "uow.manifest.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if hasNonLogFiles(manifestOnly) {
-		t.Error("dir with only uow.manifest.json should return false")
-	}
-
-	// Dir with uow.manifest.json AND a log file
-	manifestAndLog := filepath.Join(tmpDir, "manifest-and-log")
-	if err := os.MkdirAll(manifestAndLog, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(manifestAndLog, "uow.manifest.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(manifestAndLog, "build.log"), []byte("log"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if hasNonLogFiles(manifestAndLog) {
-		t.Error("dir with only uow.manifest.json and log should return false")
-	}
-
-	// Dir with uow.manifest.json AND a real file
-	manifestAndReal := filepath.Join(tmpDir, "manifest-and-real")
-	if err := os.MkdirAll(manifestAndReal, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(manifestAndReal, "uow.manifest.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(manifestAndReal, "app.exe"), []byte("binary"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if !hasNonLogFiles(manifestAndReal) {
-		t.Error("dir with uow.manifest.json and app.exe should return true")
-	}
-}
-
 func TestExecutePostBuildSteps_PathEscapeAttempt(t *testing.T) {
-	// When copy_to tries to escape workspace, should return error
 	tmpDir := t.TempDir()
 	outputDir := filepath.Join(tmpDir, "output")
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatalf("failed to create output dir: %v", err)
 	}
 
-	cfg := &config.EACConfig{
-		RepoRoot: tmpDir,
-		Repository: &config.RepositoryConfig{
-			Modules: []config.Module{
-				{
-					Moniker: "test-module",
-					Components: config.ModuleComponents{
-						"go": &config.ComponentEntry{
-							Root: "go/test-module",
-							Build: &config.ModuleBuild{
-								PostBuild: &config.PostBuildConfig{
-									CopyTo: "../outside-workspace", // Trying to escape
+	// Create component root so copy_files doesn't skip
+	componentRoot := filepath.Join(tmpDir, "go", "test-module")
+	if err := os.MkdirAll(componentRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(componentRoot, "file.txt"), []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("literal target escape", func(t *testing.T) {
+		cfg := &config.EACConfig{
+			RepoRoot: tmpDir,
+			Repository: &config.RepositoryConfig{
+				Modules: []config.Module{
+					{
+						Moniker: "test-module",
+						Components: config.ModuleComponents{
+							"go": &config.ComponentEntry{
+								Root: "go/test-module",
+								Build: &config.ModuleBuild{
+									PostBuild: &config.PostBuildConfig{
+										CopyFiles: []config.CopyFileEntry{
+											{From: "file.txt", To: "../outside-workspace/file.txt"},
+										},
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
+		}
+		config.SetGlobalForTesting(cfg)
+		defer config.ResetGlobalForTesting()
+
+		var logBuf bytes.Buffer
+		exitCode := ExecutePostBuildSteps("test-module", "go", tmpDir, outputDir, &logBuf)
+		if exitCode == 0 {
+			t.Errorf("expected non-zero exit code for path escape attempt")
+		}
+		if !strings.Contains(logBuf.String(), "must be within workspace") {
+			t.Errorf("expected workspace error, got: %s", logBuf.String())
+		}
+	})
+
+	t.Run("glob target escape", func(t *testing.T) {
+		cfg := &config.EACConfig{
+			RepoRoot: tmpDir,
+			Repository: &config.RepositoryConfig{
+				Modules: []config.Module{
+					{
+						Moniker: "test-module",
+						Components: config.ModuleComponents{
+							"go": &config.ComponentEntry{
+								Root: "go/test-module",
+								Build: &config.ModuleBuild{
+									PostBuild: &config.PostBuildConfig{
+										CopyFiles: []config.CopyFileEntry{
+											{From: "*.txt", To: "../outside-workspace"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		config.SetGlobalForTesting(cfg)
+		defer config.ResetGlobalForTesting()
+
+		var logBuf bytes.Buffer
+		exitCode := ExecutePostBuildSteps("test-module", "go", tmpDir, outputDir, &logBuf)
+		if exitCode == 0 {
+			t.Errorf("expected non-zero exit code for glob path escape attempt")
+		}
+		if !strings.Contains(logBuf.String(), "must be within workspace") {
+			t.Errorf("expected workspace error, got: %s", logBuf.String())
+		}
+	})
+}
+
+func TestGlobStaticPrefix(t *testing.T) {
+	tests := []struct {
+		pattern  string
+		expected string
+	}{
+		{"out/**/*", "out"},
+		{"**/*", ""},
+		{"src/lib/**/*.js", "src/lib"},
+		{"*.txt", ""},
+		{"dist/bundle.js", "dist/bundle.js"},
+		{"a/b/c/**", "a/b/c"},
 	}
-	config.SetGlobalForTesting(cfg)
-	defer config.ResetGlobalForTesting()
-
-	var logBuf bytes.Buffer
-	exitCode := ExecutePostBuildSteps("test-module", "go", tmpDir, outputDir, &logBuf)
-
-	if exitCode == 0 {
-		t.Errorf("expected non-zero exit code for path escape attempt, got 0")
-	}
-
-	if !strings.Contains(logBuf.String(), "must be within workspace") {
-		t.Errorf("expected error message about workspace, got: %s", logBuf.String())
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			got := globStaticPrefix(tt.pattern)
+			if got != tt.expected {
+				t.Errorf("globStaticPrefix(%q) = %q, want %q", tt.pattern, got, tt.expected)
+			}
+		})
 	}
 }

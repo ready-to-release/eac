@@ -42,7 +42,7 @@ Registry of build handler implementations that compile, render, or package modul
 | helpers.go | `RunCommandWithLog`, `Logln`, and shared builder utilities |
 | drawio.go | DrawIO diagram rendering via container |
 | structurizr.go | Structurizr architecture diagram rendering to SVG |
-| builders_unit_test.go | Unit tests for `Logln`, `substituteVars`, `isBuildMetadataFile` |
+| builders_unit_test.go | Unit tests for `Logln`, `substituteVars` |
 | mkdocs/ | MkDocs-specific handlers (preprocess, site-render, pdf-render) |
 
 ## Dependencies

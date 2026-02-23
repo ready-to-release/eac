@@ -260,9 +260,21 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 	// BUILD_ARGS: CI always builds all components
 	result.BuildArgs = "--all"
 
-	// DOWNLOAD_MODULES: from CIDeps (depends_on_ci)
+	// DOWNLOAD_MODULES: from CIDeps (depends_on_ci), excluding container-only modules
+	// Container modules upload per-component artifacts (build-artifacts-<module>-<component>),
+	// not a single build-artifacts-<module>, so they can't be downloaded by the standard action.
 	if len(mod.CIDeps) > 0 {
-		result.DownloadModules = strings.Join(mod.CIDeps, " ")
+		var downloadable []string
+		for _, dep := range mod.CIDeps {
+			depMod := cfg.Repository.GetByMoniker(dep)
+			if depMod != nil && config.IsContainerModule(depMod) {
+				continue
+			}
+			downloadable = append(downloadable, dep)
+		}
+		if len(downloadable) > 0 {
+			result.DownloadModules = strings.Join(downloadable, " ")
+		}
 	}
 
 	// CONTAINER_TEST_SCRIPT: convention containers/<module>/ci-test.sh

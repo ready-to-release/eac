@@ -36,22 +36,3 @@ func TestSubstituteVars_AllCases(t *testing.T) {
 	}
 }
 
-func TestIsBuildMetadataFile_AllCases(t *testing.T) {
-	tests := []struct {
-		name     string
-		filename string
-		expected bool
-	}{
-		{"log file", "build.log", true},
-		{"manifest", "uow.manifest.json", true},
-		{"go source", "main.go", false},
-		{"binary", "app", false},
-		{"nested log", "subdir/build.log", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, isBuildMetadataFile(tt.filename))
-		})
-	}
-}

@@ -384,8 +384,9 @@ modules:
         root: typescript/vscode-commit
         build:
           post_build:
-            copy_to: ".vscode/extensions/vscode-commit/out"
             copy_files:
+              - from: "out/**/*"
+                to: ".vscode/extensions/vscode-commit/out"
               - from: package.json
                 to: ".vscode/extensions/vscode-commit/package.json"
         design:

@@ -537,14 +537,12 @@ type ModuleBuild struct {
 // PostBuildConfig contains post-build actions for a component.
 // Configured at the component level within a module's build configuration.
 type PostBuildConfig struct {
-	// CopyTo specifies the target path to copy build output.
-	// Path is relative to workspace root.
-	// The target directory is cleaned before copying to avoid stale files.
-	CopyTo string `yaml:"copy_to,omitempty" json:"copy_to,omitempty"`
-
-	// CopyFiles specifies additional files to copy after build.
+	// CopyFiles specifies files to copy after build.
 	// Each entry maps a source path (relative to component root) to a
 	// target path (relative to workspace root).
+	// The source path supports glob patterns (*, **, ?); when a glob is used,
+	// the target is treated as a directory and matched files are copied into it
+	// preserving their relative directory structure.
 	CopyFiles []CopyFileEntry `yaml:"copy_files,omitempty" json:"copy_files,omitempty"`
 }
 
@@ -588,9 +586,7 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 		clone.Options = &BuildOptions{}
 	}
 	if b.PostBuild != nil {
-		clone.PostBuild = &PostBuildConfig{
-			CopyTo: b.PostBuild.CopyTo,
-		}
+		clone.PostBuild = &PostBuildConfig{}
 		if len(b.PostBuild.CopyFiles) > 0 {
 			clone.PostBuild.CopyFiles = make([]CopyFileEntry, len(b.PostBuild.CopyFiles))
 			copy(clone.PostBuild.CopyFiles, b.PostBuild.CopyFiles)
