@@ -116,6 +116,7 @@ modules:
             - "release/eac/**/*.md"
             - "release/eac-ext/**/*.md"
             - "release/clie/**/*.md"
+            - ".eac/**/*.md"
             - ".eac/**/*.yml"
             - ".eac/**/*.yaml"
             - ".clie/**/*.yml"
