@@ -1835,6 +1835,18 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 			}
 		}
 
+		// Substitute {moniker} in DockerBuild fields after defaults are applied.
+		// SubstituteModuleParams runs before docker_build_defaults are merged,
+		// so {moniker} placeholders from defaults remain unresolved.
+		// For multi-container modules, use the component name instead.
+		if entry.DockerBuild != nil {
+			compMoniker := m.Moniker
+			if entry.Name != "" && entry.Name != m.Moniker {
+				compMoniker = entry.Name
+			}
+			substituteDockerBuildParams(entry.DockerBuild, map[string]string{"moniker": compMoniker})
+		}
+
 		// Apply component-kind defaults (convention-over-configuration)
 		m.applyComponentDefaults(compName, entry, ct)
 
