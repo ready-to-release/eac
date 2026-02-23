@@ -326,7 +326,12 @@ func preResolveDefaultRoots(mod *Module, kinds map[string]*ComponentType) {
 			compType = entry.Type
 		}
 		if ct, ok := kinds[compType]; ok && ct.DefaultRoot != "" {
-			entry.Root = ct.GetRoot(mod.Moniker, "")
+			// For multi-container modules, use component name for root resolution
+			rootMoniker := mod.Moniker
+			if entry.Name != "" && entry.Name != mod.Moniker {
+				rootMoniker = entry.Name
+			}
+			entry.Root = ct.GetRoot(rootMoniker, "")
 		}
 	}
 }

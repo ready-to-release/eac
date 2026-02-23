@@ -1,6 +1,7 @@
 package config
 
 import (
+	"maps"
 	"strings"
 )
 
@@ -110,15 +111,24 @@ func substituteModuleParams(mod *Module, params map[string]string) {
 		if comp == nil {
 			continue
 		}
-		comp.Root = substituteParams(comp.Root, params)
+		// For multi-container modules, components with explicit names different from
+		// the module moniker need {moniker} to resolve to the component name, not the
+		// module moniker. This allows docker_build_defaults like "containers/{moniker}"
+		// to resolve correctly per component.
+		compParams := params
+		if comp.Name != "" && comp.Name != mod.Moniker {
+			compParams = maps.Clone(params)
+			compParams["moniker"] = comp.Name
+		}
+		comp.Root = substituteParams(comp.Root, compParams)
 		if comp.Patterns != nil {
-			comp.Patterns.Source = substituteParamsSlice(comp.Patterns.Source, params)
-			comp.Patterns.Tests = substituteParamsSlice(comp.Patterns.Tests, params)
-			comp.Patterns.Config = substituteParamsSlice(comp.Patterns.Config, params)
-			comp.Patterns.Data = substituteParamsSlice(comp.Patterns.Data, params)
+			comp.Patterns.Source = substituteParamsSlice(comp.Patterns.Source, compParams)
+			comp.Patterns.Tests = substituteParamsSlice(comp.Patterns.Tests, compParams)
+			comp.Patterns.Config = substituteParamsSlice(comp.Patterns.Config, compParams)
+			comp.Patterns.Data = substituteParamsSlice(comp.Patterns.Data, compParams)
 		}
 		if comp.DockerBuild != nil {
-			substituteDockerBuildParams(comp.DockerBuild, params)
+			substituteDockerBuildParams(comp.DockerBuild, compParams)
 		}
 		mod.Components[name] = comp
 	}

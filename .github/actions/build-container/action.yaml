@@ -31,6 +31,10 @@ inputs:
   module:
     description: Module moniker to build
     required: true
+  component:
+    description: 'Component name (for multi-container modules). When set, builds only this component and uses its name for image naming.'
+    required: false
+    default: ''
   trigger-run-id:
     description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
     required: false
@@ -82,11 +86,14 @@ runs:
       shell: bash
       env:
         MODULE: ${{ inputs.module }}
+        COMPONENT: ${{ inputs.component }}
         REGISTRY: ${{ inputs.registry }}
         COMMIT_SHA: ${{ inputs.commit-sha || github.sha }}
       run: |
         SHORT_SHA="${COMMIT_SHA:0:7}"
-        IMAGE_NAME="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+        # Use component name for image naming when building a specific component
+        IMAGE_SUFFIX="${COMPONENT:-$MODULE}"
+        IMAGE_NAME="$REGISTRY/${{ github.repository_owner }}/$IMAGE_SUFFIX"
         IMAGE_TAG="sha-$SHORT_SHA"
 
         echo "short-sha=$SHORT_SHA" >> $GITHUB_OUTPUT
@@ -95,6 +102,9 @@ runs:
 
         echo "Container build configuration:"
         echo "  Module: $MODULE"
+        if [ -n "$COMPONENT" ]; then
+          echo "  Component: $COMPONENT"
+        fi
         echo "  Image: $IMAGE_NAME:$IMAGE_TAG"
 
     # Login to container registry before build (required for push)
@@ -114,6 +124,32 @@ runs:
         trigger-run-id: ${{ inputs.trigger-run-id }}
         commit-sha: ${{ inputs.commit-sha || github.sha }}
 
+    - name: Prepare build args
+      id: build-args
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        ARGS="$EXTRA_ARGS"
+        if [ -n "$COMPONENT" ]; then
+          ARGS="$ARGS --component $COMPONENT"
+        fi
+        echo "args=$ARGS" >> $GITHUB_OUTPUT
+
+    - name: Determine artifact name
+      id: artifact-name
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        COMPONENT: ${{ inputs.component }}
+      run: |
+        if [ -n "$COMPONENT" ]; then
+          echo "name=build-artifacts-${MODULE}-${COMPONENT}" >> $GITHUB_OUTPUT
+        else
+          echo "name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Build container module
       id: build
       uses: ./.github/actions/build-module
@@ -121,7 +157,8 @@ runs:
         module: ${{ inputs.module }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
         upload-artifact: ${{ inputs.upload-artifact }}
-        extra-args: ${{ inputs.extra-args }}
+        artifact-name: ${{ steps.artifact-name.outputs.name }}
+        extra-args: ${{ steps.build-args.outputs.args }}
         # Container modules use buildx which is auto-detected from module type
 
     - name: Verify pushed image

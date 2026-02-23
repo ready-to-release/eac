@@ -58,90 +58,42 @@ modules:
         root: contracts/docs/0.1.0
         name: docs
 
-  - moniker: mkdocs-render-oci
-    description: MkDocs documentation rendering container
-    group: oci-tools
+  - moniker: oci-tools
+    description: Container images for documentation, build, and development tooling
     depends_on: [root]
     components:
       - type: container
-
-  - moniker: mkdocs-dev-oci
-    description: MkDocs development live serve container
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: mkdocs-render-oci
       - type: container
+        name: mkdocs-dev-oci
         docker_build:
           push: false
-
-  - moniker: drawio-oci
-    description: DrawIO diagram rendering container
-    group: oci-tools
-    depends_on: [root]
-    components:
       - type: container
-
-  - moniker: mermaid-oci
-    description: Mermaid diagram rendering container
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: drawio-oci
       - type: container
-
-  - moniker: pdf-oci
-    description: PDF rendering container
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: mermaid-oci
       - type: container
-
-  - moniker: pdf-cli-oci
-    description: PDF CLI rendering container (local only)
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: pdf-oci
       - type: container
+        name: pdf-cli-oci
         docker_build:
           push: false
-
-  - moniker: cgo-oci
-    description: CGo cross-compilation container (local only)
-    group: oci-tools
-    depends_on: [root]
-    components:
       - type: container
+        name: cgo-oci
         docker_build:
           push: false
-
-  - moniker: go-oci
-    description: Go build container (local only)
-    group: oci-tools
-    depends_on: [root]
-    components:
       - type: container
+        name: go-oci
         docker_build:
           push: false
-
-  - moniker: gource-oci
-    description: Gource repository visualization container
-    group: oci-tools
-    depends_on: [root]
-    components:
       - type: container
-
-  - moniker: nginx-oci
-    description: Nginx static file serving container
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: gource-oci
       - type: container
-
-  - moniker: git-oci
-    description: Git utility container
-    group: oci-tools
-    depends_on: [root]
-    components:
+        name: nginx-oci
       - type: container
+        name: git-oci
+      - type: container
+        name: dotnet-oci
 
   - moniker: repository
     description: Repository root module including configuration files, build tools, and git settings
@@ -163,6 +115,7 @@ modules:
             - "release/eac/**/*.md"
             - "release/eac-ext/**/*.md"
             - "release/clie/**/*.md"
+            - ".eac/**/*.md"
             - ".eac/**/*.yml"
             - ".eac/**/*.yaml"
             - ".clie/**/*.yml"
@@ -223,6 +176,7 @@ modules:
   - moniker: core
     description: Core domain libraries for configuration, modules, scheduling, and tools
     depends_on: [contracts]
+    depends_on_ci: [oci-tools]
     components:
       - type: go
         root: go/core
@@ -312,13 +266,6 @@ modules:
       - type: assets
         root: go/commands/base
         name: assets
-
-  - moniker: dotnet-oci
-    description: .NET SDK container for builds, tests, and toolchain operations
-    group: oci-tools
-    depends_on: [root]
-    components:
-      - type: container
 
   - moniker: docs
     description: MkDocs HTML documentation site for GitHub Pages

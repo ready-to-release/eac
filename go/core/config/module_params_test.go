@@ -118,3 +118,84 @@ func TestSubstituteModuleParams_NoTemplate(t *testing.T) {
 
 	assert.Equal(t, "go/explicit", mod.Components["go"].Root)
 }
+
+func TestSubstituteModuleParams_MultiContainer(t *testing.T) {
+	// Multi-container module: components with explicit names get per-component {moniker} override
+	mod := &Module{
+		Moniker: "oci-tools",
+		Components: ModuleComponents{
+			"mkdocs-render-oci": &ComponentEntry{
+				Name: "mkdocs-render-oci",
+				Type: "container",
+				Root: "containers/{moniker}",
+				DockerBuild: &DockerBuildConfig{
+					Container:  "{moniker}",
+					Context:    "containers/{moniker}",
+					Dockerfile: "containers/{moniker}/Dockerfile",
+					Tags: []string{
+						"ghcr.io/{owner}/{moniker}:latest",
+					},
+				},
+			},
+			"drawio-oci": &ComponentEntry{
+				Name: "drawio-oci",
+				Type: "container",
+				Root: "containers/{moniker}",
+				DockerBuild: &DockerBuildConfig{
+					Container:  "{moniker}",
+					Context:    "containers/{moniker}",
+					Dockerfile: "containers/{moniker}/Dockerfile",
+					Tags: []string{
+						"ghcr.io/{owner}/{moniker}:latest",
+					},
+				},
+			},
+		},
+	}
+
+	vars := map[string]string{
+		"owner": "ready-to-release",
+	}
+	SubstituteModuleParams(mod, vars)
+
+	// mkdocs-render-oci should resolve {moniker} to "mkdocs-render-oci", not "oci-tools"
+	mkdocs := mod.Components["mkdocs-render-oci"]
+	require.NotNil(t, mkdocs)
+	assert.Equal(t, "containers/mkdocs-render-oci", mkdocs.Root)
+	assert.Equal(t, "mkdocs-render-oci", mkdocs.DockerBuild.Container)
+	assert.Equal(t, "containers/mkdocs-render-oci", mkdocs.DockerBuild.Context)
+	assert.Equal(t, "containers/mkdocs-render-oci/Dockerfile", mkdocs.DockerBuild.Dockerfile)
+	assert.Contains(t, mkdocs.DockerBuild.Tags, "ghcr.io/ready-to-release/mkdocs-render-oci:latest")
+
+	// drawio-oci should resolve {moniker} to "drawio-oci"
+	drawio := mod.Components["drawio-oci"]
+	require.NotNil(t, drawio)
+	assert.Equal(t, "containers/drawio-oci", drawio.Root)
+	assert.Equal(t, "drawio-oci", drawio.DockerBuild.Container)
+	assert.Contains(t, drawio.DockerBuild.Tags, "ghcr.io/ready-to-release/drawio-oci:latest")
+}
+
+func TestSubstituteModuleParams_SingleContainer(t *testing.T) {
+	// Single container module: component name matches moniker, uses module-level params
+	mod := &Module{
+		Moniker: "eac-ext",
+		Components: ModuleComponents{
+			"eac-ext": &ComponentEntry{
+				Name: "eac-ext",
+				Type: "container",
+				Root: "containers/{moniker}",
+				DockerBuild: &DockerBuildConfig{
+					Container: "{moniker}",
+					Context:   "containers/{moniker}",
+				},
+			},
+		},
+	}
+
+	SubstituteModuleParams(mod, nil)
+
+	comp := mod.Components["eac-ext"]
+	require.NotNil(t, comp)
+	assert.Equal(t, "containers/eac-ext", comp.Root)
+	assert.Equal(t, "eac-ext", comp.DockerBuild.Container)
+}

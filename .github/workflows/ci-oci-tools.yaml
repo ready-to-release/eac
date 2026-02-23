@@ -1,4 +1,4 @@
-name: "CI: pdf-oci"
+name: "CI: oci-tools"
 
 on:
   workflow_call:
@@ -21,7 +21,7 @@ jobs:
   ci:
     uses: ./.github/workflows/_module-ci.yaml
     with:
-      module: pdf-oci
+      module: oci-tools
       ref: ${{ inputs.ref }}
       sha: ${{ inputs.sha }}
       trigger_run_id: ${{ inputs.trigger_run_id }}

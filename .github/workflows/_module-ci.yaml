@@ -4,6 +4,7 @@
 # is the sole input; all behavior (container, scans, tests, evidence) is derived
 # from core config via `eac get ci-config`.
 #
+# Single-container or binary modules:
 #   ┌────────┐
 #   │ Config │  ← eac get ci-config --module <moniker>
 #   └───┬────┘
@@ -18,6 +19,20 @@
 # │Test│ │ Test    │ │ Test  │ │ Scan │ │Container Test│
 # │Lin.│ │ Windows │ │ macOS │ │      │ │              │
 # └────┘ └─────────┘ └───────┘ └──────┘ └──────────────┘
+#
+# Multi-container modules (is-multi-container=true):
+#   ┌────────┐
+#   │ Config │  ← derives container-components JSON matrix
+#   └───┬────┘
+#       │
+#   ┌───┴──────────────────┐
+#   │  Build Containers    │  ← matrix: one job per pushable container
+#   │  (parallel per comp) │
+#   └───┬──────────────────┘
+#       │
+#   ┌───┴────┐
+#   │Summary │
+#   └────────┘
 #
 # Underscore prefix convention: internal/shared workflows that are not meant
 # to be triggered directly. This workflow is called by ci-*.yaml workflows.
@@ -113,6 +128,8 @@ jobs:
       container-test-script: ${{ steps.ci-config.outputs.container-test-script }}
       test-suites: ${{ steps.ci-config.outputs.test-suites }}
       test-suites-full: ${{ steps.ci-config.outputs.test-suites-full }}
+      is-multi-container: ${{ steps.ci-config.outputs.is-multi-container }}
+      container-components: ${{ steps.ci-config.outputs.container-components }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -138,6 +155,7 @@ jobs:
   build:
     name: Build
     needs: config
+    if: needs.config.outputs.is-multi-container != 'true'
     runs-on: ubuntu-latest
     outputs:
       image-name: ${{ steps.container-build.outputs.image-name }}
@@ -221,6 +239,54 @@ jobs:
           else
             echo "Container build failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
           fi
+
+  # ===========================================================================
+  # Job A2: Build Containers (matrix) - for multi-container modules
+  # ===========================================================================
+  build-containers:
+    name: "Build: ${{ matrix.component.name }}"
+    needs: config
+    if: needs.config.outputs.is-multi-container == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.config.outputs.container-components) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Build Container Component
+        id: container-build
+        uses: ./.github/actions/build-container
+        with:
+          module: ${{ inputs.module }}
+          component: ${{ matrix.component.name }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+          upload-artifact: 'true'
+          download-modules: ${{ needs.config.outputs.download-modules }}
+          extra-args: ${{ needs.config.outputs.build-args }}
+          registry: ghcr.io
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Build Summary
+        if: always()
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component.name }}
+          IMAGE_NAME: ${{ steps.container-build.outputs.image-name }}
+          IMAGE_TAG: ${{ steps.container-build.outputs.image-tag }}
+        run: |
+          echo "### Container Build: \`$COMPONENT\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`$IMAGE_NAME\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Job B: Test (Linux) - parallel with scan
@@ -568,7 +634,7 @@ jobs:
   # ===========================================================================
   evidence:
     name: Evidence
-    needs: [config, build, test-linux, test-windows, test-macos, container-test, scan]
+    needs: [config, build, build-containers, test-linux, test-windows, test-macos, container-test, scan]
     if: needs.config.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     outputs:
@@ -593,7 +659,7 @@ jobs:
   # ===========================================================================
   summary:
     name: Summary
-    needs: [config, build, test-linux, test-windows, test-macos, container-test, scan, evidence]
+    needs: [config, build, build-containers, test-linux, test-windows, test-macos, container-test, scan, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -609,6 +675,8 @@ jobs:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
           MODULE: ${{ inputs.module }}
           BUILD_RESULT: ${{ needs.build.result }}
+          BUILD_CONTAINERS_RESULT: ${{ needs.build-containers.result }}
+          IS_MULTI_CONTAINER: ${{ needs.config.outputs.is-multi-container }}
           TEST_LINUX_RESULT: ${{ needs.test-linux.result }}
           TEST_WINDOWS_RESULT: ${{ needs.test-windows.result }}
           TEST_MACOS_RESULT: ${{ needs.test-macos.result }}
@@ -624,6 +692,11 @@ jobs:
         run: |
           echo "## CI Summary: $MODULE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # For multi-container modules, use the matrix build result
+          if [ "$IS_MULTI_CONTAINER" = "true" ]; then
+            BUILD_RESULT="$BUILD_CONTAINERS_RESULT"
+          fi
 
           # Build flags for Go command
           FLAGS="--build=$BUILD_RESULT"

@@ -2,6 +2,7 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,6 +31,8 @@ func (c *getCIConfigCommand) Metadata() core.CommandMetadata {
 			"\n" +
 			"With --format shell, outputs shell variable assignments for eval:\n" +
 			"  IS_CONTAINER=true|false\n" +
+			"  IS_MULTI_CONTAINER=true|false\n" +
+			"  CONTAINER_COMPONENTS=[{\"name\":\"...\"},...]\n" +
 			"  CONTAINER_PUSH=true|false\n" +
 			"  HAS_TESTS=true|false\n" +
 			"  TEST_ON_WINDOWS=true|false\n" +
@@ -60,6 +63,8 @@ func (c *getCIConfigCommand) Execute(_ context.Context, _ *core.CommandRequest) 
 type CIConfigResult struct {
 	Module              string `json:"module" yaml:"module"`
 	IsContainer         bool   `json:"is_container" yaml:"is_container"`
+	IsMultiContainer    bool   `json:"is_multi_container" yaml:"is_multi_container"`
+	ContainerComponents string `json:"container_components,omitempty" yaml:"container_components,omitempty"`
 	ContainerPush       bool   `json:"container_push" yaml:"container_push"`
 	HasTests            bool   `json:"has_tests" yaml:"has_tests"`
 	TestOnWindows       bool   `json:"test_on_windows" yaml:"test_on_windows"`
@@ -159,6 +164,24 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		}
 	}
 
+	// IS_MULTI_CONTAINER + CONTAINER_COMPONENTS: matrix for multi-container modules
+	pushable := mod.GetPushableContainerComponents()
+	if len(pushable) > 1 {
+		result.IsMultiContainer = true
+		type containerComponentCI struct {
+			Name string `json:"name"`
+		}
+		entries := make([]containerComponentCI, len(pushable))
+		for i, name := range pushable {
+			entries[i] = containerComponentCI{Name: name}
+		}
+		jsonBytes, err := json.Marshal(entries)
+		if err != nil {
+			return nil, fmt.Errorf("marshal container components: %w", err)
+		}
+		result.ContainerComponents = string(jsonBytes)
+	}
+
 	// HAS_TESTS: Any component has testers defined in its component kind
 	if cfg.ComponentKinds != nil {
 		for compName, entry := range mod.Components {
@@ -256,6 +279,10 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 
 func outputCIConfigShell(r *CIConfigResult) {
 	fmt.Printf("IS_CONTAINER=%s\n", boolToStr(r.IsContainer))
+	fmt.Printf("IS_MULTI_CONTAINER=%s\n", boolToStr(r.IsMultiContainer))
+	if r.ContainerComponents != "" {
+		fmt.Printf("CONTAINER_COMPONENTS='%s'\n", r.ContainerComponents)
+	}
 	fmt.Printf("CONTAINER_PUSH=%s\n", boolToStr(r.ContainerPush))
 	fmt.Printf("HAS_TESTS=%s\n", boolToStr(r.HasTests))
 	fmt.Printf("TEST_ON_WINDOWS=%s\n", boolToStr(r.TestOnWindows))
@@ -273,6 +300,10 @@ func outputCIConfigShell(r *CIConfigResult) {
 
 func outputCIConfigGitHub(r *CIConfigResult) {
 	fmt.Printf("is-container=%s\n", boolToStr(r.IsContainer))
+	fmt.Printf("is-multi-container=%s\n", boolToStr(r.IsMultiContainer))
+	if r.ContainerComponents != "" {
+		fmt.Printf("container-components=%s\n", r.ContainerComponents)
+	}
 	fmt.Printf("container-push=%s\n", boolToStr(r.ContainerPush))
 	fmt.Printf("has-tests=%s\n", boolToStr(r.HasTests))
 	fmt.Printf("test-on-windows=%s\n", boolToStr(r.TestOnWindows))

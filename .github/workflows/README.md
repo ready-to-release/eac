@@ -4,7 +4,7 @@ Comprehensive reference for the EAC repository CI/CD system. Covers architecture
 
 ## 1. Architecture Overview
 
-```
+```text
 Push/PR to main
   │
   ▼
@@ -49,57 +49,57 @@ cron-full-trigger.yaml (every 2 hours)
 
 ### Orchestration Workflows
 
-| File | Trigger | Purpose |
-|------|---------|---------|
-| `change-trigger.yaml` | push/PR to main, `workflow_dispatch` | Detects changes, dispatches per-module CI, triggers releases |
-| `release-trigger.yaml` | `workflow_dispatch` (from change-trigger or manual) | Awaits CI, detects pending releases, dispatches release workflows |
-| `cron-full-trigger.yaml` | Schedule (every 2 hours) | Triggers full rebuild via change-trigger with `trigger-all=true` |
+| File                     | Trigger                                             | Purpose                                                           |
+| ------------------------ | --------------------------------------------------- | ----------------------------------------------------------------- |
+| `change-trigger.yaml`    | push/PR to main, `workflow_dispatch`                | Detects changes, dispatches per-module CI, triggers releases      |
+| `release-trigger.yaml`   | `workflow_dispatch` (from change-trigger or manual) | Awaits CI, detects pending releases, dispatches release workflows |
+| `cron-full-trigger.yaml` | Schedule (every 2 hours)                            | Triggers full rebuild via change-trigger with `trigger-all=true`  |
 
 ### Reusable Workflow Templates
 
-| File | Called By | Purpose |
-|------|-----------|---------|
-| `_module-ci.yaml` | All `ci-*.yaml` workflows | Config-driven CI: build, test (Linux/Windows/macOS), scan, evidence |
-| `_module-release.yaml` | All `release-*.yaml` workflows | Config-driven release: approve, build/publish, evidence, cleanup |
+| File                   | Called By                      | Purpose                                                             |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| `_module-ci.yaml`      | All `ci-*.yaml` workflows      | Config-driven CI: build, test (Linux/Windows/macOS), scan, evidence |
+| `_module-release.yaml` | All `release-*.yaml` workflows | Config-driven release: approve, build/publish, evidence, cleanup    |
 
 ### Per-Module CI Workflows
 
-| File | Module Moniker |
-|------|---------------|
-| `ci-core.yaml` | core |
-| `ci-clie.yaml` | clie |
-| `ci-eac.yaml` | eac |
-| `ci-eac-ext.yaml` | eac-ext |
-| `ci-docs.yaml` | docs |
-| `ci-repository.yaml` | repository |
+| File                        | Module Moniker    |
+| --------------------------- | ----------------- |
+| `ci-core.yaml`              | core              |
+| `ci-clie.yaml`              | clie              |
+| `ci-eac.yaml`               | eac               |
+| `ci-eac-ext.yaml`           | eac-ext           |
+| `ci-docs.yaml`              | docs              |
+| `ci-repository.yaml`        | repository        |
 | `ci-mkdocs-render-oci.yaml` | mkdocs-render-oci |
-| `ci-pdf-oci.yaml` | pdf-oci |
-| `ci-implicit-cli.yaml` | implicit-cli |
-| `ci-cli-installers.yaml` | cli-installers |
-| `ci-eac-mcp-server.yaml` | eac-mcp-server |
-| `ci-vscode-commit.yaml` | vscode-commit |
+| `ci-pdf-oci.yaml`           | pdf-oci           |
+| `ci-implicit-cli.yaml`      | implicit-cli      |
+| `ci-cli-installers.yaml`    | cli-installers    |
+| `ci-eac-mcp-server.yaml`    | eac-mcp-server    |
+| `ci-vscode-commit.yaml`     | vscode-commit     |
 
 ### Release Workflows
 
-| File | Module | Release Type |
-|------|--------|-------------|
-| `release-clie.yaml` | clie | cli-binary (SemVer) |
-| `release-eac-ext.yaml` | eac-ext | container (SemVer) |
-| `release-docs.yaml` | docs | docs-site (CalVer) |
-| `release-clie-eac-bundle.yaml` | clie-eac-bundle | bundle (SemVer) |
+| File                           | Module          | Release Type        |
+| ------------------------------ | --------------- | ------------------- |
+| `release-clie.yaml`            | clie            | cli-binary (SemVer) |
+| `release-eac-ext.yaml`         | eac-ext         | container (SemVer)  |
+| `release-docs.yaml`            | docs            | docs-site (CalVer)  |
+| `release-clie-eac-bundle.yaml` | clie-eac-bundle | bundle (SemVer)     |
 
 ### Support Workflows
 
-| File | Purpose |
-|------|---------|
+| File          | Purpose                                 |
+| ------------- | --------------------------------------- |
 | `codeql.yaml` | CodeQL security scanning (Go + Actions) |
-| `labeler.yml` | Auto-label PRs by affected modules |
+| `labeler.yml` | Auto-label PRs by affected modules      |
 
 ## 3. Module-to-Workflow Mapping
 
 Modules are defined in `.eac/repository.yml`. Each module moniker maps to a CI workflow by convention:
 
-```
+```text
 Module moniker: {moniker}
 CI workflow:    .github/workflows/ci-{moniker}.yaml
 Release workflow: .github/workflows/release-{moniker}.yaml
@@ -109,7 +109,7 @@ Release workflow: .github/workflows/release-{moniker}.yaml
 
 ### Module Dependency Graph
 
-```
+```text
 contracts (no CI)
   └─ core
        └─ clibase (no CI)
@@ -133,30 +133,30 @@ cli-installers (depends_on: eac, clie)
 
 ### Versioning Schemes
 
-| Module | Scheme | Release Type | Changelog |
-|--------|--------|-------------|-----------|
-| clie | SemVer | published | `release/clie/CHANGELOG.md` |
-| eac | SemVer | published | `release/eac/CHANGELOG.md` |
-| eac-ext | SemVer | published | `release/eac-ext/CHANGELOG.md` |
-| docs | CalVer | published | (auto-generated) |
-| clie-eac-bundle | SemVer | bundle | `release/clie-eac-bundle/CHANGELOG.md` |
-| vscode-commit | Implicit | internal | - |
-| eac-mcp-server | SemVer | internal | `go/mcp/commands/CHANGELOG.md` |
+| Module          | Scheme   | Release Type | Changelog                              |
+| --------------- | -------- | ------------ | -------------------------------------- |
+| clie            | SemVer   | published    | `release/clie/CHANGELOG.md`            |
+| eac             | SemVer   | published    | `release/eac/CHANGELOG.md`             |
+| eac-ext         | SemVer   | published    | `release/eac-ext/CHANGELOG.md`         |
+| docs            | CalVer   | published    | (auto-generated)                       |
+| clie-eac-bundle | SemVer   | bundle       | `release/clie-eac-bundle/CHANGELOG.md` |
+| vscode-commit   | Implicit | internal     | -                                      |
+| eac-mcp-server  | SemVer   | internal     | `go/mcp/commands/CHANGELOG.md`         |
 
 ## 4. Reusable Workflow: `_module-ci.yaml`
 
 ### Inputs
 
-| Input | Required | Description |
-|-------|----------|-------------|
-| `module` | yes | Module moniker to build and test |
-| `ref` | no | Git ref to checkout |
-| `sha` | no | Commit SHA for artifact lookup |
-| `trigger_run_id` | no | Run ID of trigger workflow (for downloading pre-built commands binary) |
+| Input            | Required | Description                                                            |
+| ---------------- | -------- | ---------------------------------------------------------------------- |
+| `module`         | yes      | Module moniker to build and test                                       |
+| `ref`            | no       | Git ref to checkout                                                    |
+| `sha`            | no       | Commit SHA for artifact lookup                                         |
+| `trigger_run_id` | no       | Run ID of trigger workflow (for downloading pre-built commands binary) |
 
 ### Job Structure
 
-```
+```text
 config ─── Derives all CI settings from repository.yml
   │          eac get ci-config --module {module} --format github-output
   ▼
@@ -183,18 +183,18 @@ summary ─── Generates CI summary (always runs)
 
 The `config` job runs `eac get ci-config` which returns:
 
-| Output | Meaning |
-|--------|---------|
-| `is-container` | Module has a Dockerfile component |
-| `has-tests` | Module has components with testers |
-| `test-on-windows` | `artifact_matrix` includes windows |
-| `test-on-macos` | `artifact_matrix` includes macos |
-| `scans` | Aggregated scanners (sbom, vuln, secrets, etc.) |
-| `build-evidence` | Has evidence-book components |
-| `cross-compile-windows` | `artifact_matrix` is cross-platform |
-| `download-modules` | CI dependencies (from `depends_on_ci`) |
-| `test-suites` | PR test suites (typically: unit) |
-| `test-suites-full` | Push-to-main test suites (unit,integration) |
+| Output                  | Meaning                                         |
+| ----------------------- | ----------------------------------------------- |
+| `is-container`          | Module has a Dockerfile component               |
+| `has-tests`             | Module has components with testers              |
+| `test-on-windows`       | `artifact_matrix` includes windows              |
+| `test-on-macos`         | `artifact_matrix` includes macos                |
+| `scans`                 | Aggregated scanners (sbom, vuln, secrets, etc.) |
+| `build-evidence`        | Has evidence-book components                    |
+| `cross-compile-windows` | `artifact_matrix` is cross-platform             |
+| `download-modules`      | CI dependencies (from `depends_on_ci`)          |
+| `test-suites`           | PR test suites (typically: unit)                |
+| `test-suites-full`      | Push-to-main test suites (unit,integration)     |
 
 ### Test Suite Selection
 
@@ -205,45 +205,45 @@ The `config` job runs `eac get ci-config` which returns:
 
 ### Infrastructure Actions
 
-| Action | Purpose |
-|--------|---------|
-| `setup-commands` | Gets the `eac` commands binary (download from trigger or build from source) |
-| `setup-module-deps` | Installs system deps (Go, Node, Docker Buildx, QEMU, UPX) based on module config |
-| `download-artifact-retry` | Wraps `actions/download-artifact` with 3-attempt retry (10s, 30s backoff) |
-| `upload-artifact-retry` | Wraps `actions/upload-artifact` with 3-attempt retry |
+| Action                    | Purpose                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `setup-commands`          | Gets the `eac` commands binary (download from trigger or build from source)      |
+| `setup-module-deps`       | Installs system deps (Go, Node, Docker Buildx, QEMU, UPX) based on module config |
+| `download-artifact-retry` | Wraps `actions/download-artifact` with 3-attempt retry (10s, 30s backoff)        |
+| `upload-artifact-retry`   | Wraps `actions/upload-artifact` with 3-attempt retry                             |
 
 ### Build/Test/Scan Actions
 
-| Action | Purpose |
-|--------|---------|
-| `build-module` | Builds a single module via `eac build --module {m} --skip-cache --skip-depm` |
-| `build-container` | Builds container module, pushes to GHCR with `sha-{short}` tag |
-| `test-module` | Tests a module with configurable suites via `eac test --module {m} --suites {s}` |
-| `scan-module` | Runs security scans (sbom, vuln, secrets, compliance, iac, sast, zap) |
-| `build-evidence-books` | Downloads test/scan artifacts from module + deps, builds compliance PDFs |
+| Action                 | Purpose                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `build-module`         | Builds a single module via `eac build --module {m} --skip-cache --skip-depm`     |
+| `build-container`      | Builds container module, pushes to GHCR with `sha-{short}` tag                   |
+| `test-module`          | Tests a module with configurable suites via `eac test --module {m} --suites {s}` |
+| `scan-module`          | Runs security scans (sbom, vuln, secrets, compliance, iac, sast, zap)            |
+| `build-evidence-books` | Downloads test/scan artifacts from module + deps, builds compliance PDFs         |
 
 ### Release Actions
 
-| Action | Purpose |
-|--------|---------|
-| `approve-release` | Gates release: validates version, changelog, CI status |
-| `extract-release-version` | Extracts version from tag trigger or dispatch input |
-| `attested-cli-build` | Builds CLI binaries with supply-chain attestations, creates GitHub Release |
-| `attested-container-publish` | Retags CI container image with release tags, generates attestations |
-| `trigger-release` | Dispatches a release workflow via `gh workflow run` |
-| `check-pending-releases` | Detects pending releases from CHANGELOG (semver), dispatch (calver), bundles |
-| `await-dependency-ci` | Waits for all transitive dependency modules to have passing CI |
-| `await-module-releases` | Waits for in-flight module release workflows to complete |
+| Action                       | Purpose                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| `approve-release`            | Gates release: validates version, changelog, CI status                       |
+| `extract-release-version`    | Extracts version from tag trigger or dispatch input                          |
+| `attested-cli-build`         | Builds CLI binaries with supply-chain attestations, creates GitHub Release   |
+| `attested-container-publish` | Retags CI container image with release tags, generates attestations          |
+| `trigger-release`            | Dispatches a release workflow via `gh workflow run`                          |
+| `check-pending-releases`     | Detects pending releases from CHANGELOG (semver), dispatch (calver), bundles |
+| `await-dependency-ci`        | Waits for all transitive dependency modules to have passing CI               |
+| `await-module-releases`      | Waits for in-flight module release workflows to complete                     |
 
 ### Cleanup Actions
 
-| Action | Purpose |
-|--------|---------|
-| `cleanup-failed-release` | Removes orphaned tags and partial releases after failure |
-| `cleanup-pre-releases` | Removes old CalVer pre-releases, keeping newest N |
-| `update-evidence` | Downloads evidence PDFs from CI and uploads to GitHub Release |
-| `download-ci-artifacts` | Downloads build artifacts from a CI run, resolves run ID from SHA |
-| `download-module-deps` | Downloads build artifacts for dependency modules with await + fallback |
+| Action                   | Purpose                                                                |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `cleanup-failed-release` | Removes orphaned tags and partial releases after failure               |
+| `cleanup-pre-releases`   | Removes old CalVer pre-releases, keeping newest N                      |
+| `update-evidence`        | Downloads evidence PDFs from CI and uploads to GitHub Release          |
+| `download-ci-artifacts`  | Downloads build artifacts from a CI run, resolves run ID from SHA      |
+| `download-module-deps`   | Downloads build artifacts for dependency modules with await + fallback |
 
 ## 6. EAC CLI Commands for CI
 
@@ -476,11 +476,11 @@ git tag -l "clie/*" | sort -V | tail -5
 
 ### Dependency Types
 
-| Type | Declared In | Used For |
-|------|-------------|----------|
-| `depends_on` | `repository.yml` | Build-time dependencies; change propagation |
-| `depends_on_ci` | `repository.yml` | CI artifact dependencies (merged into depends_on) |
-| `group` | `repository.yml` | Collective reference (e.g., `depends_on: [oci-tools]` expands to all modules in group) |
+| Type            | Declared In      | Used For                                                                               |
+| --------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `depends_on`    | `repository.yml` | Build-time dependencies; change propagation                                            |
+| `depends_on_ci` | `repository.yml` | CI artifact dependencies (merged into depends_on)                                      |
+| `group`         | `repository.yml` | Collective reference (e.g., `depends_on: [oci-tools]` expands to all modules in group) |
 
 ### Change Detection Flow
 
@@ -513,7 +513,7 @@ The scheduler uses **dependency-aware LPT (Longest Processing Time)** scheduling
 
 Releases dispatch in layers based on dependency order:
 
-```
+```text
 Layer 1: clie, eac (no release dependencies on each other)
 Layer 2: eac-ext (depends_on_ci: clie), docs
 Layer 3: clie-eac-bundle (awaits all module releases)
@@ -527,12 +527,12 @@ The bundle release uses `await-module-releases` to wait for all in-flight releas
 
 **Symptom**: `build` job fails in `_module-ci.yaml`
 
-| Cause | Diagnosis |
-|-------|-----------|
-| Go compilation error | `gh run view {id} --log-failed`, look for `go build` output |
+| Cause                       | Diagnosis                                                                  |
+| --------------------------- | -------------------------------------------------------------------------- |
+| Go compilation error        | `gh run view {id} --log-failed`, look for `go build` output                |
 | Missing dependency artifact | Check if dependency module CI completed; look for download-artifact errors |
-| Container build fails | Check Dockerfile context path, base image availability |
-| Cross-compile failure | Check UPX/CGo setup for target platform |
+| Container build fails       | Check Dockerfile context path, base image availability                     |
+| Cross-compile failure       | Check UPX/CGo setup for target platform                                    |
 
 ```bash
 # Quick diagnosis
@@ -544,12 +544,12 @@ eac get ci-results {run-id}
 
 **Symptom**: `test-linux`, `test-windows`, or `test-macos` job fails
 
-| Cause | Diagnosis |
-|-------|-----------|
-| Unit test assertion failure | Download test results artifact, check Go test output |
-| Integration test timeout | Check if dependent services (Docker, GHCR) were available |
-| Platform-specific failure | Compare Linux vs Windows vs macOS logs |
-| Flaky test | Check if re-run succeeds; look for race conditions |
+| Cause                       | Diagnosis                                                 |
+| --------------------------- | --------------------------------------------------------- |
+| Unit test assertion failure | Download test results artifact, check Go test output      |
+| Integration test timeout    | Check if dependent services (Docker, GHCR) were available |
+| Platform-specific failure   | Compare Linux vs Windows vs macOS logs                    |
+| Flaky test                  | Check if re-run succeeds; look for race conditions        |
 
 ```bash
 # Download and inspect test results
@@ -563,12 +563,12 @@ gh run rerun {run-id} --failed
 
 **Symptom**: `change-trigger` or `release-trigger` fails
 
-| Cause | Diagnosis |
-|-------|-----------|
-| Change detection error | Check `detect-changes` job logs for `eac get changed-modules-ci` output |
-| Dispatch timeout | Check `eac pipeline ci schedule` output; modules may be stuck |
-| Concurrency exhaustion | Check for queued/in-progress runs consuming slots |
-| Missing CI workflow file | Verify `ci-{moniker}.yaml` exists for all dispatched modules |
+| Cause                    | Diagnosis                                                               |
+| ------------------------ | ----------------------------------------------------------------------- |
+| Change detection error   | Check `detect-changes` job logs for `eac get changed-modules-ci` output |
+| Dispatch timeout         | Check `eac pipeline ci schedule` output; modules may be stuck           |
+| Concurrency exhaustion   | Check for queued/in-progress runs consuming slots                       |
+| Missing CI workflow file | Verify `ci-{moniker}.yaml` exists for all dispatched modules            |
 
 ```bash
 # Check what the orchestrator dispatched
@@ -586,13 +586,13 @@ gh run list --status queued --limit 20
 
 **Symptom**: Release workflow fails at approve, build, or publish stage
 
-| Cause | Diagnosis |
-|-------|-----------|
-| CI not passing | Approve job fails waiting for CI; check `eac pipeline await-ci` |
-| Version already exists | Release/tag already created; check `gh release view {tag}` |
-| Missing changelog entry | SemVer modules require version in CHANGELOG |
-| Container retag failure | Source CI image not found; check GHCR for `sha-{short}` tag |
-| Attestation failure | Check OIDC token permissions |
+| Cause                   | Diagnosis                                                       |
+| ----------------------- | --------------------------------------------------------------- |
+| CI not passing          | Approve job fails waiting for CI; check `eac pipeline await-ci` |
+| Version already exists  | Release/tag already created; check `gh release view {tag}`      |
+| Missing changelog entry | SemVer modules require version in CHANGELOG                     |
+| Container retag failure | Source CI image not found; check GHCR for `sha-{short}` tag     |
+| Attestation failure     | Check OIDC token permissions                                    |
 
 ```bash
 # Check release approval
@@ -609,12 +609,12 @@ gh api user/packages/container/{module}/versions --jq '.[].metadata.container.ta
 
 **Symptom**: `download-artifact-retry` exhausts all 3 attempts
 
-| Cause | Diagnosis |
-|-------|-----------|
-| Artifact expired (90-day retention) | Check artifact creation date |
-| Wrong run ID | Verify `trigger_run_id` passed through correctly |
-| Artifact name mismatch | Check naming convention: `build-artifacts-{module}` |
-| GitHub API transient error | Usually resolves on re-run |
+| Cause                               | Diagnosis                                           |
+| ----------------------------------- | --------------------------------------------------- |
+| Artifact expired (90-day retention) | Check artifact creation date                        |
+| Wrong run ID                        | Verify `trigger_run_id` passed through correctly    |
+| Artifact name mismatch              | Check naming convention: `build-artifacts-{module}` |
+| GitHub API transient error          | Usually resolves on re-run                          |
 
 ```bash
 # Check artifacts exist for a run
@@ -710,15 +710,15 @@ gh workflow run ci-{module}.yaml --ref {branch} \
 
 ### Quick Triage Cheatsheet
 
-| Scenario | Command |
-|----------|---------|
-| "What failed?" | `eac show ci-results` |
-| "Why was module X rebuilt?" | Check orchestrator `detect-changes` job summary |
-| "Is CI passing on main?" | `eac pipeline status` |
-| "What's the run ID for module X?" | `eac pipeline ci get-run-id --workflow ci-X.yaml --sha HEAD` |
-| "Re-run failed CI" | `gh run rerun {run-id} --failed` |
-| "Trigger full rebuild" | `gh workflow run change-trigger.yaml --ref main -f trigger-all=true` |
-| "What modules have CI workflows?" | `eac get ci-workflows` |
-| "What config does CI use for module X?" | `eac get ci-config --module X` |
-| "Download test results" | `gh run download {run-id} -n test-results-{module}` |
-| "Watch a run in progress" | `gh run watch {run-id}` |
+| Scenario                                | Command                                                              |
+| --------------------------------------- | -------------------------------------------------------------------- |
+| "What failed?"                          | `eac show ci-results`                                                |
+| "Why was module X rebuilt?"             | Check orchestrator `detect-changes` job summary                      |
+| "Is CI passing on main?"                | `eac pipeline status`                                                |
+| "What's the run ID for module X?"       | `eac pipeline ci get-run-id --workflow ci-X.yaml --sha HEAD`         |
+| "Re-run failed CI"                      | `gh run rerun {run-id} --failed`                                     |
+| "Trigger full rebuild"                  | `gh workflow run change-trigger.yaml --ref main -f trigger-all=true` |
+| "What modules have CI workflows?"       | `eac get ci-workflows`                                               |
+| "What config does CI use for module X?" | `eac get ci-config --module X`                                       |
+| "Download test results"                 | `gh run download {run-id} -n test-results-{module}`                  |
+| "Watch a run in progress"               | `gh run watch {run-id}`                                              |

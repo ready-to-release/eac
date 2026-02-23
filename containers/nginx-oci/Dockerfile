@@ -1,6 +1,6 @@
 # Static Site Container
 # Lightweight nginx image for serving pre-built static files
-# ~25MB image size
+# Minimal footprint (~25MB image size)
 
 ARG NGINX_VERSION=alpine
 FROM nginx:${NGINX_VERSION}
