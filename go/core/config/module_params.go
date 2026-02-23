@@ -1,6 +1,7 @@
 package config
 
 import (
+	"maps"
 	"strings"
 )
 
@@ -116,10 +117,7 @@ func substituteModuleParams(mod *Module, params map[string]string) {
 		// to resolve correctly per component.
 		compParams := params
 		if comp.Name != "" && comp.Name != mod.Moniker {
-			compParams = make(map[string]string, len(params))
-			for k, v := range params {
-				compParams[k] = v
-			}
+			compParams = maps.Clone(params)
 			compParams["moniker"] = comp.Name
 		}
 		comp.Root = substituteParams(comp.Root, compParams)

@@ -175,7 +175,10 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 		for i, name := range pushable {
 			entries[i] = containerComponentCI{Name: name}
 		}
-		jsonBytes, _ := json.Marshal(entries)
+		jsonBytes, err := json.Marshal(entries)
+		if err != nil {
+			return nil, fmt.Errorf("marshal container components: %w", err)
+		}
 		result.ContainerComponents = string(jsonBytes)
 	}
 
