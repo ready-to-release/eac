@@ -212,6 +212,7 @@ Specialized agents for specific tasks (invoke via Task tool):
 | **go-debugger**          | Debug failures and investigate issues  | Test failures, runtime panics, performance issues                         |
 | **go-security-release**  | Security scanning and release checks   | Pre-release validation, security audits, release readiness                |
 | **go-workflow-engineer** | Analyze GitHub workflows and CI/CD     | Debugging workflows, optimizing pipelines, validating CD model compliance |
+| **go-investigator**      | Open-ended investigation of ambiguous problems | Unknown root cause, cross-module systemic issues, large-scope planning with unclear starting point |
 
 ### Available Skills
 

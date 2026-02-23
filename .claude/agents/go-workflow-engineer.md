@@ -1,7 +1,7 @@
 ---
 name: go-workflow-engineer
 description: Analyze GitHub workflows, validate CD model compliance, diagnose issues
-model: opus
+model: claude-sonnet-4-6
 color: cyan
 ---
 

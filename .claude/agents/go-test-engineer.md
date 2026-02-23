@@ -1,7 +1,7 @@
 ---
 name: go-test-engineer
 description: Write comprehensive tests, debug test failures, improve test coverage
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 color: yellow
 ---
 

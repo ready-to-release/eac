@@ -1,7 +1,7 @@
 ---
 name: go-architect
 description: Design and plan Go application architecture and module structure
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 thinking: extended
 color: blue
 ---

@@ -1,7 +1,7 @@
 ---
 name: go-debugger
 description: Debug Go code, investigate failures, trace issues, analyze performance
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 color: red
 ---
 
