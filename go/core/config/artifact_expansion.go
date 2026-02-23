@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// IsContainerModule checks if a module produces container images that are pushed to registry.
-// For such modules, we don't download build artifacts - we pull from registry instead.
+// IsContainerModule checks if a module has container-type components.
+// Such modules don't produce a single build-artifacts-<module> artifact;
+// they either push images to a registry or upload per-component artifacts.
 func IsContainerModule(module *Module) bool {
-	// Check if module has docker_build with push enabled
-	dockerConfig := module.GetDockerBuildConfig()
-	return dockerConfig != nil && dockerConfig.ShouldPush()
+	_, entry := module.Components.GetFirstByType("container")
+	return entry != nil
 }
 
 // ExpandBookArtifacts expands wildcard PDF patterns to specific book PDFs.

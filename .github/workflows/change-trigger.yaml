@@ -273,7 +273,7 @@ jobs:
           ${COMMANDS:?COMMANDS not set} pipeline ci schedule \
             --directly-changed "$DIRECTLY_CHANGED" \
             --invalidated "$INVALIDATED" \
-            --head-sha "${{ github.sha }}" \
+            --head-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
             --dispatch-ref "$DISPATCH_REF" \
             --max-concurrent $MAX_CONCURRENT \
             --timeout 3600 \
