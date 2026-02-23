@@ -84,9 +84,13 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 	buf.WriteString(fmt.Sprintf("Current branch: %s\n", currentBranch))
 	buf.WriteString(fmt.Sprintf("Commits ahead: %d\n\n", len(commits)))
 
-	// Commit history
+	// Commit history (capped at MaxPromptCommits to control prompt size)
 	buf.WriteString("## Commit History\n\n")
-	for i, commit := range commits {
+	shownCommits := commits
+	if len(commits) > squashmessageinternal.MaxPromptCommits {
+		shownCommits = commits[:squashmessageinternal.MaxPromptCommits]
+	}
+	for i, commit := range shownCommits {
 		buf.WriteString(fmt.Sprintf("%d. %s (%s)\n", i+1, commit.Subject, commit.ShortSHA))
 		if commit.Message != commit.Subject {
 			// Add body if it exists (excluding subject line)
@@ -104,6 +108,9 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 		}
 		buf.WriteString("\n")
 	}
+	if len(commits) > squashmessageinternal.MaxPromptCommits {
+		buf.WriteString(fmt.Sprintf("... and %d more commits (subjects omitted for brevity)\n\n", len(commits)-squashmessageinternal.MaxPromptCommits))
+	}
 
 	// Module count
 	buf.WriteString("## Module Count\n\n")
@@ -120,15 +127,25 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 	}
 	buf.WriteString("\n")
 
-	// Files table
+	// Files table (capped at MaxPromptFiles)
 	buf.WriteString("## Changed Files\n\n")
 	buf.WriteString(buildFilesTable(files))
 	buf.WriteString("\n\n")
 
-	// Diff stats
+	// Diff stats (truncated to MaxPromptDiffStatsSize)
 	if diffStats != "" {
 		buf.WriteString("## Diff Stats\n\n")
-		buf.WriteString(diffStats)
+		if len(diffStats) > squashmessageinternal.MaxPromptDiffStatsSize {
+			truncatedStats := diffStats[:squashmessageinternal.MaxPromptDiffStatsSize]
+			lastNewline := strings.LastIndex(truncatedStats, "\n")
+			if lastNewline > 0 {
+				truncatedStats = truncatedStats[:lastNewline]
+			}
+			buf.WriteString(truncatedStats)
+			buf.WriteString("\n... [STATS TRUNCATED]\n")
+		} else {
+			buf.WriteString(diffStats)
+		}
 		buf.WriteString("\n\n")
 	}
 
@@ -157,17 +174,24 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 	return buf.String()
 }
 
-// buildFilesTable builds a markdown table of changed files.
+// buildFilesTable builds a markdown table of changed files, capped at MaxPromptFiles rows.
 func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 	var buf strings.Builder
 	buf.WriteString("| File | Modules |\n")
 	buf.WriteString("|------|--------|\n")
-	for _, f := range files {
+	shown := files
+	if len(files) > squashmessageinternal.MaxPromptFiles {
+		shown = files[:squashmessageinternal.MaxPromptFiles]
+	}
+	for _, f := range shown {
 		modulesStr := strings.Join(f.Modules, ", ")
 		if modulesStr == "" {
 			modulesStr = "NONE"
 		}
 		buf.WriteString(fmt.Sprintf("| %s | %s |\n", f.Name, modulesStr))
+	}
+	if len(files) > squashmessageinternal.MaxPromptFiles {
+		buf.WriteString(fmt.Sprintf("| ... and %d more files | (omitted) |\n", len(files)-squashmessageinternal.MaxPromptFiles))
 	}
 	return buf.String()
 }

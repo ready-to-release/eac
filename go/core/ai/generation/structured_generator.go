@@ -86,7 +86,7 @@ func (g *StructuredGenerator) Generate(ctx context.Context, prompt string) (*Gen
 			Attempts:         result.attempts,
 			Valid:            false,
 			Errors:           result.errors,
-		}, fmt.Errorf("failed to generate valid content after %d attempts", result.attempts)
+		}, fmt.Errorf("failed to generate valid content after %d attempts: %w", result.attempts, err)
 	}
 
 	// Generation complete - commands will handle formatting
