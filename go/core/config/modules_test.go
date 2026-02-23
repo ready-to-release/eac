@@ -1167,3 +1167,65 @@ func TestFindPrimaryComponent(t *testing.T) {
 		}
 	})
 }
+
+func TestGetPushableContainerComponents(t *testing.T) {
+	pushTrue := true
+	pushFalse := false
+
+	t.Run("returns sorted pushable containers", func(t *testing.T) {
+		mod := &Module{
+			Moniker: "oci-tools",
+			Components: ModuleComponents{
+				"mkdocs-render-oci": &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{Push: &pushTrue}},
+				"drawio-oci":        &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{Push: &pushTrue}},
+				"pdf-oci":           &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{Push: &pushTrue}},
+				"go-oci":            &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{Push: &pushFalse}},
+			},
+		}
+		got := mod.GetPushableContainerComponents()
+		want := []string{"drawio-oci", "mkdocs-render-oci", "pdf-oci"}
+		if len(got) != len(want) {
+			t.Fatalf("GetPushableContainerComponents() = %v, want %v", got, want)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Errorf("GetPushableContainerComponents()[%d] = %q, want %q", i, got[i], want[i])
+			}
+		}
+	})
+
+	t.Run("default push is pushable", func(t *testing.T) {
+		mod := &Module{
+			Moniker: "oci-tools",
+			Components: ModuleComponents{
+				"nginx-oci": &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{}},
+			},
+		}
+		got := mod.GetPushableContainerComponents()
+		if len(got) != 1 || got[0] != "nginx-oci" {
+			t.Errorf("GetPushableContainerComponents() = %v, want [nginx-oci]", got)
+		}
+	})
+
+	t.Run("excludes non-container components", func(t *testing.T) {
+		mod := &Module{
+			Moniker: "mixed",
+			Components: ModuleComponents{
+				"gocomp":    &ComponentEntry{Type: "go"},
+				"container": &ComponentEntry{Type: "container", DockerBuild: &DockerBuildConfig{Push: &pushTrue}},
+			},
+		}
+		got := mod.GetPushableContainerComponents()
+		if len(got) != 1 || got[0] != "container" {
+			t.Errorf("GetPushableContainerComponents() = %v, want [container]", got)
+		}
+	})
+
+	t.Run("nil module returns nil", func(t *testing.T) {
+		var mod *Module
+		got := mod.GetPushableContainerComponents()
+		if got != nil {
+			t.Errorf("GetPushableContainerComponents() = %v, want nil", got)
+		}
+	})
+}

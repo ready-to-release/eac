@@ -409,6 +409,30 @@ func (m *Module) GetReleaseBundle() *ReleaseBundle {
 }
 
 
+// GetPushableContainerComponents returns sorted names of container components
+// where push is not explicitly false. Used by CI config to generate matrix builds.
+func (m *Module) GetPushableContainerComponents() []string {
+	if m == nil || m.Components == nil {
+		return nil
+	}
+	var names []string
+	for name, entry := range m.Components {
+		compType := name
+		if entry != nil && entry.Type != "" {
+			compType = entry.Type
+		}
+		if compType != "container" {
+			continue
+		}
+		if entry != nil && entry.DockerBuild != nil && entry.DockerBuild.Push != nil && !*entry.DockerBuild.Push {
+			continue
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // GetChangelog returns the changelog path. Only SemVer modules default to release/<moniker>/CHANGELOG.md.
 // CalVer modules have no changelog (auto-managed releases).
 func (m *Module) GetChangelog() string {
@@ -1762,9 +1786,16 @@ func (m *Module) resolveComponentRoots(compTypes *ComponentKindsConfig) {
 			m.Components[compName] = entry
 		}
 
-		// Resolve root from component-kind default if not set
+		// Resolve root from component-kind default if not set.
+		// For multi-container modules, use the component name for {moniker}
+		// substitution when the component has an explicit name different from
+		// the module moniker (e.g., "mkdocs-render-oci" in the "oci-tools" module).
 		if entry.Root == "" && ct.DefaultRoot != "" {
-			entry.Root = ct.GetRoot(m.Moniker, "")
+			rootMoniker := m.Moniker
+			if entry.Name != "" && entry.Name != m.Moniker {
+				rootMoniker = entry.Name
+			}
+			entry.Root = ct.GetRoot(rootMoniker, "")
 		}
 
 		// Merge patterns from component-kind if not overridden
