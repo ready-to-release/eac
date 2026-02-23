@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
+	squashmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/squash-message/internal"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/repository"
@@ -29,6 +30,48 @@ func extractAffectedModules(files []repository.RepositoryFileWithModule) []strin
 		modules = append(modules, module)
 	}
 	return modules
+}
+
+// filterNoiseDiff strips diff sections for files that have no semantic value for AI
+// generation: go.sum, package-lock.json, and any *.lock files. These files consist
+// entirely of hash lines and content-address entries; including them wastes the diff
+// budget without helping the AI understand what changed.
+//
+// The filter splits on "diff --git" headers, drops sections whose file path ends with a
+// noise suffix, then rejoins the remaining sections.
+func filterNoiseDiff(diff string) string {
+	noiseSuffixes := []string{".sum", ".lock", "package-lock.json"}
+
+	sections := strings.Split(diff, "diff --git ")
+	var kept []string
+	for i, section := range sections {
+		if i == 0 {
+			// Anything before the first "diff --git" header (usually empty)
+			kept = append(kept, section)
+			continue
+		}
+
+		// The first line of a section is the header, e.g. "a/go.sum b/go.sum"
+		firstLine := section
+		if idx := strings.Index(section, "\n"); idx != -1 {
+			firstLine = section[:idx]
+		}
+
+		isNoise := false
+		for _, suffix := range noiseSuffixes {
+			if strings.HasSuffix(firstLine, suffix) {
+				isNoise = true
+				break
+			}
+		}
+
+		if !isNoise {
+			kept = append(kept, section)
+		}
+	}
+
+	result := strings.Join(kept, "diff --git ")
+	return strings.TrimSpace(result)
 }
 
 // buildSquashContext builds the context string for AI generation.
@@ -89,14 +132,25 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 		buf.WriteString("\n\n")
 	}
 
-	// Cumulative diff (truncated)
+	// Cumulative diff (noise-filtered and truncated)
+	filteredDiff := filterNoiseDiff(diff)
+
 	buf.WriteString("## Cumulative Diff\n\n")
 	buf.WriteString("```diff\n")
-	if len(diff) > 200000 {
-		buf.WriteString(diff[:200000])
-		buf.WriteString("\n... (diff truncated)\n")
+	if len(filteredDiff) > squashmessageinternal.MaxPromptDiffSize {
+		truncatedDiff := filteredDiff[:squashmessageinternal.MaxPromptDiffSize]
+		// Find last complete line to avoid cutting mid-line
+		lastNewline := strings.LastIndex(truncatedDiff, "\n")
+		if lastNewline > 0 {
+			truncatedDiff = truncatedDiff[:lastNewline]
+		}
+		buf.WriteString(truncatedDiff)
+		buf.WriteString("\n\n... [DIFF TRUNCATED - ")
+		buf.WriteString(fmt.Sprintf("%d KB of %d KB shown", squashmessageinternal.MaxPromptDiffSize/1024, len(filteredDiff)/1024))
+		buf.WriteString("] ...\n")
+		buf.WriteString("Note: Use diff stats and file list above to understand full scope of changes.\n")
 	} else {
-		buf.WriteString(diff)
+		buf.WriteString(filteredDiff)
 	}
 	buf.WriteString("\n```\n")
 
