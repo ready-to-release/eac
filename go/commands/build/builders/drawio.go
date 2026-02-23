@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/docprep/caching"
 	"github.com/ready-to-release/eac/go/commands/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
@@ -49,8 +50,9 @@ func (h *DrawioRenderHandler) ListArtifacts(module core.ModuleContractPort, work
 
 func (h *DrawioRenderHandler) Build(
 	module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions,
+	logWriter io.Writer, rawOpts any,
 ) int {
+	opts, _ := rawOpts.(BuildOptions)
 	Logln(logWriter, "=== Rendering drawio images via container ===")
 
 	docsAssetsDir := filepath.Join(workspaceRoot, "docs", "assets")
@@ -161,3 +163,5 @@ func (h *DrawioRenderHandler) renderMisses(
 
 	return rendered, nil
 }
+
+var _ build.BuilderPort = (*DrawioRenderHandler)(nil)

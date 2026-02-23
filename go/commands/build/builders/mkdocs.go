@@ -15,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -135,11 +136,18 @@ func (h *MkDocsHandler) ValidateModule(module core.ModuleContractPort, workspace
 	return nil
 }
 
+// IsContainer returns true as MkDocs builds use Docker.
+func (h *MkDocsHandler) IsContainer() bool { return true }
+
+// IsHostInstalled returns false as MkDocs builds use Docker.
+func (h *MkDocsHandler) IsHostInstalled() bool { return false }
+
 func (h *MkDocsHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/"}
 }
 
-func (h *MkDocsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *MkDocsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -741,3 +749,5 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	Logln(logWriter, "   PDF Output: %s", dstPdfPath)
 	return 0
 }
+
+var _ build.BuilderPort = (*MkDocsHandler)(nil)

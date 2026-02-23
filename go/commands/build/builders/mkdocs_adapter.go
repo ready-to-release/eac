@@ -6,6 +6,7 @@ import (
 	"os"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -40,7 +41,8 @@ func (a *mkdocsPreprocessAdapter) IsContainer() bool { return false }
 
 func (a *mkdocsPreprocessAdapter) IsHostInstalled() bool { return true }
 
-func (a *mkdocsPreprocessAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsPreprocessAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	a.ensureHandler(workspaceRoot)
 
 	// Convert BuildOptions to mkdocs.BuildOptions
@@ -101,7 +103,8 @@ func (a *mkdocsSiteAdapter) IsContainer() bool { return true }
 
 func (a *mkdocsSiteAdapter) IsHostInstalled() bool { return false }
 
-func (a *mkdocsSiteAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsSiteAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	a.ensureHandler(workspaceRoot)
 
 	mkdocsOpts := mkdocs.BuildOptions{
@@ -149,7 +152,8 @@ func (a *mkdocsPDFAdapter) IsContainer() bool { return true }
 
 func (a *mkdocsPDFAdapter) IsHostInstalled() bool { return false }
 
-func (a *mkdocsPDFAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (a *mkdocsPDFAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	a.ensureHandler(workspaceRoot)
 
 	// Extract theme from component name if present (e.g., "tutorials-dark" -> theme="dark")
@@ -180,3 +184,7 @@ func (a *mkdocsPDFAdapter) ensureHandler(workspaceRoot string) {
 		a.handler = mkdocs.NewPDFRenderHandler(workspaceRoot)
 	}
 }
+
+var _ build.BuilderPort = (*mkdocsPreprocessAdapter)(nil)
+var _ build.BuilderPort = (*mkdocsSiteAdapter)(nil)
+var _ build.BuilderPort = (*mkdocsPDFAdapter)(nil)

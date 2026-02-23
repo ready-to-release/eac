@@ -3,6 +3,7 @@
 package resolver
 
 import (
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -69,7 +70,7 @@ type ToolAssignment struct {
 	ToolDef *tool.ToolDefinition
 
 	// Handler is the executable handler (for build operations)
-	Handler tool.BuildHandler
+	Handler build.BuilderPort
 
 	// IsContainer indicates if the tool runs in a container
 	IsContainer bool

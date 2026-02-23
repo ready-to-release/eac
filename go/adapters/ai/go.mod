@@ -5,6 +5,7 @@ go 1.24.4
 require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/google/generative-ai-go v0.20.1
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/sashabaranov/go-openai v1.41.2
 	google.golang.org/api v0.262.0
@@ -14,7 +15,6 @@ require (
 require (
 	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
-	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
@@ -75,7 +75,7 @@ require (
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect

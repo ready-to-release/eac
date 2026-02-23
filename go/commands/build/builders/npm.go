@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -52,7 +53,8 @@ func (h *NpmHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot
 	return []string{"out/"}
 }
 
-func (h *NpmHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *NpmHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	componentRoot := module.GetComponentRoot(opts.Component)
 	moduleRoot := filepath.Join(workspaceRoot, componentRoot)
 
@@ -126,3 +128,5 @@ func writeInstallMarker(moduleRoot string) error {
 		0o644,
 	)
 }
+
+var _ build.BuilderPort = (*NpmHandler)(nil)

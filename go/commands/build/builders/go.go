@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -196,7 +197,8 @@ func (h *GoHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoot 
 	return listGoModuleArtifacts(concrete, workspaceRoot)
 }
 
-func (h *GoHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *GoHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -210,3 +212,5 @@ func (h *GoHandler) Build(module core.ModuleContractPort, workspaceRoot, outputD
 func isScriptOnlyModule(module *modules.ModuleContract) bool {
 	return module.HasComponent("pwsh") || module.HasComponent("bash")
 }
+
+var _ build.BuilderPort = (*GoHandler)(nil)

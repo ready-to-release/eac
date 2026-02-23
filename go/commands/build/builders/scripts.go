@@ -9,6 +9,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/adapters"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
@@ -50,7 +51,8 @@ func (h *ScriptsHandler) ListArtifacts(module core.ModuleContractPort, workspace
 	return nil // Artifacts are the copied files, tracked in manifest
 }
 
-func (h *ScriptsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *ScriptsHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	concrete := adapters.UnwrapModule(module)
 	if concrete == nil {
 		Logln(logWriter, "Error: invalid module type")
@@ -122,3 +124,5 @@ func (h *ScriptsHandler) Build(module core.ModuleContractPort, workspaceRoot, ou
 	Logln(logWriter, "✅ Copied %d files to build output", filesCopied)
 	return 0
 }
+
+var _ build.BuilderPort = (*ScriptsHandler)(nil)

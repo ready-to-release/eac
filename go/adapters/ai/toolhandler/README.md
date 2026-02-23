@@ -4,7 +4,7 @@ AI tool handler that bridges the tool system to the AI adapter for automated mod
 
 ## Key Types
 
-- **`AIToolHandler`** -- Implements `BuildHandler` for AI-driven analysis of DSL, specs, source, and docs
+- **`AIToolHandler`** -- Implements `build.BuilderPort` for AI-driven analysis of DSL, specs, source, and docs
 - **`AIAnalysisType`** -- Enum for analysis types (dsl, specs, source, docs)
 
 ## Key Functions
@@ -24,7 +24,7 @@ AI tool handler that bridges the tool system to the AI adapter for automated mod
 
 | File               | Responsibility                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------ |
-| handler.go         | `AIToolHandler` implementing `BuildHandler` with AI execution orchestration                |
+| handler.go         | `AIToolHandler` implementing `build.BuilderPort` with AI execution orchestration           |
 | handler_loader.go  | Content loading: `loadFilesWithExtensions` and file collection from module component roots |
 | handler_prompts.go | Prompt construction: analysis-specific prompt building with prior context and instructions |
 

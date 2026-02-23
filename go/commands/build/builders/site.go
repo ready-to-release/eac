@@ -11,6 +11,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/builders/mkdocs"
 	"github.com/ready-to-release/eac/go/commands/build/docprep"
 	"github.com/ready-to-release/eac/go/core/adapters"
@@ -86,7 +87,8 @@ func (h *SiteHandler) ListArtifacts(module core.ModuleContractPort, workspaceRoo
 }
 
 // Build executes the unified site build: preprocessing + container rendering.
-func (h *SiteHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *SiteHandler) Build(module core.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 	startTime := time.Now()
 
 	concrete := adapters.UnwrapModule(module)
@@ -263,3 +265,5 @@ func resolveBookNameForSite(module core.ModuleContractPort, componentName string
 	// Fall back to component name as book name
 	return componentName
 }
+
+var _ build.BuilderPort = (*SiteHandler)(nil)

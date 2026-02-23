@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/commands/build/docprep/diagrams"
 	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -52,8 +53,9 @@ func (h *PlantUMLRenderHandler) ListArtifacts(module core.ModuleContractPort, wo
 
 func (h *PlantUMLRenderHandler) Build(
 	module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions,
+	logWriter io.Writer, rawOpts any,
 ) int {
+	opts, _ := rawOpts.(BuildOptions)
 	Logln(logWriter, "=== Rendering plantuml diagrams via container ===")
 
 	docsDir := filepath.Join(workspaceRoot, "docs")
@@ -263,3 +265,5 @@ func (h *PlantUMLRenderHandler) renderMisses(
 
 	return rendered, nil
 }
+
+var _ build.BuilderPort = (*PlantUMLRenderHandler)(nil)

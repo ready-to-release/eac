@@ -5,39 +5,10 @@ import (
 	"io"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/environments"
 )
-
-// BuildHandler is the interface for build handlers.
-// This matches the existing builders.Handler interface to enable seamless integration.
-type BuildHandler interface {
-	// Name returns the handler identifier (e.g., "go", "mkdocs", "docker")
-	Name() string
-
-	// Build executes the build for a module.
-	// Returns exit code (0 = success, non-zero = failure).
-	Build(module core.ModuleContractPort, workspaceRoot, outputDir string,
-		logWriter io.Writer, opts BuildOptions) int
-
-	// ListArtifacts returns artifact paths that would be produced.
-	// Paths are relative to the module's output directory.
-	ListArtifacts(module core.ModuleContractPort, workspaceRoot string) []string
-
-	// Requirements returns system dependencies required by this handler.
-	// Used for early validation (e.g., ["go", "docker"]).
-	Requirements() []string
-
-	// ValidateModule checks if a module's configuration is valid for a specific component.
-	// Returns nil if valid, or an error describing the problem.
-	ValidateModule(module core.ModuleContractPort, workspaceRoot, component string) error
-
-	// IsContainer returns true if this handler runs in a Docker container.
-	IsContainer() bool
-
-	// IsHostInstalled returns true if this handler runs using host-installed tools (not containers).
-	IsHostInstalled() bool
-}
 
 // BuildOptions contains flags for controlling the build process.
 // This matches the existing builders.BuildOptions structure.
@@ -54,7 +25,7 @@ type BuildOptions struct {
 	ArtifactsMode      environments.ArtifactsMode // Artifact scope mode (all, devbox)
 }
 
-// ToolHandlerAdapter wraps a ToolDefinition to implement BuildHandler.
+// ToolHandlerAdapter wraps a ToolDefinition to implement build.BuilderPort.
 // This allows YAML-defined tools to be used with the existing handler system.
 type ToolHandlerAdapter struct {
 	BaseHandlerAdapter
@@ -69,7 +40,8 @@ func NewToolHandlerAdapter(tool *ToolDefinition, executor Executor) *ToolHandler
 
 // Build executes the tool for a build operation.
 func (a *ToolHandlerAdapter) Build(module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions) int {
+	logWriter io.Writer, rawOpts any) int {
+	opts, _ := rawOpts.(BuildOptions)
 
 	// Build execution context
 	// Note: {module} is the RELATIVE path for use in container workdir (e.g., /docs/{module})
@@ -124,3 +96,5 @@ func (a *ToolHandlerAdapter) ValidateModule(module core.ModuleContractPort, work
 	}
 	return nil
 }
+
+var _ build.BuilderPort = (*ToolHandlerAdapter)(nil)

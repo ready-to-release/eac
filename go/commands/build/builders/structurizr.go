@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/clibase/caching/itemcache"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -71,8 +72,9 @@ type structurizrModuleWork struct {
 
 func (h *StructurizrRenderHandler) Build(
 	module core.ModuleContractPort, workspaceRoot, outputDir string,
-	logWriter io.Writer, opts BuildOptions,
+	logWriter io.Writer, rawOpts any,
 ) int {
+	opts, _ := rawOpts.(BuildOptions)
 	moduleName := module.GetMoniker()
 	Logln(logWriter, "=== Rendering structurizr diagrams for %s via container ===", moduleName)
 
@@ -361,3 +363,5 @@ func renderStructurizrModule(mod structurizrModuleWork, workspaceRoot, specsDir,
 
 	return entries, nil
 }
+
+var _ build.BuilderPort = (*StructurizrRenderHandler)(nil)

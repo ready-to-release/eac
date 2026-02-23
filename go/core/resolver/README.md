@@ -44,7 +44,7 @@ and scheduling weights.
 - `core/config` -- `EACConfig`, `ComponentType` for tool and component configuration
 - `core/domain/modules` -- `ModuleContract` concrete module type
 - `core/resource` -- `PoolAllocation` for host vs container scheduling
-- `core/tool` -- `BuildBridge`, `BuildHandler`, `ToolDefinition` for tool lookup
+- `core/tool` -- `BuildBridge`, `ToolDefinition` for tool lookup; `contracts/runner/0.1.0/build.BuilderPort` for handler type
 - `core/workunit` -- `UnitSpec`, `UnitID` for work unit creation
 
 ## Role in System

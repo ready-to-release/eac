@@ -12,6 +12,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	build "github.com/ready-to-release/eac/contracts/runner/0.1.0/build"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/locking"
 	"github.com/ready-to-release/eac/go/clibase/output"
@@ -165,8 +166,8 @@ func checkExistingDependencyArtifacts(buildCfg *BuildConfig, ctx *cmdframework.E
 
 // resolveWorkerHandler resolves the build handler for a component/tool combination.
 // First tries direct tool name lookup, then falls back to component-based handler lookup.
-func resolveWorkerHandler(moduleContract *modules.ModuleContract, compName, builderName string) tool.BuildHandler {
-	var handler tool.BuildHandler
+func resolveWorkerHandler(moduleContract *modules.ModuleContract, compName, builderName string) build.BuilderPort {
+	var handler build.BuilderPort
 	if builderName != "" {
 		// Try to get handler directly by tool name (for tool chain components)
 		handler = tool.GlobalBuildBridge().GetHandler(builderName)
@@ -212,7 +213,7 @@ func lookupComponentWeight(bctx *buildContext, module, component, compName strin
 }
 
 // executeBuildAndRecord runs the build, handles exit codes, and records manifests.
-func executeBuildAndRecord(ctx *cmdframework.ExecutionContext, bctx *buildContext, spec core.UnitSpec, pipeline *cmdframework.UnitPipeline, handler tool.BuildHandler, moduleContract *modules.ModuleContract, module, compName, builderName string, unitID workunit.UnitID, opts tool.BuildOptions, logWriter io.Writer) int {
+func executeBuildAndRecord(ctx *cmdframework.ExecutionContext, bctx *buildContext, spec core.UnitSpec, pipeline *cmdframework.UnitPipeline, handler build.BuilderPort, moduleContract *modules.ModuleContract, module, compName, builderName string, unitID workunit.UnitID, opts tool.BuildOptions, logWriter io.Writer) int {
 	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", compName, handler.Name())
 
 	modulePort := adapters.AdaptModule(moduleContract)
@@ -264,7 +265,7 @@ func resolveInputHash(ctx *cmdframework.ExecutionContext, bctx *buildContext, mo
 
 // handleBuildResult processes the build exit code and records the appropriate manifest.
 // Exit codes: -1 = skipped (cached), 0 = success, >0 = failure.
-func handleBuildResult(exitCode int, compName string, unitID workunit.UnitID, inputHash, componentOutputDir string, handler tool.BuildHandler, modulePort core.ModuleContractPort, ctx *cmdframework.ExecutionContext, bctx *buildContext, pipeline *cmdframework.UnitPipeline, logWriter io.Writer) int {
+func handleBuildResult(exitCode int, compName string, unitID workunit.UnitID, inputHash, componentOutputDir string, handler build.BuilderPort, modulePort core.ModuleContractPort, ctx *cmdframework.ExecutionContext, bctx *buildContext, pipeline *cmdframework.UnitPipeline, logWriter io.Writer) int {
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
 		pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
@@ -293,7 +294,7 @@ func handleBuildResult(exitCode int, compName string, unitID workunit.UnitID, in
 }
 
 // recordSuccessManifest records a successful build completion with artifact information.
-func recordSuccessManifest(pipeline *cmdframework.UnitPipeline, unitID workunit.UnitID, inputHash, componentOutputDir string, handler tool.BuildHandler, modulePort core.ModuleContractPort, workspaceRoot string) {
+func recordSuccessManifest(pipeline *cmdframework.UnitPipeline, unitID workunit.UnitID, inputHash, componentOutputDir string, handler build.BuilderPort, modulePort core.ModuleContractPort, workspaceRoot string) {
 	artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, workspaceRoot)
 	outputHash := computeOutputHash(artifacts)
 	pipeline.RecordManifest(unitID, &coreoutput.UoWManifest{
@@ -308,7 +309,7 @@ func recordSuccessManifest(pipeline *cmdframework.UnitPipeline, unitID workunit.
 
 // getHandlerForComponent finds the build handler for a specific component.
 // It matches by component name and optionally by builder name.
-func getHandlerForComponent(module *modules.ModuleContract, compName, builderName string) tool.BuildHandler {
+func getHandlerForComponent(module *modules.ModuleContract, compName, builderName string) build.BuilderPort {
 	compHandlers := tool.GlobalBuildBridge().GetHandlersForModule(module)
 	for _, ch := range compHandlers {
 		if ch.Component == compName {
@@ -325,7 +326,7 @@ func getHandlerForComponent(module *modules.ModuleContract, compName, builderNam
 // collectUoWArtifacts collects artifact information from the build output directory.
 // It lists files in the output directory and computes their hashes.
 // Directory paths (ending with "/") are enumerated to collect all files within.
-func collectUoWArtifacts(outputDir string, handler tool.BuildHandler, modulePort core.ModuleContractPort, workspaceRoot string) []coreoutput.Artifact {
+func collectUoWArtifacts(outputDir string, handler build.BuilderPort, modulePort core.ModuleContractPort, workspaceRoot string) []coreoutput.Artifact {
 	// Get expected artifacts from handler
 	expectedPaths := handler.ListArtifacts(modulePort, workspaceRoot)
 	if len(expectedPaths) == 0 {
