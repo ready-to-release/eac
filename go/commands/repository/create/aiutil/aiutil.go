@@ -143,6 +143,19 @@ func ensurePeriod(s string) string {
 	return s
 }
 
+// shuffled returns a shuffled copy of src without mutating the original slice.
+func shuffled(src []string) []string {
+	dst := make([]string, len(src))
+	copy(dst, src)
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(dst), func(i, j int) {
+		dst[i], dst[j] = dst[j], dst[i]
+	})
+
+	return dst
+}
+
 // WhimsicalStatusLines are fun status messages shown during AI generation.
 var WhimsicalStatusLines = []string{
 	"Discombobulating the git diffs...",
@@ -183,15 +196,13 @@ var AngryStatusLines = []string{
 
 // startProgressWithLines begins showing progress updates with custom status lines.
 // Returns a cancel function to stop the progress ticker.
-func startProgressWithLines(initialMessage string, statusLines []string) context.CancelFunc {
+func startProgressWithLines(initialMessage string, statusLines []string, interval time.Duration) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Show initial message immediately
 	logging.C().Info(initialMessage)
 
-	// Start ticker for updates every 10 seconds
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
 		statusIndex := 0
@@ -212,17 +223,9 @@ func startProgressWithLines(initialMessage string, statusLines []string) context
 // WithProgress wraps fn with periodic whimsical progress log lines.
 // The initial message is logged immediately; subsequent lines appear every 10s.
 func WithProgress(stage string, fn func() error) error {
-	// Create local copy to avoid mutating global state
-	statusLines := make([]string, len(WhimsicalStatusLines))
-	copy(statusLines, WhimsicalStatusLines)
+	statusLines := shuffled(WhimsicalStatusLines)
 
-	// Shuffle local copy for variety
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(statusLines), func(i, j int) {
-		statusLines[i], statusLines[j] = statusLines[j], statusLines[i]
-	})
-
-	stopProgress := startProgressWithLines(stage, statusLines)
+	stopProgress := startProgressWithLines(stage, statusLines, 10*time.Second)
 	defer stopProgress()
 
 	return fn()
@@ -231,38 +234,10 @@ func WithProgress(stage string, fn func() error) error {
 // WithAngryProgress wraps fn with "angry" progress log lines (for retry phases).
 // Updates appear every 8 seconds (faster cadence than normal).
 func WithAngryProgress(stage string, fn func() error) error {
-	// Create local copy to avoid mutating global state
-	statusLines := make([]string, len(AngryStatusLines))
-	copy(statusLines, AngryStatusLines)
+	statusLines := shuffled(AngryStatusLines)
 
-	// Shuffle local copy
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(statusLines), func(i, j int) {
-		statusLines[i], statusLines[j] = statusLines[j], statusLines[i]
-	})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Show initial message immediately
-	logging.C().Info(stage)
-
-	// Start ticker for angry updates every 8 seconds (faster than normal)
-	go func() {
-		ticker := time.NewTicker(8 * time.Second)
-		defer ticker.Stop()
-
-		statusIndex := 0
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				logging.C().Info(statusLines[statusIndex%len(statusLines)])
-				statusIndex++
-			}
-		}
-	}()
+	stopProgress := startProgressWithLines(stage, statusLines, 8*time.Second)
+	defer stopProgress()
 
 	return fn()
 }

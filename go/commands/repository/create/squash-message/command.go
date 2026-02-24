@@ -139,7 +139,6 @@ func createSquashMessage(deps *Deps) int {
 	// Phase 10: Generate top-level message with retry loop
 	const maxRetries = 5
 	var topLevelMessage string
-	var lastErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		if attempt > 3 {
@@ -149,25 +148,21 @@ func createSquashMessage(deps *Deps) int {
 		msg, err := attemptSquashGeneration(workspaceRoot, promptCtx)
 		if err == nil {
 			topLevelMessage = msg
-			lastErr = nil
 			break
 		}
-		lastErr = err
 		log.Warnf("Generation attempt %d failed: %v", attempt, err)
 
-		if attempt < maxRetries {
-			log.Infof("Retrying squash message generation: attempt=%d, max=%d", attempt+1, maxRetries)
+		if attempt == maxRetries {
+			log.Error("Maximum retry attempts reached")
+			log.Info("The AI is having difficulty generating a valid squash message.")
+			log.Info("Please try one of the following:")
+			log.Info("  - Simplify your branch changes")
+			log.Info("  - Reduce the number of commits")
+			log.Info("  - Write the squash message manually")
+			return 1
 		}
-	}
 
-	if lastErr != nil {
-		log.Error("Maximum retry attempts reached")
-		log.Info("The AI is having difficulty generating a valid squash message.")
-		log.Info("Please try one of the following:")
-		log.Info("  - Simplify your branch changes")
-		log.Info("  - Reduce the number of commits")
-		log.Info("  - Write the squash message manually")
-		return 1
+		log.Infof("Retrying squash message generation: attempt=%d, max=%d", attempt+1, maxRetries)
 	}
 
 	// Phase 11: Generate module sections (reuse commit-message logic)
