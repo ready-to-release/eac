@@ -12,8 +12,7 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	designHelper "github.com/ready-to-release/eac/go/commands/repository/design"
 	designInternal "github.com/ready-to-release/eac/go/commands/repository/design/helper"
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
@@ -429,12 +428,8 @@ func loadPrompt(config *UpdateConfig) (string, error) {
 
 // generateUpdatedWorkspace generates the updated workspace using AI.
 func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, prompt string) (string, error) {
-	// Create executor
-	executor := ai.NewExecutor(config.TemplateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(config.TemplateRoot, nil)
 
 	// Create composite validator (quick + full validation)
 	validator, err := structurizr.NewCompositeValidator(config.Module, config.TemplateRoot, true)
@@ -454,7 +449,7 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 	retryConfig, err := coreai.BuildRetryConfig(
 		coreai.TypeDesign,
 		coreai.FormatStructurizr,
-		executorAdapter,
+		executor,
 		validator,
 		config.TemplateRoot,
 		aiConfig,

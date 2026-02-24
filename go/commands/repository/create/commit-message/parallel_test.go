@@ -10,7 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,12 +113,13 @@ func TestGenerateModuleSectionsParallel_ErrorPropagation(t *testing.T) {
 	cfg := createTestConfig(modules)
 
 	// Create mock executor that fails for specific module
-	executor := ai.NewExecutor(".")
-	mockFactory := func(config *ai.Config) (ai.Provider, error) {
+	registry := aiproviders.NewRegistry()
+	mockFactory := func(config *ai.ProviderConfig) (ai.Provider, error) {
 		return &errorInjectingMock{failOnModule: "mod-fail"}, nil
 	}
-	executor.RegisterProvider("mock", mockFactory)
-	executor.RegisterProvider("claude-cli", mockFactory)
+	registry.Register("mock", mockFactory)
+	registry.Register("claude-cli", mockFactory)
+	executor := aiproviders.NewExecutor(".", registry)
 
 	sections, err := generateModuleSectionsParallel(defaultDeps(), cfg, executor)
 
@@ -225,19 +227,17 @@ func createTestConfig(modules []string) *executionConfig {
 
 // Helper: createMockExecutor creates a mock AI executor that returns deterministic responses
 // containing the module name. This ensures tests are fast and don't depend on real AI calls.
-func createMockExecutor(modules []string) *ai.Executor {
-	// Create executor (workspace root doesn't matter for mock)
-	executor := ai.NewExecutor(".")
-
-	// Register mock provider for both "mock" and "claude-cli" names
+func createMockExecutor(modules []string) *aiproviders.Executor {
+	// Create registry with mock providers for both "mock" and "claude-cli" names
 	// (claude-cli is the default provider name when no config exists)
-	mockFactory := func(config *ai.Config) (ai.Provider, error) {
+	registry := aiproviders.NewRegistry()
+	mockFactory := func(config *ai.ProviderConfig) (ai.Provider, error) {
 		return &moduleNameExtractorMock{}, nil
 	}
-	executor.RegisterProvider("mock", mockFactory)
-	executor.RegisterProvider("claude-cli", mockFactory)
+	registry.Register("mock", mockFactory)
+	registry.Register("claude-cli", mockFactory)
 
-	return executor
+	return aiproviders.NewExecutor(".", registry)
 }
 
 // moduleNameExtractorMock is a test provider that extracts the module name

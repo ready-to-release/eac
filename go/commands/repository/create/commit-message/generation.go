@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
 )
@@ -17,7 +17,7 @@ type GenerationResult struct {
 
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
 // If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing).
-func generateWithPrompt(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
+func generateWithPrompt(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *aiproviders.Executor) (string, error) {
 	result, err := generateWithPromptResult(deps, promptName, userPrompt, workspaceRoot, affectedModules, debugEnabled, testExecutor)
 	if err != nil {
 		return "", err
@@ -26,7 +26,7 @@ func generateWithPrompt(deps *Deps, promptName, userPrompt, workspaceRoot string
 }
 
 // generateWithPromptResult generates output and returns full metadata including provider info.
-func generateWithPromptResult(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
+func generateWithPromptResult(deps *Deps, promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *aiproviders.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	// Use subcommand-aware mock lookup for module sections to allow different mock responses
 	var mock string

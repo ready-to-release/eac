@@ -12,7 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -126,11 +127,12 @@ Scan Results: {{.Custom.ScanResults}}
 			))
 
 			// Create mock AI executor
-			mockProvider := ai.NewMockProvider(tt.aiResponse)
-			executor := ai.NewExecutor(tmpDir)
-			executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
-				return mockProvider, nil
+			mockProv := &simpleMockProvider{response: tt.aiResponse}
+			registry := aiproviders.NewRegistry()
+			registry.Register("mock", func(config *ai.ProviderConfig) (ai.Provider, error) {
+				return mockProv, nil
 			})
+			executor := aiproviders.NewExecutor(tmpDir, registry)
 
 			// Create mock AI config
 			configDir := filepath.Join(tmpDir, ".eac")
@@ -150,7 +152,7 @@ git:
 
 			// Create deps with injected executor
 			deps := &Deps{
-				GetAIExecutor: func(root string) *ai.Executor { return executor },
+				GetAIExecutor: func(root string) *aiproviders.Executor { return executor },
 				GetGitRepo:    defaultDeps().GetGitRepo,
 			}
 
@@ -202,19 +204,20 @@ git:
 	))
 
 	// Create mock AI executor
-	mockProvider := ai.NewMockProvider(`repository:
+	mockProv := &simpleMockProvider{response: `repository:
   name: minimal-repo
   description: Minimal repository
 
 modules: []
-`)
-	executor := ai.NewExecutor(tmpDir)
-	executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
-		return mockProvider, nil
+`}
+	registry := aiproviders.NewRegistry()
+	registry.Register("mock", func(config *ai.ProviderConfig) (ai.Provider, error) {
+		return mockProv, nil
 	})
+	executor := aiproviders.NewExecutor(tmpDir, registry)
 	// Create deps with injected executor
 	deps := &Deps{
-		GetAIExecutor: func(root string) *ai.Executor { return executor },
+		GetAIExecutor: func(root string) *aiproviders.Executor { return executor },
 		GetGitRepo:    defaultDeps().GetGitRepo,
 	}
 
@@ -312,13 +315,14 @@ git:
 		},
 	}
 
-	executor := ai.NewExecutor(tmpDir)
-	executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
+	registry := aiproviders.NewRegistry()
+	registry.Register("mock", func(config *ai.ProviderConfig) (ai.Provider, error) {
 		return mockProvider, nil
 	})
+	executor := aiproviders.NewExecutor(tmpDir, registry)
 	// Create deps with injected executor
 	deps := &Deps{
-		GetAIExecutor: func(root string) *ai.Executor { return executor },
+		GetAIExecutor: func(root string) *aiproviders.Executor { return executor },
 		GetGitRepo:    defaultDeps().GetGitRepo,
 	}
 
@@ -344,6 +348,19 @@ git:
 	// Extract the JSON part and validate it
 	scanJSON, _ := json.MarshalIndent(scanResult, "", "  ")
 	assert.Contains(t, capturedInput, string(scanJSON))
+}
+
+// simpleMockProvider is a test provider that returns a configured response.
+type simpleMockProvider struct {
+	response string
+}
+
+func (p *simpleMockProvider) Name() string {
+	return "mock"
+}
+
+func (p *simpleMockProvider) Execute(_ context.Context, _ string, _ ...ai.Option) (string, error) {
+	return p.response, nil
 }
 
 // mockProviderWithCapture is a mock provider that captures input for verification

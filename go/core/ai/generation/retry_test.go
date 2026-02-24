@@ -4,10 +4,12 @@
 package generation
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	"github.com/ready-to-release/eac/go/core/ai/config"
 	configpkg "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/validation"
@@ -16,12 +18,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// mockExecutor is a simple mock implementation of AIExecutor for testing
+// mockExecutor is a simple mock implementation of GenerationExecutor for testing
 type mockExecutor struct {
 	executeErr error
 }
 
-func (m *mockExecutor) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
+func (m *mockExecutor) Execute(_ context.Context, _ string, _ ...ai.Option) (string, error) {
 	if m.executeErr != nil {
 		return "", m.executeErr
 	}
@@ -60,7 +62,7 @@ func TestBuildRetryConfig_RequiredParameters(t *testing.T) {
 		name         string
 		typeName     string
 		outputFormat StructuredFormat
-		executor     validation.AIExecutor
+		executor     ai.GenerationExecutor
 		validator    validation.Validator
 		templateRoot string
 		wantErr      string

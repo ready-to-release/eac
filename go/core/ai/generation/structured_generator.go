@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	"github.com/ready-to-release/eac/go/core/validation"
 	"go.uber.org/zap"
 )
@@ -18,7 +19,7 @@ import (
 type StructuredGenerator struct {
 	// Generation configuration
 	OutputFormat StructuredFormat
-	Executor     validation.AIExecutor
+	Executor     ai.GenerationExecutor
 	Validator    validation.Validator
 
 	// Retry configuration
@@ -40,7 +41,7 @@ type GenerationResult struct {
 // generationConfig holds configuration for generation with retry.
 type generationConfig struct {
 	name           string
-	executor       validation.AIExecutor
+	executor       ai.GenerationExecutor
 	validator      validation.Validator
 	initialPrompt  string
 	originalPrompt string // Base prompt for retry construction

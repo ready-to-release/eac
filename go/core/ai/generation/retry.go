@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	configpkg "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/validation"
 	"go.uber.org/zap"
@@ -27,7 +28,7 @@ type RetryConfig struct {
 	Validator    validation.Validator // Validator (optional - will auto-load if not provided)
 
 	// Executor performs AI generation
-	Executor validation.AIExecutor
+	Executor ai.GenerationExecutor
 
 	// TemplateRoot is the repository root (for loading schemas)
 	TemplateRoot string
@@ -150,7 +151,7 @@ func (cfg *RetryConfig) getLogger() *zap.Logger {
 
 // getProviderName extracts provider name from executor if available.
 func (cfg *RetryConfig) getProviderName() string {
-	if provider, ok := cfg.Executor.(validation.AIExecutorWithProviderInfo); ok {
+	if provider, ok := cfg.Executor.(ai.GenerationExecutorWithProviderInfo); ok {
 		return provider.GetProviderName()
 	}
 	return "unknown"

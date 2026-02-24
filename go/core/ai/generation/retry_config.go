@@ -3,6 +3,7 @@ package generation
 import (
 	"fmt"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	"github.com/ready-to-release/eac/go/core/ai/config"
 	configpkg "github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/validation"
@@ -48,7 +49,7 @@ import (
 func BuildRetryConfig(
 	typeName string,
 	outputFormat StructuredFormat,
-	executor validation.AIExecutor,
+	executor ai.GenerationExecutor,
 	validator validation.Validator,
 	templateRoot string,
 	aiConfig *config.AIConfig,

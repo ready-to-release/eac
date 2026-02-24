@@ -35,7 +35,7 @@ import (
 	"sync"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
-	"github.com/ready-to-release/eac/go/adapters/ai"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
@@ -81,7 +81,7 @@ import (
 //	// sections[0] corresponds to "clie"
 //	// sections[1] corresponds to "core"
 //	// sections[2] corresponds to "eac-cli"
-func generateModuleSectionsParallel(deps *Deps, cfg *executionConfig, testExecutor *ai.Executor) ([]string, error) {
+func generateModuleSectionsParallel(deps *Deps, cfg *executionConfig, testExecutor *aiproviders.Executor) ([]string, error) {
 	// Validate inputs
 	if cfg == nil {
 		return nil, fmt.Errorf("executionConfig cannot be nil")

@@ -206,7 +206,15 @@ modules:
       - type: go
         root: go/adapters/godog
       - type: go
-        root: go/adapters/ai
+        root: go/adapters/claude
+      - type: go
+        root: go/adapters/openai
+      - type: go
+        root: go/adapters/gemini
+      - type: go
+        root: go/adapters/claude-cli
+      - type: go
+        root: go/adapters/ai-test
       - type: go
         root: go/adapters/docker
       - type: go
@@ -235,9 +243,6 @@ modules:
         root: go/adapters/reqnroll
       - type: go
         root: go/adapters/gh
-      - type: assets
-        root: go/adapters/ai
-        name: assets
 
   - moniker: commands
     description: CLI command modules for repository, build, test, scan, lint, and update operations

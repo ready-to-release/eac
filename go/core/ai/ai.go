@@ -5,6 +5,7 @@ package ai
 import (
 	"context"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	"github.com/ready-to-release/eac/go/core/ai/config"
 	"github.com/ready-to-release/eac/go/core/ai/generation"
 	"github.com/ready-to-release/eac/go/core/ai/mock"
@@ -147,7 +148,7 @@ func GetPhaseInstruction(format StructuredFormat) (string, error) {
 func BuildRetryConfig(
 	typeName string,
 	outputFormat StructuredFormat,
-	executor validation.AIExecutor,
+	executor ai.GenerationExecutor,
 	validator validation.Validator,
 	templateRoot string,
 	aiConfig *AIConfig,
@@ -212,7 +213,9 @@ type (
 // ============================================================================
 
 type (
-	AIExecutor      = validation.AIExecutor
-	Validator       = validation.Validator
-	ValidationError = validation.ValidationError
+	GenerationExecutor             = ai.GenerationExecutor
+	GenerationExecutorWithProvider = ai.GenerationExecutorWithProviderInfo
+	AIExecutor                     = validation.AIExecutor // Deprecated: use GenerationExecutor
+	Validator                      = validation.Validator
+	ValidationError                = validation.ValidationError
 )

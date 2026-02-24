@@ -9,13 +9,17 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
+	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
-	github.com/ready-to-release/eac/go/adapters/ai v0.0.0
+	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/go/adapters/claude v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
+	github.com/ready-to-release/eac/go/adapters/gemini v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gh v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
+	github.com/ready-to-release/eac/go/adapters/openai v0.0.0
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/commands/base v0.0.0
@@ -105,7 +109,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -155,23 +158,26 @@ require (
 )
 
 replace (
+	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 => ../../../contracts/ai-provider/0.1.0
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 => ../../../contracts/container-runtime/0.1.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../../contracts/core/0.1.0
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 => ../../../contracts/runner/0.1.0
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
-	github.com/ready-to-release/eac/go/adapters/ai => ../../adapters/ai
 	github.com/ready-to-release/eac/go/adapters/behave => ../../adapters/behave
+	github.com/ready-to-release/eac/go/adapters/claude => ../../adapters/claude
 	github.com/ready-to-release/eac/go/adapters/cucumber => ../../adapters/cucumber
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker
 	github.com/ready-to-release/eac/go/adapters/dotnet => ../../adapters/dotnet
 	github.com/ready-to-release/eac/go/adapters/eac => ../../adapters/eac
+	github.com/ready-to-release/eac/go/adapters/gemini => ../../adapters/gemini
 	github.com/ready-to-release/eac/go/adapters/gh => ../../adapters/gh
 	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
 	github.com/ready-to-release/eac/go/adapters/gotest => ../../adapters/gotest
 	github.com/ready-to-release/eac/go/adapters/mocha => ../../adapters/mocha
 	github.com/ready-to-release/eac/go/adapters/npm => ../../adapters/npm
 	github.com/ready-to-release/eac/go/adapters/nuget => ../../adapters/nuget
+	github.com/ready-to-release/eac/go/adapters/openai => ../../adapters/openai
 	github.com/ready-to-release/eac/go/adapters/pip => ../../adapters/pip
 	github.com/ready-to-release/eac/go/adapters/pytest => ../../adapters/pytest
 	github.com/ready-to-release/eac/go/adapters/reqnroll => ../../adapters/reqnroll

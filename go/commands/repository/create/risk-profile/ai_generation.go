@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/commands/repository/internal/risk/oscal"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -113,12 +112,8 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	// Show progress message (AI calls can take time)
 	log.Info("  → Waiting for AI response...")
 
-	// Create executor
-	executor := ai.NewExecutor(config.WorkspaceRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match domain.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(config.WorkspaceRoot, nil)
 
 	// Load AI config for retry strategy
 	aiConfig, err := coreai.LoadAIConfig(config.WorkspaceRoot)
@@ -131,7 +126,7 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	retryConfig, err := coreai.BuildRetryConfig(
 		coreai.TypeRiskProfile,
 		coreai.FormatOSCALProfile, // Generate and validate OSCAL profile structure
-		executorAdapter,
+		executor,
 		nil, // Let BuildRetryConfig auto-load OSCAL profile validator
 		config.WorkspaceRoot,
 		aiConfig,

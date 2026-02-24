@@ -111,7 +111,6 @@ replace (
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 => ../../../contracts/runner/0.1.0
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 => ../../../contracts/scanner/0.1.0
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 => ../../../contracts/tui/0.1.0
-	github.com/ready-to-release/eac/go/adapters/ai => ../../adapters/ai
 	github.com/ready-to-release/eac/go/adapters/behave => ../../adapters/behave
 	github.com/ready-to-release/eac/go/adapters/cucumber => ../../adapters/cucumber
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker

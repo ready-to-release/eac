@@ -6,19 +6,20 @@ import (
 	"context"
 	"testing"
 
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
 	"github.com/ready-to-release/eac/go/core/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
-// mockExecutor implements validation.AIExecutor for testing.
+// mockExecutor implements ai.GenerationExecutor for testing.
 type mockExecutor struct {
 	responses []string
 	callCount int
 }
 
-func (m *mockExecutor) Execute(_ interface{}, _ string, _ ...interface{}) (string, error) {
+func (m *mockExecutor) Execute(_ context.Context, _ string, _ ...ai.Option) (string, error) {
 	idx := m.callCount
 	if idx >= len(m.responses) {
 		idx = len(m.responses) - 1

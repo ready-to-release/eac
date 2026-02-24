@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/commands/repository/internal/risk/scoring"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -85,12 +84,8 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 		return nil, fmt.Errorf("failed to build prompt: %w", err)
 	}
 
-	// Create AI executor
-	executor := ai.NewExecutor(config.WorkspaceRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match validation.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(config.WorkspaceRoot, nil)
 
 	// Load AI config for retry strategy
 	aiConfig, err := coreai.LoadAIConfig(config.WorkspaceRoot)
@@ -103,7 +98,7 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 	retryConfig, err := coreai.BuildRetryConfig(
 		coreai.TypeRiskAssess,
 		coreai.FormatJSON, // JSON format with automatic enhanced validation
-		executorAdapter,
+		executor,
 		nil, // Let BuildRetryConfig auto-load JSON validator
 		config.WorkspaceRoot,
 		aiConfig,

@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 
 	design "github.com/ready-to-release/eac/go/commands/repository/design"
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/validation/formats/structurizr"
@@ -50,12 +49,8 @@ func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI.
 func generateAndValidate(config *DesignConfig, prompt string, out *design.Output) (string, error) {
-	// Create executor
-	executor := ai.NewExecutor(config.TemplateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(config.TemplateRoot, nil)
 
 	// Create composite validator (quick + full validation)
 	// Skip expensive Docker validation if quick validation finds errors or if --skip-validation
@@ -77,7 +72,7 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 	retryConfig, err := coreai.BuildRetryConfig(
 		coreai.TypeDesign,
 		coreai.FormatStructurizr,
-		executorAdapter,
+		executor,
 		validator,
 		config.TemplateRoot,
 		aiConfig,

@@ -1,9 +1,14 @@
 // Package mock provides mock implementations for testing AI and validation components.
 package mock
 
-import "github.com/ready-to-release/eac/go/core/validation"
+import (
+	"context"
 
-// AIExecutor implements validation.AIExecutor for testing.
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
+	"github.com/ready-to-release/eac/go/core/validation"
+)
+
+// AIExecutor implements ai.GenerationExecutor for testing.
 type AIExecutor struct {
 	Responses      []string // Queue of responses to return
 	ResponseIndex  int      // Current response index
@@ -11,7 +16,7 @@ type AIExecutor struct {
 }
 
 // Execute returns the next response from the queue.
-func (m *AIExecutor) Execute(_ interface{}, _ string, _ ...interface{}) (string, error) {
+func (m *AIExecutor) Execute(_ context.Context, _ string, _ ...ai.Option) (string, error) {
 	m.ExecutionCount++
 	if m.ResponseIndex >= len(m.Responses) {
 		return m.Responses[len(m.Responses)-1], nil

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	ai "github.com/ready-to-release/eac/contracts/ai-provider/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
@@ -109,9 +109,8 @@ func (s *AIScorer) buildPrompt(input *AIAnalysisInput) (string, error) {
 
 // callAI makes the actual AI call.
 func (s *AIScorer) callAI(ctx context.Context, prompt string) (string, error) {
-	// Create executor
-	executor := ai.NewExecutor(s.workspaceRoot)
-	providers.RegisterBuiltIn(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(s.workspaceRoot, nil)
 
 	// Configure options
 	opts := []ai.Option{}

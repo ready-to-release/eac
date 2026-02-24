@@ -13,6 +13,7 @@ require (
 	github.com/go-git/go-git/v5 v5.16.5
 	github.com/gofrs/flock v0.13.0
 	github.com/huandu/go-clone/generic v1.7.3
+	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0-00010101000000-000000000000
@@ -66,6 +67,7 @@ require (
 )
 
 replace (
+	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 => ../../contracts/ai-provider/0.1.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../contracts/core/0.1.0
 	github.com/ready-to-release/eac/go/adapters/godog => ../adapters/godog
 	github.com/ready-to-release/eac/go/clibase => ../clibase

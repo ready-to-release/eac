@@ -4,14 +4,19 @@ go 1.24.4
 
 require (
 	github.com/cucumber/godog v0.15.1
+	github.com/ready-to-release/eac/go/adapters/ai-test v0.0.0
 	github.com/ready-to-release/eac/go/adapters/behave v0.0.0
+	github.com/ready-to-release/eac/go/adapters/claude v0.0.0
+	github.com/ready-to-release/eac/go/adapters/claude-cli v0.0.0
 	github.com/ready-to-release/eac/go/adapters/cucumber v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/dotnet v0.0.0
+	github.com/ready-to-release/eac/go/adapters/gemini v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gh v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gotest v0.0.0
 	github.com/ready-to-release/eac/go/adapters/mocha v0.0.0
+	github.com/ready-to-release/eac/go/adapters/openai v0.0.0
 	github.com/ready-to-release/eac/go/adapters/pytest v0.0.0
 	github.com/ready-to-release/eac/go/adapters/reqnroll v0.0.0
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
@@ -35,8 +40,8 @@ require (
 	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
-	github.com/ready-to-release/eac/go/adapters/ai v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/npm v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/nuget v0.0.0 // indirect
@@ -168,18 +173,22 @@ require (
 )
 
 replace (
-	github.com/ready-to-release/eac/go/adapters/ai => ../../adapters/ai
+	github.com/ready-to-release/eac/go/adapters/ai-test => ../../adapters/ai-test
 	github.com/ready-to-release/eac/go/adapters/behave => ../../adapters/behave
+	github.com/ready-to-release/eac/go/adapters/claude => ../../adapters/claude
+	github.com/ready-to-release/eac/go/adapters/claude-cli => ../../adapters/claude-cli
 	github.com/ready-to-release/eac/go/adapters/cucumber => ../../adapters/cucumber
 	github.com/ready-to-release/eac/go/adapters/docker => ../../adapters/docker
 	github.com/ready-to-release/eac/go/adapters/dotnet => ../../adapters/dotnet
 	github.com/ready-to-release/eac/go/adapters/eac => ../../adapters/eac
+	github.com/ready-to-release/eac/go/adapters/gemini => ../../adapters/gemini
 	github.com/ready-to-release/eac/go/adapters/gh => ../../adapters/gh
 	github.com/ready-to-release/eac/go/adapters/godog => ../../adapters/godog
 	github.com/ready-to-release/eac/go/adapters/gotest => ../../adapters/gotest
 	github.com/ready-to-release/eac/go/adapters/mocha => ../../adapters/mocha
 	github.com/ready-to-release/eac/go/adapters/npm => ../../adapters/npm
 	github.com/ready-to-release/eac/go/adapters/nuget => ../../adapters/nuget
+	github.com/ready-to-release/eac/go/adapters/openai => ../../adapters/openai
 	github.com/ready-to-release/eac/go/adapters/pip => ../../adapters/pip
 	github.com/ready-to-release/eac/go/adapters/pytest => ../../adapters/pytest
 	github.com/ready-to-release/eac/go/adapters/reqnroll => ../../adapters/reqnroll
@@ -194,6 +203,8 @@ replace (
 	github.com/ready-to-release/eac/go/commands/update => ../../commands/update
 	github.com/ready-to-release/eac/go/core => ../../core
 )
+
+replace github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 => ../../../contracts/ai-provider/0.1.0
 
 replace github.com/ready-to-release/eac/contracts/core/0.1.0 => ../../../contracts/core/0.1.0
 

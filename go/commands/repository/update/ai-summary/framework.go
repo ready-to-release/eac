@@ -7,7 +7,7 @@ import (
 	"io"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/adapters/ai/toolhandler"
+	"github.com/ready-to-release/eac/go/commands/repository/internal/toolhandler"
 	"github.com/ready-to-release/eac/go/clibase/cmdframework"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/output"

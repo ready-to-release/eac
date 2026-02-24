@@ -11,8 +11,7 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/commands/repository/specs"
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/commands/repository/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/core/ai"
@@ -217,12 +216,8 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		return "", fmt.Errorf("failed to load contract: %w", err)
 	}
 
-	// Create executor
-	executor := ai.NewExecutor(config.TemplateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := ai.NewExecutorAdapter(executor)
+	// Create executor (providers registered via init)
+	executor := aiproviders.NewExecutor(config.TemplateRoot, nil)
 
 	// Load tags config for tag validation
 	// The EAC config was already loaded in CreateSpec, use it to get tags config
@@ -246,7 +241,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	retryConfig, err := aimock.BuildRetryConfig(
 		aimock.TypeSpecs,
 		aimock.FormatGherkin,
-		executorAdapter,
+		executor,
 		validator,
 		config.TemplateRoot,
 		aiConfig,

@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai"
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -24,26 +23,25 @@ type GenerationParams struct {
 	SchemaFilename string // e.g. "commit-message.schema.json"
 	Model          string // Optional model override from agent frontmatter
 	Debug          bool
-	TestExecutor   *ai.Executor // Optional: use this executor instead of creating one (for testing)
+	TestExecutor   *aiproviders.Executor // Optional: use this executor instead of creating one (for testing)
 }
 
 // ExecuteGeneration performs the shared AI executor pipeline:
 // create executor → register providers → load AI config → build schema validator →
 // build retry config → generate with retry.
 func ExecuteGeneration(params GenerationParams) (*coreai.RetryResult, error) {
-	var executor *ai.Executor
+	var executor *aiproviders.Executor
 	if params.TestExecutor != nil {
 		executor = params.TestExecutor
 	} else {
-		executor = ai.NewExecutor(params.WorkspaceRoot)
-		providers.RegisterBuiltIn(executor)
+		executor = aiproviders.NewExecutor(params.WorkspaceRoot, nil)
 	}
 
-	var executorAdapter *ai.ExecutorAdapter
+	var genExecutor coreai.GenerationExecutor
 	if params.Model != "" {
-		executorAdapter = ai.NewExecutorAdapterWithModel(executor, params.Model)
+		genExecutor = aiproviders.NewWithModelExecutor(executor, params.Model)
 	} else {
-		executorAdapter = ai.NewExecutorAdapter(executor)
+		genExecutor = executor
 	}
 
 	aiConfig, err := coreai.LoadAIConfig(params.WorkspaceRoot)
@@ -72,7 +70,7 @@ func ExecuteGeneration(params GenerationParams) (*coreai.RetryResult, error) {
 	retryConfig, err := coreai.BuildRetryConfig(
 		params.TypeName,
 		coreai.FormatJSON,
-		executorAdapter,
+		genExecutor,
 		validator,
 		params.WorkspaceRoot,
 		aiConfig,

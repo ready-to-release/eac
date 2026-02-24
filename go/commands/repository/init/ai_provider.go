@@ -2,12 +2,13 @@ package init
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/adapters/ai/providers"
+	claude "github.com/ready-to-release/eac/go/adapters/claude"
+	gemini "github.com/ready-to-release/eac/go/adapters/gemini"
+	openai "github.com/ready-to-release/eac/go/adapters/openai"
 	"github.com/ready-to-release/eac/go/core/paths"
-
-	"os"
 )
 
 // agentConfig holds configuration for an AI provider.
@@ -43,19 +44,19 @@ func configureProvider(config *agentConfig, provider string) error {
 	case "claude-api":
 		config.providerName = "claude-api"
 		config.envVarName = "ANTHROPIC_API_KEY"
-		config.model = providers.DefaultClaudeAPIModel
+		config.model = claude.DefaultModel
 		config.endpoint = "https://api.anthropic.com/v1"
 
 	case "openai":
 		config.providerName = "openai"
 		config.envVarName = "OPENAI_API_KEY"
-		config.model = providers.DefaultOpenAIModel
+		config.model = openai.DefaultModel
 		config.endpoint = "https://api.openai.com/v1"
 
 	case "gemini":
 		config.providerName = "gemini"
 		config.envVarName = "GOOGLE_API_KEY"
-		config.model = providers.DefaultGeminiModel
+		config.model = gemini.DefaultModel
 		config.endpoint = "https://generativelanguage.googleapis.com"
 
 	default:
