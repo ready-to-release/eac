@@ -200,7 +200,7 @@ func (s *CIScheduler) dispatchReady(ctx context.Context) int {
 	return dispatched
 }
 
-// pollActive checks status of all active dispatches.
+// pollActive checks status of all active dispatches using a single batch API call.
 func (s *CIScheduler) pollActive(ctx context.Context) error {
 	var activeModules []string
 	for _, m := range s.dispatch {
@@ -208,30 +208,35 @@ func (s *CIScheduler) pollActive(ctx context.Context) error {
 			activeModules = append(activeModules, m)
 		}
 	}
+	if len(activeModules) == 0 {
+		return nil
+	}
+
+	statuses, err := s.dispatcher.BatchGetStatus(ctx, activeModules, s.cfg.HeadSHA)
+	if err != nil {
+		log.Warnf("CI Scheduler: batch status check error: %v", err)
+		return nil // non-fatal, retry next cycle
+	}
 
 	for _, module := range activeModules {
-		status, conclusion, err := s.dispatcher.GetStatus(ctx, module, s.cfg.HeadSHA)
-		if err != nil {
-			log.Warnf("CI Scheduler: error checking %s: %v", module, err)
-			continue
+		ms, ok := statuses[module]
+		if !ok {
+			continue // not yet visible in API
 		}
 
-		switch status {
+		switch ms.Status {
 		case "completed":
 			elapsed := time.Since(s.dispatchTime[module]).Round(time.Second)
-			if conclusion == "success" || conclusion == "skipped" {
+			if ms.Conclusion == "success" || ms.Conclusion == "skipped" {
 				log.Infof("CI Scheduler: %s completed successfully (%v)", module, elapsed)
 				s.status[module] = ciModuleCompleted
 			} else {
-				log.Warnf("CI Scheduler: %s failed (conclusion=%s, %v)", module, conclusion, elapsed)
+				log.Warnf("CI Scheduler: %s failed (conclusion=%s, %v)", module, ms.Conclusion, elapsed)
 				s.status[module] = ciModuleFailed
 				s.cascadeFail(module)
 			}
 		case "in_progress":
-			// Still running, nothing to do.
-		case "none":
-			// Not yet visible in GitHub API. This can happen right after dispatch.
-			// If it's been too long, we might have a problem, but for now just wait.
+			// still running
 		}
 	}
 
@@ -242,7 +247,6 @@ func (s *CIScheduler) pollActive(ctx context.Context) error {
 	if active > 0 || pending > 0 {
 		log.Infof("CI Scheduler: active=%d pending=%d completed=%d", active, pending, completed)
 	}
-
 	return nil
 }
 

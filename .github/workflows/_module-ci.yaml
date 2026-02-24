@@ -5,25 +5,21 @@
 # from core config via `eac get ci-config`.
 #
 # Single-container or binary modules:
-#   ┌────────┐
-#   │ Config │  ← eac get ci-config --module <moniker>
-#   └───┬────┘
+#   ┌───────────────────────────────────────────────┐
+#   │ Build (config + build + test-linux + scan)    │
+#   └───┬───────────────────────────────────────────┘
 #       │
-#   ┌───┴────┐
-#   │  Build │
-#   └───┬────┘
-#       │
-#   ┌───┼────────────┬────────────┬──────┬──────────────┐
-#   ▼   ▼            ▼            ▼      ▼              ▼
-# ┌────┐ ┌─────────┐ ┌───────┐ ┌──────┐ ┌──────────────┐
-# │Test│ │ Test    │ │ Test  │ │ Scan │ │Container Test│
-# │Lin.│ │ Windows │ │ macOS │ │      │ │              │
-# └────┘ └─────────┘ └───────┘ └──────┘ └──────────────┘
+#   ┌───┼────────────┬──────────────┐
+#   ▼   ▼            ▼              ▼
+# ┌─────────┐ ┌───────┐ ┌──────────────┐
+# │ Test    │ │ Test  │ │Container Test│
+# │ Windows │ │ macOS │ │              │
+# └─────────┘ └───────┘ └──────────────┘
 #
 # Multi-container modules (is-multi-container=true):
-#   ┌────────┐
-#   │ Config │  ← derives container-components JSON matrix
-#   └───┬────┘
+#   ┌───────────────────────────────────────────────┐
+#   │ Build (config derivation only)                │
+#   └───┬───────────────────────────────────────────┘
 #       │
 #   ┌───┴──────────────────┐
 #   │  Build Containers    │  ← matrix: one job per pushable container
@@ -68,7 +64,7 @@ on:
         value: ${{ jobs.build.result }}
       test-result:
         description: 'Test job result (Linux)'
-        value: ${{ jobs.test-linux.result }}
+        value: ${{ jobs.build.outputs.test-linux-outcome }}
       test-windows-result:
         description: 'Test job result (Windows)'
         value: ${{ jobs.test-windows.result }}
@@ -77,7 +73,7 @@ on:
         value: ${{ jobs.test-macos.result }}
       scan-result:
         description: 'Scan job result'
-        value: ${{ jobs.scan.result }}
+        value: ${{ jobs.build.outputs.scan-outcome }}
       container-test-result:
         description: 'Container test job result'
         value: ${{ jobs.container-test.result }}
@@ -108,12 +104,14 @@ permissions:
 
 jobs:
   # ===========================================================================
-  # Job 0: Config - derive all CI configuration from core config
+  # Job A: Build (config + build + test-linux + scan merged)
   # ===========================================================================
-  config:
-    name: Config
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    if: true  # always runs
     outputs:
+      # Config outputs (moved from config job)
       is-container: ${{ steps.ci-config.outputs.is-container }}
       container-push: ${{ steps.ci-config.outputs.container-push }}
       has-tests: ${{ steps.ci-config.outputs.has-tests }}
@@ -130,16 +128,27 @@ jobs:
       test-suites-full: ${{ steps.ci-config.outputs.test-suites-full }}
       is-multi-container: ${{ steps.ci-config.outputs.is-multi-container }}
       container-components: ${{ steps.ci-config.outputs.container-components }}
+      # Build outputs (existing)
+      image-name: ${{ steps.container-build.outputs.image-name }}
+      image-tag: ${{ steps.container-build.outputs.image-tag }}
+      short-sha: ${{ steps.container-build.outputs.short-sha }}
+      # Test/scan step outcomes (for evidence/summary)
+      test-linux-outcome: ${{ steps.test-linux.outcome }}
+      scan-outcome: ${{ steps.scan-step.outcome }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      # 1. Setup commands binary (one time for the whole job)
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
+      # 2. Derive CI config (replaces config job)
       - name: Derive CI Config
         id: ci-config
         env:
@@ -149,78 +158,79 @@ jobs:
             --module "${{ inputs.module }}" \
             --format github-output >> $GITHUB_OUTPUT
 
-  # ===========================================================================
-  # Job A: Build
-  # ===========================================================================
-  build:
-    name: Build
-    needs: config
-    if: needs.config.outputs.is-multi-container != 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      image-name: ${{ steps.container-build.outputs.image-name }}
-      image-tag: ${{ steps.container-build.outputs.image-tag }}
-      short-sha: ${{ steps.container-build.outputs.short-sha }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      # Binary build (default)
-      - name: Build Module
-        id: build-binary
-        if: needs.config.outputs.is-container != 'true'
-        uses: ./.github/actions/build-module
+      # 3. Setup module dependencies (one time)
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
         with:
           module: ${{ inputs.module }}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          upload-artifact: 'false'
-          extra-args: ${{ needs.config.outputs.build-args }}
-          cross-compile-windows: ${{ needs.config.outputs.cross-compile-windows }}
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
-      # Container build
+      # 4. Download module deps (for modules with depends_on_ci)
+      - name: Download Module Dependencies
+        if: steps.ci-config.outputs.download-modules != ''
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ steps.ci-config.outputs.download-modules }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+
+      # 5. Build (binary or container)
+      - name: Build Module (binary)
+        id: build-binary
+        if: steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          EXTRA_ARGS: ${{ steps.ci-config.outputs.build-args }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} build $MODULE --skip-cache --skip-depm $EXTRA_ARGS
+
       - name: Build Container
         id: container-build
-        if: needs.config.outputs.is-container == 'true'
+        if: steps.ci-config.outputs.is-container == 'true'
         uses: ./.github/actions/build-container
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: 'true'
-          extra-args: ${{ needs.config.outputs.build-args }}
-          download-modules: ${{ needs.config.outputs.download-modules }}
+          extra-args: ${{ steps.ci-config.outputs.build-args }}
+          download-modules: ${{ steps.ci-config.outputs.download-modules }}
           registry: ghcr.io
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # 6. Upload build artifacts (only when cross-platform tests need them)
       - name: Upload Build Artifacts
-        if: needs.config.outputs.is-container != 'true'
+        if: |
+          steps.ci-config.outputs.is-container != 'true'
+          && steps.ci-config.outputs.is-multi-container != 'true'
+          && (steps.ci-config.outputs.test-on-windows == 'true' || steps.ci-config.outputs.test-on-macos == 'true')
         uses: ./.github/actions/upload-artifact-retry
         with:
           name: build-artifacts-${{ inputs.module }}
           path: out/build/${{ inputs.module }}/
           if-no-files-found: error
 
+      # 7. Build summary
       - name: Build Summary
-        if: always() && needs.config.outputs.is-container != 'true'
+        if: always() && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         shell: bash
         env:
-          COMMANDS: ${{ steps.build-binary.outputs.commands-path }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
           MODULE: ${{ inputs.module }}
           RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-            echo "## ⚠️ Build Summary Unavailable" >> $GITHUB_STEP_SUMMARY
-            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+            echo "## Build Summary Unavailable" >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
           ${COMMANDS:?COMMANDS not set} show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
       - name: Container Build Summary
-        if: always() && needs.config.outputs.is-container == 'true'
+        if: always() && steps.ci-config.outputs.is-container == 'true'
         shell: bash
         env:
           MODULE: ${{ inputs.module }}
@@ -240,18 +250,152 @@ jobs:
             echo "Container build failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
           fi
 
+      # 8. Cross-compile commands for Windows (after ci-config is known)
+      - name: Cross-compile commands for Windows
+        if: steps.ci-config.outputs.cross-compile-windows == 'true'
+        shell: bash
+        run: |
+          cd go/cli/eac
+          GOOS=windows GOARCH=amd64 go build -o ../../../out/tools/eac.exe .
+      - name: Upload Windows commands binary
+        if: steps.ci-config.outputs.cross-compile-windows == 'true'
+        uses: ./.github/actions/upload-artifact-retry
+        continue-on-error: true
+        with:
+          name: commands-binary-windows
+          path: out/tools/eac.exe
+          if-no-files-found: error
+
+      # 9. Test (Linux) - runs in same job, build artifacts already on disk
+      - name: Determine test suites
+        id: suites
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        shell: bash
+        run: |
+          REF="${{ inputs.ref || github.ref }}"
+          if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
+            echo "suites=${{ steps.ci-config.outputs.test-suites }}" >> $GITHUB_OUTPUT
+          else
+            echo "suites=${{ steps.ci-config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to GHCR (for integration tests)
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Test Module (Linux)
+        id: test-linux
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SUITES: ${{ steps.suites.outputs.suites }}
+          SKIP_DEPM: ${{ steps.ci-config.outputs.download-modules == '' }}
+        run: |
+          test_failed=0
+          SKIP_DEPM_FLAG=""
+          if [ "$SKIP_DEPM" = "true" ]; then
+            SKIP_DEPM_FLAG="--skip-depm"
+          fi
+          IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
+          for suite in "${SUITE_ARRAY[@]}"; do
+            suite=$(echo "$suite" | xargs)
+            echo "Running test suite: $suite"
+            if ! ${COMMANDS:?COMMANDS not set} test $MODULE --suite $suite --skip-cache $SKIP_DEPM_FLAG; then
+              test_failed=1
+            fi
+          done
+          echo "test-failed=$test_failed" >> $GITHUB_OUTPUT
+          if [ "$test_failed" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Upload Test Results (Linux)
+        if: always() && steps.test-linux.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: test-results-${{ inputs.module }}-linux
+          path: out/test/
+          if-no-files-found: ignore
+
+      - name: Test Summary (Linux)
+        if: always() && steps.test-linux.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SUITES: ${{ steps.suites.outputs.suites }}
+          RUN_ID: ${{ github.run_id }}
+          TEST_FAILED: ${{ steps.test-linux.outputs.test-failed }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+            exit 0
+          fi
+          if [ "$TEST_FAILED" = "0" ]; then STATUS="success"; else STATUS="failure"; fi
+          PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
+          ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+
+      # 10. Scan - runs in same job, build artifacts already on disk
+      - name: Setup Docker Buildx (for scans)
+        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Scan Module
+        id: scan-step
+        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          SCANS: ${{ steps.ci-config.outputs.scans }}
+          FAIL_ON_ERROR: ${{ steps.ci-config.outputs.scan-fail-mode }}
+        run: |
+          mkdir -p out/scan/$MODULE
+          if ${COMMANDS:?COMMANDS not set} scan $MODULE --scanner "$SCANS" --no-tui; then
+            echo "scan-failed=false" >> $GITHUB_OUTPUT
+          else
+            echo "scan-failed=true" >> $GITHUB_OUTPUT
+            if [ "$FAIL_ON_ERROR" = "error" ]; then
+              exit 1
+            fi
+          fi
+
+      - name: Upload Scan Results
+        if: always() && steps.scan-step.outcome != 'skipped'
+        uses: ./.github/actions/upload-artifact-retry
+        with:
+          name: scan-results-${{ inputs.module }}
+          path: out/scan/
+          if-no-files-found: warn
+
+      - name: Scan Summary
+        if: always() && steps.scan-step.outcome != 'skipped'
+        shell: bash
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          ARTIFACT_NAME: scan-results-${{ inputs.module }}
+        run: |
+          ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
+
   # ===========================================================================
   # Job A2: Build Containers (matrix) - for multi-container modules
   # ===========================================================================
   build-containers:
     name: "Build: ${{ matrix.component.name }}"
-    needs: config
-    if: needs.config.outputs.is-multi-container == 'true'
+    needs: [build]
+    if: needs.build.outputs.is-multi-container == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        component: ${{ fromJSON(needs.config.outputs.container-components) }}
+        component: ${{ fromJSON(needs.build.outputs.container-components) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -267,8 +411,8 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: 'true'
-          download-modules: ${{ needs.config.outputs.download-modules }}
-          extra-args: ${{ needs.config.outputs.build-args }}
+          download-modules: ${{ needs.build.outputs.download-modules }}
+          extra-args: ${{ needs.build.outputs.build-args }}
           registry: ghcr.io
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -289,89 +433,12 @@ jobs:
           echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Job B: Test (Linux) - parallel with scan
-  # ===========================================================================
-  test-linux:
-    name: Test (Linux)
-    needs: [config, build]
-    if: needs.config.outputs.has-tests == 'true' && needs.config.outputs.is-container != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Download Module Dependencies
-        if: needs.config.outputs.download-modules != ''
-        uses: ./.github/actions/download-module-deps
-        with:
-          module: ${{ needs.config.outputs.download-modules }}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          commit-sha: ${{ inputs.sha || github.sha }}
-
-      - name: Determine test suites
-        id: suites
-        shell: bash
-        run: |
-          REF="${{ inputs.ref || github.ref }}"
-          if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
-          else
-            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Test Module
-        id: test
-        uses: ./.github/actions/test-module
-        with:
-          module: ${{ inputs.module }}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          suites: ${{ steps.suites.outputs.suites }}
-          results-artifact-name: test-results-${{ inputs.module }}-linux
-          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
-          download-artifact: true
-
-      - name: Upload Test Results
-        if: always() && steps.test.outcome != 'skipped'
-        uses: ./.github/actions/upload-artifact-retry
-        with:
-          name: test-results-${{ inputs.module }}-linux
-          path: ${{ steps.test.outputs.results-artifact-path }}
-          if-no-files-found: ignore
-
-      - name: Test Summary
-        if: always() && steps.test.outcome != 'skipped'
-        shell: bash
-        env:
-          COMMANDS: ${{ steps.test.outputs.commands-path }}
-          MODULE: ${{ inputs.module }}
-          SUITES: ${{ steps.suites.outputs.suites }}
-          RUN_ID: ${{ github.run_id }}
-          TEST_FAILED: ${{ steps.test.outputs.test-failed }}
-          GH_TOKEN: ${{ github.token }}
-          RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-linux
-        run: |
-          if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
-            echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-          if [ "$TEST_FAILED" = "0" ]; then
-            STATUS="success"
-          else
-            STATUS="failure"
-          fi
-          PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
-          ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
-
-  # ===========================================================================
-  # Job B2: Test (Windows) - optional, parallel with scan
+  # Job B2: Test (Windows) - optional, parallel with macOS
   # ===========================================================================
   test-windows:
     name: Test (Windows)
-    needs: [config, build]
-    if: needs.config.outputs.test-on-windows == 'true'
+    needs: [build]
+    if: needs.build.outputs.test-on-windows == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -380,10 +447,10 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Module Dependencies
-        if: needs.config.outputs.download-modules != ''
+        if: needs.build.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ needs.config.outputs.download-modules }}
+          module: ${{ needs.build.outputs.download-modules }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
@@ -393,9 +460,9 @@ jobs:
         run: |
           REF="${{ inputs.ref || github.ref }}"
           if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.build.outputs.test-suites }}" >> $GITHUB_OUTPUT
           else
-            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.build.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Test Module
@@ -406,7 +473,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-windows
-          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
+          skip-depm: ${{ needs.build.outputs.download-modules == '' }}
           download-artifact: true
 
       - name: Upload Test Results
@@ -430,7 +497,7 @@ jobs:
           RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-windows
         run: |
           if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "## Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
             echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
@@ -443,12 +510,12 @@ jobs:
           ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Job B3: Test (macOS) - optional, parallel with scan
+  # Job B3: Test (macOS) - optional, parallel with Windows
   # ===========================================================================
   test-macos:
     name: Test (macOS)
-    needs: [config, build]
-    if: needs.config.outputs.test-on-macos == 'true'
+    needs: [build]
+    if: needs.build.outputs.test-on-macos == 'true'
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -457,10 +524,10 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Module Dependencies
-        if: needs.config.outputs.download-modules != ''
+        if: needs.build.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ needs.config.outputs.download-modules }}
+          module: ${{ needs.build.outputs.download-modules }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
@@ -470,9 +537,9 @@ jobs:
         run: |
           REF="${{ inputs.ref || github.ref }}"
           if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
-            echo "suites=${{ needs.config.outputs.test-suites }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.build.outputs.test-suites }}" >> $GITHUB_OUTPUT
           else
-            echo "suites=${{ needs.config.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
+            echo "suites=${{ needs.build.outputs.test-suites-full }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Test Module
@@ -483,7 +550,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-macos
-          skip-depm: ${{ needs.config.outputs.download-modules == '' }}
+          skip-depm: ${{ needs.build.outputs.download-modules == '' }}
           download-artifact: true
 
       - name: Upload Test Results
@@ -507,7 +574,7 @@ jobs:
           RESULTS_ARTIFACT_NAME: test-results-${{ inputs.module }}-macos
         run: |
           if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
-            echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "## Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
             echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
@@ -520,53 +587,12 @@ jobs:
           ${COMMANDS:?COMMANDS not set} show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Job C: Scan - parallel with test
-  # ===========================================================================
-  scan:
-    name: Scan
-    needs: [config, build]
-    if: needs.config.outputs.scans != ''
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Scan Module
-        id: scan-step
-        uses: ./.github/actions/scan-module
-        with:
-          module: ${{ inputs.module }}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          scans: ${{ needs.config.outputs.scans }}
-          fail-on-error: ${{ needs.config.outputs.scan-fail-mode }}
-
-      - name: Upload Scan Results
-        if: always() && steps.scan-step.outcome != 'skipped'
-        uses: ./.github/actions/upload-artifact-retry
-        with:
-          name: scan-results-${{ inputs.module }}
-          path: out/scan/
-          if-no-files-found: warn
-
-      - name: Scan Summary
-        if: always() && steps.scan-step.outcome != 'skipped'
-        shell: bash
-        env:
-          COMMANDS: ${{ steps.scan-step.outputs.commands-path }}
-          MODULE: ${{ inputs.module }}
-          ARTIFACT_NAME: scan-results-${{ inputs.module }}
-        run: |
-          ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
-
-  # ===========================================================================
   # Job D: Container Test - for container modules with test scripts
   # ===========================================================================
   container-test:
     name: Container Test
-    needs: [config, build]
-    if: needs.config.outputs.is-container == 'true' && needs.config.outputs.container-test-script != ''
+    needs: [build]
+    if: needs.build.outputs.is-container == 'true' && needs.build.outputs.container-test-script != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -598,10 +624,10 @@ jobs:
           path: out/build/
 
       - name: Download Module Dependencies
-        if: needs.config.outputs.download-modules != ''
+        if: needs.build.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
         with:
-          module: ${{ needs.config.outputs.download-modules }}
+          module: ${{ needs.build.outputs.download-modules }}
           commit-sha: ${{ inputs.sha || github.sha }}
 
       - name: Run Container Tests
@@ -610,8 +636,8 @@ jobs:
           IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
           MODULE: ${{ inputs.module }}
         run: |
-          chmod +x "${{ needs.config.outputs.container-test-script }}"
-          bash "${{ needs.config.outputs.container-test-script }}"
+          chmod +x "${{ needs.build.outputs.container-test-script }}"
+          bash "${{ needs.build.outputs.container-test-script }}"
 
       - name: Container Test Summary
         if: always()
@@ -634,8 +660,8 @@ jobs:
   # ===========================================================================
   evidence:
     name: Evidence
-    needs: [config, build, build-containers, test-linux, test-windows, test-macos, container-test, scan]
-    if: needs.config.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
+    needs: [build, build-containers, test-windows, test-macos, container-test]
+    if: needs.build.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     outputs:
       artifact-name: ${{ steps.evidence.outputs.artifact-name }}
@@ -659,7 +685,7 @@ jobs:
   # ===========================================================================
   summary:
     name: Summary
-    needs: [config, build, build-containers, test-linux, test-windows, test-macos, container-test, scan, evidence]
+    needs: [build, build-containers, test-windows, test-macos, container-test, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -676,19 +702,19 @@ jobs:
           MODULE: ${{ inputs.module }}
           BUILD_RESULT: ${{ needs.build.result }}
           BUILD_CONTAINERS_RESULT: ${{ needs.build-containers.result }}
-          IS_MULTI_CONTAINER: ${{ needs.config.outputs.is-multi-container }}
-          TEST_LINUX_RESULT: ${{ needs.test-linux.result }}
+          IS_MULTI_CONTAINER: ${{ needs.build.outputs.is-multi-container }}
+          TEST_LINUX_RESULT: ${{ needs.build.outputs.test-linux-outcome }}
           TEST_WINDOWS_RESULT: ${{ needs.test-windows.result }}
           TEST_MACOS_RESULT: ${{ needs.test-macos.result }}
           CONTAINER_TEST_RESULT: ${{ needs.container-test.result }}
-          SCAN_RESULT: ${{ needs.scan.result }}
+          SCAN_RESULT: ${{ needs.build.outputs.scan-outcome }}
           EVIDENCE_RESULT: ${{ needs.evidence.result }}
-          TEST_ON_WINDOWS: ${{ needs.config.outputs.test-on-windows }}
-          TEST_ON_MACOS: ${{ needs.config.outputs.test-on-macos }}
-          CONTAINER: ${{ needs.config.outputs.is-container }}
-          CONTAINER_TEST_ENABLED: ${{ needs.config.outputs.container-test-script != '' }}
-          SCANS: ${{ needs.config.outputs.scans }}
-          BUILD_EVIDENCE: ${{ needs.config.outputs.build-evidence }}
+          TEST_ON_WINDOWS: ${{ needs.build.outputs.test-on-windows }}
+          TEST_ON_MACOS: ${{ needs.build.outputs.test-on-macos }}
+          CONTAINER: ${{ needs.build.outputs.is-container }}
+          CONTAINER_TEST_ENABLED: ${{ needs.build.outputs.container-test-script != '' }}
+          SCANS: ${{ needs.build.outputs.scans }}
+          BUILD_EVIDENCE: ${{ needs.build.outputs.build-evidence }}
         run: |
           echo "## CI Summary: $MODULE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -733,7 +759,7 @@ jobs:
         env:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
           MODULE: ${{ inputs.module }}
-          CONTAINER: ${{ needs.config.outputs.is-container }}
+          CONTAINER: ${{ needs.build.outputs.is-container }}
         run: |
           if [ "$CONTAINER" = "true" ]; then
             ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY

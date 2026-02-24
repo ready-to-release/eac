@@ -4,11 +4,10 @@
 # dispatched once all its CI dependencies have completed successfully.
 #
 # Pipeline stages:
-# 1. setup: Build commands binary (shared by all jobs)
-# 2. detect-changes: Determine which modules need CI workflows triggered
-# 3. dispatch: Schedule and dispatch CI workflows (concurrency-limited, dependency-aware)
-# 4. summary: Report results
-# 5. dispatch-releases: Trigger release orchestration (push to main only)
+# 1. detect-changes: Determine which modules need CI workflows triggered
+# 2. dispatch: Schedule and dispatch CI workflows (concurrency-limited, dependency-aware)
+# 3. summary: Report results
+# 4. dispatch-releases: Trigger release orchestration (push to main only)
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -41,24 +40,10 @@ permissions:
 
 jobs:
   # =========================================
-  # Setup: Build commands binary (runs first, shared by all jobs)
-  # =========================================
-  setup:
-    name: Setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Commands Binary
-        uses: ./.github/actions/setup-commands
-
-  # =========================================
   # Detect Changed Modules
   # =========================================
   detect-changes:
     name: Detect Changed Modules
-    needs: setup
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}

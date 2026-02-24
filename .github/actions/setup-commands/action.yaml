@@ -239,6 +239,15 @@ runs:
         go build -o ../../../out/tools/eac .
         echo "✓ Commands binary built (native)"
 
+    - name: Cache Go Build (macOS)
+      if: runner.os == 'macOS' && steps.check-macos.outputs.available != 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/go-build
+        key: go-build-macos-${{ hashFiles('go.work', 'go/*/go.sum', 'go/*/*/go.sum') }}
+        restore-keys: |
+          go-build-macos-
+
     - name: Build from source (macOS)
       if: runner.os == 'macOS' && steps.check-macos.outputs.available != 'true'
       shell: bash

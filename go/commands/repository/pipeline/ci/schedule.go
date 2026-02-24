@@ -37,7 +37,7 @@ func (c *pipelineCIScheduleCommand) Metadata() core.CommandMetadata {
 			{Name: "dispatch-ref", Type: "string", Usage: "Git ref to dispatch workflows on (default: current branch)"},
 			{Name: "max-concurrent", Type: "int", DefaultValue: "6", Usage: "Maximum number of concurrent CI dispatches"},
 			{Name: "timeout", Type: "int", DefaultValue: "3600", Usage: "Maximum time in seconds to wait for all CI"},
-			{Name: "poll-interval", Type: "int", DefaultValue: "30", Usage: "How often to check for completed workflows (seconds)"},
+			{Name: "poll-interval", Type: "int", DefaultValue: "10", Usage: "How often to check for completed workflows (seconds)"},
 			{Name: "trigger-run-id", Type: "string", Usage: "Run ID of the triggering workflow (for artifact download)"},
 			{Name: "mock", Type: "string", Usage: "Mock CI cache status (JSON format) for testing"},
 		},
@@ -65,7 +65,7 @@ func PipelineCISchedule() int {
 	cfg := CISchedulerConfig{
 		MaxConcurrent: 6,
 		Timeout:       3600 * time.Second,
-		PollInterval:  30 * time.Second,
+		PollInterval:  10 * time.Second,
 		WorkspaceRoot: workspaceRoot,
 	}
 
@@ -266,7 +266,7 @@ func printScheduleUsage() {
 	log.Info("  --dispatch-ref <ref>          Git ref for workflow dispatch (default: current branch)")
 	log.Info("  --max-concurrent <n>          Max concurrent dispatches (default: 6)")
 	log.Info("  --timeout <seconds>           Max wait time (default: 3600)")
-	log.Info("  --poll-interval <seconds>     Poll interval (default: 30)")
+	log.Info("  --poll-interval <seconds>     Poll interval (default: 10)")
 	log.Info("  --trigger-run-id <id>         Triggering workflow run ID")
 	log.Info("  --mock <json>                 Mock CI cache status for testing")
 	log.Info("  -h, --help                    Show this help message")

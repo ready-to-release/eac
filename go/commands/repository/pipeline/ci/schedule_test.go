@@ -72,6 +72,21 @@ func (m *mockDispatcher) GetStatus(_ context.Context, module, sha string) (strin
 	return entry.status, entry.conclusion, nil
 }
 
+func (m *mockDispatcher) BatchGetStatus(_ context.Context, modules []string, sha string) (map[string]ModuleRunStatus, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	result := make(map[string]ModuleRunStatus, len(modules))
+	for _, module := range modules {
+		entry, ok := m.statusMap[module]
+		if !ok {
+			continue
+		}
+		result[module] = ModuleRunStatus{Status: entry.status, Conclusion: entry.conclusion}
+	}
+	return result, nil
+}
+
 func (m *mockDispatcher) setStatus(module, status, conclusion string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -476,6 +491,52 @@ func TestScheduler_buildResult_AllStates(t *testing.T) {
 	assert.Contains(t, result.Dispatched, "b")
 	assert.Contains(t, result.Dispatched, "d")
 	assert.Equal(t, []string{"cached1"}, result.Cached)
+}
+
+func TestScheduler_BatchPollActive_MultipleModules(t *testing.T) {
+	d := newMockDispatcher()
+	s := testScheduler(6, d)
+	s.SetDispatchList([]string{"core", "docs", "eac"}, nil, nil)
+
+	// Simulate: all dispatched and active
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		// Complete core and eac, leave docs in_progress
+		d.setStatus("core", "completed", "success")
+		d.setStatus("eac", "completed", "success")
+
+		// After another delay, complete docs
+		time.Sleep(50 * time.Millisecond)
+		d.setStatus("docs", "completed", "success")
+	}()
+
+	result, err := s.Schedule(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"core", "docs", "eac"}, result.Completed)
+}
+
+func TestScheduler_BatchPollActive_MixedResults(t *testing.T) {
+	d := newMockDispatcher()
+	s := testScheduler(6, d)
+
+	deps := map[string][]string{
+		"eac": {"core"},
+	}
+	s.SetDispatchList([]string{"core", "docs", "eac"}, deps, nil)
+
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		// core fails, docs succeeds
+		d.setStatus("core", "completed", "failure")
+		d.setStatus("docs", "completed", "success")
+	}()
+
+	result, err := s.Schedule(context.Background())
+	require.Error(t, err)
+	assert.Equal(t, []string{"core"}, result.Failed)
+	assert.Equal(t, []string{"docs"}, result.Completed)
+	// eac should be cascade-failed because core failed
+	assert.Equal(t, []string{"eac"}, result.CascadeFailed)
 }
 
 // indexOf returns the index of s in slice, or -1 if not found.
