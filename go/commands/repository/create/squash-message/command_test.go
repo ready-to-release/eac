@@ -10,14 +10,15 @@ import (
 )
 
 // TestResolveBaseBranch verifies the priority chain used to determine the base branch.
-// Priority: explicit --base flag > upstream tracking branch > trunk_branch config > "main"
+// Priority: explicit --base flag > upstream tracking branch (if different from current) > trunk_branch config > "main"
 func TestResolveBaseBranch(t *testing.T) {
 	tests := []struct {
-		name         string
-		cfg          *squashConfig
-		setupRepo    func() *git.MockRepository
-		workspaceDir func(t *testing.T) string
-		want         string
+		name          string
+		cfg           *squashConfig
+		currentBranch string
+		setupRepo     func() *git.MockRepository
+		workspaceDir  func(t *testing.T) string
+		want          string
 	}{
 		{
 			name: "explicit base flag takes precedence over upstream",
@@ -25,6 +26,7 @@ func TestResolveBaseBranch(t *testing.T) {
 				baseBranch:   "feature/explicit",
 				baseExplicit: true,
 			},
+			currentBranch: "feature/my-work",
 			setupRepo: func() *git.MockRepository {
 				return git.NewMockRepository("/tmp").
 					WithUpstreamBranch("origin/main")
@@ -33,8 +35,9 @@ func TestResolveBaseBranch(t *testing.T) {
 			want:         "feature/explicit",
 		},
 		{
-			name: "upstream tracking branch used when no explicit flag",
-			cfg:  &squashConfig{},
+			name:          "upstream tracking branch used when different from current branch",
+			cfg:           &squashConfig{},
+			currentBranch: "feature/my-work",
 			setupRepo: func() *git.MockRepository {
 				return git.NewMockRepository("/tmp").
 					WithUpstreamBranch("develop")
@@ -43,8 +46,21 @@ func TestResolveBaseBranch(t *testing.T) {
 			want:         "develop",
 		},
 		{
-			name: "trunk_branch from config used when upstream returns error",
-			cfg:  &squashConfig{},
+			name:          "upstream skipped when it matches current branch (remote tracking ref)",
+			cfg:           &squashConfig{},
+			currentBranch: "topic/my-branch",
+			setupRepo: func() *git.MockRepository {
+				// Typical push: upstream is same branch name (origin tracking)
+				return git.NewMockRepository("/tmp").
+					WithUpstreamBranch("topic/my-branch")
+			},
+			workspaceDir: func(t *testing.T) string { return t.TempDir() },
+			want:         "main", // falls through to hard fallback
+		},
+		{
+			name:          "trunk_branch from config used when upstream returns error",
+			cfg:           &squashConfig{},
+			currentBranch: "feature/my-work",
 			setupRepo: func() *git.MockRepository {
 				m := git.NewMockRepository("/tmp")
 				m.UpstreamBranchError = fmt.Errorf("no upstream")
@@ -66,8 +82,9 @@ func TestResolveBaseBranch(t *testing.T) {
 			want: "develop",
 		},
 		{
-			name: "falls back to main when upstream errors and no config",
-			cfg:  &squashConfig{},
+			name:          "falls back to main when upstream errors and no config",
+			cfg:           &squashConfig{},
+			currentBranch: "feature/my-work",
 			setupRepo: func() *git.MockRepository {
 				m := git.NewMockRepository("/tmp")
 				m.UpstreamBranchError = fmt.Errorf("no upstream")
@@ -83,7 +100,7 @@ func TestResolveBaseBranch(t *testing.T) {
 			repo := tt.setupRepo()
 			workspaceRoot := tt.workspaceDir(t)
 
-			got := resolveBaseBranch(tt.cfg, workspaceRoot, repo)
+			got := resolveBaseBranch(tt.cfg, workspaceRoot, repo, tt.currentBranch)
 			if got != tt.want {
 				t.Errorf("resolveBaseBranch() = %q, want %q", got, tt.want)
 			}

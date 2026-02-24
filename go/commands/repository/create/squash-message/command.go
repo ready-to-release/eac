@@ -92,7 +92,7 @@ func createSquashMessage(deps *Deps) int {
 
 	// Phase 6: Get branch commits
 	// Resolve effective base branch: explicit flag → upstream → trunk_branch from config → "main"
-	config.baseBranch = resolveBaseBranch(config, workspaceRoot, repo)
+	config.baseBranch = resolveBaseBranch(config, workspaceRoot, repo, currentBranch)
 	log.Infof("🔍 Analyzing commits from %s to HEAD...", config.baseBranch)
 	commits, err := repo.GetBranchCommits(config.baseBranch)
 	if err != nil {
@@ -258,14 +258,19 @@ func parseConfig() (*squashConfig, error) {
 
 // resolveBaseBranch returns the effective base branch using a priority chain:
 // 1. --base flag (explicit)
-// 2. Current branch's upstream tracking branch
+// 2. Current branch's upstream tracking branch (only if different from current branch)
 // 3. trunk_branch from .eac/repository.yml
 // 4. "main" (hard fallback)
-func resolveBaseBranch(cfg *squashConfig, workspaceRoot string, repo git.GitBranchComparer) string {
+//
+// The upstream is skipped when it matches currentBranch because a typical push
+// sets branch.<name>.merge to the same branch on origin — that is a remote tracking
+// ref, not a base/parent branch, and comparing a branch against itself yields zero
+// commits ahead.
+func resolveBaseBranch(cfg *squashConfig, workspaceRoot string, repo git.GitBranchComparer, currentBranch string) string {
 	if cfg.baseExplicit {
 		return cfg.baseBranch
 	}
-	if upstream, err := repo.UpstreamBranch(); err == nil && upstream != "" {
+	if upstream, err := repo.UpstreamBranch(); err == nil && upstream != "" && upstream != currentBranch {
 		return upstream
 	}
 	if eacCfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot}); err == nil {
