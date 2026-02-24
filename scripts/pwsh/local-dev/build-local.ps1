@@ -141,6 +141,19 @@ try {
     }
 
     Write-ColorOutput "✓ Dockerfile found" "Green"
+
+    # Verify build context directory with pre-built binary exists
+    $buildContextDir = Join-Path $repoRoot "out\build\eac\eac_go"
+    if (-not (Test-Path $buildContextDir)) {
+        Write-ColorOutput ""
+        Write-ColorOutput "Error: Build context not found: $buildContextDir" "Red"
+        Write-ColorOutput "The Dockerfile expects a pre-compiled Linux binary." "Yellow"
+        Write-ColorOutput "Run the EAC pipeline build first to produce it:" "Yellow"
+        Write-ColorOutput "  go run ./go/cli/eac build go/cli/eac" "Gray"
+        exit 1
+    }
+
+    Write-ColorOutput "✓ Build context found: $buildContextDir" "Green"
     Write-ColorOutput ""
 
     # Determine build strategy
@@ -205,7 +218,7 @@ try {
             Write-ColorOutput ""
         }
 
-        $buildCmd += " ."
+        $buildCmd += " `"$buildContextDir`""
     }
     else {
         # Single-platform build
@@ -223,7 +236,7 @@ try {
         $buildCmd += " --platform $Platform"
         $buildCmd += " -t $Tag"
         $buildCmd += " -f containers/eac-ext/Dockerfile"
-        $buildCmd += " ."
+        $buildCmd += " `"$buildContextDir`""
     }
 
     Write-ColorOutput "Command: $buildCmd" "Gray"

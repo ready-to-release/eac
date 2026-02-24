@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -118,16 +119,22 @@ func loadRepositoryYML(path string) (*repositoryYMLFile, error) {
 func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvider string) int {
 	log.Info("🔍 Re-scanning repository structure...")
 
-	// Load existing repository config
+	// Load existing repository config (raw user-authored content, no system defaults injected).
+	// LoadRepositoryConfigUnmerged: returns raw user content only, no defaults applied.
+	// We use this here because we need to round-trip the user's file content without
+	// injecting system defaults into the serialized output.
 	existingRepoPath := filepath.Join(eacDir, "repository.yml")
-	existingConfig, err := config.Load(config.LoadOptions{
-		RepoRoot:        workspaceRoot,
-		ValidateSchemas: false,
-	})
+	existingRaw, err := config.LoadRepositoryConfigUnmerged(workspaceRoot)
 	if err != nil {
 		log.Warn(fmt.Sprintf("   ⚠️  Could not load existing config: %v", err))
 		log.Info("   Falling back to fresh initialization")
-		// Continue with fresh init logic below
+		// Continue with empty existing config below
+	}
+
+	// Remove system-generated placeholder modules that old versions of eac init may have written.
+	// These are identified by moniker=="default" with the exact system-generated description.
+	if existingRaw != nil {
+		existingRaw.Modules = filterSystemDefaultModules(existingRaw.Modules)
 	}
 
 	var newRepoConfig *config.RepositoryConfig
@@ -159,25 +166,27 @@ func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvide
 			return 1
 		}
 	} else {
-		// Load current defaults (no scan)
-		log.Info("🔧 Updating configuration with current defaults...")
-		newConfig, err := config.Load(config.LoadOptions{
-			RepoRoot:        workspaceRoot,
-			ValidateSchemas: false,
-		})
+		// No scan requested — preserve the existing user config as-is.
+		log.Info("🔧 Preserving existing configuration (no --scan)...")
+		rawData, err := os.ReadFile(existingRepoPath)
 		if err != nil {
-			log.Error(fmt.Sprintf("Error loading defaults: %v", err))
+			log.Error(fmt.Sprintf("Error reading existing config: %v", err))
 			return 1
 		}
-		newRepoConfig = newConfig.Repository
+		var rawCfg config.RepositoryConfig
+		if err := yaml.Unmarshal(rawData, &rawCfg); err != nil {
+			log.Error(fmt.Sprintf("Existing config is invalid YAML: %v", err))
+			return 1
+		}
+		newRepoConfig = &rawCfg
 	}
 
 	// Merge configs if we have existing config
 	var result *MergeResult
-	if existingConfig != nil && existingConfig.Repository != nil {
+	if existingRaw != nil {
 		log.Info("")
 		log.Info("🔀 Merging with existing configuration...")
-		newRepoConfig, result = mergeConfigs(workspaceRoot, existingConfig.Repository, newRepoConfig)
+		newRepoConfig, result = mergeConfigs(workspaceRoot, existingRaw, newRepoConfig)
 		log.Info("   ✓ Configuration merged")
 	} else {
 		// No existing config, treat as new
@@ -197,14 +206,20 @@ func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvide
 	}
 
 	header := `# EAC Repository Configuration
-# Updated by: clie eac init
+# Updated by: eac init
 #
 # This file defines your repository settings and module domain.
 # Edit this file to customize modules, dependencies, and build settings.
 #
-# Documentation: https://eac.readthedocs.io/configuration/repository
+# Documentation: https://ready-to-release.github.io/eac/
 
 `
+
+	// Validate serialized config before writing to disk
+	if err := validateGeneratedYAML(string(repoYAMLBytes)); err != nil {
+		log.Errorf("Serialized config is invalid: %v", err)
+		return 1
+	}
 
 	if err := os.WriteFile(existingRepoPath, []byte(header+string(repoYAMLBytes)), 0o644); err != nil {
 		log.Error(fmt.Sprintf("Error writing repository.yml: %v", err))
@@ -247,8 +262,10 @@ func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvide
 			}
 
 			log.Info(fmt.Sprintf("   ✓ Updated AI provider configuration: %s", configPath))
+		} else {
+			log.Warnf("   ⚠️  Unknown AI provider %q — skipping AI configuration. Valid providers: %s",
+				aiProvider, strings.Join(validProviders, ", "))
 		}
-		// If invalid provider, silently skip (might be a test artifact)
 	}
 
 	// Success

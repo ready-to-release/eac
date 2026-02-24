@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -83,11 +82,14 @@ func (c *TestingConfig) initialize() error {
 
 // loadSuites loads suite definitions from suites.yml.
 func (c *TestingConfig) loadSuites(repoRoot, configRoot string) error {
-	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "test-suites.yml")
-	defaults, err := loadSuitesFile(defaultPath)
-	if err != nil && !os.IsNotExist(err) {
-		return err
+	// Load contract defaults from embedded FS — available in all projects regardless of
+	// whether the contracts/ directory is present on disk (external projects, CI, etc.).
+	var defaults *core.SuitesConfig
+	if data, err := core.FS.ReadFile(core.DefaultPath("test-suites.yml")); err == nil {
+		var cfg core.SuitesConfig
+		if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr == nil {
+			defaults = &cfg
+		}
 	}
 
 	// Load user overrides
@@ -118,11 +120,14 @@ func (c *TestingConfig) loadSuites(repoRoot, configRoot string) error {
 
 // loadTags loads tag definitions from tags.yml.
 func (c *TestingConfig) loadTags(repoRoot, configRoot string) error {
-	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", "testing-tags.yml")
-	defaults, err := loadTagsFile(defaultPath)
-	if err != nil && !os.IsNotExist(err) {
-		return err
+	// Load contract defaults from embedded FS — available in all projects regardless of
+	// whether the contracts/ directory is present on disk (external projects, CI, etc.).
+	var defaults *core.TagsConfig
+	if data, err := core.FS.ReadFile(core.DefaultPath("testing-tags.yml")); err == nil {
+		var cfg core.TagsConfig
+		if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr == nil {
+			defaults = &cfg
+		}
 	}
 
 	// Load user overrides

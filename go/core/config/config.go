@@ -323,7 +323,7 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	}
 
 	// Step 7: Load user config (unmerged)
-	userCfg, err := loadRepositoryConfigUnmerged(c.RepoRoot)
+	userCfg, err := LoadRepositoryConfigUnmerged(c.RepoRoot)
 	if err != nil {
 		return err
 	}

@@ -60,27 +60,27 @@ type initFlags struct {
 }
 
 // parseInitFlags parses command-line arguments into an initFlags struct.
-func parseInitFlags() *initFlags {
+func parseInitFlags(args []string) *initFlags {
 	f := &initFlags{}
 
-	for i := 2; i < len(os.Args); i++ {
-		arg := os.Args[i]
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		switch arg {
 		case "--scan", "-s":
 			f.scan = true
 		case "--ai-provider", "-a":
-			if i+1 < len(os.Args) {
-				f.aiProvider = os.Args[i+1]
+			if i+1 < len(args) {
+				f.aiProvider = args[i+1]
 				i++ // Skip the value
 			}
 		case "--ai-token":
-			if i+1 < len(os.Args) {
-				f.aiToken = os.Args[i+1]
+			if i+1 < len(args) {
+				f.aiToken = args[i+1]
 				i++ // Skip the value
 			}
 		case "--git-token":
-			if i+1 < len(os.Args) {
-				f.gitToken = os.Args[i+1]
+			if i+1 < len(args) {
+				f.gitToken = args[i+1]
 				i++ // Skip the value
 			}
 		case "--copy-templates":
@@ -151,7 +151,7 @@ func initImpl(deps *Deps) int {
 		return 1
 	}
 
-	f := parseInitFlags()
+	f := parseInitFlags(os.Args[2:])
 
 	// Get workspace root via repository API
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -197,9 +197,13 @@ func initImpl(deps *Deps) int {
 			log.Info(fmt.Sprintf("🔄 Reusing existing AI provider: %s", existingConfig.AIProvider))
 		}
 
-		// Re-scan and merge with existing config
-		// Only pass aiProvider if user explicitly specified it (not from existing config)
-		return reinitialize(deps, workspaceRoot, eacDir, f.scan, f.aiProvider)
+		// Re-scan and merge with existing config.
+		// Use effective AI provider: flag wins if set, otherwise fall back to existing config.
+		effectiveAI := f.aiProvider
+		if effectiveAI == "" && existingConfig != nil {
+			effectiveAI = existingConfig.AIProvider
+		}
+		return reinitialize(deps, workspaceRoot, eacDir, f.scan, effectiveAI)
 	}
 
 	// First-time initialization mode
@@ -236,6 +240,7 @@ func initImpl(deps *Deps) int {
 			log.Error(fmt.Sprintf("Error generating environments.yml: %v", err))
 			return 1
 		}
+
 	}
 
 	// Copy system templates if requested

@@ -7,6 +7,7 @@ package init
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -833,4 +834,40 @@ func TestScanRepository_InvalidPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestScanRepository_RootsUseForwardSlashes tests that returned roots always use
+// forward slashes regardless of OS path separator.
+// TestScanRepository_PackageJSONBeatsRequirementsTXT verifies that a directory
+// containing both package.json and requirements.txt is detected as JavaScript,
+// not Python. This covers JS projects that include Python tooling (e.g. scripts).
+func TestScanRepository_PackageJSONBeatsRequirementsTXT(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(`{"name":"my-app"}`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "requirements.txt"), []byte("pytest\n"), 0o644))
+
+	result, err := ScanRepository(tmpDir)
+	require.NoError(t, err)
+	require.Len(t, result.Modules, 1)
+	assert.Equal(t, "javascript", result.Modules[0].Language)
+	assert.Equal(t, "my-app", result.Modules[0].Name)
+}
+
+func TestScanRepository_RootsUseForwardSlashes(t *testing.T) {
+	tmpDir := t.TempDir()
+	sub := filepath.Join(tmpDir, "examples", "celery")
+	require.NoError(t, os.MkdirAll(sub, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(sub, "pyproject.toml"), []byte(`
+[project]
+name = "celery-example"
+`), 0o644))
+
+	result, err := ScanRepository(tmpDir)
+	require.NoError(t, err)
+	require.Len(t, result.Modules, 1)
+
+	root := result.Modules[0].Root
+	assert.False(t, strings.Contains(root, `\`),
+		"Root must use forward slashes for cross-platform YAML compatibility, got: %q", root)
+	assert.Equal(t, "examples/celery", root)
 }

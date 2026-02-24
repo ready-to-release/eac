@@ -9,12 +9,12 @@ import (
 // RemoteConfig holds remote VCS repository configuration.
 // Only Owner is required - Type defaults to github, URLs are derived if not explicitly set.
 type RemoteConfig struct {
-	Type        string `yaml:"type"`         // VCS provider: github, gitlab, azure-devops, bitbucket (default: github)
-	Owner       string `yaml:"owner"`        // Organization or username (required)
-	RepoName    string `yaml:"repo"`         // Repository name - auto-detected from git if empty
-	URL         string `yaml:"url"`          // Repository URL - derived from type/owner/repo if empty
-	PagesURL    string `yaml:"pages_url"`    // Documentation site URL - derived from type/owner/repo if empty
-	RegistryURL string `yaml:"registry_url"` // Container registry URL - derived from type/owner if empty
+	Type        string `yaml:"type,omitempty"`         // VCS provider: github, gitlab, azure-devops, bitbucket (default: github)
+	Owner       string `yaml:"owner,omitempty"`        // Organization or username (required)
+	RepoName    string `yaml:"repo,omitempty"`         // Repository name - auto-detected from git if empty
+	URL         string `yaml:"url,omitempty"`          // Repository URL - derived from type/owner/repo if empty
+	PagesURL    string `yaml:"pages_url,omitempty"`    // Documentation site URL - derived from type/owner/repo if empty
+	RegistryURL string `yaml:"registry_url,omitempty"` // Container registry URL - derived from type/owner if empty
 }
 
 // GetURL returns the repository URL.

@@ -72,27 +72,37 @@ func generateConfig(deps *Deps, repoRoot string, scanResult *ScanResult, aiProvi
 }
 
 // loadPromptTemplate loads the AI prompt template from the file system.
+// It tries the local development path first, then the system container path.
 func loadPromptTemplate(repoRoot string) (string, error) {
-	// Determine template path
-	// Try local templates first (for development), then fall back to system templates
-	templatePath := filepath.Join(repoRoot, "templates", "ai", "init", "scan-repository.md")
+	const templateRelPath = "templates/ai/init/scan-repository.md"
 
-	// Check if local template exists
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		// Try system templates (for container/installed environments)
-		systemRoot := os.Getenv(environments.EnvCLIEContainerRoot)
-		if systemRoot != "" {
-			templatePath = filepath.Join(systemRoot, "templates", "ai", "init", "scan-repository.md")
+	localPath := filepath.Join(repoRoot, templateRelPath)
+
+	// Try local path first (development mode: running eac from within the EAC repo)
+	if content, err := os.ReadFile(localPath); err == nil {
+		return string(content), nil
+	}
+
+	// Try system path (container/installed mode: CLIE_CONTAINER_ROOT points to EAC install)
+	systemRoot := os.Getenv(environments.EnvCLIEContainerRoot)
+	if systemRoot != "" {
+		systemPath := filepath.Join(systemRoot, templateRelPath)
+		if content, err := os.ReadFile(systemPath); err == nil {
+			return string(content), nil
 		}
 	}
 
-	// Read template file
-	content, err := os.ReadFile(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read template file at %s: %w", templatePath, err)
+	// Neither path found — emit a diagnostic that names both paths tried
+	msg := fmt.Sprintf(
+		"AI prompt template not found.\nSearched:\n  1. %s\n", localPath,
+	)
+	if systemRoot != "" {
+		msg += fmt.Sprintf("  2. %s\n", filepath.Join(systemRoot, templateRelPath))
+	} else {
+		msg += "  2. (skipped: CLIE_CONTAINER_ROOT environment variable not set)\n"
 	}
-
-	return string(content), nil
+	msg += "\nTo enable AI generation for standalone binary use, set CLIE_CONTAINER_ROOT to the EAC installation directory."
+	return "", fmt.Errorf("%s", msg)
 }
 
 // prepareScanData prepares scan results and context for the AI prompt.
@@ -159,9 +169,8 @@ modules:
   - moniker: api
     description: Backend REST API service
     components:
-      go:
+      - type: go
         root: .
-        type: service
 
 Example 2 - Full-Stack Application:
 ---
@@ -173,18 +182,16 @@ modules:
   - moniker: backend
     description: Backend API providing REST endpoints
     components:
-      python:
+      - type: python
         root: backend
-        type: service
 
   - moniker: frontend
     description: Frontend web application built with React
     depends_on:
       - backend
     components:
-      typescript:
+      - type: typescript
         root: frontend
-        type: app
 
 Example 3 - Microservices:
 ---
@@ -196,27 +203,24 @@ modules:
   - moniker: shared-lib
     description: Shared utilities and common code
     components:
-      go:
+      - type: go
         root: lib
-        type: library
 
   - moniker: auth-service
     description: Authentication and authorization service
     depends_on:
       - shared-lib
     components:
-      go:
+      - type: go
         root: services/auth
-        type: service
 
   - moniker: api-gateway
     description: API gateway routing requests
     depends_on:
       - auth-service
     components:
-      go:
+      - type: go
         root: services/gateway
-        type: service
 `
 }
 

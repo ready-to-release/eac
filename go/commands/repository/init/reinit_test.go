@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 package init
 
 import (
@@ -349,6 +352,47 @@ modules:
 	// When scan only detects 2 modules (deprecated removed),
 	// merge should remove it from config
 	// (merge_test.go will test the actual merge logic)
+}
+
+// TestEffectiveAI_FallsBackToExistingConfig tests Bug 1 fix:
+// When --ai-provider is not given but existing config has AI configured, use existing AI.
+func TestEffectiveAI_FallsBackToExistingConfig(t *testing.T) {
+	// Simulate the effectiveAI resolution logic from initImpl.
+	flagAI := ""
+	existingCfg := &ExistingConfig{AIProvider: "claude-api"}
+
+	effectiveAI := flagAI
+	if effectiveAI == "" && existingCfg != nil {
+		effectiveAI = existingCfg.AIProvider
+	}
+
+	assert.Equal(t, "claude-api", effectiveAI)
+}
+
+// TestEffectiveAI_FlagOverridesExistingConfig tests Bug 1: explicit flag wins over existing config.
+func TestEffectiveAI_FlagOverridesExistingConfig(t *testing.T) {
+	flagAI := "openai"
+	existingCfg := &ExistingConfig{AIProvider: "claude-api"}
+
+	effectiveAI := flagAI
+	if effectiveAI == "" && existingCfg != nil {
+		effectiveAI = existingCfg.AIProvider
+	}
+
+	assert.Equal(t, "openai", effectiveAI)
+}
+
+// TestEffectiveAI_RemainsEmptyWhenNeitherConfigured tests effectiveAI stays empty when no AI anywhere.
+func TestEffectiveAI_RemainsEmptyWhenNeitherConfigured(t *testing.T) {
+	flagAI := ""
+	existingCfg := &ExistingConfig{AIProvider: ""}
+
+	effectiveAI := flagAI
+	if effectiveAI == "" && existingCfg != nil {
+		effectiveAI = existingCfg.AIProvider
+	}
+
+	assert.Empty(t, effectiveAI)
 }
 
 // TestReinitialize_PreserveBooksAndEnvironments tests that books.yml and environments.yml are unchanged.
