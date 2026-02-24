@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
+	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
@@ -122,7 +123,7 @@ func generateTopLevelSummary(deps *Deps, cfg *executionConfig, stagedFilesTable,
 
 	var topLevelOutput string
 	var providerName string
-	err := commitmessageinternal.WithProgress("🤖 Generating top-level commit summary...", func() error {
+	err := aiutil.WithProgress("🤖 Generating top-level commit summary...", func() error {
 		result, genErr := generateWithPromptResult(deps, "top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
 		if result != nil {
 			topLevelOutput = result.Output

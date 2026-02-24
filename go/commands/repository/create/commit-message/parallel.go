@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"sync"
 
-	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
+	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -139,7 +139,7 @@ func generateModuleSectionsParallel(deps *Deps, cfg *executionConfig, testExecut
 
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
-			err := commitmessageinternal.WithProgress(progressMsg, func() error {
+			err := aiutil.WithProgress(progressMsg, func() error {
 				result, genErr := generateWithPromptResult(deps, "module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
 				if result != nil {
 					output = result.Output

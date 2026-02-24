@@ -59,6 +59,7 @@ func (m *mockGitRepo) GetBranchCommits(base string) ([]git.CommitInfo, error) {
 func (m *mockGitRepo) GetBranchDiff(baseBranch string) (string, error)      { return "", nil }
 func (m *mockGitRepo) GetBranchDiffStats(baseBranch string) (string, error) { return "", nil }
 func (m *mockGitRepo) GetBranchFiles(baseBranch string) ([]string, error)   { return nil, nil }
+func (m *mockGitRepo) UpstreamBranch() (string, error)                       { return "", nil }
 
 // CommitsBetween is the key method - returns mock commits to avoid expensive git operations
 func (m *mockGitRepo) CommitsBetween(fromRef, toRef string) ([]git.CommitInfo, error) {
