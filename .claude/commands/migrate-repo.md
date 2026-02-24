@@ -52,8 +52,11 @@ You help users migrate repositories to the EAC (Enterprise Application Complianc
 - **next.js** - `https://github.com/vercel/next.js` - React framework (monorepo)
 
 ### .NET Projects
-- **roslyn** - `https://github.com/dotnet/roslyn` - C# compiler (solution with multiple projects)
-- **aspnetcore** - `https://github.com/dotnet/aspnetcore` - ASP.NET Core framework
+- **MediatR** - `https://github.com/jbogard/MediatR` - Mediator pattern library (2 projects, minimal structure)
+- **FluentValidation** - `https://github.com/FluentValidation/FluentValidation` - Validation library (small multi-project solution)
+- **Polly** - `https://github.com/App-vNext/Polly` - Resilience library (moderate size, clean project layout)
+- **AutoMapper** - `https://github.com/AutoMapper/AutoMapper` - Object mapping library (2-3 projects, single solution)
+- **Humanizer** - `https://github.com/Humanizr/Humanizer` - String/date manipulation library (~15 projects, multi-project structure)
 
 ### Java Projects
 - **spring-boot** - `https://github.com/spring-projects/spring-boot` - Application framework (Gradle multi-module)
