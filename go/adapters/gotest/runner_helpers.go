@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/clibase/testrunners"
 	"github.com/ready-to-release/eac/go/core/config"
@@ -183,10 +184,22 @@ func findModuleRoot(dir string) string {
 	}
 }
 
+// generateDirectivesCache caches hasGenerateDirectives results per module root.
+// The result is stable within a process: go:generate directives don't change
+// between package test runs in the same build.
+var generateDirectivesCache sync.Map // key: string (moduleRoot), value: bool
+
 // hasGenerateDirectives checks whether any .go file under root contains a
 // //go:generate directive. It walks the tree and scans each file line-by-line,
 // returning true as soon as the first directive is found.
+//
+// Results are cached per module root to avoid redundant filesystem walks when
+// multiple packages in the same module are tested sequentially.
 func hasGenerateDirectives(root string) (bool, error) {
+	if v, ok := generateDirectivesCache.Load(root); ok {
+		return v.(bool), nil
+	}
+
 	found := false
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -216,6 +229,9 @@ func hasGenerateDirectives(root string) (bool, error) {
 		}
 		return scanner.Err()
 	})
+	if err == nil {
+		generateDirectivesCache.Store(root, found)
+	}
 	return found, err
 }
 
