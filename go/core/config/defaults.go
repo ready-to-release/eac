@@ -17,6 +17,12 @@ import (
 // This is not an error condition - it just means defaults should be skipped.
 var ErrNoDefaults = errors.New("defaults file not found")
 
+// DefaultModuleDescription is the description of the placeholder module inserted when
+// no modules are declared in repository.yml. This constant is used by the init command
+// to identify and remove the placeholder during re-initialization.
+// Must match the value in contracts/core/0.1.0/schemas/defaults/repository.yml.
+const DefaultModuleDescription = "Auto-generated module for unconfigured repositories"
+
 // peekRepositoryType reads only the repository.type field from user config.
 // This is a minimal read to determine which type-specific defaults to load.
 // Returns empty string if file doesn't exist or type is not specified.

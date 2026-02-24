@@ -9,6 +9,9 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
+	"github.com/ready-to-release/eac/go/core/config"
+	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -32,7 +35,7 @@ func (c *createSquashMessageCommand) Metadata() core.CommandMetadata {
 		Short:         "Generate squash commit message from branch commits",
 		Long:          "Analyzes all commits in the current branch compared to the base branch\nand generates a comprehensive, cohesive commit message suitable for\nsquash merges in pull requests or local branch merging.\n\nThis command examines the full commit history and cumulative diff\nto create a message that accurately represents the entire feature\nor change set, rather than individual commit details.\n\nThe generated message is designed to be copied into GitHub's PR squash\nmerge UI for use when squashing and merging pull requests.\n\nExpected Output:\n- Comprehensive commit message for squash merge\n- Suitable for GitHub PR squash merge UI\n\nExample:\n  create squash-message\n  create squash-message --base=develop\n  create squash-message --debug",
 		Flags: []core.FlagSpec{
-			{Name: "base", Type: "string", DefaultValue: "main", Usage: "Base branch for comparison"},
+			{Name: "base", Type: "string", DefaultValue: "", Usage: "Base branch for comparison (default: trunk_branch from config, or \"main\")"},
 			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug mode to save intermediate outputs"},
 		},
 	}
@@ -88,7 +91,9 @@ func createSquashMessage(deps *Deps) int {
 	log.Debugf("Current branch: branch=%s", currentBranch)
 
 	// Phase 6: Get branch commits
-	log.Infof("Analyzing commits from base branch to HEAD: baseBranch=%s", config.baseBranch)
+	// Resolve effective base branch: explicit flag → upstream → trunk_branch from config → "main"
+	config.baseBranch = resolveBaseBranch(config, workspaceRoot, repo, currentBranch)
+	log.Infof("🔍 Analyzing commits from %s to HEAD...", config.baseBranch)
 	commits, err := repo.GetBranchCommits(config.baseBranch)
 	if err != nil {
 		// Log the error and ensure "no commits ahead" message is in stdout
@@ -131,12 +136,33 @@ func createSquashMessage(deps *Deps) int {
 	promptCtx := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
 	logDebugArtifact("SQUASH-CONTEXT", promptCtx)
 
-	// Phase 10: Generate top-level message using AI
-	log.Info("Generating squash commit message using AI...")
-	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, promptCtx)
-	if err != nil {
-		log.Errorf("Failed to generate top-level message: %v", err)
-		return 1
+	// Phase 10: Generate top-level message with retry loop
+	const maxRetries = 5
+	var topLevelMessage string
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 3 {
+			log.Warnf("retry attempt: attempt=%d, max=%d", attempt, maxRetries)
+		}
+
+		msg, err := attemptSquashGeneration(workspaceRoot, promptCtx)
+		if err == nil {
+			topLevelMessage = msg
+			break
+		}
+		log.Warnf("Generation attempt %d failed: %v", attempt, err)
+
+		if attempt == maxRetries {
+			log.Error("Maximum retry attempts reached")
+			log.Info("The AI is having difficulty generating a valid squash message.")
+			log.Info("Please try one of the following:")
+			log.Info("  - Simplify your branch changes")
+			log.Info("  - Reduce the number of commits")
+			log.Info("  - Write the squash message manually")
+			return 1
+		}
+
+		log.Infof("Retrying squash message generation: attempt=%d, max=%d", attempt+1, maxRetries)
 	}
 
 	// Phase 11: Generate module sections (reuse commit-message logic)
@@ -150,17 +176,43 @@ func createSquashMessage(deps *Deps) int {
 	finalMessage := assembleMessage(topLevelMessage, moduleSections)
 	logDebugArtifact("SQUASH-FINAL", finalMessage)
 
-	// Phase 13: Output message
+	// Phase 13: Validate and show warnings (non-blocking)
+	validator := NewSquashMessageValidator()
+	validationErrors := validator.Validate(finalMessage, nil)
+	if len(validationErrors) > 0 {
+		log.Warn("Generated squash message has validation issues:")
+		for _, verr := range validationErrors {
+			log.Warnf("  - %s", verr.Message)
+		}
+	}
+
+	// Phase 14: Output with marker
+	fmt.Println(">>>>>>OUTPUT START<<<<<<")
 	fmt.Println(finalMessage)
 
 	log.Debug("Create squash-message command completed successfully")
 	return 0
 }
 
+// attemptSquashGeneration wraps a single generation attempt with progress display.
+func attemptSquashGeneration(workspaceRoot, promptCtx string) (string, error) {
+	var result string
+	err := aiutil.WithProgress("🤖 Generating squash commit message...", func() error {
+		msg, genErr := generateTopLevelMessage(workspaceRoot, promptCtx)
+		if genErr != nil {
+			return genErr
+		}
+		result = msg
+		return nil
+	})
+	return result, err
+}
+
 // squashConfig holds the parsed command configuration.
 type squashConfig struct {
-	baseBranch string
-	debug      bool
+	baseBranch    string
+	baseExplicit  bool // true when --base was provided explicitly
+	debug         bool
 }
 
 // parseConfig parses command line arguments.
@@ -173,8 +225,7 @@ func parseConfig() (*squashConfig, error) {
 	}
 
 	cfg := &squashConfig{
-		baseBranch: "main",
-		debug:      flags.ParseDebugFlag(args),
+		debug: flags.ParseDebugFlag(args),
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -182,12 +233,14 @@ func parseConfig() (*squashConfig, error) {
 		switch {
 		case strings.HasPrefix(arg, "--base="):
 			cfg.baseBranch = strings.TrimPrefix(arg, "--base=")
+			cfg.baseExplicit = true
 		case arg == "--base":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
 			i++
 			cfg.baseBranch = args[i]
+			cfg.baseExplicit = true
 		case arg == "--debug" || arg == "-d":
 			// Already handled by shared flags package
 		default:
@@ -196,6 +249,31 @@ func parseConfig() (*squashConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+// resolveBaseBranch returns the effective base branch using a priority chain:
+// 1. --base flag (explicit)
+// 2. Current branch's upstream tracking branch (only if different from current branch)
+// 3. trunk_branch from .eac/repository.yml
+// 4. "main" (hard fallback)
+//
+// The upstream is skipped when it matches currentBranch because a typical push
+// sets branch.<name>.merge to the same branch on origin — that is a remote tracking
+// ref, not a base/parent branch, and comparing a branch against itself yields zero
+// commits ahead.
+func resolveBaseBranch(cfg *squashConfig, workspaceRoot string, repo git.GitBranchComparer, currentBranch string) string {
+	if cfg.baseExplicit {
+		return cfg.baseBranch
+	}
+	if upstream, err := repo.UpstreamBranch(); err == nil && upstream != "" && upstream != currentBranch {
+		return upstream
+	}
+	if eacCfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot}); err == nil {
+		if tb := eacCfg.Repository.Repository.TrunkBranch; tb != "" {
+			return tb
+		}
+	}
+	return "main"
 }
 
 // enrichFilesWithModuleInfo converts file names to FileInfo and enriches with module information.

@@ -99,6 +99,9 @@ type BuildResult struct {
 // ensureCommandsBinary rebuilds the eac binary if source has changed.
 // Uses go.mod as a proxy for source changes - faster than checking all files.
 // CI uses the setup-commands action instead.
+// This step is only meaningful inside the eac repository itself; external
+// projects that use eac as a tool will not have go/cli/eac in their tree,
+// so we skip silently when the source directory does not exist.
 func ensureCommandsBinary(workspaceRoot string) error {
 	buildStart := time.Now()
 
@@ -108,14 +111,19 @@ func ensureCommandsBinary(workspaceRoot string) error {
 		binaryName = "eac.exe"
 	}
 
+	// Build from source: go/cli/eac
+	cmdDir := filepath.Join(workspaceRoot, "go", "cli", "eac")
+
+	// Skip when this workspace is not the eac repository (no source tree present).
+	if _, err := os.Stat(cmdDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	// Create tools directory
 	toolsDir := filepath.Join(workspaceRoot, paths.OutDir, paths.ToolsDir)
 	if err := os.MkdirAll(toolsDir, 0o755); err != nil {
 		return fmt.Errorf("create tools dir: %w", err)
 	}
-
-	// Build from source: go/cli/eac
-	cmdDir := filepath.Join(workspaceRoot, "go", "cli", "eac")
 	outputPath := filepath.Join(toolsDir, binaryName)
 
 	// Check if rebuild is needed

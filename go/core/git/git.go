@@ -95,6 +95,31 @@ func (r *Repository) GoGitRepo() *gogit.Repository {
 	return r.repo
 }
 
+// UpstreamBranch returns the upstream tracking branch for the current branch.
+// Returns ("", err) when no upstream is configured (detached HEAD or local-only branch).
+func (r *Repository) UpstreamBranch() (string, error) {
+	head, err := r.repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD: %w", err)
+	}
+	if !head.Name().IsBranch() {
+		return "", fmt.Errorf("HEAD is not on a branch")
+	}
+	branchName := head.Name().Short()
+
+	cfg, err := r.repo.Config()
+	if err != nil {
+		return "", fmt.Errorf("failed to read git config: %w", err)
+	}
+
+	branch, ok := cfg.Branches[branchName]
+	if !ok || branch.Merge == "" {
+		return "", fmt.Errorf("no upstream configured for branch %q", branchName)
+	}
+
+	return branch.Merge.Short(), nil
+}
+
 // --- Helper methods for pure go-git operations ---
 
 // resolveBaseRef resolves a base branch reference, trying origin/ prefix if needed.

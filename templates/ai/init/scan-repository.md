@@ -26,14 +26,13 @@ Configure the repository-level settings:
 ### 2. Module Definitions
 
 For each detected module:
-- **moniker**: Short identifier (lowercase, hyphenated)
-- **name**: Full descriptive name (title case)
+- **moniker**: Short identifier (lowercase, hyphenated). This is the unique module identifier.
 - **description**: Clear purpose/role of the module (1-2 sentences)
 - **versioning**: Version scheme and release configuration
   - **scheme**: `CalVer` (calendar versioning) or `SemVer` (semantic versioning)
   - **changelog**: Path to changelog file (e.g., `CHANGELOG.md`, `release/module-name/CHANGELOG.md`)
   - **release_type**: `published` (public releases) or `internal` (internal only)
-- **components**: Language-specific configuration
+- **components**: Language-specific configuration (list format — see section 4)
 
 ### 3. Module Dependencies
 
@@ -52,54 +51,56 @@ modules:
 
 ### 4. Component Configuration
 
-For each component type, generate appropriate settings:
+Components are declared as a **YAML list**. Each component has a `type` (the language/tool kind)
+and a `root` path relative to the repository root.
 
 #### Go Module
 ```yaml
 components:
-  go:
+  - type: go
     root: path/to/module
-    type: service  # or library, cli-tool
 ```
 
 #### Python Module
 ```yaml
 components:
-  python:
+  - type: python
     root: path/to/module
-    type: service  # or library, cli-tool
 ```
 
 #### Rust Module
 ```yaml
 components:
-  rust:
+  - type: rust
     root: path/to/module
-    type: binary  # or library
 ```
 
 #### TypeScript Module
 ```yaml
 components:
-  typescript:
+  - type: typescript
     root: path/to/module
-    type: app  # or library
+```
+
+#### JavaScript Module
+```yaml
+components:
+  - type: javascript
+    root: path/to/module
 ```
 
 #### .NET Module
 ```yaml
 components:
-  dotnet:
+  - type: dotnet
     root: path/to/module
-    type: webapi  # or library, console
 ```
 
 #### Java Module
 ```yaml
 components:
-  java:
+  - type: java
     root: path/to/module
-    type: service  # or library
 ```
 
 ### 5. Infer Module Purposes
@@ -114,10 +115,10 @@ Use these heuristics:
 - `worker`, `processor` → "Background worker/processor"
 
 **By Language/Tool:**
-- Rust with `main.rs` → "Command-line tool" or "System utility"
+- Rust → "Command-line tool" or "System utility"
 - TypeScript with `package.json` → "Web application" or "Frontend"
 - Go with `cmd/` → "CLI application"
-- Python with `setup.py` → "Library" or "Service"
+- Python with `setup.py` or `pyproject.toml` → "Library" or "Service"
 
 **By File Patterns:**
 - Contains `Dockerfile` → Service/deployable application
@@ -141,16 +142,14 @@ repository:
 
 modules:
   - moniker: module-name
-    name: Descriptive Module Name
     description: Module purpose
     versioning:
       scheme: CalVer  # or SemVer
       changelog: path/to/CHANGELOG.md
       release_type: published  # or internal
     components:
-      <language>:
+      - type: <language>
         root: relative/path
-        type: component-kind
 ```
 
 ### 7. Quality Guidelines
@@ -169,11 +168,6 @@ modules:
 - Descriptive but concise
 - Examples: `api-service`, `web-frontend`, `cli-tools`
 
-**Module Names:**
-- Title case, descriptive
-- Full name of the module
-- Examples: "API Service", "Web Frontend", "CLI Tools"
-
 **Versioning:**
 - Use `CalVer` for date-based releases (YYYY.0M.0D format)
 - Use `SemVer` for semantic versioning (MAJOR.MINOR.PATCH)
@@ -189,9 +183,8 @@ modules:
   - "Command-line tool for data processing"
   - "Frontend web application built with React"
 
-**Component Types:**
-- Match actual project structure
-- Use standard types: `service`, `library`, `cli-tool`, `app`, `binary`, `webapi`, `console`
+**Component types** must match the detected language from scan results:
+`go`, `python`, `rust`, `typescript`, `javascript`, `dotnet`, `java`
 
 ### 8. Multi-Module Repository Patterns
 
@@ -205,28 +198,24 @@ repository:
 
 modules:
   - moniker: api-gateway
-    name: API Gateway
     description: API gateway routing requests to microservices
     versioning:
       scheme: SemVer
       changelog: services/gateway/CHANGELOG.md
       release_type: published
     components:
-      go:
+      - type: go
         root: services/gateway
-        type: service
 
   - moniker: auth-service
-    name: Auth Service
     description: Authentication and authorization service
     versioning:
       scheme: SemVer
       changelog: services/auth/CHANGELOG.md
       release_type: internal
     components:
-      go:
+      - type: go
         root: services/auth
-        type: service
     depends_on:
       - shared-lib
 ```
@@ -241,28 +230,24 @@ repository:
 
 modules:
   - moniker: backend
-    name: Backend API
     description: Backend API providing REST endpoints
     versioning:
       scheme: CalVer
       changelog: backend/CHANGELOG.md
       release_type: published
     components:
-      python:
+      - type: python
         root: backend
-        type: service
 
   - moniker: frontend
-    name: Frontend Web App
     description: Frontend web application
     versioning:
       scheme: CalVer
       changelog: frontend/CHANGELOG.md
       release_type: published
     components:
-      typescript:
+      - type: typescript
         root: frontend
-        type: app
     depends_on:
       - backend
 ```
@@ -271,7 +256,6 @@ modules:
 
 - **No modules detected**: Generate minimal config with repository name only
 - **Single module**: Use repository name as module moniker
-- **Ambiguous types**: Default to `service` for services, `library` for libraries
 - **Missing README**: Infer from directory names and file structure
 - **Unknown remote**: Use generic placeholder values for owner/repo
 - **Versioning defaults**: Use `CalVer` for services/apps, `SemVer` for libraries

@@ -5,8 +5,10 @@ package aiutil
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/clibase/aiproviders"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
@@ -139,4 +141,103 @@ func ensurePeriod(s string) string {
 		return s + "."
 	}
 	return s
+}
+
+// shuffled returns a shuffled copy of src without mutating the original slice.
+func shuffled(src []string) []string {
+	dst := make([]string, len(src))
+	copy(dst, src)
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(dst), func(i, j int) {
+		dst[i], dst[j] = dst[j], dst[i]
+	})
+
+	return dst
+}
+
+// WhimsicalStatusLines are fun status messages shown during AI generation.
+var WhimsicalStatusLines = []string{
+	"Discombobulating the git diffs...",
+	"Reticulating splines...",
+	"Consulting the commit oracle...",
+	"Parsing semantic tea leaves...",
+	"Harmonizing module boundaries...",
+	"Calibrating imperative mood detector...",
+	"Summoning the contract guardian...",
+	"Extracting essence from code changes...",
+	"Wrapping lines at 72 characters...",
+	"Polishing commit message prose...",
+	"Validating YAML path globs...",
+	"Generating subject line haikus...",
+	"Contemplating the WHY not the WHAT...",
+	"Assembling markdown tables...",
+	"Invoking the anti-corruption layer...",
+	"Measuring semantic distance...",
+	"Calculating commit entropy...",
+	"Negotiating with git demons...",
+}
+
+// AngryStatusLines are slightly frustrated messages for retry/auto-fix phases.
+var AngryStatusLines = []string{
+	"Ugh, fixing validation errors...",
+	"*Sigh* Correcting the mistakes...",
+	"This would've been easier if...",
+	"Fine, let me fix that...",
+	"Okay okay, adjusting things...",
+	"Not my finest work, but fixing it...",
+	"Patience wearing thin... fixing...",
+	"Let's try this again, properly...",
+	"Tweaking the problematic bits...",
+	"Making it contract-compliant...",
+	"Ironing out the wrinkles...",
+	"Second time's the charm...",
+}
+
+// startProgressWithLines begins showing progress updates with custom status lines.
+// Returns a cancel function to stop the progress ticker.
+func startProgressWithLines(initialMessage string, statusLines []string, interval time.Duration) context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	logging.C().Info(initialMessage)
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		statusIndex := 0
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				logging.C().Info(statusLines[statusIndex%len(statusLines)])
+				statusIndex++
+			}
+		}
+	}()
+
+	return cancel
+}
+
+// WithProgress wraps fn with periodic whimsical progress log lines.
+// The initial message is logged immediately; subsequent lines appear every 10s.
+func WithProgress(stage string, fn func() error) error {
+	statusLines := shuffled(WhimsicalStatusLines)
+
+	stopProgress := startProgressWithLines(stage, statusLines, 10*time.Second)
+	defer stopProgress()
+
+	return fn()
+}
+
+// WithAngryProgress wraps fn with "angry" progress log lines (for retry phases).
+// Updates appear every 8 seconds (faster cadence than normal).
+func WithAngryProgress(stage string, fn func() error) error {
+	statusLines := shuffled(AngryStatusLines)
+
+	stopProgress := startProgressWithLines(stage, statusLines, 8*time.Second)
+	defer stopProgress()
+
+	return fn()
 }

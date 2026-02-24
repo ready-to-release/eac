@@ -2,16 +2,17 @@
 
 {{ page_breadcrumb() }}
 
-**Problem**: You want to develop and test clie extensions without pushing to remote registries during development.
+**Problem**: You want to develop and test EAC commands without pushing to remote registries during development.
 
-**Solution**: Use different workflows depending on where you're working:
+**Solution**: Use the workflow that matches your goal:
 
 - **EAC repository**: Use `importer.ps1` to load commands directly from source
-- **External repositories**: Use Docker-based local development with locally built images
+- **External repository (quick test)**: Build the `eac` binary and run it directly — no Docker, no `clie`
+- **External repository (production-like)**: Use Docker-based local development with locally built images
 
 ## Overview
 
-### Two Development Workflows
+### Three Development Workflows
 
 #### 1. EAC Repository Development (importer.ps1)
 
@@ -35,7 +36,34 @@ eac <command>
 - Fastest iteration cycle
 - Direct debugging
 
-#### 2. External Repository Testing (Docker)
+#### 2. External Repository Testing (Direct Binary)
+
+When you just want to run `eac` commands against an external repository without `clie` or Docker,
+build the binary once and run it directly:
+
+```powershell
+# In the EAC repository — build the binary once
+go build -o out/eac.exe ./go/cli/eac
+
+# Change into the target repository
+cd C:\path\to\external-repo
+
+# Run any eac command directly
+C:\source\ready-to-release\eac\out\eac.exe init --scan
+C:\source\ready-to-release\eac\out\eac.exe show modules
+C:\source\ready-to-release\eac\out\eac.exe help
+```
+
+The binary auto-detects the repository root from the current directory (via git).
+
+**Advantages:**
+
+- No Docker required
+- No `clie` setup required
+- Works on any git repository immediately
+- Fastest way to test `eac` commands on external repos
+
+#### 3. External Repository Testing (Docker)
 
 When testing in external repositories (e.g., `ext-env-check`), use Docker-based local development:
 
@@ -58,13 +86,14 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 
 ### When to Use Which Workflow
 
-| Scenario                    | Use          | Reason                |
-| --------------------------- | ------------ | --------------------- |
-| Writing new EAC commands    | importer.ps1 | Fastest iteration     |
-| Debugging EAC code          | importer.ps1 | Direct code execution |
-| Testing in different repo   | Docker       | Realistic environment |
-| Validating container config | Docker       | Production-like setup |
-| Testing multi-repo support  | Docker       | Integration testing   |
+| Scenario                           | Use           | Reason                          |
+| ---------------------------------- | ------------- | ------------------------------- |
+| Writing new EAC commands           | importer.ps1  | Fastest iteration               |
+| Debugging EAC code                 | importer.ps1  | Direct code execution           |
+| Running `eac` on an external repo  | Direct binary | No Docker or clie needed        |
+| Testing init scan on another repo  | Direct binary | Quickest path, just go build    |
+| Validating container config        | Docker        | Production-like setup           |
+| Testing multi-repo support via clie| Docker        | Integration testing             |
 
 ## EAC Repository Development
 
@@ -90,9 +119,71 @@ eac help
 2. **Test immediately**: `eac <command>`
 3. **No Docker rebuild needed**
 
-## External Repository Testing
+## External Repository Testing (Direct Binary)
 
-This section covers testing your EAC extension in external repositories using Docker.
+This workflow runs `eac` directly on any external repository — no `clie`, no Docker.
+
+### Prerequisites
+
+- Go 1.21 or later
+- EAC repository source code
+
+### Quick Start
+
+```powershell
+# 1. Build the eac binary (run once from EAC repo root)
+cd C:\source\ready-to-release\eac
+go build -o out/eac.exe ./go/cli/eac
+
+# 2. Change to your target repository
+cd C:\path\to\your-repo
+
+# 3. Run eac commands directly
+C:\source\ready-to-release\eac\out\eac.exe init --scan
+C:\source\ready-to-release\eac\out\eac.exe show modules
+```
+
+### Using a Personal AI Provider
+
+If you want AI-enhanced generation (e.g. `init --scan` with `claude-cli`), copy your personal
+AI provider config into the target repo before running:
+
+```powershell
+# Create .eac directory in the target repo
+mkdir C:\path\to\your-repo\.eac
+
+# Copy personal config from this workspace
+Copy-Item C:\source\ready-to-release\eac\.eac\ai-provider.personal.yml `
+          C:\path\to\your-repo\.eac\ai-provider.personal.yml
+
+# Run init scan — eac picks up the personal config automatically
+cd C:\path\to\your-repo
+C:\source\ready-to-release\eac\out\eac.exe init --scan
+```
+
+The AI executor loads `.eac/ai-provider.personal.yml` automatically when it exists.
+No `--ai-provider` flag is needed.
+
+### Rebuilding After Code Changes
+
+The binary must be rebuilt after modifying `go/cli/eac` source:
+
+```powershell
+cd C:\source\ready-to-release\eac
+go build -o out/eac.exe ./go/cli/eac
+```
+
+### Tips
+
+- The binary auto-detects the repo root via `git rev-parse --show-toplevel`
+- Run the binary **from within** the target repository (not from the EAC repo)
+- `out/eac.exe` is gitignored — safe to rebuild at any time
+
+---
+
+## External Repository Testing (Docker/clie)
+
+This section covers testing your EAC extension in external repositories using Docker and `clie`.
 
 ### Components
 
@@ -331,14 +422,17 @@ When developing and testing in external repositories:
 
 **Note**: For faster iteration when developing commands, use `importer.ps1` in the EAC repository instead of the Docker workflow.
 
-### Comparison: importer.ps1 vs Docker
+### Comparison: All Workflows
 
-| Workflow                | Code Changes | Test Changes    | Iteration Time |
-| ----------------------- | ------------ | --------------- | -------------- |
-| importer.ps1 (EAC repo) | Edit code    | `eac <command>` | Seconds        |
-| Docker (external repo)  | Edit code    | Rebuild image   | Minutes        |
+| Workflow                       | Requires     | Test Changes          | Iteration Time |
+| ------------------------------ | ------------ | --------------------- | -------------- |
+| importer.ps1 (EAC repo)        | Go           | `eac <command>`       | Seconds        |
+| Direct binary (external repo)  | Go           | `go build` + run      | Seconds        |
+| Docker/clie (external repo)    | Docker+clie  | Rebuild image         | Minutes        |
 
-**Recommendation**: Develop and debug in EAC repo with `importer.ps1`, then validate in external repos with Docker.
+**Recommendation**: Use `importer.ps1` when developing EAC itself, the direct binary when
+running `eac` against an external repo, and Docker when you need to validate the full
+`clie eac` integration.
 
 ## Advanced Usage
 

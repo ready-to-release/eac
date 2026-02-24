@@ -33,6 +33,7 @@ type MockRepository struct {
 	branchDiff      string
 	branchDiffStats string
 	branchFiles     []string
+	upstreamBranch  string
 
 	// Uncommitted files for change detection
 	uncommittedFiles []string
@@ -59,6 +60,7 @@ type MockRepository struct {
 	GetBranchDiffError      error
 	GetBranchDiffStatsError error
 	GetBranchFilesError     error
+	UpstreamBranchError     error
 }
 
 // MockTag represents a mock tag for testing.
@@ -485,6 +487,23 @@ func (m *MockRepository) WithBranchDiffStats(stats string) *MockRepository {
 func (m *MockRepository) WithBranchFiles(files []string) *MockRepository {
 	m.branchFiles = files
 	return m
+}
+
+// WithUpstreamBranch sets the mock upstream branch.
+func (m *MockRepository) WithUpstreamBranch(branch string) *MockRepository {
+	m.upstreamBranch = branch
+	return m
+}
+
+// UpstreamBranch returns the mock upstream tracking branch.
+func (m *MockRepository) UpstreamBranch() (string, error) {
+	if m.UpstreamBranchError != nil {
+		return "", m.UpstreamBranchError
+	}
+	if m.upstreamBranch == "" {
+		return "", fmt.Errorf("no upstream configured")
+	}
+	return m.upstreamBranch, nil
 }
 
 // Ensure MockRepository implements GitRepository (also verified in interface.go).

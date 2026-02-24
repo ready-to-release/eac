@@ -121,6 +121,10 @@ type GitBranchComparer interface {
 	// GetBranchFiles returns list of files changed in baseBranch...HEAD.
 	// Returns relative paths from repository root.
 	GetBranchFiles(baseBranch string) ([]string, error)
+
+	// UpstreamBranch returns the upstream tracking branch for the current branch.
+	// Returns ("", err) when no upstream is configured (detached HEAD or local-only branch).
+	UpstreamBranch() (string, error)
 }
 
 // GitRepository is the full repository interface combining all capabilities.

@@ -1168,6 +1168,27 @@ func TestFindPrimaryComponent(t *testing.T) {
 	})
 }
 
+// TestMarshalYAML_SkipsAutoBDDRunner tests that AutoBDDRunner entries are not serialized.
+func TestMarshalYAML_SkipsAutoBDDRunner(t *testing.T) {
+	mc := ModuleComponents{
+		"python": {Type: "python", Root: "."},
+		"behave": {Type: "behave", Root: ".", AutoBDDRunner: true},
+	}
+	out, err := mc.MarshalYAML()
+	if err != nil {
+		t.Fatalf("MarshalYAML failed: %v", err)
+	}
+	entries := out.([]*ComponentEntry)
+	for _, e := range entries {
+		if e.AutoBDDRunner {
+			t.Errorf("AutoBDDRunner entry should not be marshaled")
+		}
+	}
+	if len(entries) != 1 {
+		t.Errorf("expected 1 entry (the python one), got %d", len(entries))
+	}
+}
+
 func TestGetPushableContainerComponents(t *testing.T) {
 	pushTrue := true
 	pushFalse := false

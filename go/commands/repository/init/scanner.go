@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
@@ -57,6 +58,11 @@ var packageManagerFiles = map[string]struct {
 		buildTool: "pip",
 		detector:  detectPythonSetupModule,
 	},
+	"requirements.txt": {
+		language:  "python",
+		buildTool: "pip",
+		detector:  detectPythonRequirementsModule,
+	},
 	"*.csproj": {
 		language:  "dotnet",
 		buildTool: "dotnet",
@@ -77,6 +83,29 @@ var packageManagerFiles = map[string]struct {
 		buildTool: "gradle",
 		detector:  detectGradleModule,
 	},
+	"build.gradle.kts": {
+		language:  "java",
+		buildTool: "gradle",
+		detector:  detectGradleModule,
+	},
+}
+
+// packageManagerPriority defines which file wins when multiple package manager files
+// are found in the same directory. Lower number = higher priority.
+// Files not in this map receive priority 10.
+var packageManagerPriority = map[string]int{
+	// Primary manifests: these are definitive language markers
+	"go.mod":          1,
+	"Cargo.toml":      1,
+	"package.json":    1, // beats requirements.txt/setup.py in mixed JS+Python dirs
+	"pyproject.toml":  1,
+	"pom.xml":         1,
+	// Secondary: prefer over bare requirements files
+	"setup.py":        2,
+	"build.gradle":    2,
+	"build.gradle.kts": 2,
+	// Fallback: weakest signal
+	"requirements.txt": 3,
 }
 
 // vendorDirectories are directories that should be filtered out
@@ -100,6 +129,13 @@ var vendorDirectories = map[string]bool{
 	".vscode":       true,
 }
 
+// candidateModule holds a detected module and the file name that triggered detection,
+// used for priority-based selection when multiple files match in one directory.
+type candidateModule struct {
+	info     *ModuleInfo
+	fileName string
+}
+
 // ScanRepository scans a repository and returns detected modules
 func ScanRepository(repoRoot string) (*ScanResult, error) {
 	if repoRoot == "" {
@@ -119,14 +155,10 @@ func ScanRepository(repoRoot string) (*ScanResult, error) {
 		return nil, fmt.Errorf("path is not a directory: %s", repoRoot)
 	}
 
-	result := &ScanResult{
-		Modules: []ModuleInfo{},
-	}
+	// Collect all candidates grouped by directory.
+	// Using a map lets us apply priority selection per directory before committing.
+	modulesByDir := make(map[string][]candidateModule)
 
-	// Track module roots to avoid duplicates
-	moduleRoots := make(map[string]bool)
-
-	// Walk the directory tree
 	err = filepath.Walk(repoRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -137,29 +169,14 @@ func ScanRepository(repoRoot string) (*ScanResult, error) {
 			return filepath.SkipDir
 		}
 
-		// Check if this is a package manager file
 		if !info.IsDir() {
 			moduleInfo := detectModule(repoRoot, path, info.Name())
 			if moduleInfo != nil {
-				// Get the directory containing this file
-				moduleRoot := filepath.Dir(path)
-
-				// Skip if we've already found a module at this root
-				if moduleRoots[moduleRoot] {
-					return nil
-				}
-
-				// Mark this root as found
-				moduleRoots[moduleRoot] = true
-
-				// Convert absolute path to relative
-				relRoot, err := filepath.Rel(repoRoot, moduleRoot)
-				if err != nil {
-					relRoot = moduleRoot
-				}
-				moduleInfo.Root = relRoot
-
-				result.Modules = append(result.Modules, *moduleInfo)
+				moduleDir := filepath.Dir(path)
+				modulesByDir[moduleDir] = append(modulesByDir[moduleDir], candidateModule{
+					info:     moduleInfo,
+					fileName: info.Name(),
+				})
 			}
 		}
 
@@ -170,7 +187,57 @@ func ScanRepository(repoRoot string) (*ScanResult, error) {
 		return nil, fmt.Errorf("failed to walk directory tree: %w", err)
 	}
 
+	// Sort directories for deterministic output order.
+	dirs := make([]string, 0, len(modulesByDir))
+	for dir := range modulesByDir {
+		dirs = append(dirs, dir)
+	}
+	sort.Strings(dirs)
+
+	result := &ScanResult{Modules: []ModuleInfo{}}
+
+	for _, dir := range dirs {
+		best := selectBestCandidate(modulesByDir[dir])
+		if best == nil {
+			continue
+		}
+
+		relRoot, err := filepath.Rel(repoRoot, dir)
+		if err != nil {
+			relRoot = dir
+		}
+		best.Root = filepath.ToSlash(relRoot)
+		result.Modules = append(result.Modules, *best)
+	}
+
 	return result, nil
+}
+
+// selectBestCandidate picks the highest-priority candidate from a directory.
+// When multiple package manager files are found in one directory, the one with
+// the lowest priority number wins (e.g., pyproject.toml beats setup.py).
+func selectBestCandidate(candidates []candidateModule) *ModuleInfo {
+	if len(candidates) == 0 {
+		return nil
+	}
+	best := &candidates[0]
+	bestPriority := candidatePriority(best.fileName)
+	for i := 1; i < len(candidates); i++ {
+		p := candidatePriority(candidates[i].fileName)
+		if p < bestPriority {
+			best = &candidates[i]
+			bestPriority = p
+		}
+	}
+	return best.info
+}
+
+// candidatePriority returns the detection priority for a file name.
+func candidatePriority(fileName string) int {
+	if p, ok := packageManagerPriority[fileName]; ok {
+		return p
+	}
+	return 10
 }
 
 // shouldSkipDirectory returns true if the directory should be skipped during scanning
@@ -262,7 +329,7 @@ func detectPythonModule(repoRoot, tomlPath string) (*ModuleInfo, error) {
 			Language:  "python",
 			BuildTool: "pip",
 			Files:     []string{"pyproject.toml"},
-			}, nil
+		}, nil
 	}
 
 	moduleName := config.Project.Name
@@ -280,7 +347,7 @@ func detectPythonModule(repoRoot, tomlPath string) (*ModuleInfo, error) {
 
 // detectPythonSetupModule detects a Python module from setup.py
 func detectPythonSetupModule(repoRoot, setupPath string) (*ModuleInfo, error) {
-	// For setup.py, we'll use the directory name as the module name
+	// For setup.py, use the directory name as the module name
 	// since parsing setup.py reliably would require running Python code
 	moduleName := filepath.Base(filepath.Dir(setupPath))
 
@@ -292,18 +359,34 @@ func detectPythonSetupModule(repoRoot, setupPath string) (*ModuleInfo, error) {
 	}, nil
 }
 
-// detectRustModule detects a Rust module from Cargo.toml
+// detectPythonRequirementsModule detects a Python module from requirements.txt.
+// This is a low-priority fallback for projects that have no pyproject.toml or setup.py.
+func detectPythonRequirementsModule(repoRoot, reqPath string) (*ModuleInfo, error) {
+	moduleName := filepath.Base(filepath.Dir(reqPath))
+
+	return &ModuleInfo{
+		Name:      moduleName,
+		Language:  "python",
+		BuildTool: "pip",
+		Files:     []string{"requirements.txt"},
+	}, nil
+}
+
+// detectRustModule detects a Rust module from Cargo.toml.
+// Workspace root Cargo.toml files (containing [workspace] but no [package]) are skipped.
 func detectRustModule(repoRoot, cargoPath string) (*ModuleInfo, error) {
 	content, err := os.ReadFile(cargoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse TOML to get package name
 	var config struct {
 		Package struct {
 			Name string `toml:"name"`
 		} `toml:"package"`
+		Workspace *struct {
+			Members []string `toml:"members"`
+		} `toml:"workspace"`
 	}
 
 	if err := toml.Unmarshal(content, &config); err != nil {
@@ -313,7 +396,13 @@ func detectRustModule(repoRoot, cargoPath string) (*ModuleInfo, error) {
 			Language:  "rust",
 			BuildTool: "cargo",
 			Files:     []string{"Cargo.toml"},
-			}, nil
+		}, nil
+	}
+
+	// Skip workspace root Cargo.toml files — they define the workspace layout but are not
+	// leaf modules. Only member crates (which have [package]) are EAC modules.
+	if config.Workspace != nil && config.Package.Name == "" {
+		return nil, nil
 	}
 
 	moduleName := config.Package.Name
@@ -348,7 +437,7 @@ func detectNodeModule(repoRoot, packagePath string) (*ModuleInfo, error) {
 			Language:  "javascript",
 			BuildTool: "npm",
 			Files:     []string{"package.json"},
-			}, nil
+		}, nil
 	}
 
 	moduleName := pkg.Name
@@ -391,8 +480,6 @@ func detectDotNetModule(repoRoot, projPath string) (*ModuleInfo, error) {
 
 // detectMavenModule detects a Java module from pom.xml
 func detectMavenModule(repoRoot, pomPath string) (*ModuleInfo, error) {
-	// Use directory name as module name for Maven projects
-	// Parsing pom.xml would require XML parsing which is more complex
 	moduleName := filepath.Base(filepath.Dir(pomPath))
 
 	return &ModuleInfo{
@@ -403,15 +490,14 @@ func detectMavenModule(repoRoot, pomPath string) (*ModuleInfo, error) {
 	}, nil
 }
 
-// detectGradleModule detects a Java module from build.gradle
+// detectGradleModule detects a Java module from build.gradle or build.gradle.kts
 func detectGradleModule(repoRoot, gradlePath string) (*ModuleInfo, error) {
-	// Use directory name as module name for Gradle projects
 	moduleName := filepath.Base(filepath.Dir(gradlePath))
 
 	return &ModuleInfo{
 		Name:      moduleName,
 		Language:  "java",
 		BuildTool: "gradle",
-		Files:     []string{"build.gradle"},
+		Files:     []string{filepath.Base(gradlePath)},
 	}, nil
 }

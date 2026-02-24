@@ -23,13 +23,13 @@ const RepositoryFileName = "repository.yml"
 // This is the unified config loaded from .eac/repository.yml.
 type RepositoryConfig struct {
 	// Repository settings
-	Repository RepositorySettings `yaml:"repository"`
+	Repository RepositorySettings `yaml:"repository,omitempty"`
 
 	// Path configuration
-	Paths PathsConfig `yaml:"paths"`
+	Paths PathsConfig `yaml:"paths,omitempty"`
 
 	// Filename conventions
-	Conventions ConventionsConfig `yaml:"conventions"`
+	Conventions ConventionsConfig `yaml:"conventions,omitempty"`
 
 	// Module definitions (previously in separate repository.yml)
 	Modules []Module `yaml:"modules"`
@@ -52,40 +52,40 @@ type RepositoryConfig struct {
 
 // RepositorySettings holds repository-level configuration.
 type RepositorySettings struct {
-	Type              string              `yaml:"type"`                  // mono, poly, adjunct
-	TrunkBranch       string              `yaml:"trunk_branch"`          // main branch name
-	MaxBranchAgeDays  int                 `yaml:"max_branch_age_days"`   // max age for feature branches
-	Schemes           []string            `yaml:"schemes"`               // valid versioning schemes for releasable modules (Implicit always available)
-	PR                PRConfig            `yaml:"pr"`                    // PR workflow config
-	Versioning        VersioningConfig    `yaml:"versioning"`            // versioning constraints
-	Parallelism       ParallelismConfig   `yaml:"parallelism"`           // parallelism limits
-	Remote            RemoteConfig        `yaml:"remote"`                // Remote VCS repository configuration
-	OptimizeGitLsInCI bool                `yaml:"optimize_git_ls_in_ci"` // Use GitHub API for file listing in CI (faster than git ls-files)
-	GhostTracking     GhostTrackingConfig `yaml:"ghost-tracking"`        // Ghost tracking configuration
+	Type              string              `yaml:"type,omitempty"`                  // mono, poly, adjunct
+	TrunkBranch       string              `yaml:"trunk_branch,omitempty"`          // main branch name
+	MaxBranchAgeDays  int                 `yaml:"max_branch_age_days,omitempty"`   // max age for feature branches
+	Schemes           []string            `yaml:"schemes,omitempty"`               // valid versioning schemes for releasable modules (Implicit always available)
+	PR                PRConfig            `yaml:"pr,omitempty"`                    // PR workflow config
+	Versioning        VersioningConfig    `yaml:"versioning,omitempty"`            // versioning constraints
+	Parallelism       ParallelismConfig   `yaml:"parallelism,omitempty"`           // parallelism limits
+	Remote            RemoteConfig        `yaml:"remote,omitempty"`                // Remote VCS repository configuration
+	OptimizeGitLsInCI bool                `yaml:"optimize_git_ls_in_ci,omitempty"` // Use GitHub API for file listing in CI (faster than git ls-files)
+	GhostTracking     GhostTrackingConfig `yaml:"ghost-tracking,omitempty"`        // Ghost tracking configuration
 }
 
 // GhostTrackingConfig holds configuration for ghost (dark launch) code tracking.
 type GhostTrackingConfig struct {
 	// Alias is the prefix used to identify ghosts (default: "ghost")
 	// Results in patterns: alias-*, alias.*, alias
-	Alias string `yaml:"ghost-alias"`
+	Alias string `yaml:"ghost-alias,omitempty"`
 }
 
 // ParallelismConfig holds parallelism limits for build and test operations.
 type ParallelismConfig struct {
-	CI     int `yaml:"ci"`     // Max parallel workers in CI (default: 8)
-	Devbox int `yaml:"devbox"` // Max parallel workers locally (default: 16)
+	CI     int `yaml:"ci,omitempty"`     // Max parallel workers in CI (default: 8)
+	Devbox int `yaml:"devbox,omitempty"` // Max parallel workers locally (default: 16)
 }
 
 // PRConfig holds pull request workflow configuration.
 type PRConfig struct {
-	DeleteBranchOnMerge bool   `yaml:"delete_branch_on_merge"`
-	MergeStrategy       string `yaml:"merge_strategy"` // squash, merge, rebase
+	DeleteBranchOnMerge bool   `yaml:"delete_branch_on_merge,omitempty"`
+	MergeStrategy       string `yaml:"merge_strategy,omitempty"` // squash, merge, rebase
 }
 
 // VersioningConfig holds repository-wide versioning constraints.
 type VersioningConfig struct {
-	Constraint string `yaml:"constraint"` // unrestricted, patch-only, calver-only
+	Constraint string `yaml:"constraint,omitempty"` // unrestricted, patch-only, calver-only
 }
 
 // Versioning constraint constants.
@@ -112,49 +112,56 @@ func (v VersioningConfig) IsUnrestricted() bool {
 
 // PathsConfig defines repository-specific directory structures.
 type PathsConfig struct {
-	SpecsRoot      string    `yaml:"specs_root"`
-	ContainersRoot string    `yaml:"containers_root"`
-	Templates      string    `yaml:"templates"`
-	Out            OutConfig `yaml:"out"`
+	SpecsRoot      string    `yaml:"specs_root,omitempty"`
+	ContainersRoot string    `yaml:"containers_root,omitempty"`
+	Templates      string    `yaml:"templates,omitempty"`
+	Out            OutConfig `yaml:"out,omitempty"`
 }
 
 // OutConfig defines output directory structure.
 type OutConfig struct {
-	Root  string `yaml:"root"`
-	Build string `yaml:"build"`
-	Test  string `yaml:"test"`
-	Logs  string `yaml:"logs"`
-	Scan  string `yaml:"scan"`
-	Tools string `yaml:"tools"` // CI tools like the commands binary (not build outputs)
+	Root  string `yaml:"root,omitempty"`
+	Build string `yaml:"build,omitempty"`
+	Test  string `yaml:"test,omitempty"`
+	Logs  string `yaml:"logs,omitempty"`
+	Scan  string `yaml:"scan,omitempty"`
+	Tools string `yaml:"tools,omitempty"` // CI tools like the commands binary (not build outputs)
 }
 
 // ConventionsConfig defines conventional filenames.
 type ConventionsConfig struct {
-	GodogTest              string `yaml:"godog_test"`
-	PackageJSON            string `yaml:"package_json"`
-	Changelog              string `yaml:"changelog"`
-	BuildLog               string `yaml:"build_log"`
-	BuildTiming            string `yaml:"build_timing"`
-	TestTiming             string `yaml:"test_timing"`
-	Specification          string `yaml:"specification"`
-	RiskCatalog            string `yaml:"risk_catalog"`
-	RiskControlsDir        string `yaml:"risk_controls_dir"`
-	RiskReportsCategory    string `yaml:"risk_reports_category"`
-	RiskAssessmentTemplate string `yaml:"risk_assessment_template"`
-	TestReportsCategory    string `yaml:"test_reports_category"`
-	TestResultsTemplate    string `yaml:"test_results_template"`
-	TemplateSpecsDir       string `yaml:"template_specs_dir"`
-	TemplateReportsDir     string `yaml:"template_reports_dir"`
-	TemplateRiskCatalogDir string `yaml:"template_risk_catalog_dir"`
-	DesignDir    string `yaml:"design_dir"`
-	WorkspaceDSL string `yaml:"workspace_dsl"`
+	GodogTest              string `yaml:"godog_test,omitempty"`
+	PackageJSON            string `yaml:"package_json,omitempty"`
+	Changelog              string `yaml:"changelog,omitempty"`
+	BuildLog               string `yaml:"build_log,omitempty"`
+	BuildTiming            string `yaml:"build_timing,omitempty"`
+	TestTiming             string `yaml:"test_timing,omitempty"`
+	Specification          string `yaml:"specification,omitempty"`
+	RiskCatalog            string `yaml:"risk_catalog,omitempty"`
+	RiskControlsDir        string `yaml:"risk_controls_dir,omitempty"`
+	RiskReportsCategory    string `yaml:"risk_reports_category,omitempty"`
+	RiskAssessmentTemplate string `yaml:"risk_assessment_template,omitempty"`
+	TestReportsCategory    string `yaml:"test_reports_category,omitempty"`
+	TestResultsTemplate    string `yaml:"test_results_template,omitempty"`
+	TemplateSpecsDir       string `yaml:"template_specs_dir,omitempty"`
+	TemplateReportsDir     string `yaml:"template_reports_dir,omitempty"`
+	TemplateRiskCatalogDir string `yaml:"template_risk_catalog_dir,omitempty"`
+	DesignDir    string `yaml:"design_dir,omitempty"`
+	WorkspaceDSL string `yaml:"workspace_dsl,omitempty"`
 }
 
-// loadRepositoryConfigUnmerged loads repository configuration from user's YAML file only.
-// WARNING: This returns UNMERGED config without defaults. Do NOT use directly.
-// Use config.Load().Repository instead to get properly merged config with defaults.
-// This is only exported for use by the config package's merge logic.
-func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
+// LoadRepositoryConfigUnmerged loads repository configuration from the user's YAML file only.
+// This returns the raw user-authored config WITHOUT any system defaults applied.
+// Fields not set by the user will have their zero values.
+//
+// Use cases: Serialization roundtrip (init command, reinit command) where you need
+// to read what the user wrote and write it back without injecting system defaults.
+//
+// WARNING: Do NOT use this for runtime operation. Use config.Load() to get a fully
+// merged config with defaults applied. Calling ExpandModuleParams, ApplyComponentDefaults,
+// or any other processing method on the result of this function without first loading
+// Blueprints will produce incorrect or incomplete results.
+func LoadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 	configPath := filepath.Join(paths.EACConfigPath(repoRoot), RepositoryFileName)
 	data, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {

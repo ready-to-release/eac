@@ -18,8 +18,8 @@ type Module struct {
 	Moniker       string                `yaml:"moniker"`
 	Description   string                `yaml:"description"`
 	Group         string                `yaml:"group,omitempty"`         // Group name for depends_on expansion
-	DependsOn     []string              `yaml:"depends_on"`
-	DependsOnCI   []string              `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
+	DependsOn     []string              `yaml:"depends_on,omitempty"`
+	DependsOnCI   []string              `yaml:"depends_on_ci,omitempty"`  // CI artifact dependencies (merged into DependsOn)
 	CIDeps        []string              `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
 	Metadata      map[string]string     `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
 	Versioning    *ModuleVersioning     `yaml:"versioning,omitempty"`
@@ -222,9 +222,10 @@ func expandCompanions(components ModuleComponents) error {
 			additions = append(additions, addition{
 				name: companionType,
 				entry: &ComponentEntry{
-					Name: companionType,
-					Type: companionType,
-					Root: entry.Root,
+					Name:        companionType,
+					Type:        companionType,
+					Root:        entry.Root,
+					IsCompanion: true,
 				},
 			})
 		}
@@ -661,6 +662,34 @@ func (mc *ModuleComponents) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// MarshalYAML implements custom marshaling for ModuleComponents.
+// Outputs the list (sequence) format required by UnmarshalYAML, so that a
+// config round-tripped through yaml.Marshal → yaml.Unmarshal remains valid.
+// Synthetic entries (facet-expanded and companion components) are omitted
+// because they are reconstructed at parse time from their parent declarations.
+func (mc ModuleComponents) MarshalYAML() (interface{}, error) {
+	// Collect keys to produce deterministic output order
+	keys := make([]string, 0, len(mc))
+	for k := range mc {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	entries := make([]*ComponentEntry, 0, len(mc))
+	for _, k := range keys {
+		entry := mc[k]
+		if entry == nil {
+			continue
+		}
+		// Skip synthetic entries — they are rebuilt from parent declarations at parse time
+		if entry.IsFacetComponent() || entry.IsCompanion || entry.AutoBDDRunner {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}
+
 // ComponentEntry represents a component's configuration within a module.
 // It can be parsed from either a simple string (root path) or full object.
 // AmpConfig contains per-operation resource amplifiers for a component.
@@ -765,6 +794,11 @@ type ComponentEntry struct {
 	// AutoBDDRunner indicates this component was auto-created as a BDD runner
 	// from a parent component's specs: facet. Set during ApplyComponentDefaults.
 	AutoBDDRunner bool `yaml:"-" json:"-"`
+
+	// IsCompanion indicates this component was auto-created by expandCompanions from
+	// a parent's with: field. These are reconstructed at parse time from with: declarations
+	// and should not be emitted during marshaling.
+	IsCompanion bool `yaml:"-" json:"-"`
 
 	// Resolved indicates if this entry has been resolved with defaults
 	Resolved bool `yaml:"-" json:"-"`
