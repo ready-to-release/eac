@@ -4,7 +4,7 @@ mkdocs-material>=9.4
 
 # Pin click to fix file watching (click>=8.3.0 breaks mkdocs serve --dirty)
 # See: https://github.com/mkdocs/mkdocs/issues/4032
-click==8.2.1
+click==8.3.1
 
 # Navigation
 mkdocs-awesome-nav>=3.3.0
