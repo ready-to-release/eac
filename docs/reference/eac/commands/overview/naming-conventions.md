@@ -16,7 +16,7 @@ Most commands follow the pattern: `<verb> <noun> [<modifier>]`
 get modules          # verb: get, noun: modules
 show dependencies    # verb: show, noun: dependencies
 validate contracts   # verb: validate, noun: contracts
-create commit-message  # verb: create, noun: commit-message
+get commit-message  # verb: get, noun: commit-message
 scan --scanner vuln  # verb: scan, scanner type: vuln
 ```
 
@@ -105,8 +105,8 @@ init
 Noun phrases are hyphenated:
 
 ```bash
-create commit-message
-create squash-message
+get commit-message
+get squash-message
 get changed-modules
 show valid-commands
 validate module-files
@@ -161,7 +161,7 @@ release pending
 release this
 release check-ci
 release get-version
-release generate-module-calver
+release get-module-calver
 ```
 
 **Rules**:
@@ -313,7 +313,7 @@ cli                 # Command Line Interface
 
 Don't abbreviate unless the abbreviation is standard:
 
-- ✓ `create commit-message` (clear)
+- ✓ `get commit-message` (clear)
 - ✗ `create cm` (unclear abbreviation)
 - ✓ `get dependencies` (clear)
 - ✗ `get deps` (abbreviation used internally but not in command names)
@@ -328,7 +328,7 @@ All command names are **lowercase with hyphens**:
 
 ```bash
 # Correct
-create commit-message
+get commit-message
 get changed-modules
 show valid-commands
 
@@ -375,11 +375,9 @@ When adding new commands, ensure:
 ### create commands
 
 ```bash
-create commit-message      # Generate commit message
 create pr                  # Create pull request
 create spec                # Generate specification
 create design              # Generate architecture diagram
-create squash-message      # Generate squash message
 create risk-assess         # Generate risk assessment
 create risk-profile        # Generate risk profile
 ```
@@ -391,6 +389,8 @@ get modules                # Module information (JSON)
 get dependencies           # Dependency graph (JSON)
 get files                  # File mappings (JSON)
 get changed-modules        # Changed modules (JSON)
+get commit-message         # Generate commit message
+get squash-message         # Generate squash message
 ```
 
 ### show commands

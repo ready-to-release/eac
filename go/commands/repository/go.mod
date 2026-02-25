@@ -13,6 +13,7 @@ require (
 	github.com/ready-to-release/eac/contracts/container-runtime/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/core/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0
+	github.com/ready-to-release/eac/go/adapters/ai-test v0.0.0-20260224151839-95b1d7ce9dfe
 	github.com/ready-to-release/eac/go/adapters/claude v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0

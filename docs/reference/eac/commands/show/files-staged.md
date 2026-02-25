@@ -6,4 +6,4 @@
 
 - [show files-changed](./files-changed.md) - Unstaged changes
 - [work commit](../work/commit.md) - Commit staged files
-- [create commit-message](../create/commit-message.md)
+- [get commit-message](../get/commit-message.md)

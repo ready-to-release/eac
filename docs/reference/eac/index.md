@@ -71,7 +71,7 @@ Developer → CLIE CLI → Docker Container (eac-ext:latest) → EAC Commands �
 - Module management (`build`, `test`, `show-modules`)
 - Validation (`validate-contracts`, `validate-dependencies`, `validate-specs`)
 - Security scanning (`scan-vuln`, `scan-sast`, `scan-secrets`)
-- AI workflows (`create-spec`, `create-design`, `create-commit-message`)
+- AI workflows (`create-spec`, `create-design`, `get-commit-message`)
 - Release management (`release-changelog`, `release-this`)
 - Documentation (`serve-docs`, `serve-design`)
 

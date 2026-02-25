@@ -41,7 +41,7 @@ structured generation with retry, and mock test doubles.
 ## Role in System
 
 The `ai` package is the primary integration point for AI-powered code
-generation in `core`. Commands such as `create-commit-message`, `create-design`,
+generation in `core`. Commands such as `get-commit-message`, `create-design`,
 and `create-spec` use its retry-with-validation pipeline to produce validated
 outputs in Gherkin, JSON, OSCAL, or Structurizr formats.
 

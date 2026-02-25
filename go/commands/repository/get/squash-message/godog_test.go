@@ -1,4 +1,4 @@
-package drawio
+package squashmessage
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/cucumber/godog"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	_ "github.com/ready-to-release/eac/go/adapters/ai-test"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
@@ -15,8 +16,9 @@ import (
 
 func TestFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
-		SpecsPath:         "../../../../specs/eac_drawio",
-		DefaultReportName: "cucumber-drawio",
+		SpecsPath:         "../../../../../specs/eac_get/squash-message",
+		DefaultReportName: "cucumber-squash-message",
+		AssetsPath:        "go/commands/repository/get/squash-message/assets",
 		RegisterSteps:     registerSteps,
 	}
 
@@ -32,13 +34,16 @@ func TestFeatures(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	// Register this command for in-process dispatch.
+	// This avoids subprocess overhead and removes dependency on pre-built binary.
 	reg := registry.NewCommandRegistry()
 	if err := reg.RegisterAll(Commands()...); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to register drawio commands: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to register commands: %v\n", err)
 		os.Exit(1)
 	}
 	registry.SetGlobal(reg)
 	flags.SetRegistry(reg)
+
 	os.Exit(m.Run())
 }
 

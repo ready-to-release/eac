@@ -120,25 +120,14 @@ func moduleHasUncommittedChanges(ctx *eacgodog.TestContext, moniker string) erro
 		return err
 	}
 
-	// Commit only this module's files first so they're tracked
-	modulePath := fmt.Sprintf("go/%s", moniker)
-	cmd := exec.Command("git", "add", modulePath, ".eac", ".github")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stage module files: %w", err)
-	}
-
-	cmd = exec.Command("git", "commit", "-m", fmt.Sprintf("Add %s module", moniker))
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to commit module: %w", err)
+	// Stage and commit module files in one subprocess call
+	if err := gitAddAndCommit(ctx.IsolatedDir, fmt.Sprintf("Add %s module", moniker),
+		fmt.Sprintf("go/%s", moniker), ".eac", ".github"); err != nil {
+		return err
 	}
 
 	// Now create an uncommitted change by modifying an existing tracked file
-	moduleFullPath := filepath.Join(ctx.IsolatedDir, "go", moniker)
-	mainGoPath := filepath.Join(moduleFullPath, "main.go")
-
-	// Append a change to main.go
+	mainGoPath := filepath.Join(ctx.IsolatedDir, "go", moniker, "main.go")
 	newContent := fmt.Sprintf("package main\n\nfunc main() {\n\tprintln(\"Hello from %s\")\n}\n\n// Uncommitted change\n", moniker)
 	if err := os.WriteFile(mainGoPath, []byte(newContent), 0o644); err != nil {
 		return fmt.Errorf("failed to create uncommitted change: %w", err)
@@ -153,72 +142,33 @@ func moduleHasNoChanges(ctx *eacgodog.TestContext, moniker string) error {
 		return err
 	}
 
-	// Commit only this module's files (not other changes that might exist)
-	modulePath := fmt.Sprintf("go/%s", moniker)
-	cmd := exec.Command("git", "add", modulePath, ".eac", ".github")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stage module files: %w", err)
-	}
-
-	cmd = exec.Command("git", "commit", "-m", fmt.Sprintf("Add %s module", moniker))
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to commit module: %w", err)
-	}
-
-	return nil
+	// Stage and commit module files in one subprocess call
+	return gitAddAndCommit(ctx.IsolatedDir, fmt.Sprintf("Add %s module", moniker),
+		fmt.Sprintf("go/%s", moniker), ".eac", ".github")
 }
 
 func moduleChangedSinceRef(ctx *eacgodog.TestContext, moniker, ref string) error {
 	// Strategy: Create a "feature" branch where the module exists,
-	// while keeping "main" at the state before the module was added
-
-	// First, ensure we're on main and commit current state
-	cmd := exec.Command("git", "checkout", "-B", "main")
+	// while keeping "main" at the state before the module was added.
+	// Batch git operations: checkout+add+commit on main, then checkout feature branch.
+	script := `set -e
+git checkout -B main
+git add .
+git commit --allow-empty -m "State before module"
+git checkout -b feature`
+	cmd := exec.Command("bash", "-c", script)
 	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to checkout main: %w", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to set up branches: %w\nOutput: %s", err, string(output))
 	}
 
-	cmd = exec.Command("git", "add", ".")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		// Ignore error - might have nothing to add
-	}
-
-	cmd = exec.Command("git", "commit", "--allow-empty", "-m", "State before module")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to commit baseline: %w", err)
-	}
-
-	// Create feature branch
-	cmd = exec.Command("git", "checkout", "-b", "feature")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to create feature branch: %w", err)
-	}
-
-	// Now create the module in the feature branch
+	// Create the module in the feature branch (writes files + updates repository.yml)
 	if err := createTestModule(ctx, moniker, nil); err != nil {
 		return err
 	}
 
-	cmd = exec.Command("git", "add", ".")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stage module: %w", err)
-	}
-
-	cmd = exec.Command("git", "commit", "-m", fmt.Sprintf("Add %s module", moniker))
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to commit module: %w", err)
-	}
-
-	// Now when we run `git diff main`, it will show the module files as new
-	return nil
+	// Stage and commit module files
+	return gitAddAndCommit(ctx.IsolatedDir, fmt.Sprintf("Add %s module", moniker), ".")
 }
 
 // ============================================================================
@@ -323,6 +273,18 @@ func exitsWithErrorIfTimeoutExceeded(ctx *eacgodog.TestContext) error {
 // Helper Functions
 // ============================================================================
 
+// gitAddAndCommit stages specific paths and commits in one subprocess call.
+func gitAddAndCommit(dir, message string, paths ...string) error {
+	addArgs := strings.Join(paths, " ")
+	script := fmt.Sprintf(`set -e; git add %s && git commit -m %q`, addArgs, message)
+	cmd := exec.Command("bash", "-c", script)
+	cmd.Dir = dir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git add+commit failed: %w\nOutput: %s", err, string(output))
+	}
+	return nil
+}
+
 // createTestModule creates a test module in the isolated environment.
 // It updates repository.yml and creates the module directory structure.
 func createTestModule(ctx *eacgodog.TestContext, moniker string, dependencies []string) error {
@@ -418,15 +380,7 @@ func createTestModule(ctx *eacgodog.TestContext, moniker string, dependencies []
 	}
 
 	// Create workflow file for the module
-	githubDir := filepath.Join(ctx.IsolatedDir, ".github")
-	workflowsDir := filepath.Join(githubDir, "workflows")
-
-	// Create .github directory first
-	if err := os.MkdirAll(githubDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .github directory: %w", err)
-	}
-
-	// Then create workflows subdirectory
+	workflowsDir := filepath.Join(ctx.IsolatedDir, ".github", "workflows")
 	if err := os.MkdirAll(workflowsDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create workflows directory: %w", err)
 	}

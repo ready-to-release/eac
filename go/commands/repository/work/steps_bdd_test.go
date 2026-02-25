@@ -68,30 +68,12 @@ func commitAllUncommittedFiles(ctx *eacgodog.TestContext) error {
 		return nil // Not in isolated mode
 	}
 
-	// Use current working directory (may be worktree or main)
 	workDir := ctx.CurrentWorkDir
 	if workDir == "" {
 		workDir = ctx.IsolatedDir
 	}
 
-	// Check for uncommitted changes
-	status, err := getGitCommandOutput(workDir, "status", "--porcelain")
-	if err != nil {
-		// If git status fails, maybe we're not in a git repo, just continue
-		return nil
-	}
-
-	// If there are uncommitted changes, commit them
-	if strings.TrimSpace(status) != "" {
-		if err := runGitCommand(workDir, "add", "."); err != nil {
-			return fmt.Errorf("failed to stage files: %w", err)
-		}
-		if err := runGitCommand(workDir, "commit", "-m", "Auto-commit before test"); err != nil {
-			return fmt.Errorf("failed to commit files: %w", err)
-		}
-	}
-
-	return nil
+	return gitCommitIfDirty(workDir, "Auto-commit before test")
 }
 
 // setupWorkspace creates a git worktree for the specified branch.
@@ -100,9 +82,6 @@ func setupWorkspace(ctx *eacgodog.TestContext, branch string) error {
 		return fmt.Errorf("workspace setup requires isolation")
 	}
 
-	// Store the main worktree path
-	mainWorktreePath := ctx.IsolatedDir
-
 	// Verify git repository exists (should be set up by test isolation)
 	gitDir := filepath.Join(ctx.IsolatedDir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
@@ -110,32 +89,17 @@ func setupWorkspace(ctx *eacgodog.TestContext, branch string) error {
 	}
 
 	// Ensure main worktree is clean before creating branch worktree
-	status, err := getGitCommandOutput(mainWorktreePath, "status", "--porcelain")
-	if err != nil {
-		return fmt.Errorf("failed to check git status: %w", err)
-	}
-	if strings.TrimSpace(status) != "" {
-		// Commit any uncommitted files in main worktree
-		if err := runGitCommand(mainWorktreePath, "add", "."); err != nil {
-			return fmt.Errorf("failed to stage files in main: %w", err)
-		}
-		if err := runGitCommand(mainWorktreePath, "commit", "-m", "Pre-worktree setup"); err != nil {
-			return fmt.Errorf("failed to commit in main: %w", err)
-		}
+	if err := gitCommitIfDirty(ctx.IsolatedDir, "Pre-worktree setup"); err != nil {
+		return fmt.Errorf("failed to clean main worktree: %w", err)
 	}
 
-	// Create branch if it doesn't exist
-	if err := runGitCommand(ctx.IsolatedDir, "branch", branch); err != nil {
-		// Branch might already exist, that's okay
-	}
-
-	// Create worktree directory
+	// Create branch (ignore error if it already exists) and add worktree
 	worktreePath := filepath.Join(ctx.IsolatedDir, "worktrees", branch)
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o750); err != nil {
 		return fmt.Errorf("failed to create worktree directory: %w", err)
 	}
 
-	// Add worktree
+	_ = runGitCommand(ctx.IsolatedDir, "branch", branch) // OK if exists
 	if err := runGitCommand(ctx.IsolatedDir, "worktree", "add", worktreePath, branch); err != nil {
 		return fmt.Errorf("failed to add worktree: %w", err)
 	}
@@ -143,18 +107,9 @@ func setupWorkspace(ctx *eacgodog.TestContext, branch string) error {
 	// Switch current working directory to worktree (but keep IsolatedDir as main repo root)
 	ctx.CurrentWorkDir = worktreePath
 
-	// Ensure the worktree has a clean state by committing any files
-	status, err = getGitCommandOutput(ctx.CurrentWorkDir, "status", "--porcelain")
-	if err != nil {
-		return fmt.Errorf("failed to check worktree status: %w", err)
-	}
-	if strings.TrimSpace(status) != "" {
-		if err := runGitCommand(ctx.CurrentWorkDir, "add", "."); err != nil {
-			return fmt.Errorf("failed to stage files in worktree: %w", err)
-		}
-		if err := runGitCommand(ctx.CurrentWorkDir, "commit", "-m", "Worktree setup"); err != nil {
-			return fmt.Errorf("failed to commit worktree files: %w", err)
-		}
+	// Ensure the worktree has a clean state
+	if err := gitCommitIfDirty(ctx.CurrentWorkDir, "Worktree setup"); err != nil {
+		return fmt.Errorf("failed to clean worktree: %w", err)
 	}
 
 	return nil
@@ -199,8 +154,28 @@ func verifyCurrentBranch(ctx *eacgodog.TestContext, expectedBranch string) error
 
 // ensureCleanWorkspace ensures there are no uncommitted changes.
 func ensureCleanWorkspace(ctx *eacgodog.TestContext) error {
-	// Use the helper to commit any uncommitted files
-	return commitAllUncommittedFiles(ctx)
+	if err := commitAllUncommittedFiles(ctx); err != nil {
+		return err
+	}
+
+	// Verify the workspace is actually clean after commit
+	workDir := ctx.CurrentWorkDir
+	if workDir == "" {
+		workDir = ctx.IsolatedDir
+	}
+	status, err := getGitCommandOutput(workDir, "status", "--porcelain")
+	if err != nil {
+		return fmt.Errorf("failed to verify clean state: %w", err)
+	}
+	if strings.TrimSpace(status) != "" {
+		// Diagnostic: dump git config and diff for first dirty file
+		configOut, _ := getGitCommandOutput(workDir, "config", "--list", "--show-origin")
+		envDump := fmt.Sprintf("GIT_CONFIG_GLOBAL=%q GIT_CONFIG_SYSTEM=%q", os.Getenv("GIT_CONFIG_GLOBAL"), os.Getenv("GIT_CONFIG_SYSTEM"))
+		diffOut, _ := getGitCommandOutput(workDir, "diff", "--stat", "HEAD")
+		return fmt.Errorf("workspace still dirty after cleanup:\n%s\nworkDir: %s\nisolatedDir: %s\nenv: %s\ngit config:\n%s\ngit diff --stat HEAD:\n%s",
+			status, workDir, ctx.IsolatedDir, envDump, configOut, diffOut)
+	}
+	return nil
 }
 
 // createUncommittedChanges creates uncommitted changes in the workspace.
@@ -238,10 +213,29 @@ func verifyBranchExists(ctx *eacgodog.TestContext, branch string) error {
 	return nil
 }
 
+// gitCommitIfDirty stages and commits all changes in one subprocess call.
+// Equivalent to: git status --porcelain → git add . → git commit, but batched
+// into a single bash invocation to reduce subprocess overhead.
+func gitCommitIfDirty(dir, message string) error {
+	script := fmt.Sprintf(
+		`if [ -n "$(git status --porcelain)" ]; then git add . && git commit -m %q; fi`,
+		message,
+	)
+	cmd := exec.Command("bash", "-c", script)
+	cmd.Dir = dir
+	cmd.Env = gitTestEnv()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git commit-if-dirty failed: %w\nOutput: %s", err, string(output))
+	}
+	return nil
+}
+
 // runGitCommand runs a git command in the specified directory.
 func runGitCommand(dir string, args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	cmd.Env = gitTestEnv()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git %v failed: %w\nOutput: %s", args, err, string(output))
@@ -253,9 +247,19 @@ func runGitCommand(dir string, args ...string) error {
 func getGitCommandOutput(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	cmd.Env = gitTestEnv()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("git %v failed: %w\nOutput: %s", args, err, string(output))
 	}
 	return string(output), nil
+}
+
+// gitTestEnv returns environment variables for subprocess git commands,
+// isolated from global/system git config. This prevents Windows
+// core.autocrlf=true from causing CRLF conversion in test worktrees.
+func gitTestEnv() []string {
+	env := os.Environ()
+	env = append(env, "GIT_CONFIG_GLOBAL=", "GIT_CONFIG_SYSTEM=")
+	return env
 }

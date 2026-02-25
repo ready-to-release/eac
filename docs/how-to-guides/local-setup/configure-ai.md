@@ -125,7 +125,7 @@ echo "test" > test.txt
 git add test.txt
 
 # Generate AI commit message
-eac create commit-message
+eac get commit-message
 
 # Or commit directly with AI message
 eac work commit
@@ -182,7 +182,7 @@ eac init --ai claude-api
 # 3. Test it
 echo "test change" > test.txt
 git add test.txt
-eac create commit-message
+eac get commit-message
 
 # Output:
 # Analyzing staged changes...
@@ -207,7 +207,7 @@ eac init --ai claude-api --ai-token sk-ant-api03-...
 # 2. Test it (no environment variable needed!)
 echo "test change" > test.txt
 git add test.txt
-eac create commit-message
+eac get commit-message
 
 # Works immediately - token is in the config file
 ```
@@ -280,4 +280,4 @@ git status | grep ai-provider.personal
 
 - [`init`](../../reference/eac/commands/init/init.md) - Full init command reference
 - [`work commit`](../../reference/eac/commands/work/commit.md) - Commit with AI messages
-- [`create commit-message`](../../reference/eac/commands/create/commit-message.md) - Generate commit messages
+- [`get commit-message`](../../reference/eac/commands/get/commit-message.md) - Generate commit messages

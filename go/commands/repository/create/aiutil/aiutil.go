@@ -1,5 +1,5 @@
 // Package aiutil provides shared utilities for AI-powered commit message generation commands
-// (create commit-message, create squash-message).
+// (get commit-message, get squash-message).
 package aiutil
 
 import (

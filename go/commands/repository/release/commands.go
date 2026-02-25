@@ -8,7 +8,7 @@ import (
 func Commands() []core.CommandPort {
 	return []core.CommandPort{
 		&releaseAwaitDepsCommand{},
-		&releaseGenerateModuleCalverCommand{},
+		&releaseGetModuleCalverCommand{},
 		&releaseChangelogCommand{},
 		&releaseCheckCICommand{},
 		&releaseCheckExistsCommand{},

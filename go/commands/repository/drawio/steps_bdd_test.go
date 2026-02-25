@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
@@ -19,13 +20,15 @@ import (
 
 // drawioContext holds state for drawio tests.
 type drawioContext struct {
-	dockerAvailable bool
-	lastDecoded     string
+	lastDecoded string
 }
 
 // registerSteps registers step definitions for drawio command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	dCtx := &drawioContext{}
+
+	// Wire in-process command dispatch to avoid subprocess overhead
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
 
 	// Background steps
 	sc.Step(`^the drawio-oci Docker image is available$`, func() error {
@@ -70,32 +73,42 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 }
 
+// dockerCheckOnce caches the Docker availability check across all scenarios.
+// Docker availability doesn't change between scenarios, so checking once is sufficient.
+var (
+	dockerCheckOnce sync.Once
+	dockerErr       error
+)
+
 // drawioEnsureImage builds the drawio-oci Docker image if needed.
+// Uses sync.Once to avoid repeated Docker checks across scenarios.
 func drawioEnsureImage(ctx *eacgodog.TestContext, dCtx *drawioContext) error {
-	// Check if Docker is available
-	cmd := exec.Command("docker", "info")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker is not available: %w", err)
-	}
-
-	// Check if image exists
-	cmd = exec.Command("docker", "image", "inspect", "cli-drawio-oci:latest")
-	if err := cmd.Run(); err != nil {
-		// Image doesn't exist, build it using ORIGINAL repo root (not isolated dir)
-		repoRoot := ctx.OriginalRepoRoot
-		dockerfilePath := filepath.Join(repoRoot, "containers", "drawio-oci", "Dockerfile")
-		contextPath := filepath.Join(repoRoot, "containers", "drawio-oci")
-
-		cmd = exec.Command("docker", "build", "-t", "cli-drawio-oci:latest", "-f", dockerfilePath, contextPath)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
+	dockerCheckOnce.Do(func() {
+		// Check if Docker is available
+		cmd := exec.Command("docker", "info")
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to build drawio-oci image: %w: %s", err, stderr.String())
+			dockerErr = fmt.Errorf("docker is not available: %w", err)
+			return
 		}
-	}
 
-	dCtx.dockerAvailable = true
-	return nil
+		// Check if image exists
+		cmd = exec.Command("docker", "image", "inspect", "cli-drawio-oci:latest")
+		if err := cmd.Run(); err != nil {
+			// Image doesn't exist, build it using ORIGINAL repo root (not isolated dir)
+			repoRoot := ctx.OriginalRepoRoot
+			dockerfilePath := filepath.Join(repoRoot, "containers", "drawio-oci", "Dockerfile")
+			contextPath := filepath.Join(repoRoot, "containers", "drawio-oci")
+
+			cmd = exec.Command("docker", "build", "-t", "cli-drawio-oci:latest", "-f", dockerfilePath, contextPath)
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if buildErr := cmd.Run(); buildErr != nil {
+				dockerErr = fmt.Errorf("failed to build drawio-oci image: %w: %s", buildErr, stderr.String())
+				return
+			}
+		}
+	})
+	return dockerErr
 }
 
 // drawioCreateTestFile creates a test .drawio.png file directly (no Docker needed).
@@ -169,34 +182,52 @@ func drawioVerifyPNG(ctx *eacgodog.TestContext, filename string) error {
 
 // drawioDecodeAndVerify runs drawio decode command and checks for content in the decoded XML.
 func drawioDecodeAndVerify(ctx *eacgodog.TestContext, dCtx *drawioContext, filename, expectedContent string) error {
-	// Run the actual decode command to properly decode base64+deflate content
-	// We need to run this without affecting the main command context state
-	binaryPath := paths.CommandsBinaryPath(ctx.OriginalRepoRoot)
+	// Use in-process dispatch if available (avoids subprocess overhead)
+	if ctx.CommandDispatcher != nil {
+		// Save and restore command context state since this is a side-channel decode
+		savedOutput := ctx.CommandOutput
+		savedExitCode := ctx.ExitCode
+		savedErr := ctx.CommandError
+		defer func() {
+			ctx.CommandOutput = savedOutput
+			ctx.ExitCode = savedExitCode
+			ctx.CommandError = savedErr
+		}()
 
-	cmd := exec.Command(binaryPath, "drawio", "decode", "--input", filename)
+		if err := ctx.RunCommand(fmt.Sprintf("drawio decode --input %s", filename)); err != nil {
+			return fmt.Errorf("decode failed: %w", err)
+		}
+		if ctx.ExitCode != 0 {
+			return fmt.Errorf("decode failed (exit %d): %s", ctx.ExitCode, ctx.CommandOutput)
+		}
+		dCtx.lastDecoded = ctx.CommandOutput
+	} else {
+		// Fallback to subprocess if no dispatcher
+		binaryPath := paths.CommandsBinaryPath(ctx.OriginalRepoRoot)
 
-	// Set working directory to isolated dir if in isolation
-	if ctx.IsolatedDir != "" {
-		cmd.Dir = ctx.IsolatedDir
+		cmd := exec.Command(binaryPath, "drawio", "decode", "--input", filename)
+
+		if ctx.IsolatedDir != "" {
+			cmd.Dir = ctx.IsolatedDir
+		}
+
+		env := os.Environ()
+		if ctx.IsolatedDir != "" {
+			env = append(env, fmt.Sprintf("CLIE_REPO_ROOT=%s", ctx.IsolatedDir))
+			env = append(env, fmt.Sprintf("CLIE_PWD=%s", ctx.IsolatedDir))
+		}
+		cmd.Env = env
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("decode failed: %w: %s", err, stderr.String())
+		}
+
+		dCtx.lastDecoded = stdout.String()
 	}
-
-	// Build environment with CLIE_REPO_ROOT for proper path resolution
-	env := os.Environ()
-	if ctx.IsolatedDir != "" {
-		env = append(env, fmt.Sprintf("CLIE_REPO_ROOT=%s", ctx.IsolatedDir))
-		env = append(env, fmt.Sprintf("CLIE_PWD=%s", ctx.IsolatedDir))
-	}
-	cmd.Env = env
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("decode failed: %w: %s", err, stderr.String())
-	}
-
-	dCtx.lastDecoded = stdout.String()
 
 	if !strings.Contains(dCtx.lastDecoded, expectedContent) {
 		preview := dCtx.lastDecoded

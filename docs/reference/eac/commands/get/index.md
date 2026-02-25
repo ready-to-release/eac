@@ -15,6 +15,7 @@ Retrieve repository data in structured JSON format for automation and scripting.
 | [get changed-modules-ci](./changed-modules-ci.md) | Get modules requiring rebuild since last CI   |
 | [get changelog](./changelog.md)                   | Get changelog data in structured format       |
 | [get commands](./commands.md)                     | Retrieve repository data in structured format |
+| [get commit-message](./commit-message.md)         | Generate AI-powered commit messages           |
 | [get config](./config.md)                         | Get all EAC configuration                     |
 | [get dependencies](./dependencies.md)             | Get module dependency graph                   |
 | [get environments](./environments.md)             | Get all environment contracts                 |
@@ -23,6 +24,7 @@ Retrieve repository data in structured JSON format for automation and scripting.
 | [get release-notes](./release-notes.md)           | Get release notes data in structured format   |
 | [get specs](./specs.md)                           | Get specifications data in structured format  |
 | [get specs-unused-steps](./specs-unused-steps.md) | Detect unused godog step definitions          |
+| [get squash-message](./squash-message.md)         | Generate squash commit message from branch    |
 | [get suite](./suite.md)                           | Get test suite information                    |
 | [get test-timings](./test-timings.md)             | Get test timing information                   |
 | [get tests](./tests.md)                           | Get all tests in the repository               |

@@ -21,7 +21,7 @@ The design generation supports **three-tier prompt system** for customization:
 2. **Team Override**: `.eac/templates/ai/design/design.md` (team-wide customization)
 3. **System Default**: `templates/ai/design/design.md` (fallback)
 
-See [commit-message](./commit-message.md#custom-prompts) for detailed customization guide.
+See [commit-message](../get/commit-message.md#custom-prompts) for detailed customization guide.
 
 ## See Also
 

@@ -12,17 +12,15 @@ EAC provides many commands organized into top-level categories:
 
 **Purpose**: AI-powered content generation
 
-Create commands use AI to generate various artifacts including commit messages, specifications, architecture diagrams, and release documentation.
+Create commands use AI to generate various artifacts including specifications, architecture diagrams, and release documentation.
 
 **Commands**:
 
-- `create commit-message` - Generate semantic commit messages from staged changes
 - `create design` - Generate architecture diagrams (workspace.dsl) with AI
 - `create pr` - Create pull requests with AI-generated descriptions
 - `create risk-assess` - Update OSCAL assessment-results with test and security evidence
 - `create risk-profile` - Create OSCAL profiles from risk assessments using AI
 - `create spec` - Generate Gherkin specifications from natural language
-- `create squash-message` - Generate squash merge commit messages
 
 **When to use**: During development and release preparation when you need AI assistance to generate structured documentation or content.
 
@@ -75,6 +73,11 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 **Specifications**:
 
 - `get specs unused-steps` - Detect unused godog step definitions
+
+**AI-Powered**:
+
+- `get commit-message` - Generate semantic commit messages from staged changes
+- `get squash-message` - Generate squash merge commit messages
 
 **When to use**: In CI/CD pipelines, build scripts, or when you need programmatic access to repository data.
 
@@ -269,7 +272,7 @@ Release commands manage the release process from changelog generation through ta
 - `release pending` - Check if module has pending changes for release
 - `release this` - Finalize changelog and prepare module for release
 - `release get-version` - Extract latest version from changelog
-- `release generate-module-calver` - Generate CalVer tag for a module
+- `release get-module-calver` - Generate CalVer tag for a module
 - `release clie` - Create SemVer tag for releasing clie
 - `release check-ci` - Check CI status before releasing
 - `release tag-pending` - Check for changelog versions without git tags
@@ -384,13 +387,13 @@ Most commands follow a **verb-first naming pattern**: `<verb> <noun> [<modifier>
 - `get modules` - verb: get, noun: modules
 - `show dependencies` - verb: show, noun: dependencies
 - `validate contracts` - verb: validate, noun: contracts
-- `create commit-message` - verb: create, noun: commit-message
+- `get commit-message` - verb: get, noun: commit-message
 
 ### Multi-word Commands
 
 Some commands have multi-word names connected by hyphens:
 
-- `create commit-message`
+- `get commit-message`
 - `get changed-modules-ci`
 - `pipeline ci dispatch-and-wait`
 
@@ -420,7 +423,7 @@ See [Naming Conventions](./naming-conventions.md) for detailed rules.
 - **...see what modules exist**: `show modules`
 - **...build a module**: `build <module>`
 - **...run tests**: `test <module>` or `test suite <name>`
-- **...commit my changes**: `work commit` or `create commit-message`
+- **...commit my changes**: `work commit` or `get commit-message`
 - **...create a pull request**: `create pr`
 - **...check for errors**: `validate` commands
 - **...scan for security issues**: `scan` commands
@@ -442,7 +445,7 @@ See [Naming Conventions](./naming-conventions.md) for detailed rules.
 **I'm working on...**
 
 - **Local development**: `work create`, `create spec`, `validate`, `test`, `build`
-- **Committing changes**: `work commit`, `create commit-message`
+- **Committing changes**: `work commit`, `get commit-message`
 - **Code review**: `create pr`, `show files-changed`
 - **CI/CD**: `pipeline run`, `get changed-modules-ci`, `test suite`
 - **Releases**: `release` commands

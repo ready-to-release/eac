@@ -3,16 +3,16 @@ package commitmessage
 import (
 	"fmt"
 
-	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/get/commit-message/internal"
 	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
-func CreateCommitMessage() int {
-	return createCommitMessageWithDeps(defaultDeps())
+func GetCommitMessage() int {
+	return getCommitMessageWithDeps(defaultDeps())
 }
 
-func createCommitMessageWithDeps(deps *Deps) int {
+func getCommitMessageWithDeps(deps *Deps) int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {

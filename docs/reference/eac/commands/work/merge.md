@@ -4,6 +4,6 @@
 
 ## See Also
 
-- [create squash-message](../create/squash-message.md)
+- [get squash-message](../get/squash-message.md)
 - [work remove](./remove.md)
 - [work Commands](../categories/work.md)

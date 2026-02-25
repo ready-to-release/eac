@@ -119,6 +119,6 @@ eac init --ai claude-api
 ## See Also
 
 - [How-to Guide](../../../../how-to-guides/local-setup/configure-ai.md) - Setup walkthrough
-- [create commit-message](../create/commit-message.md) - AI commit messages
+- [get commit-message](../get/commit-message.md) - AI commit messages
 - [create spec](../create/spec.md) - AI specification generation
 - [init Commands](../categories/init.md)

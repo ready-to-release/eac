@@ -37,7 +37,7 @@ eac build -h
 
 ### Debug Flag
 
-**Available on**: AI-powered commands (`create` category)
+**Available on**: AI-powered commands (`create` and `get` categories)
 
 ```bash
 --debug, -d         Save intermediate AI outputs for inspection
@@ -47,7 +47,7 @@ eac build -h
 
 ```bash
 # Debug commit message generation
-eac create commit-message --debug
+eac get commit-message --debug
 
 # Debug specification generation
 eac create spec "User can login" --debug
@@ -278,7 +278,7 @@ eac validate markdown --fix docs/
 eac validate specs --strict
 ```
 
-#### create commit-message
+#### get commit-message
 
 ```bash
 --commit, -c        Automatically create the commit (skip editor)
@@ -289,13 +289,13 @@ eac validate specs --strict
 
 ```bash
 # Generate and commit automatically
-eac create commit-message --commit
+eac get commit-message --commit
 
 # Debug AI generation
-eac create commit-message --debug
+eac get commit-message --debug
 
 # Both
-eac create commit-message --commit --debug
+eac get commit-message --commit --debug
 ```
 
 #### work commands
@@ -432,7 +432,7 @@ GOOGLE_API_KEY       # Google API key (for create commands)
 ```bash
 # Set temporarily
 export ANTHROPIC_API_KEY="sk-ant-api03-..."
-eac create commit-message
+eac get commit-message
 
 # Set permanently (add to ~/.bashrc or ~/.zshrc)
 echo 'export ANTHROPIC_API_KEY="sk-ant-api03-..."' >> ~/.bashrc
@@ -464,11 +464,11 @@ GIT_EDITOR           # Git-specific editor (overrides EDITOR)
 ```bash
 # Set default editor
 export EDITOR="vim"
-eac create commit-message
+eac get commit-message
 
 # Set git-specific editor
 export GIT_EDITOR="code --wait"
-eac create commit-message
+eac get commit-message
 ```
 
 ---

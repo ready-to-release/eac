@@ -32,9 +32,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -236,118 +234,25 @@ git:
 	return nil
 }
 
-// initGitRepository initializes a git repository in the isolated directory.
+// initGitRepository initializes a git repository in the isolated directory using go-git.
 // This is required for tests that run git commands like `git add`, `git commit`, etc.
-// Ensures the repository is always on "main" branch for consistency across git versions.
+// Uses in-process go-git instead of exec.Command for ~10x speedup on Windows.
 func (t *TestIsolation) initGitRepository() error {
 	if t.isolatedDir == "" {
 		return fmt.Errorf("isolated directory not set")
 	}
 
-	// Try to initialize with main branch (git >= 2.28)
-	cmd := exec.Command("git", "init", "--initial-branch=main")
-	cmd.Dir = t.isolatedDir
-	if err := cmd.Run(); err != nil {
-		// Fall back to regular init for older git versions
-		cmd = exec.Command("git", "init")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git init failed: %w (output: %s)", err, string(output))
-		}
-	}
-
-	// Configure git user for commits (required for git commit)
-	if err := t.gitConfig("user.name", "Test User"); err != nil {
+	// GitInit handles: init, config user.name/email, initial commit, branch rename to "main"
+	if _, err := GitInit(t.isolatedDir); err != nil {
 		return err
-	}
-	if err := t.gitConfig("user.email", "test@example.com"); err != nil {
-		return err
-	}
-
-	// Check current branch and normalize to "main" if needed
-	// This handles older git versions that create "master" by default
-	currentBranch, err := t.getCurrentBranch()
-	if err != nil {
-		return err
-	}
-
-	if currentBranch != "main" {
-		// We're on wrong branch (probably "master" from old git)
-		// Create initial commit first, then rename branch to "main"
-		readmePath := filepath.Join(t.isolatedDir, "README.md")
-		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0o644); err != nil {
-			return fmt.Errorf("failed to create README.md: %w", err)
-		}
-
-		cmd = exec.Command("git", "add", "README.md")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git add failed: %w (output: %s)", err, string(output))
-		}
-
-		cmd = exec.Command("git", "commit", "-m", "Initial commit")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git commit failed: %w (output: %s)", err, string(output))
-		}
-
-		// Rename current branch to "main"
-		cmd = exec.Command("git", "branch", "-M", "main")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git branch -M main failed: %w (output: %s)", err, string(output))
-		}
-	} else {
-		// Already on main, just create initial commit
-		// This allows tests to run `git reset HEAD .` and other HEAD-dependent commands
-		readmePath := filepath.Join(t.isolatedDir, "README.md")
-		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0o644); err != nil {
-			return fmt.Errorf("failed to create README.md: %w", err)
-		}
-
-		cmd = exec.Command("git", "add", "README.md")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git add failed: %w (output: %s)", err, string(output))
-		}
-
-		cmd = exec.Command("git", "commit", "-m", "Initial commit")
-		cmd.Dir = t.isolatedDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git commit failed: %w (output: %s)", err, string(output))
-		}
 	}
 
 	// Set up a self-referencing "origin" remote for testing work-pull and other remote-dependent commands
-	// This allows work-pull to fetch from "origin/main" even in isolated tests
-	cmd = exec.Command("git", "remote", "add", "origin", t.isolatedDir)
-	cmd.Dir = t.isolatedDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git remote add origin failed: %w (output: %s)", err, string(output))
+	if err := GitAddRemote(t.isolatedDir, "origin", t.isolatedDir); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-// gitConfig sets a git configuration value in the isolated repository.
-func (t *TestIsolation) gitConfig(key, value string) error {
-	cmd := exec.Command("git", "config", key, value)
-	cmd.Dir = t.isolatedDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git config %s failed: %w (output: %s)", key, err, string(output))
-	}
-	return nil
-}
-
-// getCurrentBranch returns the current branch name in the isolated repository.
-func (t *TestIsolation) getCurrentBranch() (string, error) {
-	cmd := exec.Command("git", "branch", "--show-current")
-	cmd.Dir = t.isolatedDir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current branch: %w (output: %s)", err, string(output))
-	}
-	return strings.TrimSpace(string(output)), nil
 }
 
 // Cleanup removes the temporary directory.

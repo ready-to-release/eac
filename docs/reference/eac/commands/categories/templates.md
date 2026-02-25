@@ -51,6 +51,6 @@ clie templates install specs
 
 - [create design](../create/design.md) - AI architecture design
 - [create spec](../create/spec.md) - AI specification generation
-- [create commit-message](../create/commit-message.md) - AI commit messages
+- [get commit-message](../get/commit-message.md) - AI commit messages
 - [validate markdown](../validate/markdown.md)
 - [validate books](../validate/books.md)

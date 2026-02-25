@@ -35,7 +35,7 @@ git add src/auth/login.go src/auth/login_test.go
 ### 2. Generate Commit Message
 
 ```bash
-eac create commit-message
+eac get commit-message
 ```
 
 **What happens**: AI analyzes changes, generates a semantic commit message with validation, and opens editor for review
@@ -59,7 +59,7 @@ Review, edit if needed, save and close editor.
 ## Auto-Commit (Skip Editor)
 
 ```bash
-eac create commit-message --commit
+eac get commit-message --commit
 ```
 
 **What happens**: Generates message and commits automatically without opening editor
@@ -73,7 +73,7 @@ You've added login functionality and want a good commit message:
 git add src/auth/
 
 # Generate and commit
-eac create commit-message
+eac get commit-message
 
 # AI generates:
 # feat(auth): implement user login with session management
@@ -98,6 +98,6 @@ eac create commit-message
 
 ## Related Commands
 
-- [`create commit-message`](../../../../reference/eac/commands/create/commit-message.md) - Full command reference
+- [`get commit-message`](../../../../reference/eac/commands/get/commit-message.md) - Full command reference
 - [`work commit`](../../../../reference/eac/commands/work/commit.md) - Commit in workspace
-- [`create squash-message`](../../../../reference/eac/commands/create/squash-message.md) - Generate squash message
+- [`get squash-message`](../../../../reference/eac/commands/get/squash-message.md) - Generate squash message

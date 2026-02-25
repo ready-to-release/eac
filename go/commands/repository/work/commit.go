@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	commitmessage "github.com/ready-to-release/eac/go/commands/repository/create/commit-message"
+	commitmessage "github.com/ready-to-release/eac/go/commands/repository/get/commit-message"
 	"github.com/ready-to-release/eac/go/commands/repository/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/tool"
@@ -248,5 +248,5 @@ func commitWithAI(debug bool) int {
 	}
 
 	// Call commit message
-	return commitmessage.CreateCommitMessage()
+	return commitmessage.GetCommitMessage()
 }

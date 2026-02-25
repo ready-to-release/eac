@@ -129,8 +129,7 @@ func PipelineCISchedule() int {
 	}
 
 	// Create dispatcher.
-	var dispatcher CIWorkflowDispatcher
-	dispatcher = NewGHWorkflowDispatcher(workspaceRoot)
+	dispatcher := NewGHWorkflowDispatcher(workspaceRoot)
 
 	// Build scheduler.
 	scheduler := NewCIScheduler(cfg, dispatcher)

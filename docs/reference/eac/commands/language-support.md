@@ -100,7 +100,7 @@ Security tools detect languages automatically.
 - [`release-this`](./release/this.md) - Prepares module for release
 - [`release-pending`](./release/pending.md) - Checks for pending releases
 - [`release-check-ci`](./release/check-ci.md) - Verifies CI status before release
-- [`release-generate-module-calver`](./release/generate-module-calver.md) - Generates calendar version tags
+- [`release-get-module-calver`](./release/get-module-calver.md) - Generates calendar version tags
 - [`release-get-version`](./release/get-version.md) - Extracts version from changelog
 - [`release-tag-pending`](./release/tag-pending.md) - Creates git tags for releases
 
@@ -125,9 +125,9 @@ Security tools detect languages automatically.
 
 - [`create-spec`](./create/spec.md) - Generates Gherkin specifications
 - [`create-design`](./create/design.md) - Generates Structurizr architecture diagrams
-- [`create-commit-message`](./create/commit-message.md) - Generates commit messages
+- [`get-commit-message`](./get/commit-message.md) - Generates commit messages
 - [`create-pr`](./create/pr.md) - Generates pull request descriptions
-- [`create-squash-message`](./create/squash-message.md) - Generates squash commit messages
+- [`get-squash-message`](./get/squash-message.md) - Generates squash commit messages
 
 AI providers adapt output to module context.
 

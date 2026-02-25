@@ -29,4 +29,4 @@ eac work merge
 ## See Also
 
 - [Category Overview](../categories/work.md)
-- [create commit-message](../create/commit-message.md)
+- [get commit-message](../get/commit-message.md)

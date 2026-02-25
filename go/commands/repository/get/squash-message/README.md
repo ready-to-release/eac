@@ -1,4 +1,4 @@
-# create/squash-message
+# get/squash-message
 
 Generates a comprehensive squash commit message from all branch commits compared to a base branch, using AI to synthesize the commit history and cumulative diff into a cohesive message suitable for GitHub PR squash merges.
 
@@ -43,7 +43,7 @@ Generates a comprehensive squash commit message from all branch commits compared
 
 ## Role in System
 
-The `create squash-message` command generates publication-ready squash commit messages for `eac`, analyzing the full branch history and diff to produce a conventional-commit-formatted message with auditor summary, change breakdown, and module attribution. It complements `create commit-message` (for individual commits) by synthesizing an entire branch's work into a single cohesive message for PR squash merges.
+The `get squash-message` command generates publication-ready squash commit messages for `eac`, analyzing the full branch history and diff to produce a conventional-commit-formatted message with auditor summary, change breakdown, and module attribution. It complements `get commit-message` (for individual commits) by synthesizing an entire branch's work into a single cohesive message for PR squash merges.
 
 ## Code Health
 

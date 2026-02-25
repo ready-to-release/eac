@@ -124,7 +124,7 @@ Each command has a dedicated reference page with:
 - **Error Handling**: Common errors and solutions
 - **Related Commands**: Links to related functionality
 
-**Example**: [create commit-message](./create/commit-message.md)
+**Example**: [get commit-message](./get/commit-message.md)
 
 ## Output Formats
 

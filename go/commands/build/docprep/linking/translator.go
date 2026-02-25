@@ -67,6 +67,8 @@ func (m *TranslationMap) BuildTranslations(siteURL string) error {
 		sourceToStaging[sourcePath] = stagingPath
 	}
 
+	var brokenLinks []string
+
 	for stagingFile, sourceFile := range m.FileMap {
 		if !strings.HasSuffix(strings.ToLower(sourceFile), ".md") {
 			continue
@@ -147,8 +149,9 @@ func (m *TranslationMap) BuildTranslations(siteURL string) error {
 						newLink = baseURL + relPath + anchor
 					}
 				} else {
-					return fmt.Errorf("BROKEN LINK in %s: '%s' points to '%s' which doesn't exist in source",
-						sourceFile, oldLink, absSourcePath)
+					brokenLinks = append(brokenLinks, fmt.Sprintf("  %s: '%s' -> '%s'",
+						sourceFile, oldLink, absSourcePath))
+					continue
 				}
 			} else {
 				relPath, err := filepath.Rel(stagingDir, targetStagingFile)
@@ -167,6 +170,11 @@ func (m *TranslationMap) BuildTranslations(siteURL string) error {
 		if len(trans.Translations) > 0 {
 			m.Translations[stagingFile] = trans
 		}
+	}
+
+	if len(brokenLinks) > 0 {
+		sort.Strings(brokenLinks)
+		return fmt.Errorf("BROKEN LINKS (%d found):\n%s", len(brokenLinks), strings.Join(brokenLinks, "\n"))
 	}
 
 	return nil

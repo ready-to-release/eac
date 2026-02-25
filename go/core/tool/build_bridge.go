@@ -63,20 +63,7 @@ func (b *BuildBridge) SetToolSystem(registry Registry, resolver *DefaultResolver
 func (b *BuildBridge) GetHandler(name string) build.BuilderPort {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-
-	// Check native handlers first
-	if h, ok := b.nativeHandlers[name]; ok {
-		return h
-	}
-
-	// Fall back to tool registry
-	if b.registry != nil && b.executor != nil {
-		if tool, ok := b.registry.Get(name); ok {
-			return NewToolHandlerAdapter(tool, b.executor)
-		}
-	}
-
-	return nil
+	return b.getHandlerUnlocked(name)
 }
 
 // GetAllHandlers returns all available handlers (native + tool registry).
@@ -324,6 +311,14 @@ var globalToolSystem *ToolSystem
 // GlobalToolSystem returns the global ToolSystem, or nil if not initialized.
 func GlobalToolSystem() *ToolSystem {
 	return globalToolSystem
+}
+
+// SetGlobalToolSystemForTesting sets the global ToolSystem to a test instance.
+// Use NewToolSystemForTesting() to create a minimal instance. Call this in
+// TestMain when enabling in-process command dispatch for commands that depend
+// on GlobalToolSystem().
+func SetGlobalToolSystemForTesting(ts *ToolSystem) {
+	globalToolSystem = ts
 }
 
 // InitializeGlobalBridges initializes all global bridges (build, lint, test, scan, serve) with tool system.

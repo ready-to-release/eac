@@ -39,7 +39,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 
 **I want to...**
 
-- **...commit changes**: [work commit](../work/commit.md) or [create commit-message](../create/commit-message.md)
+- **...commit changes**: [work commit](../work/commit.md) or [get commit-message](../get/commit-message.md)
 - **...create a PR**: [create pr](../create/pr.md)
 - **...see changed files**: [show files-changed](../show/files-changed.md)
 - **...get changed modules**: [get changed-modules](../get/changed-modules.md)

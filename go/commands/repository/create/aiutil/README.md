@@ -1,6 +1,6 @@
 # aiutil
 
-Shared utilities for AI-powered generation commands (create commit-message, create squash-message).
+Shared utilities for AI-powered generation commands (get commit-message, get squash-message).
 
 ## Key Types
 
@@ -34,7 +34,7 @@ Shared utilities for AI-powered generation commands (create commit-message, crea
 
 ## Role in System
 
-This package serves as the shared foundation for AI-powered content generation commands in the CLI. It eliminates duplication by centralizing the AI executor pipeline -- from provider setup through schema validation and retry -- so that individual commands like `create commit-message` and `create squash-message` only need to supply their specific prompt and configuration.
+This package serves as the shared foundation for AI-powered content generation commands in the CLI. It eliminates duplication by centralizing the AI executor pipeline -- from provider setup through schema validation and retry -- so that individual commands like `get commit-message` and `get squash-message` only need to supply their specific prompt and configuration.
 
 ## Code Health
 

@@ -405,7 +405,7 @@ eac release get-version {moniker}
 eac validate release-version {version}
 
 # Generate next version tag (CalVer)
-eac release generate-module-calver {moniker}
+eac release get-module-calver {moniker}
 ```
 
 ## Best Practices

@@ -34,7 +34,7 @@ Generates AI-powered conventional commit messages from staged git changes. Analy
 
 ## Dependencies
 
-- `cli/eac/impl/create/commit-message/internal` -- validation rules and constants
+- `cli/eac/impl/get/commit-message/internal` -- validation rules and constants
 - `clibase/registry` -- command registration
 - `clibase/flags` -- flag validation and parsing
 - `clibase/render` -- table builder for staged file display

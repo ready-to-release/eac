@@ -7,11 +7,9 @@ designs, and risk documentation from repository content.
 
 | Command | Package | Purpose |
 | --- | --- | --- |
-| `eac create commit-message` | [commit-message/](./commit-message/) | Generate AI-powered commit messages from staged changes |
 | `eac create design` | [design/](./design/) | Generate Structurizr DSL workspace files using AI source analysis |
 | `eac create risk-assess` | [risk-assess/](./risk-assess/) | Create OSCAL assessment-results from test and security evidence |
 | `eac create risk-profile` | [risk-profile/](./risk-profile/) | Create OSCAL profile from risk assessment using AI |
-| `eac create squash-message` | [squash-message/](./squash-message/) | Generate squash commit message from branch commits |
 
 ## Small Commands
 
@@ -33,14 +31,14 @@ following Rules/Scenarios patterns suitable for BDD testing with Godog.
 Most create commands follow a common pattern: gather context from the repository,
 construct an AI prompt with relevant source material, invoke the AI model, and write
 the structured output. The `risk-assess` and `risk-profile` commands share tag extraction
-logic from the `risk` package. The `commit-message` and `squash-message` commands both
-analyze git history but differ in scope (staged changes vs. full branch).
+logic from the `risk` package.
 
 ### Common Patterns
 
-- **AI-driven commands** (`commit-message`, `design`, `risk-profile`, `spec`): Use the
+- **AI-driven commands** (`design`, `risk-profile`, `spec`): Use the
   `core/ai` package for prompt construction and model invocation
 - **Evidence-based commands** (`risk-assess`): Aggregate existing test and scan artifacts
   rather than generating new content
-- **Git-analysis commands** (`commit-message`, `squash-message`): Read git diff/log output
-  and produce structured commit messages following conventional commit format
+
+Note: The `commit-message` and `squash-message` commands have been moved to `get/`
+since they are read-only (output to stdout with no side effects).

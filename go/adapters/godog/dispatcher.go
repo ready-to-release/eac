@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -22,6 +24,14 @@ type CommandLookupFunc func(cmdName string) (func() int, bool)
 // but the mutex protects against any future concurrency.
 var osMu sync.Mutex
 
+// ExitCodeDispatchDeclined is returned by the in-process dispatcher when it
+// cannot handle a command in-process. This happens when:
+//   - The command is not registered (e.g., circular dependency prevents import)
+//   - The command requests --help (which requires cobra in a subprocess)
+//
+// RunCommand checks for this sentinel and falls back to subprocess execution.
+const ExitCodeDispatchDeclined = -1
+
 // MakeInProcessDispatcher returns a CommandDispatcher that executes commands
 // in-process via a command lookup function instead of spawning a subprocess.
 // This avoids subprocess overhead and makes BDD tests run much faster.
@@ -33,6 +43,14 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 	return func(args []string) (string, int) {
 		if len(args) < 1 {
 			return "in-process dispatch: need at least 1 arg", 1
+		}
+
+		// Decline --help requests: cobra handles these in subprocess mode
+		// but in-process commands don't have cobra's help infrastructure.
+		for _, arg := range args {
+			if arg == "--help" || arg == "-h" {
+				return "", ExitCodeDispatchDeclined
+			}
 		}
 
 		// Try longest match first (e.g., "templates install docs" before "templates install")
@@ -54,7 +72,7 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 			}
 		}
 		if !ok {
-			return fmt.Sprintf("in-process dispatch: unknown command %q", strings.Join(args, " ")), 1
+			return "", ExitCodeDispatchDeclined
 		}
 
 		osMu.Lock()
@@ -105,6 +123,11 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 			os.Setenv("CLIE_CONTAINER_ROOT", ctx.OriginalRepoRoot)
 		}
 
+		// Apply mock environment variables so in-process commands use mocks
+		// (e.g., CLIE_MOCK_DOCKER, CLIE_MOCK_SECURITY) just like subprocess mode.
+		restoreMockEnv := applyMockEnvironment(ctx)
+		defer restoreMockEnv()
+
 		// Capture stdout and stderr into a combined buffer
 		stdoutR, stdoutW, err := os.Pipe()
 		if err != nil {
@@ -152,6 +175,63 @@ func MakeInProcessDispatcher(ctx *TestContext, lookupFn CommandLookupFunc) func(
 		// Combine stdout and stderr (stdout first for deterministic output)
 		stdoutBuf.Write(stderrBuf.Bytes())
 		return stdoutBuf.String(), exitCode
+	}
+}
+
+// applyMockEnvironment loads testing-mocks.yml and sets mock environment variables
+// (e.g., CLIE_MOCK_DOCKER=true) on the current process. Returns a cleanup function
+// that restores original values. This mirrors buildMockingEnvironment() for subprocess
+// execution, ensuring in-process commands see the same mock configuration.
+func applyMockEnvironment(ctx *TestContext) func() {
+	if ctx.OriginalRepoRoot == "" {
+		return func() {} // No repo root, nothing to configure
+	}
+
+	mockConfigPath := filepath.Join(ctx.OriginalRepoRoot, ".eac", "testing-mocks.yml")
+	mockConfig, err := config.LoadTestingMocks(mockConfigPath)
+	if err != nil {
+		return func() {} // Config not found or invalid, skip mocking
+	}
+
+	mockEnvVars := mockConfig.ToEnvironmentVariables()
+	if len(mockEnvVars) == 0 {
+		return func() {}
+	}
+
+	// Also include per-scenario overrides
+	for key, value := range ctx.MockOverrides {
+		mockEnvVars = append(mockEnvVars, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	// Save originals and set new values
+	origValues := make(map[string]string, len(mockEnvVars))
+	origExists := make(map[string]bool, len(mockEnvVars))
+	for _, envVar := range mockEnvVars {
+		parts := strings.SplitN(envVar, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key, value := parts[0], parts[1]
+		if orig, exists := os.LookupEnv(key); exists {
+			origValues[key] = orig
+			origExists[key] = true
+		}
+		os.Setenv(key, value)
+	}
+
+	return func() {
+		for _, envVar := range mockEnvVars {
+			parts := strings.SplitN(envVar, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := parts[0]
+			if origExists[key] {
+				os.Setenv(key, origValues[key])
+			} else {
+				os.Unsetenv(key)
+			}
+		}
 	}
 }
 

@@ -48,7 +48,7 @@ Loads and manages unified AI configuration from `ai-config.yml`. Provides a thre
 
 ## Role in System
 
-Central configuration provider for all AI generation commands. Commands like `create-spec`, `create-design`, and `create-commit-message` use `ContractLoader` to load their type-specific config, prompts, and validation schemas. The three-tier config loading ensures AI works in container deployments, local development, and user-customized setups.
+Central configuration provider for all AI generation commands. Commands like `create-spec`, `create-design`, and `get-commit-message` use `ContractLoader` to load their type-specific config, prompts, and validation schemas. The three-tier config loading ensures AI works in container deployments, local development, and user-customized setups.
 
 ## Code Health
 

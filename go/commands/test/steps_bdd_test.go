@@ -195,8 +195,8 @@ func makeCucumberScenario(name string, tags []string, status string, durationMs 
 func godogAssetFeatures() []cucumberFeatureJSON {
 	return []cucumberFeatureJSON{
 		{
-			URI:  "specs/eac-commands/create-commit-message/specification.feature",
-			Name: "Create commit message",
+			URI:  "specs/eac-commands/get-commit-message/specification.feature",
+			Name: "Get commit message",
 			Elements: []cucumberElementJSON{
 				makeCucumberScenario("Generate message from commits", []string{"@L2", "@control:au-2", "@deps:go"}, "passed", 1200),
 			},

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/get/commit-message/internal"
 	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -41,7 +41,7 @@ func AutoCleanup(commitMessage string) string {
 
 // parseConfig parses command-line flags and returns configuration values.
 func parseConfig() (debug, autoCommit bool, workspaceRoot string, err error) {
-	args := os.Args[3:] // Skip program name, "create", and "commit-message"
+	args := os.Args[3:] // Skip program name, "get", and "commit-message"
 
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

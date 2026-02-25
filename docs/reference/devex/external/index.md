@@ -70,7 +70,7 @@ eac scan                # Security scanning
 With an AI provider configured:
 
 ```bash
-eac create commit-message   # Generate commit messages
+eac get commit-message      # Generate commit messages
 eac create-pr              # Create PRs with AI descriptions
 eac create-spec            # Generate Gherkin specifications
 ```

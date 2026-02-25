@@ -12,6 +12,7 @@ import (
 	"github.com/cucumber/godog"
 
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
 
 // cacheContext holds test state for cache invalidation scenarios.
@@ -20,6 +21,7 @@ type cacheContext struct {
 	mockedCIStatus map[string]mockedModuleCI
 	changedFiles   []string
 	currentHeadSHA string
+	moduleRegistry *modules.Registry // cached per-scenario to avoid repeated disk I/O
 }
 
 type mockedModuleCI struct {
@@ -39,9 +41,27 @@ func resetCacheContext() {
 	}
 }
 
+// getOrLoadRegistry returns the cached module registry, loading from disk if needed.
+// This avoids repeated YAML parsing within the same scenario.
+func getOrLoadRegistry(isolatedDir string) (*modules.Registry, error) {
+	if cacheCtx.moduleRegistry != nil {
+		return cacheCtx.moduleRegistry, nil
+	}
+	reg, err := modules.LoadFromWorkspaceNoValidation(isolatedDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load module registry: %w", err)
+	}
+	cacheCtx.moduleRegistry = reg
+	return reg, nil
+}
+
 // registerCacheSteps registers step definitions for cache invalidation feature specs.
 func registerCacheSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	resetCacheContext()
+
+	// Enable in-process domain dispatch for cache invalidation tests.
+	// This avoids subprocess overhead (~200-500ms per call on Windows).
+	ctx.CommandDispatcher = makeCoreInProcessDispatcher(ctx)
 
 	// Hook to capture HEAD SHA after isolation is set up
 	sc.After(func(ctx2 context.Context, sc *godog.Scenario, err error) (context.Context, error) {

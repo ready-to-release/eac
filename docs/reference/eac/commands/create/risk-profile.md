@@ -21,7 +21,7 @@ The risk profile generation supports **three-tier prompt system** for customizat
 2. **Team Override**: `.eac/templates/ai/risk/profile.md` (team-wide customization)
 3. **System Default**: `templates/ai/risk/profile.md` (fallback)
 
-See [commit-message](./commit-message.md#custom-prompts) for detailed customization guide.
+See [commit-message](../get/commit-message.md#custom-prompts) for detailed customization guide.
 
 ## See Also
 

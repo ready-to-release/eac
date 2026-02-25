@@ -442,19 +442,19 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         if (fs.existsSync(binaryPath)) {
             // Use pre-built binary
             command = binaryPath;
-            args = ['create', 'commit-message'];
+            args = ['get', 'commit-message'];
             cwd = workspacePath;
             log(`[commit message] Using pre-built binary: ${binaryPath}`);
         } else {
             // Fall back to go run (requires Go in PATH)
             const cliPath = path.join(workspacePath, 'go', 'cli', 'eac');
             command = 'go';
-            args = ['run', '.', 'create', 'commit-message'];
+            args = ['run', '.', 'get', 'commit-message'];
             cwd = cliPath;
             log(`[commit message] Pre-built binary not found, using go run from: ${cliPath}`);
         }
 
-        // Call create commit-message which handles everything: generation, cleanup, validation, auto-fix
+        // Call get commit-message which handles everything: generation, cleanup, validation, auto-fix
         const childProcess = child_process.spawn(command, args, {
             cwd: cwd,
             stdio: ['pipe', 'pipe', 'pipe'],

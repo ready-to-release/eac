@@ -1,6 +1,6 @@
-# Create squash-message
+# get squash-message
 
-<!-- book:cmd create squash-message -->
+<!-- book:cmd get squash-message -->
 
 ## How It Works
 
@@ -26,6 +26,6 @@ See [commit-message](./commit-message.md#custom-prompts) for detailed customizat
 ## See Also
 
 - [work merge](../work/merge.md)
-- [create pr](./pr.md)
-- [create commit-message](./commit-message.md)
-- [create Commands](../categories/create.md)
+- [create pr](../create/pr.md)
+- [get commit-message](./commit-message.md)
+- [get Commands](../categories/get.md)

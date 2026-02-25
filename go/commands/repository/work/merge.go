@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	commitmessage "github.com/ready-to-release/eac/go/commands/repository/create/commit-message"
+	commitmessage "github.com/ready-to-release/eac/go/commands/repository/get/commit-message"
 	"github.com/ready-to-release/eac/go/commands/repository/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -382,7 +382,7 @@ func performSquashMerge(config *mergeConfig) error {
 		os.Args = []string{"clie", "commit", "message"}
 	}
 
-	exitCode := commitmessage.CreateCommitMessage()
+	exitCode := commitmessage.GetCommitMessage()
 	if exitCode != 0 {
 		return fmt.Errorf("commit message failed with exit code %d", exitCode)
 	}

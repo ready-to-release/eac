@@ -7,12 +7,12 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 
-	createcommitmessage "github.com/ready-to-release/eac/go/commands/repository/create/commit-message"
+	getcommitmessage "github.com/ready-to-release/eac/go/commands/repository/get/commit-message"
 	createdesign "github.com/ready-to-release/eac/go/commands/repository/create/design"
 	createriskassess "github.com/ready-to-release/eac/go/commands/repository/create/risk-assess"
 	createriskprofile "github.com/ready-to-release/eac/go/commands/repository/create/risk-profile"
 	createspec "github.com/ready-to-release/eac/go/commands/repository/create/spec"
-	createsquashmessage "github.com/ready-to-release/eac/go/commands/repository/create/squash-message"
+	getsquashmessage "github.com/ready-to-release/eac/go/commands/repository/get/squash-message"
 	"github.com/ready-to-release/eac/go/commands/repository/describe"
 	"github.com/ready-to-release/eac/go/commands/repository/drawio"
 	"github.com/ready-to-release/eac/go/commands/repository/extension"
@@ -80,12 +80,14 @@ func Commands() []core.CommandPort {
 		specsunused.Commands(),
 
 		// Create subpackages
-		createcommitmessage.Commands(),
 		createdesign.Commands(),
 		createriskassess.Commands(),
 		createriskprofile.Commands(),
 		createspec.Commands(),
-		createsquashmessage.Commands(),
+
+		// Get subpackages (AI-powered read-only commands)
+		getcommitmessage.Commands(),
+		getsquashmessage.Commands(),
 
 		// Templates install subpackages
 		templatesai.Commands(),

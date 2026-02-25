@@ -16,6 +16,6 @@ Streamlines commit workflow in feature workspaces.
 
 ## See Also
 
-- [create commit-message](../create/commit-message.md) - Generate messages
+- [get commit-message](../get/commit-message.md) - Generate messages
 - [work create](./create.md)
 - [work Commands](../categories/work.md)

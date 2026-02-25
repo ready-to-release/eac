@@ -437,6 +437,6 @@ fi
 ## See Also
 
 - [show workspaces](../show/workspaces.md) - List all workspaces
-- [create commit-message](../create/commit-message.md) - AI commit messages
-- [create squash-message](../create/squash-message.md) - Squash merge messages
+- [get commit-message](../get/commit-message.md) - AI commit messages
+- [get squash-message](../get/squash-message.md) - Squash merge messages
 - [Workspace Commands Guide](../work/index.md)

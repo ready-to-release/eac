@@ -18,7 +18,7 @@ type mockDispatcher struct {
 	// dispatched records the order of dispatched modules.
 	dispatched []string
 
-	// statusMap maps module -> (status, conclusion) to return from GetStatus.
+	// statusMap maps module -> (status, conclusion) used by GetStatus and BatchGetStatus.
 	// Use setStatus() to change during a test.
 	statusMap map[string]statusEntry
 

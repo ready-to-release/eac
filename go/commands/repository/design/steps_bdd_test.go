@@ -17,6 +17,10 @@ import (
 
 // registerSteps registers step definitions for design command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
+	// Wire in-process command dispatch to avoid subprocess overhead.
+	// Commands not in the registry (e.g., create design) fall back to subprocess.
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
+
 	// No teardown needed - Docker operations are handled by commands via adapters/docker
 
 	// Given steps - repository/module setup

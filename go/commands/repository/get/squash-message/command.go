@@ -16,24 +16,24 @@ import (
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
-type createSquashMessageCommand struct{}
+type getSquashMessageCommand struct{}
 
-var _ core.SimpleCommandPort = (*createSquashMessageCommand)(nil)
+var _ core.SimpleCommandPort = (*getSquashMessageCommand)(nil)
 
 // Commands returns all command ports provided by this package.
 func Commands() []core.CommandPort {
 	return []core.CommandPort{
-		&createSquashMessageCommand{},
+		&getSquashMessageCommand{},
 	}
 }
 
-func (c *createSquashMessageCommand) Name() string { return "create squash-message" }
+func (c *getSquashMessageCommand) Name() string { return "get squash-message" }
 
-func (c *createSquashMessageCommand) Metadata() core.CommandMetadata {
+func (c *getSquashMessageCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
-		CanonicalName: "create-squash-message",
+		CanonicalName: "get-squash-message",
 		Short:         "Generate squash commit message from branch commits",
-		Long:          "Analyzes all commits in the current branch compared to the base branch\nand generates a comprehensive, cohesive commit message suitable for\nsquash merges in pull requests or local branch merging.\n\nThis command examines the full commit history and cumulative diff\nto create a message that accurately represents the entire feature\nor change set, rather than individual commit details.\n\nThe generated message is designed to be copied into GitHub's PR squash\nmerge UI for use when squashing and merging pull requests.\n\nExpected Output:\n- Comprehensive commit message for squash merge\n- Suitable for GitHub PR squash merge UI\n\nExample:\n  create squash-message\n  create squash-message --base=develop\n  create squash-message --debug",
+		Long:          "Analyzes all commits in the current branch compared to the base branch\nand generates a comprehensive, cohesive commit message suitable for\nsquash merges in pull requests or local branch merging.\n\nThis command examines the full commit history and cumulative diff\nto create a message that accurately represents the entire feature\nor change set, rather than individual commit details.\n\nThe generated message is designed to be copied into GitHub's PR squash\nmerge UI for use when squashing and merging pull requests.\n\nExpected Output:\n- Comprehensive commit message for squash merge\n- Suitable for GitHub PR squash merge UI\n\nExample:\n  get squash-message\n  get squash-message --base=develop\n  get squash-message --debug",
 		Flags: []core.FlagSpec{
 			{Name: "base", Type: "string", DefaultValue: "", Usage: "Base branch for comparison (default: trunk_branch from config, or \"main\")"},
 			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug mode to save intermediate outputs"},
@@ -41,18 +41,18 @@ func (c *createSquashMessageCommand) Metadata() core.CommandMetadata {
 	}
 }
 
-func (c *createSquashMessageCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
-	return CreateSquashMessage()
+func (c *getSquashMessageCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
+	return GetSquashMessage()
 }
 
 var log = logging.C()
 
-// CreateSquashMessage is the main entry point for the create squash-message command.
-func CreateSquashMessage() int {
-	return createSquashMessage(defaultDeps())
+// GetSquashMessage is the main entry point for the get squash-message command.
+func GetSquashMessage() int {
+	return getSquashMessage(defaultDeps())
 }
 
-func createSquashMessage(deps *Deps) int {
+func getSquashMessage(deps *Deps) int {
 	// Phase 1: Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -73,7 +73,7 @@ func createSquashMessage(deps *Deps) int {
 	}
 	defer logging.CloseLogging()
 
-	log.Debug("Starting create squash-message command")
+	log.Debug("Starting get squash-message command")
 
 	// Phase 4: Open git repository
 	repo, err := deps.GetGitRepo(workspaceRoot)
@@ -190,7 +190,7 @@ func createSquashMessage(deps *Deps) int {
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
 	fmt.Println(finalMessage)
 
-	log.Debug("Create squash-message command completed successfully")
+	log.Debug("Get squash-message command completed successfully")
 	return 0
 }
 
@@ -217,7 +217,7 @@ type squashConfig struct {
 
 // parseConfig parses command line arguments.
 func parseConfig() (*squashConfig, error) {
-	args := os.Args[3:] // Skip "clie", "create", "squash-message"
+	args := os.Args[3:] // Skip "clie", "get", "squash-message"
 
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

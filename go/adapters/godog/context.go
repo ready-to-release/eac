@@ -280,16 +280,20 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		return fmt.Errorf("empty command")
 	}
 
-	// Use in-process dispatch if available (avoids subprocess overhead)
+	// Use in-process dispatch if available (avoids subprocess overhead).
+	// The dispatcher may decline (ExitCodeDispatchDeclined) for commands
+	// it cannot handle in-process (e.g., --help), falling through to subprocess.
 	if c.CommandDispatcher != nil {
 		output, exitCode := c.CommandDispatcher(parts)
-		c.CommandOutput = output
-		c.ExitCode = exitCode
-		c.CommandError = nil
-		if exitCode != 0 {
-			c.CommandError = fmt.Errorf("exit code %d", exitCode)
+		if exitCode != ExitCodeDispatchDeclined {
+			c.CommandOutput = output
+			c.ExitCode = exitCode
+			c.CommandError = nil
+			if exitCode != 0 {
+				c.CommandError = fmt.Errorf("exit code %d", exitCode)
+			}
+			return nil
 		}
-		return nil
 	}
 
 	// Try to use pre-built binary for better performance

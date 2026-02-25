@@ -114,4 +114,4 @@ eac create pr
 ## Related Commands
 
 - [`create pr`](../../../../reference/eac/commands/create/pr.md) - Full command reference
-- [`create squash-message`](../../../../reference/eac/commands/create/squash-message.md) - Generate squash message
+- [`get squash-message`](../../../../reference/eac/commands/get/squash-message.md) - Generate squash message

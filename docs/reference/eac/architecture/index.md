@@ -123,7 +123,7 @@ See [Dependency System](./dependencies.md) for graph algorithms and caching stra
 | **Validation** | `validate-contracts`, `validate-dependencies`, `validate-specs`      |
 | **Release**    | `release-changelog`, `release-this`, `release-pending`               |
 | **Security**   | `scan`, `scan-zap`, `validate-risk-catalog`                          |
-| **AI**         | `create-commit-message`, `create-spec`, `create-design`, `create-pr` |
+| **AI**         | `get-commit-message`, `create-spec`, `create-design`, `create-pr` |
 | **CI/CD**      | `pipeline-run`, `pipeline-wait`, `get-changed-modules-ci`            |
 
 All commands are implemented in `eac` following a consistent pattern:
@@ -174,7 +174,7 @@ api_key_env: ANTHROPIC_API_KEY
 
 | Command                 | AI Task                                     | Output          |
 | ----------------------- | ------------------------------------------- | --------------- |
-| `create-commit-message` | Analyze git diff, generate semantic message | Commit message  |
+| `get-commit-message` | Analyze git diff, generate semantic message | Commit message  |
 | `create-spec`           | Convert natural language to Gherkin         | `.feature` file |
 | `create-design`         | Generate Structurizr DSL from description   | `workspace.dsl` |
 | `create-pr`             | Analyze commits, generate PR description    | GitHub PR body  |

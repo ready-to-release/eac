@@ -12,7 +12,7 @@ nav:
   - execute-layers.md
   - eac-ext.md
   - extract-version.md
-  - generate-module-calver.md
+  - get-module-calver.md
   - get-version.md
   - pending.md
   - prune.md

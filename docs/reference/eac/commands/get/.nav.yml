@@ -17,6 +17,7 @@ nav:
   - ci-workflows.md
   - cli-release-notes.md
   - commands.md
+  - commit-message.md
   - config.md
   - current-sha.md
   - dependencies.md
@@ -33,6 +34,7 @@ nav:
   - release-status.md
   - specs.md
   - specs-unused-steps.md
+  - squash-message.md
   - suite.md
   - test-results.md
   - test-timings.md

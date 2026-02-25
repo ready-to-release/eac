@@ -30,7 +30,7 @@ eac release get-version
 ### Module Release
 
 ```bash
-TAG=$(eac release generate-module-calver src-auth)
+TAG=$(eac release get-module-calver src-auth)
 git tag -a $TAG -m "Release $TAG"
 ```
 
@@ -46,4 +46,4 @@ git tag -a $TAG -m "Release $TAG"
 
 - [pipeline status](../pipeline/status.md)
 - [validate release](../validate/release.md)
-- [create squash-message](../create/squash-message.md)
+- [get squash-message](../get/squash-message.md)

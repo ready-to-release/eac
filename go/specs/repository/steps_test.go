@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cucumber/godog"
@@ -379,22 +380,41 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 // ============================================================================
 
 func (c *repositoryContext) runGoModTidyDiffInEachModule() error {
+	type tidyResult struct {
+		path   string
+		output string
+		failed bool
+	}
+
+	results := make(chan tidyResult, len(c.discoveredModules))
+	sem := make(chan struct{}, runtime.NumCPU())
+
 	for _, modulePath := range c.discoveredModules {
-		cmd := exec.Command("go", "mod", "tidy", "-diff")
-		cmd.Dir = modulePath
+		sem <- struct{}{}
+		go func(mp string) {
+			defer func() { <-sem }()
+			cmd := exec.Command("go", "mod", "tidy", "-diff")
+			cmd.Dir = mp
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+			err := cmd.Run()
+			// Only use stdout for the diff — stderr contains "go: downloading" noise
+			// that doesn't indicate an untidy module.
+			diff := stdout.String()
+			results <- tidyResult{
+				path:   mp,
+				output: diff,
+				failed: err != nil || strings.TrimSpace(diff) != "",
+			}
+		}(modulePath)
+	}
 
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
-		err := cmd.Run()
-		// Only use stdout for the diff — stderr contains "go: downloading" noise
-		// that doesn't indicate an untidy module.
-		diff := stdout.String()
-		c.tidyResults[modulePath] = diff
-
-		if err != nil || strings.TrimSpace(diff) != "" {
-			c.failedModules = append(c.failedModules, modulePath)
+	for range c.discoveredModules {
+		r := <-results
+		c.tidyResults[r.path] = r.output
+		if r.failed {
+			c.failedModules = append(c.failedModules, r.path)
 		}
 	}
 	return nil

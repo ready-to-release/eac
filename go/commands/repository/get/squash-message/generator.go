@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/commands/repository/create/aiutil"
-	squashmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/squash-message/internal"
+	squashmessageinternal "github.com/ready-to-release/eac/go/commands/repository/get/squash-message/internal"
 	coreai "github.com/ready-to-release/eac/go/core/ai"
 	"github.com/ready-to-release/eac/go/core/git"
 	"github.com/ready-to-release/eac/go/core/repository"

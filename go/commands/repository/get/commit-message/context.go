@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/create/commit-message/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/commands/repository/get/commit-message/internal"
 	"github.com/ready-to-release/eac/go/clibase/render"
 	"github.com/ready-to-release/eac/go/core/repository"
 	"github.com/ready-to-release/eac/go/core/repository/reports"

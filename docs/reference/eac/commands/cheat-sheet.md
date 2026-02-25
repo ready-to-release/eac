@@ -146,7 +146,7 @@ git add .
 eac work commit
 
 # Alternative: Generate message only (no commit)
-eac create commit-message
+eac get commit-message
 ```
 
 ### Pull Requests
@@ -156,7 +156,7 @@ eac create commit-message
 eac create pr
 
 # Generate squash commit message
-eac create squash-message main..feature/auth
+eac get squash-message main..feature/auth
 ```
 
 ---
@@ -226,7 +226,7 @@ eac release check-ci $(git rev-parse HEAD)
 eac release this
 
 # Generate calver tag for module
-eac release generate-module-calver src-auth
+eac release get-module-calver src-auth
 
 # Validate version format
 eac validate release-version

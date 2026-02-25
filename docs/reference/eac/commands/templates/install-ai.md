@@ -11,12 +11,12 @@
 
 Install AI prompt templates for customization. Used by:
 
-- `create commit-message` - Commit messages
+- `get commit-message` - Commit messages
 - `create design` - Architecture diagrams
 - `create spec` - Gherkin specifications
 
 ## See Also
 
-- [create commit-message](../create/commit-message.md) - AI commit messages
+- [get commit-message](../get/commit-message.md) - AI commit messages
 - [create spec](../create/spec.md) - AI specification generation
 - [templates Commands](../categories/templates.md)

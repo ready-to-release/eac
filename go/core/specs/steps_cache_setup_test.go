@@ -7,13 +7,13 @@ package specs
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/cucumber/godog"
 
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	coretesting "github.com/ready-to-release/eac/go/core/testing"
 )
 
 // cacheModuleConfig describes a module in the test repository.
@@ -28,21 +28,14 @@ func captureHeadSHA(ctx *eacgodog.TestContext) {
 	if ctx.IsolatedDir == "" {
 		return
 	}
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = ctx.IsolatedDir
-	output, err := cmd.Output()
+	sha, err := coretesting.GitHeadSHA(ctx.IsolatedDir)
 	if err == nil {
-		cacheCtx.currentHeadSHA = strings.TrimSpace(string(output))
+		cacheCtx.currentHeadSHA = sha
 	}
 }
 
 func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) error {
 	ctx.MustBeIsolated()
-
-	clieDir := filepath.Join(ctx.IsolatedDir, ".eac")
-	if err := os.MkdirAll(clieDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .clie directory: %w", err)
-	}
 
 	var mods []cacheModuleConfig
 	for i, row := range table.Rows {
@@ -59,6 +52,22 @@ func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) er
 		})
 	}
 
+	if err := writeMultiModuleStructure(ctx.IsolatedDir, mods); err != nil {
+		return err
+	}
+
+	captureHeadSHA(ctx)
+	return nil
+}
+
+// writeMultiModuleStructure creates the module directory structure, repository.yml,
+// workflow files, and commits everything. Used by both template setup and per-scenario fallback.
+func writeMultiModuleStructure(rootDir string, mods []cacheModuleConfig) error {
+	clieDir := filepath.Join(rootDir, ".eac")
+	if err := os.MkdirAll(clieDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create .eac directory: %w", err)
+	}
+
 	repoYAML := generateCacheRepositoryYAML(mods)
 	repoPath := filepath.Join(clieDir, "repository.yml")
 	if err := os.WriteFile(repoPath, []byte(repoYAML), 0o644); err != nil {
@@ -66,7 +75,7 @@ func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) er
 	}
 
 	for _, mod := range mods {
-		goDir := filepath.Join(ctx.IsolatedDir, mod.GoRoot)
+		goDir := filepath.Join(rootDir, mod.GoRoot)
 		if err := os.MkdirAll(goDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create go directory: %w", err)
 		}
@@ -101,7 +110,7 @@ func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) er
 		}
 	}
 
-	workflowsDir := filepath.Join(ctx.IsolatedDir, ".github", "workflows")
+	workflowsDir := filepath.Join(rootDir, ".github", "workflows")
 	if err := os.MkdirAll(workflowsDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create workflows directory: %w", err)
 	}
@@ -113,29 +122,18 @@ func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) er
 		}
 	}
 
-	gitignorePath := filepath.Join(ctx.IsolatedDir, ".gitignore")
+	gitignorePath := filepath.Join(rootDir, ".gitignore")
 	gitignoreContent := "out/\n"
 	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write .gitignore: %w", err)
 	}
 
-	cmd := exec.Command("git", "add", "-A")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
+	if err := coretesting.GitAddAll(rootDir); err != nil {
 		return fmt.Errorf("failed to git add: %w", err)
 	}
 
-	cmd = exec.Command("git", "commit", "-m", "Add multi-module structure for cache invalidation tests")
-	cmd.Dir = ctx.IsolatedDir
-	if err := cmd.Run(); err != nil {
+	if _, err := coretesting.GitCommit(rootDir, "Add multi-module structure for cache invalidation tests"); err != nil {
 		return fmt.Errorf("failed to git commit: %w", err)
-	}
-
-	cmd = exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = ctx.IsolatedDir
-	output, err := cmd.Output()
-	if err == nil {
-		cacheCtx.currentHeadSHA = strings.TrimSpace(string(output))
 	}
 
 	return nil
@@ -186,9 +184,7 @@ func ensureNoBuildState(ctx *eacgodog.TestContext) error {
 
 func ensureNoModifications(ctx *eacgodog.TestContext) error {
 	ctx.MustBeIsolated()
-	cmd := exec.Command("git", "checkout", "--", ".")
-	cmd.Dir = ctx.IsolatedDir
-	_ = cmd.Run()
+	_ = coretesting.GitCheckoutPath(ctx.IsolatedDir, ".")
 	return nil
 }
 

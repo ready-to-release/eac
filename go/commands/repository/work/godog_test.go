@@ -6,6 +6,7 @@ import (
 
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 func TestFeatures(t *testing.T) {
@@ -27,5 +28,6 @@ func TestFeatures(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	tool.SetGlobalToolSystemForTesting(tool.NewToolSystemForTesting())
 	os.Exit(m.Run())
 }

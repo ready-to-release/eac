@@ -1,6 +1,6 @@
 // Package squashmessage contains godog step implementations for eac.
 //
-// This file contains create squash-message command step definitions.
+// This file contains get squash-message command step definitions.
 package squashmessage
 
 import (
@@ -13,14 +13,17 @@ import (
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 )
 
-// createSquashMessageTestState holds state for create squash-message tests.
-type createSquashMessageTestState struct {
+// getSquashMessageTestState holds state for get squash-message tests.
+type getSquashMessageTestState struct {
 	baseBranch string
 }
 
-// registerSteps registers step definitions for create squash-message command features.
+// registerSteps registers step definitions for get squash-message command features.
 func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
-	state := &createSquashMessageTestState{}
+	// Wire in-process command dispatch to avoid subprocess overhead.
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
+
+	state := &getSquashMessageTestState{}
 
 	// Note: "I am in a git repository with EAC configuration" and
 	// "AI configuration exists at" steps are in RegisterCommonSteps (godog package)

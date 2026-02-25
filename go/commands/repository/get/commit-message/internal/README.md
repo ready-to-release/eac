@@ -47,7 +47,7 @@ Commit message validation, cleanup, and verification against the commit-message 
 
 ## Role in System
 
-This package is the internal engine for the `create commit-message` command. It validates generated commit messages against the commit-message contract, ensures multi-module commits have proper module sections with subject lines, and automatically cleans up common formatting issues. The validators are used both during AI generation (to retry on validation failures) and for final output verification.
+This package is the internal engine for the `get commit-message` command. It validates generated commit messages against the commit-message contract, ensures multi-module commits have proper module sections with subject lines, and automatically cleans up common formatting issues. The validators are used both during AI generation (to retry on validation failures) and for final output verification.
 
 ## Code Health
 

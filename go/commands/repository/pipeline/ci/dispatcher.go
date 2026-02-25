@@ -71,10 +71,12 @@ func (d *ghWorkflowDispatcher) Dispatch(ctx context.Context, module, ref, sha, t
 }
 
 // runStatusInfo holds workflow run status from GitHub JSON output.
+// WorkflowName is populated by BatchGetStatus (omitted by GetStatus queries).
 type runStatusInfo struct {
-	HeadSHA    string `json:"headSha"`
-	Status     string `json:"status"`
-	Conclusion string `json:"conclusion"`
+	HeadSHA      string `json:"headSha"`
+	Status       string `json:"status"`
+	Conclusion   string `json:"conclusion"`
+	WorkflowName string `json:"workflowName,omitempty"`
 }
 
 // GetStatus queries the CI workflow status for a module at a specific SHA.
@@ -127,14 +129,6 @@ func (d *ghWorkflowDispatcher) GetStatus(ctx context.Context, module, sha string
 	return "none", "", nil
 }
 
-// batchRunStatusInfo holds workflow run status from GitHub JSON output for batch queries.
-type batchRunStatusInfo struct {
-	HeadSHA      string `json:"headSha"`
-	Status       string `json:"status"`
-	Conclusion   string `json:"conclusion"`
-	WorkflowName string `json:"workflowName"`
-}
-
 // BatchGetStatus queries CI workflow status for multiple modules in a single API call.
 // Instead of one `gh run list -w <workflow>` per module, it fetches all runs for the
 // commit SHA and filters by workflow name prefix "CI: ".
@@ -146,7 +140,7 @@ func (d *ghWorkflowDispatcher) BatchGetStatus(ctx context.Context, modules []str
 		return nil, fmt.Errorf("batch status query: %w", err)
 	}
 
-	var runs []batchRunStatusInfo
+	var runs []runStatusInfo
 	if err := json.Unmarshal(output, &runs); err != nil {
 		return nil, fmt.Errorf("parse batch status: %w", err)
 	}
@@ -205,9 +199,9 @@ func (d *ghWorkflowDispatcher) BatchGetStatus(ctx context.Context, modules []str
 // extractModuleFromWorkflowName extracts the module moniker from a GitHub Actions
 // workflow name. CI workflows are named "CI: <module>".
 func extractModuleFromWorkflowName(name string) string {
-	const prefix = "CI: "
-	if strings.HasPrefix(name, prefix) {
-		return strings.TrimPrefix(name, prefix)
+	after, found := strings.CutPrefix(name, "CI: ")
+	if !found {
+		return ""
 	}
-	return ""
+	return after
 }

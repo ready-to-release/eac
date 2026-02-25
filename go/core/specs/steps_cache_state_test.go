@@ -9,39 +9,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
-	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/hash"
 	"github.com/ready-to-release/eac/go/core/output"
+	coretesting "github.com/ready-to-release/eac/go/core/testing"
 )
+
+// withContainerRoot temporarily sets CLIE_CONTAINER_ROOT to the original repo root
+// and returns a cleanup function that restores the previous value.
+func withContainerRoot(ctx *eacgodog.TestContext) func() {
+	orig := os.Getenv(environments.EnvCLIEContainerRoot)
+	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
+	return func() {
+		if orig == "" {
+			os.Unsetenv(environments.EnvCLIEContainerRoot)
+		} else {
+			os.Setenv(environments.EnvCLIEContainerRoot, orig)
+		}
+	}
+}
 
 func buildAllModules(ctx *eacgodog.TestContext) error {
 	ctx.MustBeIsolated()
+	defer withContainerRoot(ctx)()
 
-	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
-	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
-	defer func() {
-		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvCLIEContainerRoot)
-		} else {
-			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
-		}
-	}()
-
-	reg, err := modules.LoadFromWorkspaceNoValidation(ctx.IsolatedDir)
+	reg, err := getOrLoadRegistry(ctx.IsolatedDir)
 	if err != nil {
-		return fmt.Errorf("failed to load module registry: %w", err)
+		return err
 	}
 
 	// Create UoW manifests for each module (simulating a successful build)
 	for _, contract := range reg.All() {
-		files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
+		patterns := contract.GetGlobPatterns()
+		files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, patterns)
 		if err != nil {
 			return fmt.Errorf("failed to expand patterns for %s: %w", contract.Moniker, err)
 		}
@@ -49,7 +54,6 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 		if err != nil {
 			return fmt.Errorf("failed to hash files for %s: %w", contract.Moniker, err)
 		}
-
 		// Create UoW manifest in the expected location
 		// Format: out/build/<module>/<component>-<tool>/uow.manifest.json
 		manifest := &output.UoWManifest{
@@ -86,20 +90,11 @@ func buildAllModules(ctx *eacgodog.TestContext) error {
 
 func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
+	defer withContainerRoot(ctx)()
 
-	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
-	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
-	defer func() {
-		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvCLIEContainerRoot)
-		} else {
-			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
-		}
-	}()
-
-	reg, err := modules.LoadFromWorkspaceNoValidation(ctx.IsolatedDir)
+	reg, err := getOrLoadRegistry(ctx.IsolatedDir)
 	if err != nil {
-		return fmt.Errorf("failed to load module registry: %w", err)
+		return err
 	}
 
 	contract, ok := reg.Get(module)
@@ -151,20 +146,11 @@ func lintModuleSuccessfully(ctx *eacgodog.TestContext, module string) error {
 
 func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 	ctx.MustBeIsolated()
+	defer withContainerRoot(ctx)()
 
-	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
-	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
-	defer func() {
-		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvCLIEContainerRoot)
-		} else {
-			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
-		}
-	}()
-
-	reg, err := modules.LoadFromWorkspaceNoValidation(ctx.IsolatedDir)
+	reg, err := getOrLoadRegistry(ctx.IsolatedDir)
 	if err != nil {
-		return fmt.Errorf("failed to load module registry: %w", err)
+		return err
 	}
 
 	contract, ok := reg.Get(module)
@@ -216,29 +202,17 @@ func setLintStateFailed(ctx *eacgodog.TestContext, module string) error {
 
 func ensureNoModificationsInDir(ctx *eacgodog.TestContext, dir string) error {
 	ctx.MustBeIsolated()
-	fullDir := filepath.Join(ctx.IsolatedDir, dir)
-	cmd := exec.Command("git", "checkout", "--", fullDir)
-	cmd.Dir = ctx.IsolatedDir
-	_ = cmd.Run()
+	_ = coretesting.GitCheckoutPath(ctx.IsolatedDir, dir)
 	return nil
 }
 
 func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 	ctx.MustBeIsolated()
+	defer withContainerRoot(ctx)()
 
-	origContainerRoot := os.Getenv(environments.EnvCLIEContainerRoot)
-	os.Setenv(environments.EnvCLIEContainerRoot, ctx.OriginalRepoRoot)
-	defer func() {
-		if origContainerRoot == "" {
-			os.Unsetenv(environments.EnvCLIEContainerRoot)
-		} else {
-			os.Setenv(environments.EnvCLIEContainerRoot, origContainerRoot)
-		}
-	}()
-
-	reg, err := modules.LoadFromWorkspaceNoValidation(ctx.IsolatedDir)
+	reg, err := getOrLoadRegistry(ctx.IsolatedDir)
 	if err != nil {
-		return fmt.Errorf("failed to load module registry: %w", err)
+		return err
 	}
 
 	moduleNames := []string{mod1, mod2}

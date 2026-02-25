@@ -1,6 +1,6 @@
-# create commit-message
+# get commit-message
 
-<!-- book:cmd create commit-message -->
+<!-- book:cmd get commit-message -->
 
 ## How It Works
 
@@ -20,7 +20,7 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
 1. **Command Flag** (highest priority)
 
    ```bash
-   eac create commit-message --prompt /path/to/custom.md
+   eac get commit-message --prompt /path/to/custom.md
    ```
 
 2. **Team Override** (version controlled)
@@ -52,7 +52,7 @@ git add .eac/templates/ai/commit-message/
 git commit -m "chore(eac): customize commit message prompt"
 
 # Test with debug flag to verify
-eac create commit-message --debug
+eac get commit-message --debug
 ```
 
 ## See Also
@@ -60,4 +60,4 @@ eac create commit-message --debug
 - [How-to Guide](../../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md) - Quick start and common workflows
 - [work commit](../work/commit.md) - Workspace-aware commits
 - [init](../init/init.md) - Configure AI provider
-- [create Commands](../categories/create.md)
+- [get Commands](../categories/get.md)
