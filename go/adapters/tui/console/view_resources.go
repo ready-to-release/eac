@@ -7,11 +7,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// renderTopBar renders a 4-row dashboard bar at the top of the TUI.
+// renderTopBar renders a 5-row dashboard bar at the top of the TUI.
 // Row 1: Header with freeze button
-// Row 2: Data (status text, counters, slots) left │ Host Mem + Host lamps right
-// Row 3: CPU left │ Docker Mem + Pressure lamps right
-// Row 4: Footer
+// Row 2: (left empty) │ Host / Docker column headers (right)
+// Row 3: Data (status text, counters, slots) left │ Pressure lamps (right)
+// Row 4: CPU left │ Mem lamps (right)
+// Row 5: Footer
 func (m Model) renderTopBar() string {
 	var result strings.Builder
 
@@ -41,27 +42,61 @@ func (m Model) renderTopBar() string {
 	}
 	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + " " + freezeBtn + " ┐\n")
 
-	// === Far-right column: resource lamp pairs (host top, docker bottom) ===
-	memLamps := m.Resources.Catalog.RenderWidget("res-mem", snap)
-	hostLamps := m.Resources.Catalog.RenderWidget("res-host", snap)
-	dmemLamps := m.Resources.Catalog.RenderWidget("res-dmem", snap)
-	dockerLamps := m.Resources.Catalog.RenderWidget("res-docker", snap)
+	// === Far-right columns: Host (left col) │ Docker (right col) ===
+	hostPressureLamps := m.Resources.Catalog.RenderWidget("res-host", snap)
+	hostMemLamps := m.Resources.Catalog.RenderWidget("res-mem", snap)
+	dockerPressureLamps := m.Resources.Catalog.RenderWidget("res-docker", snap)
+	dockerMemLamps := m.Resources.Catalog.RenderWidget("res-dmem", snap)
 
-	// Use %-10s so "Host:" and "Pressure:" align to the same column width
-	hostRight := white.Render(fmt.Sprintf("%-5s", "Mem:")) + memLamps + "  " + white.Render(fmt.Sprintf("%-10s", "Host:")) + hostLamps
-	dockerRight := white.Render(fmt.Sprintf("%-5s", "Mem:")) + dmemLamps + "  " + white.Render(fmt.Sprintf("%-10s", "Pressure:")) + dockerLamps
+	// Build each column's 3 rows: header, pressure, mem
+	colGap := "  "
+	headerLabel := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
 
-	// Ensure both right-column rows are the same width
-	rightWidth := lipgloss.Width(hostRight)
-	if w := lipgloss.Width(dockerRight); w > rightWidth {
+	hostHeader := headerLabel.Render("Host")
+	dockerHeader := headerLabel.Render("Docker")
+	hostPressure := white.Render(fmt.Sprintf("%-10s", "Pressure:")) + hostPressureLamps
+	dockerPressure := white.Render(fmt.Sprintf("%-10s", "Pressure:")) + dockerPressureLamps
+	hostMem := white.Render(fmt.Sprintf("%-10s", "Mem:")) + hostMemLamps
+	dockerMem := white.Render(fmt.Sprintf("%-10s", "Mem:")) + dockerMemLamps
+
+	// Compute per-column visual widths, then align
+	hostColWidth := lipgloss.Width(hostPressure)
+	if w := lipgloss.Width(hostMem); w > hostColWidth {
+		hostColWidth = w
+	}
+	if w := lipgloss.Width(hostHeader); w > hostColWidth {
+		hostColWidth = w
+	}
+	dockerColWidth := lipgloss.Width(dockerPressure)
+	if w := lipgloss.Width(dockerMem); w > dockerColWidth {
+		dockerColWidth = w
+	}
+	if w := lipgloss.Width(dockerHeader); w > dockerColWidth {
+		dockerColWidth = w
+	}
+
+	padRight := func(s string, width int) string {
+		if w := lipgloss.Width(s); w < width {
+			return s + strings.Repeat(" ", width-w)
+		}
+		return s
+	}
+
+	// 3 right-side rows: header, pressure, mem
+	rightRow1 := padRight(hostHeader, hostColWidth) + colGap + padRight(dockerHeader, dockerColWidth)
+	rightRow2 := padRight(hostPressure, hostColWidth) + colGap + padRight(dockerPressure, dockerColWidth)
+	rightRow3 := padRight(hostMem, hostColWidth) + colGap + padRight(dockerMem, dockerColWidth)
+
+	rightWidth := lipgloss.Width(rightRow1)
+	if w := lipgloss.Width(rightRow2); w > rightWidth {
 		rightWidth = w
 	}
-	if lipgloss.Width(hostRight) < rightWidth {
-		hostRight += strings.Repeat(" ", rightWidth-lipgloss.Width(hostRight))
+	if w := lipgloss.Width(rightRow3); w > rightWidth {
+		rightWidth = w
 	}
-	if lipgloss.Width(dockerRight) < rightWidth {
-		dockerRight += strings.Repeat(" ", rightWidth-lipgloss.Width(dockerRight))
-	}
+	rightRow1 = padRight(rightRow1, rightWidth)
+	rightRow2 = padRight(rightRow2, rightWidth)
+	rightRow3 = padRight(rightRow3, rightWidth)
 
 	sepWidth := lipgloss.Width(sep)
 	leftZoneWidth := contentWidth - rightWidth - sepWidth
@@ -69,7 +104,11 @@ func (m Model) renderTopBar() string {
 		leftZoneWidth = 10
 	}
 
-	// === Row 2: Data (left) │ Host lamps (right) ===
+	// === Row 2: Headers (left empty) │ Host / Docker headers (right) ===
+	emptyLeft := strings.Repeat(" ", leftZoneWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + emptyLeft + sep + rightRow1 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Row 3: Data (left) │ Pressure lamps (right) ===
 	leftCells := statusText + sep + counters + "  " + progressCount + sep + slotsCell
 	leftWidth := lipgloss.Width(leftCells)
 	if leftWidth > leftZoneWidth {
@@ -88,15 +127,15 @@ func (m Model) renderTopBar() string {
 	if leftWidth < leftZoneWidth {
 		leftCells += strings.Repeat(" ", leftZoneWidth-leftWidth)
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + leftCells + sep + hostRight + " " + Styles.Border.Render("│") + "\n")
+	result.WriteString(Styles.Border.Render("│") + " " + leftCells + sep + rightRow2 + " " + Styles.Border.Render("│") + "\n")
 
-	// === Row 3: CPU (left) │ Docker lamps (right) ===
+	// === Row 4: CPU (left) │ Mem lamps (right) ===
 	cpuLeft := cpuCell
 	cpuWidth := lipgloss.Width(cpuLeft)
 	if cpuWidth < leftZoneWidth {
 		cpuLeft += strings.Repeat(" ", leftZoneWidth-cpuWidth)
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + cpuLeft + sep + dockerRight + " " + Styles.Border.Render("│") + "\n")
+	result.WriteString(Styles.Border.Render("│") + " " + cpuLeft + sep + rightRow3 + " " + Styles.Border.Render("│") + "\n")
 
 	// === Row 4: Footer ===
 	footerLen := m.Display.Width - 2
@@ -108,44 +147,3 @@ func (m Model) renderTopBar() string {
 	return result.String()
 }
 
-// renderBottomBar renders a 3-row help bar at the bottom of the TUI.
-// Row 1: Header
-// Row 2: Help text for hovered element (or placeholder)
-// Row 3: Footer
-func (m Model) renderBottomBar() string {
-	var result strings.Builder
-
-	contentWidth := m.Display.Width - 4 // inside "│ " + " │"
-	if contentWidth < 1 {
-		contentWidth = 1
-	}
-
-	// === Row 1: Header ===
-	headerBorderLen := m.Display.Width - 2
-	if headerBorderLen < 1 {
-		headerBorderLen = 1
-	}
-	result.WriteString("┌" + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + "┐\n")
-
-	// === Row 2: Help text ===
-	var helpLine string
-	if helpText, ok := m.Resources.Catalog.HelpText(m.Interaction.HoveredZone); ok {
-		elementName := m.Resources.Catalog.ElementName(m.Interaction.HoveredZone)
-		helpLine = m.renderSelectedHelp(elementName, helpText, contentWidth)
-	} else {
-		helpLine = Styles.Dim.Render("hover over a UI element to understand it")
-	}
-	if helpVisWidth := lipgloss.Width(helpLine); helpVisWidth < contentWidth {
-		helpLine += strings.Repeat(" ", contentWidth-helpVisWidth)
-	}
-	result.WriteString(Styles.Border.Render("│") + " " + helpLine + " " + Styles.Border.Render("│") + "\n")
-
-	// === Row 3: Footer ===
-	footerLen := m.Display.Width - 2
-	if footerLen < 1 {
-		footerLen = 1
-	}
-	result.WriteString("└" + Styles.Border.Render(strings.Repeat("─", footerLen)) + "┘")
-
-	return result.String()
-}

@@ -3,7 +3,9 @@ package repository
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -12,12 +14,39 @@ import (
 	"github.com/cucumber/godog"
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
 
+// registryLookup adapts the global command registry for in-process dispatch.
+func registryLookup(cmdName string) (func() int, bool) {
+	reg := registry.Global()
+	if reg == nil {
+		return nil, false
+	}
+	cmd, ok := reg.Get(cmdName)
+	if !ok {
+		return nil, false
+	}
+	simple, ok := cmd.(core.SimpleCommandPort)
+	if !ok {
+		return nil, false
+	}
+	return func() int {
+		return simple.Execute(context.Background(), &core.CommandRequest{
+			Args:   os.Args[1:],
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		})
+	}, true
+}
+
 // RegisterSteps registers all repository-specific step definitions.
 func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
+	// Wire in-process command dispatch to avoid subprocess overhead
+	ctx.CommandDispatcher = eacgodog.MakeInProcessDispatcher(ctx, registryLookup)
+
 	// Create repository-specific context that also updates the shared context
 	repoCtx := &repositoryContext{sharedCtx: ctx}
 

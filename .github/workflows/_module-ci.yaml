@@ -201,12 +201,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      # 6. Upload build artifacts (only when cross-platform tests need them)
+      # 6. Upload build artifacts (needed by cross-platform tests and release workflows)
       - name: Upload Build Artifacts
         if: |
           steps.ci-config.outputs.is-container != 'true'
           && steps.ci-config.outputs.is-multi-container != 'true'
-          && (steps.ci-config.outputs.test-on-windows == 'true' || steps.ci-config.outputs.test-on-macos == 'true')
         uses: ./.github/actions/upload-artifact-retry
         with:
           name: build-artifacts-${{ inputs.module }}

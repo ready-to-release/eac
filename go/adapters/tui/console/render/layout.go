@@ -6,7 +6,7 @@ package render
 // to ensure click detection aligns with rendered output.
 type LayoutMetrics struct {
 	ComponentsStart int // Y coordinate where components panel content starts (top bar + newline + panel header)
-	SummaryLines    int // Lines reserved for chrome (7: top bar 4 + bottom bar 3)
+	SummaryLines    int // Lines reserved for chrome (5: top bar 5, no bottom bar)
 	RemainingHeight int // Height available for side-by-side layout
 	DetailPaneHeight int // Height of the detail pane (9 when active, 0 when collapsed)
 }

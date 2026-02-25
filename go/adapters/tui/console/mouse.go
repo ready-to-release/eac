@@ -44,7 +44,7 @@ func (m Model) detectTabAt(x, y int) string {
 	}
 
 	// Use shared layout metrics - single source of truth for Y offset calculation
-	// ComponentsStart already includes: top bar (4) + newline (1) + panel header (1)
+	// ComponentsStart already includes: top bar (5) + newline (1) + panel header (1)
 	metrics := m.calculateLayoutMetrics()
 
 	// Content starts at ComponentsStart (0-indexed Y coordinate)
@@ -175,7 +175,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if metrics.DetailPaneHeight > 0 {
 			paneHeight = metrics.RemainingHeight - metrics.DetailPaneHeight // borderless headless pane
 		} else {
-			paneHeight = metrics.RemainingHeight - 2 // -2 for panel header/footer
+			paneHeight = metrics.RemainingHeight - 1 // -1 for header only (no footer)
 		}
 		if paneHeight < 5 {
 			paneHeight = 5
@@ -208,21 +208,24 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	metrics := m.calculateLayoutMetrics()
 	logsStartX := componentsWidth + 1
 
-	// When detail pane is active, logs start after it (borderless: no header/footer).
-	// Without detail pane, logs start after ComponentsStart + header line.
-	// logsStartY is set so that (msg.Y - logsStartY) gives the content line index directly.
+	// logsStartY is the screen Y of the first log content line.
+	// Panel starts at Y = ComponentsStart - 1 (the header/detail line).
+	// Without detail pane: header at panel line 0, content at line 1 → Y = ComponentsStart.
+	// With detail pane: detail occupies panel lines 0..DetailPaneHeight-1,
+	//   logs start at panel line DetailPaneHeight → Y = (ComponentsStart-1) + DetailPaneHeight.
+	panelStartY := metrics.ComponentsStart - 1
 	var logsStartY, logsHeight int
 	if metrics.DetailPaneHeight > 0 {
-		logsStartY = metrics.ComponentsStart + metrics.DetailPaneHeight
+		logsStartY = panelStartY + metrics.DetailPaneHeight
 		logsHeight = metrics.RemainingHeight - metrics.DetailPaneHeight // borderless headless pane
 	} else {
-		logsStartY = metrics.ComponentsStart + 1 // +1 to skip header line
-		logsHeight = metrics.RemainingHeight - 2 // -2 for header/footer
+		logsStartY = metrics.ComponentsStart // content starts at ComponentsStart (header is at panelStartY)
+		logsHeight = metrics.RemainingHeight - 1 // -1 for header only (no footer)
 	}
 
 	// Mouse press in logs pane - start selection
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
-		if msg.X >= logsStartX && msg.Y > logsStartY && msg.Y <= logsStartY+logsHeight {
+		if msg.X >= logsStartX && msg.Y >= logsStartY && msg.Y < logsStartY+logsHeight {
 			m.Resources.Selection = SelectionState{
 				Active:    true,
 				StartX:    msg.X,

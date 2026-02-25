@@ -1,17 +1,13 @@
 package repository
 
 import (
+	"bytes"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/cucumber/godog"
 	eacgodog "github.com/ready-to-release/eac/go/adapters/godog"
 	"github.com/ready-to-release/eac/go/core/testing"
@@ -157,13 +153,16 @@ func (c *testSanityContext) ensureInRepoRoot() error {
 }
 
 func (c *testSanityContext) scanForFeatureFiles(dir string) error {
-	root := c.repoRoot
-	pattern := filepath.Join(root, dir, "**", "*.feature")
-	pattern = filepath.ToSlash(pattern)
+	cache := c.sharedCtx.OriginalRepoCache
+	if cache == nil {
+		return fmt.Errorf("OriginalRepoCache not available")
+	}
 
-	matches, err := doublestar.FilepathGlob(pattern)
-	if err != nil {
-		return err
+	// Use cached git ls-files data instead of filesystem glob
+	relFiles := cache.FilesInDirWithExtension(dir, ".feature")
+	matches := make([]string, len(relFiles))
+	for i, f := range relFiles {
+		matches[i] = filepath.Join(c.repoRoot, filepath.FromSlash(f))
 	}
 
 	c.rawScanFiles = matches
@@ -172,98 +171,63 @@ func (c *testSanityContext) scanForFeatureFiles(dir string) error {
 }
 
 func (c *testSanityContext) scanForGoTestFiles(excludeGodog bool) error {
-	root := c.repoRoot
-
-	// Scan all Go module roots that can contain tests
-	patterns := []string{
-		filepath.ToSlash(filepath.Join(root, "go", "**", "*_test.go")),
-		filepath.ToSlash(filepath.Join(root, "contracts", "**", "*_test.go")),
+	cache := c.sharedCtx.OriginalRepoCache
+	if cache == nil {
+		return fmt.Errorf("OriginalRepoCache not available")
 	}
 
+	// Use cached file list instead of filesystem glob
+	allTestFiles := cache.FilesBySuffix("_test.go")
+
+	// Filter to go/ and contracts/ directories (matching original scan scope)
 	var matches []string
-	for _, pattern := range patterns {
-		m, err := doublestar.FilepathGlob(pattern)
-		if err != nil {
-			return fmt.Errorf("glob %s: %w", pattern, err)
+	for _, f := range allTestFiles {
+		if !strings.HasPrefix(f, "go/") && !strings.HasPrefix(f, "contracts/") {
+			continue
 		}
-		matches = append(matches, m...)
-	}
-
-	// Filter to only files that actually contain Test functions
-	// This matches what discovery.go does - it only discovers files with func Test*
-	filtered := []string{}
-	for _, f := range matches {
 		if excludeGodog && strings.HasSuffix(f, "godog_test.go") {
 			continue
 		}
-		// Parse the file and check if it has Test functions
-		if hasTestFunctions(f) {
-			filtered = append(filtered, f)
+		absPath := filepath.Join(c.repoRoot, filepath.FromSlash(f))
+		// Quick byte scan for "func Test" instead of full AST parse
+		if hasTestFunctions(absPath) {
+			matches = append(matches, absPath)
 		}
 	}
 
-	c.rawScanFiles = filtered
-	c.rawScanCount = len(filtered)
+	c.rawScanFiles = matches
+	c.rawScanCount = len(matches)
 	return nil
 }
 
 // hasTestFunctions checks if a Go test file contains actual Test functions.
-// This filters out files that only contain Examples, Benchmarks, or step definitions.
+// Uses a fast byte scan instead of full AST parsing (~6x faster).
+// Checks for both "func Test" and "*testing.T" to exclude TestMain(m *testing.M)
+// and files that only contain Benchmarks, Examples, or step definitions.
 func hasTestFunctions(filePath string) bool {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, filePath, nil, 0)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return false
 	}
-
-	for _, decl := range file.Decls {
-		funcDecl, ok := decl.(*ast.FuncDecl)
-		if !ok {
-			continue
-		}
-
-		// Check if function name starts with Test
-		if !strings.HasPrefix(funcDecl.Name.Name, "Test") {
-			continue
-		}
-
-		// Check if it has *testing.T parameter
-		if funcDecl.Type.Params == nil || len(funcDecl.Type.Params.List) == 0 {
-			continue
-		}
-
-		param := funcDecl.Type.Params.List[0]
-		starExpr, ok := param.Type.(*ast.StarExpr)
-		if !ok {
-			continue
-		}
-
-		selExpr, ok := starExpr.X.(*ast.SelectorExpr)
-		if !ok {
-			continue
-		}
-
-		ident, ok := selExpr.X.(*ast.Ident)
-		if !ok {
-			continue
-		}
-
-		if ident.Name == "testing" && selExpr.Sel.Name == "T" {
-			return true
-		}
-	}
-
-	return false
+	return bytes.Contains(data, []byte("\nfunc Test")) &&
+		bytes.Contains(data, []byte("*testing.T"))
 }
 
 func (c *testSanityContext) scanForGodogRunners() error {
-	root := c.repoRoot
-	pattern := filepath.Join(root, "go", "**", "godog_test.go")
-	pattern = filepath.ToSlash(pattern)
+	cache := c.sharedCtx.OriginalRepoCache
+	if cache == nil {
+		return fmt.Errorf("OriginalRepoCache not available")
+	}
 
-	matches, err := doublestar.FilepathGlob(pattern)
-	if err != nil {
-		return err
+	// Use cached file list instead of filesystem glob
+	allGodog := cache.FilesBySuffix("godog_test.go")
+
+	// Filter to go/ directory (matching original scan scope)
+	var matches []string
+	for _, f := range allGodog {
+		if strings.HasPrefix(f, "go/") {
+			matches = append(matches, filepath.Join(c.repoRoot, filepath.FromSlash(f)))
+		}
 	}
 
 	c.rawScanFiles = matches
@@ -272,22 +236,16 @@ func (c *testSanityContext) scanForGodogRunners() error {
 }
 
 func (c *testSanityContext) scanForTypeScriptTests() error {
-	root := c.repoRoot
-
-	// Use git ls-files to avoid scanning node_modules (90MB+)
-	cmd := exec.Command("git", "ls-files", "typescript/**/*.test.ts")
-	cmd.Dir = root
-	output, err := cmd.Output()
-	if err != nil {
-		return err
+	cache := c.sharedCtx.OriginalRepoCache
+	if cache == nil {
+		return fmt.Errorf("OriginalRepoCache not available")
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	var matches []string
-	for _, line := range lines {
-		if line != "" {
-			matches = append(matches, filepath.Join(root, line))
-		}
+	// Use cached file list instead of git ls-files subprocess
+	relFiles := cache.FilesInDirWithExtension("typescript", ".test.ts")
+	matches := make([]string, 0, len(relFiles))
+	for _, f := range relFiles {
+		matches = append(matches, filepath.Join(c.repoRoot, filepath.FromSlash(f)))
 	}
 
 	c.rawScanFiles = matches

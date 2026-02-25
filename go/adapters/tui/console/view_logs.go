@@ -95,21 +95,22 @@ func (m Model) renderLogsPanel(width, height int) string {
 		}
 	}
 
-	borderLen := width - lipgloss.Width(left) - 2
-	if borderLen < 1 {
-		borderLen = 1
+	// Header line (borderless)
+	headerWidth := width - lipgloss.Width(left)
+	if headerWidth < 0 {
+		headerWidth = 0
 	}
-	b.WriteString("┌" + left + " " + Styles.Border.Render(strings.Repeat("─", borderLen)) + "┐\n")
+	b.WriteString(left + strings.Repeat(" ", headerWidth) + "\n")
 
-	// Content area
-	contentHeight := height - 2
+	// Content area (1 line for header, no footer)
+	contentHeight := height - 1
 	if contentHeight < 1 {
 		contentHeight = 1
 	}
 
 	// During init phase: show init buffer lines + animated dots
 	if pane.Status == PhasePending {
-		innerWidth := width - 4
+		innerWidth := width - 2
 		if innerWidth < 1 {
 			innerWidth = 1
 		}
@@ -120,29 +121,23 @@ func (m Model) renderLogsPanel(width, height int) string {
 		for _, line := range initLines {
 			icon := m.phaseIcon(PhaseComplete)
 			text := render.PadOrTruncate(line.Text, innerWidth-3)
-			b.WriteString(Styles.Border.Render("│") + icon + " " + text + " " + Styles.Border.Render("│") + "\n")
+			b.WriteString(icon + " " + text + "\n")
 			lineCount++
 		}
 
 		// Animated "Initializing..." dots
 		if lineCount < contentHeight {
 			animLine := m.renderInitAnimatedStatus(innerWidth)
-			b.WriteString(Styles.Border.Render("│") + " " + animLine + " " + Styles.Border.Render("│") + "\n")
+			b.WriteString(" " + animLine + "\n")
 			lineCount++
 		}
 
 		// Fill remaining with empty lines
 		for lineCount < contentHeight {
-			b.WriteString(Styles.Border.Render("│") + " " + strings.Repeat(" ", innerWidth) + " " + Styles.Border.Render("│") + "\n")
+			b.WriteString(strings.Repeat(" ", width) + "\n")
 			lineCount++
 		}
 
-		// Footer
-		footerBorderLen := width - 2
-		if footerBorderLen < 1 {
-			footerBorderLen = 1
-		}
-		b.WriteString("└" + strings.Repeat("─", footerBorderLen) + "┘")
 		return b.String()
 	}
 
@@ -150,13 +145,6 @@ func (m Model) renderLogsPanel(width, height int) string {
 	if isCachedModule {
 		if state, exists := m.Execution.UoWStates[activeModule]; exists {
 			m.renderCachedContent(&b, activeModule, state, width, contentHeight)
-
-			// Footer
-			footerBorderLen := width - 2
-			if footerBorderLen < 1 {
-				footerBorderLen = 1
-			}
-			b.WriteString("└" + strings.Repeat("─", footerBorderLen) + "┘")
 			return b.String()
 		}
 	}
@@ -184,21 +172,15 @@ func (m Model) renderLogsPanel(width, height int) string {
 
 	for i := 0; i < contentHeight; i++ {
 		if i < len(lines) {
-			lineContent := m.renderLogLine(lines[i], width-4, i, false)
+			lineContent := m.renderLogLine(lines[i], 0, i, true)
 			b.WriteString(lineContent + "\n")
 		} else {
-			b.WriteString(Styles.Dim.Render("│") + " " + strings.Repeat(" ", width-4) + Styles.Dim.Render("│") + "\n")
+			b.WriteString(strings.Repeat(" ", width) + "\n")
 		}
 	}
 
-	// Footer with scroll indicator
-	if pane.scrollOffset == 0 {
-		footerBorderLen := width - 2
-		if footerBorderLen < 1 {
-			footerBorderLen = 1
-		}
-		b.WriteString("└" + strings.Repeat("─", footerBorderLen) + "┘")
-	} else {
+	// Scroll indicator (inline, no border chrome)
+	if pane.scrollOffset > 0 {
 		totalLines := buffer.Count()
 		scrollPercent := 0
 		if pane.maxScroll > 0 {
@@ -212,12 +194,8 @@ func (m Model) renderLogsPanel(width, height int) string {
 		if viewEnd > totalLines {
 			viewEnd = totalLines
 		}
-		indicator := fmt.Sprintf(" ↑ %d%% [%d-%d/%d] ", scrollPercent, viewStart+1, viewEnd, totalLines)
-		borderLen := width - lipgloss.Width(indicator) - 2
-		if borderLen < 1 {
-			borderLen = 1
-		}
-		b.WriteString("└" + Styles.Dim.Render(indicator) + strings.Repeat("─", borderLen) + "┘")
+		indicator := fmt.Sprintf(" ↑ %d%% [%d-%d/%d]", scrollPercent, viewStart+1, viewEnd, totalLines)
+		b.WriteString(" " + Styles.Dim.Render(indicator))
 	}
 
 	return b.String()
@@ -364,12 +342,12 @@ func (m Model) renderCachedContent(b *strings.Builder, moniker string, state *Uo
 	cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("75"))
 	dimStyle := Styles.Dim
 
-	// Calculate content width (accounting for borders)
-	contentWidth := width - 4
+	// Full width, no borders
+	contentWidth := width
 
 	// Helper to render an empty line
 	emptyLine := func() {
-		b.WriteString(dimStyle.Render("│") + " " + strings.Repeat(" ", contentWidth) + dimStyle.Render("│") + "\n")
+		b.WriteString(strings.Repeat(" ", contentWidth) + "\n")
 	}
 
 	// Helper to render a centered line
@@ -382,7 +360,7 @@ func (m Model) renderCachedContent(b *strings.Builder, moniker string, state *Uo
 		padding := (contentWidth - textLen) / 2
 		leftPad := strings.Repeat(" ", padding)
 		rightPad := strings.Repeat(" ", contentWidth-textLen-padding)
-		b.WriteString(dimStyle.Render("│") + " " + leftPad + style.Render(text) + rightPad + dimStyle.Render("│") + "\n")
+		b.WriteString(leftPad + style.Render(text) + rightPad + "\n")
 	}
 
 	// Helper to render a left-aligned line with prefix
@@ -394,7 +372,7 @@ func (m Model) renderCachedContent(b *strings.Builder, moniker string, state *Uo
 		if padding < 0 {
 			padding = 0
 		}
-		b.WriteString(dimStyle.Render("│") + " " + renderedPrefix + renderedText + strings.Repeat(" ", padding) + dimStyle.Render("│") + "\n")
+		b.WriteString(renderedPrefix + renderedText + strings.Repeat(" ", padding) + "\n")
 	}
 
 	lineCount := 0
