@@ -41,11 +41,22 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/core/config"
 )
 
 var reDockerMemoryValue = regexp.MustCompile(`^([\d.]+)\s*(GiB|MiB|TiB|KiB|GB|MB|TB|KB|G|M|T|K)?$`)
+
+// dockerMemOnce and dockerCPUOnce cache Docker daemon queries for the lifetime
+// of the process. Docker memory and CPU limits don't change during a test run,
+// so querying once and caching eliminates repeated subprocess spawns.
+var (
+	dockerMemOnce  sync.Once
+	dockerMemBytes uint64
+	dockerCPUOnce  sync.Once
+	dockerCPUCount int
+)
 
 const (
 	// memoryPerSlot is the memory unit for calculating pressure capacity.
@@ -105,7 +116,19 @@ func parseMeminfo(output string) uint64 {
 //
 // On Windows with WSL2 backend, this reflects the WSL2 memory limit,
 // making it the most accurate source for containerized build capacity.
+//
+// The result is cached after the first successful call. Docker memory limits
+// do not change during a process lifetime, so repeated subprocess spawns are
+// unnecessary overhead.
 func GetDockerMemoryBytes() uint64 {
+	dockerMemOnce.Do(func() {
+		dockerMemBytes = queryDockerMemoryBytes()
+	})
+	return dockerMemBytes
+}
+
+// queryDockerMemoryBytes performs the actual docker info subprocess call.
+func queryDockerMemoryBytes() uint64 {
 	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
@@ -337,7 +360,18 @@ func FormatBytes(bytes uint64) string {
 
 // GetDockerCPUs returns the number of CPUs available to Docker.
 // Returns 0 if Docker is not available or the command fails.
+//
+// The result is cached after the first call. CPU allocation does not change
+// during a process lifetime.
 func GetDockerCPUs() int {
+	dockerCPUOnce.Do(func() {
+		dockerCPUCount = queryDockerCPUs()
+	})
+	return dockerCPUCount
+}
+
+// queryDockerCPUs performs the actual docker info subprocess call.
+func queryDockerCPUs() int {
 	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
