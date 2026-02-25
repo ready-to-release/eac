@@ -43,9 +43,11 @@ func GitInit(repoPath string) (*coregit.Repository, error) {
 		return nil, fmt.Errorf("failed to read .git/config: %w", err)
 	}
 	configStr := string(configData)
-	// Append autocrlf=false to [core] section if not already present
+	// Append autocrlf=false and fileMode=false to [core] section if not already present.
+	// fileMode=false: go-git stores blobs as 100755 on Windows but working tree
+	// files are 100644, causing spurious ` M` (mode change) in git status.
 	if !strings.Contains(configStr, "autocrlf") {
-		configStr = strings.Replace(configStr, "[core]", "[core]\n\tautocrlf = false", 1)
+		configStr = strings.Replace(configStr, "[core]", "[core]\n\tautocrlf = false\n\tfilemode = false", 1)
 		if err := os.WriteFile(gitConfigPath, []byte(configStr), 0o644); err != nil {
 			return nil, fmt.Errorf("failed to write .git/config: %w", err)
 		}

@@ -168,12 +168,7 @@ func ensureCleanWorkspace(ctx *eacgodog.TestContext) error {
 		return fmt.Errorf("failed to verify clean state: %w", err)
 	}
 	if strings.TrimSpace(status) != "" {
-		// Diagnostic: dump git config and diff for first dirty file
-		configOut, _ := getGitCommandOutput(workDir, "config", "--list", "--show-origin")
-		envDump := fmt.Sprintf("GIT_CONFIG_GLOBAL=%q GIT_CONFIG_SYSTEM=%q", os.Getenv("GIT_CONFIG_GLOBAL"), os.Getenv("GIT_CONFIG_SYSTEM"))
-		diffOut, _ := getGitCommandOutput(workDir, "diff", "--stat", "HEAD")
-		return fmt.Errorf("workspace still dirty after cleanup:\n%s\nworkDir: %s\nisolatedDir: %s\nenv: %s\ngit config:\n%s\ngit diff --stat HEAD:\n%s",
-			status, workDir, ctx.IsolatedDir, envDump, configOut, diffOut)
+		return fmt.Errorf("workspace still dirty after cleanup:\n%s\nworkDir: %s\nisolatedDir: %s", status, workDir, ctx.IsolatedDir)
 	}
 	return nil
 }

@@ -188,7 +188,7 @@ jobs:
 
       - name: Build Container
         id: container-build
-        if: steps.ci-config.outputs.is-container == 'true'
+        if: steps.ci-config.outputs.is-container == 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         uses: ./.github/actions/build-container
         with:
           module: ${{ inputs.module }}
@@ -230,7 +230,7 @@ jobs:
           ${COMMANDS:?COMMANDS not set} show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
       - name: Container Build Summary
-        if: always() && steps.ci-config.outputs.is-container == 'true'
+        if: always() && steps.ci-config.outputs.is-container == 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         shell: bash
         env:
           MODULE: ${{ inputs.module }}
