@@ -131,7 +131,7 @@ func (c *testSanityContext) ensureInRepoRoot() error {
 	// Use OriginalRepoRoot if available
 	if c.sharedCtx.OriginalRepoRoot != "" {
 		c.repoRoot = c.sharedCtx.OriginalRepoRoot
-		return nil
+		return c.sharedCtx.EnsureOriginalRepoCache()
 	}
 
 	// Otherwise find repo root from cwd
