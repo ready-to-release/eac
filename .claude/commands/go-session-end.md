@@ -30,42 +30,45 @@ You are completing a Claude Code session and running mandatory cleanup.
    - For affected modules, run: MCP `build <module>` or `go run ./go/cli/eac build <module>`
    - Ensure clean build with no errors
 
-5. **Provide session summary**:
-   - What was accomplished
-   - Files modified
-   - Code-simplifier changes applied
-   - Tests status (all passing)
-   - Any remaining TODOs
+5. **Write session summary file**:
+   - Determine filename: `out/session-summary-YYYY-MM-DD-HH-MM.md` (use current date/time)
+   - Write the file using the template below
+   - Confirm: "Session summary written to out/session-summary-<timestamp>.md"
+   - This file is picked up by `/go:status` at the start of the next session
+
+6. **Provide session summary** (print to terminal):
 
 ## Output Format
 
+Write to `out/session-summary-YYYY-MM-DD-HH-MM.md` and print to terminal:
+
 ```
-Session Summary:
-================
+# Session Summary — YYYY-MM-DD HH:MM
 
-Completed:
-- [List accomplishments]
+## Accomplished
+- [list]
 
-Files Modified:
-- [List files]
+## Files Modified
+- [list]
 
-Code Simplification:
-- ✅ code-simplifier ran successfully
-- [List simplifications applied]
+## Code Simplification
+- [changes applied or "none needed"]
 
-Tests:
-- ✅ All tests passing
+## Tests
+- go test ./...       [PASS / FAIL + details]
+- go test -race ./... [PASS / FAIL + details]
 
-Build:
-- ✅ Clean build
+## Build
+- [PASS / FAIL + details]
 
-Lint:
-- ✅ No critical issues
+## Lint
+- [PASS / no critical issues / FAIL + details]
 
-Ready for commit: [Yes/No]
+## Known TODOs
+- [list or "none"]
 
-Remaining TODOs (if any):
-- [List items]
+## Next Session Should
+- [1-3 actionable starting points]
 ```
 
 ## Why This Matters

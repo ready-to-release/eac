@@ -12,12 +12,16 @@ Learn how to use Claude Code effectively for Go CLI development with this reposi
 
 ### Your First Session
 
+> **Note**: Project context (`CLAUDE.md`) loads automatically when you open
+> Claude Code — no manual initialization needed. Run `/go:status` if you want
+> to confirm MCP server availability or check what a prior session left in progress.
+
 ```bash
 # 1. Start Claude Code
-claude-code
+claude
 
-# 2. Initialize with project context
-> /boot
+# 2. (Optional) Verify your environment
+> /go:status
 
 # 3. Plan your feature
 > /go:plan add a 'status' command that shows repository health
@@ -36,17 +40,18 @@ claude-code
 
 ### Slash Commands (Quick Access)
 
-| Command           | Purpose                           | When to Use                          |
-| ----------------- | --------------------------------- | ------------------------------------ |
-| `/boot`           | Initialize session                | **Start of every session**           |
-| `/go:plan`        | Plan feature/change               | Before implementing                  |
-| `/go:implement`   | Implement with TDD                | After planning                       |
-| `/go:test`        | Write/debug tests                 | Testing phase                        |
-| `/go:review`      | Review code + run code-simplifier | Before committing                    |
-| `/go:cli-docs`    | Update CLI docs                   | When CLI changes                     |
-| `/go:release`     | Check release readiness           | Before tagging release               |
-| `/go:debug`       | Debug failures                    | When things break                    |
-| `/go:session-end` | **End session cleanup**           | **End of every session (MANDATORY)** |
+| Command           | Purpose                                   | When to Use                          |
+| ----------------- | ----------------------------------------- | ------------------------------------ |
+| `/go:status`      | Verify MCP, worktree, prior session       | Optional — confirm environment       |
+| `/go:plan`        | Plan feature/change                       | Before implementing                  |
+| `/go:implement`   | Implement with TDD                        | After planning                       |
+| `/go:test`        | Write/debug tests                         | Testing phase                        |
+| `/go:review`      | Review code + run code-simplifier         | Before committing                    |
+| `/go:fix`         | Restore broken pipeline                   | CI/build/vet/test failures           |
+| `/go:cli-docs`    | Update CLI docs                           | When CLI changes                     |
+| `/go:release`     | Check release readiness                   | Before tagging release               |
+| `/go:debug`       | Debug failures                            | When things break                    |
+| `/go:session-end` | **End session cleanup + session summary** | **End of every session (MANDATORY)** |
 
 ### Sub-Agents (Specialized Tasks)
 
@@ -79,8 +84,6 @@ Invoke via: "Run the go-cli-feature skill for..."
 **Workflow**:
 
 ```text
-/boot
-  ↓
 /go:plan add a 'validate config' command that checks configuration files
   ↓
 Claude delegates to go-architect → provides architecture plan
@@ -118,9 +121,7 @@ Claude:
 **Workflow**:
 
 ```text
-/boot
-  ↓
-/go:debug [paste test failure output]
+/go:debug [paste test failure output]  OR  /go:fix [for pipeline failures]
   ↓
 Claude delegates to go-debugger:
 - Analyzes stack trace
@@ -147,8 +148,6 @@ Claude implements fix, all tests now pass
 **Workflow**:
 
 ```text
-/boot
-  ↓
 Use the go-cli-refactor-safe skill to refactor the config parser
   ↓
 Claude:
@@ -174,8 +173,6 @@ Claude:
 **Workflow**:
 
 ```text
-/boot
-  ↓
 /go:release check if commands module is ready for v1.5.0
   ↓
 Claude runs go-cli-release-check skill:
@@ -193,6 +190,33 @@ Claude: ✅ APPROVED FOR RELEASE v1.5.0
 **Result**: Confidence to tag and release
 
 ## Understanding the Setup
+
+### CLAUDE.md — Auto-loaded Context
+
+A `CLAUDE.md` file at the repository root is loaded automatically by Claude Code
+at the start of every session. It contains stable project facts: module layout,
+the clie isolation constraint, MCP server names, and the skills list.
+
+You do not need to run any command to load it — it is always present.
+
+For module-specific context, additional `CLAUDE.md` files exist in:
+
+- `go/cli/clie/` — isolation constraint and environment constants
+- `go/core/` — dependency position and key packages
+- `go/cli/eac/` — command entrypoints and build info
+
+These load automatically when Claude works in those directories.
+
+### Stop Hook — Automatic go vet Gate
+
+After every Claude response that modifies Go files, `go vet ./...` runs
+automatically at the workspace root. This catches obvious errors (unreachable
+code, printf format mismatches, suspicious constructs) before you see the result.
+
+If the hook fires with errors, use `/go:fix` to address vet failures
+systematically with guided exit criteria.
+
+No configuration needed — this runs via `.claude/settings.json` automatically.
 
 ### MCP Tools
 
@@ -306,7 +330,7 @@ Tests: ✅ All still pass
 
 ### Always
 
-- ✅ Run `/boot` at start of every session
+- ✅ Project context loads automatically — run `/go:status` to verify MCP availability
 - ✅ Run `/go:session-end` at end of every session
 - ✅ Write tests first (TDD)
 - ✅ Keep commits small and focused
@@ -416,28 +440,27 @@ Combine commands for custom workflows:
 **Example: Quick bug fix**:
 
 ```text
-/boot → /go:debug → /go:test → /go:review → /go:session-end
+/go:debug → /go:test → /go:review → /go:session-end
 ```
 
 **Example: Documentation update**:
 
 ```text
-/boot → /go:cli-docs → /go:review → /go:session-end
+/go:cli-docs → /go:review → /go:session-end
 ```
 
 ## Learning More
 
 - **Full agent details**: See `.claude/agents/` directory
-- **Skill workflows**: See `.claude/skills/` directory
 - **Command reference**: See `.claude/commands/` directory
-- **Project guidelines**: Read `/agent.md`
+- **Project guidelines**: Loaded automatically from `CLAUDE.md` (stable facts) and `agent.md` (deep reference, on demand)
 - **Module operations**: Use MCP `show-valid-commands`
 
 ## Summary
 
 **Every session**:
 
-1. Start: `/boot`
+1. (Optional) Verify environment: `/go:status`
 2. Work: Use appropriate commands/agents
 3. End: `/go:session-end` (MANDATORY)
 

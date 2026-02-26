@@ -6,6 +6,8 @@ This documentation is based on the ACD framework by Bryan Finster. For the canon
 
 > ACD requires CD to already be working. The six artifact contract and the eight constraints apply on top of an established CD pipeline — not instead of it.
 
+For the practical Claude Code setup that implements these principles in this repository, see [Working with Claude Code](../../how-to-guides/local-setup/configure-claude-code.md).
+
 ## In This Section
 
 | Topic | Description |

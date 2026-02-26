@@ -51,6 +51,28 @@ Provide a summary:
 - Required actions before commit/PR
 - Confirmation that code-simplifier ran
 
+## Structured Output
+
+After completing the review checklist, output a JSON summary block:
+
+```json
+{
+  "review": {
+    "verdict": "pass | fail | conditional",
+    "tests": "pass | fail | skip",
+    "vet": "pass | fail",
+    "lint": "pass | fail | skip",
+    "simplifier": "ran | skipped",
+    "issues": [],
+    "required_actions": []
+  }
+}
+```
+
+- `verdict: pass` — ready to commit with no changes needed
+- `verdict: conditional` — ready after the listed `required_actions` are done
+- `verdict: fail` — blocking issues found, do not commit
+
 ## Example Usage
 
 User: `/go:review the changes I made to the CLI parser`

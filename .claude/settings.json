@@ -8,6 +8,17 @@
     "deny": []
   },
   "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "go vet ./..."
+          }
+        ]
+      }
+    ]
   },
   "cleanupPeriodDays": 99999
 }

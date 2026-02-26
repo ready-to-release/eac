@@ -1,0 +1,18 @@
+# Pre-commit hooks for the EAC repository.
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: go-vet-changed
+        name: go vet
+        language: system
+        entry: go vet ./...
+        pass_filenames: false
+        types: [go]
