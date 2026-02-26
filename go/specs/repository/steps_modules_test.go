@@ -207,9 +207,10 @@ func (c *repositoryContext) checkForOrphanFiles() error {
 
 	// Check each file against the already-loaded module registry
 	for _, file := range c.sharedCtx.OriginalRepoCache.TrackedFiles() {
-		// Skip git internal files (.gitignore, .gitkeep) - same as GetRepositoryFiles
+		// Skip tooling config files that don't belong to any module
 		basename := filepath.Base(file)
-		if basename == ".gitignore" || basename == ".gitkeep" {
+		if basename == ".gitignore" || basename == ".gitkeep" ||
+			basename == ".pre-commit-config.yaml" || basename == "CLAUDE.md" {
 			continue
 		}
 
