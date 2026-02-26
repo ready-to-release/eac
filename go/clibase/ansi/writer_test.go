@@ -129,9 +129,9 @@ func TestFilter_StripAll_StripsEverything(t *testing.T) {
 
 	output := buf.String()
 
-	// Should warn about stripping
-	if !strings.Contains(output, "[NOTE] ANSI stripped (strip-all mode)") {
-		t.Errorf("Expected warning, got: %s", output)
+	// Should NOT inject any warning/note into the output (strip-all is intentional)
+	if strings.Contains(output, "[NOTE]") {
+		t.Errorf("Unexpected note injected: %s", output)
 	}
 
 	// Should strip ALL ANSI including colors

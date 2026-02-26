@@ -3,6 +3,7 @@ package tool
 
 import (
 	"fmt"
+	"os/exec"
 	"sync"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -23,12 +24,17 @@ type BuildBridge struct {
 	registry Registry
 	resolver *DefaultResolver
 	executor Executor
+
+	// lookPathFunc checks if a binary exists on PATH. Defaults to exec.LookPath.
+	// Override in tests to control requirement checking.
+	lookPathFunc func(string) (string, error)
 }
 
 // NewBuildBridge creates a new build bridge.
 func NewBuildBridge() *BuildBridge {
 	return &BuildBridge{
 		nativeHandlers: make(map[string]build.BuilderPort),
+		lookPathFunc:   exec.LookPath,
 	}
 }
 
@@ -67,6 +73,7 @@ func (b *BuildBridge) GetHandler(name string) build.BuilderPort {
 }
 
 // GetAllHandlers returns all available handlers (native + tool registry).
+// Native handlers are only included if their binding allows and requirements are met.
 func (b *BuildBridge) GetAllHandlers() map[string]build.BuilderPort {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -80,9 +87,15 @@ func (b *BuildBridge) GetAllHandlers() map[string]build.BuilderPort {
 		}
 	}
 
-	// Native handlers override tool registry (added second so they win)
+	// Native handlers: only add if binding allows and requirements met
 	for name, h := range b.nativeHandlers {
-		result[name] = h
+		binding := b.getBindingForTool(name)
+		if binding == ToolBindingContainer {
+			continue // Skip native in container mode
+		}
+		if binding == ToolBindingSystem || b.areRequirementsMet(h) {
+			result[name] = h // Override registry handler
+		}
 	}
 
 	return result
@@ -160,13 +173,23 @@ func (b *BuildBridge) GetHandlersForModule(module *modules.ModuleContract) []Com
 }
 
 // getHandlerUnlocked returns a handler by name (must be called with lock held).
+// Respects executor-mode and per-tool bindings:
+//   - container mode: skip native handlers, use registry only
+//   - system mode: always use native handler (fail fast if broken)
+//   - auto mode: use native if requirements met, else fall through to registry
 func (b *BuildBridge) getHandlerUnlocked(name string) build.BuilderPort {
-	// Check native handlers first
-	if h, ok := b.nativeHandlers[name]; ok {
-		return h
+	binding := b.getBindingForTool(name)
+
+	if binding != ToolBindingContainer {
+		if h, ok := b.nativeHandlers[name]; ok {
+			if binding == ToolBindingSystem || b.areRequirementsMet(h) {
+				return h
+			}
+			// Auto mode: requirements not met, fall through
+		}
 	}
 
-	// Fall back to tool registry
+	// Fall back to tool registry (which has its own auto/system/container logic)
 	if b.registry != nil && b.executor != nil {
 		if tool, ok := b.registry.Get(name); ok {
 			return NewToolHandlerAdapter(tool, b.executor)
@@ -177,13 +200,19 @@ func (b *BuildBridge) getHandlerUnlocked(name string) build.BuilderPort {
 }
 
 // HasHandler checks if a handler exists by name.
+// Respects binding mode and requirements for native handlers.
 func (b *BuildBridge) HasHandler(name string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	// Check native handlers first
-	if _, ok := b.nativeHandlers[name]; ok {
-		return true
+	// Check native handlers with availability gating
+	if h, ok := b.nativeHandlers[name]; ok {
+		binding := b.getBindingForTool(name)
+		if binding != ToolBindingContainer {
+			if binding == ToolBindingSystem || b.areRequirementsMet(h) {
+				return true
+			}
+		}
 	}
 
 	// Check tool registry
@@ -256,10 +285,14 @@ func (b *BuildBridge) GetHandlerForComponent(componentType string) build.Builder
 		return nil
 	}
 
-	// Check if the tool ID is a native handler first
-	// Native handlers take precedence (e.g., mkdocs-preprocess, mkdocs-render-oci, pdf-oci)
+	// Check native handler with availability gating
 	if h, ok := b.nativeHandlers[toolID]; ok {
-		return h
+		binding := b.getBindingForTool(toolID)
+		if binding != ToolBindingContainer {
+			if binding == ToolBindingSystem || b.areRequirementsMet(h) {
+				return h
+			}
+		}
 	}
 
 	// Fall back to tool registry lookup
@@ -289,6 +322,145 @@ func (b *BuildBridge) ResolveTool(componentType string, operation core.ActionTyp
 	}
 
 	return t
+}
+
+// getBindingForTool determines the effective binding mode for a tool name.
+func (b *BuildBridge) getBindingForTool(name string) ToolBinding {
+	if b.registry == nil {
+		return ToolBindingAuto
+	}
+	reg, ok := b.registry.(*DefaultRegistry)
+	if !ok {
+		return ToolBindingAuto
+	}
+	return reg.GetBindingForTool(name)
+}
+
+// areRequirementsMet checks if a native handler's system requirements are satisfied.
+// Uses two-tier verification:
+//  1. Fast-reject: lookPathFunc checks binary exists on PATH (~0ms)
+//  2. Full verify: registry.IsAvailable checks version requirements (cached after first call)
+//
+// Returns true if the handler declares no requirements.
+func (b *BuildBridge) areRequirementsMet(h build.BuilderPort) bool {
+	reqs := h.Requirements()
+	if len(reqs) == 0 {
+		return true
+	}
+
+	// Tier 1: Fast-reject via PATH check
+	lookPath := b.lookPathFunc
+	if lookPath == nil {
+		lookPath = exec.LookPath
+	}
+	for _, req := range reqs {
+		if _, err := lookPath(req); err != nil {
+			return false // Binary not on PATH, skip expensive verification
+		}
+	}
+
+	// Tier 2: Full verification via registry (version checks, cached)
+	reg, ok := b.registry.(*DefaultRegistry)
+	if !ok {
+		return true // No registry available, PATH check passed
+	}
+	for _, req := range reqs {
+		if !reg.IsAvailable(req) {
+			return false
+		}
+	}
+	return true
+}
+
+// PreWarmRequirements verifies all native handler requirements in parallel.
+// Call during initialization to populate the registry's verify cache.
+// Subsequent areRequirementsMet calls return cached results instantly.
+func (b *BuildBridge) PreWarmRequirements() {
+	b.mu.RLock()
+	reg, ok := b.registry.(*DefaultRegistry)
+	if !ok {
+		b.mu.RUnlock()
+		return
+	}
+
+	// Collect unique requirements from all native handlers
+	unique := make(map[string]bool)
+	for _, h := range b.nativeHandlers {
+		for _, req := range h.Requirements() {
+			unique[req] = true
+		}
+	}
+	b.mu.RUnlock()
+
+	if len(unique) == 0 {
+		return
+	}
+
+	// Fast-reject: skip requirements not on PATH
+	lookPath := b.lookPathFunc
+	if lookPath == nil {
+		lookPath = exec.LookPath
+	}
+	var toVerify []string
+	for req := range unique {
+		if _, err := lookPath(req); err == nil {
+			toVerify = append(toVerify, req)
+		}
+	}
+
+	if len(toVerify) == 0 {
+		return
+	}
+
+	// Collect tool definitions under read lock
+	var tools []*ToolDefinition
+
+	reg.mu.RLock()
+	verifier := reg.verifier
+	for _, req := range toVerify {
+		if _, ok := reg.verifyCache[req]; ok {
+			continue // Already cached
+		}
+		systemID := req + ":system"
+		if tool, ok := reg.tools[systemID]; ok {
+			tools = append(tools, tool)
+		}
+	}
+	reg.mu.RUnlock()
+
+	if len(tools) == 0 {
+		return
+	}
+
+	// Verify in parallel (no lock held during expensive shell commands)
+	type verifyResult struct {
+		toolID    string
+		available bool
+	}
+	results := make([]verifyResult, len(tools))
+	var wg sync.WaitGroup
+	for i, tool := range tools {
+		wg.Add(1)
+		go func(idx int, td *ToolDefinition) {
+			defer wg.Done()
+			var avail bool
+			if verifier != nil {
+				avail = verifier(td)
+			} else {
+				vr := VerifyToolDefinition(td)
+				avail = vr.Available
+			}
+			results[idx] = verifyResult{td.ID, avail}
+		}(i, tool)
+	}
+	wg.Wait()
+
+	// Write all results to cache under write lock
+	reg.mu.Lock()
+	for _, r := range results {
+		reg.verifyCache[r.toolID] = r.available
+	}
+	reg.mu.Unlock()
 }
 
 // Global build bridge instance.
@@ -346,6 +518,12 @@ func InitializeGlobalBridges(repoRoot, configRoot string) error {
 	GlobalTestBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 	GlobalScanBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 	GlobalServeBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+
+	// Pre-warm native handler requirement cache in parallel.
+	// Runs ~4-5 verification commands concurrently (~500ms wall time).
+	// Only build bridge needs pre-warming — all bridges share the same registry
+	// and verify cache, so results are available to lint/test/scan bridges too.
+	GlobalBuildBridge().PreWarmRequirements()
 
 	return nil
 }

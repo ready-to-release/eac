@@ -133,14 +133,8 @@ func (f *Filter) Write(p []byte) (n int, err error) {
 
 	switch f.mode {
 	case FilterAll:
-		// Strip ALL ANSI using external library
+		// Strip ALL ANSI using external library - no warning needed, this is intentional for log files
 		output = stripansi.Bytes(data)
-		if len(output) != len(data) && !f.warnedOnce {
-			f.warnedOnce = true
-			caller := getCallerInfo(3)
-			msg := fmt.Sprintf("[NOTE] ANSI stripped (strip-all mode) from: %s [caller: %s]\n", f.source, caller)
-			_, _ = f.w.Write([]byte(msg)) //nolint:errcheck
-		}
 
 	case FilterBadOnly:
 		fallthrough

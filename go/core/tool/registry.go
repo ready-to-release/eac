@@ -506,9 +506,45 @@ func (r *DefaultRegistry) GetMissingTools(toolIDs []string) []string {
 	return missing
 }
 
-// IsAvailable checks if a tool is available (convenience function).
+// IsAvailable checks if a tool is available using cached verification.
+// First call runs full verification (including version checks).
+// Subsequent calls return the cached result immediately.
 func (r *DefaultRegistry) IsAvailable(toolID string) bool {
-	return r.VerifyTool(toolID).Available
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check cache first
+	if cached, ok := r.verifyCache[toolID]; ok {
+		return cached
+	}
+
+	// Try system tool variant
+	systemID := toolID + ":system"
+	if tool, ok := r.tools[systemID]; ok {
+		return r.isToolAvailableUnlocked(tool)
+	}
+
+	// Try direct lookup
+	if tool, ok := r.tools[toolID]; ok && tool.Type == ToolTypeSystem {
+		return r.isToolAvailableUnlocked(tool)
+	}
+
+	return false
+}
+
+// GetBindingForTool returns the effective binding mode for a tool.
+// Checks per-tool bindings first, then falls back to global default.
+func (r *DefaultRegistry) GetBindingForTool(toolName string) ToolBinding {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if binding, ok := r.bindings[toolName]; ok {
+		return binding
+	}
+	if r.defaultBinding != "" {
+		return r.defaultBinding
+	}
+	return ToolBindingAuto
 }
 
 // GetExecutorMode returns the current global executor mode.

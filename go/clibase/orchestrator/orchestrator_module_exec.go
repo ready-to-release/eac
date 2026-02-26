@@ -10,6 +10,7 @@ import (
 	"time"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/ansi"
 	"github.com/ready-to-release/eac/go/clibase/display"
 	"github.com/ready-to-release/eac/go/clibase/output"
 )
@@ -253,12 +254,15 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	}
 	o.tuiMarkRunning(item.Moniker)
 
+	// Wrap log file with ANSI filter - strip ALL sequences (including colors) from log files
+	filteredLogFile := ansi.NewStripAllFilter(logFile, item.Moniker)
+
 	// Create writer for worker - use writerFactory if available (e.g., TUIObserver)
 	var workerWriter io.Writer
 	if o.writerFactory != nil {
-		workerWriter = o.writerFactory.NewWriter(item.Moniker, logFile)
+		workerWriter = o.writerFactory.NewWriter(item.Moniker, filteredLogFile)
 	} else {
-		workerWriter = logFile
+		workerWriter = filteredLogFile
 	}
 
 	// Execute worker function (module-level workers get background context)

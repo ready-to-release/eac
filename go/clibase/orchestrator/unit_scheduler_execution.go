@@ -183,8 +183,8 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		return result
 	}
 
-	// Wrap log file with bad ANSI filter - preserves colors, strips control sequences
-	filteredLogFile := ansi.NewBadOnlyFilter(logFile, displayName)
+	// Wrap log file with ANSI filter - strip ALL sequences (including colors) from log files
+	filteredLogFile := ansi.NewStripAllFilter(logFile, displayName)
 
 	// Create writer for worker - use writerFactory if available (e.g., TUIObserver)
 	// Use moniker (longname) to match TUI tab identification

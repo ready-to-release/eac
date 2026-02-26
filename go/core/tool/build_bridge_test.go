@@ -1,7 +1,9 @@
 package tool
 
 import (
+	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -9,6 +11,16 @@ import (
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 )
+
+// lookPathNotFound simulates no binaries available on PATH.
+func lookPathNotFound(name string) (string, error) {
+	return "", fmt.Errorf("%s: not found", name)
+}
+
+// lookPathAllFound simulates all binaries available on PATH.
+func lookPathAllFound(name string) (string, error) {
+	return "/usr/bin/" + name, nil
+}
 
 // mockBuildHandler implements build.BuilderPort for testing.
 type mockBuildHandler struct {
@@ -229,6 +241,465 @@ func TestBuildBridge_SetToolSystem(t *testing.T) {
 	handler := bridge.GetHandler("test-tool")
 	if handler == nil {
 		t.Error("Tool system not properly configured")
+	}
+}
+
+func TestBuildBridge_NativeHandlerSkippedWhenRequirementsNotMet(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathNotFound // npm not on PATH
+
+	// Register native handler that requires "npm"
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	// Create registry with only container tool (npm not available via verifier)
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // Nothing available on system
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected container handler fallback, got nil")
+	}
+	if !handler.IsContainer() {
+		t.Error("expected container handler, got native")
+	}
+}
+
+func TestBuildBridge_NativeHandlerUsedWhenRequirementsMet(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathAllFound // npm IS on PATH
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return true // Everything available
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected native handler, got nil")
+	}
+	if handler.IsContainer() {
+		t.Error("expected native handler, got container")
+	}
+}
+
+func TestBuildBridge_ContainerModeSkipsNativeHandlers(t *testing.T) {
+	bridge := NewBuildBridge()
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	registry := NewRegistry()
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ExecutorMode: ExecutorModeContainer,
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected container handler in container mode, got nil")
+	}
+	if !handler.IsContainer() {
+		t.Error("expected container handler in container mode, got native")
+	}
+}
+
+func TestBuildBridge_SystemModeAlwaysUsesNativeHandler(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathNotFound // npm not on PATH, but system mode forces native
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // npm not available
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ExecutorMode: ExecutorModeSystem,
+		SystemTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeSystem, Binary: "npm"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected native handler in system mode, got nil")
+	}
+	if handler.IsContainer() {
+		t.Error("system mode should force native handler, got container")
+	}
+}
+
+func TestBuildBridge_NativeHandlerNoRequirementsAlwaysReturned(t *testing.T) {
+	bridge := NewBuildBridge()
+
+	// Handler with no requirements (e.g., DependencyGraphHandler)
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "dependency-graph",
+		requirements: nil,
+	})
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // Nothing available
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("dependency-graph")
+	if handler == nil {
+		t.Fatal("expected native handler with no requirements, got nil")
+	}
+	if handler.IsContainer() {
+		t.Error("expected native handler, got container")
+	}
+}
+
+func TestBuildBridge_PerToolBindingOverride(t *testing.T) {
+	bridge := NewBuildBridge()
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	// Global mode is auto, but npm-build has per-tool container binding
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return true // npm IS available on system
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ExecutorMode: ExecutorModeAuto,
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+		ToolBindings: map[string]ToolBinding{
+			"npm-build": ToolBindingContainer, // Force container for npm-build
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected container handler via per-tool binding, got nil")
+	}
+	if !handler.IsContainer() {
+		t.Error("per-tool container binding should skip native handler")
+	}
+}
+
+func TestBuildBridge_GetAllHandlers_RespectsAvailabilityGating(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathNotFound // npm not on PATH
+
+	// Register two native handlers: one with met requirements, one without
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "go-build",
+		requirements: nil, // No requirements = always available
+	})
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // Nothing available on system
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handlers := bridge.GetAllHandlers()
+
+	// go-build: native (no requirements)
+	if h, ok := handlers["go-build"]; !ok {
+		t.Error("go-build should be in GetAllHandlers()")
+	} else if h.IsContainer() {
+		t.Error("go-build should be native (no requirements)")
+	}
+
+	// npm-build: container (requirements not met → native skipped)
+	if h, ok := handlers["npm-build"]; !ok {
+		t.Error("npm-build should be in GetAllHandlers() via container fallback")
+	} else if !h.IsContainer() {
+		t.Error("npm-build should be container (requirements not met)")
+	}
+}
+
+func TestBuildBridge_HasHandler_RespectsAvailabilityGating(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathNotFound // npm not on PATH
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // npm not available
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	// Should still report true (container fallback available)
+	if !bridge.HasHandler("npm-build") {
+		t.Error("HasHandler should return true (container fallback exists)")
+	}
+}
+
+func TestBuildBridge_HasHandler_FalseWhenNeitherAvailable(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathNotFound // npm not on PATH
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	// Registry with nothing for npm-build
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	// Native requirements not met AND no registry fallback → false
+	if bridge.HasHandler("npm-build") {
+		t.Error("HasHandler should return false (no available handler)")
+	}
+}
+
+func TestBuildBridge_NativeHandlerSkippedWhenRegistryRejectsVersion(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathAllFound // npm IS on PATH (tier 1 passes)
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+
+	// Registry has npm:system but verifier rejects it (wrong version)
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		return false // npm version check fails (tier 2 rejects)
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {Type: ToolTypeContainer, Image: "node", Tag: "22-alpine"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetHandler("npm-build")
+	if handler == nil {
+		t.Fatal("expected container handler fallback, got nil")
+	}
+	if !handler.IsContainer() {
+		t.Error("expected container handler when registry rejects version, got native")
+	}
+}
+
+func TestBuildBridge_PreWarmRequirements(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = lookPathAllFound
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"},
+	})
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "go-build",
+		requirements: []string{"go"},
+	})
+
+	var verified []string
+	var mu sync.Mutex
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		mu.Lock()
+		verified = append(verified, tool.ID)
+		mu.Unlock()
+		return true
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+			"go":  {Type: ToolTypeSystem, Binary: "go"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	bridge.PreWarmRequirements()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(verified) != 2 {
+		t.Errorf("expected 2 verifications, got %d: %v", len(verified), verified)
+	}
+
+	// After pre-warm, IsAvailable should return cached results
+	if !registry.IsAvailable("npm") {
+		t.Error("npm should be available after pre-warm")
+	}
+	if !registry.IsAvailable("go") {
+		t.Error("go should be available after pre-warm")
+	}
+}
+
+func TestBuildBridge_PreWarmRequirements_SkipsMissingBinaries(t *testing.T) {
+	bridge := NewBuildBridge()
+	bridge.lookPathFunc = func(name string) (string, error) {
+		if name == "go" {
+			return "/usr/bin/go", nil
+		}
+		return "", fmt.Errorf("%s: not found", name)
+	}
+
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "npm-build",
+		requirements: []string{"npm"}, // Not on PATH
+	})
+	bridge.RegisterNativeHandler(&mockBuildHandler{
+		name:         "go-build",
+		requirements: []string{"go"}, // On PATH
+	})
+
+	var verified []string
+	var mu sync.Mutex
+
+	registry := NewRegistry()
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		mu.Lock()
+		verified = append(verified, tool.ID)
+		mu.Unlock()
+		return true
+	})
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+			"go":  {Type: ToolTypeSystem, Binary: "go"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	bridge.PreWarmRequirements()
+
+	mu.Lock()
+	defer mu.Unlock()
+	// Only "go" should be verified (npm was fast-rejected by LookPath)
+	if len(verified) != 1 {
+		t.Errorf("expected 1 verification (npm skipped), got %d: %v", len(verified), verified)
+	}
+	if len(verified) > 0 && verified[0] != "go" {
+		t.Errorf("expected 'go' to be verified, got %q", verified[0])
+	}
+}
+
+func TestRegistry_IsAvailable_UsesCachePath(t *testing.T) {
+	registry := NewRegistry()
+
+	callCount := 0
+	registry.SetVerifier(func(tool *ToolDefinition) bool {
+		callCount++
+		return true
+	})
+
+	if err := registry.RegisterFromConfig(&ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {Type: ToolTypeSystem, Binary: "npm"},
+		},
+	}); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	// First call should verify exactly once (no double verification)
+	if !registry.IsAvailable("npm") {
+		t.Error("npm should be available")
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 verification call, got %d (double-verify bug?)", callCount)
+	}
+
+	// Second call should use cache (no additional verification)
+	if !registry.IsAvailable("npm") {
+		t.Error("npm should still be available (cached)")
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 verification call (cached), got %d", callCount)
 	}
 }
 

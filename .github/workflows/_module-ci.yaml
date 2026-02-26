@@ -201,7 +201,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      # 6. Upload build artifacts (needed by cross-platform tests and release workflows)
+      # 6. Upload build artifacts (needed by download-module-deps in dependent modules, cross-platform tests, and release workflows)
       - name: Upload Build Artifacts
         if: |
           steps.ci-config.outputs.is-container != 'true'
@@ -268,7 +268,7 @@ jobs:
       # 9. Test (Linux) - runs in same job, build artifacts already on disk
       - name: Determine test suites
         id: suites
-        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         shell: bash
         run: |
           REF="${{ inputs.ref || github.ref }}"
@@ -279,7 +279,7 @@ jobs:
           fi
 
       - name: Log in to GHCR (for integration tests)
-        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -288,7 +288,7 @@ jobs:
 
       - name: Test Module (Linux)
         id: test-linux
-        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true'
+        if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         shell: bash
         env:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
@@ -342,12 +342,12 @@ jobs:
 
       # 10. Scan - runs in same job, build artifacts already on disk
       - name: Setup Docker Buildx (for scans)
-        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true'
+        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Scan Module
         id: scan-step
-        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true'
+        if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
         shell: bash
         env:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
