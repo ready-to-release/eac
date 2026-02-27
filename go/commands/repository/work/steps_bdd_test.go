@@ -208,22 +208,20 @@ func verifyBranchExists(ctx *eacgodog.TestContext, branch string) error {
 	return nil
 }
 
-// gitCommitIfDirty stages and commits all changes in one subprocess call.
-// Equivalent to: git status --porcelain → git add . → git commit, but batched
-// into a single bash invocation to reduce subprocess overhead.
+// gitCommitIfDirty stages and commits all changes if the working tree is dirty.
 func gitCommitIfDirty(dir, message string) error {
-	script := fmt.Sprintf(
-		`if [ -n "$(git status --porcelain)" ]; then git add . && git commit -m %q; fi`,
-		message,
-	)
-	cmd := exec.Command("bash", "-c", script)
-	cmd.Dir = dir
-	cmd.Env = gitTestEnv()
-	output, err := cmd.CombinedOutput()
+	// Check if working tree is dirty
+	status, err := getGitCommandOutput(dir, "status", "--porcelain")
 	if err != nil {
-		return fmt.Errorf("git commit-if-dirty failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("git status failed: %w", err)
 	}
-	return nil
+	if strings.TrimSpace(status) == "" {
+		return nil // Nothing to commit
+	}
+	if err := runGitCommand(dir, "add", "."); err != nil {
+		return err
+	}
+	return runGitCommand(dir, "commit", "-m", message)
 }
 
 // runGitCommand runs a git command in the specified directory.

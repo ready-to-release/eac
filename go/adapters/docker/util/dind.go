@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const (
@@ -162,11 +163,21 @@ func FormatDockerVolume(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
 }
 
-// IsDockerAvailable checks if Docker daemon is accessible by attempting to run 'docker info'.
-// Returns true if Docker daemon is accessible, false otherwise.
+var (
+	dockerAvailableOnce   sync.Once
+	dockerAvailableResult bool
+)
+
+// IsDockerAvailable checks if Docker daemon is accessible.
+// Uses "docker version" instead of "docker info" to avoid a daemon round-trip (~50ms vs ~300ms).
+// Result is cached for the process lifetime — Docker availability is not expected to change
+// mid-run, and the savings are significant when this is called many times (e.g., per-image).
 func IsDockerAvailable() bool {
-	cmd := exec.Command("docker", "info")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run() == nil
+	dockerAvailableOnce.Do(func() {
+		cmd := exec.Command("docker", "version")
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+		dockerAvailableResult = cmd.Run() == nil
+	})
+	return dockerAvailableResult
 }

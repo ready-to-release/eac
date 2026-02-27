@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../contracts/core/0.1.0/schemas/timeouts.schema.json
+#
+# Repository-specific timeout overrides.
+# Only values that differ from contracts/core/0.1.0/schemas/defaults/timeouts.yml are listed here.
+# All values use Go duration syntax: 500ms, 5s, 2m, 1h
+
+# Long-running operations
+long_operations:
+  # Docker-dependent L2 test suites (e.g., drawio) run 15-20 container scenarios
+  # sequentially, each requiring a Docker image pull + container start + execution.
+  # Cold runs easily exceed the 5m default.  15m accommodates the full suite
+  # while still catching genuine hangs before CI limits are reached.
+  worker_timeout: 15m

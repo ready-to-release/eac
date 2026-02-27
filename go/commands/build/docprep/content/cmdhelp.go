@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/commands/build/docprep/staging"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -63,6 +64,9 @@ var cmdMarkerPatterns = map[string]*regexp.Regexp{
 }
 
 // ProcessCommandMarkers finds and replaces command help markers in staging markdown files.
+// Files are processed in parallel (up to 8 goroutines) to reduce wall-clock time when
+// there are many markers (e.g. 200+ book:cmd markers each spawning a subprocess).
+// A cachingExecutor deduplicates calls such as GetValidCommands across all files.
 func ProcessCommandMarkers(
 	ctx context.Context,
 	fileIndex *staging.FileIndex,
@@ -79,77 +83,127 @@ func ProcessCommandMarkers(
 		return nil
 	}
 
+	// Wrap with caching to deduplicate subprocess calls across files.
+	// GetValidCommands is called once per category/group marker but always
+	// returns the same result; caching reduces it to a single subprocess call.
+	cached := newCachingExecutor(executor)
+
+	// Thread-safe warn wrapper for parallel file processing.
+	var warnMu sync.Mutex
+	safeWarnf := func(format string, args ...any) {
+		warnMu.Lock()
+		warnf(format, args...)
+		warnMu.Unlock()
+	}
+
+	files := fileIndex.GetMarkdownFiles()
+	type fileResult struct {
+		replacements int
+		err          error
+	}
+	results := make([]fileResult, len(files))
+
+	const parallelism = 8
+	sem := make(chan struct{}, parallelism)
+	var wg sync.WaitGroup
+
+	for i, p := range files {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(idx int, filePath string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			count, err := processFileMarkers(ctx, filePath, stagingDir, workspaceRoot, cached, safeWarnf)
+			results[idx] = fileResult{replacements: count, err: err}
+		}(i, p)
+	}
+	wg.Wait()
+
 	replacements := 0
 	filesModified := 0
-
-	for _, path := range fileIndex.GetMarkdownFiles() {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return err
+	for _, r := range results {
+		if r.err != nil {
+			return r.err
 		}
-
-		original := string(content)
-		modified := original
-		fileReplacements := 0
-
-		for markerType, pattern := range cmdMarkerPatterns {
-			matches := pattern.FindAllStringSubmatch(modified, -1)
-			for _, match := range matches {
-				var replacement string
-				var err error
-
-				switch markerType {
-				case "cmd":
-					cmdName := match[1]
-					replacement, err = FormatSingleCommand(ctx, workspaceRoot, executor, cmdName)
-				case "cmd-group":
-					groupName := match[1]
-					replacement, err = FormatCommandGroup(ctx, workspaceRoot, executor, groupName, warnf)
-				case "cmd-all":
-					replacement, err = FormatAllCommands(ctx, workspaceRoot, executor)
-				case "cmd-toc":
-					replacement, err = FormatCommandTOC(ctx, workspaceRoot, executor)
-				case "categories-table":
-					replacement, err = FormatCategoriesTable(ctx, workspaceRoot, executor)
-				case "categories-list":
-					replacement, err = FormatCategoriesList(ctx, workspaceRoot, executor)
-				case "category-section":
-					categoryName := match[1]
-					replacement, err = FormatCategorySection(ctx, workspaceRoot, executor, categoryName)
-				case "category-commands":
-					categoryName := match[1]
-					replacement, err = FormatCategoryCommands(ctx, workspaceRoot, executor, categoryName)
-				case "categories-index":
-					replacement, err = FormatCategoriesIndex(ctx, workspaceRoot, executor)
-				}
-
-				if err != nil {
-					if errors.Is(err, ErrCommandNotFound) {
-						relPath, relErr := filepath.Rel(stagingDir, path)
-						if relErr != nil {
-							relPath = path
-						}
-						return fmt.Errorf("command marker in %s references non-existent command: %w", relPath, err)
-					}
-					warnf("failed to process %s marker '%s': %v", markerType, match[0], err)
-					continue
-				}
-
-				wrapped := fmt.Sprintf("<!-- book:generated %s -->\n%s\n<!-- /book:generated -->", match[0][5:len(match[0])-4], replacement)
-				modified = strings.Replace(modified, match[0], wrapped, 1)
-				fileReplacements++
-			}
-		}
-
-		if fileReplacements > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
-				return err
-			}
-			replacements += fileReplacements
+		if r.replacements > 0 {
+			replacements += r.replacements
 			filesModified++
 		}
 	}
 
 	logf("    Processed %d command markers in %d files", replacements, filesModified)
 	return nil
+}
+
+// processFileMarkers processes command help markers in a single markdown file.
+// Returns the number of replacements made.
+func processFileMarkers(
+	ctx context.Context,
+	path, stagingDir, workspaceRoot string,
+	executor CommandExecutor,
+	warnf func(string, ...any),
+) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+
+	modified := string(data)
+	fileReplacements := 0
+
+	for markerType, pattern := range cmdMarkerPatterns {
+		matches := pattern.FindAllStringSubmatch(modified, -1)
+		for _, match := range matches {
+			var replacement string
+			var replErr error
+
+			switch markerType {
+			case "cmd":
+				cmdName := match[1]
+				replacement, replErr = FormatSingleCommand(ctx, workspaceRoot, executor, cmdName)
+			case "cmd-group":
+				groupName := match[1]
+				replacement, replErr = FormatCommandGroup(ctx, workspaceRoot, executor, groupName, warnf)
+			case "cmd-all":
+				replacement, replErr = FormatAllCommands(ctx, workspaceRoot, executor)
+			case "cmd-toc":
+				replacement, replErr = FormatCommandTOC(ctx, workspaceRoot, executor)
+			case "categories-table":
+				replacement, replErr = FormatCategoriesTable(ctx, workspaceRoot, executor)
+			case "categories-list":
+				replacement, replErr = FormatCategoriesList(ctx, workspaceRoot, executor)
+			case "category-section":
+				categoryName := match[1]
+				replacement, replErr = FormatCategorySection(ctx, workspaceRoot, executor, categoryName)
+			case "category-commands":
+				categoryName := match[1]
+				replacement, replErr = FormatCategoryCommands(ctx, workspaceRoot, executor, categoryName)
+			case "categories-index":
+				replacement, replErr = FormatCategoriesIndex(ctx, workspaceRoot, executor)
+			}
+
+			if replErr != nil {
+				if errors.Is(replErr, ErrCommandNotFound) {
+					relPath, relErr := filepath.Rel(stagingDir, path)
+					if relErr != nil {
+						relPath = path
+					}
+					return 0, fmt.Errorf("command marker in %s references non-existent command: %w", relPath, replErr)
+				}
+				warnf("failed to process %s marker '%s': %v", markerType, match[0], replErr)
+				continue
+			}
+
+			wrapped := fmt.Sprintf("<!-- book:generated %s -->\n%s\n<!-- /book:generated -->", match[0][5:len(match[0])-4], replacement)
+			modified = strings.Replace(modified, match[0], wrapped, 1)
+			fileReplacements++
+		}
+	}
+
+	if fileReplacements > 0 {
+		if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
+			return 0, err
+		}
+	}
+	return fileReplacements, nil
 }

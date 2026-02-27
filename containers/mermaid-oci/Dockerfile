@@ -2,7 +2,7 @@
 # Lightweight container for mermaid-cli (mmdc) diagram rendering
 # Used by eac-commands for pre-rendering mermaid diagrams to SVG
 
-ARG NODE_VERSION=25
+ARG NODE_VERSION=22
 FROM node:${NODE_VERSION}-slim
 
 # Install mermaid-cli to /opt/mermaid (NOT /docs which gets volume-mounted at runtime)

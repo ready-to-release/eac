@@ -313,3 +313,65 @@ func TestImageManager_EnsureImageWithOptions_LocalContainer_OfflineMode(t *testi
 		t.Logf("EnsureImageWithOptions failed as expected: %v", err)
 	}
 }
+
+func TestGetNewestFileTime_SentinelTaken(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a sentinel file (Dockerfile) in the temp dir.
+	dockerfile := filepath.Join(tmpDir, "Dockerfile")
+	if err := os.WriteFile(dockerfile, []byte("FROM alpine"), 0644); err != nil {
+		t.Fatalf("failed to create Dockerfile: %v", err)
+	}
+
+	// Create a nested file that is NOT a sentinel — should be ignored by the
+	// sentinel path and should NOT affect the returned time.
+	subdir := filepath.Join(tmpDir, "subdir")
+	if err := os.MkdirAll(subdir, 0755); err != nil {
+		t.Fatalf("failed to create subdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(subdir, "hidden.txt"), []byte("data"), 0644); err != nil {
+		t.Fatalf("failed to create hidden.txt: %v", err)
+	}
+
+	mgr := NewImageManager("/workspace", false, "org", nil)
+	got, err := mgr.getNewestFileTime(tmpDir)
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if got.IsZero() {
+		t.Error("expected a non-zero time from the sentinel file, got zero")
+	}
+}
+
+func TestGetNewestFileTime_FallbackWalk(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create only a non-sentinel file so the fallback walk is exercised.
+	if err := os.WriteFile(filepath.Join(tmpDir, "random.txt"), []byte("hello"), 0644); err != nil {
+		t.Fatalf("failed to create random.txt: %v", err)
+	}
+
+	mgr := NewImageManager("/workspace", false, "org", nil)
+	got, err := mgr.getNewestFileTime(tmpDir)
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if got.IsZero() {
+		t.Error("expected a non-zero time from the fallback walk, got zero")
+	}
+}
+
+func TestGetNewestFileTime_EmptyDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// No files at all — neither sentinel nor non-sentinel.
+	mgr := NewImageManager("/workspace", false, "org", nil)
+	_, err := mgr.getNewestFileTime(tmpDir)
+
+	if err != nil {
+		t.Errorf("unexpected error for empty directory: %v", err)
+	}
+	// A zero time is acceptable for an empty directory; we only assert no error.
+}

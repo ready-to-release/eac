@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -47,7 +46,11 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	// Verify system dependencies using tool registry
 	registry := tool.GlobalRegistry()
 	sysResults := registry.VerifyAll(toolIDs)
-	missingSet := make(map[string]bool)
+
+	// missingForFilter: original tool IDs used to match @deps: tags in test references.
+	// missingForReport: user-visible tool names (container tools report as "docker").
+	missingForFilter := make(map[string]bool)
+	missingForReport := make(map[string]bool)
 	for _, result := range sysResults {
 		if result.Available || result.Skipped {
 			continue
@@ -57,21 +60,28 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		// tool itself. Report "docker" instead of the tool name.
 		resolvedTool, ok := registry.Get(result.ToolID)
 		if ok && resolvedTool.Type == tool.ToolTypeContainer {
-			missingSet["docker"] = true
-			continue
+			missingForReport["docker"] = true
+		} else {
+			missingForReport[result.ToolID] = true
 		}
-		missingSet[result.ToolID] = true
+		missingForFilter[result.ToolID] = true
 	}
-	missing := make([]string, 0, len(missingSet))
-	for dep := range missingSet {
-		missing = append(missing, dep)
-	}
-	sort.Strings(missing)
 
-	if len(missing) > 0 {
-		ctx.WriteInit("❌ Required system dependencies are missing: %s", strings.Join(missing, ", "))
-		ctx.WriteInit("   Use --skip-deps to run tests anyway")
-		return fmt.Errorf("missing system dependencies: %s", strings.Join(missing, ", "))
+	if len(missingForFilter) > 0 {
+		// Filter out tests that require missing tools rather than blocking the entire run.
+		// Tests with unsatisfied @deps: tags are excluded; all other tests proceed normally.
+		filtered, removedCount := filterTestsWithMissingDeps(testCfg.SelectedTests, missingForFilter)
+		if removedCount > 0 {
+			missing := make([]string, 0, len(missingForReport))
+			for dep := range missingForReport {
+				missing = append(missing, dep)
+			}
+			sort.Strings(missing)
+			ctx.WriteInit("⚠ Skipping %d tests: %s not installed", removedCount, strings.Join(missing, ", "))
+			testCfg.SelectedTests = filtered
+			testCfg.Stats.Selected = len(filtered)
+			testCfg.Stats.ModulesInScope = getUniqueModulesFromTests(filtered, testCfg.ModuleMapper)
+		}
 	}
 
 	// Verify module dependencies
@@ -83,6 +93,31 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	}
 
 	return nil
+}
+
+// filterTestsWithMissingDeps removes test references that require any of the given missing tool IDs.
+// Returns the filtered list and the count of removed tests.
+func filterTestsWithMissingDeps(tests []testing.TestReference, missingToolIDs map[string]bool) ([]testing.TestReference, int) {
+	filtered := make([]testing.TestReference, 0, len(tests))
+	removed := 0
+	for _, test := range tests {
+		hasMissingDep := false
+		for _, tag := range test.Tags {
+			if strings.HasPrefix(tag, "@deps:") {
+				toolID := strings.TrimPrefix(tag, "@deps:")
+				if missingToolIDs[toolID] {
+					hasMissingDep = true
+					break
+				}
+			}
+		}
+		if hasMissingDep {
+			removed++
+		} else {
+			filtered = append(filtered, test)
+		}
+	}
+	return filtered, removed
 }
 
 func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) error {

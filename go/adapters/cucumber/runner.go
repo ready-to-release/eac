@@ -36,6 +36,13 @@ func init() {
 			// TypeScript Cucumber owns features for TypeScript modules
 			return info.HasTypeScript
 		},
+		DefaultInferences: []testrunners.Inference{
+			{
+				TestTypes:   []string{"tscucumber"},
+				ThenAddTags: []string{"@deps:npm"},
+				Description: "TypeScript Cucumber tests require Node.js/npm",
+			},
+		},
 	})
 }
 

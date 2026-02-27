@@ -8,13 +8,13 @@
     "deny": []
   },
   "hooks": {
-    "Stop": [
+    "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "go vet ./..."
+            "command": "bash -c 'f=$(jq -r \".tool_input.file_path // empty\"); [[ \"$f\" == *.go ]] && gofmt -w \"$f\" || true'"
           }
         ]
       }

@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mermaid-cli for SVG pre-rendering
-RUN npm install -g @mermaid-js/mermaid-cli \
+RUN npm install -g @mermaid-js/mermaid-cli@11.4.2 \
     && npm cache clean --force
 
 # Chromium wrapper with container-safe flags (for mermaid-cli)
@@ -75,10 +75,10 @@ RUN pip install --no-cache-dir --root-user-action=ignore /tmp/mkdocs-exporter-fo
 # Store in /opt so it doesn't conflict with mounted /docs volume
 COPY overrides /opt/mkdocs-overrides
 
-# Install Playwright browser (headless shell for faster PDF generation)
-# chromium-headless-shell: smaller binary, faster startup, optimized for automation
-# CI=1 suppresses progress bars, NODE_NO_WARNINGS=1 suppresses deprecation warnings
-RUN CI=1 NODE_NO_WARNINGS=1 playwright install chromium-headless-shell --with-deps
+# Point Playwright at the apt-installed Chromium (already present above).
+# This avoids a redundant 100-400 MB chromium-headless-shell download.
+# PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH overrides which binary Playwright uses.
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/local/bin/chromium-wrapper
 
 # Use ramdisk for temp files at RUNTIME (PDF aggregation I/O optimization)
 # Note: This is set after installs to avoid breaking pip/playwright downloads during build

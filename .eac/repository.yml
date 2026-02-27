@@ -127,6 +127,7 @@ modules:
             - ".golangci.yml"
             - ".markdownlint.yml"
             - ".markdownlint-cli2.yaml"
+            - ".pre-commit-config.yaml"
             - "cspell.config.yml"
             - "clie.yml"
             - ".mcp.json"
@@ -180,6 +181,10 @@ modules:
     components:
       - type: go
         root: go/core
+        patterns:
+          data:
+            - "CLAUDE.md"
+            - "specs/gherkin/testdata/**"
 
   - moniker: clibase
     description: Shared CLI framework for orchestration, flags, and command execution
@@ -315,6 +320,7 @@ modules:
           data:
             - "specs/assets/**"
             - "**/testdata/**"
+            - "CLAUDE.md"
 
   - moniker: clie
     description: The extendable go-based CLI tool
@@ -330,6 +336,8 @@ modules:
           binary_name: clie
           artifact_matrix: cross-platform-upx
         patterns:
+          data:
+            - "CLAUDE.md"
           exclude:
             - "specs/installer/**"
       - type: evidence-book

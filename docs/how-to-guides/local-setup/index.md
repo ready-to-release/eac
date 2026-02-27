@@ -11,6 +11,7 @@ These guides cover installation, configuration, and platform-specific troublesho
 | [Install Toolchain](./install-toolchain.md)               | Install CLIE CLI and EAC extension               |
 | [Configure AI Provider](./configure-ai.md)                | Set up Anthropic Claude for AI features         |
 | [Configure Claude Code](./configure-claude-code.md)       | Use Claude Code effectively in this repository  |
+| [Configure Azure MCP](./configure-azure-mcp.md)           | Enable Azure tools in Claude Code (Windows WSL) |
 | [Local Dev Workflows](./local-dev-workflows.md)           | Development and testing workflows               |
 | [Platform Troubleshooting](./platform-troubleshooting.md) | Windows Defender, permissions, and other issues |
 

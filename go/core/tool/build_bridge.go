@@ -493,10 +493,26 @@ func SetGlobalToolSystemForTesting(ts *ToolSystem) {
 	globalToolSystem = ts
 }
 
+// initBridgesOnce ensures InitializeGlobalBridges body runs only once per process,
+// making the second call (from phaseInitDeferred) a no-op returning the cached result.
+var (
+	initBridgesOnce sync.Once
+	initBridgesErr  error
+)
+
 // InitializeGlobalBridges initializes all global bridges (build, lint, test, scan, serve) with tool system.
 // Call this during application startup after loading configuration.
 // Internally creates a ToolSystem and populates all legacy globals for backward compatibility.
+// Safe to call multiple times: only the first call performs work; subsequent calls return the
+// cached result immediately.
 func InitializeGlobalBridges(repoRoot, configRoot string) error {
+	initBridgesOnce.Do(func() {
+		initBridgesErr = initializeGlobalBridgesImpl(repoRoot, configRoot)
+	})
+	return initBridgesErr
+}
+
+func initializeGlobalBridgesImpl(repoRoot, configRoot string) error {
 	ts, err := NewToolSystem(repoRoot, configRoot, defaultContainerProvider)
 	if err != nil {
 		// Tool config is optional — no tool-config.yml is expected in many repos.

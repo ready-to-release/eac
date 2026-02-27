@@ -118,7 +118,7 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 }
 
 // LoadTimeouts loads the timeout configuration.
-// Loads contract defaults first, then merges personal overrides from .eac/timeouts.personal.yml.
+// Three-tier merge: contract defaults → .eac/timeouts.yml (repo) → .eac/timeouts.personal.yml (local).
 // Sets the global timeout configuration for use throughout the application.
 func (c *EACConfig) LoadTimeouts() error {
 	// Load defaults from contract
@@ -130,6 +130,18 @@ func (c *EACConfig) LoadTimeouts() error {
 	// Ensure we have a valid config even if no defaults
 	if cfg == nil {
 		cfg = DefaultTimeoutConfig()
+	}
+
+	// Load repository-level override if it exists (.eac/timeouts.yml)
+	repoPath := filepath.Join(c.ConfigRoot, "timeouts.yml")
+	if data, err := os.ReadFile(repoPath); err == nil {
+		var repoCfg TimeoutConfig
+		if err := yaml.Unmarshal(data, &repoCfg); err != nil {
+			return fmt.Errorf("failed to parse timeouts.yml: %w", err)
+		}
+		cfg = MergeTimeoutConfigs(cfg, &repoCfg)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read timeouts.yml: %w", err)
 	}
 
 	// Load personal override if it exists (.eac/timeouts.personal.yml)

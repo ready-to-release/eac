@@ -150,16 +150,26 @@ func moduleHasNoChanges(ctx *eacgodog.TestContext, moniker string) error {
 func moduleChangedSinceRef(ctx *eacgodog.TestContext, moniker, ref string) error {
 	// Strategy: Create a "feature" branch where the module exists,
 	// while keeping "main" at the state before the module was added.
-	// Batch git operations: checkout+add+commit on main, then checkout feature branch.
-	script := `set -e
-git checkout -B main
-git add .
-git commit --allow-empty -m "State before module"
-git checkout -b feature`
-	cmd := exec.Command("bash", "-c", script)
-	cmd.Dir = ctx.IsolatedDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to set up branches: %w\nOutput: %s", err, string(output))
+	runGit := func(args ...string) error {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = ctx.IsolatedDir
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git %v failed: %w\nOutput: %s", args, err, string(output))
+		}
+		return nil
+	}
+
+	if err := runGit("checkout", "-B", "main"); err != nil {
+		return fmt.Errorf("failed to set up branches: %w", err)
+	}
+	if err := runGit("add", "."); err != nil {
+		return fmt.Errorf("failed to set up branches: %w", err)
+	}
+	if err := runGit("commit", "--allow-empty", "-m", "State before module"); err != nil {
+		return fmt.Errorf("failed to set up branches: %w", err)
+	}
+	if err := runGit("checkout", "-b", "feature"); err != nil {
+		return fmt.Errorf("failed to set up branches: %w", err)
 	}
 
 	// Create the module in the feature branch (writes files + updates repository.yml)
@@ -273,14 +283,19 @@ func exitsWithErrorIfTimeoutExceeded(ctx *eacgodog.TestContext) error {
 // Helper Functions
 // ============================================================================
 
-// gitAddAndCommit stages specific paths and commits in one subprocess call.
+// gitAddAndCommit stages specific paths and commits.
 func gitAddAndCommit(dir, message string, paths ...string) error {
-	addArgs := strings.Join(paths, " ")
-	script := fmt.Sprintf(`set -e; git add %s && git commit -m %q`, addArgs, message)
-	cmd := exec.Command("bash", "-c", script)
-	cmd.Dir = dir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git add+commit failed: %w\nOutput: %s", err, string(output))
+	addArgs := append([]string{"add"}, paths...)
+	addCmd := exec.Command("git", addArgs...)
+	addCmd.Dir = dir
+	if output, err := addCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git add failed: %w\nOutput: %s", err, string(output))
+	}
+
+	commitCmd := exec.Command("git", "commit", "-m", message)
+	commitCmd.Dir = dir
+	if output, err := commitCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git commit failed: %w\nOutput: %s", err, string(output))
 	}
 	return nil
 }

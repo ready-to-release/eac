@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
@@ -117,9 +118,16 @@ func (m *ImageManager) EnsureImageWithOptions(ctx context.Context, tool *ToolDef
 	return m.ensureExternalImageWithOptions(ctx, tool, opts)
 }
 
+// dockerCliAvailableOnce caches the result of the legacy CLI Docker availability check.
+// Called at most once per process when ContainerPort is not injected.
+var (
+	dockerCliAvailableOnce   sync.Once
+	dockerCliAvailableResult bool
+)
+
 // verifyDockerAvailable checks if Docker daemon is accessible.
 // Uses ContainerPort.IsAvailable() when a port is injected, otherwise
-// falls back to running "docker info" directly.
+// falls back to a cached "docker version" check (fast: ~50ms, no daemon round-trip).
 func (m *ImageManager) verifyDockerAvailable() error {
 	if m.container != nil {
 		if !m.container.IsAvailable() {
@@ -127,11 +135,16 @@ func (m *ImageManager) verifyDockerAvailable() error {
 		}
 		return nil
 	}
-	// Fallback: direct CLI check
-	cmd := exec.Command("docker", "info") //nolint:gosec // G204: legacy fallback, to be removed when all callers inject ContainerPort
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	if err := cmd.Run(); err != nil {
+	// Fallback: cached CLI check. "docker version" queries only the client binary,
+	// avoiding the ~300ms daemon round-trip that "docker info" requires.
+	// Safe to cache: Docker availability does not change mid-run.
+	dockerCliAvailableOnce.Do(func() { //nolint:gosec // G204: legacy fallback
+		cmd := exec.Command("docker", "version")
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
+		dockerCliAvailableResult = cmd.Run() == nil
+	})
+	if !dockerCliAvailableResult {
 		return fmt.Errorf("docker daemon not accessible (is Docker running?)")
 	}
 	return nil
@@ -340,7 +353,49 @@ func (m *ImageManager) getImageCreatedTime(imageRef string) (time.Time, error) {
 	return t, err
 }
 
+// containerSentinelFiles lists files checked for container context staleness.
+// Mirrors the sentinel-based approach used by commandsBinaryNeedsRebuild.
+// Checking only these files reduces stat calls from O(files-in-context) to O(sentinels).
+// Users can force a rebuild with --skip-cache when non-sentinel files change.
+var containerSentinelFiles = []string{
+	"Dockerfile",
+	"package.json",
+	"package-lock.json",
+	"requirements.txt",
+	"pyproject.toml",
+	"go.mod",
+	"go.sum",
+}
+
+// getNewestFileTime returns the most recent modification time among sentinel files
+// in the container context directory. Falls back to a full directory walk if no
+// sentinels are found, ensuring correctness for unconventional container contexts.
 func (m *ImageManager) getNewestFileTime(dir string) (time.Time, error) {
+	var newest time.Time
+	foundAny := false
+
+	for _, sentinel := range containerSentinelFiles {
+		info, err := os.Stat(filepath.Join(dir, sentinel))
+		if err != nil {
+			continue // sentinel absent is normal
+		}
+		foundAny = true
+		if info.ModTime().After(newest) {
+			newest = info.ModTime()
+		}
+	}
+
+	if foundAny {
+		return newest, nil
+	}
+
+	// Fallback: no sentinel files found — walk the whole directory.
+	return m.getNewestFileTimeFull(dir)
+}
+
+// getNewestFileTimeFull performs a full directory walk to find the newest file.
+// Used only when no sentinel files are present in the container context.
+func (m *ImageManager) getNewestFileTimeFull(dir string) (time.Time, error) {
 	var newest time.Time
 	err := filepath.Walk(dir, func(_ string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {

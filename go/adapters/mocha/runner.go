@@ -34,6 +34,18 @@ func init() {
 		OutputArtifacts: []testrunners.ArtifactPattern{
 			{ID: "ctrf-report", Pattern: "unit.json", Type: "ctrf-report"},
 		},
+		DefaultInferences: []testrunners.Inference{
+			{
+				TestTypes:   []string{"mocha"},
+				ThenAddTags: []string{"@deps:npm"},
+				Description: "Mocha tests require Node.js/npm",
+			},
+			{
+				TestTypes:   []string{"mocha"},
+				ThenAddTags: []string{"@L1"},
+				Description: "Mocha unit tests default to L1",
+			},
+		},
 	})
 }
 

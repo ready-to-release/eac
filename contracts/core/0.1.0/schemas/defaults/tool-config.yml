@@ -76,8 +76,8 @@ system-tools:
     description: "Container runtime"
     binary: docker
     verify:
-      command: "docker info"
-      pattern: "Server Version: (\\d+\\.\\d+)"
+      command: "docker version"
+      pattern: "Version:\\s+(\\d+\\.\\d+)"
     version: ">=20.10"
 
   podman:

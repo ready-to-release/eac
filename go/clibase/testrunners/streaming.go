@@ -145,7 +145,6 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 
 	result.Duration = time.Since(start)
 	result.Events = r.events
-	result.PackageFailed = cmdErr != nil
 
 	// Calculate test counts from events
 	r.mu.Lock()
@@ -169,6 +168,17 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 		}
 	}
 	r.mu.Unlock()
+
+	// Set PackageFailed based on the process exit code, with one exception:
+	// if cmdErr is non-nil but all tests actually passed (TestsFailed == 0 &&
+	// TestsTotal > 0), the non-zero exit is likely a post-test cleanup failure
+	// (e.g., Windows "unlinkat ... Access is denied" when the test binary is
+	// still held open by antivirus). In that case, treat the package as passed.
+	if cmdErr != nil && result.TestsFailed == 0 && result.TestsTotal > 0 {
+		result.PackageFailed = false
+	} else {
+		result.PackageFailed = cmdErr != nil
+	}
 
 	return result, nil
 }

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
@@ -39,6 +40,45 @@ func (t ToolCommandExecutor) Run(ctx context.Context, workspaceRoot string, args
 		return "", fmt.Errorf("command failed (exit %d): %s", result.ExitCode, errMsg)
 	}
 	return string(result.Stdout), nil
+}
+
+// cachingExecutor wraps a CommandExecutor and memoizes results to avoid
+// redundant subprocess spawns during a single command-help phase.
+// Thread-safe: safe for concurrent use from multiple goroutines.
+type cachingExecutor struct {
+	inner CommandExecutor
+	mu    sync.Mutex
+	cache map[string]execCached
+}
+
+type execCached struct {
+	output string
+	err    error
+}
+
+func newCachingExecutor(inner CommandExecutor) CommandExecutor {
+	return &cachingExecutor{inner: inner, cache: make(map[string]execCached)}
+}
+
+func (c *cachingExecutor) Run(ctx context.Context, workspaceRoot string, args []string) (string, error) {
+	key := workspaceRoot + "\x00" + strings.Join(args, "\x00")
+
+	c.mu.Lock()
+	if r, ok := c.cache[key]; ok {
+		c.mu.Unlock()
+		return r.output, r.err
+	}
+	c.mu.Unlock()
+
+	// Cache miss: execute the command. Two goroutines may both miss the cache
+	// for the same key; both will run the subprocess but results are identical.
+	output, err := c.inner.Run(ctx, workspaceRoot, args)
+
+	c.mu.Lock()
+	c.cache[key] = execCached{output: output, err: err}
+	c.mu.Unlock()
+
+	return output, err
 }
 
 // ExecuteCommands runs all command and inline sources.
