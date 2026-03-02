@@ -617,7 +617,7 @@ jobs:
           docker images ${{ inputs.module }}:ci-test
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: build-artifacts-${{ inputs.module }}
           path: out/build/
