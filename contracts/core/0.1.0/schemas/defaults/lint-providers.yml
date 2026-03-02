@@ -57,6 +57,18 @@ lint-providers:
     options:
       auto_fix: true
 
+  # GitHub Actions Workflow Linter - actionlint
+  # Static checker for GitHub Actions workflow files
+  actionlint:
+    description: GitHub Actions workflow file linter
+    command: actionlint
+    input_mode: files
+    config_files: []
+    system_dependency: actionlint
+    applies_to: [workflows]
+    options:
+      auto_fix: false
+
   # YAML Linter - yamllint
   yamllint:
     description: YAML file linter

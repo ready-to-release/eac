@@ -17,7 +17,7 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, plantuml, markdownlint, mermaid-render]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, plantuml, markdownlint, mermaid-render, actionlint]
   node: [npm, tsc, npm-build, npm-test, eslint]
   python: [python, ruff, pytest]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
@@ -377,6 +377,18 @@ container-tools:
     mounts:
       - source: "{module}"
         target: /workdir
+    workdir: /workdir
+    requirements: [docker]
+
+  actionlint:
+    description: "GitHub Actions workflow linter"
+    image: rhysd/actionlint
+    tag: "1.7.7"
+    command: ["actionlint"]
+    mounts:
+      - source: "{module}"
+        target: /workdir
+        readonly: true
     workdir: /workdir
     requirements: [docker]
 
