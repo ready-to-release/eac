@@ -17,6 +17,12 @@ import (
 var (
 	cachedCommands     CommandTree
 	cachedCommandsOnce sync.Once
+
+	// toolNameToParts maps MCP tool names (e.g. "get-commit-message") to their
+	// command parts (e.g. ["get", "commit-message"]). This avoids the lossy
+	// roundtrip of converting all hyphens to spaces, which breaks hyphenated
+	// subcommand names like "commit-message".
+	toolNameToParts map[string][]string
 )
 
 // getCommandTools discovers commands by calling "get commands".
@@ -24,8 +30,8 @@ func getCommandTools() []Tool {
 	tree := getCommands()
 	tools := make([]Tool, 0, len(tree.Commands))
 	for i := range tree.Commands {
-		if tool, ok := commandToTool(&tree.Commands[i]); ok {
-			tools = append(tools, tool)
+		if t, ok := commandToTool(&tree.Commands[i]); ok {
+			tools = append(tools, t)
 		}
 	}
 	return tools
@@ -65,11 +71,23 @@ func toolInputSchema() InputSchema {
 // getCommands returns the cached command tree, discovering commands on the
 // first call only. The command set does not change during a server session,
 // so sync.Once ensures we shell out exactly once (OO-094).
+// Also populates the toolNameToParts lookup for correct command dispatch.
 func getCommands() CommandTree {
 	cachedCommandsOnce.Do(func() {
 		cachedCommands = discoverCommands()
+		toolNameToParts = buildToolPartsIndex(cachedCommands)
 	})
 	return cachedCommands
+}
+
+// buildToolPartsIndex creates a mapping from MCP tool names to command parts.
+func buildToolPartsIndex(tree CommandTree) map[string][]string {
+	index := make(map[string][]string, len(tree.Commands))
+	for i := range tree.Commands {
+		toolName := strings.ReplaceAll(tree.Commands[i].Name, " ", "-")
+		index[toolName] = tree.Commands[i].Parts
+	}
+	return index
 }
 
 // discoverCommands calls the commands system to get command info.

@@ -11,9 +11,8 @@ import (
 
 // callTool dispatches a tool call to the appropriate command.
 func callTool(params *CallToolParams) ToolResult {
-	commandName := strings.ReplaceAll(params.Name, "-", " ")
 	args := extractArgs(params.Arguments)
-	return textResult(execCommand(commandName, args))
+	return textResult(execCommand(params.Name, args))
 }
 
 // extractArgs extracts the "args" string from tool arguments.
@@ -25,17 +24,17 @@ func extractArgs(arguments map[string]interface{}) string {
 }
 
 // execCommand executes a command via the commands system.
-func execCommand(commandName, additionalArgs string) string {
+func execCommand(toolName, additionalArgs string) string {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return "Error: Could not find repository root"
 	}
-	cmdParts := buildCmdParts(commandName, additionalArgs)
+	cmdParts := buildCmdParts(toolName, additionalArgs)
 	port := eac.New(repoRoot, tool.GlobalRegistry(), tool.GlobalExecutor())
 	result, err := port.Execute(context.Background(), cmdParts, &eac.ExecConfig{
 		WorkspaceRoot: repoRoot,
 	})
-	return formatCommandOutput(commandName, result, err)
+	return formatCommandOutput(toolName, result, err)
 }
 
 // formatCommandOutput formats command output or error for the tool result.
@@ -50,9 +49,20 @@ func formatCommandOutput(commandName string, result *eac.Result, err error) stri
 	return strings.TrimSpace(string(result.Stdout))
 }
 
-// buildCmdParts builds command arguments from command name and additional args.
-func buildCmdParts(commandName, additionalArgs string) []string {
-	cmdParts := strings.Fields(commandName)
+// buildCmdParts builds command arguments from the tool name and additional args.
+// Uses the cached parts lookup to correctly preserve hyphenated subcommand names
+// (e.g. "commit-message") that would be lost by a naive hyphens-to-spaces conversion.
+func buildCmdParts(toolName, additionalArgs string) []string {
+	// Ensure commands are discovered so toolNameToParts is populated.
+	getCommands()
+
+	var cmdParts []string
+	if parts, ok := toolNameToParts[toolName]; ok {
+		cmdParts = append(cmdParts, parts...)
+	} else {
+		// Fallback for unknown tools: split on spaces (tool name already has hyphens).
+		cmdParts = strings.Fields(strings.ReplaceAll(toolName, "-", " "))
+	}
 	if additionalArgs != "" {
 		cmdParts = append(cmdParts, strings.Fields(additionalArgs)...)
 	}

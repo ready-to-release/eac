@@ -258,6 +258,66 @@ func TestFindRepoRoot_NotInRepo(t *testing.T) {
 	assert.Equal(t, "", root, "Should return empty string when not in a repo")
 }
 
+func TestBuildCmdParts_HyphenatedSubcommand(t *testing.T) {
+	// Populate the parts index with a hyphenated subcommand.
+	toolNameToParts = map[string][]string{
+		"get-commit-message": {"get", "commit-message"},
+		"show-modules":       {"show", "modules"},
+	}
+
+	tests := []struct {
+		name     string
+		toolName string
+		args     string
+		want     []string
+	}{
+		{
+			name:     "hyphenated subcommand preserved",
+			toolName: "get-commit-message",
+			want:     []string{"get", "commit-message"},
+		},
+		{
+			name:     "simple subcommand",
+			toolName: "show-modules",
+			want:     []string{"show", "modules"},
+		},
+		{
+			name:     "with additional args",
+			toolName: "get-commit-message",
+			args:     "--format json",
+			want:     []string{"get", "commit-message", "--format", "json"},
+		},
+		{
+			name:     "unknown tool falls back",
+			toolName: "unknown-tool",
+			want:     []string{"unknown", "tool"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildCmdParts(tt.toolName, tt.args)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestBuildToolPartsIndex(t *testing.T) {
+	tree := CommandTree{
+		Commands: []CommandInfo{
+			{Name: "get commit-message", Parts: []string{"get", "commit-message"}},
+			{Name: "show modules", Parts: []string{"show", "modules"}},
+			{Name: "get commands", Parts: []string{"get", "commands"}},
+		},
+	}
+
+	index := buildToolPartsIndex(tree)
+
+	assert.Equal(t, []string{"get", "commit-message"}, index["get-commit-message"])
+	assert.Equal(t, []string{"show", "modules"}, index["show-modules"])
+	assert.Equal(t, []string{"get", "commands"}, index["get-commands"])
+}
+
 func TestCommandTreeParsing(t *testing.T) {
 	jsonData := `{
 		"commands": [
