@@ -5,19 +5,12 @@ package config
 import (
 	"testing"
 
-	"github.com/ready-to-release/eac/go/core/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoadSecurityConfig(t *testing.T) {
-	repoRoot, err := workspace.Root()
-	require.NoError(t, err)
-
-	// Use a temp dir as config root (no user overrides)
-	configRoot := t.TempDir()
-
-	cfg, err := LoadSecurityConfig(repoRoot, configRoot)
+	cfg, err := LoadSecurityConfig(t.TempDir())
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -51,10 +44,7 @@ func TestLoadSecurityConfig(t *testing.T) {
 }
 
 func TestSecurityConfig_GetScanner(t *testing.T) {
-	repoRoot, err := workspace.Root()
-	require.NoError(t, err)
-
-	cfg, err := LoadSecurityConfig(repoRoot, t.TempDir())
+	cfg, err := LoadSecurityConfig(t.TempDir())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -83,10 +73,7 @@ func TestSecurityConfig_GetScanner(t *testing.T) {
 }
 
 func TestSecurityConfig_GetDefaultScanners_Fallback(t *testing.T) {
-	repoRoot, err := workspace.Root()
-	require.NoError(t, err)
-
-	cfg, err := LoadSecurityConfig(repoRoot, t.TempDir())
+	cfg, err := LoadSecurityConfig(t.TempDir())
 	require.NoError(t, err)
 
 	// Unknown component type should fall back to default

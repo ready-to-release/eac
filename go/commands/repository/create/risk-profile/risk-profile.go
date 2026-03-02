@@ -281,7 +281,7 @@ Try:
 func getDefaultCatalogURL(workspaceRoot string) string {
 	// Try to load RiskConfig for catalog URL
 	configRoot := paths.EACConfigPath(workspaceRoot)
-	riskCfg, err := eacConfig.LoadRiskConfig(workspaceRoot, configRoot)
+	riskCfg, err := eacConfig.LoadRiskConfig(configRoot)
 	if err == nil && riskCfg.GetCatalogURL() != "" {
 		return riskCfg.GetCatalogURL()
 	}

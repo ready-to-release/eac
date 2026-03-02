@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/core/paths"
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"gopkg.in/yaml.v3"
 )
 
@@ -97,15 +97,33 @@ func (c *EACConfig) GetLoadedFiles() []LoadedConfig {
 func (c *EACConfig) getFilesForConfig(filename string) []LoadedFile {
 	var files []LoadedFile
 
-	// Contract defaults path
-	contractPath := filepath.Join(c.RepoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", filename)
-	files = append(files, makeLoadedFile(contractPath, LayerContract))
+	// Contract defaults from embedded filesystem
+	files = append(files, makeEmbeddedLoadedFile(filename))
 
 	// User config path
 	userPath := filepath.Join(c.ConfigRoot, filename)
 	files = append(files, makeLoadedFile(userPath, LayerUser))
 
 	return files
+}
+
+// makeEmbeddedLoadedFile creates a LoadedFile entry from the embedded core contract FS.
+func makeEmbeddedLoadedFile(filename string) LoadedFile {
+	lf := LoadedFile{
+		Path:   "embedded:contracts/core/defaults/" + filename,
+		Layer:  LayerContract,
+		Exists: false,
+		Values: 0,
+	}
+
+	data, err := core.FS.ReadFile(core.DefaultPath(filename))
+	if err != nil {
+		return lf
+	}
+
+	lf.Exists = true
+	lf.Values = countYAMLValues(data)
+	return lf
 }
 
 // makeLoadedFile creates a LoadedFile entry by checking existence and counting values.

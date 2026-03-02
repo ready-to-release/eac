@@ -8,15 +8,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/ready-to-release/eac/go/core/paths"
-
 	tools "github.com/ready-to-release/eac/contracts/core/0.1.0"
 )
 
 // ToolLoader provides namespace-based lazy loading of tool definitions.
 // Only bootstrap tools are loaded at startup; other namespaces load on-demand.
 type ToolLoader struct {
-	repoRoot   string
 	configRoot string
 
 	config     *tools.ToolsConfig
@@ -28,9 +25,8 @@ type ToolLoader struct {
 }
 
 // NewToolLoader creates a ToolLoader that loads tools from the eac-tools contract.
-func NewToolLoader(repoRoot, configRoot string) (*ToolLoader, error) {
+func NewToolLoader(configRoot string) (*ToolLoader, error) {
 	l := &ToolLoader{
-		repoRoot:   repoRoot,
 		configRoot: configRoot,
 		namespaces: make(map[tools.Namespace][]string),
 		loaded:     make(map[tools.Namespace]bool),
@@ -52,14 +48,10 @@ func NewToolLoader(repoRoot, configRoot string) (*ToolLoader, error) {
 
 // loadConfig loads the tools configuration from contract defaults and user overrides.
 func (l *ToolLoader) loadConfig() error {
-	// Load contract defaults
-	defaultPath := filepath.Join(l.repoRoot, "contracts", "core", paths.DefaultsVersion, "schemas", "defaults", ToolConfigFileName)
-	defaultData, err := os.ReadFile(defaultPath)
+	// Load contract defaults from embedded filesystem
+	defaultData, err := tools.FS.ReadFile(tools.DefaultPath(ToolConfigFileName))
 	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("tool config defaults not found: %s", defaultPath)
-		}
-		return fmt.Errorf("reading tool config defaults: %w", err)
+		return fmt.Errorf("reading embedded tool config defaults: %w", err)
 	}
 
 	var config tools.ToolsConfig
@@ -89,64 +81,27 @@ func mergeToolsConfig(base, override *tools.ToolsConfig) {
 		return
 	}
 
-	// Merge namespaces (override replaces)
-	for ns, toolIDs := range override.Namespaces {
-		base.Namespaces[ns] = toolIDs
-	}
+	base.Namespaces = mergeMap(base.Namespaces, override.Namespaces)
+	base.SystemTools = mergeMap(base.SystemTools, override.SystemTools)
+	base.ContainerTools = mergeMap(base.ContainerTools, override.ContainerTools)
+	base.Bindings = mergeMap(base.Bindings, override.Bindings)
+	base.ComponentTools = mergeMap(base.ComponentTools, override.ComponentTools)
+	base.Environments = mergeMap(base.Environments, override.Environments)
+	base.Caches = mergeMap(base.Caches, override.Caches)
+}
 
-	// Merge system tools
-	for id, tool := range override.SystemTools {
-		if tool.IDValue == "" {
-			tool.IDValue = id
-		}
-		if base.SystemTools == nil {
-			base.SystemTools = make(map[string]*tools.ToolDefinition)
-		}
-		base.SystemTools[id] = tool
+// mergeMap copies all entries from override into base, initializing base if nil.
+func mergeMap[K comparable, V any](base, override map[K]V) map[K]V {
+	if len(override) == 0 {
+		return base
 	}
-
-	// Merge container tools
-	for id, tool := range override.ContainerTools {
-		if tool.IDValue == "" {
-			tool.IDValue = id
-		}
-		if base.ContainerTools == nil {
-			base.ContainerTools = make(map[string]*tools.ToolDefinition)
-		}
-		base.ContainerTools[id] = tool
+	if base == nil {
+		base = make(map[K]V, len(override))
 	}
-
-	// Merge bindings
-	for id, binding := range override.Bindings {
-		if base.Bindings == nil {
-			base.Bindings = make(map[string]tools.Binding)
-		}
-		base.Bindings[id] = binding
+	for k, v := range override {
+		base[k] = v
 	}
-
-	// Merge component tools
-	for compType, assignment := range override.ComponentTools {
-		if base.ComponentTools == nil {
-			base.ComponentTools = make(map[string]*tools.ToolAssignment)
-		}
-		base.ComponentTools[compType] = assignment
-	}
-
-	// Merge environments
-	for name, env := range override.Environments {
-		if base.Environments == nil {
-			base.Environments = make(map[string]*tools.EnvironmentConfig)
-		}
-		base.Environments[name] = env
-	}
-
-	// Merge caches
-	for name, cache := range override.Caches {
-		if base.Caches == nil {
-			base.Caches = make(map[string]*tools.CacheConfig)
-		}
-		base.Caches[name] = cache
-	}
+	return base
 }
 
 // GetTool returns a tool definition by ID.
@@ -208,6 +163,8 @@ func (l *ToolLoader) GetComponentTools(componentType string) (tools.ToolConfigAs
 }
 
 // EnsureNamespace loads tools in the given namespace if not already loaded.
+// Tools that are listed in the namespace but not defined in config are skipped
+// (namespaces may reference optional tools).
 func (l *ToolLoader) EnsureNamespace(ns tools.Namespace) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -218,10 +175,7 @@ func (l *ToolLoader) EnsureNamespace(ns tools.Namespace) error {
 
 	toolIDs := l.namespaces[ns]
 	for _, id := range toolIDs {
-		if err := l.loadToolUnlocked(id); err != nil {
-			// Log but don't fail - tool might just not exist
-			continue
-		}
+		_ = l.loadToolUnlocked(id) // Optional tools may not exist
 	}
 
 	l.loaded[ns] = true
@@ -236,9 +190,7 @@ func (l *ToolLoader) loadToolUnlocked(id string) error {
 
 	// Check system tools first
 	if tool, ok := l.config.SystemTools[id]; ok {
-		if tool.IDValue == "" {
-			tool.IDValue = id
-		}
+		tool.IDValue = id
 		if tool.TypeValue == "" {
 			tool.TypeValue = tools.ToolTypeSystem
 		}
@@ -248,9 +200,7 @@ func (l *ToolLoader) loadToolUnlocked(id string) error {
 
 	// Check container tools
 	if tool, ok := l.config.ContainerTools[id]; ok {
-		if tool.IDValue == "" {
-			tool.IDValue = id
-		}
+		tool.IDValue = id
 		if tool.TypeValue == "" {
 			tool.TypeValue = tools.ToolTypeContainer
 		}

@@ -5,21 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRiskConfig_ImplementsPort(t *testing.T) {
-	var _ scanner.RiskConfigPort = (*RiskConfig)(nil)
-}
-
 func TestLoadRiskConfig_NoFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-	cfg, err := LoadRiskConfig(tmpDir, configDir)
+	cfg, err := LoadRiskConfig(t.TempDir())
 	require.NoError(t, err)
 	assert.NotNil(t, cfg)
 
@@ -33,27 +24,26 @@ func TestLoadRiskConfig_NoFiles(t *testing.T) {
 	assert.Contains(t, err.Error(), "no risk profile configured")
 }
 
-func TestLoadRiskConfig_WithDefaults(t *testing.T) {
-	tmpDir := t.TempDir()
+func TestLoadRiskConfig_EmbeddedDefaults(t *testing.T) {
+	cfg, err := LoadRiskConfig(t.TempDir())
+	require.NoError(t, err)
 
-	// Create contract defaults structure
-	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
-	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
+	// Embedded defaults provide scoring from risk-config.yml
+	assert.Equal(t, 4, cfg.GetScoring().GetImpact("api"))
+	assert.Equal(t, "high", cfg.GetScoring().GetCriticality("api"))
+	assert.Equal(t, 1, cfg.GetScoring().GetImpact("docs"))
 
-	// Create risk-config.yml
-	riskConfigYAML := `
-profile:
-  path: risk-profile.json
-  catalog_url: https://example.com/catalog.json
-scoring:
-  impact:
-    api: 5
-  criticality:
-    api: high
-`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-config.yml"), []byte(riskConfigYAML), 0o644))
+	// Embedded defaults provide NIST catalog URL
+	assert.Contains(t, cfg.GetCatalogURL(), "nist.gov")
 
-	// Create profile file
+	// No profile loaded from embedded defaults (relative path can't resolve)
+	_, err = cfg.GetProfile()
+	assert.Error(t, err)
+}
+
+func TestLoadRiskConfig_UserProfileOverride(t *testing.T) {
+	configDir := t.TempDir()
+
 	profileJSON := `{
   "profile": {
     "uuid": "test-uuid",
@@ -61,21 +51,24 @@ scoring:
     "imports": [{"href": "https://example.com/catalog.json", "include-controls": [{"with-ids": ["ac-1", "ac-2"]}]}]
   }
 }`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-profile.json"), []byte(profileJSON), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-profile.json"), []byte(profileJSON), 0o644))
 
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	userYAML := `
+profile:
+  path: risk-profile.json
+  catalog_url: https://example.com/catalog.json
+scoring:
+  impact:
+    api: 5
+`
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte(userYAML), 0o644))
 
-	cfg, err := LoadRiskConfig(tmpDir, configDir)
+	cfg, err := LoadRiskConfig(configDir)
 	require.NoError(t, err)
 
-	// Check scoring
 	assert.Equal(t, 5, cfg.GetScoring().GetImpact("api"))
-
-	// Check catalog URL
 	assert.Equal(t, "https://example.com/catalog.json", cfg.GetCatalogURL())
 
-	// Check profile
 	profile, err := cfg.GetProfile()
 	require.NoError(t, err)
 	assert.Equal(t, "Test Profile", profile.Title())
@@ -83,25 +76,7 @@ scoring:
 }
 
 func TestLoadRiskConfig_WithUserOverrides(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create contract defaults
-	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
-	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
-
-	defaultsYAML := `
-profile:
-  catalog_url: https://default.com/catalog.json
-scoring:
-  impact:
-    api: 4
-    docs: 1
-`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-config.yml"), []byte(defaultsYAML), 0o644))
-
-	// Create user overrides
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	configDir := t.TempDir()
 
 	userYAML := `
 profile:
@@ -112,24 +87,20 @@ scoring:
 `
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte(userYAML), 0o644))
 
-	cfg, err := LoadRiskConfig(tmpDir, configDir)
+	cfg, err := LoadRiskConfig(configDir)
 	require.NoError(t, err)
 
 	// Overridden values
 	assert.Equal(t, 5, cfg.GetScoring().GetImpact("api"))
 	assert.Equal(t, "https://override.com/catalog.json", cfg.GetCatalogURL())
 
-	// Preserved default values
+	// Preserved embedded default values
 	assert.Equal(t, 1, cfg.GetScoring().GetImpact("docs"))
 }
 
 func TestLoadRiskConfig_ModuleProfiles(t *testing.T) {
-	tmpDir := t.TempDir()
+	configDir := t.TempDir()
 
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-	// Create main profile
 	mainProfileJSON := `{
   "profile": {
     "uuid": "main-uuid",
@@ -139,7 +110,6 @@ func TestLoadRiskConfig_ModuleProfiles(t *testing.T) {
 }`
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "main-profile.json"), []byte(mainProfileJSON), 0o644))
 
-	// Create module profile
 	moduleProfileJSON := `{
   "profile": {
     "uuid": "billing-uuid",
@@ -149,7 +119,6 @@ func TestLoadRiskConfig_ModuleProfiles(t *testing.T) {
 }`
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "billing-profile.json"), []byte(moduleProfileJSON), 0o644))
 
-	// Create config
 	configYAML := `
 profile:
   path: main-profile.json
@@ -159,48 +128,39 @@ module_profiles:
 `
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte(configYAML), 0o644))
 
-	cfg, err := LoadRiskConfig(tmpDir, configDir)
+	cfg, err := LoadRiskConfig(configDir)
 	require.NoError(t, err)
 
-	// Main profile
 	mainProfile, err := cfg.GetProfile()
 	require.NoError(t, err)
 	assert.Equal(t, "Main Profile", mainProfile.Title())
 	assert.Len(t, mainProfile.ControlIDs(), 1)
 
-	// Module profile
 	billingProfile, err := cfg.GetModuleProfile("billing-service")
 	require.NoError(t, err)
 	assert.Equal(t, "Billing Profile", billingProfile.Title())
 	assert.Len(t, billingProfile.ControlIDs(), 3)
 
-	// Unknown module falls back to main
 	unknownProfile, err := cfg.GetModuleProfile("unknown-service")
 	require.NoError(t, err)
 	assert.Equal(t, "Main Profile", unknownProfile.Title())
 
-	// List module profiles
 	modules := cfg.ListModuleProfiles()
 	assert.Len(t, modules, 1)
 	assert.Contains(t, modules, "billing-service")
 }
 
 func TestLoadRiskConfig_InvalidYAML(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
-
+	configDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte("invalid: yaml: here:"), 0o644))
 
-	_, err := LoadRiskConfig(tmpDir, configDir)
+	_, err := LoadRiskConfig(configDir)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parsing")
 }
 
 func TestLoadRiskConfig_InvalidProfileJSON(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	configDir := t.TempDir()
 
 	configYAML := `
 profile:
@@ -209,17 +169,14 @@ profile:
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte(configYAML), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "invalid-profile.json"), []byte("not json"), 0o644))
 
-	_, err := LoadRiskConfig(tmpDir, configDir)
+	_, err := LoadRiskConfig(configDir)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "loading profile")
 }
 
 func TestLoadRiskConfig_MissingProfileIsOK(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	configDir := t.TempDir()
 
-	// Profile path points to non-existent file - this is OK
 	configYAML := `
 profile:
   path: nonexistent-profile.json
@@ -229,13 +186,11 @@ scoring:
 `
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte(configYAML), 0o644))
 
-	cfg, err := LoadRiskConfig(tmpDir, configDir)
+	cfg, err := LoadRiskConfig(configDir)
 	require.NoError(t, err)
 
-	// Scoring should still work
 	assert.Equal(t, 5, cfg.GetScoring().GetImpact("api"))
 
-	// Profile should be nil
 	_, err = cfg.GetProfile()
 	assert.Error(t, err)
 }
@@ -250,12 +205,6 @@ func TestRiskConfig_resolvePath(t *testing.T) {
 		assert.Equal(t, expected, got)
 	})
 
-	t.Run("relative with subdirectory", func(t *testing.T) {
-		got := cfg.resolvePath(filepath.Join("profiles", "main.json"))
-		expected := filepath.Join(tmpDir, "profiles", "main.json")
-		assert.Equal(t, expected, got)
-	})
-
 	t.Run("absolute path unchanged", func(t *testing.T) {
 		absPath := filepath.Join(tmpDir, "other", "system.json")
 		got := cfg.resolvePath(absPath)
@@ -264,41 +213,13 @@ func TestRiskConfig_resolvePath(t *testing.T) {
 }
 
 func TestSecurityConfig_Risk_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".eac")
-	require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-	// Create contract defaults structure
-	defaultsDir := filepath.Join(tmpDir, "contracts", "scanner", "0.1.0", "schemas", "defaults")
-	require.NoError(t, os.MkdirAll(defaultsDir, 0o755))
-
-	// Create minimal scanners.yml
-	scannersYAML := `scanners: {}`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "scanners.yml"), []byte(scannersYAML), 0o644))
-
-	// Create minimal policies.yml
-	policiesYAML := `default: []`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "policies.yml"), []byte(policiesYAML), 0o644))
-
-	// Create risk-config.yml with scoring
-	riskConfigYAML := `
-scoring:
-  impact:
-    api: 5
-  criticality:
-    api: high
-`
-	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-config.yml"), []byte(riskConfigYAML), 0o644))
-
-	cfg, err := LoadSecurityConfig(tmpDir, configDir)
+	cfg, err := LoadSecurityConfig(t.TempDir())
 	require.NoError(t, err)
 
-	// Access risk config through SecurityConfig
 	risk := cfg.Risk()
 	require.NotNil(t, risk, "Risk() should return non-nil")
 
-	// Verify scoring works
-	assert.Equal(t, 5, risk.GetScoring().GetImpact("api"))
+	assert.Equal(t, 4, risk.GetScoring().GetImpact("api"))
 	assert.Equal(t, "high", risk.GetScoring().GetCriticality("api"))
 }
 

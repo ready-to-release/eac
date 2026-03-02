@@ -561,3 +561,33 @@ func TestConvention_BackwardCompatibility(t *testing.T) {
 		t.Errorf("Backward compatibility broken: got different content")
 	}
 }
+
+// TestLoad_EmbeddedFallback verifies that Load() succeeds using the embedded
+// ai-config.yml when neither user override nor system default files exist.
+// This covers the client-repo scenario where no contracts/ directory is present.
+func TestLoad_EmbeddedFallback(t *testing.T) {
+	// Create a temp directory with NO .clie/.eac/ai-config.yml and NO contracts/ dir
+	tmpDir, err := os.MkdirTemp("", "embedded-fallback-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Ensure CLIE_CONTAINER_ROOT is unset so tier 2 falls back to workspaceRoot
+	t.Setenv(paths.ContainerRootEnv, "")
+
+	loader := NewAIConfigLoader(tmpDir)
+	config, err := loader.Load()
+	if err != nil {
+		t.Fatalf("Load() should succeed with embedded fallback, got error: %v", err)
+	}
+
+	if config == nil {
+		t.Fatal("Load() returned nil config")
+	}
+
+	// The embedded ai-config.yml should have at least one type defined
+	if len(config.Types) == 0 {
+		t.Error("Expected embedded config to have at least one AI type defined")
+	}
+}

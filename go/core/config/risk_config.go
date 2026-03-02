@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	scanner "github.com/ready-to-release/eac/contracts/scanner/0.1.0"
-	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,19 +36,16 @@ type RiskConfigYAML struct {
 	ModuleProfiles map[string]ProfileConfig `yaml:"module_profiles,omitempty"`
 }
 
-// LoadRiskConfig loads risk configuration from scanner contract.
-// It loads defaults from contracts/scanner/0.1.0/schemas/defaults/risk-config.yml
-// and merges with user overrides from .eac/risk-config.yml.
-func LoadRiskConfig(repoRoot, configRoot string) (*RiskConfig, error) {
+// LoadRiskConfig loads risk configuration from the embedded scanner contract
+// and merges with user overrides from configRoot/risk-config.yml.
+func LoadRiskConfig(configRoot string) (*RiskConfig, error) {
 	cfg := &RiskConfig{
 		moduleProfiles: make(map[string]*ProfileWrapper),
 		scoring:        DefaultRiskScoringConfig(),
 	}
 
-	// Load contract defaults
-	defaultPath := filepath.Join(repoRoot, "contracts", "scanner",
-		paths.DefaultsVersion, "schemas", "defaults", "risk-config.yml")
-	if err := cfg.loadFromFile(defaultPath); err != nil && !os.IsNotExist(err) {
+	// Load contract defaults from embedded filesystem
+	if err := cfg.loadFromEmbeddedDefaults("risk-config.yml"); err != nil {
 		return nil, fmt.Errorf("loading risk-config defaults: %w", err)
 	}
 
@@ -76,18 +72,13 @@ func (c *RiskConfig) loadFromFile(path string) error {
 
 	c.configDir = filepath.Dir(path)
 
-	// Load profile
+	// Load main profile
 	if yamlCfg.Profile.Path != "" {
-		profilePath := c.resolvePath(yamlCfg.Profile.Path)
-		profile, err := LoadProfileWrapper(profilePath)
+		profile, err := c.loadOptionalProfile(yamlCfg.Profile.Path)
 		if err != nil {
-			// Profile loading is optional - allow missing files
-			// This supports config-first workflow where profile is created later
-			if !errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("loading profile from %s: %w", profilePath, err)
-			}
-			// Profile file doesn't exist - that's OK
-		} else {
+			return fmt.Errorf("loading profile from %s: %w", c.resolvePath(yamlCfg.Profile.Path), err)
+		}
+		if profile != nil {
 			c.profile = profile
 		}
 	}
@@ -96,7 +87,6 @@ func (c *RiskConfig) loadFromFile(path string) error {
 		c.catalogURL = yamlCfg.Profile.CatalogURL
 	}
 
-	// Merge scoring config
 	if yamlCfg.Scoring != nil {
 		c.scoring = mergeRiskScoring(c.scoring, yamlCfg.Scoring)
 	}
@@ -104,17 +94,53 @@ func (c *RiskConfig) loadFromFile(path string) error {
 	// Load module-specific profiles
 	for moniker, profileCfg := range yamlCfg.ModuleProfiles {
 		if profileCfg.Path != "" {
-			profilePath := c.resolvePath(profileCfg.Path)
-			profile, err := LoadProfileWrapper(profilePath)
+			profile, err := c.loadOptionalProfile(profileCfg.Path)
 			if err != nil {
-				if !errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("loading module profile %s from %s: %w", moniker, profilePath, err)
-				}
-				// Module profile file doesn't exist - that's OK
-			} else {
+				return fmt.Errorf("loading module profile %s from %s: %w", moniker, c.resolvePath(profileCfg.Path), err)
+			}
+			if profile != nil {
 				c.moduleProfiles[moniker] = profile
 			}
 		}
+	}
+
+	return nil
+}
+
+// loadOptionalProfile loads a profile, returning nil if the file doesn't exist.
+// Returns an error only for non-missing-file failures (e.g. invalid JSON).
+func (c *RiskConfig) loadOptionalProfile(relativePath string) (*ProfileWrapper, error) {
+	profilePath := c.resolvePath(relativePath)
+	profile, err := LoadProfileWrapper(profilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
+// loadFromEmbeddedDefaults loads risk config defaults from the embedded scanner contract.
+// Only scoring and catalog URL are loaded. Profile loading is skipped because
+// embedded defaults reference relative paths that cannot be resolved without a filesystem context.
+func (c *RiskConfig) loadFromEmbeddedDefaults(filename string) error {
+	data, err := scanner.FS.ReadFile(scanner.DefaultPath(filename))
+	if err != nil {
+		return err
+	}
+
+	var yamlCfg RiskConfigYAML
+	if err := yaml.Unmarshal(data, &yamlCfg); err != nil {
+		return fmt.Errorf("parsing embedded %s: %w", filename, err)
+	}
+
+	if yamlCfg.Profile.CatalogURL != "" {
+		c.catalogURL = yamlCfg.Profile.CatalogURL
+	}
+
+	if yamlCfg.Scoring != nil {
+		c.scoring = mergeRiskScoring(c.scoring, yamlCfg.Scoring)
 	}
 
 	return nil

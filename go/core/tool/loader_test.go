@@ -17,7 +17,7 @@ func TestNewToolLoader(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}
@@ -49,7 +49,7 @@ func TestToolLoader_EnsureNamespace(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}
@@ -84,7 +84,7 @@ func TestToolLoader_EnsureNamespaceForComponent(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}
@@ -130,7 +130,7 @@ func TestToolLoader_GetBinding(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}
@@ -164,7 +164,7 @@ func TestToolLoader_GetComponentTools(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}
@@ -197,7 +197,7 @@ func TestToolLoader_LoadAll(t *testing.T) {
 
 	configRoot := filepath.Join(repoRoot, ".eac")
 
-	loader, err := NewToolLoader(repoRoot, configRoot)
+	loader, err := NewToolLoader(configRoot)
 	if err != nil {
 		t.Fatalf("NewToolLoader() error = %v", err)
 	}

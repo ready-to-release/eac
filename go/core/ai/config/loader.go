@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"gopkg.in/yaml.v3"
@@ -51,16 +52,12 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 		systemPath := filepath.Join(systemRoot, paths.CLIEDir, paths.EACDir, paths.AIConfigFilename)
 		data, err = os.ReadFile(systemPath)
 
-		// If still not found, try contracts default (ultimate fallback)
+		// If still not found, use embedded defaults (ultimate fallback)
 		if os.IsNotExist(err) {
-			// contracts/core/0.1.0/defaults/ai-config.yml
-			// Use workspaceRoot (in container, this is /app; in dev, this is repo root)
-			contractsRoot := l.workspaceRoot
-			contractsPath := filepath.Join(contractsRoot, "contracts", "core", "0.1.0", "schemas", "defaults", paths.AIConfigFilename)
-			data, err = os.ReadFile(contractsPath)
+			data, err = core.FS.ReadFile(core.DefaultPath(paths.AIConfigFilename))
 			if err != nil {
-				return nil, fmt.Errorf("failed to read AI config from user repo (%s), system defaults (%s), or contracts defaults (%s): %w",
-					configPath, systemPath, contractsPath, err)
+				return nil, fmt.Errorf("failed to read AI config from user repo (%s), system defaults (%s), or embedded defaults: %w",
+					configPath, systemPath, err)
 			}
 		} else if err != nil {
 			return nil, fmt.Errorf("failed to read AI config from system defaults %s: %w", systemPath, err)

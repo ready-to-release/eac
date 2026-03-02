@@ -354,14 +354,14 @@ func (c *EACConfig) LoadTesting() error {
 // LoadSecurity loads the security configuration from the security contract.
 // This provides SecurityConfigPort interface access to scanners and policies.
 func (c *EACConfig) LoadSecurity() error {
-	cfg, err := LoadSecurityConfig(c.RepoRoot, c.ConfigRoot)
+	cfg, err := LoadSecurityConfig(c.ConfigRoot)
 	if err != nil {
 		// Non-fatal: security config is optional, provide empty default
 		c.Security = &SecurityConfig{
 			scanners: make(map[string]*scanner.ScannerDefinition),
 			policies: &scanner.PoliciesConfig{
 				ComponentScanners: make(map[string][]string),
-				Default:           []string{"trivy-sbom", "trivy-vuln"},
+				Default:           defaultScannerIDs,
 			},
 		}
 		return nil
