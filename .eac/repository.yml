@@ -267,6 +267,8 @@ modules:
         root: go/commands/lint
       - type: go
         root: go/commands/update
+      - type: go
+        root: go/commands/deploy
       - type: assets
         root: go/commands/repository
         name: repository-cmds-assets

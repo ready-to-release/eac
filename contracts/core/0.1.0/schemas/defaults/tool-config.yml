@@ -21,6 +21,7 @@ namespaces:
   node: [npm, tsc, npm-build, npm-test, eslint]
   python: [python, ruff, pytest]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]
+  deploy: [az-bicep]
 
 #---------------------------------------------------------------------------
 # Executor Mode - Global tool type resolution default
@@ -722,6 +723,26 @@ container-tools:
     output_format: json
     requirements: [docker]
 
+  # -------------------------------------------------------------------------
+  # Deploy tools
+  # -------------------------------------------------------------------------
+  az-bicep:
+    description: "Azure Bicep deployer (az CLI wrapper)"
+    localPath: containers/az-bicep-oci
+    command: ["sh", "/entrypoint.sh"]
+    mounts:
+      - source: "{component}"
+        target: /app
+        readonly: true
+      - source: "{output}"
+        target: /output
+    workdir: /app
+    host-env:
+      - AZURE_TENANT_ID
+      - AZURE_CLIENT_ID
+      - AZURE_CLIENT_SECRET
+    requirements: [docker]
+
 #---------------------------------------------------------------------------
 # Tool Bindings (override auto resolution)
 # Default is "auto" - tries system first, falls back to container
@@ -808,6 +829,10 @@ component-tools:
 
   ai-docs:
     builder: ai-docs-analyzer
+
+  bicep:
+    deployer: az-bicep
+    scanners: [trivy-iac]
 
 #---------------------------------------------------------------------------
 # Test Type to Component Type Mapping

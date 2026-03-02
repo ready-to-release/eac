@@ -34,6 +34,7 @@ use (
 	./go/clibase
 	./go/commands/base
 	./go/commands/build
+	./go/commands/deploy
 	./go/commands/lint
 	./go/commands/repository
 	./go/commands/scan

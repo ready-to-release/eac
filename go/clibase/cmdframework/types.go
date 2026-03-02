@@ -97,6 +97,8 @@ type CommandConfig struct {
 	ScanCmdContext   interface{} // *scan.scanContext (set by scan command)
 	LintCmdConfig    interface{} // *lint.LintConfig (set by lint command)
 	LintCmdContext   interface{} // *lint.lintContext (set by lint command)
+	DeployCmdConfig  interface{} // *deploy.DeployConfig (set by deploy command)
+	DeployCmdContext interface{} // *deploy.deployContext (set by deploy command)
 	AnalysisType     string      // AI summary analysis type filter (set by ai-summary command)
 }
 

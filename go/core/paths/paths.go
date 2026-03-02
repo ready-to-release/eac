@@ -28,6 +28,9 @@ const (
 	// LintDir is the subdirectory under OutDir for lint outputs.
 	LintDir = "lint"
 
+	// DeployDir is the subdirectory under OutDir for deploy outputs.
+	DeployDir = "deploy"
+
 	// AISummaryDir is the subdirectory under OutDir for AI summary outputs.
 	AISummaryDir = "ai-summary"
 
@@ -147,6 +150,9 @@ const (
 
 	// OutStagingRelPath is the relative path from repo root to staging area.
 	OutStagingRelPath = OutDir + "/" + StagingDir
+
+	// OutDeployRelPath is the relative path from repo root to deploy output.
+	OutDeployRelPath = OutDir + "/" + DeployDir
 
 	// OutAISummaryRelPath is the relative path from repo root to AI summary output.
 	OutAISummaryRelPath = OutDir + "/" + AISummaryDir

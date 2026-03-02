@@ -394,6 +394,16 @@ component-kinds:
     files:
       source: ["**/*.md"]
 
+  bicep:
+    extensions: [".bicep", ".bicepparam"]
+    deployers: [az-bicep]
+    scanners: [trivy-iac]
+    files:
+      source: ["**/*.bicep", "**/*.bicepparam"]
+      config: ["configuration/**/*.json"]
+    defaults:
+      entrypoint: main.bicep
+
 # =============================================================================
 # Artifact Matrices
 # =============================================================================

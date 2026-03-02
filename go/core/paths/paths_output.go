@@ -167,6 +167,28 @@ func TestStatePath(repoRoot, stateFileName string) string {
 }
 
 // ============================================================================
+// Deploy Path Helpers
+// ============================================================================
+
+// DeployOutputPath returns the path to a module's deploy output directory for an environment.
+// Structure: out/deploy/<module>/<environment>/
+func DeployOutputPath(repoRoot, moniker, environment string) string {
+	return outSubPath(repoRoot, DeployDir, moniker, environment)
+}
+
+// DeployLogPath returns the path to a module's deploy.log for an environment.
+// Structure: out/deploy/<module>/<environment>/deploy.log
+func DeployLogPath(repoRoot, moniker, environment string) string {
+	return outSubPath(repoRoot, DeployDir, moniker, environment, "deploy.log")
+}
+
+// DeployEvidencePath returns the path to a module's deploy evidence JSON.
+// Structure: out/deploy/<module>/<environment>/deploy-evidence.json
+func DeployEvidencePath(repoRoot, moniker, environment string) string {
+	return outSubPath(repoRoot, DeployDir, moniker, environment, "deploy-evidence.json")
+}
+
+// ============================================================================
 // Additional Path Helpers for Common Patterns
 // ============================================================================
 

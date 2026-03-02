@@ -57,6 +57,10 @@ type ComponentType struct {
 	// Empty or omitted = not scannable.
 	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
 
+	// Deployers are the deploy tools for this component type (tool IDs).
+	// Empty or omitted = not deployable.
+	Deployers []string `yaml:"deployers,omitempty" json:"deployers,omitempty"`
+
 	// BuildAfter specifies component types that must complete before this one
 	// within the same module. Used for intra-module dependency ordering.
 	// Example: ["go"] means this component waits for the "go" component to finish.
@@ -299,6 +303,19 @@ func (c *ComponentType) GetScanners() []string {
 	return c.Scanners
 }
 
+// IsDeployable returns true if this component type has deployers configured.
+func (c *ComponentType) IsDeployable() bool {
+	return len(c.GetDeployers()) > 0
+}
+
+// GetDeployers returns the deployer tool IDs for this component type.
+func (c *ComponentType) GetDeployers() []string {
+	if c == nil {
+		return nil
+	}
+	return c.Deployers
+}
+
 // GetBuildAfter returns component types that must complete before this type.
 // Creates intra-module dependencies: all components of this type wait for
 // all components of the listed types within the same module.
@@ -389,6 +406,8 @@ func (c *ComponentType) ToolIDsForAction(action core.ActionType) []string {
 		return c.Testers
 	case core.ActionScan:
 		return c.Scanners
+	case core.ActionDeploy:
+		return c.Deployers
 	default:
 		return nil
 	}

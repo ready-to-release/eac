@@ -106,7 +106,7 @@ func checkTestIsolation(cfg *CommandConfig) bool {
 		return false
 	}
 	switch cfg.Type {
-	case core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint:
+	case core.ActionBuild, core.ActionTest, core.ActionScan, core.ActionLint, core.ActionDeploy:
 		log.Errorf("ISOLATION VIOLATION: %s command cannot run within test scope without --dry-run", cfg.Type)
 		log.Errorf("Tests should not actively execute %s - use --dry-run for validation", cfg.Type)
 		return true

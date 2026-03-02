@@ -87,6 +87,49 @@ func TestNewPathHelpers(t *testing.T) {
 	}
 }
 
+// TestDeployPathHelpers tests the deploy-specific path helper functions.
+func TestDeployPathHelpers(t *testing.T) {
+	repoRoot := "/repo"
+	moniker := "infra"
+	env := "development"
+
+	tests := []struct {
+		name     string
+		fn       func() string
+		expected string
+	}{
+		{
+			name:     "DeployOutputPath",
+			fn:       func() string { return DeployOutputPath(repoRoot, moniker, env) },
+			expected: filepath.Join(repoRoot, "out", "deploy", moniker, env),
+		},
+		{
+			name:     "DeployLogPath",
+			fn:       func() string { return DeployLogPath(repoRoot, moniker, env) },
+			expected: filepath.Join(repoRoot, "out", "deploy", moniker, env, "deploy.log"),
+		},
+		{
+			name:     "DeployEvidencePath",
+			fn:       func() string { return DeployEvidencePath(repoRoot, moniker, env) },
+			expected: filepath.Join(repoRoot, "out", "deploy", moniker, env, "deploy-evidence.json"),
+		},
+		{
+			name:     "DeployOutputPath_Production",
+			fn:       func() string { return DeployOutputPath(repoRoot, "app", "production") },
+			expected: filepath.Join(repoRoot, "out", "deploy", "app", "production"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.fn()
+			if result != tt.expected {
+				t.Errorf("%s() = %q, expected %q", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
 // TestCachePathHelpers tests the cache path helper functions.
 func TestCachePathHelpers(t *testing.T) {
 	repoRoot := "/repo"
@@ -185,6 +228,7 @@ func TestPathConstants(t *testing.T) {
 		{"TemplatesDir", TemplatesDir, "templates"},
 		{"CLIEDir", CLIEDir, ".clie"},
 		{"BuildDir", BuildDir, "build"},
+		{"DeployDir", DeployDir, "deploy"},
 		{"TestDir", TestDir, "test"},
 		{"LogsDir", LogsDir, "logs"},
 		{"RiskControlsDir", RiskControlsDir, ".risk-controls"},

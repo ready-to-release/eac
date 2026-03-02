@@ -46,6 +46,18 @@ func LintConfig() CommandFlagConfig {
 	}
 }
 
+// DeployConfig returns the flag configuration for the deploy command.
+func DeployConfig() CommandFlagConfig {
+	return CommandFlagConfig{
+		Command:   "deploy",
+		Execution: false,
+		Output:    true,
+		Cache:     false,
+		Module:    false,
+		DryRun:    true,
+	}
+}
+
 // ScanConfig returns the flag configuration for the scan command.
 func ScanConfig() CommandFlagConfig {
 	return CommandFlagConfig{

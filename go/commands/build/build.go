@@ -266,7 +266,7 @@ func parseAllBuildFlags(args []string, env *environment.Env) (*flags.SharedFlags
 	// The shared parser splits unknown flags (Remaining) from positional args (Monikers),
 	// but build-specific value-taking flags like --component need their values preserved
 	// in the correct position (e.g., "--component site" must stay together).
-	buildArgs := rebuildUnconsumedArgs(args, shared.Remaining, shared.Monikers)
+	buildArgs := flags.RebuildUnconsumedArgs(args, shared.Remaining, shared.Monikers)
 
 	buildFlags, unknownArgs, err := ParseBuildSpecificFlags(buildArgs)
 	if err != nil {
@@ -369,33 +369,6 @@ func buildBuildConfig(buildFlags *BuildSpecificFlags, tidyFirst bool, artifactsM
 		Components:      buildFlags.Components,
 		RequestedSet:    requestedSet,
 	}
-}
-
-// rebuildUnconsumedArgs reconstructs remaining and positional args in their
-// original order. The shared parser separates unknown flags (remaining) from
-// positional args (positional), but this loses ordering information needed for
-// value-taking build-specific flags like --component, --version, --reproducible.
-// By restoring original order, ParseBuildSpecificFlags can correctly pair flags
-// with their values (e.g., "--component site" stays together).
-func rebuildUnconsumedArgs(originalArgs, remaining, positional []string) []string {
-	// Count occurrences of each unconsumed arg
-	unconsumed := make(map[string]int)
-	for _, r := range remaining {
-		unconsumed[r]++
-	}
-	for _, p := range positional {
-		unconsumed[p]++
-	}
-
-	// Scan original args, keeping only unconsumed ones in original order
-	var result []string
-	for _, arg := range originalArgs {
-		if unconsumed[arg] > 0 {
-			result = append(result, arg)
-			unconsumed[arg]--
-		}
-	}
-	return result
 }
 
 // isValidReproducible checks if a reproducible flag value is valid.

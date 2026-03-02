@@ -10,6 +10,7 @@ const (
 	ActionTest      ActionType = "test"
 	ActionScan      ActionType = "scan"
 	ActionLint      ActionType = "lint"
+	ActionDeploy    ActionType = "deploy"
 	ActionAISummary ActionType = "ai-summary"
 	ActionServe     ActionType = "serve"
 )
@@ -54,6 +55,7 @@ func init() {
 	RegisterActionType(ActionDescriptor{ActionTest, "Testing", "tested", "out/test", "test.log"})
 	RegisterActionType(ActionDescriptor{ActionScan, "Scanning", "scanned", "out/security", "scan.log"})
 	RegisterActionType(ActionDescriptor{ActionLint, "Linting", "linted", "out/lint", "lint.log"})
+	RegisterActionType(ActionDescriptor{ActionDeploy, "Deploying", "deployed", "out/deploy", "deploy.log"})
 	RegisterActionType(ActionDescriptor{ActionAISummary, "Summarizing", "summarized", "out/ai-summary", "ai-summary.log"})
 	RegisterActionType(ActionDescriptor{ActionServe, "Serving", "served", "out/serve", "serve.log"})
 }

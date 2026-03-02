@@ -22,6 +22,7 @@ require (
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/commands/build v0.0.0
+	github.com/ready-to-release/eac/go/commands/deploy v0.0.0
 	github.com/ready-to-release/eac/go/commands/lint v0.0.0
 	github.com/ready-to-release/eac/go/commands/repository v0.0.0
 	github.com/ready-to-release/eac/go/commands/scan v0.0.0
@@ -196,6 +197,7 @@ replace (
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/commands/base => ../../commands/base
 	github.com/ready-to-release/eac/go/commands/build => ../../commands/build
+	github.com/ready-to-release/eac/go/commands/deploy => ../../commands/deploy
 	github.com/ready-to-release/eac/go/commands/lint => ../../commands/lint
 	github.com/ready-to-release/eac/go/commands/repository => ../../commands/repository
 	github.com/ready-to-release/eac/go/commands/scan => ../../commands/scan

@@ -534,6 +534,7 @@ func initializeGlobalBridgesImpl(repoRoot, configRoot string) error {
 	GlobalTestBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 	GlobalScanBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 	GlobalServeBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
+	GlobalDeployBridge().SetToolSystem(ts.Registry, ts.Resolver, ts.Executor)
 
 	// Pre-warm native handler requirement cache in parallel.
 	// Runs ~4-5 verification commands concurrently (~500ms wall time).
