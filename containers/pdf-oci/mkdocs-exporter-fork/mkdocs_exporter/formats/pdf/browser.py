@@ -79,7 +79,12 @@ class Browser:
       logger.info('[mkdocs-exporter.pdf] Launching browser with pool_size=%d...', self.pool_size)
 
       self.playwright = await async_playwright().start()
-      self.browser = await self.playwright.chromium.launch(headless=self.headless, args=self.args)
+      executable_path = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+      self.browser = await self.playwright.chromium.launch(
+        headless=self.headless,
+        args=self.args,
+        **({'executable_path': executable_path} if executable_path else {}),
+      )
       self.context = await self.browser.new_context()
       self.context.on('console', self.log)
 
