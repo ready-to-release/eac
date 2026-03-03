@@ -94,6 +94,8 @@ modules:
         name: git-oci
       - type: container
         name: dotnet-oci
+      - type: container
+        name: az-bicep-oci
 
   - moniker: repository
     description: Repository root module including configuration files, build tools, and git settings
