@@ -83,17 +83,23 @@ func (a *ContainerAdapter) Execute(ctx context.Context, config *containerport.Co
 			break
 		}
 
+		// Use longer delay for image pull failures (rate limits, registry issues)
+		retryDelay := delay
+		if err != nil && strings.Contains(err.Error(), "failed to pull image") {
+			retryDelay = max(delay, 2*time.Second)
+		}
+
 		// Log retry attempt
 		if config.LogWriter != nil {
 			fmt.Fprintf(config.LogWriter, "[container] Attempt %d/%d failed, retrying in %v...\n",
-				attempt, maxRetries, delay)
+				attempt, maxRetries, retryDelay)
 		}
 
 		// Wait with exponential backoff
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(delay):
+		case <-time.After(retryDelay):
 		}
 
 		delay = min(delay*2, maxDelay)
@@ -363,6 +369,10 @@ func isRetryableError(err error, result *containerport.ContainerResult) bool {
 	// Check error message for transient Docker errors
 	if err != nil {
 		errStr := err.Error()
+		// Check for image pull failures (transient: rate limits, network issues)
+		if strings.Contains(errStr, "failed to pull image") {
+			return true
+		}
 		// Check for container conflict errors
 		if strings.Contains(errStr, "container already exists") {
 			return true

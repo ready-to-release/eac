@@ -72,6 +72,11 @@ func TestIsRetryableError_DockerErrors(t *testing.T) {
 		expected bool
 	}{
 		{
+			name:     "failed to pull image",
+			err:      &testError{msg: "failed to pull image structurizr/cli:2025.11.09: toomanyrequests"},
+			expected: true,
+		},
+		{
 			name:     "container already exists",
 			err:      &testError{msg: "container already exists: conflict"},
 			expected: true,
