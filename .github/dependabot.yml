@@ -443,6 +443,11 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    groups:
+      eslint-ecosystem:
+        patterns:
+          - "eslint"
+          - "@typescript-eslint/*"
 
   # Docker - containers/cgo-oci
   - package-ecosystem: "docker"
