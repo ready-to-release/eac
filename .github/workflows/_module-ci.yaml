@@ -660,7 +660,7 @@ jobs:
   evidence:
     name: Evidence
     needs: [build, build-containers, test-windows, test-macos, container-test]
-    if: needs.build.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
+    if: always() && needs.build.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     outputs:
       artifact-name: ${{ steps.evidence.outputs.artifact-name }}
