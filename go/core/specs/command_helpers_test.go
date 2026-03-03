@@ -24,6 +24,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/hash"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/repository"
+	coretesting "github.com/ready-to-release/eac/go/core/testing"
 	"gopkg.in/yaml.v3"
 )
 
@@ -103,6 +104,10 @@ func makeCoreInProcessDispatcher(ctx *eacgodog.TestContext) func(args []string) 
 
 		case cmdName == "validate module-hierarchy":
 			dispatch = func(ws string) (string, int) { return validateModuleHierarchyInProcess(ws) }
+
+		case cmdName == "get changed-containers" ||
+			strings.HasPrefix(cmdName, "get changed-containers "):
+			dispatch = func(ws string) (string, int) { return detectContainerChangesInProcess(ws, args) }
 
 		default:
 			return "", eacgodog.ExitCodeDispatchDeclined
@@ -736,4 +741,311 @@ func filterFilesForModuleDomain(files []string, module, workspaceRoot string, ci
 		}
 	}
 	return moduleFiles
+}
+
+// containerChangeResult matches the YAML output struct from
+// go/commands/repository/get/changed-containers.go.
+type containerChangeResult struct {
+	Module            string                     `yaml:"module"`
+	HeadSHA           string                     `yaml:"head_sha"`
+	AllComponents     []string                   `yaml:"all_components"`
+	ChangedComponents []containerComponentStatus `yaml:"changed_components"`
+	SkippedComponents []containerComponentStatus `yaml:"skipped_components"`
+	FilteredMatrix    string                     `yaml:"filtered_matrix,omitempty"`
+}
+
+type containerComponentStatus struct {
+	Name         string `yaml:"name"`
+	LastBuildSHA string `yaml:"last_build_sha,omitempty"`
+	Reason       string `yaml:"reason"`
+	FilesChanged int    `yaml:"files_changed,omitempty"`
+}
+
+// detectContainerChangesInProcess replicates "get changed-containers" using go/core domain functions.
+// Reads mock data from EAC_MOCK_CONTAINER_REGISTRY and CLIE_MOCK_HEAD_SHA env vars.
+func detectContainerChangesInProcess(workspaceRoot string, args []string) (string, int) {
+	// Parse flags from args
+	module := ""
+	componentsJSON := ""
+	headSHA := ""
+	forceAll := false
+
+	for i, arg := range args {
+		switch arg {
+		case "--module":
+			if i+1 < len(args) {
+				module = args[i+1]
+			}
+		case "--components":
+			if i+1 < len(args) {
+				componentsJSON = args[i+1]
+			}
+		case "--head-sha":
+			if i+1 < len(args) {
+				headSHA = args[i+1]
+			}
+		case "--force-all":
+			forceAll = true
+		}
+	}
+
+	if module == "" {
+		return "Error: --module is required\n", 1
+	}
+
+	// Load module registry
+	reg, err := modules.LoadFromWorkspaceNoValidation(workspaceRoot)
+	if err != nil {
+		return fmt.Sprintf("Error: loading module registry: %v\n", err), 1
+	}
+
+	// Resolve component names
+	var componentNames []string
+	if componentsJSON != "" {
+		type compInput struct {
+			Name string `json:"name"`
+		}
+		var inputs []compInput
+		if err := json.Unmarshal([]byte(componentsJSON), &inputs); err != nil {
+			return fmt.Sprintf("Error: parsing --components JSON: %v\n", err), 1
+		}
+		for _, input := range inputs {
+			componentNames = append(componentNames, input.Name)
+		}
+	} else {
+		// Discover from registry: use all component names
+		mod, ok := reg.Get(module)
+		if !ok {
+			return fmt.Sprintf("Error: module %q not found\n", module), 1
+		}
+		for name := range mod.Components {
+			componentNames = append(componentNames, name)
+		}
+	}
+
+	if len(componentNames) == 0 {
+		return fmt.Sprintf("Error: no container components found for module %q\n", module), 1
+	}
+
+	// Resolve HEAD SHA
+	if headSHA == "" {
+		headSHA = os.Getenv(environments.EnvCLIEMockHeadSHA)
+	}
+	if headSHA == "" {
+		sha, err := coretesting.GitHeadSHA(workspaceRoot)
+		if err != nil {
+			return fmt.Sprintf("Error: getting current SHA: %v\n", err), 1
+		}
+		headSHA = sha
+	}
+
+	// Build result
+	if forceAll {
+		result := buildForceAllContainerResult(module, headSHA, componentNames)
+		return marshalContainerResult(result)
+	}
+
+	// Load mock container registry
+	mockPath := os.Getenv(environments.EnvEACMockContainerRegistry)
+	if mockPath == "" {
+		return "Error: EAC_MOCK_CONTAINER_REGISTRY not set\n", 1
+	}
+
+	data, err := os.ReadFile(mockPath)
+	if err != nil {
+		return fmt.Sprintf("Error: reading mock container registry: %v\n", err), 1
+	}
+
+	var mocks map[string]string
+	if err := json.Unmarshal(data, &mocks); err != nil {
+		return fmt.Sprintf("Error: parsing mock container registry: %v\n", err), 1
+	}
+
+	mod, ok := reg.Get(module)
+	if !ok {
+		return fmt.Sprintf("Error: module %q not found\n", module), 1
+	}
+
+	result := &containerChangeResult{
+		Module:        module,
+		HeadSHA:       headSHA,
+		AllComponents: componentNames,
+	}
+
+	shortHead := headSHA
+	if len(shortHead) > 7 {
+		shortHead = shortHead[:7]
+	}
+
+	// Track changed files per base SHA to avoid redundant git diffs
+	diffCache := make(map[string][]string)
+
+	for _, compName := range componentNames {
+		// Check for error sentinel
+		lastBuildSHA, exists := mocks[compName]
+		if exists && lastBuildSHA == "__ERROR__" {
+			result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+				Name:   compName,
+				Reason: "registry_query_failed: mock error",
+			})
+			continue
+		}
+
+		// No entry = no previous build
+		if !exists || lastBuildSHA == "" {
+			result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+				Name:   compName,
+				Reason: "no_previous_build",
+			})
+			continue
+		}
+
+		// Already built at HEAD -> skip
+		if lastBuildSHA == shortHead {
+			result.SkippedComponents = append(result.SkippedComponents, containerComponentStatus{
+				Name:         compName,
+				LastBuildSHA: lastBuildSHA,
+				Reason:       "already_built_at_head",
+			})
+			continue
+		}
+
+		// Different SHA -> check if component's files changed
+		changedFiles, ok := diffCache[lastBuildSHA]
+		if !ok {
+			changedFiles, err = getChangedFilesBetweenSHAsInProcess(lastBuildSHA, headSHA, workspaceRoot)
+			if err != nil {
+				// git diff failed -> rebuild
+				result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+					Name:         compName,
+					LastBuildSHA: lastBuildSHA,
+					Reason:       fmt.Sprintf("diff_failed: %v", err),
+				})
+				continue
+			}
+			diffCache[lastBuildSHA] = changedFiles
+		}
+
+		// Check for shared files (module-owned but not component-owned)
+		sharedFiles := detectSharedFileChangesInProcess(changedFiles, mod, componentNames)
+
+		if len(sharedFiles) > 0 {
+			result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+				Name:         compName,
+				LastBuildSHA: lastBuildSHA,
+				Reason:       fmt.Sprintf("shared_files_changed_since_%s", lastBuildSHA),
+				FilesChanged: len(sharedFiles),
+			})
+			continue
+		}
+
+		// Filter to files owned by THIS component
+		componentFiles := filterFilesForComponentInProcess(changedFiles, mod, compName)
+
+		if len(componentFiles) == 0 {
+			result.SkippedComponents = append(result.SkippedComponents, containerComponentStatus{
+				Name:         compName,
+				LastBuildSHA: lastBuildSHA,
+				Reason:       "no_component_file_changes",
+			})
+		} else {
+			result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+				Name:         compName,
+				LastBuildSHA: lastBuildSHA,
+				Reason:       fmt.Sprintf("files_changed_since_%s", lastBuildSHA),
+				FilesChanged: len(componentFiles),
+			})
+		}
+	}
+
+	// Build filtered matrix
+	result.FilteredMatrix = buildContainerFilteredMatrix(result.ChangedComponents)
+
+	return marshalContainerResult(result)
+}
+
+func buildForceAllContainerResult(module, headSHA string, components []string) *containerChangeResult {
+	result := &containerChangeResult{
+		Module:        module,
+		HeadSHA:       headSHA,
+		AllComponents: components,
+	}
+	for _, name := range components {
+		result.ChangedComponents = append(result.ChangedComponents, containerComponentStatus{
+			Name:   name,
+			Reason: "force_all",
+		})
+	}
+	result.FilteredMatrix = buildContainerFilteredMatrix(result.ChangedComponents)
+	return result
+}
+
+func buildContainerFilteredMatrix(changed []containerComponentStatus) string {
+	type matrixEntry struct {
+		Name string `json:"name"`
+	}
+	entries := make([]matrixEntry, len(changed))
+	for i, c := range changed {
+		entries[i] = matrixEntry{Name: c.Name}
+	}
+	data, err := json.Marshal(entries)
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
+func marshalContainerResult(result *containerChangeResult) (string, int) {
+	out, err := yaml.Marshal(result)
+	if err != nil {
+		return fmt.Sprintf("Error: marshal failed: %v\n", err), 1
+	}
+	return string(out) + "\n", 0
+}
+
+// getChangedFilesBetweenSHAsInProcess uses git diff to find changed files.
+func getChangedFilesBetweenSHAsInProcess(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
+	output, err := coretesting.GitDiffNameOnly(workspaceRoot, baseSHA, headSHA)
+	if err != nil {
+		return nil, fmt.Errorf("git diff failed: %w", err)
+	}
+
+	trimmed := strings.TrimSpace(output)
+	if trimmed == "" {
+		return []string{}, nil
+	}
+
+	return strings.Split(trimmed, "\n"), nil
+}
+
+// filterFilesForComponentInProcess returns files that match a specific component.
+func filterFilesForComponentInProcess(files []string, mod *modules.ModuleContract, componentName string) []string {
+	var matched []string
+	for _, f := range files {
+		if mod.MatchesFileForComponent(f, componentName) {
+			matched = append(matched, f)
+		}
+	}
+	return matched
+}
+
+// detectSharedFileChangesInProcess finds files owned by the module but not by any component.
+func detectSharedFileChangesInProcess(changedFiles []string, mod *modules.ModuleContract, components []string) []string {
+	var shared []string
+	for _, f := range changedFiles {
+		if !mod.MatchesFile(f) {
+			continue
+		}
+		ownedByComponent := false
+		for _, comp := range components {
+			if mod.MatchesFileForComponent(f, comp) {
+				ownedByComponent = true
+				break
+			}
+		}
+		if !ownedByComponent {
+			shared = append(shared, f)
+		}
+	}
+	return shared
 }

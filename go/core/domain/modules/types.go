@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain"
 	"github.com/ready-to-release/eac/go/core/hash"
 )
@@ -56,21 +57,8 @@ func (m *ModuleContract) GetGlobPatterns() []string {
 			continue
 		}
 		root := normalizePathSeparators(comp.Root)
-
-		// Collect patterns from this component
-		if comp.Patterns != nil {
-			for _, pattern := range comp.Patterns.Source {
-				patterns = append(patterns, joinPattern(root, pattern))
-			}
-			for _, pattern := range comp.Patterns.Tests {
-				patterns = append(patterns, joinPattern(root, pattern))
-			}
-			for _, pattern := range comp.Patterns.Config {
-				patterns = append(patterns, joinPattern(root, pattern))
-			}
-			for _, pattern := range comp.Patterns.Data {
-				patterns = append(patterns, joinPattern(root, pattern))
-			}
+		for _, pattern := range comp.Patterns.AllOwnershipPatterns() {
+			patterns = append(patterns, joinPattern(root, pattern))
 		}
 	}
 
@@ -130,42 +118,58 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 		if comp == nil {
 			continue
 		}
-		root := normalizePathSeparators(comp.Root)
-
-		// Check if file is under this component's root
-		isUnderRoot := root == "" || root == "/" ||
-			strings.HasPrefix(path, root+"/") || path == root
-
-		if !isUnderRoot {
-			continue
-		}
-
-		// Collect all declared patterns across source, tests, config, and data.
-		var allPatterns []string
-		if comp.Patterns != nil {
-			allPatterns = append(allPatterns, comp.Patterns.Source...)
-			allPatterns = append(allPatterns, comp.Patterns.Tests...)
-			allPatterns = append(allPatterns, comp.Patterns.Config...)
-			allPatterns = append(allPatterns, comp.Patterns.Data...)
-		}
-
-		if len(allPatterns) > 0 {
-			// Component has explicit patterns - match against them.
-			for _, pattern := range allPatterns {
-				fullPattern := joinPattern(root, pattern)
-				if matchWithFallback(path, fullPattern) {
-					return true
-				}
-			}
-		} else if root != "" && root != "/" {
-			// No patterns defined - component owns all files under its root.
-			// This covers any component type that declares a root without
-			// restricting by patterns (e.g., static content, books).
+		if matchesComponentFile(path, comp) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// MatchesFileForComponent returns true if the given file path matches
+// patterns for the specific named component within this module.
+// This enables per-component change detection within multi-container modules.
+func (m *ModuleContract) MatchesFileForComponent(filePath, componentName string) bool {
+	comp, ok := m.Components[componentName]
+	if !ok || comp == nil {
+		return false
+	}
+
+	path := normalizePathSeparators(filePath)
+
+	// Check module-level excludes first
+	if m.matchesAnyExclude(path) {
+		return false
+	}
+
+	return matchesComponentFile(path, comp)
+}
+
+// matchesComponentFile checks if a file matches a single component's patterns.
+// Assumes exclude check and path normalization were already done by the caller.
+func matchesComponentFile(path string, comp *config.ComponentEntry) bool {
+	root := normalizePathSeparators(comp.Root)
+
+	isUnderRoot := root == "" || root == "/" ||
+		strings.HasPrefix(path, root+"/") || path == root
+	if !isUnderRoot {
+		return false
+	}
+
+	allPatterns := comp.Patterns.AllOwnershipPatterns()
+
+	if len(allPatterns) > 0 {
+		for _, pattern := range allPatterns {
+			fullPattern := joinPattern(root, pattern)
+			if matchWithFallback(path, fullPattern) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// No patterns defined - component owns all files under its root.
+	return root != "" && root != "/"
 }
 
 // matchesAnyExclude returns true if the file matches any exclude pattern

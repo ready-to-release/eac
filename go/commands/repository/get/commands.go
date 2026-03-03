@@ -14,6 +14,7 @@ func Commands() []core.CommandPort {
 		&getBookDescriptionCommand{},
 		&getBuildDepsCommand{},
 		&getBuildTimesCommand{},
+		&getChangedContainersCommand{},
 		&getChangedModulesCommand{},
 		&getChangedModulesCICommand{},
 		&getChangedModulesLocalCommand{},

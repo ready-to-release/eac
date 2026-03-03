@@ -1250,3 +1250,57 @@ func TestGetPushableContainerComponents(t *testing.T) {
 		}
 	})
 }
+
+func TestComponentPatterns_AllOwnershipPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		patterns *ComponentPatterns
+		expected int
+	}{
+		{
+			name:     "nil patterns returns nil",
+			patterns: nil,
+			expected: 0,
+		},
+		{
+			name:     "empty patterns returns empty",
+			patterns: &ComponentPatterns{},
+			expected: 0,
+		},
+		{
+			name: "source only",
+			patterns: &ComponentPatterns{
+				Source: []string{"**/*.go", "go.mod"},
+			},
+			expected: 2,
+		},
+		{
+			name: "all pattern types aggregated",
+			patterns: &ComponentPatterns{
+				Source: []string{"**/*.go"},
+				Tests:  []string{"**/*_test.go"},
+				Config: []string{"*.yml"},
+				Data:   []string{"testdata/**"},
+			},
+			expected: 4,
+		},
+		{
+			name: "excludes are not included",
+			patterns: &ComponentPatterns{
+				Source:  []string{"**/*.go"},
+				Exclude: []string{"vendor/**"},
+			},
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.patterns.AllOwnershipPatterns()
+			if len(got) != tt.expected {
+				t.Errorf("AllOwnershipPatterns() returned %d patterns, expected %d: %v",
+					len(got), tt.expected, got)
+			}
+		})
+	}
+}

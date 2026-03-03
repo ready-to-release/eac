@@ -251,6 +251,12 @@ jobs:
           echo "  Max concurrent: $MAX_CONCURRENT"
           echo ""
 
+          # When trigger-all is set, also force-rebuild all containers
+          FORCE_CONTAINERS_FLAG=""
+          if [ "${{ inputs.trigger-all }}" = "true" ]; then
+            FORCE_CONTAINERS_FLAG="--force-all-containers"
+          fi
+
           # Single command handles the full lifecycle:
           # filter, dispatch, poll for completion, report results
           ${COMMANDS:?COMMANDS not set} pipeline ci schedule \
@@ -260,7 +266,8 @@ jobs:
             --dispatch-ref "$DISPATCH_REF" \
             --max-concurrent $MAX_CONCURRENT \
             --timeout 3600 \
-            --trigger-run-id ${{ github.run_id }}
+            --trigger-run-id ${{ github.run_id }} \
+            $FORCE_CONTAINERS_FLAG
 
   # =========================================
   # Summary

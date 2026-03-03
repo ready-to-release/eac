@@ -39,6 +39,7 @@ func resetCacheContext() {
 	cacheCtx = cacheContext{
 		mockedCIStatus: make(map[string]mockedModuleCI),
 	}
+	resetContainerMockContext()
 }
 
 // getOrLoadRegistry returns the cached module registry, loading from disk if needed.
@@ -197,5 +198,39 @@ func registerCacheSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 	sc.Step(`^the build state file contains invalid JSON "([^"]*)"$`, func(content string) error {
 		return corruptBuildState(ctx, content)
+	})
+
+	// Container change detection
+	sc.Step(`^module "([^"]*)" has container components:$`, func(moduleName string, table *godog.Table) error {
+		return setupContainerModule(ctx, moduleName, table)
+	})
+	sc.Step(`^the mocked container registry has no tags$`, func() error {
+		return mockContainerRegistryNoTags()
+	})
+	sc.Step(`^the mocked container registry shows:$`, func(table *godog.Table) error {
+		return mockContainerRegistryFromTable(table)
+	})
+	sc.Step(`^the mocked container registry returns error for "([^"]*)"$`, func(component string) error {
+		return mockContainerRegistryError(component)
+	})
+	sc.Step(`^I commit a change to "([^"]*)"$`, func(filePath string) error {
+		return commitChangeToFile(ctx, filePath)
+	})
+	sc.Step(`^I run "([^"]*)" with mocked container registry$`, func(cmdLine string) error {
+		return runCommandWithMockedContainerRegistry(ctx, cmdLine)
+	})
+
+	// Container-specific YAML assertions
+	sc.Step(`^the YAML output field "([^"]*)" has (\d+) entries$`, func(fieldPath string, n int) error {
+		return yamlFieldHasNEntries(ctx, fieldPath, n)
+	})
+	sc.Step(`^the YAML output field "([^"]*)" contains component "([^"]*)"$`, func(fieldPath, component string) error {
+		return yamlFieldContainsComponent(ctx, fieldPath, component)
+	})
+	sc.Step(`^each entry in "([^"]*)" has reason "([^"]*)"$`, func(fieldPath, reason string) error {
+		return yamlArrayAllHaveReason(ctx, fieldPath, reason)
+	})
+	sc.Step(`^the component "([^"]*)" in "([^"]*)" has reason containing "([^"]*)"$`, func(component, fieldPath, substring string) error {
+		return yamlComponentReasonContains(ctx, fieldPath, component, substring)
 	})
 }

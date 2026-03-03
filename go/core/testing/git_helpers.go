@@ -184,6 +184,59 @@ func GitCheckoutPath(repoPath, path string) error {
 	return nil
 }
 
+// GitDiffNameOnly returns the list of files changed between two SHAs as a
+// newline-separated string. Uses go-git tree comparison.
+func GitDiffNameOnly(repoPath, baseSHA, headSHA string) (string, error) {
+	mgr := coregit.NewManager(nil)
+	repo, err := mgr.Open(repoPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open repository: %w", err)
+	}
+
+	goRepo := repo.GoGitRepo()
+
+	baseHash := plumbing.NewHash(baseSHA)
+	headHash := plumbing.NewHash(headSHA)
+
+	baseCommit, err := goRepo.CommitObject(baseHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to get base commit %s: %w", baseSHA, err)
+	}
+
+	headCommit, err := goRepo.CommitObject(headHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to get head commit %s: %w", headSHA, err)
+	}
+
+	baseTree, err := baseCommit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get base tree: %w", err)
+	}
+
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get head tree: %w", err)
+	}
+
+	changes, err := baseTree.Diff(headTree)
+	if err != nil {
+		return "", fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	var names []string
+	for _, change := range changes {
+		name := change.To.Name
+		if name == "" {
+			name = change.From.Name // deleted file
+		}
+		// Normalize to forward slashes
+		name = strings.ReplaceAll(name, "\\", "/")
+		names = append(names, name)
+	}
+
+	return strings.Join(names, "\n"), nil
+}
+
 // GitAddRemote adds a remote to the repository.
 func GitAddRemote(repoPath, name, url string) error {
 	mgr := coregit.NewManager(nil)

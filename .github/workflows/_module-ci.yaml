@@ -22,7 +22,11 @@
 #   └───┬───────────────────────────────────────────┘
 #       │
 #   ┌───┴──────────────────┐
-#   │  Build Containers    │  ← matrix: one job per pushable container
+#   │  Check Containers    │  ← per-component change detection via GHCR tags
+#   └───┬──────────────────┘
+#       │
+#   ┌───┴──────────────────┐
+#   │  Build Containers    │  ← matrix: only CHANGED containers
 #   │  (parallel per comp) │
 #   └───┬──────────────────┘
 #       │
@@ -57,6 +61,11 @@ on:
         required: false
         type: string
         default: ''
+      force-all-containers:
+        description: 'Force rebuild all container components (skip change detection)'
+        required: false
+        type: boolean
+        default: false
 
     outputs:
       build-result:
@@ -384,17 +393,74 @@ jobs:
           ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
+  # Job A1.5: Check Container Changes - per-component change detection
+  # ===========================================================================
+  check-containers:
+    name: Check Container Changes
+    needs: [build]
+    if: needs.build.outputs.is-multi-container == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      filtered-components: ${{ steps.detect.outputs.filtered-components }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+      skipped-components: ${{ steps.detect.outputs.skipped-components }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
+      - name: Detect Changed Containers
+        id: detect
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force-all-containers }}" = "true" ]; then
+            FORCE_FLAG="--force-all"
+          fi
+          ${COMMANDS:?COMMANDS not set} get changed-containers \
+            --module "${{ inputs.module }}" \
+            --components '${{ needs.build.outputs.container-components }}' \
+            --head-sha "${{ inputs.sha || github.sha }}" \
+            --format github-output \
+            $FORCE_FLAG >> $GITHUB_OUTPUT
+
+      - name: Change Detection Summary
+        env:
+          HAS_CHANGES: ${{ steps.detect.outputs.has-changes }}
+          FILTERED: ${{ steps.detect.outputs.filtered-components }}
+          SKIPPED: ${{ steps.detect.outputs.skipped-components }}
+        run: |
+          echo "### Container Change Detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | Components |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Changed | \`$FILTERED\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | \`$SKIPPED\` |" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
   # Job A2: Build Containers (matrix) - for multi-container modules
   # ===========================================================================
   build-containers:
     name: "Build: ${{ matrix.component.name }}"
-    needs: [build]
-    if: needs.build.outputs.is-multi-container == 'true'
+    needs: [build, check-containers]
+    if: >-
+      needs.build.outputs.is-multi-container == 'true'
+      && needs.check-containers.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        component: ${{ fromJSON(needs.build.outputs.container-components) }}
+        component: ${{ fromJSON(needs.check-containers.outputs.filtered-components) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -659,7 +725,7 @@ jobs:
   # ===========================================================================
   evidence:
     name: Evidence
-    needs: [build, build-containers, test-windows, test-macos, container-test]
+    needs: [build, check-containers, build-containers, test-windows, test-macos, container-test]
     if: always() && needs.build.outputs.build-evidence == 'true' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     outputs:
@@ -684,7 +750,7 @@ jobs:
   # ===========================================================================
   summary:
     name: Summary
-    needs: [build, build-containers, test-windows, test-macos, container-test, evidence]
+    needs: [build, check-containers, build-containers, test-windows, test-macos, container-test, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:

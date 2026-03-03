@@ -46,4 +46,7 @@ const (
 	EnvCLIEMockTimeout           = "CLIE_MOCK_TIMEOUT"
 	EnvCLIEMockInvalidRef        = "CLIE_MOCK_INVALID_REF"
 	EnvCLIEMockFailingWorkflow   = "CLIE_MOCK_FAILING_WORKFLOW"
+
+	// EAC mock environment variables (for eac commands, not clie)
+	EnvEACMockContainerRegistry = "EAC_MOCK_CONTAINER_REGISTRY"
 )

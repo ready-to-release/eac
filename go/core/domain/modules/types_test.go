@@ -14,7 +14,6 @@ import (
 func TestNewModuleContract(t *testing.T) {
 	base := domain.BaseContract{
 		Moniker: "test-module",
-		Name:    "Test Module",
 		Components: config.ModuleComponents{
 			"go": &config.ComponentEntry{
 				Root:     "test/root",
@@ -590,6 +589,150 @@ func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 				t.Errorf("GetTestImplementationPath() = %q, expected %q", got, tt.expected)
 			}
 		})
+	}
+}
+
+// TestModuleContract_MatchesFileForComponent tests per-component file matching
+// for multi-container modules where each container has its own root.
+func TestModuleContract_MatchesFileForComponent(t *testing.T) {
+	// Multi-container module with separate container roots
+	base := domain.BaseContract{
+		Moniker: "oci-tools",
+		Components: config.ModuleComponents{
+			"drawio-oci": &config.ComponentEntry{
+				Root:     "containers/drawio-oci",
+				Patterns: &config.ComponentPatterns{Source: []string{"**/*"}},
+			},
+			"mkdocs-render-oci": &config.ComponentEntry{
+				Root:     "containers/mkdocs-render-oci",
+				Patterns: &config.ComponentPatterns{Source: []string{"**/*"}},
+			},
+			"pdf-oci": &config.ComponentEntry{
+				Root:     "containers/pdf-oci",
+				Patterns: &config.ComponentPatterns{Source: []string{"**/*"}},
+			},
+		},
+	}
+	module := NewModuleContract(base, "")
+
+	tests := []struct {
+		name      string
+		filePath  string
+		component string
+		expected  bool
+	}{
+		// File under correct component root
+		{"drawio file matches drawio", "containers/drawio-oci/Dockerfile", "drawio-oci", true},
+		{"drawio nested matches drawio", "containers/drawio-oci/scripts/build.sh", "drawio-oci", true},
+		{"mkdocs file matches mkdocs", "containers/mkdocs-render-oci/requirements.txt", "mkdocs-render-oci", true},
+		{"pdf file matches pdf", "containers/pdf-oci/Dockerfile", "pdf-oci", true},
+
+		// File under different component root
+		{"drawio file does not match mkdocs", "containers/drawio-oci/Dockerfile", "mkdocs-render-oci", false},
+		{"mkdocs file does not match pdf", "containers/mkdocs-render-oci/requirements.txt", "pdf-oci", false},
+		{"pdf file does not match drawio", "containers/pdf-oci/Dockerfile", "drawio-oci", false},
+
+		// Unknown component
+		{"unknown component", "containers/drawio-oci/Dockerfile", "nonexistent", false},
+
+		// File outside all component roots
+		{"file outside roots", "go/cli/eac/main.go", "drawio-oci", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := module.MatchesFileForComponent(tt.filePath, tt.component)
+			if got != tt.expected {
+				t.Errorf("MatchesFileForComponent(%q, %q) = %v, expected %v",
+					tt.filePath, tt.component, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModuleContract_MatchesFileForComponent_Excludes tests that module-level excludes are respected.
+func TestModuleContract_MatchesFileForComponent_Excludes(t *testing.T) {
+	base := domain.BaseContract{
+		Components: config.ModuleComponents{
+			"main": &config.ComponentEntry{
+				Root: "containers/main",
+				Patterns: &config.ComponentPatterns{
+					Source:  []string{"**/*"},
+					Exclude: []string{"**/node_modules/**"},
+				},
+			},
+		},
+	}
+	module := NewModuleContract(base, "")
+
+	tests := []struct {
+		name     string
+		filePath string
+		expected bool
+	}{
+		{"normal file matches", "containers/main/Dockerfile", true},
+		{"excluded file does not match", "containers/main/node_modules/pkg/index.js", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := module.MatchesFileForComponent(tt.filePath, "main")
+			if got != tt.expected {
+				t.Errorf("MatchesFileForComponent(%q, %q) = %v, expected %v",
+					tt.filePath, "main", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModuleContract_MatchesFileForComponent_NoPatterns tests components with root only (no patterns).
+func TestModuleContract_MatchesFileForComponent_NoPatterns(t *testing.T) {
+	base := domain.BaseContract{
+		Components: config.ModuleComponents{
+			"static": &config.ComponentEntry{
+				Root: "containers/static",
+				// No patterns: owns all files under root
+			},
+		},
+	}
+	module := NewModuleContract(base, "")
+
+	tests := []struct {
+		name     string
+		filePath string
+		expected bool
+	}{
+		{"file under root matches", "containers/static/index.html", true},
+		{"nested file matches", "containers/static/assets/style.css", true},
+		{"file outside root", "containers/other/index.html", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := module.MatchesFileForComponent(tt.filePath, "static")
+			if got != tt.expected {
+				t.Errorf("MatchesFileForComponent(%q, %q) = %v, expected %v",
+					tt.filePath, "static", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModuleContract_MatchesFileForComponent_WindowsPaths tests with backslash paths.
+func TestModuleContract_MatchesFileForComponent_WindowsPaths(t *testing.T) {
+	base := domain.BaseContract{
+		Components: config.ModuleComponents{
+			"container": &config.ComponentEntry{
+				Root:     "containers/app",
+				Patterns: &config.ComponentPatterns{Source: []string{"**/*"}},
+			},
+		},
+	}
+	module := NewModuleContract(base, "")
+
+	got := module.MatchesFileForComponent("containers\\app\\Dockerfile", "container")
+	if !got {
+		t.Error("MatchesFileForComponent should normalize backslashes")
 	}
 }
 

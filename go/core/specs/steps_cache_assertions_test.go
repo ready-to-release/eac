@@ -188,7 +188,7 @@ func extractYAMLField(ctx *eacgodog.TestContext, fieldPath string) (interface{},
 }
 
 func findYAMLStart(output string) int {
-	patterns := []string{"modules:", "is_fresh_build:", "directly_changed:", "base_sha:"}
+	patterns := []string{"modules:", "is_fresh_build:", "directly_changed:", "base_sha:", "module:", "head_sha:", "all_components:"}
 	minIndex := len(output)
 
 	for _, pattern := range patterns {

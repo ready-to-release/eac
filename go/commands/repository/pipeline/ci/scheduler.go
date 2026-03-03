@@ -9,16 +9,17 @@ import (
 
 // CISchedulerConfig holds configuration for the CI scheduler.
 type CISchedulerConfig struct {
-	MaxConcurrent   int
-	HeadSHA         string
-	DispatchRef     string
-	Timeout         time.Duration
-	PollInterval    time.Duration
-	TriggerRunID    string
-	DirectlyChanged string
-	Invalidated     string
-	WorkspaceRoot   string
-	MockJSON        string
+	MaxConcurrent      int
+	HeadSHA            string
+	DispatchRef        string
+	Timeout            time.Duration
+	PollInterval       time.Duration
+	TriggerRunID       string
+	DirectlyChanged    string
+	Invalidated        string
+	WorkspaceRoot      string
+	MockJSON           string
+	ForceAllContainers bool // When true, dispatched workflows receive force-all-containers=true
 }
 
 // CIModuleStatus represents the status of a module in the scheduler.
@@ -183,7 +184,7 @@ func (s *CIScheduler) dispatchReady(ctx context.Context) int {
 		}
 
 		log.Infof("CI Scheduler: dispatching %s", module)
-		err := s.dispatcher.Dispatch(ctx, module, s.cfg.DispatchRef, s.cfg.HeadSHA, s.cfg.TriggerRunID)
+		err := s.dispatcher.Dispatch(ctx, module, s.cfg.DispatchRef, s.cfg.HeadSHA, s.cfg.TriggerRunID, s.extraInputs())
 		if err != nil {
 			log.Errorf("CI Scheduler: failed to dispatch %s: %v", module, err)
 			s.status[module] = ciModuleFailed
@@ -285,6 +286,14 @@ func (s *CIScheduler) countByStatus(status CIModuleStatus) int {
 		}
 	}
 	return count
+}
+
+// extraInputs returns additional workflow dispatch inputs from config.
+func (s *CIScheduler) extraInputs() map[string]string {
+	if !s.cfg.ForceAllContainers {
+		return nil
+	}
+	return map[string]string{"force-all-containers": "true"}
 }
 
 // buildResult constructs the final result from current state.

@@ -13,7 +13,7 @@ import (
 func createTestModule(moniker, compType string) *ModuleContract {
 	base := domain.BaseContract{
 		Moniker: moniker,
-		Name:    "Test " + moniker,
+		Description: "Test " + moniker,
 		Components: config.ModuleComponents{
 			compType: &config.ComponentEntry{Root: "test/" + moniker},
 		},
@@ -27,9 +27,9 @@ func createTestModuleWithPackages(moniker string, components map[string]string) 
 		comps[name] = &config.ComponentEntry{Root: root}
 	}
 	base := domain.BaseContract{
-		Moniker:    moniker,
-		Name:       "Test " + moniker,
-		Components: comps,
+		Moniker:     moniker,
+		Description: "Test " + moniker,
+		Components:  comps,
 	}
 	return NewModuleContract(base, "/workspace")
 }
@@ -80,7 +80,7 @@ func TestRegistry_Add_EmptyMoniker(t *testing.T) {
 	registry := NewRegistry("0.1.0", "/workspace")
 	base := domain.BaseContract{
 		Moniker: "",
-		Name:    "Test",
+		Description: "Test",
 	}
 	module := NewModuleContract(base, "")
 

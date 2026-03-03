@@ -232,3 +232,54 @@ Feature: Cache Invalidation System
       Given the build state file contains invalid JSON "{ corrupted"
       When I run "get changed-modules-local "
       Then the YAML output field "is_fresh_build" is "true"
+
+  # ===========================================================================
+  # Category J: Per-Component Container Change Detection
+  # ===========================================================================
+
+  Rule: Container components are detected individually based on registry state
+
+    Scenario: J1 - All containers detected when no registry tags exist
+      Given module "test-containers" has container components:
+        | component    | root                     |
+        | alpha-oci    | containers/alpha-oci     |
+        | beta-oci     | containers/beta-oci      |
+      And the mocked container registry has no tags
+      When I run "get changed-containers --module test-containers" with mocked container registry
+      Then the exit code is 0
+      And the YAML output field "changed_components" has 2 entries
+      And each entry in "changed_components" has reason "no_previous_build"
+
+    Scenario: J2 - Container built at HEAD is skipped
+      Given module "test-containers" has container components:
+        | component    | root                     |
+        | alpha-oci    | containers/alpha-oci     |
+        | beta-oci     | containers/beta-oci      |
+      And the mocked container registry shows:
+        | component    | last_build_sha |
+        | alpha-oci    | HEAD_SHORT     |
+        | beta-oci     | HEAD_SHORT     |
+      When I run "get changed-containers --module test-containers" with mocked container registry
+      Then the exit code is 0
+      And the YAML output field "changed_components" is empty
+      And the YAML output field "skipped_components" has 2 entries
+
+    Scenario: J3 - Force-all returns all components as changed
+      Given module "test-containers" has container components:
+        | component    | root                     |
+        | alpha-oci    | containers/alpha-oci     |
+        | beta-oci     | containers/beta-oci      |
+      When I run "get changed-containers --module test-containers --force-all" with mocked container registry
+      Then the exit code is 0
+      And the YAML output field "changed_components" has 2 entries
+      And each entry in "changed_components" has reason "force_all"
+
+    Scenario: J4 - Registry query failure triggers rebuild (fail-open)
+      Given module "test-containers" has container components:
+        | component    | root                     |
+        | alpha-oci    | containers/alpha-oci     |
+      And the mocked container registry returns error for "alpha-oci"
+      When I run "get changed-containers --module test-containers" with mocked container registry
+      Then the exit code is 0
+      And the YAML output field "changed_components" has 1 entries
+      And the component "alpha-oci" in "changed_components" has reason containing "registry_query_failed"

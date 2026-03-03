@@ -856,6 +856,20 @@ type ComponentPatterns struct {
 	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty"` // Patterns to exclude from ownership
 }
 
+// AllOwnershipPatterns returns all patterns that contribute to file ownership.
+// This includes source, tests, config, and data patterns (everything except excludes).
+func (p *ComponentPatterns) AllOwnershipPatterns() []string {
+	if p == nil {
+		return nil
+	}
+	var all []string
+	all = append(all, p.Source...)
+	all = append(all, p.Tests...)
+	all = append(all, p.Config...)
+	all = append(all, p.Data...)
+	return all
+}
+
 // UnmarshalYAML implements custom unmarshaling for ComponentEntry.
 // Handles both string (root path) and object formats.
 func (ce *ComponentEntry) UnmarshalYAML(node *yaml.Node) error {
