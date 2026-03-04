@@ -18,9 +18,6 @@ type mockDispatcher struct {
 	// dispatched records the order of dispatched modules.
 	dispatched []string
 
-	// dispatchedExtraInputs records extraInputs per dispatch call (keyed by module).
-	dispatchedExtraInputs map[string]map[string]string
-
 	// statusMap maps module -> (status, conclusion) used by GetStatus and BatchGetStatus.
 	// Use setStatus() to change during a test.
 	statusMap map[string]statusEntry
@@ -39,12 +36,11 @@ type statusEntry struct {
 
 func newMockDispatcher() *mockDispatcher {
 	return &mockDispatcher{
-		statusMap:             make(map[string]statusEntry),
-		dispatchedExtraInputs: make(map[string]map[string]string),
+		statusMap: make(map[string]statusEntry),
 	}
 }
 
-func (m *mockDispatcher) Dispatch(_ context.Context, module, ref, sha, triggerRunID string, extraInputs map[string]string) error {
+func (m *mockDispatcher) Dispatch(_ context.Context, module, ref, sha, triggerRunID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -57,13 +53,6 @@ func (m *mockDispatcher) Dispatch(_ context.Context, module, ref, sha, triggerRu
 		return m.dispatchErr
 	}
 	m.dispatched = append(m.dispatched, module)
-	if len(extraInputs) > 0 {
-		copied := make(map[string]string, len(extraInputs))
-		for k, v := range extraInputs {
-			copied[k] = v
-		}
-		m.dispatchedExtraInputs[module] = copied
-	}
 
 	// Default: after dispatch, module appears as in_progress.
 	if _, ok := m.statusMap[module]; !ok {
@@ -548,53 +537,6 @@ func TestScheduler_BatchPollActive_MixedResults(t *testing.T) {
 	assert.Equal(t, []string{"docs"}, result.Completed)
 	// eac should be cascade-failed because core failed
 	assert.Equal(t, []string{"eac"}, result.CascadeFailed)
-}
-
-func TestScheduler_ForceAllContainers_PassedAsExtraInput(t *testing.T) {
-	d := newMockDispatcher()
-	cfg := CISchedulerConfig{
-		MaxConcurrent:      6,
-		HeadSHA:            "abc123",
-		DispatchRef:        "main",
-		Timeout:            5 * time.Second,
-		PollInterval:       10 * time.Millisecond,
-		ForceAllContainers: true,
-	}
-	s := NewCIScheduler(cfg, d)
-	s.SetDispatchList([]string{"oci-tools"}, nil, nil)
-
-	go func() {
-		time.Sleep(30 * time.Millisecond)
-		d.setStatus("oci-tools", "completed", "success")
-	}()
-
-	result, err := s.Schedule(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, []string{"oci-tools"}, result.Completed)
-
-	// Verify force-all-containers was passed as extra input.
-	extras := d.dispatchedExtraInputs["oci-tools"]
-	require.NotNil(t, extras, "expected extraInputs for oci-tools")
-	assert.Equal(t, "true", extras["force-all-containers"])
-}
-
-func TestScheduler_NoForceAllContainers_NoExtraInputs(t *testing.T) {
-	d := newMockDispatcher()
-	s := testScheduler(6, d)
-	s.SetDispatchList([]string{"core"}, nil, nil)
-
-	go func() {
-		time.Sleep(30 * time.Millisecond)
-		d.setStatus("core", "completed", "success")
-	}()
-
-	result, err := s.Schedule(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, []string{"core"}, result.Completed)
-
-	// Verify no extra inputs were passed.
-	extras := d.dispatchedExtraInputs["core"]
-	assert.Nil(t, extras, "expected no extraInputs when ForceAllContainers is false")
 }
 
 // indexOf returns the index of s in slice, or -1 if not found.

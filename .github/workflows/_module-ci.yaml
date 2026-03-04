@@ -61,11 +61,6 @@ on:
         required: false
         type: string
         default: ''
-      force-all-containers:
-        description: 'Force rebuild all container components (skip change detection)'
-        required: false
-        type: boolean
-        default: false
 
     outputs:
       build-result:
@@ -423,16 +418,12 @@ jobs:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          FORCE_FLAG=""
-          if [ "${{ inputs.force-all-containers }}" = "true" ]; then
-            FORCE_FLAG="--force-all"
-          fi
           ${COMMANDS:?COMMANDS not set} get changed-containers \
             --module "${{ inputs.module }}" \
             --components '${{ needs.build.outputs.container-components }}' \
             --head-sha "${{ inputs.sha || github.sha }}" \
             --format github-output \
-            $FORCE_FLAG >> $GITHUB_OUTPUT
+            >> $GITHUB_OUTPUT
 
       - name: Change Detection Summary
         env:

@@ -22,8 +22,7 @@ type ModuleRunStatus struct {
 type CIWorkflowDispatcher interface {
 	// Dispatch triggers a CI workflow for a module and returns immediately.
 	// The workflow name is derived as "ci-{module}.yaml".
-	// extraInputs are additional -f key=value pairs passed to gh workflow run.
-	Dispatch(ctx context.Context, module, ref, sha, triggerRunID string, extraInputs map[string]string) error
+	Dispatch(ctx context.Context, module, ref, sha, triggerRunID string) error
 
 	// GetStatus returns the current status of a module's CI workflow for a given SHA.
 	// Returns (status, conclusion, error) where:
@@ -48,7 +47,7 @@ func NewGHWorkflowDispatcher(workspaceRoot string) CIWorkflowDispatcher {
 }
 
 // Dispatch triggers a CI workflow for the given module.
-func (d *ghWorkflowDispatcher) Dispatch(ctx context.Context, module, ref, sha, triggerRunID string, extraInputs map[string]string) error {
+func (d *ghWorkflowDispatcher) Dispatch(ctx context.Context, module, ref, sha, triggerRunID string) error {
 	workflow := fmt.Sprintf("ci-%s.yaml", module)
 
 	args := []string{
@@ -59,9 +58,6 @@ func (d *ghWorkflowDispatcher) Dispatch(ctx context.Context, module, ref, sha, t
 	}
 	if triggerRunID != "" {
 		args = append(args, "-f", fmt.Sprintf("trigger_run_id=%s", triggerRunID))
-	}
-	for k, v := range extraInputs {
-		args = append(args, "-f", fmt.Sprintf("%s=%s", k, v))
 	}
 
 	_, err := tool.GlobalToolSystem().RunTool(ctx, "gh", d.workspaceRoot, args...)

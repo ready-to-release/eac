@@ -39,7 +39,6 @@ func (c *pipelineCIScheduleCommand) Metadata() core.CommandMetadata {
 			{Name: "timeout", Type: "int", DefaultValue: "3600", Usage: "Maximum time in seconds to wait for all CI"},
 			{Name: "poll-interval", Type: "int", DefaultValue: "10", Usage: "How often to check for completed workflows (seconds)"},
 			{Name: "trigger-run-id", Type: "string", Usage: "Run ID of the triggering workflow (for artifact download)"},
-			{Name: "force-all-containers", Type: "bool", Usage: "Pass force-all-containers=true to dispatched workflows"},
 			{Name: "mock", Type: "string", Usage: "Mock CI cache status (JSON format) for testing"},
 		},
 	}
@@ -103,8 +102,6 @@ func PipelineCISchedule() int {
 		case arg == "--trigger-run-id" && i+1 < len(os.Args):
 			cfg.TriggerRunID = os.Args[i+1]
 			i++
-		case arg == "--force-all-containers":
-			cfg.ForceAllContainers = true
 		case arg == "--mock" && i+1 < len(os.Args):
 			cfg.MockJSON = os.Args[i+1]
 			i++
@@ -270,7 +267,6 @@ func printScheduleUsage() {
 	log.Info("  --timeout <seconds>           Max wait time (default: 3600)")
 	log.Info("  --poll-interval <seconds>     Poll interval (default: 10)")
 	log.Info("  --trigger-run-id <id>         Triggering workflow run ID")
-	log.Info("  --force-all-containers        Pass force-all-containers=true to dispatched workflows")
 	log.Info("  --mock <json>                 Mock CI cache status for testing")
 	log.Info("  -h, --help                    Show this help message")
 	log.Info("")
