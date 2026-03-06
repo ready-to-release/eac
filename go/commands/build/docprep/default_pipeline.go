@@ -101,6 +101,10 @@ func buildFileIndexPhase(pctx *PreprocessContext) error {
 }
 
 func convertAttrImagesPhase(pctx *PreprocessContext) error {
+	if !pctx.Mode.ShouldConvertAttrListImages() {
+		pctx.Log.Infof("    Skipping attr_list image conversion (MkDocs attr_list handles natively)")
+		return nil
+	}
 	return content.ProcessAttrListImages(pctx.FileIndex, pctx.Log.Infof)
 }
 

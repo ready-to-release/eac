@@ -33,6 +33,13 @@ type OutputMode interface {
 	// ShouldSkipDrawioFiles returns true if .drawio source files should
 	// not be copied to staging.
 	ShouldSkipDrawioFiles() bool
+
+	// ShouldConvertAttrListImages returns true if ![alt](path){attrs} images
+	// should be pre-converted to <img> HTML tags during preprocessing.
+	// Site mode returns false: MkDocs's native attr_list extension handles
+	// {width=N} syntax AND properly rewrites paths for use_directory_urls.
+	// PDF mode returns true: the PDF exporter needs explicit <img> HTML tags.
+	ShouldConvertAttrListImages() bool
 }
 
 // SiteMode is the OutputMode for HTML site builds.
@@ -46,7 +53,8 @@ func (SiteMode) ShouldInjectMacros() bool         { return true }
 func (SiteMode) ShouldConvertDrawioToLinks() bool { return false }
 func (SiteMode) ShouldStripExternalLinks() bool   { return false }
 func (SiteMode) ExtraPathPrefix() string          { return "../" }
-func (SiteMode) ShouldSkipDrawioFiles() bool      { return false }
+func (SiteMode) ShouldSkipDrawioFiles() bool          { return false }
+func (SiteMode) ShouldConvertAttrListImages() bool    { return false }
 
 // PDFMode is the OutputMode for PDF builds.
 type PDFMode struct {
@@ -61,7 +69,8 @@ func (PDFMode) ShouldInjectMacros() bool           { return false }
 func (PDFMode) ShouldConvertDrawioToLinks() bool   { return true }
 func (PDFMode) ShouldStripExternalLinks() bool     { return true }
 func (PDFMode) ExtraPathPrefix() string            { return "" }
-func (PDFMode) ShouldSkipDrawioFiles() bool        { return true }
+func (PDFMode) ShouldSkipDrawioFiles() bool          { return true }
+func (PDFMode) ShouldConvertAttrListImages() bool    { return true }
 
 // ModeFromString creates the appropriate OutputMode from a format string.
 func ModeFromString(format string) OutputMode {

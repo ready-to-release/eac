@@ -17,6 +17,7 @@ func TestSiteMode(t *testing.T) {
 	assert.False(t, m.ShouldStripExternalLinks())
 	assert.Equal(t, "../", m.ExtraPathPrefix())
 	assert.False(t, m.ShouldSkipDrawioFiles())
+	assert.False(t, m.ShouldConvertAttrListImages())
 }
 
 func TestPDFModeDark(t *testing.T) {
@@ -30,6 +31,7 @@ func TestPDFModeDark(t *testing.T) {
 	assert.True(t, m.ShouldStripExternalLinks())
 	assert.Equal(t, "", m.ExtraPathPrefix())
 	assert.True(t, m.ShouldSkipDrawioFiles())
+	assert.True(t, m.ShouldConvertAttrListImages())
 }
 
 func TestPDFModeLight(t *testing.T) {
