@@ -28,7 +28,7 @@ The following diagram shows the complete entity-relationship model for the modul
 Each module includes C4 architecture diagrams documenting its design. View them interactively:
 
 ```bash
-eac serve-design
+eac serve design
 # Opens http://localhost:8080
 ```
 
@@ -155,13 +155,13 @@ modules:
 
 ```bash
 # Show dependency graph
-eac show-dependencies
+eac show dependencies
 
 # Validate dependencies
-eac validate-dependencies
+eac validate dependencies
 
 # Check for circular dependencies
-eac validate-module-hierarchy
+eac validate module-hierarchy
 ```
 
 ### Dependency Rules
@@ -199,7 +199,7 @@ components:
 **Command**:
 
 ```bash
-eac validate-module-files
+eac validate module-files
 ```
 
 **Error Example**:
@@ -214,13 +214,13 @@ eac validate-module-files
 
 ```bash
 # Show all files with ownership
-eac show-files
+eac show files
 
 # Show changed files with ownership
-eac show-files-changed
+eac show files-changed
 
 # Show staged files with ownership
-eac show-files-staged
+eac show files-staged
 ```
 
 ---
@@ -232,7 +232,7 @@ eac show-files-staged
 **Load contracts**:
 
 ```bash
-eac get-modules
+eac get modules
 ```
 
 **Output**: All modules from `repository.yml` with resolved dependencies
@@ -271,7 +271,7 @@ eac test <module>
 **Test suite** (multiple modules):
 
 ```bash
-eac test-suite unit
+eac test --suite unit
 ```
 
 **Test Flow**:
@@ -286,19 +286,19 @@ eac test-suite unit
 **Schema validation**:
 
 ```bash
-eac validate-contracts
+eac validate contracts
 ```
 
 **Dependency validation**:
 
 ```bash
-eac validate-dependencies
+eac validate dependencies
 ```
 
 **File ownership validation**:
 
 ```bash
-eac validate-module-files
+eac validate module-files
 ```
 
 ### 5. Release
@@ -306,19 +306,19 @@ eac validate-module-files
 **Check pending releases**:
 
 ```bash
-eac release-pending <module>
+eac release pending <module>
 ```
 
 **Generate changelog**:
 
 ```bash
-eac release-changelog <module>
+eac release changelog <module>
 ```
 
 **Create release**:
 
 ```bash
-eac release-this <module>
+eac release this <module>
 ```
 
 ---
@@ -343,8 +343,8 @@ modules:
 **2. Validate**:
 
 ```bash
-eac validate-contracts
-eac validate-module-files
+eac validate contracts
+eac validate module-files
 ```
 
 **3. Build**:
@@ -364,8 +364,8 @@ depends_on: [logging-go, config-go] # Add config-go
 **2. Validate**:
 
 ```bash
-eac validate-dependencies
-eac validate-module-hierarchy  # Check for cycles
+eac validate dependencies
+eac validate module-hierarchy  # Check for cycles
 ```
 
 **3. Rebuild**:
@@ -378,19 +378,19 @@ eac build my-module --deps
 
 ```bash
 # List all modules
-eac show-modules
+eac show modules
 
 # Show dependency graph
-eac show-dependencies
+eac show dependencies
 
 # Show files owned by modules
-eac show-files
+eac show files
 
 # Get module details (JSON)
-eac get-modules
+eac get modules
 
 # Get build dependencies
-eac get-build-deps my-module
+eac get build-deps my-module
 ```
 
 ---
@@ -438,8 +438,8 @@ Each UoW writes artifacts to a deterministic output path along with a
 **Verification**:
 
 ```bash
-eac show-artifacts <module>
-eac validate-artifacts <module>
+eac show artifacts <module>
+eac validate artifacts <module>
 ```
 
 ### Build Cache
@@ -456,8 +456,8 @@ See [Cache System](./cache-system.md) for full details.
 # Use cache (default)
 eac build my-module
 
-# Force rebuild
-eac build my-module --force
+# Force rebuild (ignore cached state)
+eac build my-module --skip-cache=local:state
 
 # Clear all caches
 eac update cache-clear
@@ -469,17 +469,17 @@ eac update cache-clear
 
 ```bash
 # Detect changed modules since last successful CI
-eac get-changed-modules-ci
+eac get changed-modules-ci
 
 # Get affected modules (dependents)
-eac get-changed-modules --with-dependents
+eac get changed-modules --with-dependents
 ```
 
 **CI Workflow**:
 
 ```bash
 # 1. Detect changes
-CHANGED=$(eac get-changed-modules-ci)
+CHANGED=$(eac get changed-modules-ci)
 
 # 2. Build affected modules
 eac build $CHANGED
@@ -504,12 +504,12 @@ eac test $CHANGED
 
 ```bash
 # Start Structurizr Lite server
-eac serve-design
+eac serve design
 
 # Access: http://localhost:8080
 
 # Stop server
-eac serve-design --stop
+eac serve design --stop
 ```
 
 **Method 2: VS Code Extension**:
@@ -521,13 +521,13 @@ eac serve-design --stop
 
 ```bash
 # Validate design
-eac validate-design <module>
+eac validate design <module>
 
 # Generate design (AI-powered)
-eac create-design <module>
+eac create design <module>
 
 # Update existing design (AI-powered)
-eac update-design <module>
+eac update design <module>
 ```
 
 ### C4 Model Levels
@@ -552,12 +552,12 @@ For the complete module catalog organized by group, see [Modules Reference](../m
 ### Discovery
 
 ```bash
-eac show-modules               # Module table
-eac show-dependencies          # Dependency graph
-eac show-files                 # File ownership
-eac show-component-kinds        # Component kind table
-eac get-modules                # Modules JSON
-eac get-dependencies           # Dependencies JSON
+eac show modules               # Module table
+eac show dependencies          # Dependency graph
+eac show files                 # File ownership
+eac show component-kinds        # Component kind table
+eac get modules                # Modules JSON
+eac get dependencies           # Dependencies JSON
 ```
 
 ### Build
@@ -565,46 +565,46 @@ eac get-dependencies           # Dependencies JSON
 ```bash
 eac build <module>             # Build single module
 eac build <module> --deps      # Build with dependencies
-eac get-artifacts <module>     # List artifacts
-eac show-artifacts <module>    # Show artifact status
-eac show-build-summary <module> # Build summary
+eac get artifacts <module>     # List artifacts
+eac show artifacts <module>    # Show artifact status
+eac show build-summary <module> # Build summary
 ```
 
 ### Test
 
 ```bash
 eac test <module>              # Test single module
-eac test-suite <suite>         # Run test suite
-eac test-debug                 # Debug test failures
-eac show-test-summary <module> # Test summary
+eac test --suite <suite>         # Run test suite
+eac test debug                 # Debug test failures
+eac show test-summary <module> # Test summary
 ```
 
 ### Validation
 
 ```bash
 eac validate                   # Validate all
-eac validate-contracts         # Schema validation
-eac validate-dependencies      # Dependency validation
-eac validate-module-files      # File ownership validation
-eac validate-module-hierarchy  # Circular dependency check
-eac validate-artifacts <module> # Artifact validation
+eac validate contracts         # Schema validation
+eac validate dependencies      # Dependency validation
+eac validate module-files      # File ownership validation
+eac validate module-hierarchy  # Circular dependency check
+eac validate artifacts <module> # Artifact validation
 ```
 
 ### Design
 
 ```bash
-eac validate-design <module>   # Validate Structurizr DSL
-eac create-design <module>     # Generate design (AI)
-eac update-design <module>     # Update design (AI)
-eac serve-design               # Serve designs in browser
+eac validate design <module>   # Validate Structurizr DSL
+eac create design <module>     # Generate design (AI)
+eac update design <module>     # Update design (AI)
+eac serve design               # Serve designs in browser
 ```
 
 ### Release
 
 ```bash
-eac release-changelog <module> # Generate changelog
-eac release-pending <module>   # Check pending releases
-eac release-this <module>      # Create release
+eac release changelog <module> # Generate changelog
+eac release pending <module>   # Check pending releases
+eac release this <module>      # Create release
 ```
 
 ---

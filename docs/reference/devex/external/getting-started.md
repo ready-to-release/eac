@@ -6,47 +6,30 @@ First steps for adopting EAC in your repository.
 
 Before starting:
 
-- [ ] Docker Desktop installed and running
 - [ ] Git repository initialized
 - [ ] Terminal access (bash, zsh, or PowerShell)
 
-## Step 1: Install CLIE CLI
+## Step 1: Install EAC CLI
 
 ### Linux/macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
 ```
 
 ### Windows
 
 ```powershell
-irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
+irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac/install.ps1 | iex
 ```
 
 ### Verify Installation
 
 ```bash
-clie version
+eac version
 ```
 
-## Step 2: Initialize CLIE
-
-```bash
-clie init
-```
-
-This creates `.clie/clie.yml` with extension registry settings.
-
-## Step 3: Install EAC Extension
-
-```bash
-clie install eac
-```
-
-This pulls the EAC Docker image.
-
-## Step 4: Initialize EAC
+## Step 2: Initialize EAC
 
 ```bash
 eac init
@@ -54,7 +37,20 @@ eac init
 
 This creates the `.eac/` directory with default configuration.
 
-## Step 5: Define Your First Module
+## Step 3: Verify Setup
+
+```bash
+# Show modules
+eac show modules
+
+# Validate configuration
+eac validate
+
+# Check module dependencies
+eac show dependencies
+```
+
+## Step 4: Define Your First Module
 
 Edit `.eac/repository.yml`:
 
@@ -66,19 +62,6 @@ modules:
     files:
       root: cmd/my-app
       source: ["**/*.go"]
-```
-
-## Step 6: Verify Setup
-
-```bash
-# Show modules
-eac show-modules
-
-# Validate configuration
-eac validate
-
-# Check module dependencies
-eac show-dependencies
 ```
 
 ## Optional: Configure AI Provider
@@ -99,18 +82,29 @@ After setup, your project includes:
 
 ```text
 your-project/
-├── .clie/
-│   └── clie.yml          # CLIE CLI configuration
 ├── .eac/
 │   └── repository.yml    # Module definitions
 └── ... (your code)
+```
+
+## Alternative: CLIE Container Host
+
+If you need containerized execution via Docker:
+
+```bash
+# Install CLIE CLI
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+
+# Initialize and install EAC extension
+clie init
+clie install eac
 ```
 
 ## Common First Commands
 
 ```bash
 # View all modules
-eac show-modules
+eac show modules
 
 # Validate all contracts
 eac validate
@@ -129,8 +123,7 @@ eac test my-app
 
 | Problem              | Solution                         |
 | -------------------- | -------------------------------- |
-| "Docker not running" | Start Docker Desktop             |
-| "Image not found"    | Run `clie install eac`            |
+| "Command not found"  | Add install directory to PATH    |
 | "Module not found"   | Check `repository.yml` syntax    |
 | "Invalid type"       | Use valid component type (go, typescript, etc.) |
 

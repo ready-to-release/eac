@@ -141,7 +141,7 @@ Each completed UoW writes a manifest to `{outdir}/uow.manifest.json`:
 
 ```json
 {
-  "id": "build:eac-cli:go:go",
+  "id": "build:eac:go:go",
   "input_hash": "sha256:abc123...",
   "output_hash": "sha256:def456...",
   "executed_at": "2025-02-07T15:30:00Z",
@@ -317,8 +317,7 @@ The CI cache is consumed by two commands:
 
 ```bash
 # Force rebuild (ignore local state cache)
-eac build --force
-eac build --skip-cache=local:state    # Equivalent
+eac build --skip-cache=local:state
 
 # Skip specific cache types
 eac build --skip-cache=local:asset    # Re-render diagrams

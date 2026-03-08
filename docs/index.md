@@ -8,9 +8,9 @@
 
 Ready to Release is a set of tools to fully standardize software delivery in regulated spaces.
 
-- **eac** is an extensible cli, that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline.
-- **clie** is a cli extender, making it possible to distribute platforms cli's through a uniform interface.
-  **eac** is provided also as a clie extension, to limit the install surface of the framework(s).
+- **eac** is a standalone CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline.
+- **clie** is an optional CLI extender for enterprise scenarios, distributing platform CLIs through containerized extensions.
+  EAC can also run as a CLIE extension for reproducible containerized environments.
 
 Built by engineers, for engineers.
 
@@ -22,7 +22,7 @@ The **eac** CLI is your primary interface for:
 - Integrating with MCP servers and VSCode for IDE-native workflows
 - Automating delivery flows with containers and GitHub Actions
 
-For larger enterprise settings, with multiple competeting platforms, the CLIE cli extender can be used as a uniform distribution mechanism.
+For enterprise settings with multiple competing platforms, CLIE can optionally be used as a uniform distribution mechanism.
 
 **This repository is both the tool and a working example**:
 
@@ -59,7 +59,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p>Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.</p>
 <ul>
 <li><a href="tutorials/getting-started/quick-start.md">Quick Start Guide</a></li>
-<li><a href="tutorials/getting-started/creating-your-first-extension.md">Creating Your First Extension</a></li>
+<li><a href="tutorials/getting-started/configuration-files.md">Understanding Configuration Files</a></li>
 </ul>
 </div>
 <div>
@@ -76,7 +76,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p><strong>Information-oriented descriptions</strong></p>
 <p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
 <ul>
-<li><a href="reference/eac/architecture/index.md">EAC and CLIE Architecture</a> - System overview and design</li>
+<li><a href="reference/eac/architecture/index.md">EAC Architecture</a> - System overview and design</li>
 <li><a href="reference/eac/architecture/repository-layout.md">Repository Layout</a> - File structure</li>
 <li><a href="reference/eac/commands/index.md">Command Reference</a> - CLI commands</li>
 <li><a href="reference/eac/decision-records/index.md">Decision Records</a> - Architectural decisions</li>

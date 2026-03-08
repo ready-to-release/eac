@@ -32,9 +32,9 @@ Manual tests are Gherkin scenarios tagged with `@Manual` that require human exec
 
 **Workflow**:
 
-1. Export scenarios: `eac test-export-manual <module>`
+1. Export scenarios: `eac test export-manual <module>`
 2. Execute tests manually (human)
-3. Import results: `eac test-import-manual <module> --results results.json`
+3. Import results: `eac test import-manual <module> --results results.json`
 
 **Schema**: Manual test results use JSON schema defined in `contracts/core/0.1.0/schemas/manual-test-results.schema.json`
 

@@ -18,25 +18,19 @@ EAC (Everything as Code) provides automation for:
 | ------------------------------------------- | ------------------------------------ |
 | [Getting Started](./getting-started.md)     | First steps adopting EAC             |
 | [Configuration](./configuration.md)         | Configure EAC for your project       |
-| [Project Structure](./project-structure.md) | Recommended `.clie/` directory layout |
+| [Project Structure](./project-structure.md) | Recommended `.eac/` directory layout |
 
 ## Quick Start
 
 ```bash
-# 1. Install CLIE CLI
-curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+# 1. Install EAC CLI
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
 
-# 2. Initialize CLIE
-clie init
-
-# 3. Install EAC extension
-clie install eac
-
-# 4. Initialize EAC in your project
+# 2. Initialize EAC in your project
 eac init
 
-# 5. Start using commands
-eac show-modules
+# 3. Start using commands
+eac show modules
 eac validate
 ```
 
@@ -71,15 +65,14 @@ With an AI provider configured:
 
 ```bash
 eac get commit-message      # Generate commit messages
-eac create-pr              # Create PRs with AI descriptions
-eac create-spec            # Generate Gherkin specifications
+eac create pr              # Create PRs with AI descriptions
+eac create spec            # Generate Gherkin specifications
 ```
 
 ## Requirements
 
-- **Docker** - EAC runs as a container
 - **Git** - Version control
-- **CLIE CLI** - The framework that runs EAC
+- **CLIE CLI** - Optional, for containerized execution
 
 ## Next Steps
 

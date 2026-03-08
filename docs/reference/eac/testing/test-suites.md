@@ -84,9 +84,9 @@ Production Installation Verification (@piv) confirms:
 Manual tests are exported, executed by humans, then results imported:
 
 ```bash
-eac test-export-manual <module>          # Export scenarios
+eac test export-manual <module>          # Export scenarios
 # ... human execution ...
-eac test-import-manual <module> --results results.json
+eac test import-manual <module> --results results.json
 ```
 
 ---

@@ -14,7 +14,9 @@ import (
 	"github.com/ready-to-release/eac/go/adapters/docker"
 	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/clibase/services"
+	"github.com/ready-to-release/eac/go/commands/repository/internal/helputil"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	coreoutput "github.com/ready-to-release/eac/go/core/output"
@@ -38,24 +40,33 @@ func (c *serveCommand) Name() string { return "serve" }
 func (c *serveCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "serve",
-		Short:         "Start server for a module's build output",
-		Long:          "The serve command starts a Docker container to serve a module's build output.\nFor site-type modules (like docs), serves the HTML site.\nFor PDF-type modules (like books), serves the PDF directory listing.\nTakes a module moniker as argument (e.g., docs, books).",
-		Args:          "module",
-		Flags: []core.FlagSpec{
-			{Name: "no-browser", Type: "bool", DefaultValue: "false", Usage: "Don't open browser after starting server"},
-			{Name: "port", Shorthand: "p", Type: "int", DefaultValue: "9000", Usage: "Port number for server (auto-allocated from 9000-9999 if not specified)"},
-			{Name: "stop", Type: "bool", DefaultValue: "false", Usage: "Stop the running server"},
-			{Name: "reload", Type: "bool", DefaultValue: "false", Usage: "Force reload (auto-detects container config changes)"},
-			{Name: "debug", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
-			{Name: "rebuild", Type: "bool", DefaultValue: "false", Usage: "Force rebuild before serving"},
-			{Name: "book", Shorthand: "b", Type: "string", Usage: "Named book to serve (defaults to first 'site' book, or first book if no site)"},
-			{Name: "build-actual-site", Type: "bool", DefaultValue: "false", Usage: "Build full site before serving (disables live-reload dev mode)"},
+		Short:         "Start development servers for documentation and visualization",
+		IsParent:      true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Servers", Subcommands: []string{"docs", "design", "gource"}},
 		},
+		Examples: []string{"eac serve docs", "eac serve design src-auth", "eac serve gource"},
 	}
 }
 
 func (c *serveCommand) Execute(_ context.Context, _ *core.CommandRequest) int {
-	return Serve()
+	cmd, _ := registry.Global().Get("serve")
+	helputil.PrintHelp(os.Stdout, cmd, registry.Global())
+	return 1
+}
+
+// DocsFlags returns the flag specs for the serve docs subcommand.
+func DocsFlags() []core.FlagSpec {
+	return []core.FlagSpec{
+		{Name: "no-browser", Type: "bool", DefaultValue: "false", Usage: "Don't open browser after starting server"},
+		{Name: "port", Shorthand: "p", Type: "int", DefaultValue: "9000", Usage: "Port number for server (auto-allocated from 9000-9999 if not specified)"},
+		{Name: "stop", Type: "bool", DefaultValue: "false", Usage: "Stop the running server"},
+		{Name: "reload", Type: "bool", DefaultValue: "false", Usage: "Force reload (auto-detects container config changes)"},
+		{Name: "debug", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
+		{Name: "rebuild", Type: "bool", DefaultValue: "false", Usage: "Force rebuild before serving"},
+		{Name: "book", Shorthand: "b", Type: "string", Usage: "Named book to serve (defaults to first 'site' book, or first book if no site)"},
+		{Name: "build-actual-site", Type: "bool", DefaultValue: "false", Usage: "Build full site before serving (disables live-reload dev mode)"},
+	}
 }
 
 var log = logging.C()
@@ -148,20 +159,6 @@ func initServeServices(debug bool) (*services.Services, string, error) {
 	}
 
 	return svc, workspaceRoot, nil
-}
-
-// showModuleRequiredUsage prints the usage message when no module moniker is provided.
-func showModuleRequiredUsage(cfg *config.EACConfig) {
-	log.Error("Error: module name is required")
-	log.Info("")
-	log.Info("Usage: eac serve <module> [flags]")
-	if modules := listServableModulesFromConfig(cfg); len(modules) > 0 {
-		log.Info("")
-		log.Info("Available modules:")
-		for _, m := range modules {
-			log.Infof("  - %s", m)
-		}
-	}
 }
 
 // handleRunningContainer checks a running container and decides whether to restart it.
@@ -280,7 +277,7 @@ func Serve() int {
 
 	// Validate module moniker
 	if f.moduleMoniker == "" {
-		showModuleRequiredUsage(svc.RawConfig())
+		log.Error("Error: module name is required")
 		return 1
 	}
 
@@ -470,23 +467,6 @@ func getServableItems(module *config.Module) []servableItem {
 	}
 
 	return items
-}
-
-// listServableModulesFromConfig returns modules that can be served using pre-loaded config.
-func listServableModulesFromConfig(cfg *config.EACConfig) []string {
-	if cfg == nil || cfg.Repository == nil {
-		return nil
-	}
-
-	var modules []string
-	for i := range cfg.Repository.Modules {
-		module := &cfg.Repository.Modules[i]
-		// A module is servable if it has site-render, pdf-render, or book components
-		if len(getServableItems(module)) > 0 {
-			modules = append(modules, module.Moniker)
-		}
-	}
-	return modules
 }
 
 // rebuildModule triggers a build for the module.

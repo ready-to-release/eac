@@ -1,6 +1,8 @@
-# CLIE CLI vs Extensions: Understanding the Architecture
+# CLIE Extension Architecture: Running EAC via CLIE
 
-This guide explains the two-tier architecture of CLIE:
+EAC runs as a standalone CLI. It can also optionally run inside the CLIE container host. This document covers the CLIE hosting architecture.
+
+The two-tier architecture of CLIE:
 
 1. The core CLI framework
 2. The containerized extensions.

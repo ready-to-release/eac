@@ -8,7 +8,7 @@ These guides cover installation, configuration, and platform-specific troublesho
 
 | Guide                                                     | Description                                     |
 | --------------------------------------------------------- | ----------------------------------------------- |
-| [Install Toolchain](./install-toolchain.md)               | Install CLIE CLI and EAC extension               |
+| [Install Toolchain](./install-toolchain.md)               | Install EAC CLI (standalone or via CLIE)          |
 | [Configure AI Provider](./configure-ai.md)                | Set up Anthropic Claude for AI features         |
 | [Configure Claude Code](./configure-claude-code.md)       | Use Claude Code effectively in this repository  |
 | [Configure Azure MCP](./configure-azure-mcp.md)           | Enable Azure tools in Claude Code (Windows WSL) |
@@ -18,22 +18,19 @@ These guides cover installation, configuration, and platform-specific troublesho
 ## Quick Start
 
 ```bash
-# 1. Install CLIE CLI
-curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+# 1. Install EAC CLI
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
 
-# 2. Initialize configuration
-clie init
+# 2. Initialize EAC in your project
+eac init --ai-provider claude-api
 
-# 3. Install EAC extension
-clie install eac
-
-# 4. Configure AI provider (optional)
-clie eac init --ai claude-api
+# 3. Explore commands
+eac help
 ```
 
 ## Prerequisites
 
-- **Docker** - Required for running extensions
+- **Docker** - Required only if using CLIE container host
 - **Git** - Version control
 - **Go 1.21+** - For local development (optional)
 
@@ -42,4 +39,4 @@ clie eac init --ai claude-api
 After setup, explore:
 
 - [EAC Commands](../eac/commands/index.md) - Available automation commands
-- [Creating Extensions](../clie/creating-extensions.md) - Build your own CLIE extensions
+- [Creating CLIE Extensions](../clie/creating-extensions.md) - Build containerized extensions (optional)

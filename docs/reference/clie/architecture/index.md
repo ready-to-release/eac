@@ -195,7 +195,7 @@ Extensions can invoke other extensions:
 
 ```bash
 # Inside eac-ext container
-clie eac show-modules  # Calls back to CLIE CLI
+clie eac show modules  # Calls back to CLIE CLI
 ```
 
 Enables:
@@ -298,6 +298,6 @@ See [Creating Extensions](../../../how-to-guides/clie/creating-extensions.md) fo
 ## Related Documentation
 
 - [CLIE CLI Commands](../commands/index.md) - Command reference
-- [EAC Extension Architecture](../../eac/architecture/index.md) - EAC extension details
+- [EAC Architecture](../../eac/architecture/index.md) - EAC CLI architecture
 - [How-to Guides: CLIE](../../../how-to-guides/clie/index.md) - Usage guides
 - [Creating Extensions](../../../how-to-guides/clie/creating-extensions.md) - Extension development guide

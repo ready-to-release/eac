@@ -109,12 +109,14 @@ See [Measuring and Improving Flow](./explanation/everything-as-code/measuring-an
 
 ### EAC (Everything as Code)
 
-The principle that all aspects of software development should be defined as code:
-configuration, architecture, specifications, tests, and infrastructure.
+Both a principle and a CLI tool:
+
+1. **The principle**: All aspects of software development should be defined as code -- configuration, architecture, specifications, tests, and infrastructure.
+2. **The CLI**: A standalone command-line tool (`eac`) that automates Everything-as-Code workflows including build, test, validate, scan, and release.
+
+EAC can run as a standalone binary or optionally inside the CLIE extension host for containerized execution.
 
 See [Everything as Code](./explanation/everything-as-code/index.md).
-
-It is also a full automation platform to manage everything as code software delivery.
 
 ### Execution Order
 
@@ -123,9 +125,9 @@ The sequence in which modules should be built or tested based on their dependenc
 
 ### Extension
 
-A Docker-based plugins for the CLIE CLI that provides additional commands.
+A Docker-based plugin for the CLIE CLI that provides additional commands.
 
-EAC is also delivered as the `eac-ext:latest` extension, making the eac executable into a CLIE extension.
+EAC is available as the `eac-ext:latest` CLIE extension, but also runs as a standalone CLI without CLIE.
 
 ---
 
@@ -191,13 +193,13 @@ An orchestrated sequence of build, test, and deployment steps. See [Pipeline Com
 
 ## R
 
-### CLIE (Cli Extender)
+### CLIE (CLI Extender)
 
-An enterprise CLI framework for containerized workflow execution.
+An optional enterprise CLI framework for containerized workflow execution.
 
-EAC is delivered as an CLIE extension, as well as a stand-alone executable.
+EAC can run as a CLIE extension for reproducible Docker-based environments, or as a standalone executable (recommended).
 
-See [EAC and CLIE](./reference/eac/architecture/index.md).
+See [EAC Architecture](./reference/eac/architecture/index.md).
 
 ### Release Gate
 

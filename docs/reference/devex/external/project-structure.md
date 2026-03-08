@@ -8,10 +8,10 @@ Minimal setup for any project:
 
 ```text
 your-project/
-├── .clie/
-│   └── clie.yml              # CLIE CLI configuration
 ├── .eac/
 │   └── repository.yml        # Module definitions
+├── .clie/                     # Optional (only if using CLIE)
+│   └── clie.yml              # CLIE CLI configuration
 ├── .gitignore                # Include .eac/*.personal.yml
 └── ... (your code)
 ```
@@ -22,10 +22,6 @@ Complete setup with all features:
 
 ```text
 your-project/
-├── .clie/
-│   ├── clie.yml              # CLIE CLI configuration
-│   ├── clie.local.yml        # Local overrides (gitignored)
-│   └── cache/                # Build cache (gitignored)
 ├── .eac/
 │   ├── repository.yml        # Module definitions
 │   ├── ai-provider.yml       # AI configuration
@@ -42,6 +38,11 @@ your-project/
 │
 ├── docs/                        # Documentation (optional)
 │   └── ...
+│
+├── .clie/                       # Optional (only if using CLIE)
+│   ├── clie.yml              # CLIE CLI configuration
+│   ├── clie.local.yml        # Local overrides (gitignored)
+│   └── cache/                # Build cache (gitignored)
 │
 └── ... (your code)
 ```
@@ -212,7 +213,7 @@ Each deployable or testable unit should be its own module.
 Every source file should belong to exactly one module. Validate with:
 
 ```bash
-eac validate-module-files
+eac validate module-files
 ```
 
 ### 4. Consistent Naming
@@ -246,7 +247,7 @@ Create `.eac/repository.yml` with your modules.
 
 ```bash
 eac validate
-eac show-modules
+eac show modules
 ```
 
 ### Step 4: Test Commands

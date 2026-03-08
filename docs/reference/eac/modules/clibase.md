@@ -51,7 +51,7 @@ Distributed lock lifecycle tracking with TTL and stale detection.
 ## Design File
 
 - **Location**: `specs/clibase/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module clibase`
+- **Interactive**: `eac serve design --module clibase`
 
 ## Key Responsibilities
 

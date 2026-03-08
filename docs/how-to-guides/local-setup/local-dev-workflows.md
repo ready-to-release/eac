@@ -220,7 +220,7 @@ This will:
 1. Check prerequisites
 2. Build the Docker image as `eac-ext:dev` in EAC repo
 3. Install the clie binary (if not already installed)
-4. Create `.clie/clie.local.yml` configuration in the external repo
+4. Create `.eac/eac.local.yml` configuration in the external repo
 5. Test the setup
 
 ## Step-by-Step Setup for External Repositories
@@ -285,7 +285,7 @@ Create a local clie configuration that uses your Docker image:
 | `-MountWorkspace` | Add volume mount for live development | `false`       |
 | `-EnableDebug`    | Add debug environment variables       | `false`       |
 
-This creates `.clie/clie.local.yml` with:
+This creates `.eac/eac.local.yml` with:
 
 ```yaml
 # Local development configuration (gitignored)
@@ -329,8 +329,8 @@ eac show modules
 
 clie uses a configuration hierarchy:
 
-1. `.clie/clie.yml` - Base configuration (committed to git)
-2. `.clie/clie.local.yml` - Local overrides (gitignored)
+1. `.eac/eac.yml` - Base configuration (committed to git)
+2. `.eac/eac.local.yml` - Local overrides (gitignored)
 
 Local files override base configuration for development.
 
@@ -498,7 +498,7 @@ If missing, rebuild:
 **Solution**: Check your local configuration:
 
 ```powershell
-cat .clie\clie.local.yml
+cat .eac\eac.local.yml
 ```
 
 Ensure it contains:
@@ -535,10 +535,10 @@ echo $env:CLIE_REPO_ROOT
 
 ```powershell
 # Verify file exists
-Test-Path .clie\clie.local.yml
+Test-Path .eac\eac.local.yml
 
 # Check for YAML syntax errors
-cat .clie\clie.local.yml
+cat .eac\eac.local.yml
 ```
 
 ### Build Failures
@@ -577,7 +577,7 @@ cat .clie\clie.local.yml
 2. **Validate with Docker**: Test in external repos with Docker for realistic validation
 3. **Use descriptive tags**: Tag images with feature names or versions
 4. **Rebuild after changes**: Always rebuild the Docker image after code changes
-5. **Keep configs gitignored**: Never commit `.clie/*.local.yml` files
+5. **Keep configs gitignored**: Never commit `.eac/*.local.yml` files
 6. **Set environment variables**: Remember to set `CLIE_REPO_ROOT` in each session
 7. **Clean up old images**: Periodically remove unused Docker images
 
@@ -596,8 +596,8 @@ cat .clie\clie.local.yml
 
 | File                   | Purpose            | Committed       |
 | ---------------------- | ------------------ | --------------- |
-| `.clie/clie.yml`       | Base configuration | Yes             |
-| `.clie/clie.local.yml` | Local overrides    | No (gitignored) |
+| `.eac/eac.yml`       | Base configuration | Yes             |
+| `.eac/eac.local.yml` | Local overrides    | No (gitignored) |
 
 ### Environment Variables
 

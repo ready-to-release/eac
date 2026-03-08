@@ -19,7 +19,7 @@ Generate a JSON object matching this schema:
 
 ### JSON Field Requirements
 
-**module** (required): Module name (e.g., `eac-commands`, `contracts`)
+**module** (required): Module name (e.g., `commands`, `contracts`)
 
 - Lowercase with hyphens
 - Length: 1-30 characters
@@ -50,7 +50,7 @@ Generate a JSON object matching this schema:
 
 ```json
 {
-  "module": "eac-commands",
+  "module": "commands",
   "type": "refactor",
   "description": "simplify commit message generation",
   "body": "Removed template variable embedding from generation logic and updated\nprompts to use direct format instructions. Simplified assembly code to\nuse blank line separators instead of dashes between module sections."
@@ -72,9 +72,9 @@ body
 Example final output:
 
 ```text
-eac-commands
+commands
 ------------
-eac-commands: refactor: simplify commit message generation
+commands: refactor: simplify commit message generation
 
 Removed template variable embedding from generation logic and updated
 prompts to use direct format instructions. Simplified assembly code to

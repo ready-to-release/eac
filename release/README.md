@@ -233,7 +233,7 @@ Calendar versioning: `YYYY.MM.DD` or `YYYY.MM.DD.N` for multiple releases per da
 
 ## Versioning Constraints
 
-The `.clie/definitions.yml` file can constrain version bumps:
+The `.eac/definitions.yml` file can constrain version bumps:
 
 ```yaml
 # Only allow patch version bumps (no minor or major)

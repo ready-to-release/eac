@@ -40,7 +40,7 @@ Clears incremental cache state files, rendered asset caches, ephemeral work dire
 
 ## Role in System
 
-The `update cache-clear` command provides cache management for `eac-cli`, allowing developers to reset incremental build/test/lint/scan state, clear rendered asset caches, remove ephemeral work directories, and prune Docker images and builder caches. It is the primary tool for resolving stale cache issues, hung parallel execution (via semaphore cleanup), and reclaiming disk space across all cache layers.
+The `update cache-clear` command provides cache management for `eac`, allowing developers to reset incremental build/test/lint/scan state, clear rendered asset caches, remove ephemeral work directories, and prune Docker images and builder caches. It is the primary tool for resolving stale cache issues, hung parallel execution (via semaphore cleanup), and reclaiming disk space across all cache layers.
 
 ## Code Health
 

@@ -1,22 +1,10 @@
 # Command Reference
 
-This section documents **EAC extension commands** - the automation tools provided by the EAC extension.
+This section documents **EAC commands** - the automation tools provided by the EAC CLI.
 
-!!! info "Looking for CLIE CLI commands?"
-    For framework commands like `clie init`, `clie install`, and `clie list`, see:
+## EAC Commands
 
-    **[CLIE CLI Command Reference](https://ready-to-release.github.io/eac/reference/clie/commands/)**
-
-    CLIE uses a two-tier architecture:
-
-    - **CLIE CLI** (framework) - Manages extensions
-    - **EAC Extension** (this section) - Provides automation tools
-
-    Learn more: [CLI vs Extensions Architecture](../architecture/cli-integration.md)
-
-## EAC Extension Commands
-
-Complete technical reference for all EAC extension commands (invoked as `eac <command>`).
+Complete technical reference for all EAC commands (invoked as `eac <command>`).
 
 ## Quick Access
 

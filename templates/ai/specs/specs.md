@@ -40,7 +40,7 @@ Generate ONLY valid Gherkin syntax directly - no JSON intermediate format.
 **name**: Pattern `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$`
 
 - Must follow pattern: lowercase module, underscore, lowercase feature name
-- Examples: `eac-commands_commit`, `clie_init-command`
+- Examples: `commands_commit`, `clie_init-command`
 
 **description**: Brief feature description (1-2 sentences)
 
@@ -219,10 +219,10 @@ Scenario: Create user account with approval workflow
 
 ```gherkin
 # Intent: Initialize a new project with EAC configuration so developers can start using EAC commands
-# Architecture: Affects eac-cli init command container; reads git repository state; creates .eac/, specs/, templates/ directories; depends on filesystem and git detection components
+# Architecture: Affects eac init command container; reads git repository state; creates .eac/, specs/, templates/ directories; depends on filesystem and git detection components
 
 @L2 @ov
-Feature: eac-commands_init
+Feature: commands_init
   Initialize project structure with EAC configuration
 
   As a developer

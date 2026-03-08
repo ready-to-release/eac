@@ -4,5 +4,5 @@
 
 ## See Also
 
-- [serve-docs](../serve/docs.md) - Serve documentation
+- [serve docs](../serve/docs.md) - Serve documentation
 - [validate books](../validate/books.md)

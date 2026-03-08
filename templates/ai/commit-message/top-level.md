@@ -26,7 +26,7 @@ Generate a JSON object matching this schema:
 
 **scope** (required): For single-module: the module name. For multi-module: use `multi-module`
 
-- Pattern: lowercase with hyphens (e.g., `eac-commands`, `eac-core`)
+- Pattern: lowercase with hyphens (e.g., `commands`, `core`)
 - Length: 1-20 characters
 - Must match actual module names from the context
 

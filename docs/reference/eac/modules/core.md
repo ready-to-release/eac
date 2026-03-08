@@ -51,7 +51,7 @@ Test utilities and shared test infrastructure.
 ## Design File
 
 - **Location**: `specs/core/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module core`
+- **Interactive**: `eac serve design --module core`
 
 ## Key Responsibilities
 

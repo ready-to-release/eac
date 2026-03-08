@@ -8,11 +8,10 @@ Install the standalone EAC CLI binary for native Go performance — no Docker re
 
 | CLI                  | Install method         | Requires Docker | Best for                                                             |
 | -------------------- | ---------------------- | --------------- | -------------------------------------------------------------------- |
-| **clie** + eac-ext   | `clie install eac`     | Yes             | Full workflow: extensions, Docker-based tools, team standardization  |
-| **eac** (standalone) | Installer script below | No              | Direct CLI access, CI runners, lightweight environments, development |
+| **eac** (standalone) | Installer script below | No              | **Recommended.** Direct CLI access, native performance, CI runners  |
+| **clie** + eac-ext   | `clie install eac`     | Yes             | Containerized execution, reproducible environments, team standardization |
 
-> Most users should start with [CLIE CLI](./install-toolchain.md) which includes EAC via Docker extension.
-> Install the standalone EAC CLI if you want native performance or can't use Docker.
+> This is the **recommended** installation method. For containerized execution via Docker, see [CLIE Extension Host](./install-toolchain.md#option-2-clie-extension-host-containerized).
 
 ## Prerequisites
 

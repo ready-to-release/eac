@@ -644,10 +644,10 @@ Implement a runner in `go/adapters/` or `go/clibase/testrunners/` if the compone
 
 ```bash
 # List all component kinds
-eac show-component-kinds
+eac show component-kinds
 
 # Show modules with their components
-eac show-modules
+eac show modules
 ```
 
 ---

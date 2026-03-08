@@ -8,7 +8,7 @@ Manual tests are Gherkin scenarios tagged with `@Manual` that require human exec
 
 ```bash
 # 1. Export manual test scenarios
-eac test-export-manual <module>
+eac test export-manual <module>
 # Output: out/test/<module>/manual-test-scenarios.json
 
 # 2. Execute tests manually (human)
@@ -17,11 +17,11 @@ eac test-export-manual <module>
 # - Record results in results.json
 
 # 3. Import results
-eac test-import-manual <module> --results results.json
+eac test import-manual <module> --results results.json
 # Output: out/test/<module>/manual-results.json
 
 # 4. Merge results into test manifest
-eac test-merge-results <module>
+eac test merge-results <module>
 # Updates: out/test/<module>/uow.manifest.json
 ```
 
@@ -119,7 +119,7 @@ Manual tests are typically executed during release milestones:
 ```yaml
 # .github/workflows/release.yml
 - name: Export Manual Tests
-  run: eac test-export-manual eac
+  run: eac test export-manual eac
 
 - name: Upload Scenarios
   uses: actions/upload-artifact@v3
@@ -137,10 +137,10 @@ After human execution:
     name: manual-test-results
 
 - name: Import Results
-  run: eac test-import-manual eac --results manual-test-results.json
+  run: eac test import-manual eac --results manual-test-results.json
 
 - name: Merge to Manifest
-  run: eac test-merge-results eac
+  run: eac test merge-results eac
 ```
 
 ---
@@ -149,9 +149,9 @@ After human execution:
 
 | Command                                          | Purpose                  |
 | ------------------------------------------------ | ------------------------ |
-| `eac test-export-manual <module>`                | Export scenarios to JSON |
-| `eac test-import-manual <module> --results file` | Import results from JSON |
-| `eac test-merge-results <module>`                | Merge into manifest      |
+| `eac test export-manual <module>`                | Export scenarios to JSON |
+| `eac test import-manual <module> --results file` | Import results from JSON |
+| `eac test merge-results <module>`                | Merge into manifest      |
 
 **See**: [Test Commands](../commands/test/index.md)
 

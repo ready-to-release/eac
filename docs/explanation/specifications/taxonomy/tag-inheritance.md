@@ -258,16 +258,13 @@ Feature: Build Pipeline
 
 ### Viewing Effective Tags
 
-Use the validation command to see effective tags:
+Review your specification files to trace effective tags manually:
 
-```bash
-# Show effective tags for all scenarios
-eac validate specs --show-effective-tags
-
-# Example output:
-# Feature: auth_api-service
-#   Scenario: Create account
-#     Effective Tags: @L2, @deps:docker, @ov, @control:ac-2
+```gherkin
+# Check which tags a scenario inherits:
+# 1. Start with Feature-level tags
+# 2. Add Rule-level tags (override test levels, accumulate others)
+# 3. Add Scenario-level tags (override test levels, accumulate others)
 ```
 
 ### Common Issues
@@ -286,7 +283,6 @@ For validation commands, see:
 **[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
 
 - `eac validate specs` - Validate Gherkin syntax
-- `eac validate specs --show-effective-tags` - Show calculated tags
 
 ---
 

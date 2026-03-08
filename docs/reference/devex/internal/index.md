@@ -7,7 +7,7 @@ Reference documentation for developers contributing to the EAC monorepo.
 The EAC repository is a modular monorepo containing:
 
 - **CLIE CLI** - The core command-line framework
-- **EAC Extension** - Containerized automation tools
+- **EAC CLI** - Automation tools (standalone + containerized)
 - **Supporting Modules** - Shared libraries and infrastructure
 
 ## In This Section
@@ -50,10 +50,10 @@ System defaults are in `contracts/core/0.1.0/schemas/defaults/`.
 
 ```bash
 # View all modules
-eac show-modules
+eac show modules
 
 # Check dependencies
-eac show-dependencies
+eac show dependencies
 
 # Validate contracts
 eac validate

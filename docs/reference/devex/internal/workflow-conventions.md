@@ -90,7 +90,7 @@ git push -u origin feat/my-feature
 Then create PR via GitHub or:
 
 ```bash
-eac create-pr
+eac create pr
 ```
 
 ### 4. PR Requirements
@@ -134,7 +134,7 @@ Every push triggers:
 View CI status:
 
 ```bash
-eac pipeline-status
+eac pipeline status
 ```
 
 ## Release Process
@@ -149,7 +149,7 @@ Releases are triggered by changelog updates:
 Check release readiness:
 
 ```bash
-eac release-check-ci <module>
+eac release check-ci <module>
 ```
 
 ## Working with Modules
@@ -158,7 +158,7 @@ eac release-check-ci <module>
 
 ```bash
 # See which modules changed
-eac get-changed-modules
+eac get changed-modules
 
 # Build only changed modules
 eac build --changed
@@ -168,7 +168,7 @@ eac build --changed
 
 ```bash
 # View dependency graph
-eac show-dependencies
+eac show dependencies
 
 # Build with dependencies
 eac build <module> --deps
@@ -190,7 +190,7 @@ eac build <module> --deps
 # Run same checks locally
 eac validate
 eac test <module>
-eac update-lint <module>
+eac lint <module>
 ```
 
 ### Merge Conflicts

@@ -111,8 +111,8 @@ templates install claude
 ## Related Commands
 
 - [`templates install`](../../../../reference/eac/commands/templates/index.md) - Install templates overview
-- [`templates install-docs`](../../../../reference/eac/commands/templates/install-docs.md) - Documentation templates
-- [`templates install-ai`](../../../../reference/eac/commands/templates/install-ai.md) - AI prompt templates
-- [`templates install-reports`](../../../../reference/eac/commands/templates/install-reports.md) - Report templates
-- [`templates install-specs`](../../../../reference/eac/commands/templates/install-specs.md) - Specification templates
-- [`templates install-claude`](../../../../reference/eac/commands/templates/install-claude.md) - Claude Code templates
+- [`templates install docs`](../../../../reference/eac/commands/templates/install-docs.md) - Documentation templates
+- [`templates install ai`](../../../../reference/eac/commands/templates/install-ai.md) - AI prompt templates
+- [`templates install reports`](../../../../reference/eac/commands/templates/install-reports.md) - Report templates
+- [`templates install specs`](../../../../reference/eac/commands/templates/install-specs.md) - Specification templates
+- [`templates install claude`](../../../../reference/eac/commands/templates/install-claude.md) - Claude Code templates

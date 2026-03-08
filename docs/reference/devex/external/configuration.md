@@ -110,7 +110,7 @@ files:
 Validate with:
 
 ```bash
-eac validate-module-files
+eac validate module-files
 ```
 
 ## AI Provider Configuration
@@ -196,9 +196,9 @@ Always validate after changes:
 eac validate
 
 # Specific validations
-eac validate-contracts      # Schema validation
-eac validate-dependencies   # Dependency references
-eac validate-module-files   # File ownership
+eac validate contracts      # Schema validation
+eac validate dependencies   # Dependency references
+eac validate module-files   # File ownership
 ```
 
 ## Common Configurations

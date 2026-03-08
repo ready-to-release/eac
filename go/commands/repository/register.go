@@ -24,6 +24,7 @@ import (
 	"github.com/ready-to-release/eac/go/commands/repository/release"
 	"github.com/ready-to-release/eac/go/commands/repository/serve"
 	servedesign "github.com/ready-to-release/eac/go/commands/repository/serve/design"
+	servedocs "github.com/ready-to-release/eac/go/commands/repository/serve/docs"
 	servegource "github.com/ready-to-release/eac/go/commands/repository/serve/gource"
 	"github.com/ready-to-release/eac/go/commands/repository/show"
 	showhelp "github.com/ready-to-release/eac/go/commands/repository/show/help"
@@ -75,6 +76,7 @@ func Commands() []core.CommandPort {
 		showhelp.Commands(),
 		extension.Commands(),
 		serve.Commands(),
+		servedocs.Commands(),
 		servedesign.Commands(),
 		servegource.Commands(),
 		specsunused.Commands(),

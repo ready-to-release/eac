@@ -101,7 +101,7 @@ The flow when installing extensions.
 ## Design File
 
 - **Location**: `specs/clie/.design/workspace.dsl`
-- **Interactive**: `clie eac serve-design --module clie`
+- **Interactive**: `clie eac serve design --module clie`
 
 ## Key Features
 

@@ -98,7 +98,7 @@ files:
 
 **Validation Rule**: Each file must be claimed by exactly one module
 
-**Command**: `eac validate-module-files`
+**Command**: `eac validate module-files`
 
 ### Dependencies
 
@@ -120,7 +120,7 @@ modules:
 
 **Build Order** (topological sort): logging-go → eac-core → eac-commands
 
-**Validation**: `eac validate-module-hierarchy` checks for circular dependencies
+**Validation**: `eac validate module-hierarchy` checks for circular dependencies
 
 ---
 
@@ -418,22 +418,22 @@ graph TB
 eac validate
 
 # Schema validation
-eac validate-contracts
+eac validate contracts
 
 # Cross-references
-eac validate-dependencies
+eac validate dependencies
 
 # File ownership
-eac validate-module-files
+eac validate module-files
 
 # Dependency graph
-eac validate-module-hierarchy
+eac validate module-hierarchy
 
 # Gherkin specs
-eac validate-specs
+eac validate specs
 
 # Structurizr DSL
-eac validate-design
+eac validate design
 ```
 
 ---
@@ -458,7 +458,7 @@ eac validate-design
 **2. Validation**: Validate against JSON schema
 
 ```bash
-eac validate-contracts
+eac validate contracts
 ```
 
 **3. Loading**: Contracts loaded at command runtime
@@ -606,20 +606,20 @@ This allows multiple contract versions to coexist during migration periods
 ### Display Commands (Human-Readable)
 
 ```bash
-eac show-modules            # Module table
-eac show-dependencies       # Dependency graph
-eac show-environments       # Environment table
-eac show-component-kinds    # Component kind table
-eac show-config             # All configuration
+eac show modules            # Module table
+eac show dependencies       # Dependency graph
+eac show environments       # Environment table
+eac show component-kinds    # Component kind table
+eac show config             # All configuration
 ```
 
 ### Get Commands (JSON Output)
 
 ```bash
-eac get-modules             # Modules JSON
-eac get-dependencies        # Dependencies JSON
-eac get-environments        # Environments JSON
-eac get-config              # Config JSON
+eac get modules             # Modules JSON
+eac get dependencies        # Dependencies JSON
+eac get environments        # Environments JSON
+eac get config              # Config JSON
 ```
 
 ---

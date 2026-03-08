@@ -8,6 +8,7 @@ Learn how to extend the CLI with custom commands packaged as Docker containers.
 
 | Guide                                                              | Description                                                                                                           |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| [Creating Your First Extension](./creating-your-first-extension.md) | Tutorial: build a simple CLIE extension from scratch |
 | [Creating Extensions](./creating-extensions.md)                    | Build production-ready extensions: project structure, metadata, testing, Dockerfile optimization, and EAC integration |
 | [Testing in External Repositories](./testing-in-external-repos.md) | Test eac-ext and standalone extensions in external repositories using Docker                                          |
 

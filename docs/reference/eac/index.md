@@ -42,29 +42,41 @@ See [Component Types Reference](./architecture/component-kinds.md) for complete 
 
 ---
 
-## EAC as an CLIE Extension
+## Running EAC
 
-**EAC is delivered as an extension to CLIE**, an enterprise CLI framework for multi-platform containerized workflow execution.
+EAC can be run in two modes:
 
-**CLIE** provides:
+### Standalone CLI
 
-- Cross-platform CLI (`clie`, `clie.exe`) for Windows, macOS, and Linux
-- Docker-based extension execution with isolated, reproducible environments
-- Git-aware working directory mounting
-- Configurable extension management via `.clie/clie.yml`
+Install the `eac` binary directly. No Docker required.
 
-**The EAC extension** (`eac-ext:latest`) provides:
+```text
+Developer → EAC CLI → EAC Commands → Repository
+```
 
-- **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
-- **Dual operation modes**: Run as a CLIE extension for containerized developer environments, or independently via the eac-mcp-server for AI tool integration using the Model Context Protocol (MCP)
-- **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
-- **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
+### Via CLIE Extension Host (Optional)
 
-**Integration pattern**:
+EAC is also available as a CLIE extension (`eac-ext:latest`) for containerized execution. CLIE provides Docker-based isolation, reproducible environments, and git-aware volume mounting.
 
 ```text
 Developer → CLIE CLI → Docker Container (eac-ext:latest) → EAC Commands → Repository
 ```
+
+See [CLIE CLI Reference](../clie/index.md) for details on the extension host.
+
+### Via MCP Server
+
+LLM tools connect via the Model Context Protocol for AI-assisted workflows.
+
+```text
+LLM Tool → MCP Protocol → eac-mcp-commands → Repository
+```
+
+### Capabilities
+
+- **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
+- **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
+- **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
 
 **Commands are organized by purpose**:
 

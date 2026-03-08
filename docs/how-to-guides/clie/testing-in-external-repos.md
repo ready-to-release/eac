@@ -179,9 +179,6 @@ clie eac help
 
 # Show module information
 clie eac show modules
-
-# List module groups
-clie eac show module-groups
 ```
 
 ## Setup Verification
@@ -192,10 +189,10 @@ Verify the configuration files were created:
 
 ```powershell
 # Check clie local config
-cat .clie\clie.local.yml
+cat .eac\eac.local.yml
 
 # Check EAC config (after clie eac init)
-cat .clie\eac\agent.yml
+cat .eac\eac\agent.yml
 ```
 
 ### Verify Docker Image
@@ -233,17 +230,17 @@ clie eac help
 
 ```powershell
 # Create specification with AI
-clie eac create-spec "description of feature"
+clie eac create spec "description of feature"
 
 # Generate changelog
-clie eac release-changelog
+clie eac release changelog
 ```
 
 ### 3. Test Build and Validation
 
 ```powershell
 # Validate dependencies
-clie eac validate-dependencies
+clie eac validate dependencies
 
 # Run tests
 clie eac test <module-name>
@@ -277,14 +274,14 @@ Each repository maintains its own configuration:
 
 ```text
 project-a/
-  .clie/
-    clie.local.yml      # Points to eac-ext:dev
+  .eac/
+    eac.local.yml       # Points to eac-ext:dev
     eac/
       agent.yml             # Project A specific config
 
 project-b/
-  .clie/
-    clie.local.yml      # Points to eac-ext:dev
+  .eac/
+    eac.local.yml       # Points to eac-ext:dev
     eac/
       agent.yml             # Project B specific config
 ```

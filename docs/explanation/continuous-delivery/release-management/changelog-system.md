@@ -91,7 +91,7 @@ Complete implementation guide including:
 - `eac release pending` - Check for unreleased changes
 - `eac release this` - Finalize changelog for release
 - `eac release tag-pending` - Check for untagged versions
-- `eac release validate` - Validate changelog format
+- `eac validate release` - Validate changelog format
 - Workflow automation details
 - Troubleshooting guide
 

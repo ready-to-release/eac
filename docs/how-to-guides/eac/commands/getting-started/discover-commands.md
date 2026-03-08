@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-The EAC extension provides hundreds of commands organized by category. This guide shows you how to discover, explore, and use them effectively.
+EAC provides hundreds of commands organized by category. This guide shows you how to discover, explore, and use them effectively.
 
 **What you'll learn:**
 

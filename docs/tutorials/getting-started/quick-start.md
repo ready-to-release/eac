@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get up and running with the clie CLI. This tutorial walks you through installation, initialization, and running your first commands.
+Get up and running with the EAC CLI. This tutorial walks you through installation, initialization, and running your first commands.
 
 **Prerequisites:** Command-line access, internet connection
 
@@ -8,29 +8,29 @@ Get up and running with the clie CLI. This tutorial walks you through installati
 
 By the end of this tutorial, you'll be able to:
 
-- Install the clie CLI on your platform (Linux, macOS, or Windows)
-- Initialize clie configuration in a project
+- Install the EAC CLI on your platform (Linux, macOS, or Windows)
+- Initialize EAC configuration in a project
 - Run basic commands to explore your repository
-- Execute tests using the clie CLI
+- Execute tests using the EAC CLI
 - Navigate to the next steps in your learning journey
 
 ## Step 1: Install the CLI
 
-The CLIE CLI is distributed as a pre-built binary for Linux, macOS, and Windows.
+The EAC CLI is distributed as a pre-built binary for Linux, macOS, and Windows.
 
 ### Linux and macOS
 
 Run the installation script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
 ```
 
 The script will:
 
 - Detect your platform (OS and architecture)
-- Download the latest clie release
-- Install to `~/.local/bin/clie` (or use `--system` for system-wide installation)
+- Download the latest EAC release
+- Install to `~/.local/bin/eac` (or use `--system` for system-wide installation)
 - Verify the installation
 
 If `~/.local/bin` is not in your PATH, add it to your shell profile:
@@ -46,13 +46,13 @@ Then restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
 Run the installation script in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
+irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac/install.ps1 | iex
 ```
 
 The script will:
 
-- Download the latest clie release for Windows
-- Install to `%LOCALAPPDATA%\clie` (or use `-System` for Program Files)
+- Download the latest EAC release for Windows
+- Install to `%LOCALAPPDATA%\eac` (or use `-System` for Program Files)
 - Add the installation directory to your PATH
 - Verify the installation
 
@@ -63,45 +63,17 @@ You may need to restart your terminal for PATH changes to take effect.
 Check that the CLI is installed correctly:
 
 ```bash
-clie --version
+eac version
 ```
 
 You should see version information displayed.
 
-## Step 3: Initialize CLIE Configuration
+## Step 3: Initialize EAC in Your Project
 
-Navigate to your project directory and create the CLIE CLI configuration:
+Navigate to your project directory and initialize EAC:
 
 ```bash
 cd /path/to/your/project
-clie init
-```
-
-This command:
-
-- Creates the `.clie/` directory
-- Generates `clie.yml` for extension management
-- Sets up the extension registry configuration
-
-## Step 4: Install EAC Extension
-
-Install the Everything-as-Code (EAC) extension:
-
-```bash
-clie install eac
-```
-
-This command:
-
-- Pulls the EAC extension Docker image from the registry
-- Registers the `eac` extension in your configuration
-- Makes `eac` commands available
-
-## Step 5: Initialize EAC in Your Project
-
-Configure the EAC extension for your project:
-
-```bash
 eac init --ai-provider claude-api
 ```
 
@@ -130,7 +102,7 @@ eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
     Other configuration files like `ai-config.yml` and templates are automatically loaded from built-in system defaults.
     See [Understanding Configuration Files](./configuration-files.md) to learn more.
 
-## Step 6: Set Your API Key
+## Step 4: Set Your API Key
 
 Before running commands that use AI, set your API key as an environment variable:
 
@@ -146,7 +118,7 @@ export ANTHROPIC_API_KEY=sk-ant-your-key-here
 $env:ANTHROPIC_API_KEY = "sk-ant-your-key-here"
 ```
 
-## Step 7: Explore Available Commands
+## Step 5: Explore Available Commands
 
 List all available commands:
 
@@ -165,12 +137,12 @@ eac help show
     EAC provides hundreds of commands organized into categories (show, get, build, test, create, validate, release, pipeline, work, and more).
     See [Discovering Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md) for a complete guide to finding and using all commands.
 
-## Step 8: Analyze Your Repository
+## Step 6: Initialize Your Repository
 
-Before using other commands, analyze your repository structure:
+Before using other commands, initialize your repository structure:
 
 ```bash
-eac analyze modules
+eac init
 ```
 
 This command:
@@ -179,7 +151,7 @@ This command:
 - Generates `.eac/repository.yml` with module metadata
 - Creates `.eac/books.yml` with architecture patterns
 
-## Step 9: View Your Project Structure
+## Step 7: View Your Project Structure
 
 Show all modules discovered in your repository:
 
@@ -195,7 +167,7 @@ Show the project configuration:
 eac show config
 ```
 
-## Step 10: Run Tests
+## Step 8: Run Tests
 
 To run tests for your project:
 
@@ -228,10 +200,9 @@ Available test suites:
 
 Congratulations! You've successfully:
 
-- ✅ Installed the clie CLI on your system
-- ✅ Initialized CLIE CLI configuration with `clie init`
-- ✅ Installed the EAC extension with `clie install eac`
-- ✅ Configured EAC with AI provider settings
+- ✅ Installed the EAC CLI on your system
+- ✅ Initialized EAC configuration with `eac init`
+- ✅ Configured AI provider settings
 - ✅ Set up your API key for AI-powered commands
 - ✅ Analyzed your repository to discover modules
 - ✅ Explored available commands with `eac help`
@@ -240,10 +211,8 @@ Congratulations! You've successfully:
 
 ## Key Concepts Covered
 
-- **clie CLI installation** - Binary distribution for multiple platforms
-- **CLIE CLI initialization** - Creating `.clie/clie.yml` for extension management
-- **Extension installation** - Installing containerized extensions like EAC
-- **EAC configuration** - Setting up `.eac/` with AI provider settings
+- **EAC CLI installation** - Binary distribution for multiple platforms
+- **EAC initialization** - Creating `.eac/` with configuration
 - **Configuration layering** - System defaults vs. user overrides
 - **AI provider configuration** - Claude, OpenAI, or Gemini integration
 - **Repository analysis** - Discovering modules and architecture patterns
@@ -254,17 +223,16 @@ Congratulations! You've successfully:
 
 ### Continue Learning
 
-- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.clie/` and `.eac/` files
-- **Then:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom clie extension
+- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.eac/` configuration files
 
 ### Try Common Tasks
 
-Now that you know the basics of clie, try these common tasks:
+Now that you know the basics of EAC, try these common tasks:
 
 - **[Discover Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md)**
   Explore all commands organized by category
 - **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)**
-  Find and understand any clie command
+  Find and understand any EAC command
 - **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)**
   Discover modules, files, and structure
 
@@ -272,4 +240,4 @@ Now that you know the basics of clie, try these common tasks:
 
 - **[Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md)** - Understand the philosophy
 - **[Command Reference](../../reference/eac/commands/index.md)** - Complete command documentation
-- **[Creating Extensions Guide](../../how-to-guides/clie/creating-extensions.md)** - Build custom extensions
+- **[Creating CLIE Extensions](../../how-to-guides/clie/creating-extensions.md)** - Build containerized extensions (optional)

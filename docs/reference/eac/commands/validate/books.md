@@ -6,5 +6,5 @@
 
 - [validate](./validate.md)
 - [show books](../show/books.md)
-- [serve-docs](../serve/docs.md)
+- [serve docs](../serve/docs.md)
 - [validate Commands](../categories/validate.md)

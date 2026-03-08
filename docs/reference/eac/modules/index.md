@@ -162,9 +162,9 @@ Modules declare dependencies via `depends_on` in `.eac/repository.yml`. Build sy
 **Commands**:
 
 ```bash
-eac show-dependencies          # View dependency graph
-eac validate-dependencies      # Validate no cycles
-eac get-changed-modules-ci     # Detect changed modules
+eac show dependencies          # View dependency graph
+eac validate dependencies      # Validate no cycles
+eac get changed-modules-ci     # Detect changed modules
 ```
 
 **See**: [Architecture: Modules](../architecture/modules.md)
@@ -185,8 +185,8 @@ components:
 **Commands**:
 
 ```bash
-eac show-files                 # Show file ownership
-eac validate-module-files      # Validate no conflicts
+eac show files                 # Show file ownership
+eac validate module-files      # Validate no conflicts
 ```
 
 ---
@@ -208,8 +208,8 @@ eac validate-module-files      # Validate no conflicts
 Each module includes C4 architecture diagrams in Structurizr DSL format:
 
 ```bash
-eac serve-design               # View all diagrams in browser
-eac serve-design --module core # View specific module
+eac serve design               # View all diagrams in browser
+eac serve design --module core # View specific module
 ```
 
 **Design files**: `specs/{module}/.design/workspace.dsl`

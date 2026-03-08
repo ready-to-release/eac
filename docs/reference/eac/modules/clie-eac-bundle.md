@@ -130,7 +130,7 @@ clie eac build eac-ext
 docker save eac-ext:latest -o eac-ext.tar
 
 # Package bundle
-clie eac release-bundle --version 2024.02.1
+clie eac release bundle --version 2024.02.1
 ```
 
 ### Bundle Artifacts
@@ -167,41 +167,6 @@ bundles:
     eac: "2024.02.1"
     docker_image: "ghcr.io/ready-to-release/eac-ext:2024.02.1"
 ```
-
-## Update Mechanism
-
-### Checking for Updates
-
-```bash
-# Check for bundle updates
-clie eac check-updates
-
-# Output:
-# Current version: 2024.02.1
-# Latest version: 2024.03.1
-# Update available!
-```
-
-### Automatic Updates
-
-Bundle supports self-updating:
-
-```bash
-# Update CLIE and EAC to latest
-clie eac update-bundle
-
-# Update to specific version
-clie eac update-bundle --version 2024.03.1
-```
-
-Update process:
-
-1. Download new bundle
-2. Extract to temporary directory
-3. Replace CLIE binary
-4. Pull new EAC image
-5. Update configuration if needed
-6. Clean up temporary files
 
 ## Dependencies
 
@@ -255,7 +220,7 @@ clie --version
 clie eac --help
 
 # Run test command
-clie eac show-modules
+clie eac show modules
 ```
 
 ## See Also

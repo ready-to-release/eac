@@ -1,6 +1,6 @@
-# CLIE CLI vs Extensions: Understanding the Architecture
+# Running EAC via CLIE: Container Hosting Architecture
 
-This guide explains the two-tier architecture of CLIE: the core CLI framework and containerized extensions.
+This guide explains how EAC can optionally run inside the CLIE container host, and the two-tier architecture this entails.
 
 ## Overview
 
@@ -54,7 +54,7 @@ Framework commands that manage extensions:
 
 ### Configuration
 
-- **File**: `.clie/clie.yml`
+- **File**: `.eac/eac.yml`
 - **Purpose**: Extension registry and runtime settings
 - **Scope**: Framework-level configuration
 
@@ -86,7 +86,7 @@ Extensions are **containerized tools** that provide automation capabilities. Eac
 
 ### Configuration
 
-- **Directory**: `.clie/<extension>/`
+- **Directory**: `.eac/<extension>/`
 - **Purpose**: Extension-specific settings
 - **Scope**: Per-extension configuration
 
@@ -119,7 +119,7 @@ User runs: eac build
 
    ↓
 [CLIE CLI]
-  ├─ Reads .clie/clie.yml
+  ├─ Reads .eac/eac.yml
   ├─ Finds 'eac' extension config
   ├─ Pulls image if needed
   ├─ Mounts workspace volume
@@ -143,7 +143,7 @@ User runs: eac build
 | **Installation**  | System-wide binary     | Per-project Docker images |
 | **Runs**          | On host machine        | Inside containers         |
 | **Updates**       | `clie update`           | Automatic via registry    |
-| **Configuration** | `.clie/clie.yml`     | `.clie/<extension>/`       |
+| **Configuration** | `.eac/eac.yml`     | `.eac/<extension>/`       |
 | **Commands**      | Framework operations   | Tool-specific operations  |
 | **Examples**      | init, install, cleanup | build, test, scan         |
 
@@ -153,8 +153,8 @@ User runs: eac build
 
 ```text
 Project Root/
-├── .clie/
-│   ├── clie.yml              ← Tier 1: Framework config
+├── .eac/
+│   ├── eac.yml               ← Tier 1: Framework config
 │   │                                (Which extensions to use)
 │   └── eac/                     ← Tier 2: Extension config
 │       ├── ai-provider.yml          (How EAC behaves)
@@ -163,7 +163,7 @@ Project Root/
 
 ### Configuration Purposes
 
-**Tier 1** (`.clie/clie.yml`):
+**Tier 1** (`.eac/eac.yml`):
 
 ```yaml
 extensions:
@@ -224,7 +224,7 @@ clie pwsh run-script.ps1
 
 ### Example 2: Development vs CI
 
-**Development** (`.clie/clie.local.yml`):
+**Development** (`.eac/eac.local.yml`):
 
 ```yaml
 extensions:
@@ -233,7 +233,7 @@ extensions:
     pull_policy: 'Never'          # Don't pull
 ```
 
-**CI** (`.clie/clie.yml`):
+**CI** (`.eac/eac.yml`):
 
 ```yaml
 extensions:

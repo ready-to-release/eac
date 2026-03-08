@@ -41,7 +41,7 @@ This repository is optimized for AI-assisted development.
 ## 📮 Pull Requests & Commits
 
 - **Small & Atomic**: We prefer small, focused pull requests that address a single concern.
-- **Semantic Commits**: Use clear, descriptive commit messages. We recommend using `eac work-commit` for AI-generated semantic messages.
+- **Semantic Commits**: Use clear, descriptive commit messages. We recommend using `eac work commit` for AI-generated semantic messages.
 - **Validation**: Ensure `eac validate` passes locally before submitting a PR.
 
 ## ⚖️ Legal

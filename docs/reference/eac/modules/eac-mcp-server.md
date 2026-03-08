@@ -39,7 +39,7 @@ The flow when an AI assistant invokes an EAC command.
 ## Design File
 
 - **Location**: `specs/eac-mcp-server/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module eac-mcp-server`
+- **Interactive**: `eac serve design --module eac-mcp-server`
 
 ## MCP Integration
 

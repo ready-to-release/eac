@@ -97,7 +97,7 @@ type Command struct {
 
 - `build`: Build a module
 - `build --deps`: Build with dependencies
-- `build --force`: Force rebuild
+- `build --skip-cache=local:state`: Force rebuild (ignore cached state)
 
 ### commands/lint
 

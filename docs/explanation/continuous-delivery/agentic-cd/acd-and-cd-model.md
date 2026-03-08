@@ -37,7 +37,7 @@ The `specification.feature` file is structured so that the agent implementing th
 
 ```gherkin
 # Intent: Add pre-commit validation for AI-generated commit messages so that non-conforming messages are rejected before they reach the repository
-# Architecture: Affects eac-cli work-commit container; reads git staged changes; calls commit message validator; depends on validation/formats/commit package and git adapter
+# Architecture: Affects eac work-commit container; reads git staged changes; calls commit message validator; depends on validation/formats/commit package and git adapter
 
 @deps:go @L2 @ov @env:isolated-test-project
 Feature: eac-work_work-commit

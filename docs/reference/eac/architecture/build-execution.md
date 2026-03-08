@@ -337,7 +337,7 @@ Build summaries aggregate results across all UoWs:
 - Duration per UoW
 - Artifact inventory
 
-**Source**: `go/core/output/aggregation.go`
+**Source**: `go/core/output/reader.go`, `go/core/output/types.go`
 
 ---
 

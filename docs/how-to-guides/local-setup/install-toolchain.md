@@ -2,76 +2,73 @@
 
 ## What You'll Accomplish
 
-Either:
+Install the EAC CLI to enable automation commands in your repository.
 
-- Install the CLIE CLI and EAC extension
+Two installation methods are available:
 
-Or
-
-- Install the eac executable
-
-to enable automation commands in your repository.
+- **Standalone EAC CLI (Recommended)** - Direct binary, no Docker required
+- **CLIE + EAC Extension** - Containerized execution via Docker
 
 ## Prerequisites
 
-- **Docker Desktop** installed and running
 - **Git** installed
 - **Terminal access** (PowerShell on Windows, bash/zsh on macOS/Linux)
 
-## Installation Options
+## Option 1: Standalone EAC CLI (Recommended)
 
-### Option 1: Quick Install (Recommended)
+Install the `eac` binary directly. No Docker required.
 
-#### Linux/macOS
+### Linux/macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/eac/install.ps1 | iex
+```
+
+### Verify
+
+```bash
+eac version
+```
+
+### Post-Installation
+
+```bash
+# Initialize EAC in your project
+eac init --ai-provider claude-api
+
+# Explore commands
+eac help
+```
+
+## Option 2: CLIE Extension Host (Containerized)
+
+Install the CLIE CLI framework to run EAC inside Docker containers. Use this for reproducible, isolated environments.
+
+**Requires Docker.**
+
+### Linux/macOS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
 ```
 
-#### Windows (PowerShell)
+### Windows (PowerShell)
 
 ```powershell
 irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
 ```
 
-### Option 2: Manual Installation
-
-1. **Download the binary** from the [releases page](https://github.com/ready-to-release/eac/releases)
-2. **Extract** to a directory in your PATH
-3. **Verify** installation:
-
-```bash
-clie version
-```
-
-## Post-Installation Setup
-
-### 1. Initialize Configuration
+### Post-Installation
 
 ```bash
 clie init
-```
-
-This creates `.clie/clie.yml` with default extension registry settings.
-
-### 2. Install EAC Extension
-
-```bash
 clie install eac
-```
-
-This pulls the EAC Docker image and registers it with the CLI.
-
-### 3. Verify Installation
-
-```bash
-# Check CLI version
-clie version
-
-# Verify Docker connectivity
-clie verify
-
-# Test EAC extension
 eac help
 ```
 
@@ -79,21 +76,25 @@ eac help
 
 | File               | Purpose                                           |
 | ------------------ | ------------------------------------------------- |
-| `.clie/clie.yml` | Extension registry and CLI settings               |
-| `.eac/`        | EAC-specific configuration (created on first use) |
+| `.eac/`            | EAC configuration (created by `eac init`)         |
+| `.clie/clie.yml`   | Extension registry (only if using CLIE)           |
 
 ## Updating
 
-### Update CLIE CLI
+### Update EAC CLI (Standalone)
 
 ```bash
 # Re-run the install script
-curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/eac/install.sh | bash
 ```
 
-### Update EAC Extension
+### Update CLIE + EAC Extension
 
 ```bash
+# Update CLIE CLI
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+
+# Update EAC extension
 clie cleanup --all
 clie install eac
 ```
@@ -102,7 +103,7 @@ clie install eac
 
 | Problem             | Solution                                                    |
 | ------------------- | ----------------------------------------------------------- |
-| "Docker not found"  | Install Docker Desktop and ensure it's running              |
+| "Docker not found"  | Only needed for CLIE. Install Docker Desktop if using CLIE  |
 | "Permission denied" | Run terminal as administrator (Windows) or use sudo (Linux) |
 | "Image pull failed" | Check network connectivity and Docker Hub access            |
 | "Command not found" | Add installation directory to PATH                          |
@@ -114,5 +115,5 @@ clie install eac
 
 ## See Also
 
-- [CLIE CLI Reference](../../reference/clie/commands/index.md) - Full CLI command documentation
-- [CLI vs Extensions](../../reference/devex/internal/cli-vs-extensions.md) - Architecture overview
+- [Install EAC CLI](./install-eac.md) - Detailed standalone installation options
+- [CLIE CLI Reference](../../reference/clie/commands/index.md) - Full CLIE command documentation

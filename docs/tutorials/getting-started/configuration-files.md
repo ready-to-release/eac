@@ -10,71 +10,43 @@ Learn about the configuration files in `.eac/` and how they're managed by EAC.
 
 By the end of this tutorial, you'll understand:
 
-- The difference between CLIE CLI and EAC configuration
-- What configuration files exist in `.clie/`
+- What configuration files exist in `.eac/`
 - Which files are created by commands vs. exist as system defaults
 - How to customize configurations when needed
 - Which files to commit to git
+- How CLIE CLI configuration relates (if using CLIE)
 
 ## Configuration Overview
 
-CLIE uses two layers of configuration:
+EAC uses a layered configuration system:
 
-| Layer         | File/Directory     | Purpose               | Created By     |
-| ------------- | ------------------ | --------------------- | -------------- |
-| **Framework** | `.clie/clie.yml` | Extension management  | `clie init`     |
-| **Extension** | `.eac/`        | EAC-specific settings | `eac init` |
+| Layer          | File/Directory | Purpose               | Created By |
+| -------------- | -------------- | --------------------- | ---------- |
+| **EAC Config** | `.eac/`        | EAC settings          | `eac init` |
+| **CLIE Config** (optional) | `.clie/clie.yml` | Extension management | `clie init` |
 
-### CLIE CLI vs EAC Configuration
+### EAC Configuration
 
-Understanding the two configuration layers:
+**`.eac/`** (EAC Configuration)
+
+- Created by: `eac init`
+- Purpose: Configures how EAC behaves
+- Scope: Project-level (applies to all EAC commands)
+- Example content: AI provider settings, module configuration
+
+### CLIE CLI Configuration (Optional)
 
 **`.clie/clie.yml`** (Framework Configuration)
 
 - Created by: `clie init`
-- Purpose: Manages which extensions are available
+- Purpose: Manages which extensions are available when running EAC via CLIE
 - Scope: Framework-level (applies to all extensions)
 - Example content: Extension registry, Docker images
+- **Only needed if running EAC via the CLIE container host**
 
-**`.eac/`** (EAC Extension Configuration)
+See [CLIE CLI Architecture](../../reference/clie/architecture/index.md) for detailed architecture explanation.
 
-- Created by: `eac init`
-- Purpose: Configures how the EAC extension behaves
-- Scope: Extension-specific (only affects EAC)
-- Example content: AI provider settings, module configuration
-
-See [CLI vs Extensions](../../reference/eac/architecture/cli-integration.md) for detailed architecture explanation.
-
-## CLIE CLI Configuration
-
-### The `.clie/clie.yml` File
-
-This file is created by `clie init` and manages extension installation:
-
-```yaml
-extensions:
-  - name: 'eac'
-    image: 'ghcr.io/ready-to-release/eac-ext:latest'
-    description: 'Everything-as-Code automation'
-```
-
-**Purpose:**
-
-- Defines which extensions are available
-- Specifies Docker images for each extension
-- Configures registry and pull policies
-
-**When to edit:**
-
-- Adding new extensions (or use `clie install <extension>`)
-- Changing extension versions
-- Configuring local development images
-
-**Should you commit it?** ✅ Yes - team needs to know which extensions are used
-
-For complete reference, see [CLIE CLI Configuration Guide](../../reference/clie/configuration.md).
-
-## EAC Extension Configuration
+## EAC Configuration
 
 ### The `.eac/` Directory
 
@@ -166,14 +138,14 @@ These files are created by EAC commands and stored in your repository:
 
 | File             | Created By                | Purpose                                    | Commit? |
 | ---------------- | ------------------------- | ------------------------------------------ | ------- |
-| `repository.yml` | `eac analyze modules` | Repository metadata and discovered modules | ✅ Yes  |
-| `books.yml`      | `eac analyze books`   | Architecture patterns found in code        | ✅ Yes  |
+| `repository.yml` | `eac init` | Repository metadata and discovered modules | ✅ Yes  |
+| `books.yml`      | `eac init` | Architecture patterns found in code        | ✅ Yes  |
 
 **Note on `test-suites.yml`**: This file has **system defaults** (see Section 2 above) providing standard test suites (unit, integration, acceptance, production-verification). You can optionally generate a customized version:
 
 | File              | Created By                         | Purpose                          | Commit?                |
 | ----------------- | ---------------------------------- | -------------------------------- | ---------------------- |
-| `test-suites.yml` | `eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
+| `test-suites.yml` | `eac init` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
 
 **Example: `repository.yml` (generated)**
 
@@ -198,11 +170,10 @@ modules:
 **When created:**
 
 ```bash
-# Run analyze to create repository.yml and books.yml
-eac analyze modules
+# Run init to create repository.yml and books.yml
+eac init
 
-# Optional: Generate custom test-suites.yml (system defaults work automatically)
-eac analyze tests
+# System defaults for test-suites.yml work automatically
 ```
 
 **Can you edit them?**
@@ -211,7 +182,7 @@ Yes! You can edit generated files after creation. But running the command again 
 
 ```bash
 # Regenerate (overwrites your edits!)
-eac analyze modules --force
+eac init --force
 ```
 
 ---
@@ -230,7 +201,7 @@ eac init --ai-provider claude-api
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 # 3. Run commands (uses system defaults automatically!)
-eac analyze modules
+eac init
 eac create spec my-module
 
 # Result: Clean .eac/ with only user-specific files
@@ -332,7 +303,7 @@ Use the minimal setup - no customization needed:
 ```bash
 eac init --ai-provider claude-api
 export ANTHROPIC_API_KEY=your-key
-eac analyze modules
+eac init
 ```
 
 **Result:** One config file (`ai-provider.yml`), everything else uses system defaults.
@@ -421,7 +392,7 @@ If you're using system defaults (most users):
 
 **Automatic upgrade:**
 
-- Install new version of clie CLI
+- Install new version of EAC CLI
 - System defaults automatically updated
 - No configuration changes needed
 
@@ -431,7 +402,7 @@ If you've created custom configuration files:
 
 **Manual review:**
 
-- Install new version of clie CLI
+- Install new version of EAC CLI
 - Review release notes for configuration changes
 - Update your custom files if needed
 
@@ -449,7 +420,8 @@ If you've created custom configuration files:
 
 ## Next Steps
 
-- **Next tutorial:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom clie extension
+- **Explore commands:** [EAC Commands Guide](../../how-to-guides/eac/commands/index.md) - Task-oriented command guides
+- **Creating CLIE extensions:** [Creating Extensions](../../how-to-guides/clie/creating-extensions.md) - Build containerized CLIE extensions (optional)
 - **Learn about specifications:** [BDD Fundamentals](../../explanation/specifications/concepts/bdd-fundamentals.md) - Understand Gherkin and BDD
 - **If customizing (advanced):** See reference documentation for configuration file formats
 

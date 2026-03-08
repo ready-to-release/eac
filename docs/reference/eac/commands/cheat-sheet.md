@@ -322,19 +322,19 @@ eac serve docs --stop
 
 ```bash
 # Install documentation templates
-clie templates install docs
+eac templates install docs
 
 # Install to custom location
-clie templates install docs --destination ./custom-docs
+eac templates install docs --destination ./custom-docs
 
 # Install AI prompt templates
-clie templates install ai
+eac templates install ai
 
 # Install report templates
-clie templates install reports
+eac templates install reports
 
 # Install specification templates
-clie templates install specs
+eac templates install specs
 ```
 
 ### Maintenance Commands

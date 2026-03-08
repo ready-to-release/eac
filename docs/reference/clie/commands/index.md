@@ -47,7 +47,11 @@ clie run eac build   # explicit form
 
 Aliases are only registered when the configuration file loads successfully at startup.
 
-## CLIE CLI vs EAC Extension
+!!! note "EAC can also run standalone"
+    If you don't need containerized execution, you can install the `eac` CLI directly.
+    See [Install EAC CLI](../../../how-to-guides/local-setup/install-eac.md).
+
+## CLIE CLI vs EAC CLI
 
 | Aspect       | CLIE CLI              | EAC Extension         |
 | ------------ | --------------------- | --------------------- |

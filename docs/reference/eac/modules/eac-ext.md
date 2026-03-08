@@ -25,7 +25,7 @@ The layers and components within the Docker image.
 ## Design File
 
 - **Location**: `specs/eac-ext/.design/workspace.dsl`
-- **Interactive**: `eac serve-design --module eac-ext`
+- **Interactive**: `eac serve design --module eac-ext`
 
 ## Image Contents
 

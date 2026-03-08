@@ -186,58 +186,46 @@ eac get modules | jq '.modules | length'
 #### build command
 
 ```bash
---parallel, -p      Build modules in parallel (default: true)
---force, -f         Force rebuild even if up-to-date
+--skip-cache <spec>   Bypass specific cache types (see Skip Cache Flag above)
+--skip-deps           Skip dependency modules
+--tui / --no-tui      Enable/disable TUI mode
+--turbo               Turbo mode (parallel with reduced output)
 ```
 
 **Usage**:
 
 ```bash
-# Sequential build
-eac build --parallel=false eac-commands
+# Force rebuild (ignore cached state)
+eac build --skip-cache=local:state eac-commands
 
-# Force rebuild
-eac build --force eac-commands
+# Build without dependency modules
+eac build --skip-deps eac-commands
 ```
 
 #### test command
 
 ```bash
---parallel, -p      Run tests in parallel (default: true)
---verbose, -v       Verbose test output
---short             Run only short tests
---coverage          Generate coverage report
+--suite <name>        Run a specific test suite
+--skip-deps           Skip dependency modules
+--list-only           List tests without running them
+--timings             Show test timing information
+--debug               Enable debug output
+--tui / --no-tui      Enable/disable TUI mode
+--turbo               Turbo mode (parallel with reduced output)
+--skip-cache <spec>   Bypass specific cache types
 ```
 
 **Usage**:
 
 ```bash
-# Sequential tests
-eac test --parallel=false src-auth
+# Run a specific suite
+eac test --suite integration src-auth
 
-# With coverage
-eac test --coverage src-auth
+# List tests only
+eac test --list-only src-auth
 
-# Short tests only (for pre-commit)
-eac test --short src-auth
-```
-
-#### test suite command
-
-```bash
---parallel, -p      Run tests in parallel (default: true)
---tags              Run tests with specific tags
---stop-on-failure   Stop on first failure
-```
-
-**Usage**:
-
-```bash
-# Run specific tags
-eac test suite acceptance --tags @auth,@login
-
-# Stop on first failure
-eac test suite integration --stop-on-failure
+# Show timing information
+eac test --timings src-auth
 ```
 
 #### scan commands
@@ -616,7 +604,7 @@ temperature: 0.7
 
    ```bash
    # Interactive use
-   eac build -f src-auth
+   eac build --skip-cache=local:state src-auth
    eac test -v src-auth
    ```
 

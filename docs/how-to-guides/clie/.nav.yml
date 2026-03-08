@@ -1,5 +1,6 @@
 title: clie
 nav:
   - index.md
+  - creating-your-first-extension.md
   - creating-extensions.md
   - testing-in-external-repos.md

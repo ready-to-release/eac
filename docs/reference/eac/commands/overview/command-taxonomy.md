@@ -521,7 +521,7 @@ Parent commands organize related subcommands into logical groups. When you try t
 **Utility Commands:**
 
 - `drawio` - Must use subcommands like `drawio render`, `drawio create`, etc.
-- `serve` - Parent command, but also accepts module monikers: `serve docs`
+- `serve` - Must use subcommands: `serve docs`, `serve design`, `serve gource`
 - `validate` - Parent command, but can also run all validations when used alone
 
 #### Behavior Examples
@@ -559,18 +559,6 @@ $ eac validate
 # Runs specific validation
 $ eac validate specs
 ✓ Validated specifications
-```
-
-**Module-accepting commands:**
-
-```bash
-# Serves the "docs" module
-$ eac serve docs
-Starting MkDocs server for docs module...
-
-# Shows help if no module specified
-$ eac serve
-Usage: eac serve <module>
 ```
 
 #### Why Parent-Only Commands?

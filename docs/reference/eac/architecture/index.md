@@ -1,4 +1,4 @@
-# EAC Extension Architecture
+# EAC Architecture
 
 ## Viewing Architecture Diagrams
 
@@ -24,13 +24,16 @@ See [Viewing Architecture](./viewing-diagrams.md) for detailed instructions.
 
 ```mermaid
 graph TB
-    Dev[Developer] -->|eac| CLI[CLIE CLI]
+    Dev[Developer] -->|eac| EAC[EAC CLI]
     LLM[LLM Tools] -->|MCP| MCP[MCP Server]
 
+    Dev -.->|optional| CLI[CLIE CLI]
     CLI -->|Docker| Ext[eac-ext Container]
-    MCP -->|Direct| Commands[eac-commands]
-
     Ext --> Commands
+
+    EAC --> Commands[eac-commands]
+    MCP -->|Direct| Commands
+
     Commands --> Core[core]
     Commands --> Specs[godog-eac]
 
@@ -38,16 +41,17 @@ graph TB
     Core --> Modules[Go Modules]
     Specs --> Features[BDD Specs]
 
+    style EAC fill:#e1ffe1
+    style CLI fill:#f5f5f5
     style Ext fill:#ffe1e1
     style Core fill:#e1ffe1
 ```
 
-**EAC operates in two execution modes**:
+**EAC operates in three execution modes**:
 
-1. **Containerized**
-   (via CLIE CLI): Developer runs `eac <command>` → CLIE CLI launches eac-ext Docker container → Command executes in isolated environment
-2. **Direct**
-   (via MCP): LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly (no container overhead)
+1. **Standalone CLI** (recommended): Developer runs `eac <command>` directly on host machine -- native Go performance, no Docker required
+2. **Containerized** (via CLIE): Developer runs `eac <command>` → CLIE CLI launches eac-ext Docker container → Command executes in isolated environment
+3. **MCP Server**: LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly
 
 ---
 
@@ -233,9 +237,7 @@ This hierarchy allows:
 | **Semgrep**         | Static analysis (SAST)               |
 | **OWASP ZAP**       | Dynamic analysis (DAST)              |
 
-**Container-level technologies**:
-
-(Docker, Docker SDK) are provided by the [CLIE CLI framework](https://ready-to-release.github.io/eac/reference/clie/architecture/).
+Container technologies (Docker, Docker SDK) are used by the [CLIE extension host](https://ready-to-release.github.io/eac/reference/clie/architecture/) for containerized execution.
 
 ---
 
@@ -256,9 +258,9 @@ This hierarchy allows:
 - **OSCAL documents**: Assessment results, catalogs, profiles
 - **Artifacts**: All evidence stored in `out/evidence/` for audit
 
-**Container-level security**:
+**Container-level security** (when running via CLIE):
 
-(isolation, non-root execution, network restrictions) is provided by [CLIE CLI](https://ready-to-release.github.io/eac/reference/clie/architecture/#security-model).
+Isolation, non-root execution, and network restrictions are provided by the [CLIE extension host](https://ready-to-release.github.io/eac/reference/clie/architecture/#security-model).
 
 ---
 
@@ -311,14 +313,14 @@ architecture.
 
 ---
 
-## Integration with CLIE CLI
+## Optional: CLIE Extension Host
 
-EAC extends the [CLIE CLI framework](https://ready-to-release.github.io/eac/reference/clie/architecture/). The relationship:
+EAC can optionally run inside the [CLIE CLI framework](https://ready-to-release.github.io/eac/reference/clie/architecture/) for containerized execution:
 
 - **CLIE provides**: Container orchestration, git discovery, volume mounting, configuration loading
 - **EAC provides**: Commands, contracts, modules, AI integration, security scanning
 
-See [CLI Integration](./cli-integration.md) for details on the CLIE ↔ EAC boundary and extension contract.
+See [Running EAC via CLIE](./cli-integration.md) for details on the CLIE/EAC integration.
 
 ---
 
