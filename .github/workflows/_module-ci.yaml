@@ -284,7 +284,7 @@ jobs:
 
       - name: Log in to GHCR (for integration tests)
         if: steps.ci-config.outputs.has-tests == 'true' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -657,7 +657,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
