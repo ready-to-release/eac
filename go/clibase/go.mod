@@ -7,7 +7,7 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
-	github.com/mattn/go-runewidth v0.0.20
+	github.com/mattn/go-runewidth v0.0.21
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
