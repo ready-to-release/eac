@@ -502,6 +502,32 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      # Workaround: actions/runner-images#13729 - Docker service may not be
+      # started when the Windows runner boots. Start it explicitly and wait.
+      - name: Ensure Docker is available
+        shell: pwsh
+        run: |
+          $maxAttempts = 30
+          $delay = 2
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            if (docker info 2>$null) {
+              Write-Host "✓ Docker is ready (attempt $i/$maxAttempts)"
+              docker version --format '{{.Server.Version}}'
+              exit 0
+            }
+            if ($i -eq 1) {
+              Write-Host "Docker not ready, ensuring service is started..."
+              Get-Service -Name 'docker*' | Where-Object { $_.Status -ne 'Running' } | ForEach-Object {
+                Write-Host "  Starting service: $($_.Name) (status: $($_.Status))"
+                Start-Service $_.Name -ErrorAction SilentlyContinue
+              }
+            }
+            Write-Host "Waiting for Docker (attempt $i/$maxAttempts)..."
+            Start-Sleep -Seconds $delay
+          }
+          Write-Host "❌ Docker did not become available after $($maxAttempts * $delay)s"
+          exit 1
+
       - name: Download Module Dependencies
         if: needs.build.outputs.download-modules != ''
         uses: ./.github/actions/download-module-deps
