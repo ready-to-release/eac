@@ -58,7 +58,6 @@ Component kinds define:
 - Tool bindings (build, test, lint, scan)
 - Component ordering (`build_after` relationships)
 
-**Source**: `contracts/core/0.1.0/schemas/defaults/blueprints.yml`
 
 Component-kind defaults are applied as fallbacks; module-declared values
 always take precedence.
@@ -88,7 +87,6 @@ Module: eac, Component: go, Action: test
   → UoW: test:eac:go:godog  (if godog component exists)
 ```
 
-**Source**: `go/core/resolver/tool_chain.go`
 
 ---
 
@@ -114,11 +112,9 @@ docs-pdf:
 **Meaning**: Within the same module, a `dockerfile` component's build UoW
 depends on the `go` component's build UoW completing first.
 
-**Resolution**: `ComponentResolver.ResolveForBuild()` creates a dependency
-graph from `build_after` declarations and adds `DependsOn` edges to the
-UoW specs.
+**Resolution**: The resolver creates a dependency graph from `build_after`
+declarations and adds dependency edges to the UoW specs.
 
-**Source**: `go/core/resolver/component_resolver.go`
 
 ### Cross-Module Dependencies
 
@@ -132,7 +128,6 @@ modules:
 ```
 
 This means every UoW in `eac-ext` depends on every UoW in `eac`.
-Injected by `injectModuleDependencies()` in the command framework.
 
 ### Combined Ordering Example
 
@@ -186,7 +181,6 @@ The display order follows these rules:
 3. Non-buildable components (gherkin, structurizr, markdown, yaml)
 4. Alphabetical within each category
 
-**Source**: `go/core/config/display_order.go`
 
 ---
 

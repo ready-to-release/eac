@@ -588,58 +588,6 @@ components:
 
 ---
 
-## Adding Custom Component Types
-
-To add support for a new language or build system:
-
-### 1. Define Component Kind
-
-Add to `blueprints.yml` under `component-kinds`:
-
-```yaml
-component-kinds:
-  python:
-    extensions: [".py"]
-    builder: python
-    scanners: [sbom, vuln, secrets, sast]
-    requirements: [python]
-    files:
-      source: ["**/*.py"]
-      tests: ["tests/**/*.py", "**/*_test.py"]
-      config: ["pyproject.toml", "setup.py", "requirements.txt"]
-```
-
-### 2. Create Build Handler
-
-Implement a handler in `go/cli/eac/impl/build/builders/`:
-
-```go
-type PythonHandler struct{}
-
-func (h *PythonHandler) Name() string {
-    return "python"
-}
-
-func (h *PythonHandler) Build(ctx context.Context, module *contracts.Module) error {
-    // Build logic here
-}
-```
-
-### 3. Register Handler
-
-Wire the handler in `go/cli/eac/impl/build/unit_worker.go`:
-
-```go
-// In the unit worker's handler map
-"python": &PythonHandler{},
-```
-
-### 4. Add Test Runner (Optional)
-
-Implement a runner in `go/adapters/` or `go/clibase/testrunners/` if the component type has specific test tooling.
-
----
-
 ## Commands
 
 ```bash

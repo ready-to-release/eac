@@ -2,20 +2,34 @@
 
 <!-- book:cmd validate module-hierarchy -->
 
-## How It Works
+Validates the module dependency graph for structural integrity, ensuring there are no broken references or cycles.
 
-Validates module dependency graph structure for correctness:
+## Usage
 
-- **Acyclic Check**: Ensures no circular dependencies exist
-- **Layer Validation**: Verifies modules respect architectural layers
-- **Dependency Direction**: Checks dependencies flow in correct direction
-- **Orphan Detection**: Identifies unreachable or isolated modules
-- **Contract Consistency**: Validates dependency declarations match actual usage
+```bash
+eac validate module-hierarchy
+```
 
-Prevents architectural violations and ensures buildable dependency graph.
+## What It Checks
+
+- **Non-existent module references** -- A module's `depends_on` lists a module that does not exist.
+- **Bidirectional consistency** -- The `depends_on` and computed `used_by` relationships are consistent.
+- **Circular dependencies** -- No cycles in the dependency graph (e.g., A -> B -> A).
+- **Unreachable modules** -- All modules are reachable within the graph.
+
+## Examples
+
+```bash
+eac validate module-hierarchy
+```
+
+## Common Errors
+
+- **Module 'X' depends on 'Y', but 'Y' does not exist** -- A `depends_on` entry references an undefined module. Check for typos or add the missing contract.
+- **Circular dependency: A -> B -> A** -- Two or more modules form a cycle. Refactor to break it.
 
 ## See Also
 
+- [get modules](../get/modules.md)
+- [show modules](../show/modules.md)
 - [validate](./validate.md)
-- [get dependencies](../get/dependencies.md)
-- [validate Commands](../categories/validate.md)

@@ -51,7 +51,6 @@ eac build --skip-cache=all
 eac build --skip-cache=local:state,local:asset
 ```
 
-**Source**: `go/core/cache/cache.go` (taxonomy), `go/core/cache/config.go` (skip logic)
 
 ---
 
@@ -88,7 +87,6 @@ For each module in CI dispatch, the checker:
 3. If they match, the module is **CI-cached** (skip dispatch)
 4. If they differ (or no run exists), the module needs CI dispatch
 
-**Source**: `go/core/cache/ci.go` (CICacheChecker, CIRunQuerier port)
 
 ---
 
@@ -117,22 +115,6 @@ blueprint templates via `blueprints.yml`.
 3. The hash is computed **per module** — all components in a module share
    the same input hash
 
-**Source**: `go/cli/eac/impl/build/framework.go` (hash computation),
-`go/core/domain/modules/types.go` (`GetGlobPatterns()`),
-`go/core/hash/cache.go` (hash cache with mtime optimization)
-
-### Mtime Optimization
-
-To avoid reading every file on every invocation, the hash cache uses file
-modification times as a fast-path check:
-
-1. Load cached hash entries from `.cache/eac/build/input-hashes.json`
-2. For each file, compare current mtime against cached mtime
-3. If all mtimes match, reuse the cached hash (no file reads needed)
-4. If any mtime differs, recompute the full hash
-
-**Source**: `go/core/hash/mtime.go`, `go/core/hash/cache.go`
-
 ---
 
 ## UoW Manifest
@@ -159,7 +141,6 @@ Each completed UoW writes a manifest to `{outdir}/uow.manifest.json`:
 | `duration_ms`  | Execution time for performance tracking        |
 | `artifacts`    | List of produced files with per-artifact SHA256|
 
-**Source**: `go/core/output/manifest.go`, `go/core/output/types.go`
 
 ---
 
@@ -183,43 +164,9 @@ For each expected UoW:
 8. Otherwise → CACHED (skip)
 ```
 
-**Source**: `go/core/output/cache_detector.go` (`checkUoWChanged()`)
 
-### Cross-Context Invalidation
-
-Some UoWs depend on other UoWs completing, not just source file changes:
-
-**Test/Lint/Scan after Build**: If a module was rebuilt, its tests must
-re-run even if the test files haven't changed. The cache detector checks
-whether any build manifest for the **same module** has a newer
-`executed_at` timestamp:
-
-```text
-If action is test/lint/scan:
-  Load build manifests for this module
-  If any build manifest.executed_at > this manifest.executed_at:
-    → CHANGED ("build invalidated")
-```
-
-This ensures that `test:core:go:gotest` re-runs after `build:core:go:go`
-produces new output, even if no test files changed.
-
-**Source**: `go/core/output/cache_detector.go`, lines 146-155
-
-### Change Result
-
-The detection produces a `UoWChangeResult`:
-
-```go
-type UoWChangeResult struct {
-    Changed   []UnitID   // UoWs that need to execute
-    Unchanged []UnitID   // UoWs that can be skipped (cached)
-    Reasons   map[string]string  // Change reason per UoW
-}
-```
-
-Changed UoWs execute normally. Unchanged UoWs are marked `Cached` in the
-state manager and skipped by the scheduler.
+Changed UoWs execute normally. Unchanged UoWs are marked as cached and
+skipped by the scheduler.
 
 ---
 
@@ -230,38 +177,6 @@ needs to be dispatched or can be skipped because a successful build
 already exists at the current HEAD SHA.
 
 ### Port/Adapter Pattern
-
-The cache package defines a **port interface** — it never imports
-GitHub or other infrastructure. Command code injects a concrete adapter.
-
-```text
-┌─────────────────────────────┐     ┌──────────────────────────┐
-│  go/core/cache              │     │  go/cli/eac/impl/get     │
-│                             │     │                          │
-│  CIRunQuerier (interface)   │◄────│  ghCIRunQuerier (adapter) │
-│  CICacheChecker (logic)     │     │  wraps github.API        │
-│  MockCIRunQuerier (testing) │     │                          │
-└─────────────────────────────┘     └──────────────────────────┘
-```
-
-**CIRunQuerier** is the port:
-
-```go
-type CIRunQuerier interface {
-    LastSuccessfulRunSHA(workflowName string) (sha string, err error)
-}
-```
-
-**CICacheChecker** owns the decision logic:
-
-```go
-checker := cache.NewCICacheChecker(querier, cacheConfig)
-result := checker.Check("core", headSHA)
-// result.Cached == true  → skip dispatch
-// result.Cached == false → dispatch CI workflow
-// result.Reason explains: "valid_ci_at_head", "no_ci_run",
-//     "ci_at_different_sha:abc1234", "query_failed: ...", "cache_bypassed"
-```
 
 ### Decision Flow
 
@@ -297,7 +212,6 @@ The CI cache is consumed by two commands:
 - **`get ci-dispatch`** — uses `CICacheChecker` to filter which modules need CI dispatch
 - **`get changed-modules-ci`** — uses `CIRunQuerier` to check per-module CI status
 
-**Source**: `go/core/cache/ci.go`, `go/cli/eac/impl/get/ci_run_querier.go`
 
 ---
 

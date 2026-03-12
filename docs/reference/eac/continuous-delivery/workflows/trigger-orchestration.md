@@ -168,9 +168,7 @@ RESULT=$(commands get changed-modules-ci --as-json)
 
 **CI Cache Filtering:**
 
-- After detecting changed modules, `get ci-dispatch` uses a `CICacheChecker` to
-  skip modules that already have a successful CI build at the current HEAD SHA
-- This avoids re-dispatching CI for modules whose source hasn't changed
+- Modules that already have a successful CI build at the current HEAD SHA are skipped
 - Bypass with `--skip-cache=remote:ci` to force all dispatches
 
 **Dependency Invalidation:**
@@ -295,29 +293,6 @@ Compares current commit against last successful CI run:
 commands get changed-modules-ci --as-json
 ```
 
-The command uses a `CIRunQuerier` (backed by the GitHub Actions API) to find the
-last successful run of `change-trigger.yaml` on the main branch.
-
-### CI Cache Integration
-
-Module CI dispatch uses the core cache system's **CI cache** (`remote:ci`) to
-determine which modules already have a valid CI build at the current HEAD SHA.
-
-The `get ci-dispatch` command creates a `CICacheChecker` that:
-
-1. Queries GitHub Actions for each module's last successful `ci-{module}.yaml` run
-2. Compares the run's HEAD SHA against the current commit SHA
-3. Skips dispatch for modules where the SHAs match (CI-cached)
-
-This is a first-class cache type in the 2D taxonomy. It can be bypassed with:
-
-```bash
-commands get ci-dispatch --skip-cache=remote:ci  # Force dispatch all modules
-```
-
-See [Cache System](../../architecture/cache-system.md#ci-cache-architecture) for
-the full CI cache architecture including the port/adapter pattern.
-
 ### Bootstrap Mode
 
 When no previous successful CI run is found:
@@ -332,14 +307,6 @@ The change detection includes transitive invalidation:
 
 1. **Directly changed modules:** Modules with modified files
 2. **Invalidated modules:** Modules that depend on directly changed modules
-
-**Example:**
-
-```text
-eac-core (changed) → eac-commands (invalidated) → clie (invalidated)
-```
-
-If `eac-core` changes, both `eac-commands` and `clie` are rebuilt.
 
 ## Workflow Dispatch Parameters
 

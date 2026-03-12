@@ -5,7 +5,7 @@ nav:
   - architecture
   - modules
   - continuous-delivery
-  - decision-records
+  # decision-records moved to docs/architecture/decisions/
   - security
   - specifications
   - testing

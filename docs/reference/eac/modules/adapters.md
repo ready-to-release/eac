@@ -142,7 +142,6 @@ To add a new adapter:
 4. **Write tests**: Add adapter tests
 5. **Document**: Create `docs/reference/eac/modules/adapters/{name}.md`
 
-See [Adapters System](../architecture/adapters-system.md) for detailed architecture guidance.
 
 ## Dependencies
 

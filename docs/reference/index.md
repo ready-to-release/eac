@@ -33,5 +33,5 @@ Technical reference for **EAC** (Everything-as-Code) and **CLIE** (CLI Extender)
 | Resource                                                  | Description                     |
 | --------------------------------------------------------- | ------------------------------- |
 | [Continuous Delivery](./eac/continuous-delivery/index.md) | CI/CD workflows and conventions |
-| [Decision Records](./eac/decision-records/index.md)       | Architectural decisions         |
+| [Decision Records](../architecture/decisions/index.md)       | Architectural decisions         |
 | [Modules](./eac/modules/index.md)                         | Complete module reference       |

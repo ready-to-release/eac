@@ -2,19 +2,38 @@
 
 <!-- book:cmd validate contracts -->
 
-## How It Works
+Validates all EAC repository configuration files against their JSON schema definitions.
 
-Validates repository contract files against JSON schemas:
+## Usage
 
-- **Schema Validation**: Validates `.eac/repository.yml` against defined schema
-- **Module Contracts**: Verifies all module definitions are valid
-- **Required Fields**: Ensures all mandatory fields are present
-- **Type Checking**: Validates field types and values
-- **Reference Integrity**: Checks cross-references between contracts
+```bash
+eac validate contracts
+```
 
-Ensures repository configuration is valid before builds or releases.
+## What It Checks
+
+Validates each contract file with schema validation enabled:
+
+| File | Validation |
+|------|------------|
+| `repository.yml` | Module definitions, component types, paths |
+| `environments.yml` | Environment definitions and semantic validation |
+| `testing-tags.yml` | Tag definitions and skip reasons |
+| `test-suites.yml` | Test suite definitions |
+
+Reports the number of validated items per file (modules, environments, tags, suites).
+
+## Examples
+
+```bash
+eac validate contracts
+```
+
+## Common Errors
+
+- **FAILED** -- A YAML file does not conform to its JSON schema. Check the error message for the specific field or value.
+- **Semantic validation warning** -- The file is schema-valid but has logical issues (e.g., duplicate monikers).
 
 ## See Also
 
 - [validate](./validate.md)
-- [validate Commands](../categories/validate.md)

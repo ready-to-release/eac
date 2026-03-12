@@ -8,16 +8,20 @@ nav:
   - book-description.md
   - build-deps.md
   - build-times.md
+  - changed-containers.md
   - changed-modules.md
   - changed-modules-ci.md
   - changed-modules-local.md
   - changelog.md
+  - ci-config.md
   - ci-dispatch.md
   - ci-dispatch-layers.md
+  - ci-results.md
   - ci-workflows.md
   - cli-release-notes.md
   - commands.md
   - commit-message.md
+  - components.md
   - config.md
   - current-sha.md
   - dependencies.md
@@ -26,10 +30,12 @@ nav:
   - evidence-ci-runs.md
   - files.md
   - files-by-module.md
+  - ghosts.md
   - module-ci-workflow.md
   - module-trigger-reason.md
   - modules.md
   - release-bundle.md
+  - release-config.md
   - release-notes.md
   - release-status.md
   - specs.md
@@ -40,4 +46,5 @@ nav:
   - test-timings.md
   - tests.md
   - token-size.md
+  - units.md
   - valid-commands.md

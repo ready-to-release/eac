@@ -2,17 +2,6 @@
 
 <!-- book:cmd get commit-message -->
 
-## How It Works
-
-The command uses AI generation with format support:
-
-- **Format**: Generates plaintext commit messages following conventional commit format (type, scope, description, body)
-- **Validation**: Validates message format and structure automatically
-- **Retry**: If validation fails, AI receives error feedback and regenerates improved output
-- **Customization**: Uses three-tier prompt system for team-specific commit message styles
-
-Supported formats: Conventional commits with module-aware sections for monorepo commits.
-
 ## Custom Prompts
 
 Customize AI behavior using the **three-tier prompt system**. Prompts are loaded with the following priority:

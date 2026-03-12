@@ -73,6 +73,56 @@ modules:
       criticality: high
 ```
 
+### Repository Settings
+
+The `repository:` top-level key in `repository.yml` controls repository-wide behavior.
+
+```yaml
+repository:
+  type: mono                        # mono, poly, or adjunct
+  trunk_branch: main
+  max_branch_age_days: 30           # stale branch warning threshold
+  schemes: [semver, calver]         # valid versioning schemes for releasable modules
+  optimize_git_ls_in_ci: true       # use GitHub API for file listing in CI (faster)
+
+  ghost-tracking:
+    ghost-alias: ghost              # prefix for ghost/dark-launch code markers
+                                    # results in patterns: ghost-*, ghost.*, ghost
+
+  pr:
+    delete_branch_on_merge: true
+    merge_strategy: squash          # squash, merge, or rebase
+
+  versioning:
+    constraint: unrestricted        # unrestricted, patch-only, or calver-only
+
+  parallelism:
+    ci: 8                           # max parallel workers in CI
+    devbox: 16                      # max parallel workers locally
+
+  remote:
+    type: github                    # github, gitlab, azure-devops, bitbucket
+    owner: my-org
+    repo: my-repo                   # auto-detected from git if empty
+    url: ""                         # derived from type/owner/repo if empty
+    pages_url: ""                   # documentation site URL
+    registry_url: ""                # container registry URL
+```
+
+| Field                   | Type    | Description                                                  |
+| ----------------------- | ------- | ------------------------------------------------------------ |
+| `type`                  | string  | Repository layout: `mono`, `poly`, `adjunct`                 |
+| `trunk_branch`          | string  | Main branch name (default: `main`)                           |
+| `max_branch_age_days`   | int     | Warn on branches older than this many days                   |
+| `schemes`               | array   | Valid versioning schemes (`semver`, `calver`); `implicit` is always available |
+| `optimize_git_ls_in_ci` | bool    | Use GitHub API instead of `git ls-files` in CI               |
+| `ghost-tracking`        | object  | Ghost (dark launch) code tracking configuration              |
+| `ghost-alias`           | string  | Prefix for ghost markers (default: `ghost`)                  |
+| `pr`                    | object  | Pull request workflow settings                               |
+| `versioning`            | object  | Repository-wide versioning constraints                       |
+| `parallelism`           | object  | Max parallel workers for CI and local dev                    |
+| `remote`                | object  | Remote VCS provider configuration                            |
+
 ### Key Fields
 
 | Field         | Type   | Required | Description                              |
@@ -81,10 +131,13 @@ modules:
 | `type`        | string | ❌       | Deprecated; use `components` instead     |
 | `name`        | string | ❌       | Human-readable name                      |
 | `description` | string | ❌       | Module purpose                           |
-| `depends_on`  | array  | ❌       | Module dependencies (monikers)           |
-| `files`       | object | ❌       | File ownership patterns (glob)           |
-| `versioning`  | object | ❌       | Versioning configuration (semver/calver) |
-| `metadata`    | object | ❌       | Custom key-value pairs                   |
+| `depends_on`    | array  | ❌       | Module dependencies (monikers or group names)  |
+| `depends_on_ci` | array  | ❌       | CI-only artifact dependencies (merged for dispatch) |
+| `group`         | string | ❌       | Group name for bulk dependency targeting       |
+| `files`         | object | ❌       | File ownership patterns (glob)                 |
+| `versioning`    | object | ❌       | Versioning configuration (semver/calver)       |
+| `metadata`      | object | ❌       | Free-form key-value pairs                      |
+| `linting`       | object | ❌       | Per-module linting overrides                   |
 
 ### File Ownership
 
@@ -99,6 +152,133 @@ files:
 **Validation Rule**: Each file must be claimed by exactly one module
 
 **Command**: `eac validate module-files`
+
+### Additional Module Fields
+
+#### `depends_on_ci`
+
+CI artifact dependencies. These are modules whose build artifacts are needed at CI time
+but are not source-level dependencies. They are merged into `depends_on` for CI dispatch
+layering but do not affect local build ordering.
+
+```yaml
+modules:
+  - moniker: eac-core
+    depends_on: [contracts]
+    depends_on_ci: [oci-tools]    # needs container images in CI, not locally
+```
+
+#### `group`
+
+Assigns a module to a named group. Groups can be referenced in `depends_on` to depend
+on all members of the group at once.
+
+```yaml
+modules:
+  - moniker: lib-a
+    group: shared-libs
+  - moniker: lib-b
+    group: shared-libs
+
+  - moniker: my-app
+    depends_on: [shared-libs]     # depends on both lib-a and lib-b
+```
+
+#### `metadata`
+
+A free-form key-value map for module-specific data. Used for ownership, criticality,
+and any other annotations that tools or reports can consume.
+
+```yaml
+modules:
+  - moniker: eac-core
+    metadata:
+      owner: platform-team
+      criticality: high
+      team-channel: "#platform-eng"
+```
+
+#### `linting`
+
+Per-module linting overrides. Controls which lint providers run for this module.
+
+```yaml
+modules:
+  - moniker: legacy-scripts
+    linting:
+      disabled: ["all"]           # skip all linting for this module
+
+  - moniker: eac-core
+    linting:
+      enabled: [golangci-lint]    # only run golangci-lint (ignore others)
+
+  - moniker: docs-site
+    linting:
+      disabled: [markdownlint]    # skip markdownlint, run everything else
+```
+
+| Field      | Type  | Description                                                        |
+| ---------- | ----- | ------------------------------------------------------------------ |
+| `enabled`  | array | Lint providers to use (empty = all applicable from lint-providers) |
+| `disabled` | array | Lint providers to skip, or `["all"]` to disable linting entirely  |
+
+### Component Facets
+
+Components can declare **facets** — lightweight sub-components for specifications,
+design, and documentation assets. Each facet expands into a synthetic component named
+`{parent}~{suffix}` with the appropriate component kind.
+
+| Facet    | Suffix   | Component Kind | Purpose                       |
+| -------- | -------- | -------------- | ----------------------------- |
+| `specs`  | `specs`  | `gherkin`      | BDD specification files       |
+| `design` | `design` | `structurizr`  | Architecture DSL files        |
+| `docs`   | `docs`   | `docs-assets`  | Documentation asset files     |
+
+#### Simple form (inherits parent root)
+
+```yaml
+components:
+  - type: go
+    root: go/core
+    specs: ["**/*.feature"]       # creates go~specs (gherkin, root: go/core)
+```
+
+#### Rooted form (independent root)
+
+```yaml
+components:
+  - type: go
+    root: go/cli/eac
+    design:
+      root: specs/docs/.design    # creates go~design (structurizr, root: specs/docs/.design)
+      patterns:
+        - "workspace.dsl"
+        - "**/*.dsl"
+    docs: ["**/*.md"]             # creates go~docs (docs-assets, root: go/cli/eac)
+```
+
+Synthetic components participate in builds, linting, and scanning like any other component.
+They inherit the parent component's root unless the rooted form provides an explicit `root`.
+
+### Companion Components
+
+The `with` field on a component auto-creates additional components that share the same root.
+Each companion uses its type as its name. If a component with that name already exists,
+the companion is skipped.
+
+```yaml
+components:
+  - type: mkdocs-site
+    root: docs
+    with: [docs-assets, docs-drawio, docs-mermaid]
+    # creates three companions, all rooted at docs/:
+    #   docs-assets   (type: docs-assets)
+    #   docs-drawio   (type: docs-drawio)
+    #   docs-mermaid  (type: docs-mermaid)
+```
+
+Companions are useful when a single directory tree contains multiple buildable concerns
+(e.g., a documentation site that also has draw.io diagrams and mermaid charts).
 
 ### Dependencies
 
@@ -545,16 +725,16 @@ contracts/
 
 ### Contract Modules (8 contracts at v0.1.0)
 
-| Contract              | Purpose                            | Go Module                         |
-| --------------------- | ---------------------------------- | --------------------------------- |
-| **ai-provider**       | AI provider integration interface  | `go/contracts/ai-provider/`       |
-| **clie**              | CLIE CLI framework configuration   | `go/contracts/clie/`              |
-| **container-runtime** | Container runtime interface        | `go/contracts/container-runtime/` |
-| **core**              | Core configuration and environment | `go/contracts/core/`              |
-| **docs**              | Documentation generation contracts | `go/contracts/docs/`              |
-| **runner**            | Test runner interface              | `go/contracts/runner/`            |
-| **scanner**           | Security scanner interface         | `go/contracts/scanner/`           |
-| **tui**               | Terminal UI component interface    | `go/contracts/tui/`               |
+| Contract              | Purpose                            |
+| --------------------- | ---------------------------------- |
+| **ai-provider**       | AI provider integration interface  |
+| **clie**              | CLIE CLI framework configuration   |
+| **container-runtime** | Container runtime interface        |
+| **core**              | Core configuration and environment |
+| **docs**              | Documentation generation contracts |
+| **runner**            | Test runner interface              |
+| **scanner**           | Security scanner interface         |
+| **tui**               | Terminal UI component interface    |
 
 See [Contracts Module](../modules/contracts.md) for detailed documentation.
 
@@ -583,23 +763,6 @@ contracts/runner/
 ```
 
 **Migration**: Schema versioning with migration tools for contract upgrades will be added in future releases.
-
-### Loading Versioned Contracts
-
-Go code references specific contract versions:
-
-```go
-import "github.com/ready-to-release/eac/go/contracts/runner/0.1.0/runner"
-
-// Use v0.1.0 runner interface
-func runTests(r runner.Runner) error {
-    // Implementation
-}
-```
-
-This allows multiple contract versions to coexist during migration periods
-
----
 
 ## Display and Query Commands
 

@@ -163,4 +163,3 @@ Generated specifications include:
 ## Related Commands
 
 - [`create spec`](../../../../reference/eac/commands/create/spec.md) - Generate specification
-- [`validate specs`](../../../../reference/eac/commands/validate/specs.md) - Validate quality

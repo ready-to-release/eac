@@ -11,7 +11,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 **I want to...**
 
 - **...see what modules exist**: [show modules](../show/modules.md)
-- **...check dependencies**: [show dependencies](../show/dependencies.md) or [get dependencies](../get/dependencies.md)
+- **...check dependencies**: [show dependencies](../show/dependencies.md)
 - **...create a workspace**: [work create](../work/create.md)
 - **...write specifications**: [create spec](../create/spec.md)
 - **...generate diagrams**: [create design](../create/design.md)
@@ -20,9 +20,6 @@ Browse EAC commands organized by function. Each category groups commands that se
 
 **I want to...**
 
-- **...validate contracts**: [validate contracts](../validate/contracts.md)
-- **...check dependencies**: [validate dependencies](../validate/dependencies.md)
-- **...validate specs**: [validate specs](../validate/specs.md)
 - **...scan for secrets**: [scan](../scan/scan.md) with `--scanner secrets`
 - **...check for vulnerabilities**: [scan](../scan/scan.md) with `--scanner vuln`
 

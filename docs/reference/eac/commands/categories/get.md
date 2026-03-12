@@ -136,34 +136,6 @@ eac get build-deps src-api | jq '.dependencies[]'
 eac get build-times | jq '[.builds[]] | sort_by(.duration) | reverse'
 ```
 
-## Performance Notes
-
-### Fast Commands
-
-Execute quickly (< 1s):
-
-- `get modules`
-- `get dependencies`
-- `get config`
-- `get environments`
-- `get changed-modules`
-
-### Moderate Commands
-
-May take a few seconds:
-
-- `get tests` (scans test files)
-- `get build-times` (parses build logs)
-- `get test-timings` (parses test logs)
-
-### Expensive Commands
-
-Avoid in tight loops:
-
-- **`get files`** - Loads ~2,690 files (~19k tokens)
-  - Use `show files-changed` or `show files-staged` instead when possible
-  - Cache results if querying multiple times
-
 ## Best Practices
 
 ### Always Use jq

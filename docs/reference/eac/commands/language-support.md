@@ -7,7 +7,7 @@ Most EAC commands are language-agnostic and work across all supported languages.
 | Command                                               | Purpose                                   | Why Go-Only?                                    |
 | ----------------------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
 | [`validate-go-tidy`](./validate/go-tidy.md)           | Validates Go module dependencies are tidy | Runs `go mod tidy` and checks for changes       |
-| [`validate-dependencies`](./validate/dependencies.md) | Checks go.mod against module contracts    | Parses `go.mod` files to build dependency graph |
+| `validate-dependencies`                                | Checks go.mod against module contracts    | Parses `go.mod` files to build dependency graph |
 
 These commands specifically interact with Go's module system (`go.mod`) and toolchain.
 
@@ -67,11 +67,11 @@ All other commands work across languages via **capability-based dispatch**. Comm
 **Work on contracts, specifications, and code quality regardless of language:**
 
 - [`validate`](./validate/validate.md) - Runs all validations
-- [`validate-contracts`](./validate/contracts.md) - JSON schema validation
-- [`validate-specs`](./validate/specs.md) - Gherkin specification validation
+- `validate-contracts` - JSON schema validation
+- `validate-specs` - Gherkin specification validation
 - [`validate-markdown`](./validate/markdown.md) - Markdown linting
 - [`validate-module-files`](./validate/module-files.md) - File ownership validation
-- [`validate-module-hierarchy`](./validate/module-hierarchy.md) - Dependency graph validation
+- `validate-module-hierarchy` - Dependency graph validation
 - [`validate-test-tags`](./validate/test-tags.md) - Test tag contract validation
 
 ---
@@ -115,7 +115,7 @@ Security tools detect languages automatically.
 - [`show-dependencies`](./show/dependencies.md) - Shows dependency graph
 - [`show-files`](./show/files.md) - Shows file ownership
 - [`get-modules`](./get/modules.md) - Returns module data as JSON
-- [`get-dependencies`](./get/dependencies.md) - Returns dependencies as JSON
+- `get-dependencies` - Returns dependencies as JSON
 
 ---
 

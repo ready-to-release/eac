@@ -73,6 +73,5 @@ eac test <module>
 
 ## See Also
 
-- [Command Implementation](../../eac/architecture/command-implementation.md) - Add new EAC commands
 - [Contracts Reference](../../eac/architecture/contracts.md) - Full contract documentation
 - [Local Setup](../../../how-to-guides/local-setup/index.md) - Development environment setup

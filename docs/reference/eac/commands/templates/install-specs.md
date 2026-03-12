@@ -18,5 +18,5 @@ Install specification templates for compliance testing:
 ## See Also
 
 - [create spec](../create/spec.md) - AI specification generation
-- [validate specs](../validate/specs.md) - Validate specifications
+
 - [templates Commands](../categories/templates.md)

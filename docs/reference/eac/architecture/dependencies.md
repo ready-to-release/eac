@@ -22,76 +22,6 @@ modules:
       - core
 ```
 
-**Source**: `go/core/domain/modules/types.go`
-
-```go
-type BaseContract struct {
-    DependsOn []string `yaml:"depends_on"`
-}
-```
-
-## Data Flow
-
-```text
-repository.yml
-     │
-     ▼
-modules.LoadFromWorkspace()
-     │
-     ▼
-Registry (holds all ModuleContract)
-     │
-     ├──► GetDependencyGraph()        → map[string][]string (module → dependencies)
-     ├──► GetReverseDependencyGraph() → map[string][]string (module → dependents)
-     └──► CalculateExecutionOrder()   → ExecutionPlan (layers + flat order)
-```
-
-## Key Files
-
-| File                                                | Purpose                                       |
-| --------------------------------------------------- | --------------------------------------------- |
-| `go/core/domain/modules/types.go`               | `BaseContract.DependsOn` - YAML parsing       |
-| `go/core/domain/modules/types.go`               | `ModuleContract.GetDependencies()` - accessor |
-| `go/core/repository/dependencies.go`            | Graph operations                              |
-| `go/cli/eac/impl/validate/`                     | Cycle detection and hierarchy validation      |
-| `go/cli/eac/impl/release/await-deps.go`        | Release-time CI verification                  |
-
-## Execution Order Algorithm
-
-**File**: `go/core/repository/dependencies.go`
-
-Uses **Kahn's topological sort**:
-
-1. Build in-degree map (count of unprocessed dependencies per module)
-2. Layer 0 = modules with in-degree 0 (no dependencies)
-3. Process layer, decrease in-degrees of dependents
-4. Repeat until all modules processed
-5. Detect cycles if layer is empty but modules remain
-
-```go
-type ExecutionPlan struct {
-    Layers         [][]string // [[eac-core], [eac-commands, clie], [eac-ext]]
-    ExecutionOrder []string   // Flattened: [eac-core, eac-commands, clie, eac-ext]
-    LayerCount     int
-}
-```
-
-## Cycle Detection
-
-**File**: `go/cli/eac/impl/validate/module-hierarchy.go`
-
-Uses **DFS with recursion stack**:
-
-```go
-func validateNoCircularDependencies(reg *modules.Registry, report *moduleHierarchyReport) {
-    visited := make(map[string]bool)
-    recStack := make(map[string]bool)  // Tracks current path
-
-    // DFS - if we hit a node already in recStack, we found a cycle
-    var detectCycle func(moniker string, path []string) bool
-}
-```
-
 ## Dependency Uses
 
 | Use Case           | Description                                                |
@@ -194,8 +124,6 @@ release-eac-ext.yaml
 ```
 
 ### await-deps Command
-
-**File**: `go/cli/eac/impl/release/await-deps.go`
 
 ```text
 release await-deps <module> [--timeout N] [--skip-static]

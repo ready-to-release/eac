@@ -17,7 +17,6 @@ Retrieve repository data in structured JSON format for automation and scripting.
 | [get commands](./commands.md)                     | Retrieve repository data in structured format |
 | [get commit-message](./commit-message.md)         | Generate AI-powered commit messages           |
 | [get config](./config.md)                         | Get all EAC configuration                     |
-| [get dependencies](./dependencies.md)             | Get module dependency graph                   |
 | [get environments](./environments.md)             | Get all environment contracts                 |
 | [get files](./files.md)                           | Get repository files with module ownership    |
 | [get modules](./modules.md)                       | Get all module contracts                      |

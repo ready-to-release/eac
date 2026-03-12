@@ -2,18 +2,43 @@
 
 <!-- book:cmd validate docs -->
 
-## How It Works
-
 Validates documentation files for references to obsolete or deleted configuration files.
 
-This command helps maintain documentation accuracy by detecting references to files
-that no longer exist in the codebase, such as deprecated configuration files.
+## Usage
 
-- **Obsolete References**: Detects references to files that have been removed
-- **Line Numbers**: Shows exact location of each obsolete reference
-- **File List**: Reports all affected documentation files
+```bash
+eac validate docs [docs-directory]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `docs-directory` | Directory to scan (default: `docs/`) |
+
+## What It Checks
+
+Scans all `.md` files for references to known obsolete files:
+
+- `module-types.yml` (deleted)
+- `system-dependencies.yml` (deleted)
+
+Automatically excludes `assets/cache/`, `.git/`, `node_modules/` directories and deprecation notice files.
+
+## Examples
+
+```bash
+# Validate all documentation
+eac validate docs
+
+# Validate a specific directory
+eac validate docs docs/reference
+```
+
+## Common Errors
+
+- **references obsolete file** -- A markdown file mentions a deleted config file. Update the documentation to use the current file name.
 
 ## See Also
 
 - [validate](./validate.md)
-- [validate Commands](../categories/validate.md)

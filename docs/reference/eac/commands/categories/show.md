@@ -248,36 +248,6 @@ eac show modules > modules.txt
 eac show test-summary src-auth acceptance >> test-report.log
 ```
 
-## Performance Notes
-
-### Fast Commands
-
-These commands execute quickly (< 1s):
-
-- `show modules`
-- `show component-kinds`
-- `show dependencies`
-- `show config`
-- `show workspaces`
-- `show environments`
-- `show books`
-
-### Moderate Commands
-
-These commands may take a few seconds:
-
-- `show files` (loads ~2,690 files)
-- `show tests` (scans all test files)
-- `show build-times` (parses build logs)
-- `show test-timings` (parses test logs)
-
-### Expensive Commands
-
-Avoid in tight loops:
-
-- `show files` - Loads all files (~19k tokens)
-- Use `show files-changed` or `show files-staged` instead when possible
-
 ## Best Practices
 
 ### Interactive Use

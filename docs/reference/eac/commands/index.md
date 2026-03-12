@@ -42,7 +42,7 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 - [show modules](./show/modules.md) - List all modules
 - [build](./build/build.md) - Build modules
 - [test](./test/test.md) - Test modules
-- [validate dependencies](./validate/dependencies.md) - Check contracts
+
 
 ### CI/CD
 

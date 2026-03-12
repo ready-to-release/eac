@@ -109,10 +109,9 @@ See [Repository Layout](./architecture/repository-layout.md) for the full direct
 | [Component Types](./architecture/component-kinds.md)       | Language support and component type specifications    |
 | [Contracts](./architecture/contracts.md)                   | YAML contracts, schemas, and validation system        |
 | [Repository Layout](./architecture/repository-layout.md)   | Directory structure and file organization             |
-| [Command Implementation](./architecture/command-implementation.md)   | Developer guide for implementing EAC commands   |
 
 ## Related Documentation
 
 - **[Command Reference](./commands/index.md)** - Complete reference for all EAC commands
 - **[How-To Guides](../../how-to-guides/eac/index.md)** - Task-oriented guides for using EAC
-- **[Decision Records](./decision-records/index.md)** - Architectural decisions and rationale
+- **[Decision Records](../../architecture/decisions/index.md)** - Architectural decisions and rationale

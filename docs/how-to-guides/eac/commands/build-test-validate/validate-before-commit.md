@@ -110,5 +110,3 @@ eac validate || exit 1
 ## Related Commands
 
 - [`validate`](../../../../reference/eac/commands/validate/validate.md) - Run all validations
-- [`validate specs`](../../../../reference/eac/commands/validate/specs.md) - Validate specifications
-- [`validate dependencies`](../../../../reference/eac/commands/validate/dependencies.md) - Check dependencies

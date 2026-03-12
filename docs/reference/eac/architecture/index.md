@@ -147,7 +147,7 @@ func (h *BuildHandler) Execute(args []string) error {
 }
 ```
 
-See [Command Implementation Guide](./command-implementation.md) for command development guide.
+
 
 ---
 
@@ -338,6 +338,7 @@ See [Running EAC via CLIE](./cli-integration.md) for details on the CLIE/EAC int
 - [Build Execution System](./build-execution.md) - UoW orchestration and parallel scheduling
 - [Cache System](./cache-system.md) - Incremental builds and input hashing
 - [Component Resolution](./component-resolution.md) - How contracts become executable UoWs
+- [Tool System](./tool-system.md) - Tool composition, executor modes, and container configuration
 
 ### How-To Guides
 
@@ -349,4 +350,4 @@ See [Running EAC via CLIE](./cli-integration.md) for details on the CLIE/EAC int
 ### Reference
 
 - [EAC Commands](../commands/index.md) - Complete command reference
-- [Decision Records](../decision-records/index.md) - Architectural decisions
+- [Decision Records](../../../architecture/decisions/index.md) - Architectural decisions

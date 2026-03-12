@@ -2,20 +2,34 @@
 
 <!-- book:cmd validate dependencies -->
 
-## How It Works
+Validates that actual dependencies in `go.mod` files match the dependencies declared in module contracts. Helps ensure consistency between contract definitions and implementation.
 
-Validates Go module dependencies against module contracts:
+## Usage
 
-- **go.mod Parsing**: Extracts dependencies from go.mod files
-- **Contract Matching**: Verifies dependencies match repository contracts
-- **Version Consistency**: Ensures consistent versions across modules
-- **Circular Detection**: Identifies circular dependencies
-- **Undeclared Dependencies**: Finds missing contract declarations
+```bash
+eac validate dependencies
+```
 
-Prevents dependency mismatches and ensures consistent module graph.
+## What It Checks
+
+- Loads module contracts from the workspace.
+- Builds a dependency graph from all `go.mod` files (excluding `out/`, `vendor/`, `.git/`, `node_modules/`, `tools/`, `templates/`).
+- Compares the actual Go module dependencies against declared contract dependencies.
+- Reports extra or missing dependencies.
+
+## Examples
+
+```bash
+eac validate dependencies
+```
+
+## Common Errors
+
+- **Extra dependency** -- A `go.mod` file imports a workspace module not declared in the contract. Update the contract to declare it.
+- **Missing dependency** -- A contract declares a dependency not present in `go.mod`. Add the import or remove the contract declaration.
 
 ## See Also
 
-- [validate](./validate.md)
 - [get dependencies](../get/dependencies.md)
-- [validate Commands](../categories/validate.md)
+- [show dependencies](../show/dependencies.md)
+- [validate](./validate.md)

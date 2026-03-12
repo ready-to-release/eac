@@ -28,6 +28,6 @@ See [commit-message](../get/commit-message.md#custom-prompts) for detailed custo
 
 ## See Also
 
-- [validate specs](../validate/specs.md)
+
 - [test](../test/test.md)
 - [create Commands](../categories/create.md)

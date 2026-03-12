@@ -10,7 +10,7 @@ Definitions of key terms and concepts used throughout the documentation.
 
 A document capturing an important architectural decision, including context, decision, and consequences.
 
-See [Decision Records](./reference/eac/decision-records/index.md).
+See [Decision Records](./architecture/decisions/index.md).
 
 ### Artifact
 
@@ -89,12 +89,12 @@ Security testing that analyzes running applications to find vulnerabilities thro
 
 A representation of module dependencies showing which modules depend on others.
 
-Commands: [get dependencies](./reference/eac/commands/get/dependencies.md), [show dependencies](./reference/eac/commands/show/dependencies.md).
+Commands: [show dependencies](./reference/eac/commands/show/dependencies.md).
 
 ### Diataxis
 
 A documentation framework organizing content into tutorials, how-to guides, technical reference,
-and explanation. See [DR-004](./reference/eac/decision-records/dr004.md).
+and explanation. See [DR-004](./architecture/decisions/dr004.md).
 
 ### DORA Metrics
 
@@ -169,7 +169,7 @@ Used throughout commands to reference modules.
 
 A repository containing multiple related modules managed together.
 
-See [DR-001](./reference/eac/decision-records/dr001.md).
+See [DR-001](./architecture/decisions/dr001.md).
 
 ---
 
@@ -253,7 +253,7 @@ A reusable document structure with placeholder variables for generating document
 
 ### Trunk-Based Development
 
-A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/eac/decision-records/dr002.md).
+A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./architecture/decisions/dr002.md).
 
 ---
 
@@ -378,5 +378,5 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 - [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md) - Command organization
 - [Naming Conventions](./reference/eac/commands/overview/naming-conventions.md) - Command naming patterns
 - [EAC and CLIE](./reference/eac/architecture/index.md) - System architecture
-- [Decision Records](./reference/eac/decision-records/index.md) - Architectural decisions
+- [Decision Records](./architecture/decisions/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy

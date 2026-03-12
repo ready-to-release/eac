@@ -32,7 +32,6 @@ action:module:component:tool
 - `test:core:go:gotest` — Run Go unit tests for the core module
 - `lint:docs:markdown:markdownlint` — Lint documentation markdown
 
-**Source**: `go/core/workunit/unit_id.go`
 
 ### Output Directory
 
@@ -47,7 +46,6 @@ Examples:
 - `out/build/eac/go-go/` — contains cross-compiled binaries and `uow.manifest.json`
 - `out/test/core/go-gotest/` — contains test results and `uow.manifest.json`
 
-**Source**: `UnitID.OutDir()` in `go/core/workunit/unit_id.go`
 
 ### UoW Manifest
 
@@ -71,7 +69,6 @@ Every completed UoW produces a manifest at `{outdir}/uow.manifest.json`:
 }
 ```
 
-**Source**: `go/core/output/manifest.go`, `go/core/output/types.go`
 
 ### UoW Specification
 
@@ -84,7 +81,6 @@ Before execution, each UoW is described by a `UnitSpec`:
 | `Weight`    | Scheduling weight (CPU cost) for capacity management |
 | `Tags`      | Metadata tags for filtering and display              |
 
-**Source**: `go/core/workunit/unit_spec.go`
 
 ---
 
@@ -114,14 +110,6 @@ Command Entry Point (build.go / test.go / lint.go)
     │
     └── Output: manifests, artifacts, summaries
 ```
-
-**Source files**:
-
-- `go/clibase/orchestrator/orchestrator_core.go` — lifecycle management
-- `go/clibase/orchestrator/orchestrator_phases.go` — phase execution
-- `go/clibase/orchestrator/unit_scheduler_core.go` — scheduling loop
-- `go/clibase/orchestrator/unit_scheduler_execution.go` — UoW execution
-- `go/clibase/orchestrator/unit_scheduler_capacity.go` — capacity management
 
 ### Execution Phases
 
@@ -157,7 +145,6 @@ effective_weight = tool.resources.cpus * component.amp.{action}
 A UoW is scheduled only when both pools have sufficient capacity. When a
 UoW completes, its capacity is returned to both pools.
 
-**Source**: `go/clibase/capacity/dual_pool.go`
 
 ### Dependency Ordering
 
@@ -170,10 +157,9 @@ from two sources:
 2. **Cross-module** (`depends_on`): All UoWs in module A depend on all UoWs
    in module B. Example: `eac-ext` depends on `eac`.
 
-Cross-module dependencies are injected by `injectModuleDependencies()` in
-`go/clibase/cmdframework/execute.go`. This function reads each module's
-`depends_on` list and creates edges from every UoW in the dependent module
-to every UoW in the dependency module.
+Cross-module dependencies are derived from each module's `depends_on` list,
+creating edges from every UoW in the dependent module to every UoW in the
+dependency module.
 
 ### State Machine
 
@@ -188,7 +174,6 @@ Pending → Running → Completed
 The state manager tracks transitions and computes aggregate status for
 display and summary reporting.
 
-**Source**: `go/core/workunit/unit_state.go`, `go/core/workunit/state_manager.go`
 
 ---
 
@@ -211,8 +196,6 @@ and incremental change detection.
 8. Submit to orchestrator for parallel execution
 9. Collect results, write summaries
 ```
-
-**Source**: `go/cli/eac/impl/build/framework.go`, `go/cli/eac/impl/build/build.go`
 
 ### Module Scope Resolution
 
@@ -243,8 +226,6 @@ on the UoW's tool field.
 | `npm`      | `NpmHandler`               | TypeScript/JavaScript packages  |
 | `structurizr` | `StructurizrHandler`    | C4 architecture diagrams        |
 
-**Source**: `go/cli/eac/impl/build/unit_worker.go`,
-`go/cli/eac/impl/build/builders/`
 
 ---
 
@@ -263,7 +244,6 @@ Compiles Go binaries with cross-compilation support.
 
 **Output**: `out/build/{module}/go-go/{binary}-{os}-{arch}`
 
-**Source**: `go/cli/eac/impl/build/builders/go.go`
 
 ### Buildx Builder
 
@@ -293,15 +273,14 @@ The build context, Dockerfile path, platforms, tags, and cache settings all
 come from the module's `docker_build` configuration, with template defaults
 provided by the module's blueprint template (e.g., `container-multiarch`).
 
-**Source**: `go/cli/eac/impl/build/builders/buildx.go`
 
 ### Other Builders
 
-- **MkDocs** (`mkdocs.go`): Runs mkdocs-render-oci container for HTML/PDF
-- **Structurizr** (`structurizr.go`): Generates C4 diagram PNGs
-- **DrawIO** (`drawio.go`): Renders `.drawio` files to PNG
-- **Scripts** (`scripts.go`): Executes bash/pwsh build scripts
-- **PDF** (`pdf.go`): Generates PDF documents from markdown
+- **MkDocs**: Runs mkdocs-render-oci container for HTML/PDF
+- **Structurizr**: Generates C4 diagram PNGs
+- **DrawIO**: Renders `.drawio` files to PNG
+- **Scripts**: Executes bash/pwsh build scripts
+- **PDF**: Generates PDF documents from markdown
 
 ---
 
@@ -313,7 +292,6 @@ During build execution, the `OutputTracker` records artifacts as they are
 produced. Each artifact gets a SHA256 hash, type, and path recorded in the
 UoW manifest.
 
-**Source**: `go/core/output/tracker.go`
 
 ### Output Reader
 
@@ -327,7 +305,6 @@ queries like:
 This is used by the cache system to determine whether a UoW needs to
 re-execute.
 
-**Source**: `go/core/output/reader.go`
 
 ### Output Aggregation
 
@@ -337,7 +314,6 @@ Build summaries aggregate results across all UoWs:
 - Duration per UoW
 - Artifact inventory
 
-**Source**: `go/core/output/reader.go`, `go/core/output/types.go`
 
 ---
 

@@ -7,6 +7,7 @@ nav:
   - check-recent-run.md
   - ci.md
   - ci-dispatch-and-wait.md
+  - ci-schedule.md
   - ci-get-run-id.md
   - ci-summary-link.md
   - download-evidence-artifacts.md

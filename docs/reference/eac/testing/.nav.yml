@@ -1,6 +1,7 @@
 title: Testing
 nav:
   - index.md
+  - build-tags.md
   - test-suites.md
   - manual-tests.md
   - go

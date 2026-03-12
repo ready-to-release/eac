@@ -2,17 +2,6 @@
 
 <!-- book:cmd create design -->
 
-## How It Works
-
-The command uses AI generation with Structurizr DSL format support:
-
-- **Format**: Generates workspace.dsl files in valid Structurizr DSL syntax
-- **Validation**: Validates DSL syntax using Structurizr CLI (requires Docker)
-- **Retry**: If syntax validation fails, AI receives error feedback and regenerates corrected DSL
-- **Customization**: Uses three-tier prompt system for team-specific design approaches
-
-Supported formats: Structurizr DSL for C4 model diagrams (system context, container, component).
-
 ## Custom Prompts
 
 The design generation supports **three-tier prompt system** for customization:

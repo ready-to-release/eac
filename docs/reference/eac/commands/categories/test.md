@@ -596,7 +596,7 @@ eac test debug
 ## See Also
 
 - [build](../build/build.md) - Build modules before testing
-- [validate specs](../validate/specs.md) - Validate Gherkin specifications
+
 - [show tests](../show/tests.md) - List all tests
 - [show test-summary](../show/test-summary.md) - Test execution summary
 - [show test-timings](../show/test-timings.md) - Test performance analysis

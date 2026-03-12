@@ -79,7 +79,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <li><a href="reference/eac/architecture/index.md">EAC Architecture</a> - System overview and design</li>
 <li><a href="reference/eac/architecture/repository-layout.md">Repository Layout</a> - File structure</li>
 <li><a href="reference/eac/commands/index.md">Command Reference</a> - CLI commands</li>
-<li><a href="reference/eac/decision-records/index.md">Decision Records</a> - Architectural decisions</li>
+<li><a href="architecture/decisions/index.md">Decision Records</a> - Architectural decisions</li>
 </ul>
 </div>
 <div>

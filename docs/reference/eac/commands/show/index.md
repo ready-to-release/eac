@@ -29,6 +29,19 @@ Display repository information in human-readable format for interactive terminal
 | [show test-timings](./test-timings.md)           | Show test timing analysis                             |
 | [show tests](./tests.md)                         | Show all tests in table                               |
 | [show valid-commands](./valid-commands.md)       | Show all valid commands in table                      |
+| [show approve-summary](./approve-summary.md)     | Generate release approval summary                     |
+| [show ci-results](./ci-results.md)              | Display CI results                                    |
+| [show ci-summary](./ci-summary.md)              | Generate CI workflow summary for a module             |
+| [show components](./components.md)              | Display all components grouped by module              |
+| [show dependency-ci-summary](./dependency-ci-summary.md) | Generate dependency CI check summary         |
+| [show deps-setup-summary](./deps-setup-summary.md) | Generate dependencies setup summary               |
+| [show ghosts](./ghosts.md)                      | Display ghost files                                   |
+| [show lint-summary](./lint-summary.md)          | Generate lint summary for a module                    |
+| [show release-summary](./release-summary.md)    | Generate release summary from layers JSON             |
+| [show scan-summary](./scan-summary.md)          | Generate security scan summary for a module           |
+| [show test-results](./test-results.md)          | Display test results with coverage                    |
+| [show trigger-summary](./trigger-summary.md)    | Generate release trigger summary                      |
+| [show units](./units.md)                        | Display units of work for a framework                 |
 | [show workspaces](./workspaces.md)               | List all workspaces and their status                  |
 
 ## Quick Examples

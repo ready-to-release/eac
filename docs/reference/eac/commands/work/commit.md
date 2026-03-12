@@ -2,17 +2,36 @@
 
 <!-- book:cmd work commit -->
 
-## How It Works
+Commits changes in the current workspace using AI to generate semantic commit messages that follow project conventions.
 
-Commits changes with AI-generated commit messages:
+By default, commits only staged changes. Use `--all` to stage all changes before committing. If `--message` is provided, the AI generation step is skipped.
 
-- **Change Analysis**: Analyzes staged changes to understand intent
-- **Message Generation**: Uses AI to generate conventional commit message
-- **Module Detection**: Identifies affected modules for multi-module commits
-- **Validation**: Ensures message follows conventional commits format
-- **Customization**: Supports custom prompts via three-tier system
+## Usage
 
-Streamlines commit workflow in feature workspaces.
+```bash
+eac work commit [flags]
+```
+
+## Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Stage all changes before committing |
+| `--message` | `-m` | Custom commit message (skips AI generation) |
+| `--debug` | `-d` | Enable debug mode |
+
+## Examples
+
+```bash
+# Commit staged changes with AI-generated message
+eac work commit
+
+# Stage and commit all changes
+eac work commit --all
+
+# Commit with a custom message
+eac work commit -m "fix: resolve authentication bug"
+```
 
 ## See Also
 

@@ -95,4 +95,3 @@ eac show artifacts src-auth
 
 - [`build`](../../../../reference/eac/commands/build/build.md) - Full command reference
 - [`show artifacts`](../../../../reference/eac/commands/show/artifacts.md) - View artifacts
-- [`validate artifacts`](../../../../reference/eac/commands/validate/artifacts.md) - Verify artifacts

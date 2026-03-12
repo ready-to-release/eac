@@ -7,10 +7,9 @@ nav:
   - dependencies.md
   - component-kinds.md
   - commands-framework.md
-  - command-implementation.md
-  - adapters-system.md
   - repository-layout.md
   - build-execution.md
   - cache-system.md
   - component-resolution.md
+  - tool-system.md
   - viewing-diagrams.md

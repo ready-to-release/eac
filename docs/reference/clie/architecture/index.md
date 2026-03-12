@@ -17,41 +17,6 @@ The architecture focuses on:
 
 ![CLIE CLI Ecosystem Overview](../../../assets/clie/clie-overview.drawio.png)
 
-The diagram above shows the CLIE CLI ecosystem end-to-end. The lettered zones map to these steps:
-
-| Zone    | Label               | What happens                                                                                                 |
-| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **A**   | binary release      | The `clie` binary is built and published as a GitHub Release                                                 |
-| **B**   | distribute cli      | Platform-specific installers deliver the binary to Windows, macOS, and Linux                                 |
-| **C**   | install cli         | The user installs `clie` locally, adds it to PATH, and can self-update via `clie update self`                |
-| **D**   | command             | The user types a command such as `clie eac show modules` in their shell                                      |
-| **E**   | cli loader          | The Go binary (Cobra/Viper) loads `.clie/clie.yml`, discovers configured extensions, and routes the command  |
-| **F**   | container registry  | The extension image is fetched from GitHub Container Registry — pinned to a specific SHA for reproducibility |
-| **G**   | cli extension       | The command executes inside the extension container; output streams back to the host shell                   |
-| **H/N** | host docker service | Docker manages the container lifecycle on the host                                                           |
-| **I**   | host shell          | The user's shell (bash, zsh, pwsh) is the entry point                                                        |
-| **J**   | host repository     | The repository on disk is mounted into the container at `/workspace`                                         |
-
-The bottom row of language icons indicates that extensions can be written in any language — the container boundary means the host only needs Docker and `clie`.
-
-The circled numbers trace two execution sequences through the diagram:
-
-**Setup sequence** (one-time, zones A → B → C):
-
-1. Binary is built and released (A)
-2. Installer delivers it to the host machine (B)
-3. User installs `clie`, adds it to PATH (C)
-
-**Run sequence** (every command, zones D → E → F → H → G):
-
-1. User types a command in the shell — e.g. `clie eac show modules` (D)
-2. CLI loads `.clie/clie.yml`, resolves the extension, checks the registry for the image (E → F)
-3. Docker pulls the image if needed, creates and starts the container with the repository mounted (H → G)
-
-Output streams back from the container (G) through the host shell (I) to the user.
-
----
-
 ## Core Design Principles
 
 ### 1. Container Isolation
@@ -87,60 +52,6 @@ Extensions are self-contained Docker images:
 | ---------------------------- | --------------------------------------------- |
 | [CLIE CLI Module](module.md) | Detailed module architecture with C4 diagrams |
 
-## Key Components
-
-### CLI Core
-
-The CLIE binary provides:
-
-| Component            | Technology | Responsibility                                  |
-| -------------------- | ---------- | ----------------------------------------------- |
-| Command Parser       | Cobra      | Command routing and argument parsing            |
-| Configuration Loader | Viper      | Load `.clie/clie.yml` and merge configs     |
-| Docker Orchestrator  | Docker SDK | Container lifecycle (pull, create, start, stop) |
-| Git Discovery        | go-git     | Find repository root and mount points           |
-
-### Extension Interface
-
-Extensions communicate via:
-
-- **stdin/stdout**: Command input and output
-- **Volume mounts**: Repository access at `/workspace`
-- **Environment variables**: Configuration and secrets
-- **Exit codes**: Success (0) or failure (non-zero)
-
-**Configuration example** (`.clie/clie.yml`):
-
-```yaml
-extensions:
-  - name: eac
-    image: eac-ext:latest
-    load_local: true # Build from Dockerfile for development
-```
-
-### Execution Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant CLI as CLIE CLI
-    participant Docker
-    participant Container as Extension Container
-
-    User->>CLI: clie eac build
-    CLI->>CLI: Parse command (eac = extension, build = subcommand)
-    CLI->>CLI: Load .clie/clie.yml
-    CLI->>CLI: Find git repository root
-    CLI->>Docker: Pull/build eac-ext:latest
-    Docker-->>CLI: Image ready
-    CLI->>Docker: Create container with volume mount
-    CLI->>Container: Execute: /app/eac build
-    Container->>Container: Run command logic
-    Container-->>CLI: Output + exit code
-    CLI->>Docker: Remove container
-    CLI-->>User: Display output
-```
-
 ## Command Discovery
 
 Extensions register commands dynamically:
@@ -151,58 +62,6 @@ Extensions register commands dynamically:
 4. Extension handles subcommand routing internally
 
 No central registry needed - extensions are self-documenting.
-
-## Configuration Hierarchy
-
-CLIE loads configuration from multiple sources (precedence order):
-
-1. **Command-line flags** (highest priority)
-2. **Environment variables** (`CLIE_*`)
-3. **Project config** (`.clie/clie.yml`)
-4. **User config** (`~/.clie/config.yml`)
-5. **System defaults** (hardcoded fallbacks)
-
-## Design Patterns
-
-### Repository as Volume
-
-```yaml
-# Docker container configuration
-volumes:
-  - /absolute/path/to/repo:/workspace
-working_dir: /workspace
-```
-
-Benefits:
-
-- Native file I/O performance
-- Preserves file permissions
-- Direct git operations
-- Simple debugging (files visible on host)
-
-### Stateless Containers
-
-Containers are ephemeral:
-
-- Created per command execution
-- Removed after completion
-- No state persists between runs
-- Cache stored in repository (`.clie/cache/`)
-
-### Extension Composition
-
-Extensions can invoke other extensions:
-
-```bash
-# Inside eac-ext container
-clie eac show modules  # Calls back to CLIE CLI
-```
-
-Enables:
-
-- Reusable command building blocks
-- Cross-extension workflows
-- Dependency management
 
 ## Performance Optimizations
 
@@ -247,16 +106,6 @@ Extensions execute arbitrary code - users must trust extension authors.
 - Local build option (`load_local: true`)
 - No automatic updates (explicit version pins)
 
-## Technology Stack
-
-| Component         | Technology        |
-| ----------------- | ----------------- |
-| CLI Framework     | Go (Cobra)        |
-| Configuration     | Viper (YAML/ENV)  |
-| Container Runtime | Docker Engine API |
-| Git Integration   | go-git / git CLI  |
-| Logging           | logrus            |
-
 ## Error Handling
 
 CLIE uses exit codes for error signaling:
@@ -270,18 +119,6 @@ CLIE uses exit codes for error signaling:
 | 125+      | Container exit code |
 
 Errors propagate from extension to CLI to user.
-
-## Extension Development
-
-To create an extension:
-
-1. Create Dockerfile with extension binary
-2. Add entry to `.clie/clie.yml`
-3. Implement command handling
-4. Build and test locally
-5. Publish Docker image (optional)
-
-See [Creating Extensions](../../../how-to-guides/clie/creating-extensions.md) for details.
 
 ## Comparison with Alternatives
 

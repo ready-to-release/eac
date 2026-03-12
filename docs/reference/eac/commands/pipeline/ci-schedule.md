@@ -16,51 +16,6 @@ Schedule and dispatch CI workflows with concurrency limits and dependency-aware 
 
 This is the CI-level analog of the local DependencyScheduler, handling the full dispatch lifecycle.
 
-## How It Works
-
-### Scheduling Algorithm
-
-```text
-┌─────────────────┐
-│ Filter Modules  │  Check CI cache, identify what needs dispatch
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ Build Dep Graph │  Analyze dependencies from repository config
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ Initial Batch   │  Dispatch modules with no pending dependencies
-└────────┬────────┘
-         │
-    ┌────▼────┐
-    │  Poll   │◄─────┐
-    └────┬────┘      │
-         │           │
-    ┌────▼────┐      │
-    │Complete?│──No──┘
-    └────┬────┘
-         Yes
-    ┌────▼────┐
-    │ Report  │  Summary of completed/failed/cached modules
-    └─────────┘
-```
-
-### Concurrency Control
-
-- **Default**: 6 concurrent workflows
-- **Configurable**: Adjust with `--max-concurrent`
-- **Dependency-aware**: Only dispatches when dependencies complete
-- **Cascade handling**: Skips dependent modules if parent fails
-
-### CI Cache Integration
-
-Uses the same caching logic as `get ci-dispatch`:
-
-- Checks for successful CI runs at the target SHA
-- Skips dispatch for modules with valid cached builds
-- Reports cached modules separately
-
 ## Usage
 
 ```bash
@@ -183,33 +138,6 @@ pipeline ci schedule \
   --directly-changed "core" \
   --mock '{"core": {"has_ci": true, "ci_passed": true}}'
 ```
-
-## Comparison with pipeline ci
-
-| Feature               | `pipeline ci`         | `pipeline ci schedule`   |
-| --------------------- | --------------------- | ------------------------ |
-| Dispatch Strategy     | Wave-based (by layer) | Pull-based (by capacity) |
-| Concurrency Control   | ❌ No                 | ✅ Yes (configurable)    |
-| Dependency Awareness  | ✅ Yes (layers)       | ✅ Yes (graph)           |
-| Early Failure Cascade | ⚠️ Partial            | ✅ Full                  |
-| Resource Efficiency   | Lower                 | Higher                   |
-| Use Case              | Simple pipelines      | Complex, large-scale CI  |
-
-## When to Use
-
-**Use `pipeline ci schedule` when:**
-
-- Building many modules with complex dependencies
-- Need to limit concurrent GitHub Actions usage
-- Want resource-efficient CI execution
-- Have long-running build pipelines
-- Need fine-grained control over dispatch timing
-
-**Use `pipeline ci` when:**
-
-- Simple pipeline with few modules
-- Prefer straightforward wave-based execution
-- Don't need concurrency limits
 
 ## Common Workflows
 
