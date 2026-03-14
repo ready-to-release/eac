@@ -14,7 +14,7 @@ require (
 	github.com/ready-to-release/eac/go/commands/base v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
