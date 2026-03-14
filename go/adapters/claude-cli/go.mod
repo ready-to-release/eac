@@ -1,6 +1,6 @@
 module github.com/ready-to-release/eac/go/adapters/claude-cli
 
-go 1.24.4
+go 1.25.0
 
 require (
 	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0

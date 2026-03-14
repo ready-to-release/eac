@@ -1,6 +1,6 @@
 module github.com/ready-to-release/eac/go/adapters/claude
 
-go 1.24.4
+go 1.25.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
