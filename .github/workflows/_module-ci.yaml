@@ -347,7 +347,7 @@ jobs:
       # 10. Scan - runs in same job, build artifacts already on disk
       - name: Setup Docker Buildx (for scans)
         if: steps.ci-config.outputs.scans != '' && steps.ci-config.outputs.is-container != 'true' && steps.ci-config.outputs.is-multi-container != 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Scan Module
         id: scan-step
