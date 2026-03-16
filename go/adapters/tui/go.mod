@@ -11,7 +11,7 @@ require (
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5
-	golang.org/x/term v0.40.0
+	golang.org/x/term v0.41.0
 )
 
 require (
