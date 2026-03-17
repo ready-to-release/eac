@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -25,10 +26,25 @@ func Parse(repoRoot string) (*DependabotConfig, error) {
 	return ParseBytes(data)
 }
 
+// parseContext tracks which YAML list field is currently being filled.
+type parseContext int
+
+const (
+	ctxNone parseContext = iota
+	ctxLabels
+	ctxReviewers
+	ctxAssignees
+	ctxDirectories
+	ctxGroupPatterns
+	ctxGroupExcludePatterns
+)
+
 // ParseBytes parses dependabot.yml content from raw bytes.
 func ParseBytes(data []byte) (*DependabotConfig, error) {
 	config := &DependabotConfig{Version: 2}
 	var current *UpdateEntry
+	ctx := ctxNone
+	currentGroupName := ""
 	lines := strings.Split(string(data), "\n")
 
 	for _, line := range lines {
@@ -54,6 +70,8 @@ func ParseBytes(data []byte) (*DependabotConfig, error) {
 			}
 			current = &UpdateEntry{}
 			current.PackageEcosystem = extractYAMLValue(trimmed[len("- package-ecosystem:"):])
+			ctx = ctxNone
+			currentGroupName = ""
 			continue
 		}
 
@@ -61,26 +79,86 @@ func ParseBytes(data []byte) (*DependabotConfig, error) {
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "directory:") {
+		if strings.HasPrefix(trimmed, "directory:") && !strings.HasPrefix(trimmed, "directories:") {
 			current.Directory = extractYAMLValue(trimmed[len("directory:"):])
+			ctx = ctxNone
+		} else if strings.HasPrefix(trimmed, "directories:") {
+			ctx = ctxDirectories
 		} else if strings.HasPrefix(trimmed, "interval:") {
 			current.Schedule.Interval = extractYAMLValue(trimmed[len("interval:"):])
+			ctx = ctxNone
 		} else if strings.HasPrefix(trimmed, "day:") {
 			current.Schedule.Day = extractYAMLValue(trimmed[len("day:"):])
+			ctx = ctxNone
 		} else if strings.HasPrefix(trimmed, "time:") {
 			current.Schedule.Time = extractYAMLValue(trimmed[len("time:"):])
+			ctx = ctxNone
 		} else if strings.HasPrefix(trimmed, "timezone:") {
 			current.Schedule.Timezone = extractYAMLValue(trimmed[len("timezone:"):])
+			ctx = ctxNone
 		} else if strings.HasPrefix(trimmed, "prefix:") {
 			if current.CommitMessage == nil {
 				current.CommitMessage = &CommitMessage{}
 			}
 			current.CommitMessage.Prefix = extractYAMLValue(trimmed[len("prefix:"):])
-		} else if strings.HasPrefix(trimmed, "- \"") || strings.HasPrefix(trimmed, "- '") || (strings.HasPrefix(trimmed, "- ") && !strings.Contains(trimmed, ":")) {
-			// This is a list item (labels, reviewers, etc.)
+			ctx = ctxNone
+		} else if trimmed == "labels:" {
+			ctx = ctxLabels
+		} else if trimmed == "reviewers:" {
+			ctx = ctxReviewers
+		} else if trimmed == "assignees:" {
+			ctx = ctxAssignees
+		} else if trimmed == "groups:" {
+			if current.Groups == nil {
+				current.Groups = make(map[string]Group)
+			}
+			ctx = ctxNone
+		} else if trimmed == "patterns:" {
+			ctx = ctxGroupPatterns
+		} else if trimmed == "exclude-patterns:" {
+			ctx = ctxGroupExcludePatterns
+		} else if strings.HasPrefix(trimmed, "group-by:") {
+			if currentGroupName != "" && current.Groups != nil {
+				g := current.Groups[currentGroupName]
+				g.GroupBy = extractYAMLValue(trimmed[len("group-by:"):])
+				current.Groups[currentGroupName] = g
+			}
+		} else if strings.HasSuffix(trimmed, ":") && !strings.HasPrefix(trimmed, "- ") &&
+			trimmed != "schedule:" && trimmed != "commit-message:" &&
+			trimmed != "open-pull-requests-limit:" {
+			// Could be a group name like "golang-x:" or "all-go-deps:"
+			name := strings.TrimSuffix(trimmed, ":")
+			if current.Groups != nil {
+				currentGroupName = name
+				if _, exists := current.Groups[name]; !exists {
+					current.Groups[name] = Group{}
+				}
+			}
+		} else if strings.HasPrefix(trimmed, "- ") {
 			val := extractYAMLValue(trimmed[len("- "):])
-			// We need context of which list we're in; use a simple heuristic based on the last key
-			if current.Labels != nil || current.Reviewers == nil {
+			switch ctx {
+			case ctxDirectories:
+				current.Directories = append(current.Directories, val)
+			case ctxLabels:
+				current.Labels = append(current.Labels, val)
+			case ctxReviewers:
+				current.Reviewers = append(current.Reviewers, val)
+			case ctxAssignees:
+				current.Assignees = append(current.Assignees, val)
+			case ctxGroupPatterns:
+				if currentGroupName != "" && current.Groups != nil {
+					g := current.Groups[currentGroupName]
+					g.Patterns = append(g.Patterns, val)
+					current.Groups[currentGroupName] = g
+				}
+			case ctxGroupExcludePatterns:
+				if currentGroupName != "" && current.Groups != nil {
+					g := current.Groups[currentGroupName]
+					g.ExcludePatterns = append(g.ExcludePatterns, val)
+					current.Groups[currentGroupName] = g
+				}
+			default:
+				// Legacy fallback: assume labels
 				current.Labels = append(current.Labels, val)
 			}
 		}
@@ -135,7 +213,14 @@ func FormatConfig(config *DependabotConfig) string {
 
 		// Write the entry
 		fmt.Fprintf(&b, "  - package-ecosystem: %q\n", u.PackageEcosystem)
-		fmt.Fprintf(&b, "    directory: %q\n", u.Directory)
+		if len(u.Directories) > 0 {
+			b.WriteString("    directories:\n")
+			for _, d := range u.Directories {
+				fmt.Fprintf(&b, "      - %q\n", d)
+			}
+		} else {
+			fmt.Fprintf(&b, "    directory: %q\n", u.Directory)
+		}
 		b.WriteString("    schedule:\n")
 		fmt.Fprintf(&b, "      interval: %q\n", u.Schedule.Interval)
 		if u.Schedule.Day != "" {
@@ -172,6 +257,33 @@ func FormatConfig(config *DependabotConfig) string {
 		if u.OpenPullRequests != nil {
 			fmt.Fprintf(&b, "    open-pull-requests-limit: %d\n", *u.OpenPullRequests)
 		}
+		if len(u.Groups) > 0 {
+			b.WriteString("    groups:\n")
+			names := make([]string, 0, len(u.Groups))
+			for name := range u.Groups {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for _, name := range names {
+				g := u.Groups[name]
+				fmt.Fprintf(&b, "      %s:\n", name)
+				if len(g.Patterns) > 0 {
+					b.WriteString("        patterns:\n")
+					for _, p := range g.Patterns {
+						fmt.Fprintf(&b, "          - %q\n", p)
+					}
+				}
+				if g.GroupBy != "" {
+					fmt.Fprintf(&b, "        group-by: %q\n", g.GroupBy)
+				}
+				if len(g.ExcludePatterns) > 0 {
+					b.WriteString("        exclude-patterns:\n")
+					for _, p := range g.ExcludePatterns {
+						fmt.Fprintf(&b, "          - %q\n", p)
+					}
+				}
+			}
+		}
 
 		prevEcosystem = ecosystem
 	}
@@ -185,6 +297,9 @@ func entryComment(u UpdateEntry) string {
 	case "github-actions":
 		return "GitHub Actions"
 	case "gomod":
+		if u.IsConsolidated() {
+			return "Go modules - all workspace modules (consolidated)"
+		}
 		dir := strings.TrimPrefix(u.Directory, "/")
 		return fmt.Sprintf("Go modules - %s", dir)
 	case "npm":

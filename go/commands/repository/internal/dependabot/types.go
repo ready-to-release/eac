@@ -12,14 +12,30 @@ type DependabotConfig struct {
 
 // UpdateEntry represents a single ecosystem update configuration in dependabot.yml.
 type UpdateEntry struct {
-	PackageEcosystem string         `yaml:"package-ecosystem"`
-	Directory        string         `yaml:"directory"`
-	Schedule         Schedule       `yaml:"schedule"`
-	CommitMessage    *CommitMessage `yaml:"commit-message,omitempty"`
-	Labels           []string       `yaml:"labels,omitempty"`
-	Reviewers        []string       `yaml:"reviewers,omitempty"`
-	Assignees        []string       `yaml:"assignees,omitempty"`
-	OpenPullRequests *int           `yaml:"open-pull-requests-limit,omitempty"`
+	PackageEcosystem string            `yaml:"package-ecosystem"`
+	Directory        string            `yaml:"directory,omitempty"`
+	Directories      []string          `yaml:"directories,omitempty"`
+	Schedule         Schedule          `yaml:"schedule"`
+	CommitMessage    *CommitMessage    `yaml:"commit-message,omitempty"`
+	Labels           []string          `yaml:"labels,omitempty"`
+	Reviewers        []string          `yaml:"reviewers,omitempty"`
+	Assignees        []string          `yaml:"assignees,omitempty"`
+	OpenPullRequests *int              `yaml:"open-pull-requests-limit,omitempty"`
+	Groups           map[string]Group  `yaml:"groups,omitempty"`
+}
+
+// Group represents a dependabot dependency group.
+type Group struct {
+	Patterns        []string `yaml:"patterns,omitempty"`
+	GroupBy         string   `yaml:"group-by,omitempty"`
+	ExcludePatterns []string `yaml:"exclude-patterns,omitempty"`
+}
+
+// IsConsolidated returns true if this entry uses directories: (plural)
+// rather than directory: (singular). Such entries are externally managed
+// and skipped by validate/update comparison logic.
+func (u UpdateEntry) IsConsolidated() bool {
+	return len(u.Directories) > 0
 }
 
 // Schedule defines how often Dependabot checks for updates.
@@ -46,18 +62,23 @@ func (e EcosystemEntry) Key() string {
 	return e.Ecosystem + ":" + e.Directory
 }
 
-// Key returns a unique identifier for matching entries.
+// Key returns a unique identifier for matching entries. For consolidated
+// entries, returns ecosystem:* to indicate it covers multiple directories.
 func (u UpdateEntry) Key() string {
+	if u.IsConsolidated() {
+		return u.PackageEcosystem + ":*"
+	}
 	return u.PackageEcosystem + ":" + u.Directory
 }
 
 // ComparisonReport contains the results of comparing declared vs discovered entries.
 type ComparisonReport struct {
-	Declared   []UpdateEntry
-	Discovered []EcosystemEntry
-	Missing    []EcosystemEntry // In filesystem but not in dependabot.yml
-	Extra      []UpdateEntry    // In dependabot.yml but no filesystem source
-	Matched    []EcosystemEntry // Present in both
+	Declared     []UpdateEntry
+	Discovered   []EcosystemEntry
+	Missing      []EcosystemEntry // In filesystem but not in dependabot.yml
+	Extra        []UpdateEntry    // In dependabot.yml but no filesystem source
+	Matched      []EcosystemEntry // Present in both
+	Consolidated []UpdateEntry    // Entries using directories: (plural), externally managed
 }
 
 // HasIssues returns true if there are missing or extra entries.

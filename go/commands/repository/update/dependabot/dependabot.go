@@ -108,6 +108,13 @@ func UpdateDependabot() int {
 
 	var newUpdates []dependabot.UpdateEntry
 
+	// Keep consolidated entries unchanged (externally managed)
+	for _, u := range config.Updates {
+		if u.IsConsolidated() {
+			newUpdates = append(newUpdates, u)
+		}
+	}
+
 	// Keep matched entries (preserves user customizations)
 	for _, m := range report.Matched {
 		if existing, ok := existingByKey[m.Key()]; ok {

@@ -1,0 +1,50 @@
+name: dependabot-tidy
+
+on:
+  pull_request:
+    paths:
+      - "**/go.mod"
+      - "**/go.sum"
+      - "go.work"
+      - "go.work.sum"
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: false
+
+      - name: go work sync
+        run: go work sync
+
+      - name: go mod tidy (all workspace modules)
+        run: |
+          # Read all module directories from go.work
+          grep -E '^\s+\.' go.work | sed 's|[[:space:]]*||;s|^\./||' | while read -r mod; do
+            echo "Tidying $mod"
+            (cd "$mod" && go mod tidy)
+          done
+
+      - name: Commit tidy changes if any
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "chore(deps): go mod tidy after dependabot update"
+            git push
+          else
+            echo "No tidy changes needed"
+          fi

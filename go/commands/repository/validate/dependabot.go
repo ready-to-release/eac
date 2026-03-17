@@ -62,7 +62,7 @@ func ValidateDependabot() int {
 
 	report := dependabot.Compare(config.Updates, discovered)
 
-	printDependabotReport(report, len(config.Updates), len(discovered))
+	printDependabotReport(report, len(config.Updates), len(discovered), len(report.Consolidated))
 
 	if report.HasIssues() {
 		return 1
@@ -70,7 +70,7 @@ func ValidateDependabot() int {
 	return 0
 }
 
-func printDependabotReport(report *dependabot.ComparisonReport, declared, discovered int) {
+func printDependabotReport(report *dependabot.ComparisonReport, declared, discovered, consolidated int) {
 	var missingItems []string
 	for _, m := range report.Missing {
 		missingItems = append(missingItems,
@@ -107,14 +107,22 @@ func printDependabotReport(report *dependabot.ComparisonReport, declared, discov
 			},
 			SuccessMessage: "All dependency sources are covered by dependabot!",
 		},
-		[]string{
-			fmt.Sprintf("Declared entries in dependabot.yml: %d", declared),
-			fmt.Sprintf("Discovered dependency sources: %d", discovered),
-			fmt.Sprintf("Missing entries: %d", len(report.Missing)),
-			fmt.Sprintf("Extra entries: %d", len(report.Extra)),
-			fmt.Sprintf("Matched entries: %d", len(report.Matched)),
-		},
+		summaryLines(declared, discovered, consolidated, report),
 	)
+}
+
+func summaryLines(declared, discovered, consolidated int, report *dependabot.ComparisonReport) []string {
+	lines := []string{
+		fmt.Sprintf("Declared entries in dependabot.yml: %d", declared),
+		fmt.Sprintf("Discovered dependency sources: %d", discovered),
+		fmt.Sprintf("Missing entries: %d", len(report.Missing)),
+		fmt.Sprintf("Extra entries: %d", len(report.Extra)),
+		fmt.Sprintf("Matched entries: %d", len(report.Matched)),
+	}
+	if consolidated > 0 {
+		lines = append(lines, fmt.Sprintf("Consolidated entries (externally managed): %d", consolidated))
+	}
+	return lines
 }
 
 func printDependabotUsage() {

@@ -1,11 +1,48 @@
 package dependabot
 
 // Compare produces a ComparisonReport from declared (dependabot.yml) and discovered (filesystem) entries.
+// Consolidated entries (using directories: rather than directory:) are handled specially:
+// their listed directories are considered covered and excluded from the 1:1 comparison.
 func Compare(declared []UpdateEntry, discovered []EcosystemEntry) *ComparisonReport {
-	report := &ComparisonReport{
-		Declared:   declared,
-		Discovered: discovered,
+	// Partition declared entries into singular vs consolidated
+	var singular []UpdateEntry
+	var consolidated []UpdateEntry
+	for _, d := range declared {
+		if d.IsConsolidated() {
+			consolidated = append(consolidated, d)
+		} else {
+			singular = append(singular, d)
+		}
 	}
+
+	// Build set of directories covered by consolidated entries
+	coveredDirs := make(map[string]bool)
+	for _, c := range consolidated {
+		for _, dir := range c.Directories {
+			coveredDirs[c.PackageEcosystem+":"+dir] = true
+		}
+	}
+
+	// Filter discovered: remove entries covered by a consolidated entry
+	var uncoveredDiscovered []EcosystemEntry
+	for _, e := range discovered {
+		if coveredDirs[e.Key()] {
+			continue
+		}
+		uncoveredDiscovered = append(uncoveredDiscovered, e)
+	}
+
+	// Run the 1:1 comparison on the remainder
+	report := compareExact(singular, uncoveredDiscovered)
+	report.Declared = declared
+	report.Discovered = discovered
+	report.Consolidated = consolidated
+	return report
+}
+
+// compareExact performs 1:1 key matching between declared and discovered entries.
+func compareExact(declared []UpdateEntry, discovered []EcosystemEntry) *ComparisonReport {
+	report := &ComparisonReport{}
 
 	declaredSet := make(map[string]UpdateEntry, len(declared))
 	for _, d := range declared {

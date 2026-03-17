@@ -119,6 +119,50 @@ func TestCompare(t *testing.T) {
 	}
 }
 
+func TestCompare_ConsolidatedEntryCoversAllDirectories(t *testing.T) {
+	declared := []UpdateEntry{
+		{
+			PackageEcosystem: "gomod",
+			Directories:      []string{"/go/core", "/go/cli/eac", "/go/clibase"},
+		},
+		{PackageEcosystem: "npm", Directory: "/web"},
+	}
+	discovered := []EcosystemEntry{
+		{Ecosystem: "gomod", Directory: "/go/core"},
+		{Ecosystem: "gomod", Directory: "/go/cli/eac"},
+		{Ecosystem: "gomod", Directory: "/go/clibase"},
+		{Ecosystem: "npm", Directory: "/web"},
+	}
+
+	report := Compare(declared, discovered)
+
+	assert.Empty(t, report.Missing, "no missing: all gomod dirs covered by consolidated entry")
+	assert.Empty(t, report.Extra, "no extra")
+	assert.Len(t, report.Matched, 1, "npm matched")
+	assert.Len(t, report.Consolidated, 1, "one consolidated entry")
+	assert.False(t, report.HasIssues())
+}
+
+func TestCompare_ConsolidatedEntryDoesNotCoverNewModule(t *testing.T) {
+	declared := []UpdateEntry{
+		{
+			PackageEcosystem: "gomod",
+			Directories:      []string{"/go/core", "/go/cli/eac"},
+		},
+	}
+	discovered := []EcosystemEntry{
+		{Ecosystem: "gomod", Directory: "/go/core"},
+		{Ecosystem: "gomod", Directory: "/go/cli/eac"},
+		{Ecosystem: "gomod", Directory: "/go/new-module"},
+	}
+
+	report := Compare(declared, discovered)
+
+	assert.Len(t, report.Missing, 1, "new module not covered")
+	assert.Equal(t, "/go/new-module", report.Missing[0].Directory)
+	assert.True(t, report.HasIssues())
+}
+
 func TestCompare_MissingContainsCorrectEntries(t *testing.T) {
 	declared := []UpdateEntry{
 		{PackageEcosystem: "gomod", Directory: "/go/core"},

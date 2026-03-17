@@ -125,6 +125,74 @@ updates:
 		assert.Equal(t, "/containers/app", config.Updates[1].Directory)
 	})
 
+	t.Run("consolidated entry with directories and groups", func(t *testing.T) {
+		input := `version: 2
+
+updates:
+  - package-ecosystem: "gomod"
+    directories:
+      - "/go/core"
+      - "/go/cli/eac"
+      - "/go/clibase"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+    groups:
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
+      all-go-deps:
+        group-by: "dependency-name"
+`
+		config, err := ParseBytes([]byte(input))
+		require.NoError(t, err)
+
+		require.Len(t, config.Updates, 1)
+		u := config.Updates[0]
+		assert.Equal(t, "gomod", u.PackageEcosystem)
+		assert.Empty(t, u.Directory)
+		assert.Equal(t, []string{"/go/core", "/go/cli/eac", "/go/clibase"}, u.Directories)
+		assert.Equal(t, "weekly", u.Schedule.Interval)
+		assert.Equal(t, "monday", u.Schedule.Day)
+		assert.Equal(t, []string{"dependencies", "go"}, u.Labels)
+		assert.True(t, u.IsConsolidated())
+
+		require.Len(t, u.Groups, 2)
+		assert.Equal(t, []string{"golang.org/x/*"}, u.Groups["golang-x"].Patterns)
+		assert.Equal(t, "dependency-name", u.Groups["all-go-deps"].GroupBy)
+	})
+
+	t.Run("mixed singular and consolidated entries", func(t *testing.T) {
+		input := `version: 2
+
+updates:
+  - package-ecosystem: "gomod"
+    directories:
+      - "/go/core"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+`
+		config, err := ParseBytes([]byte(input))
+		require.NoError(t, err)
+
+		require.Len(t, config.Updates, 2)
+		assert.True(t, config.Updates[0].IsConsolidated())
+		assert.False(t, config.Updates[1].IsConsolidated())
+	})
+
 	t.Run("values without quotes", func(t *testing.T) {
 		input := `version: 2
 updates:
@@ -342,6 +410,69 @@ func TestFormatConfig(t *testing.T) {
 		assert.Contains(t, output, `- "bob"`)
 		assert.Contains(t, output, "assignees:")
 		assert.Contains(t, output, `- "charlie"`)
+	})
+
+	t.Run("consolidated entry formats directories and groups", func(t *testing.T) {
+		config := &DependabotConfig{
+			Version: 2,
+			Updates: []UpdateEntry{
+				{
+					PackageEcosystem: "gomod",
+					Directories:      []string{"/go/core", "/go/cli/eac"},
+					Schedule:         Schedule{Interval: "weekly", Day: "monday"},
+					CommitMessage:    &CommitMessage{Prefix: "chore(deps)"},
+					Labels:           []string{"dependencies", "go"},
+					Groups: map[string]Group{
+						"golang-x":    {Patterns: []string{"golang.org/x/*"}},
+						"all-go-deps": {GroupBy: "dependency-name"},
+					},
+				},
+			},
+		}
+
+		output := FormatConfig(config)
+
+		assert.Contains(t, output, "# Go modules - all workspace modules (consolidated)")
+		assert.Contains(t, output, "directories:")
+		assert.Contains(t, output, `- "/go/core"`)
+		assert.Contains(t, output, `- "/go/cli/eac"`)
+		assert.NotContains(t, output, "directory:")
+		assert.Contains(t, output, "groups:")
+		assert.Contains(t, output, "golang-x:")
+		assert.Contains(t, output, `- "golang.org/x/*"`)
+		assert.Contains(t, output, "all-go-deps:")
+		assert.Contains(t, output, `group-by: "dependency-name"`)
+	})
+
+	t.Run("consolidated entry roundtrips through format and parse", func(t *testing.T) {
+		config := &DependabotConfig{
+			Version: 2,
+			Updates: []UpdateEntry{
+				{
+					PackageEcosystem: "gomod",
+					Directories:      []string{"/go/core", "/go/cli/eac"},
+					Schedule:         Schedule{Interval: "weekly", Day: "monday"},
+					CommitMessage:    &CommitMessage{Prefix: "chore(deps)"},
+					Labels:           []string{"dependencies", "go"},
+					Groups: map[string]Group{
+						"golang-x":    {Patterns: []string{"golang.org/x/*"}},
+						"all-go-deps": {GroupBy: "dependency-name"},
+					},
+				},
+			},
+		}
+
+		formatted := FormatConfig(config)
+		parsed, err := ParseBytes([]byte(formatted))
+		require.NoError(t, err)
+
+		require.Len(t, parsed.Updates, 1)
+		u := parsed.Updates[0]
+		assert.Equal(t, []string{"/go/core", "/go/cli/eac"}, u.Directories)
+		assert.Empty(t, u.Directory)
+		assert.True(t, u.IsConsolidated())
+		assert.Equal(t, []string{"golang.org/x/*"}, u.Groups["golang-x"].Patterns)
+		assert.Equal(t, "dependency-name", u.Groups["all-go-deps"].GroupBy)
 	})
 
 	t.Run("empty updates produces header only", func(t *testing.T) {
