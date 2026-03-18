@@ -54,42 +54,42 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <!-- markdownlint-disable MD033 -->
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2em; margin: 2em 0;">
 <div>
-<h3><a href="tutorials/index.md">Tutorials</a></h3>
+<h3><a href="tutorials/">Tutorials</a></h3>
 <p><strong>Learning-oriented guides</strong></p>
 <p>Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.</p>
 <ul>
-<li><a href="tutorials/getting-started/quick-start.md">Quick Start Guide</a></li>
-<li><a href="tutorials/getting-started/configuration-files.md">Understanding Configuration Files</a></li>
+<li><a href="tutorials/getting-started/quick-start/">Quick Start Guide</a></li>
+<li><a href="tutorials/getting-started/configuration-files/">Understanding Configuration Files</a></li>
 </ul>
 </div>
 <div>
-<h3><a href="how-to-guides/index.md">How-to Guides</a></h3>
+<h3><a href="how-to-guides/">How-to Guides</a></h3>
 <p><strong>Task-oriented recipes</strong></p>
 <p>Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.</p>
 <ul>
-<li><a href="how-to-guides/eac/commands/index.md">EAC Commands</a></li>
-<li><a href="how-to-guides/eac/modules/index.md">EAC Modules</a></li>
+<li><a href="how-to-guides/eac/commands/">EAC Commands</a></li>
+<li><a href="how-to-guides/eac/modules/">EAC Modules</a></li>
 </ul>
 </div>
 <div>
-<h3><a href="reference/index.md">Reference</a></h3>
+<h3><a href="reference/">Reference</a></h3>
 <p><strong>Information-oriented descriptions</strong></p>
 <p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
 <ul>
-<li><a href="reference/eac/architecture/index.md">EAC Architecture</a> - System overview and design</li>
-<li><a href="reference/eac/architecture/repository-layout.md">Repository Layout</a> - File structure</li>
-<li><a href="reference/eac/commands/index.md">Command Reference</a> - CLI commands</li>
-<li><a href="architecture/decisions/index.md">Decision Records</a> - Architectural decisions</li>
+<li><a href="reference/eac/architecture/">EAC Architecture</a> - System overview and design</li>
+<li><a href="reference/eac/architecture/repository-layout/">Repository Layout</a> - File structure</li>
+<li><a href="reference/eac/commands/">Command Reference</a> - CLI commands</li>
+<li><a href="architecture/decisions/">Decision Records</a> - Architectural decisions</li>
 </ul>
 </div>
 <div>
-<h3><a href="explanation/index.md">Explanation</a></h3>
+<h3><a href="explanation/">Explanation</a></h3>
 <p><strong>Understanding-oriented discussion</strong></p>
 <p>Conceptual explanations that clarify and illuminate. Read these to understand the "why" behind the system.</p>
 <ul>
-<li><a href="explanation/everything-as-code/index.md">Everything as Code</a></li>
-<li><a href="explanation/continuous-delivery/index.md">Continuous Delivery Model</a></li>
-<li><a href="explanation/transformation/index.md">Compliance Transformation</a></li>
+<li><a href="explanation/everything-as-code/">Everything as Code</a></li>
+<li><a href="explanation/continuous-delivery/">Continuous Delivery Model</a></li>
+<li><a href="explanation/transformation/">Compliance Transformation</a></li>
 </ul>
 </div>
 </div>
