@@ -33,7 +33,7 @@ release-{moniker}.yaml (Per-Module Release)
   └─ calls _module-release.yaml (Reusable Template)
        config → approve → release → evidence → cleanup → summary
 
-cron-full-trigger.yaml (every 2 hours)
+cron-full-trigger.yaml (nightly)
   └─ gh workflow run change-trigger.yaml --trigger-all=true
        Full rebuild to catch deviation between incremental and full builds
 ```
@@ -53,7 +53,7 @@ cron-full-trigger.yaml (every 2 hours)
 | ------------------------ | --------------------------------------------------- | ----------------------------------------------------------------- |
 | `change-trigger.yaml`    | push/PR to main, `workflow_dispatch`                | Detects changes, dispatches per-module CI, triggers releases      |
 | `release-trigger.yaml`   | `workflow_dispatch` (from change-trigger or manual) | Awaits CI, detects pending releases, dispatches release workflows |
-| `cron-full-trigger.yaml` | Schedule (every 2 hours)                            | Triggers full rebuild via change-trigger with `trigger-all=true`  |
+| `cron-full-trigger.yaml` | Schedule (nightly)                            | Triggers full rebuild via change-trigger with `trigger-all=true`  |
 
 ### Reusable Workflow Templates
 

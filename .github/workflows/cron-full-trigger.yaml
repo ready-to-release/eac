@@ -1,6 +1,6 @@
 # Scheduled Full CI Rebuild
 #
-# Runs every 2 hours (even hours) to ensure the full codebase is tested regularly.
+# Runs nightly to ensure the full codebase is tested regularly.
 # Only triggers if there are changes since the last successful full CI run.
 #
 # This catches issues that incremental CI might miss:
@@ -16,7 +16,7 @@ name: "Scheduled Full CI"
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Every 2 hours: 00:00, 02:00, 04:00, etc. UTC
+    - cron: '0 2 * * *'  # Nightly at 02:00 UTC
   workflow_dispatch:       # Manual trigger to test the change-detection logic
 
 concurrency:
