@@ -2,9 +2,11 @@ package docker
 
 import (
 	"context"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -251,9 +253,15 @@ func (m *SimpleMockDockerClient) ContainerLogs(ctx context.Context, containerID 
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
-// ContainerAttach returns empty response.
+// ContainerAttach returns a valid HijackedResponse with an immediately-closed connection.
 func (m *SimpleMockDockerClient) ContainerAttach(ctx context.Context, containerID string, options container.AttachOptions) (types.HijackedResponse, error) {
-	return types.HijackedResponse{}, nil
+	// Create a pipe and close the write end immediately so StdCopy reads EOF.
+	serverConn, clientConn := net.Pipe()
+	serverConn.Close()
+	return types.HijackedResponse{
+		Conn:   clientConn,
+		Reader: bufio.NewReader(clientConn),
+	}, nil
 }
 
 // Close is a no-op.

@@ -58,6 +58,12 @@ func DrawioEncode() int {
 		}
 	}
 
+	// Require explicit input — stdin piping is not supported
+	if inputFile == "" {
+		log.Errorf("Error: --input is required. Provide an XML file to encode.")
+		return 1
+	}
+
 	// Get repo root
 	repoRoot, err := GetRepoRoot()
 	if err != nil {

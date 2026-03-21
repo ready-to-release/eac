@@ -17,7 +17,10 @@
 namespaces:
   bootstrap: [go, docker, git]
   go: [golangci-lint, gcc, go-build, go-test-race]
-  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, pdf-oci, mkdocs-preprocess, drawio, structurizr-cli, structurizr-lite, structurizr-export, static-site, gource, plantuml, markdownlint, mermaid-render, actionlint]
+  docs: [mkdocs-build, mkdocs-live, mkdocs-dev-oci, mkdocs-render-oci, mkdocs-preprocess, static-site, markdownlint, pdf-oci, pdf-cli-oci]
+  design: [structurizr-cli, structurizr-lite, structurizr-export, plantuml, drawio, mermaid-render]
+  visualization: [gource]
+  ci: [actionlint]
   node: [npm, tsc, npm-build, npm-test, eslint]
   python: [python, ruff, pytest]
   security: [trivy-sbom, trivy-vuln, trivy-secrets, trivy-iac, trivy-compliance, semgrep, zap]

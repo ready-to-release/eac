@@ -67,7 +67,10 @@ type RunResult struct {
 // RunContainer runs a container with the given configuration and waits for it to complete.
 // This is for one-shot tasks, not long-running services.
 func RunContainer(ctx context.Context, config *RunConfig) (*RunResult, error) {
-	cli, err := NewDockerClient()
+	// Always use a real Docker client. RunContainer is a low-level utility that
+	// executes actual containers — mock clients (CLIE_MOCK_DOCKER) are for the
+	// higher-level ContainerAdapter/tool executor path only.
+	cli, err := newRealDockerClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
@@ -100,10 +103,12 @@ func RunContainer(ctx context.Context, config *RunConfig) (*RunResult, error) {
 
 	// Container configuration
 	containerConfig := &container.Config{
-		Image:      config.Image,
-		Cmd:        config.Command,
-		Env:        config.EnvVars,
-		WorkingDir: config.WorkingDir,
+		Image:        config.Image,
+		Cmd:          config.Command,
+		Env:          config.EnvVars,
+		WorkingDir:   config.WorkingDir,
+		AttachStdout: true,
+		AttachStderr: true,
 	}
 
 	// Host configuration
@@ -135,43 +140,45 @@ func RunContainer(ctx context.Context, config *RunConfig) (*RunResult, error) {
 	defer func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		_ = cli.ContainerStop(cleanupCtx, containerID, container.StopOptions{})   //nolint:errcheck
+		_ = cli.ContainerStop(cleanupCtx, containerID, container.StopOptions{})                //nolint:errcheck
 		_ = cli.ContainerRemove(cleanupCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck
 	}()
+
+	// Attach to container before starting to reliably capture all output.
+	// ContainerLogs after exit can miss output on short-lived containers.
+	attachResp, err := cli.ContainerAttach(ctx, containerID, container.AttachOptions{
+		Stream: true,
+		Stdout: true,
+		Stderr: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to attach to container: %w", err)
+	}
+	defer attachResp.Close()
+
+	// Set up wait before starting container
+	waitChan, errChan := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 
 	// Start container
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Set up log streaming if requested (runs concurrently with container)
-	var logsDone chan struct{}
-	if config.StreamLogs && config.LogWriter != nil {
-		logOptions := container.LogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Follow:     true,
-		}
+	// Read output from the attach stream.
+	// For StreamLogs mode, tee to the LogWriter while also capturing.
+	var stdoutBuf, stderrBuf bytes.Buffer
+	var stdoutWriter, stderrWriter io.Writer = &stdoutBuf, &stderrBuf
 
-		logs, err := cli.ContainerLogs(ctx, containerID, logOptions)
-		if err != nil {
-			// Non-fatal: continue without streaming, will capture at end
-			// Note: Do NOT write to os.Stderr - TUI may be active
-			_ = err // Silently ignore, logs will be captured at container exit
-		} else {
-			logsDone = make(chan struct{})
-			go func() {
-				defer close(logsDone)
-				defer logs.Close()
-				// Stream to provided LogWriter only - never os.Stdout
-				_, _ = stdcopy.StdCopy(config.LogWriter, config.LogWriter, logs) //nolint:errcheck
-			}()
-		}
+	if config.StreamLogs && config.LogWriter != nil {
+		stdoutWriter = io.MultiWriter(&stdoutBuf, config.LogWriter)
+		stderrWriter = io.MultiWriter(&stderrBuf, config.LogWriter)
 	}
 
-	// Wait for container to complete
-	waitChan, errChan := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
+	// stdcopy.StdCopy demuxes the Docker multiplexed stream into stdout/stderr.
+	// This blocks until the stream closes (container exits).
+	_, _ = stdcopy.StdCopy(stdoutWriter, stderrWriter, attachResp.Reader) //nolint:errcheck
 
+	// Wait for container to complete
 	var exitCode int64
 	select {
 	case err := <-errChan:
@@ -184,37 +191,10 @@ func RunContainer(ctx context.Context, config *RunConfig) (*RunResult, error) {
 		return nil, fmt.Errorf("container execution timed out")
 	}
 
-	// Wait for log streaming to complete (if active)
-	if logsDone != nil {
-		<-logsDone
-	}
-
-	// Get logs if not streaming (capture for RunResult)
-	var stdout, stderr string
-	if !config.StreamLogs || config.LogWriter == nil {
-		stdout, stderr, _ = getContainerLogsInternal(ctx, cli, containerID)
-	}
-
 	return &RunResult{
 		ExitCode: exitCode,
-		Stdout:   stdout,
-		Stderr:   stderr,
+		Stdout:   stdoutBuf.String(),
+		Stderr:   stderrBuf.String(),
 	}, nil
 }
 
-// getContainerLogsInternal retrieves container logs.
-func getContainerLogsInternal(ctx context.Context, cli DockerClient, containerID string) (stdout, stderr string, err error) {
-	logsReader, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	defer logsReader.Close()
-
-	var stdoutBuf, stderrBuf bytes.Buffer
-	_, _ = stdcopy.StdCopy(&stdoutBuf, &stderrBuf, logsReader) //nolint:errcheck
-
-	return stdoutBuf.String(), stderrBuf.String(), nil
-}

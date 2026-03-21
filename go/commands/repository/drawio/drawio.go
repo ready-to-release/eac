@@ -58,7 +58,7 @@ var log = logging.C()
 
 // EnsureDrawioImage builds the drawio-oci Docker image if needed.
 // Uses Docker's layer cache for efficiency.
-// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to docker.RunContainer.
 func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvider ContainerProvider) error {
 	// Get host repo root for Docker build context
 	// In DinD mode, Docker daemon runs on the host, so it needs host paths
@@ -85,14 +85,14 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvi
 	}
 
 	imageName := GetDrawioImageName()
-	if logWriter != nil {
-		fmt.Fprintf(logWriter, "Building Docker image: %s\n", imageName)
-	}
 
 	// Try to use ContainerPort.Build if available
 	if containerProvider != nil {
 		c := containerProvider()
 		if c != nil {
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "Building Docker image: %s\n", imageName)
+			}
 			config := &container.BuildConfig{
 				ContextPath: contextPath,
 				Dockerfile:  dockerfilePath,
@@ -105,12 +105,18 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvi
 	}
 
 	// Fallback: use EnsureServeImage which handles staleness checks + SDK-based builds
+	output := io.Writer(io.Discard)
+	if logWriter != nil {
+		output = logWriter
+	}
+
 	serveConfig := &docker.ServeConfig{
 		Image: imageName,
 		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  dockerfilePath,
 			ContextPath: contextPath,
 		},
+		Output: output,
 	}
 
 	return docker.EnsureServeImage(context.Background(), serveConfig)
@@ -118,7 +124,7 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvi
 
 // RunDrawioCommand executes a drawio-oci command in the container.
 // The workspaceRoot is mounted at /docs in the container.
-// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to docker.RunContainer.
 func RunDrawioCommand(
 	workspaceRoot string,
 	args []string,
@@ -184,7 +190,7 @@ func runWithContainerPort(c container.ContainerPort, hostRepoRoot string, args [
 }
 
 // runWithExec executes the command using docker.RunContainer (fallback when no ContainerPort).
-func runWithExec(workspaceRoot, hostRepoRoot string, args []string, _ io.Reader, stdout, stderr io.Writer) error {
+func runWithExec(_ string, hostRepoRoot string, args []string, _ io.Reader, stdout, stderr io.Writer) error {
 	command := append([]string{"python", "/app/drawio_cli.py"}, args...)
 
 	runConfig := &docker.RunConfig{
@@ -248,7 +254,7 @@ func GetRepoRoot() (string, error) {
 
 // RunDrawioCommandWithOutput runs a command and returns stdout as string.
 // Uses a limited buffer to prevent memory exhaustion from runaway Docker output.
-// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to docker.RunContainer.
 func RunDrawioCommandWithOutput(workspaceRoot string, args []string, containerProvider ContainerProvider) (string, error) {
 	stdout := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
 	stderr := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
@@ -260,7 +266,7 @@ func RunDrawioCommandWithOutput(workspaceRoot string, args []string, containerPr
 }
 
 // CheckDockerAvailable verifies Docker is available and the image exists.
-// The containerProvider parameter is optional (may be nil); when nil, falls back to exec.Command.
+// The containerProvider parameter is optional (may be nil); when nil, falls back to docker.RunContainer.
 func CheckDockerAvailable(workspaceRoot string, containerProvider ContainerProvider) error {
 	// Check container runtime availability
 	if containerProvider != nil {
@@ -288,7 +294,6 @@ func CheckDockerAvailable(workspaceRoot string, containerProvider ContainerProvi
 		return fmt.Errorf("Docker is not available. Ensure Docker is installed and running")
 	}
 
-	// EnsureDrawioImage handles staleness checks and builds if needed
-	log.Infof("Ensuring drawio-oci Docker image is up to date...")
-	return EnsureDrawioImage(workspaceRoot, os.Stderr, containerProvider)
+	// EnsureDrawioImage handles staleness checks and only builds if needed
+	return EnsureDrawioImage(workspaceRoot, nil, containerProvider)
 }
