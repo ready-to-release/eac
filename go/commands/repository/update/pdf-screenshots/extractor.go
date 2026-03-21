@@ -4,35 +4,38 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
-	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
-// ensurePDFToolsImage builds the pdf-oci Docker image if needed.
+// ensurePDFToolsImage ensures the pdf-cli-oci Docker image exists, building if needed.
 func ensurePDFToolsImage(repoRoot string) error {
-	// Check if image exists
-	cmd := exec.Command("docker", "image", "inspect", pdfToolsImage)
-	if err := cmd.Run(); err == nil {
-		return nil // Image exists
+	toolDef := tool.GetToolDefinition("pdf-cli-oci")
+	if toolDef == nil {
+		return fmt.Errorf("pdf-cli-oci tool not found in tool-config.yml")
 	}
 
-	// Build the image
-	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-cli-oci")
-	buildCtx := paths.ContainersPath(repoRoot, "pdf-cli-oci")
+	if !toolDef.IsLocalContainer() {
+		// External image — RunContainer will pull it automatically
+		return nil
+	}
 
-	fmt.Println("Building pdf-cli-oci image...")
-	cmd = exec.Command("docker", "build",
-		"-t", pdfToolsImage,
-		"-f", dockerfilePath,
-		buildCtx)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	// Build a ServeConfig to leverage EnsureServeImage's staleness check + SDK build
+	contextPath := toolDef.LocalContextPath(repoRoot)
+	serveConfig := &docker.ServeConfig{
+		Image: toolDef.LocalImageTag(),
+		BuildInfo: &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ContextPath: contextPath,
+		},
+	}
+
+	fmt.Println("Ensuring pdf-cli-oci image is up to date...")
+	return docker.EnsureServeImage(context.Background(), serveConfig)
 }
 
 // extractPages uses pdftoppm to extract PDF pages as PNG images.
@@ -43,7 +46,7 @@ func extractPages(_ docker.DockerClient, pdfPath, outputDir string, dpi int) err
 	ctx := context.Background()
 
 	runConfig := &docker.RunConfig{
-		Image: pdfToolsImage,
+		Image: getPDFToolsImage(),
 		Command: []string{
 			"pdftoppm",
 			"-png",

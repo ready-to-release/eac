@@ -7,17 +7,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/adapters/docker"
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
-	"github.com/ready-to-release/eac/go/core/iobuffer"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
 )
@@ -164,9 +163,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 
 // IsDockerRunning checks if Docker daemon is available.
 func (v *StructurizrValidatorImpl) IsDockerRunning() bool {
-	cmd := exec.Command("docker", "ps")
-	err := cmd.Run()
-	return err == nil
+	return dockerutil.IsDockerAvailable()
 }
 
 // ValidateModule validates all DSL files in a module's .design folder
@@ -433,12 +430,12 @@ func accumulateSummary(summary *ValidationSummary, result *ValidationResult) {
 // executeDockerValidation runs Structurizr Lite validation in Docker container
 // Uses Lite instead of CLI to ensure same validation rules as serve command.
 func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string) (string, error) {
-	dockerVolume, relWorkspacePath, err := resolveValidationPaths(workspacePath)
+	specsDir, relWorkspacePath, err := resolveValidationPaths(workspacePath)
 	if err != nil {
 		return "", err
 	}
 
-	return runDockerValidationCommand(dockerVolume, relWorkspacePath)
+	return runDockerValidationCommand(specsDir, relWorkspacePath)
 }
 
 // resolveValidationPaths resolves the workspace path into a Docker volume mount
@@ -470,42 +467,34 @@ func resolveValidationPaths(workspacePath string) (string, string, error) {
 	// Convert to Unix-style path for Docker
 	relWorkspacePath = filepath.ToSlash(relWorkspacePath)
 
-	// Convert Windows path to Docker volume format
-	dockerVolume := dockerutil.FormatDockerVolume(specsDir)
-
-	return dockerVolume, relWorkspacePath, nil
+	return specsDir, relWorkspacePath, nil
 }
 
 // runDockerValidationCommand executes the Structurizr CLI validate command in Docker
 // and returns the combined stdout+stderr output.
-func runDockerValidationCommand(dockerVolume, relWorkspacePath string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), DockerValidationTimeout)
-	defer cancel()
+func runDockerValidationCommand(specsDir, relWorkspacePath string) (string, error) {
+	ctx := context.Background()
 
-	cmd := exec.CommandContext(ctx, "docker", "run",
-		"--rm",
-		"-v", dockerVolume+":"+DockerWorkspaceMount,
-		GetStructurizrCLIImage(),
-		"validate",
-		"-workspace", DockerWorkspaceMount+"/"+relWorkspacePath,
-	)
-
-	// Create limited buffers to prevent memory exhaustion
-	stdout := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
-	stderr := iobuffer.NewLimitedBuffer(MaxDockerOutputSize)
-
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	// Run command (don't check error - validation failures return non-zero exit)
-	err := cmd.Run()
-
-	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("Docker validation timed out after %v", DockerValidationTimeout)
+	runConfig := &docker.RunConfig{
+		Image:   GetStructurizrCLIImage(),
+		Command: []string{"validate", "-workspace", DockerWorkspaceMount + "/" + relWorkspacePath},
+		Mounts: []docker.MountConfig{
+			{Source: specsDir, Target: DockerWorkspaceMount},
+		},
+		Timeout:       DockerValidationTimeout,
+		ContainerName: fmt.Sprintf("structurizr-validate-%d", time.Now().UnixNano()),
 	}
-	_ = err // validation failures return non-zero exit; we parse stdout/stderr
 
-	return stdout.String() + stderr.String(), nil
+	result, err := docker.RunContainer(ctx, runConfig)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("Docker validation timed out after %v", DockerValidationTimeout)
+		}
+		return "", fmt.Errorf("failed to run validation container: %w", err)
+	}
+
+	// Validation failures return non-zero exit; we parse stdout/stderr
+	return result.Stdout + result.Stderr, nil
 }
 
 // parseValidationOutput parses Structurizr CLI output from Docker container.

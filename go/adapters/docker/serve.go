@@ -551,6 +551,19 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 	return nil
 }
 
+// EnsureServeImage ensures the Docker image for a ServeConfig exists and is up-to-date.
+// Creates its own Docker client internally. Use this when you need to ensure an image
+// exists outside of the full StartServe flow (e.g., before RunContainer).
+func EnsureServeImage(ctx context.Context, config *ServeConfig) error {
+	cli, err := createDockerClient()
+	if err != nil {
+		return fmt.Errorf("failed to create Docker client: %w", err)
+	}
+	defer cli.Close()
+
+	return ensureImage(ctx, cli, config)
+}
+
 // isImageStale checks if any file in the build context is newer than the image.
 // Returns (true, reason) if stale, (false, "") if up-to-date.
 func isImageStale(contextPath string, imageCreated time.Time) (stale bool, reason string) {

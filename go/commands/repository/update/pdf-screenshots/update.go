@@ -14,6 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type updatePDFScreenshotsCommand struct{}
@@ -53,12 +54,18 @@ var log = logging.C()
 var rePageNumber = regexp.MustCompile(`^page-(\d+)\.png$`)
 
 const (
-	// pdfToolsImage is the Docker image for PDF operations.
-	pdfToolsImage = "pdf-cli-oci:latest"
+	// defaultPDFToolsImage is the fallback Docker image for PDF operations.
+	defaultPDFToolsImage = "pdf-cli-oci:local"
 
 	// defaultDPI is the default resolution for extracted images.
 	defaultDPI = 150
 )
+
+// getPDFToolsImage returns the Docker image for PDF operations.
+// Checks tool-config.yml first, falls back to default.
+func getPDFToolsImage() string {
+	return tool.GetToolImageWithDefault("pdf-cli-oci", defaultPDFToolsImage)
+}
 
 // PDFInfo holds information about a found PDF file.
 type PDFInfo struct {

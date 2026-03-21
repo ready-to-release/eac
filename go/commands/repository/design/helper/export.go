@@ -3,17 +3,16 @@
 package design
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/adapters/docker"
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/paths"
@@ -221,18 +220,18 @@ func (e *StructurizrExporterImpl) executeDockerExport(workspacePath, outputDir, 
 		return err
 	}
 
-	dockerSpecsVolume, dockerOutputVolume, relWorkspacePath, err := prepareDockerExportVolumes(repoRoot, absWorkspacePath, absOutputDir)
+	specsDir, outputDirResolved, relWorkspacePath, err := prepareDockerExportVolumes(repoRoot, absWorkspacePath, absOutputDir)
 	if err != nil {
 		return err
 	}
 
 	// Step 1: Export to PlantUML using Structurizr CLI
-	if err := runStructurizrExportToPlantUML(dockerSpecsVolume, dockerOutputVolume, relWorkspacePath); err != nil {
+	if err := runStructurizrExportToPlantUML(specsDir, outputDirResolved, relWorkspacePath); err != nil {
 		return err
 	}
 
 	// Step 2: Render PlantUML files to SVG
-	return renderPlantUMLToSVG(absOutputDir, dockerOutputVolume)
+	return renderPlantUMLToSVG(absOutputDir, outputDirResolved)
 }
 
 // resolveExportPaths resolves workspace and output paths to absolute paths.
@@ -264,44 +263,38 @@ func prepareDockerExportVolumes(repoRoot, absWorkspacePath, absOutputDir string)
 	}
 	relWorkspacePath = filepath.ToSlash(relWorkspacePath)
 
-	dockerSpecsVolume := dockerutil.FormatDockerVolume(specsDir)
-	dockerOutputVolume := dockerutil.FormatDockerVolume(absOutputDir)
-
-	return dockerSpecsVolume, dockerOutputVolume, relWorkspacePath, nil
+	return specsDir, absOutputDir, relWorkspacePath, nil
 }
 
 // runStructurizrExportToPlantUML executes Structurizr CLI in Docker to export
 // workspace views to PlantUML (.puml) format.
-func runStructurizrExportToPlantUML(dockerSpecsVolume, dockerOutputVolume, relWorkspacePath string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
+func runStructurizrExportToPlantUML(specsDir, outputDir, relWorkspacePath string) error {
+	ctx := context.Background()
 
-	args := []string{
-		"run", "--rm",
-		"-v", dockerSpecsVolume + ":" + DockerWorkspaceMount + ":ro",
-		"-v", dockerOutputVolume + ":/output",
-		GetStructurizrCLIImage(),
-		"export",
-		"-workspace", DockerWorkspaceMount + "/" + relWorkspacePath,
-		"-format", "plantuml/c4plantuml",
-		"-output", "/output",
+	runConfig := &docker.RunConfig{
+		Image: GetStructurizrCLIImage(),
+		Command: []string{
+			"export",
+			"-workspace", DockerWorkspaceMount + "/" + relWorkspacePath,
+			"-format", "plantuml/c4plantuml",
+			"-output", "/output",
+		},
+		Mounts: []docker.MountConfig{
+			{Source: specsDir, Target: DockerWorkspaceMount, ReadOnly: true},
+			{Source: outputDir, Target: "/output"},
+		},
+		Timeout:       2 * time.Minute,
+		ContainerName: fmt.Sprintf("structurizr-export-%d", time.Now().UnixNano()),
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-
-	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("structurizr export timed out after 2 minutes")
-	}
-
+	result, err := docker.RunContainer(ctx, runConfig)
 	if err != nil {
-		return fmt.Errorf("structurizr export failed: %w\nstdout: %s\nstderr: %s",
-			err, stdout.String(), stderr.String())
+		return fmt.Errorf("structurizr export failed: %w", err)
+	}
+
+	if result.ExitCode != 0 {
+		return fmt.Errorf("structurizr export failed (exit %d):\nstdout: %s\nstderr: %s",
+			result.ExitCode, result.Stdout, result.Stderr)
 	}
 
 	return nil
@@ -309,7 +302,7 @@ func runStructurizrExportToPlantUML(dockerSpecsVolume, dockerOutputVolume, relWo
 
 // renderPlantUMLToSVG finds .puml files in the output directory, renders them to
 // SVG using the PlantUML Docker image, and cleans up the intermediate .puml files.
-func renderPlantUMLToSVG(absOutputDir, dockerOutputVolume string) error {
+func renderPlantUMLToSVG(absOutputDir, outputDir string) error {
 	pumlFiles, err := filepath.Glob(filepath.Join(absOutputDir, "*.puml"))
 	if err != nil {
 		return fmt.Errorf("failed to find puml files: %w", err)
@@ -320,31 +313,26 @@ func renderPlantUMLToSVG(absOutputDir, dockerOutputVolume string) error {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
-	renderArgs := []string{
-		"run", "--rm",
-		"-v", dockerOutputVolume + ":/data",
-		GetPlantUMLImage(),
-		"-tsvg", "/data",
+	runConfig := &docker.RunConfig{
+		Image:   GetPlantUMLImage(),
+		Command: []string{"-tsvg", "/data"},
+		Mounts: []docker.MountConfig{
+			{Source: outputDir, Target: "/data"},
+		},
+		Timeout:       3 * time.Minute,
+		ContainerName: fmt.Sprintf("plantuml-render-%d", time.Now().UnixNano()),
 	}
 
-	renderCmd := exec.CommandContext(ctx, "docker", renderArgs...)
-
-	var renderStdout, renderStderr bytes.Buffer
-	renderCmd.Stdout = &renderStdout
-	renderCmd.Stderr = &renderStderr
-
-	err = renderCmd.Run()
-
-	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("plantuml render timed out after 3 minutes")
-	}
-
+	result, err := docker.RunContainer(ctx, runConfig)
 	if err != nil {
-		return fmt.Errorf("plantuml render failed: %w\nstdout: %s\nstderr: %s",
-			err, renderStdout.String(), renderStderr.String())
+		return fmt.Errorf("plantuml render failed: %w", err)
+	}
+
+	if result.ExitCode != 0 {
+		return fmt.Errorf("plantuml render failed (exit %d):\nstdout: %s\nstderr: %s",
+			result.ExitCode, result.Stdout, result.Stderr)
 	}
 
 	// Cleanup: remove .puml files (we only need the SVGs)

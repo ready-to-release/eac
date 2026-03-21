@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 )
 
 type serveGourceCommand struct{}
@@ -290,24 +290,70 @@ func buildGourceEnvVars(opts *gourceOptions) []string {
 	}
 }
 
+// gourceToolID is the tool-config.yml identifier for the gource container.
+const gourceToolID = "gource"
+
+// buildServeConfig builds a ServeConfig from the gource tool definition.
+// This follows the same pattern as serve/docker.go for static-site and mkdocs-dev-oci.
+func buildServeConfig(workspaceRoot string) (*docker.ServeConfig, error) {
+	toolDef := tool.GetToolDefinition(gourceToolID)
+	if toolDef == nil {
+		return nil, fmt.Errorf("gource tool not found in tool-config.yml")
+	}
+
+	serveConfig := &docker.ServeConfig{}
+
+	// Resolve image: local container (has Dockerfile) vs external image
+	if toolDef.IsLocalContainer() {
+		serveConfig.Image = toolDef.LocalImageTag()
+		contextPath := toolDef.LocalContextPath(workspaceRoot)
+		serveConfig.BuildInfo = &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ContextPath: contextPath,
+		}
+	} else {
+		serveConfig.Image = toolDef.FullImage()
+	}
+
+	// Resolve container path from tool mounts (first mount with {content} source)
+	containerPath := "/visualization/repo" // fallback
+	for _, mount := range toolDef.Mounts {
+		if mount.Source == "{content}" {
+			containerPath = mount.Target
+			break
+		}
+	}
+	serveConfig.ContainerPath = containerPath
+
+	// Get serve configuration from tool definition
+	if toolDef.Serve != nil {
+		serveConfig.ContainerPort = toolDef.Serve.ContainerPort
+		serveConfig.RestartPolicy = toolDef.Serve.RestartPolicy
+	}
+	if serveConfig.ContainerPort == 0 {
+		serveConfig.ContainerPort = 80 // fallback
+	}
+	if serveConfig.RestartPolicy == "" {
+		serveConfig.RestartPolicy = "no"
+	}
+
+	return serveConfig, nil
+}
+
 // startServeContainer builds and starts the gource streaming container.
 func startServeContainer(ctx context.Context, workspaceRoot, containerName string, opts *gourceOptions) int {
-	serveConfig := &docker.ServeConfig{
-		Name:  containerName,
-		Image: "cli-gource:latest",
-		BuildInfo: &docker.BuildInfo{
-			Dockerfile:  filepath.Join(workspaceRoot, "containers/gource/Dockerfile"),
-			ContextPath: filepath.Join(workspaceRoot, "containers/gource"),
-		},
-		ContentPath:   workspaceRoot,
-		ContainerPath: "/visualization/repo",
-		ContainerPort: 80,
-		EnvVars:       buildGourceEnvVars(opts),
-		RestartPolicy: "no", // Stop when visualization ends
-		PreferredPort: opts.port,
-		Memory:        environments.GetContainerMemoryBytes(),
-		CPUs:          float64(runtime.NumCPU()) / 2,
+	serveConfig, err := buildServeConfig(workspaceRoot)
+	if err != nil {
+		log.Errorf("Failed to resolve gource tool: %v", err)
+		return 1
 	}
+
+	serveConfig.Name = containerName
+	serveConfig.ContentPath = workspaceRoot
+	serveConfig.EnvVars = buildGourceEnvVars(opts)
+	serveConfig.PreferredPort = opts.port
+	serveConfig.Memory = environments.GetContainerMemoryBytes()
+	serveConfig.CPUs = float64(runtime.NumCPU()) / 2
 
 	log.Info("Starting Gource visualization...")
 	log.Infof("Repository: %s", workspaceRoot)
@@ -370,12 +416,13 @@ func handleFileOutput(ctx context.Context, workspaceRoot string, opts *gourceOpt
 		return 1
 	}
 
-	if err := buildGourceImage(ctx, workspaceRoot); err != nil {
+	image, err := ensureGourceImage(ctx, workspaceRoot)
+	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	return runRenderContainer(ctx, workspaceRoot, outputPath, outputDir, opts)
+	return runRenderContainer(ctx, workspaceRoot, outputPath, outputDir, opts, image)
 }
 
 // resolveOutputPath resolves the output file path and ensures the directory exists.
@@ -402,38 +449,20 @@ func resolveOutputPath(workspaceRoot, output, format string) (string, string, er
 	return outputPath, outputDir, nil
 }
 
-// buildGourceImage checks image staleness and rebuilds the Docker image with no-cache.
-func buildGourceImage(ctx context.Context, workspaceRoot string) error {
-	serveConfig := &docker.ServeConfig{
-		Image: "cli-gource:latest",
-		BuildInfo: &docker.BuildInfo{
-			Dockerfile:  filepath.Join(workspaceRoot, "containers/gource/Dockerfile"),
-			ContextPath: filepath.Join(workspaceRoot, "containers/gource"),
-		},
-	}
-
-	stale, reason, err := docker.CheckImageStale(ctx, serveConfig)
+// ensureGourceImage ensures the gource image exists, building if necessary.
+// Uses docker.EnsureServeImage which handles staleness checks and SDK-based builds,
+// the same path that docker.StartServe uses internally.
+func ensureGourceImage(ctx context.Context, workspaceRoot string) (string, error) {
+	serveConfig, err := buildServeConfig(workspaceRoot)
 	if err != nil {
-		log.Warnf("Could not check image staleness: %v", err)
-	}
-	if stale {
-		log.Infof("Rebuilding image: %s", reason)
+		return "", err
 	}
 
-	log.Info("Building Docker image (no-cache)...")
-	dockerfilePath := filepath.Join(workspaceRoot, "containers/gource/Dockerfile")
-	contextPath := filepath.Join(workspaceRoot, "containers/gource")
-	buildCmd := fmt.Sprintf("docker build --no-cache -t cli-gource:latest -f %s %s", dockerfilePath, contextPath)
-	log.Infof("Running: %s", buildCmd)
-
-	cmd := exec.CommandContext(ctx, "docker", "build", "--no-cache", "-t", "cli-gource:latest", "-f", dockerfilePath, contextPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to build image: %v", err)
+	if err := docker.EnsureServeImage(ctx, serveConfig); err != nil {
+		return "", fmt.Errorf("failed to ensure gource image: %w", err)
 	}
 
-	return nil
+	return serveConfig.Image, nil
 }
 
 // calculateRenderResources returns the memory and CPU allocation for the render container.
@@ -461,12 +490,12 @@ func buildFileOutputEnvVars(opts *gourceOptions, outputFilename string) []string
 }
 
 // runRenderContainer configures and runs the Docker container for file rendering.
-func runRenderContainer(ctx context.Context, workspaceRoot, outputPath, outputDir string, opts *gourceOptions) int {
+func runRenderContainer(ctx context.Context, workspaceRoot, outputPath, outputDir string, opts *gourceOptions, image string) int {
 	memoryBytes, cpuCount := calculateRenderResources(opts.turbo)
 	outputFilename := filepath.Base(outputPath)
 
 	runConfig := &docker.RunConfig{
-		Image:   "cli-gource:latest",
+		Image:   image,
 		EnvVars: buildFileOutputEnvVars(opts, outputFilename),
 		Mounts: []docker.MountConfig{
 			{Source: workspaceRoot, Target: "/visualization/repo", ReadOnly: true},

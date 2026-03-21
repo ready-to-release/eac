@@ -20,11 +20,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	container "github.com/ready-to-release/eac/contracts/container-runtime/0.1.0"
+	"github.com/ready-to-release/eac/go/adapters/docker"
 	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/iobuffer"
 	"github.com/ready-to-release/eac/go/core/logging"
@@ -103,22 +104,16 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer, containerProvi
 		}
 	}
 
-	// Fallback to exec.Command
-	cmd := exec.Command("docker", "build",
-		"-t", imageName,
-		"-f", dockerfilePath,
-		contextPath)
-
-	if logWriter != nil {
-		cmd.Stdout = logWriter
-		cmd.Stderr = logWriter
+	// Fallback: use EnsureServeImage which handles staleness checks + SDK-based builds
+	serveConfig := &docker.ServeConfig{
+		Image: imageName,
+		BuildInfo: &docker.BuildInfo{
+			Dockerfile:  dockerfilePath,
+			ContextPath: contextPath,
+		},
 	}
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker build failed: %w", err)
-	}
-
-	return nil
+	return docker.EnsureServeImage(context.Background(), serveConfig)
 }
 
 // RunDrawioCommand executes a drawio-oci command in the container.
@@ -188,42 +183,38 @@ func runWithContainerPort(c container.ContainerPort, hostRepoRoot string, args [
 	return nil
 }
 
-// runWithExec executes the command using exec.Command (fallback).
-func runWithExec(workspaceRoot, hostRepoRoot string, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	// Format Docker volume path (handles Windows C:\ to /c/ conversion)
-	dockerVolume := dockerutil.FormatDockerVolume(hostRepoRoot)
+// runWithExec executes the command using docker.RunContainer (fallback when no ContainerPort).
+func runWithExec(workspaceRoot, hostRepoRoot string, args []string, _ io.Reader, stdout, stderr io.Writer) error {
+	command := append([]string{"python", "/app/drawio_cli.py"}, args...)
 
-	// Build Docker command
-	dockerArgs := []string{
-		"run", "--rm",
-		"-v", dockerVolume + ":" + ContainerWorkdir,
-		"-w", ContainerWorkdir,
+	runConfig := &docker.RunConfig{
+		Image:      GetDrawioImageName(),
+		Command:    command,
+		WorkingDir: ContainerWorkdir,
+		Mounts: []docker.MountConfig{
+			{Source: hostRepoRoot, Target: ContainerWorkdir},
+		},
+		ContainerName: fmt.Sprintf("drawio-run-%d", time.Now().UnixNano()),
 	}
 
-	// Add user spec in DinD mode to avoid permission issues
-	if dockerutil.IsDinD() {
-		uid := os.Getuid()
-		gid := os.Getgid()
-		userSpec := fmt.Sprintf("%d:%d", uid, gid)
-		dockerArgs = append(dockerArgs, "--user", userSpec)
+	result, err := docker.RunContainer(context.Background(), runConfig)
+	if err != nil {
+		return err
 	}
 
-	// Handle stdin
-	if stdin != nil {
-		dockerArgs = append(dockerArgs, "-i")
+	// Write captured output to the provided writers
+	if stdout != nil && result.Stdout != "" {
+		_, _ = io.WriteString(stdout, result.Stdout)
+	}
+	if stderr != nil && result.Stderr != "" {
+		_, _ = io.WriteString(stderr, result.Stderr)
 	}
 
-	// Add image and command
-	dockerArgs = append(dockerArgs, GetDrawioImageName(), "python", "/app/drawio_cli.py")
-	dockerArgs = append(dockerArgs, args...)
+	if result.ExitCode != 0 {
+		return fmt.Errorf("drawio command failed with exit code %d", result.ExitCode)
+	}
 
-	cmd := exec.Command("docker", dockerArgs...)
-	cmd.Dir = workspaceRoot
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	return cmd.Run()
+	return nil
 }
 
 // TranslateToContainerPath converts a local path to a container path.
@@ -292,20 +283,12 @@ func CheckDockerAvailable(workspaceRoot string, containerProvider ContainerProvi
 		}
 	}
 
-	// Fallback: use dockerutil
+	// Fallback: use dockerutil for availability check, EnsureDrawioImage for build
 	if !dockerutil.IsDockerAvailable() {
 		return fmt.Errorf("Docker is not available. Ensure Docker is installed and running")
 	}
 
-	// Check if image exists, build if not
-	cmd := exec.Command("docker", "image", "inspect", GetDrawioImageName())
-	if err := cmd.Run(); err != nil {
-		// Image doesn't exist, build it
-		log.Infof("Building drawio-oci Docker image...")
-		if err := EnsureDrawioImage(workspaceRoot, os.Stderr, containerProvider); err != nil {
-			return fmt.Errorf("failed to build drawio-oci image: %w", err)
-		}
-	}
-
-	return nil
+	// EnsureDrawioImage handles staleness checks and builds if needed
+	log.Infof("Ensuring drawio-oci Docker image is up to date...")
+	return EnsureDrawioImage(workspaceRoot, os.Stderr, containerProvider)
 }
