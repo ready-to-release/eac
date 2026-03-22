@@ -215,6 +215,7 @@ USER appuser
 
 OCI tools are used in GitHub Actions workflows:
 
+{% raw %}
 ```yaml
 # Example: Build documentation using mkdocs-render-oci
 - name: Build docs
@@ -224,6 +225,7 @@ OCI tools are used in GitHub Actions workflows:
       ghcr.io/ready-to-release/mkdocs-render-oci:latest \
       mkdocs build
 ```
+{% endraw %}
 
 ## Adding New OCI Tools
 

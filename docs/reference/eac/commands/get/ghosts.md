@@ -57,4 +57,4 @@ eac get ghosts --unowned --as-json
 
 - [show ghosts](../show/ghosts.md)
 - [Ghost Tracking](../../../../explanation/continuous-delivery/workflow/ghost-tracking.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

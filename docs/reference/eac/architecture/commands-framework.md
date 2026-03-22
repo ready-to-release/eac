@@ -268,7 +268,7 @@ This pattern enables:
 ```text
 ┌─────────────────────────────────────┐
 │       User Invocation               │
-│     clie eac build core             │
+│     eac build core                  │
 └──────────────┬──────────────────────┘
                │
                ▼
@@ -353,7 +353,7 @@ Integration tests verify command interactions:
 
 ```bash
 # Test build command
-clie eac build test-module
+eac build test-module
 
 # Verify artifacts were created
 ls out/build/test-module/
@@ -368,7 +368,7 @@ Feature: Build Command
 
   Scenario: Build a Go module
     Given a Go module "test-module"
-    When I run "clie eac build test-module"
+    When I run "eac build test-module"
     Then the build should succeed
     And artifacts should exist in "out/build/test-module/"
 ```

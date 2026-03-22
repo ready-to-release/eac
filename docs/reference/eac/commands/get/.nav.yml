@@ -1,4 +1,4 @@
-title: get Commands
+title: get
 nav:
   - index.md
   - get.md
@@ -15,7 +15,7 @@ nav:
   - changelog.md
   - ci-config.md
   - ci-dispatch.md
-  - ci-dispatch-layers.md
+
   - ci-results.md
   - ci-workflows.md
   - cli-release-notes.md

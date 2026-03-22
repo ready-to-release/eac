@@ -37,4 +37,4 @@ eac work commit -m "fix: resolve authentication bug"
 
 - [get commit-message](../get/commit-message.md) - Generate messages
 - [work create](./create.md)
-- [work Commands](../categories/work.md)
+- [work Commands](../../categories/work.md)

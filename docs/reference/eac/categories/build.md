@@ -54,7 +54,7 @@ eac build $(eac get changed-modules | jq -r '.changed_modules[]')
 
 ## See Also
 
-- [get build-deps](../get/build-deps.md) - View build dependencies
-- [show build-summary](../show/build-summary.md) - Build execution summary
-- [show build-times](../show/build-times.md) - Build performance analysis
+- [get build-deps](../commands/get/build-deps.md) - View build dependencies
+- [show build-summary](../commands/show/build-summary.md) - Build execution summary
+- [show build-times](../commands/show/build-times.md) - Build performance analysis
 - [test](./test.md) - Test after building

@@ -2,7 +2,7 @@
 
 <!-- book:cmd templates install -->
 
-Installs template files by copying them as-is to your project without variable substitution. All `{{ .Variable }}` placeholders are preserved for later customization.
+Installs template files by copying them as-is to your project without variable substitution. All `{% raw %}{{ .Variable }}{% endraw %}` placeholders are preserved for later customization.
 
 ## Usage
 
@@ -35,4 +35,4 @@ Use `help templates install <template-type>` for detailed information on each ty
 
 - [templates install-ai](./install-ai.md)
 - [templates install-docs](./install-docs.md)
-- [templates Commands](../categories/templates.md)
+- [templates Commands](../../categories/templates.md)

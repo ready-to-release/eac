@@ -36,4 +36,4 @@ eac release get-version clie --json
 
 - [release changelog](./changelog.md)
 - [release this](./this.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

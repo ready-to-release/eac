@@ -36,4 +36,4 @@ eac get environments --as-json
 
 - [show environments](../show/environments.md) - Formatted table
 - [test](../test/test.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

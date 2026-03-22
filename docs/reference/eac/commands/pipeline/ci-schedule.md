@@ -143,6 +143,7 @@ pipeline ci schedule \
 
 ### GitHub Actions Integration
 
+{% raw %}
 ```yaml
 name: CI Scheduler
 
@@ -172,6 +173,7 @@ jobs:
             --head-sha ${{ github.sha }} \
             --max-concurrent 10
 ```
+{% endraw %}
 
 ### Local Testing
 
@@ -247,4 +249,4 @@ pipeline ci schedule \
 - [pipeline status](./status.md) - Check pipeline status
 - [pipeline wait](./wait.md) - Wait for pipeline completion
 - [get ci-dispatch](../get/ci-dispatch.md) - Module filtering logic
-- [pipeline Commands](../categories/pipeline.md) - All pipeline commands
+- [pipeline Commands](../../categories/pipeline.md) - All pipeline commands

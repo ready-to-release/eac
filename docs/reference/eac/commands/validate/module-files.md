@@ -30,4 +30,4 @@ eac validate module-files
 
 - [validate](./validate.md)
 - [get files](../get/files.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

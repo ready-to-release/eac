@@ -37,6 +37,8 @@ docs_dir: $DOCS_DIR
 dev_addr: '0.0.0.0:8000'
 EOF
     EFFECTIVE_CONFIG="/tmp/mkdocs-dev.yml"
+    # mkdocs-macros looks for main.py next to the config file
+    cp /docs/main.py /tmp/main.py
     echo "Created wrapper config at $EFFECTIVE_CONFIG"
 fi
 

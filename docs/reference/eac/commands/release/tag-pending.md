@@ -38,4 +38,4 @@ eac release tag-pending --all       # Check all modules
 
 - [release pending](./pending.md)
 - [release this](./this.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

@@ -36,4 +36,4 @@ eac validate books
 - [validate](./validate.md)
 - [show books](../show/books.md)
 - [serve docs](../serve/docs.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

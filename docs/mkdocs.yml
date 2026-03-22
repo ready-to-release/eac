@@ -37,7 +37,8 @@ theme:
 
 plugins:
   - search
-  - macros
+  - macros:
+      on_error_fail: true
   - awesome-nav
   - drawio
   # Mermaid diagram rendering for web (JavaScript-based)

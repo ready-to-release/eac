@@ -34,5 +34,5 @@ eac release this
 
 ## See Also
 
-- [Category Overview](../categories/release.md)
+- [Category Overview](../../categories/release.md)
 - [pipeline status](../pipeline/status.md)

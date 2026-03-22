@@ -24,5 +24,5 @@ eac create spec "User can login"
 
 ## See Also
 
-- [Category Overview](../categories/create.md)
+- [Category Overview](../../categories/create.md)
 - [Command Reference Index](../index.md)

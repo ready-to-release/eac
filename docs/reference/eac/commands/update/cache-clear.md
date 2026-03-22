@@ -45,5 +45,5 @@ eac update cache-clear --dry-run           # Preview what would be deleted
 
 - [build](../build/build.md)
 - [test](../test/test.md)
-- [lint](../core/lint.md)
-- [update Commands](../categories/update.md)
+- [lint](../lint.md)
+- [update Commands](../../categories/update.md)

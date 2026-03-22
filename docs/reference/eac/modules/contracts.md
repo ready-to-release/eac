@@ -221,10 +221,10 @@ Validate contracts with:
 
 ```bash
 # Validate all contract schemas
-clie eac validate contracts
+eac validate contracts
 
 # Validate a specific contract
-clie eac validate contracts --contract runner
+eac validate contracts --contract runner
 ```
 
 ## See Also

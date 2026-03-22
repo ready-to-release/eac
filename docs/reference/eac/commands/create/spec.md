@@ -30,4 +30,4 @@ See [commit-message](../get/commit-message.md#custom-prompts) for detailed custo
 
 
 - [test](../test/test.md)
-- [create Commands](../categories/create.md)
+- [create Commands](../../categories/create.md)

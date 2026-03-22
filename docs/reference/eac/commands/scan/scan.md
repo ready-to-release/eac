@@ -56,5 +56,5 @@ eac scan zap eac-api --target http://localhost:8080
 
 ## See Also
 
-- [scan Commands Category](../categories/scan.md)
+- [scan Commands Category](../../categories/scan.md)
 - [validate control-tags](../validate/control-tags.md) - Validate security control mappings

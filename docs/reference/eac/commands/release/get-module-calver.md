@@ -46,4 +46,4 @@ eac release get-module-calver docs --create --dry-run
 
 - [release this](./this.md)
 - [release clie](./clie.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

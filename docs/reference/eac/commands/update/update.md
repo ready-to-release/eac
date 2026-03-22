@@ -4,5 +4,5 @@
 
 ## See Also
 
-- [create Commands](../categories/create.md) - Create new content
-- [validate Commands](../categories/validate.md) - Validate content
+- [create Commands](../../categories/create.md) - Create new content
+- [validate Commands](../../categories/validate.md) - Validate content

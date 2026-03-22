@@ -121,4 +121,4 @@ eac init --ai claude-api
 - [How-to Guide](../../../../how-to-guides/local-setup/configure-ai.md) - Setup walkthrough
 - [get commit-message](../get/commit-message.md) - AI commit messages
 - [create spec](../create/spec.md) - AI specification generation
-- [init Commands](../categories/init.md)
+- [init Commands](../../categories/init.md)

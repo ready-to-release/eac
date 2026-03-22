@@ -55,6 +55,9 @@ RUN printf '#!/bin/sh\nexec /usr/bin/chromium \\\n  --no-sandbox \\\n  --disable
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-wrapper
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+# Suppress mkdocs-material 9.7.2+ warning about MkDocs 2.0 (we pin mkdocs<2.0)
+# See: https://github.com/squidfunk/mkdocs-material/issues/8567
+ENV NO_MKDOCS_2_WARNING=1
 
 # Install Python packages in stages to manage build layer size
 # First: Install playwright separately (large package, 46MB)

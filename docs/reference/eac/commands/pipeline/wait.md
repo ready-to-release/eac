@@ -37,4 +37,4 @@ eac pipeline wait 12345 --interval 5         # Poll every 5 seconds
 
 - [pipeline ci](./ci.md)
 - [pipeline status](./status.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

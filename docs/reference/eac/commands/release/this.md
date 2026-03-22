@@ -19,4 +19,4 @@ The command will fail if CI hasn't passed or changelog validation fails.
 - [release changelog](./changelog.md)
 - [release check-ci](./check-ci.md)
 - [validate release](./../validate/release.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

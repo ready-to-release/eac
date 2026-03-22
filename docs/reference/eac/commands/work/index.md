@@ -28,5 +28,5 @@ eac work merge
 
 ## See Also
 
-- [Category Overview](../categories/work.md)
+- [Category Overview](../../categories/work.md)
 - [get commit-message](../get/commit-message.md)

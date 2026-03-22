@@ -400,7 +400,7 @@ eac build src-auth && eac test src-auth
 ```bash
 # Create workspace for testing
 eac work create test/feature-x
-cd ../work/test-feature-x
+cd ../commands/work/test-feature-x
 
 # Run tests in isolation
 eac test
@@ -476,7 +476,7 @@ docker run -v $(pwd):/app test-image eac test
 
 # Or use workspace isolation
 eac work create test/investigation
-cd ../work/test-investigation
+cd ../commands/work/test-investigation
 eac test
 ```
 
@@ -595,9 +595,9 @@ eac test debug
 
 ## See Also
 
-- [build](../build/build.md) - Build modules before testing
+- [build](../commands/build/build.md) - Build modules before testing
 
-- [show tests](../show/tests.md) - List all tests
-- [show test-summary](../show/test-summary.md) - Test execution summary
-- [show test-timings](../show/test-timings.md) - Test performance analysis
-- [get tests](../get/tests.md) - Test metadata as JSON
+- [show tests](../commands/show/tests.md) - List all tests
+- [show test-summary](../commands/show/test-summary.md) - Test execution summary
+- [show test-timings](../commands/show/test-timings.md) - Test performance analysis
+- [get tests](../commands/get/tests.md) - Test metadata as JSON

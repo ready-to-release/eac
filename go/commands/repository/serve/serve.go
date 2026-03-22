@@ -692,6 +692,7 @@ func handleRunningDevContainer(dockerClient *DockerClient, workspaceRoot, module
 }
 
 // startDevServerContainer starts the MkDocs dev server container and waits for it to be ready.
+// Streams container logs in real-time so build errors are immediately visible.
 // Returns the container info on success, or an error.
 func startDevServerContainer(dockerClient *DockerClient, workspaceRoot, containerName string, port int) (*docker.ServeResult, error) {
 	log.Info("Initializing container...")
@@ -702,12 +703,23 @@ func startDevServerContainer(dockerClient *DockerClient, workspaceRoot, containe
 
 	log.Infof("Container started on port %d", info.HostPort)
 
+	// Stream container logs in the background so the user sees mkdocs output in real-time
+	logCtx, logCancel := context.WithCancel(context.Background())
+	logDone := make(chan struct{})
+	go func() {
+		defer close(logDone)
+		_ = dockerClient.StreamLogsCtx(logCtx)
+	}()
+
 	if err := waitForServerReady(info.URL, 60*time.Second); err != nil {
-		log.Info("Check container logs with: docker logs " + containerName + "-" + strconv.Itoa(info.HostPort))
+		logCancel()
+		<-logDone
 		_ = dockerClient.StopContainer()
 		return nil, fmt.Errorf("server failed to start: %v", err)
 	}
 
+	logCancel()
+	<-logDone
 	return info, nil
 }
 
@@ -742,6 +754,16 @@ func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrow
 	}
 
 	containerName := fmt.Sprintf("cli-serve-dev-%s", moduleMoniker)
+
+	// Stop any stale static serve container for this module to avoid confusion
+	staticName := fmt.Sprintf("cli-serve-%s", moduleMoniker)
+	if staticClient, err := NewDockerClient(staticName); err == nil {
+		if running, _, _ := staticClient.IsRunning(); running {
+			log.Info("Stopping stale static server...")
+			_ = staticClient.StopContainer()
+		}
+		staticClient.Close()
+	}
 
 	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {

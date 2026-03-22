@@ -54,4 +54,4 @@ eac get release-config --module docs --format github-output >> $GITHUB_OUTPUT
 
 - [get release-status](./release-status.md)
 - [get release-notes](./release-notes.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

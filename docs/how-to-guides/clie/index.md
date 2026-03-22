@@ -20,7 +20,7 @@ Develop and test extensions locally (moved to Local Setup section)
 
 - **Creating your first extension?** Start with [Creating Extensions](./creating-extensions.md)
 - **Developing eac-ext commands?** See [Local Development - EAC Repository](../local-setup/local-dev-workflows.md#eac-repository-development)
-- **Building a standalone extension?** See [Local Development - External Repository Testing](../local-setup/local-dev-workflows.md#external-repository-testing)
+- **Building a standalone extension?** See [Local Development - External Repository Testing](../local-setup/local-dev-workflows.md#external-repository-testing-dockerclie)
 - **Testing in another repo?** See [Testing in External Repositories](./testing-in-external-repos.md)
 
 ### Reference Implementation

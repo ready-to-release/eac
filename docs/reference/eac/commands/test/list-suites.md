@@ -24,4 +24,4 @@ eac test list-suites
 
 - [test suite](./suite.md) - Run suite
 - [show suite](../show/suite.md) - Suite details
-- [test Commands](../categories/test.md)
+- [test Commands](../../categories/test.md)

@@ -21,5 +21,5 @@ eac serve design src-auth
 
 ## See Also
 
-- [Category Overview](../categories/serve.md)
+- [Category Overview](../../categories/serve.md)
 - [create design](../create/design.md)

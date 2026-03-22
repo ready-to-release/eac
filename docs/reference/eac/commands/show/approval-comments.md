@@ -29,4 +29,4 @@ gh auth login
 
 - [get approval-comments](../get/approval-comments.md) - JSON/YAML output
 - [show specs](./specs.md) - View specifications
-- [show Commands](../categories/show.md)
+- [show Commands](../../categories/show.md)

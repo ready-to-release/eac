@@ -38,5 +38,5 @@ eac pipeline ci-dispatch-and-wait
 
 ## See Also
 
-- [build](../build/build.md)
+- [build](../commands/build/build.md)
 - [test Commands](./test.md)

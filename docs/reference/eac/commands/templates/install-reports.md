@@ -19,4 +19,4 @@ Install report templates (test reports, build summaries, security scan reports) 
 - [templates install-docs](./install-docs.md) - Install documentation templates
 - [show build-summary](../show/build-summary.md)
 - [show test-summary](../show/test-summary.md)
-- [templates Commands](../categories/templates.md)
+- [templates Commands](../../categories/templates.md)

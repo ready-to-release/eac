@@ -1,17 +1,15 @@
 title: Commands
 nav:
   - index.md
-  - cheat-sheet.md
-  - language-support.md
-  - overview/
-  - categories/
-  - core/
   - build/
   - create/
+  - deploy.md
   - drawio/
+  - extension-meta.md
   - get/
   - help/
   - init/
+  - lint.md
   - pipeline/
   - release/
   - scan/

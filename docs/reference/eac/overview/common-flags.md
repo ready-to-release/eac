@@ -118,7 +118,7 @@ eac build --skip-cache=local:state,local:asset
 eac build --skip-cache=all
 ```
 
-See [Cache System](../../architecture/cache-system.md) for the full 2D taxonomy reference.
+See [Cache System](../architecture/cache-system.md) for the full 2D taxonomy reference.
 
 ---
 
@@ -582,7 +582,7 @@ temperature: 0.7
 
 **Set with**: `eac init`
 
-**See also**: [Init Command](../init/init.md)
+**See also**: [Init Command](../commands/init/init.md)
 
 ---
 
@@ -658,5 +658,5 @@ temperature: 0.7
 - [Command Taxonomy](./command-taxonomy.md) - How commands are organized
 - [Naming Conventions](./naming-conventions.md) - Command naming patterns
 - [Output Formats](./output-formats.md) - Understanding command output
-- [Help Command](../help/help.md) - Using the help system
-- [Init Command](../init/init.md) - Initialize AI configuration
+- [Help Command](../commands/help/help.md) - Using the help system
+- [Init Command](../commands/init/init.md) - Initialize AI configuration

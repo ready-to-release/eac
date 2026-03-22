@@ -1,11 +1,14 @@
 title: EAC CLI
 nav:
   - index.md
+  - cheat-sheet.md
+  - language-support.md
+  - overview
+  - categories
   - commands
   - architecture
   - modules
   - continuous-delivery
-  # decision-records moved to docs/architecture/decisions/
   - security
   - specifications
   - testing

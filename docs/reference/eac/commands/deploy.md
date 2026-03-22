@@ -41,4 +41,4 @@ eac deploy infra development --component networking
 
 ## See Also
 
-- [build](../build/build.md) - Build modules
+- [build](./build/build.md) - Build modules

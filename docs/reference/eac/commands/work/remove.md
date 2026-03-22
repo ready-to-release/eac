@@ -50,4 +50,4 @@ eac work remove --force
 
 - [work create](./create.md)
 - [show workspaces](../show/workspaces.md)
-- [work Commands](../categories/work.md)
+- [work Commands](../../categories/work.md)

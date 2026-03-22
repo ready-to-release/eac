@@ -26,4 +26,4 @@ eac test debug
 
 - [test](./test.md) - Run tests
 - [show test-summary](../show/test-summary.md)
-- [test Commands](../categories/test.md)
+- [test Commands](../../categories/test.md)

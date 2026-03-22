@@ -114,4 +114,4 @@ See [Repository Layout](./architecture/repository-layout.md) for the full direct
 
 - **[Command Reference](./commands/index.md)** - Complete reference for all EAC commands
 - **[How-To Guides](../../how-to-guides/eac/index.md)** - Task-oriented guides for using EAC
-- **[Decision Records](../../architecture/decisions/index.md)** - Architectural decisions and rationale
+- **[Decision Records](./architecture/decisions/index.md)** - Architectural decisions and rationale

@@ -104,15 +104,10 @@ func (m Model) renderTopBar() string {
 		leftZoneWidth = 10
 	}
 
-	// === Row 2: Headers (left empty) │ Host / Docker headers (right) ===
-	emptyLeft := strings.Repeat(" ", leftZoneWidth)
-	result.WriteString(Styles.Border.Render("│") + " " + emptyLeft + sep + rightRow1 + " " + Styles.Border.Render("│") + "\n")
-
-	// === Row 3: Data (left) │ Pressure lamps (right) ===
+	// === Row 2: Status+counters (left) │ Host / Docker headers (right) ===
 	leftCells := statusText + sep + counters + "  " + progressCount + sep + slotsCell
 	leftWidth := lipgloss.Width(leftCells)
 	if leftWidth > leftZoneWidth {
-		// Truncate status text to fit
 		fixedRight := sep + counters + "  " + progressCount + sep + slotsCell
 		statusMaxWidth := leftZoneWidth - lipgloss.Width(fixedRight)
 		if statusMaxWidth < 3 {
@@ -127,17 +122,21 @@ func (m Model) renderTopBar() string {
 	if leftWidth < leftZoneWidth {
 		leftCells += strings.Repeat(" ", leftZoneWidth-leftWidth)
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + leftCells + sep + rightRow2 + " " + Styles.Border.Render("│") + "\n")
+	result.WriteString(Styles.Border.Render("│") + " " + leftCells + sep + rightRow1 + " " + Styles.Border.Render("│") + "\n")
 
-	// === Row 4: CPU (left) │ Mem lamps (right) ===
+	// === Row 3: CPU (left) │ Pressure lamps (right) ===
 	cpuLeft := cpuCell
 	cpuWidth := lipgloss.Width(cpuLeft)
 	if cpuWidth < leftZoneWidth {
 		cpuLeft += strings.Repeat(" ", leftZoneWidth-cpuWidth)
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + cpuLeft + sep + rightRow3 + " " + Styles.Border.Render("│") + "\n")
+	result.WriteString(Styles.Border.Render("│") + " " + cpuLeft + sep + rightRow2 + " " + Styles.Border.Render("│") + "\n")
 
-	// === Row 4: Footer ===
+	// === Row 4: (left empty) │ Mem lamps (right) ===
+	emptyLeft := strings.Repeat(" ", leftZoneWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + emptyLeft + sep + rightRow3 + " " + Styles.Border.Render("│") + "\n")
+
+	// === Row 5: Footer ===
 	footerLen := m.Display.Width - 2
 	if footerLen < 1 {
 		footerLen = 1

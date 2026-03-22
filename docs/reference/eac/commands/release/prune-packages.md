@@ -7,8 +7,8 @@ Remove old container image versions from GitHub Container Registry (GHCR), keepi
 ## Synopsis
 
 ```bash
-clie release prune-packages <package> [flags]
-clie release prune-packages --all [flags]
+eac release prune-packages <package> [flags]
+eac release prune-packages --all [flags]
 ```
 
 ## Description
@@ -76,7 +76,7 @@ registries:
 Show what would be deleted without actually deleting:
 
 ```bash
-clie release prune-packages eac-ext
+eac release prune-packages eac-ext
 ```
 
 Output:
@@ -97,25 +97,25 @@ Use --force to actually delete.
 ### Actually delete
 
 ```bash
-clie release prune-packages eac-ext --force
+eac release prune-packages eac-ext --force
 ```
 
 ### Prune all packages
 
 ```bash
-clie release prune-packages --all --force
+eac release prune-packages --all --force
 ```
 
 ### Override keep count
 
 ```bash
-clie release prune-packages eac-ext --keep 5 --force
+eac release prune-packages eac-ext --keep 5 --force
 ```
 
 ### Show protected versions
 
 ```bash
-clie release prune-packages eac-ext --verbose
+eac release prune-packages eac-ext --verbose
 ```
 
 Output includes:
@@ -130,7 +130,7 @@ Protected versions:
 ### JSON output
 
 ```bash
-clie release prune-packages eac-ext --json
+eac release prune-packages eac-ext --json
 ```
 
 ## Understanding Tags

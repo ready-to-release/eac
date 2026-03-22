@@ -29,4 +29,4 @@ eac pipeline status --commit abc123    # Check specific commit
 
 - [pipeline run](./run.md)
 - [release check-ci](../release/check-ci.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

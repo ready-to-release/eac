@@ -56,4 +56,4 @@ eac get ci-config --module docs --format github-output >> $GITHUB_OUTPUT
 
 - [get ci-dispatch](./ci-dispatch.md)
 - [get ci-workflows](./ci-workflows.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

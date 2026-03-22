@@ -6,3 +6,4 @@ nav:
     - getting-started/index.md
     - Quick Start: getting-started/quick-start.md
     - Understanding Configuration Files: getting-started/configuration-files.md
+    - Creating Your First Extension: getting-started/creating-your-first-extension.md

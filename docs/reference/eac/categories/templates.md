@@ -15,28 +15,28 @@ AI prompts, reports, and specifications.
 
 ```bash
 # Install to default location
-clie templates install docs
+eac templates install docs
 
 # Install to custom location
-clie templates install docs --destination ./custom-docs
+eac templates install docs --destination ./custom-docs
 ```
 
 ### Install AI Prompt Templates
 
 ```bash
-clie templates install ai
+eac templates install ai
 ```
 
 ### Install Report Templates
 
 ```bash
-clie templates install reports --debug
+eac templates install reports --debug
 ```
 
 ### Install Specification Templates
 
 ```bash
-clie templates install specs
+eac templates install specs
 ```
 
 ## Key Features
@@ -49,8 +49,8 @@ clie templates install specs
 
 ## See Also
 
-- [create design](../create/design.md) - AI architecture design
-- [create spec](../create/spec.md) - AI specification generation
-- [get commit-message](../get/commit-message.md) - AI commit messages
-- [validate markdown](../validate/markdown.md)
-- [validate books](../validate/books.md)
+- [create design](../commands/create/design.md) - AI architecture design
+- [create spec](../commands/create/spec.md) - AI specification generation
+- [get commit-message](../commands/get/commit-message.md) - AI commit messages
+- [validate markdown](../commands/validate/markdown.md)
+- [validate books](../commands/validate/books.md)

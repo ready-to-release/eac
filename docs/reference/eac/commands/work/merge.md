@@ -41,4 +41,4 @@ eac work merge --keep-worktree
 
 - [get squash-message](../get/squash-message.md)
 - [work remove](./remove.md)
-- [work Commands](../categories/work.md)
+- [work Commands](../../categories/work.md)

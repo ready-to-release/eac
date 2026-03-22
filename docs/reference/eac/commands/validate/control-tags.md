@@ -32,4 +32,4 @@ eac validate control-tags
 
 - [validate](./validate.md)
 - [validate risk-profile](./risk-profile.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

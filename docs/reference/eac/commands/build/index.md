@@ -23,6 +23,6 @@ eac build eac-core clie
 
 ## See Also
 
-- [Category Overview](../categories/build.md)
+- [Category Overview](../../categories/build.md)
 - [get build-deps](../get/build-deps.md)
 - [show build-summary](../show/build-summary.md)

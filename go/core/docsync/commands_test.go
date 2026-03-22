@@ -148,14 +148,12 @@ func TestScanCommandDocsWithCommands_AllDocumented(t *testing.T) {
 	docsBase := filepath.Join(repoRoot, "docs", "reference", "eac", "commands")
 	require.NoError(t, os.MkdirAll(filepath.Join(docsBase, "get"), 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(docsBase, "show"), 0o755))
-	require.NoError(t, os.MkdirAll(filepath.Join(docsBase, "core"), 0o755))
-
 	// Create the doc files
 	docFiles := []string{
 		filepath.Join(docsBase, "get", "modules.md"),
 		filepath.Join(docsBase, "get", "files.md"),
 		filepath.Join(docsBase, "show", "modules.md"),
-		filepath.Join(docsBase, "core", "build.md"), // Single-word goes to core/uncategorized
+		filepath.Join(docsBase, "build.md"), // Single-word uncategorized goes to docsBase root
 	}
 
 	for _, docFile := range docFiles {

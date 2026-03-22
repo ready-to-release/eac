@@ -34,5 +34,5 @@ eac scan eac-core eac-commands --scanner sbom,vuln
 
 ## See Also
 
-- [Category Overview](../categories/scan.md)
+- [Category Overview](../../categories/scan.md)
 - [validate Commands](../validate/index.md)

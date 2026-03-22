@@ -16,19 +16,19 @@ Install project templates for documentation, AI prompts, reports, specifications
 
 ```bash
 # Install documentation templates
-clie templates install docs
+eac templates install docs
 
 # Install to custom location
-clie templates install docs --destination ./custom-docs
+eac templates install docs --destination ./custom-docs
 
 # Install AI templates
-clie templates install ai
+eac templates install ai
 
 # Install Claude Code templates
 eac templates install claude
 
 # Install with debug logging
-clie templates install reports --debug
+eac templates install reports --debug
 ```
 
 ## Available Template Types
@@ -82,5 +82,5 @@ Claude Code configuration templates (agents, commands, skills).
 
 ## See Also
 
-- [Category Overview](../categories/templates.md)
+- [Category Overview](../../categories/templates.md)
 - [create spec](../create/spec.md)

@@ -202,7 +202,7 @@ Work commands manage parallel development workspaces, enabling multiple topic br
 
 **When to use**: When you need to work on multiple features simultaneously or want isolated development environments.
 
-**See also**: [Work Commands Category](../categories/work.md), [Workspace Commands Guide](../work/index.md)
+**See also**: [Work Commands Category](../categories/work.md), [Workspace Commands Guide](../commands/work/index.md)
 
 ---
 
@@ -235,7 +235,7 @@ Test commands run tests, manage test suites, and analyze test results.
 
 **When to use**: To compile modules in dependency order, both locally and in CI/CD pipelines.
 
-**See also**: [Build Command Reference](../build/build.md)
+**See also**: [Build Command Reference](../commands/build/build.md)
 
 ---
 

@@ -669,6 +669,60 @@ func createContainer(ctx context.Context, cli DockerClient, config *ServeConfig,
 	return resp.ID, nil
 }
 
+// GetContainerLogs retrieves recent container logs as a string.
+// Useful for showing error output when a container fails to start.
+func GetContainerLogs(ctx context.Context, containerNamePrefix string, tailLines string) (string, error) {
+	cli, err := NewDockerClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to create docker client: %w", err)
+	}
+	defer cli.Close()
+
+	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return "", fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	var containerID string
+	for i := range containers {
+		c := &containers[i]
+		for _, name := range c.Names {
+			cleanName := strings.TrimPrefix(name, "/")
+			if cleanName == containerNamePrefix || strings.HasPrefix(cleanName, containerNamePrefix+"-") {
+				containerID = c.ID
+				break
+			}
+		}
+		if containerID != "" {
+			break
+		}
+	}
+
+	if containerID == "" {
+		return "", fmt.Errorf("container not found: %s", containerNamePrefix)
+	}
+
+	logOptions := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       tailLines,
+	}
+
+	logs, err := cli.ContainerLogs(ctx, containerID, logOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to get container logs: %w", err)
+	}
+	defer logs.Close()
+
+	var buf strings.Builder
+	_, err = stdcopy.StdCopy(&buf, &buf, logs)
+	if err != nil {
+		return "", fmt.Errorf("error reading logs: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
 // StreamContainerLogs streams container logs to stdout/stderr.
 // containerNamePrefix is used to find the container by name prefix.
 func StreamContainerLogs(ctx context.Context, containerNamePrefix string) error {

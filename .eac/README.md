@@ -233,16 +233,16 @@ Inspect the loaded configuration:
 
 ```bash
 # Structured YAML output of all config
-clie get config
+eac get config
 
 # Human-readable summary tables
-clie show config
+eac show config
 
 # Show config source files and layers (verbose)
-clie show config --verbose
+eac show config --verbose
 
 # Validate all contracts and schemas
-clie validate config
+eac validate config
 ```
 
 ## Validation

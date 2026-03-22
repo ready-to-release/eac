@@ -479,4 +479,4 @@ eac release get-module-calver {moniker}
 - [Format Specification](./format-specification.md) - Changelog format
 - [Repository Changelog](./repository-changelog.md) - Repository versioning
 - [Module Changelogs](./module-changelogs.md) - Module versioning
-- Decision Record: [DR-002 - Use Semantic Versioning](../../../../architecture/decisions/dr002.md)
+- Decision Record: [DR-002 - Use Semantic Versioning](../../architecture/decisions/dr002.md)

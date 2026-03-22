@@ -10,7 +10,7 @@ Definitions of key terms and concepts used throughout the documentation.
 
 A document capturing an important architectural decision, including context, decision, and consequences.
 
-See [Decision Records](./architecture/decisions/index.md).
+See [Decision Records](./reference/eac/architecture/decisions/index.md).
 
 ### Artifact
 
@@ -48,7 +48,7 @@ Used for module releases. See [Versioning](./reference/eac/continuous-delivery/c
 
 A grouping of related commands by verb (e.g., `get`, `show`, `validate`).
 
-See [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md).
+See [Command Taxonomy](./reference/eac/overview/command-taxonomy.md).
 
 ### CI/CD (Continuous Integration/Continuous Deployment)
 
@@ -94,7 +94,7 @@ Commands: [show dependencies](./reference/eac/commands/show/dependencies.md).
 ### Diataxis
 
 A documentation framework organizing content into tutorials, how-to guides, technical reference,
-and explanation. See [DR-004](./architecture/decisions/dr004.md).
+and explanation. See [DR-004](./reference/eac/architecture/decisions/dr004.md).
 
 ### DORA Metrics
 
@@ -169,7 +169,7 @@ Used throughout commands to reference modules.
 
 A repository containing multiple related modules managed together.
 
-See [DR-001](./architecture/decisions/dr001.md).
+See [DR-001](./reference/eac/architecture/decisions/dr001.md).
 
 ---
 
@@ -187,7 +187,7 @@ Commands: [create risk-profile](./reference/eac/commands/create/risk-profile.md)
 
 ### Pipeline
 
-An orchestrated sequence of build, test, and deployment steps. See [Pipeline Commands](./reference/eac/commands/categories/pipeline.md).
+An orchestrated sequence of build, test, and deployment steps. See [Pipeline Commands](./reference/eac/categories/pipeline.md).
 
 ---
 
@@ -249,11 +249,11 @@ A development practice of writing tests before implementation code. See [Three-L
 
 ### Template
 
-A reusable document structure with placeholder variables for generating documentation. See [Templates Commands](./reference/eac/commands/categories/templates.md).
+A reusable document structure with placeholder variables for generating documentation. See [Templates Commands](./reference/eac/categories/templates.md).
 
 ### Trunk-Based Development
 
-A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./architecture/decisions/dr002.md).
+A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/eac/architecture/decisions/dr002.md).
 
 ---
 
@@ -269,7 +269,7 @@ The smallest deployable unit that delivers value independently. See [Unit of Flo
 
 ### Validation
 
-The process of checking contracts, dependencies, specifications, and code against defined rules. See [Validate Commands](./reference/eac/commands/categories/validate.md).
+The process of checking contracts, dependencies, specifications, and code against defined rules. See [Validate Commands](./reference/eac/categories/validate.md).
 
 ### Value Stream Mapping
 
@@ -289,7 +289,7 @@ Commands: [work create](./reference/eac/commands/work/create.md), [work merge](.
 
 ### Workspace
 
-An EAC term for a git worktree used for feature development. Enables parallel development on multiple features. See [Work Commands](./reference/eac/commands/categories/work.md).
+An EAC term for a git worktree used for feature development. Enables parallel development on multiple features. See [Work Commands](./reference/eac/categories/work.md).
 
 ---
 
@@ -375,8 +375,8 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 
 ## See Also
 
-- [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md) - Command organization
-- [Naming Conventions](./reference/eac/commands/overview/naming-conventions.md) - Command naming patterns
+- [Command Taxonomy](./reference/eac/overview/command-taxonomy.md) - Command organization
+- [Naming Conventions](./reference/eac/overview/naming-conventions.md) - Command naming patterns
 - [EAC and CLIE](./reference/eac/architecture/index.md) - System architecture
-- [Decision Records](./architecture/decisions/index.md) - Architectural decisions
+- [Decision Records](./reference/eac/architecture/decisions/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy

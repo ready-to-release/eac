@@ -190,4 +190,4 @@ This command is the first step in the manual testing workflow:
 - [test import-manual](./import-manual.md) - Import manual test results
 - [test merge-results](./merge-results.md) - Merge results into manifest
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide
-- [test Commands](../categories/test.md)
+- [test Commands](../../categories/test.md)

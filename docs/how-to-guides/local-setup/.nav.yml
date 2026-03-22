@@ -4,6 +4,7 @@ nav:
   - install-toolchain.md
   - install-eac.md
   - configure-ai.md
+  - configure-azure-mcp.md
   - configure-claude-code.md
   - local-dev-workflows.md
   - platform-troubleshooting.md

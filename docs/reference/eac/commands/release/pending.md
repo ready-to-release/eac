@@ -48,4 +48,4 @@ eac release pending --published       # Check only published modules
 
 - [release this](./this.md)
 - [release tag-pending](./tag-pending.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

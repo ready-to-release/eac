@@ -28,6 +28,6 @@ eac update design src-auth
 
 ## See Also
 
-- [Category Overview](../categories/update.md)
+- [Category Overview](../../categories/update.md)
 - [create design](../create/design.md)
 - [build Commands](../build/index.md)

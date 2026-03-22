@@ -44,4 +44,4 @@ eac work create feature/api --path=../custom-path
 - [work commit](./commit.md) - Commit with AI messages
 - [work remove](./remove.md) - Remove workspace
 - [show workspaces](../show/workspaces.md)
-- [work Commands](../categories/work.md)
+- [work Commands](../../categories/work.md)

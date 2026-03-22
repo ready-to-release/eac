@@ -295,7 +295,7 @@ Is the module released to external users?
 
 ## Related Architecture
 
-- [DR-011: Calendar Versioning Policy](../../../architecture/decisions/dr011.md) - CalVer usage for docs
+- [DR-011: Calendar Versioning Policy](../architecture/decisions/dr011.md) - CalVer usage for docs
 - [Module Changelogs](changelog/module-changelogs.md) - Changelog format and structure
 - [Release Workflows](workflows/release-workflows.md) - Automated release process
 - [Supporting Modules](../modules/index.md) - Module catalog

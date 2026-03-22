@@ -20,5 +20,5 @@ eac init --name my-project
 
 ## See Also
 
-- [Category Overview](../categories/init.md)
+- [Category Overview](../../categories/init.md)
 - [Getting Started Guide](../../../../tutorials/getting-started/quick-start.md)

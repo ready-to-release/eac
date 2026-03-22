@@ -39,13 +39,18 @@ Markdown with a clickable run link and a fenced code block containing `gh` comma
 eac pipeline ci summary-link 12345678
 eac pipeline ci summary-link 12345678 --type test --artifact results
 eac pipeline ci summary-link 12345678 --type container --image ghcr.io/org/img:latest
+```
 
-# In a GitHub Actions workflow
+In a GitHub Actions workflow:
+
+{% raw %}
+```bash
 go run ./go/cli/eac pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY
 ```
+{% endraw %}
 
 ## See Also
 
 - [pipeline ci](./ci.md)
 - [pipeline status](./status.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

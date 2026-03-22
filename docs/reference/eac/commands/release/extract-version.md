@@ -7,4 +7,4 @@
 - [release get-version](./get-version.md)
 - [release changelog](./changelog.md)
 - [validate release-version](../validate/release-version.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

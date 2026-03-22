@@ -350,4 +350,4 @@ See [Running EAC via CLIE](./cli-integration.md) for details on the CLIE/EAC int
 ### Reference
 
 - [EAC Commands](../commands/index.md) - Complete command reference
-- [Decision Records](../../../architecture/decisions/index.md) - Architectural decisions
+- [Decision Records](./decisions/index.md) - Architectural decisions

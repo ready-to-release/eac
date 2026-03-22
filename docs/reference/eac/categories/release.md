@@ -44,6 +44,6 @@ git tag -a $TAG -m "Release $TAG"
 
 ## See Also
 
-- [pipeline status](../pipeline/status.md)
-- [validate release](../validate/release.md)
-- [get squash-message](../get/squash-message.md)
+- [pipeline status](../commands/pipeline/status.md)
+- [validate release](../commands/validate/release.md)
+- [get squash-message](../commands/get/squash-message.md)

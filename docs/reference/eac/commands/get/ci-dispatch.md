@@ -71,4 +71,4 @@ eac get ci-dispatch --directly-changed "core" --invalidated "eac-cli docs" \
 
 - [get changed-modules-ci](./changed-modules-ci.md)
 - [pipeline ci](../pipeline/ci.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

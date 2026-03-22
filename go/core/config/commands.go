@@ -39,7 +39,7 @@ func DefaultCommandsConfig() *CommandsConfig {
 	return &CommandsConfig{
 		Defaults: CommandsDefaults{
 			DocsBase:            "docs/reference/eac/commands",
-			UncategorizedFolder: "core",
+			UncategorizedFolder: "",
 		},
 		Categories: map[string]CategoryConfig{
 			"get":       {Description: "Retrieve data in structured format"},
@@ -102,12 +102,12 @@ func (c *CommandsConfig) GetDocPath(command, sourcePath, repoRoot string) string
 			}
 		}
 
-		// Not a category - goes to uncategorized folder
+		// Not a category - goes directly in docsBase (or uncategorized folder if configured)
 		uncategorized := c.Defaults.UncategorizedFolder
-		if uncategorized == "" {
-			uncategorized = "core"
+		if uncategorized != "" {
+			return filepath.Join(docsBase, uncategorized, parts[0]+".md")
 		}
-		return filepath.Join(docsBase, uncategorized, parts[0]+".md")
+		return filepath.Join(docsBase, parts[0]+".md")
 	}
 
 	// Multi-word command: first word is category, rest joined with hyphen

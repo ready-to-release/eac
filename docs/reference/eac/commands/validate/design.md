@@ -69,4 +69,4 @@ eac validate design eac-cli --verbose
 - [validate](./validate.md)
 - [create design](../create/design.md)
 - [serve design](../serve/design.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

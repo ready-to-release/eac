@@ -6,7 +6,7 @@ Most EAC commands are language-agnostic and work across all supported languages.
 
 | Command                                               | Purpose                                   | Why Go-Only?                                    |
 | ----------------------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
-| [`validate-go-tidy`](./validate/go-tidy.md)           | Validates Go module dependencies are tidy | Runs `go mod tidy` and checks for changes       |
+| [`validate-go-tidy`](./commands/validate/go-tidy.md)           | Validates Go module dependencies are tidy | Runs `go mod tidy` and checks for changes       |
 | `validate-dependencies`                                | Checks go.mod against module contracts    | Parses `go.mod` files to build dependency graph |
 
 These commands specifically interact with Go's module system (`go.mod`) and toolchain.
@@ -31,15 +31,15 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 ## See Also
 
-- [build](./build/build.md) - Build modules by language type
-- [test](./test/test.md) - Test modules by language type
+- [build](./commands/build/build.md) - Build modules by language type
+- [test](./commands/test/test.md) - Test modules by language type
 - [Command Overview](./index.md)
 
 **Commands:**
 
-- [`build`](./build/build.md) - Builds modules using appropriate handler
-- [`show-build-summary`](./show/build-summary.md) - Shows build results
-- [`show-build-times`](./show/build-times.md) - Analyzes build performance
+- [`build`](./commands/build/build.md) - Builds modules using appropriate handler
+- [`show-build-summary`](./commands/show/build-summary.md) - Shows build results
+- [`show-build-times`](./commands/show/build-times.md) - Analyzes build performance
 
 ---
 
@@ -54,11 +54,11 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Commands:**
 
-- [`test`](./test/test.md) - Runs tests using appropriate runner
-- [`test-suite`](./test/suite.md) - Executes test suites with filtering
-- [`test-debug`](./test/debug.md) - Debugs test failures
-- [`show-test-summary`](./show/test-summary.md) - Shows test results
-- [`show-test-timings`](./show/test-timings.md) - Analyzes test performance
+- [`test`](./commands/test/test.md) - Runs tests using appropriate runner
+- [`test-suite`](./commands/test/suite.md) - Executes test suites with filtering
+- [`test-debug`](./commands/test/debug.md) - Debugs test failures
+- [`show-test-summary`](./commands/show/test-summary.md) - Shows test results
+- [`show-test-timings`](./commands/show/test-timings.md) - Analyzes test performance
 
 ---
 
@@ -66,13 +66,13 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Work on contracts, specifications, and code quality regardless of language:**
 
-- [`validate`](./validate/validate.md) - Runs all validations
+- [`validate`](./commands/validate/validate.md) - Runs all validations
 - `validate-contracts` - JSON schema validation
 - `validate-specs` - Gherkin specification validation
-- [`validate-markdown`](./validate/markdown.md) - Markdown linting
-- [`validate-module-files`](./validate/module-files.md) - File ownership validation
+- [`validate-markdown`](./commands/validate/markdown.md) - Markdown linting
+- [`validate-module-files`](./commands/validate/module-files.md) - File ownership validation
 - `validate-module-hierarchy` - Dependency graph validation
-- [`validate-test-tags`](./validate/test-tags.md) - Test tag contract validation
+- [`validate-test-tags`](./commands/validate/test-tags.md) - Test tag contract validation
 
 ---
 
@@ -80,7 +80,7 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Scan any codebase with language-aware tools:**
 
-- [`scan`](./scan/scan.md) - Runs security scans with `--scanner` flag
+- [`scan`](./commands/scan/scan.md) - Runs security scans with `--scanner` flag
   - `--scanner vuln` - Vulnerability scanning (Trivy)
   - `--scanner sast` - Static analysis (Semgrep)
   - `--scanner secrets` - Secret detection (Trivy)
@@ -96,13 +96,13 @@ Security tools detect languages automatically.
 
 **Version control and changelog generation work across all module types:**
 
-- [`release-changelog`](./release/changelog.md) - Generates changelogs from commits
-- [`release-this`](./release/this.md) - Prepares module for release
-- [`release-pending`](./release/pending.md) - Checks for pending releases
-- [`release-check-ci`](./release/check-ci.md) - Verifies CI status before release
-- [`release-get-module-calver`](./release/get-module-calver.md) - Generates calendar version tags
-- [`release-get-version`](./release/get-version.md) - Extracts version from changelog
-- [`release-tag-pending`](./release/tag-pending.md) - Creates git tags for releases
+- [`release-changelog`](./commands/release/changelog.md) - Generates changelogs from commits
+- [`release-this`](./commands/release/this.md) - Prepares module for release
+- [`release-pending`](./commands/release/pending.md) - Checks for pending releases
+- [`release-check-ci`](./commands/release/check-ci.md) - Verifies CI status before release
+- [`release-get-module-calver`](./commands/release/get-module-calver.md) - Generates calendar version tags
+- [`release-get-version`](./commands/release/get-version.md) - Extracts version from changelog
+- [`release-tag-pending`](./commands/release/tag-pending.md) - Creates git tags for releases
 
 ---
 
@@ -110,11 +110,11 @@ Security tools detect languages automatically.
 
 **Introspection and discovery commands work with all module types:**
 
-- [`show-modules`](./show/modules.md) - Lists all modules
-- [`show-component-kinds`](./show/component-kinds.md) - Lists component kinds
-- [`show-dependencies`](./show/dependencies.md) - Shows dependency graph
-- [`show-files`](./show/files.md) - Shows file ownership
-- [`get-modules`](./get/modules.md) - Returns module data as JSON
+- [`show-modules`](./commands/show/modules.md) - Lists all modules
+- [`show-component-kinds`](./commands/show/component-kinds.md) - Lists component kinds
+- [`show-dependencies`](./commands/show/dependencies.md) - Shows dependency graph
+- [`show-files`](./commands/show/files.md) - Shows file ownership
+- [`get-modules`](./commands/get/modules.md) - Returns module data as JSON
 - `get-dependencies` - Returns dependencies as JSON
 
 ---
@@ -123,11 +123,11 @@ Security tools detect languages automatically.
 
 **AI commands generate language-appropriate outputs:**
 
-- [`create-spec`](./create/spec.md) - Generates Gherkin specifications
-- [`create-design`](./create/design.md) - Generates Structurizr architecture diagrams
-- [`get-commit-message`](./get/commit-message.md) - Generates commit messages
-- [`create-pr`](./create/pr.md) - Generates pull request descriptions
-- [`get-squash-message`](./get/squash-message.md) - Generates squash commit messages
+- [`create-spec`](./commands/create/spec.md) - Generates Gherkin specifications
+- [`create-design`](./commands/create/design.md) - Generates Structurizr architecture diagrams
+- [`get-commit-message`](./commands/get/commit-message.md) - Generates commit messages
+- [`create-pr`](./commands/create/pr.md) - Generates pull request descriptions
+- [`get-squash-message`](./commands/get/squash-message.md) - Generates squash commit messages
 
 AI providers adapt output to module context.
 
@@ -137,12 +137,12 @@ AI providers adapt output to module context.
 
 **Git worktree operations work regardless of module language:**
 
-- [`work-create`](./work/create.md) - Creates feature workspace
-- [`work-commit`](./work/commit.md) - Commits with AI-generated messages
-- [`work-pull`](./work/pull.md) - Syncs workspace with main
-- [`work-merge`](./work/merge.md) - Merges workspace changes
-- [`work-remove`](./work/remove.md) - Removes workspace
-- [`show-workspaces`](./show/workspaces.md) - Lists all workspaces
+- [`work-create`](./commands/work/create.md) - Creates feature workspace
+- [`work-commit`](./commands/work/commit.md) - Commits with AI-generated messages
+- [`work-pull`](./commands/work/pull.md) - Syncs workspace with main
+- [`work-merge`](./commands/work/merge.md) - Merges workspace changes
+- [`work-remove`](./commands/work/remove.md) - Removes workspace
+- [`show-workspaces`](./commands/show/workspaces.md) - Lists all workspaces
 
 ---
 
@@ -150,11 +150,11 @@ AI providers adapt output to module context.
 
 **Documentation generation supports multiple formats:**
 
-- [`serve docs`](./serve/docs.md) - Starts MkDocs server
-- [`serve design`](./serve/design.md) - Starts Structurizr Lite server
-- [`templates install`](./templates/index.md) - Installs project templates
-- [`templates install docs`](./templates/install-docs.md) - Installs documentation templates
-- [`templates install ai`](./templates/install-ai.md) - Installs AI prompt templates
+- [`serve docs`](./commands/serve/docs.md) - Starts MkDocs server
+- [`serve design`](./commands/serve/design.md) - Starts Structurizr Lite server
+- [`templates install`](./commands/templates/index.md) - Installs project templates
+- [`templates install docs`](./commands/templates/install-docs.md) - Installs documentation templates
+- [`templates install ai`](./commands/templates/install-ai.md) - Installs AI prompt templates
 
 ---
 
@@ -208,7 +208,7 @@ To add support for a new language:
 3. **Define component type** - Create default file patterns and settings
 4. **Register handler** - Add to handler registry in `init()`
 
-See [Component Types Reference](../architecture/component-kinds.md) for detailed instructions.
+See [Component Types Reference](./architecture/component-kinds.md) for detailed instructions.
 
 ---
 
@@ -238,7 +238,7 @@ See [Component Types Reference](../architecture/component-kinds.md) for detailed
 
 ## Related Documentation
 
-- [Component Types Reference](../architecture/component-kinds.md) - Detailed component type specifications
-- [Architecture](../architecture/index.md) - System architecture and component design
-- [Build Command](./build/build.md) - Build command reference
-- [Test Command](./test/test.md) - Test command reference
+- [Component Types Reference](./architecture/component-kinds.md) - Detailed component type specifications
+- [Architecture](./architecture/index.md) - System architecture and component design
+- [Build Command](./commands/build/build.md) - Build command reference
+- [Test Command](./commands/test/test.md) - Test command reference

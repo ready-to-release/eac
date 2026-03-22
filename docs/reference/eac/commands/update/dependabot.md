@@ -31,4 +31,4 @@ eac update dependabot --dry-run      # Preview changes
 ## See Also
 
 - [validate dependabot](../validate/dependabot.md)
-- [update Commands](../categories/update.md)
+- [update Commands](../../categories/update.md)

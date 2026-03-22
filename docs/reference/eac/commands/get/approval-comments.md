@@ -29,4 +29,4 @@ Returns approvals for PRs containing spec files from:
 
 - [show approval-comments](../show/approval-comments.md) - Human-readable output
 - [get specs](./specs.md) - Specification data
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

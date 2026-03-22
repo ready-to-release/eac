@@ -65,6 +65,6 @@ eac create design src-auth
 
 ## See Also
 
-- [AI Configuration](../init/init.md)
+- [AI Configuration](../commands/init/init.md)
 - [update Commands](./update.md)
 - [templates Commands](./templates.md)

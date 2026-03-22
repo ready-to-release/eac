@@ -10,53 +10,53 @@ Browse EAC commands organized by function. Each category groups commands that se
 
 **I want to...**
 
-- **...see what modules exist**: [show modules](../show/modules.md)
-- **...check dependencies**: [show dependencies](../show/dependencies.md)
-- **...create a workspace**: [work create](../work/create.md)
-- **...write specifications**: [create spec](../create/spec.md)
-- **...generate diagrams**: [create design](../create/design.md)
+- **...see what modules exist**: [show modules](../commands/show/modules.md)
+- **...check dependencies**: [show dependencies](../commands/show/dependencies.md)
+- **...create a workspace**: [work create](../commands/work/create.md)
+- **...write specifications**: [create spec](../commands/create/spec.md)
+- **...generate diagrams**: [create design](../commands/create/design.md)
 
 ### Quality and Validation
 
 **I want to...**
 
-- **...scan for secrets**: [scan](../scan/scan.md) with `--scanner secrets`
-- **...check for vulnerabilities**: [scan](../scan/scan.md) with `--scanner vuln`
+- **...scan for secrets**: [scan](../commands/scan/scan.md) with `--scanner secrets`
+- **...check for vulnerabilities**: [scan](../commands/scan/scan.md) with `--scanner vuln`
 
 ### Building and Testing
 
 **I want to...**
 
-- **...build a module**: [build](../build/build.md)
-- **...run tests**: [test](../test/test.md)
-- **...run a test suite**: [test suite](../test/suite.md)
-- **...see test results**: [show test-summary](../show/test-summary.md)
+- **...build a module**: [build](../commands/build/build.md)
+- **...run tests**: [test](../commands/test/test.md)
+- **...run a test suite**: [test suite](../commands/test/suite.md)
+- **...see test results**: [show test-summary](../commands/show/test-summary.md)
 
 ### Committing and PRs
 
 **I want to...**
 
-- **...commit changes**: [work commit](../work/commit.md) or [get commit-message](../get/commit-message.md)
-- **...create a PR**: [create pr](../create/pr.md)
-- **...see changed files**: [show files-changed](../show/files-changed.md)
-- **...get changed modules**: [get changed-modules](../get/changed-modules.md)
+- **...commit changes**: [work commit](../commands/work/commit.md) or [get commit-message](../commands/get/commit-message.md)
+- **...create a PR**: [create pr](../commands/create/pr.md)
+- **...see changed files**: [show files-changed](../commands/show/files-changed.md)
+- **...get changed modules**: [get changed-modules](../commands/get/changed-modules.md)
 
 ### Release and Deployment
 
 **I want to...**
 
-- **...check for release changes**: [release pending](../release/pending.md)
-- **...generate changelog**: [release changelog](../release/changelog.md)
-- **...create a release**: [release this](../release/this.md)
-- **...check CI status**: [release check-ci](../release/check-ci.md)
-- **...run pipelines**: [pipeline run](../pipeline/run.md)
+- **...check for release changes**: [release pending](../commands/release/pending.md)
+- **...generate changelog**: [release changelog](../commands/release/changelog.md)
+- **...create a release**: [release this](../commands/release/this.md)
+- **...check CI status**: [release check-ci](../commands/release/check-ci.md)
+- **...run pipelines**: [pipeline run](../commands/pipeline/run.md)
 
 ### Documentation
 
 **I want to...**
 
-- **...serve docs locally**: [serve docs](../serve/docs.md)
-- **...view architecture diagrams**: [serve design](../serve/design.md)
+- **...serve docs locally**: [serve docs](../commands/serve/docs.md)
+- **...view architecture diagrams**: [serve design](../commands/serve/design.md)
 - **...manage templates**: [templates commands](./templates.md)
 
 ## Category Patterns

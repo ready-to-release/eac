@@ -43,4 +43,4 @@ eac get valid-commands --as-json
 
 - [show valid-commands](../show/valid-commands.md) - Human-readable output
 - [help](../help/help.md) - Command help
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

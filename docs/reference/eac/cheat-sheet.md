@@ -447,12 +447,12 @@ Consider creating shell aliases for frequently used commands:
 
 ```bash
 # ~/.bashrc or ~/.zshrc
-alias clie-modules='eac show modules'
-alias clie-build='eac build'
-alias clie-test='eac test'
-alias clie-validate='eac validate'
-alias clie-commit='eac work commit'
-alias clie-changed='eac get changed-modules'
+alias eac-modules='eac show modules'
+alias eac-build='eac build'
+alias eac-test='eac test'
+alias eac-validate='eac validate'
+alias eac-commit='eac work commit'
+alias eac-changed='eac get changed-modules'
 ```
 
 ---

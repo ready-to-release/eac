@@ -93,11 +93,11 @@ To list all available commands:
 
 ```bash
 # List all EAC commands
-clie eac --help
+eac --help
 
 # List commands in a specific category
-clie eac build --help
-clie eac test --help
+eac build --help
+eac test --help
 ```
 
 ## Module Documentation

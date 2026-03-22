@@ -51,4 +51,4 @@ eac get book-description unknown.pdf --default "Documentation"
 
 - [show books](../show/books.md)
 - [validate books](../validate/books.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

@@ -18,4 +18,4 @@ Coordinates distributed CI execution across multiple GitHub Actions runners.
 
 - [pipeline wait](./wait.md)
 - [pipeline status](./status.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

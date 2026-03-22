@@ -93,14 +93,16 @@ func RegisterAllWidgets(catalog *WidgetCatalog) {
 	catalog.Register(&Widget{
 		ID:          "res-counters",
 		ElementName: "Counters",
-		HelpText:    "Progress: blue=cached (higher=good incremental), green=done, red=failed",
+		HelpText:    "Progress: blue=cached, green=done, yellow=processing, red=failed",
 		ZoneEnabled: true,
 		Render: func(snap WidgetSnapshot) string {
 			blueBg := lipgloss.NewStyle().Background(lipgloss.Color("39")).Foreground(lipgloss.Color("0"))
 			greenBg := lipgloss.NewStyle().Background(lipgloss.Color("40")).Foreground(lipgloss.Color("0"))
+			yellowBg := lipgloss.NewStyle().Background(lipgloss.Color("214")).Foreground(lipgloss.Color("0"))
 			redBg := lipgloss.NewStyle().Background(lipgloss.Color("196")).Foreground(lipgloss.Color("0"))
 			return blueBg.Render(fmt.Sprintf("%3d", snap.Counts.Cached)) + " " +
 				greenBg.Render(fmt.Sprintf("%3d", snap.Counts.Done)) + " " +
+				yellowBg.Render(fmt.Sprintf("%3d", snap.Counts.RunningCount)) + " " +
 				redBg.Render(fmt.Sprintf("%3d", snap.Counts.Failed))
 		},
 	})

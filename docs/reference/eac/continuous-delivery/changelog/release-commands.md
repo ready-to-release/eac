@@ -6,17 +6,17 @@ CLI commands for the changelog-based release system.
 
 ```bash
 # Check for pending changes
-clie release pending <module>
-clie release pending --all
+eac release pending <module>
+eac release pending --all
 
 # Finalize changelog for release
-clie release this <module>
+eac release this <module>
 
 # Check for untagged versions
-clie release tag-pending <module>
+eac release tag-pending <module>
 
 # Validate changelog format
-clie release validate <module>
+eac release validate <module>
 ```
 
 ---
@@ -27,13 +27,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-clie release pending clie
+eac release pending clie
 
 # Check all modules
-clie release pending --all
+eac release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-clie release pending clie --quiet
+eac release pending clie --quiet
 ```
 
 **Output includes**:
@@ -51,13 +51,13 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-clie release this clie
+eac release this clie
 
 # Preview without writing
-clie release this clie --dry-run
+eac release this clie --dry-run
 
 # Output as JSON
-clie release this clie --json
+eac release this clie --json
 ```
 
 **What it does**:
@@ -74,8 +74,8 @@ clie release this clie --json
 Check for changelog versions without corresponding git tags. Used by CI.
 
 ```bash
-clie release tag-pending clie
-clie release tag-pending --all
+eac release tag-pending clie
+eac release tag-pending --all
 ```
 
 ---
@@ -85,8 +85,8 @@ clie release tag-pending --all
 Validate changelog format and structure.
 
 ```bash
-clie release validate clie
-clie release validate --all
+eac release validate clie
+eac release validate --all
 ```
 
 **Checks**:
@@ -154,7 +154,7 @@ Commits are filtered by module file patterns. Ensure changes touch files owned b
 
 ### Changelog validation errors
 
-Run `clie release validate <module>` to check for format issues:
+Run `eac release validate <module>` to check for format issues:
 
 - Invalid version format
 - Duplicate versions

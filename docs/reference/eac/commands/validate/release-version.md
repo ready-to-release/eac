@@ -39,4 +39,4 @@ eac validate release-version 01.2.3    # leading zero
 
 - [validate release](./release.md)
 - [release get-version](../release/get-version.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

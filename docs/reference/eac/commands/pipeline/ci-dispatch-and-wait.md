@@ -36,4 +36,4 @@ eac pipeline ci dispatch-and-wait --workflow ci-clie.yaml --inputs '{"version":"
 
 - [pipeline wait](./wait.md)
 - [pipeline ci](./ci.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

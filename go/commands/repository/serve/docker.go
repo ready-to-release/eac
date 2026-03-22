@@ -212,6 +212,17 @@ func (c *DockerClient) OpenBrowserWithFallback(url string) (bool, error) {
 	return docker.OpenBrowserWithFallback(url)
 }
 
+// GetRecentLogs retrieves the last N lines of container logs.
+func (c *DockerClient) GetRecentLogs(tailLines string) (string, error) {
+	return docker.GetContainerLogs(c.ctx, c.containerName, tailLines)
+}
+
+// StreamLogsCtx streams container logs to stdout/stderr using the given context.
+// Blocks until the context is cancelled or the container stops.
+func (c *DockerClient) StreamLogsCtx(ctx context.Context) error {
+	return docker.StreamContainerLogs(ctx, c.containerName)
+}
+
 // StreamLogs streams container logs to stdout/stderr.
 // Blocks until the context is cancelled or the container stops.
 func (c *DockerClient) StreamLogs() error {

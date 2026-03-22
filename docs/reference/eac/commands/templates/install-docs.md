@@ -19,4 +19,4 @@ Install documentation templates (architecture docs, implementation plans, operat
 - [templates install](./index.md) - Install command overview
 - [templates install-ai](./install-ai.md) - Install AI prompt templates
 - [create design](../create/design.md) - Generate architecture diagrams
-- [templates Commands](../categories/templates.md)
+- [templates Commands](../../categories/templates.md)

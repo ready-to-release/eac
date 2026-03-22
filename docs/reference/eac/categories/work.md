@@ -81,7 +81,7 @@ eac work create feature/api
 eac work create feature/user-authentication
 
 # Change to workspace directory
-cd ../work/feature-user-authentication
+cd ../commands/work/feature-user-authentication
 
 # Develop feature
 # ... write code ...
@@ -95,13 +95,13 @@ eac work commit --all
 ```bash
 # Feature 1: Authentication
 eac work create feature/auth
-cd ../work/feature-auth
+cd ../commands/work/feature-auth
 # ... develop ...
 
 # Feature 2: API (separate workspace)
 cd ~/project
 eac work create feature/api
-cd ../work/feature-api
+cd ../commands/work/feature-api
 # ... develop ...
 
 # Both workspaces remain active
@@ -190,7 +190,7 @@ eac work create hotfix/security --from release/v1.2.0
 
 **What it does**:
 
-- Creates git worktree in `../work/<branch-name>/`
+- Creates git worktree in `../commands/work/<branch-name>/`
 - Creates new branch (or checks out existing)
 - Sets up isolated development environment
 
@@ -414,7 +414,7 @@ FEATURE_NAME=$1
 eac work create "feature/$FEATURE_NAME"
 
 # Change directory
-cd "../work/feature-$FEATURE_NAME"
+cd "../commands/work/feature-$FEATURE_NAME"
 
 # ... develop feature ...
 
@@ -436,7 +436,7 @@ fi
 
 ## See Also
 
-- [show workspaces](../show/workspaces.md) - List all workspaces
-- [get commit-message](../get/commit-message.md) - AI commit messages
-- [get squash-message](../get/squash-message.md) - Squash merge messages
-- [Workspace Commands Guide](../work/index.md)
+- [show workspaces](../commands/show/workspaces.md) - List all workspaces
+- [get commit-message](../commands/get/commit-message.md) - AI commit messages
+- [get squash-message](../commands/get/squash-message.md) - Squash merge messages
+- [Workspace Commands Guide](../commands/work/index.md)

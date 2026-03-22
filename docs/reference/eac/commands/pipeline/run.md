@@ -17,4 +17,4 @@ Each module's pipeline includes build, test, and validation steps.
 
 - [pipeline status](./status.md)
 - [pipeline ci](./ci.md)
-- [pipeline Commands](../categories/pipeline.md)
+- [pipeline Commands](../../categories/pipeline.md)

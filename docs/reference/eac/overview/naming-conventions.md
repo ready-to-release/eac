@@ -476,4 +476,4 @@ validate contracts       # Clear verb
 - [Command Taxonomy](./command-taxonomy.md) - How commands are organized into categories
 - [Common Flags](./common-flags.md) - Global options available to commands
 - [Output Formats](./output-formats.md) - Understanding command output formats
-- [Help Command](../help/help.md) - Using the help system
+- [Help Command](../commands/help/help.md) - Using the help system

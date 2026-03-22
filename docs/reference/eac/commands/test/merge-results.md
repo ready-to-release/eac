@@ -308,4 +308,4 @@ invalid version format: version must be in semver (v1.2.3) or calver (v2024.01.1
 - [test import-manual](./import-manual.md) - Import manual test results
 - [show test-summary](../show/test-summary.md) - View aggregated results
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide
-- [test Commands](../categories/test.md)
+- [test Commands](../../categories/test.md)

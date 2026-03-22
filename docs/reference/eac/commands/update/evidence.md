@@ -38,4 +38,4 @@ eac update evidence eac -v           # Verbose output
 
 - [scan](../scan/scan.md)
 - [test](../test/test.md)
-- [update Commands](../categories/update.md)
+- [update Commands](../../categories/update.md)

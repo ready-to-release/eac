@@ -31,5 +31,5 @@ eac validate dependencies
 
 ## See Also
 
-- [Category Overview](../categories/validate.md)
+- [Category Overview](../../categories/validate.md)
 - [scan Commands](../scan/index.md)

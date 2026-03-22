@@ -9,12 +9,13 @@ import (
 // This is the single source of truth for progress tracking.
 // Call DeriveCounts() in View() rather than maintaining separate counters.
 type DerivedCounts struct {
-	Total   int // Total number of UoWs registered
-	Running int // Sum of weights for running UoWs (weight-aware)
-	Done    int // Completed successfully (exit code 0)
-	Cached  int // Skipped/cached (exit code < 0)
-	Failed  int // Failed (exit code > 0)
-	Pending int // Waiting to start
+	Total        int // Total number of UoWs registered
+	Running      int // Sum of weights for running UoWs (weight-aware)
+	RunningCount int // Number of running UoWs (unweighted)
+	Done         int // Completed successfully (exit code 0)
+	Cached       int // Skipped/cached (exit code < 0)
+	Failed       int // Failed (exit code > 0)
+	Pending      int // Waiting to start
 }
 
 // CapacityInfo holds the three-value capacity model for display.
@@ -228,6 +229,7 @@ func (m Model) DeriveCounts() DerivedCounts {
 		case UoWPending:
 			c.Pending++
 		case UoWRunning:
+			c.RunningCount++
 			w := state.Weight
 			if w <= 0 {
 				w = 1 // Default weight to 1

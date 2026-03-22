@@ -7,6 +7,10 @@ FROM python:${PYTHON_VERSION}-alpine
 
 WORKDIR /docs
 
+# Suppress mkdocs-material 9.7.2+ warning about MkDocs 2.0 (we pin mkdocs<2.0)
+# See: https://github.com/squidfunk/mkdocs-material/issues/8567
+ENV NO_MKDOCS_2_WARNING=1
+
 # Minimal dependencies for mkdocs + material theme
 RUN apk add --no-cache \
     git \

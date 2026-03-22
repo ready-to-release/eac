@@ -41,6 +41,6 @@ eac validate design
 
 ## See Also
 
-- [show config](../show/config.md)
-- [get modules](../get/modules.md)
+- [show config](../commands/show/config.md)
+- [get modules](../commands/get/modules.md)
 - [scan Commands](./scan.md)

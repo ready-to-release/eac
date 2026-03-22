@@ -13,20 +13,11 @@
     },
     "github": {
       "type": "stdio",
-      "command": "pwsh",
-      "args": ["-NoLogo", "-Command", "$env:GITHUB_PERSONAL_ACCESS_TOKEN | docker login ghcr.io -u user --password-stdin 2>$null; docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN=$env:GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"],
-      "env": {}
-    },
-    "azure": {
-      "type": "stdio",
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-e", "AZURE_CLIENT_ID",
-        "-e", "AZURE_CLIENT_SECRET",
-        "-e", "AZURE_TENANT_ID",
-        "-e", "AZURE_SUBSCRIPTION_ID",
-        "mcr.microsoft.com/azure-sdk/azure-mcp:latest"
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
       ],
       "env": {}
     }

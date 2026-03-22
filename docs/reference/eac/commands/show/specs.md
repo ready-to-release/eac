@@ -10,4 +10,4 @@ Specifications are read from: `specs/<module>/`
 
 - [get specs](../get/specs.md) - JSON/YAML output
 - [show changelog](./changelog.md) - View changelog
-- [show Commands](../categories/show.md)
+- [show Commands](../../categories/show.md)

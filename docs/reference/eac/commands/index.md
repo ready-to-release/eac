@@ -8,32 +8,32 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 
 ## Quick Access
 
-- [Language Support](./language-support.md) - Which commands work with which languages
-- [Command Taxonomy](./overview/command-taxonomy.md) - How commands are organized
-- [All Categories](./categories/index.md) - Browse by category
-- [Naming Conventions](./overview/naming-conventions.md) - Command naming patterns
-- [Common Flags](./overview/common-flags.md) - Global options
-- [Output Formats](./overview/output-formats.md) - JSON vs human-readable output
+- [Language Support](../language-support.md) - Which commands work with which languages
+- [Command Taxonomy](../overview/command-taxonomy.md) - How commands are organized
+- [All Categories](../categories/index.md) - Browse by category
+- [Naming Conventions](../overview/naming-conventions.md) - Command naming patterns
+- [Common Flags](../overview/common-flags.md) - Global options
+- [Output Formats](../overview/output-formats.md) - JSON vs human-readable output
 
 ## Command Categories
 
 | Category                               | Purpose                                              |
 | -------------------------------------- | ---------------------------------------------------- |
-| [build](./categories/build.md)         | Module building and compilation                      |
-| [create](./categories/create.md)       | AI-powered generation (commits, specs, designs, PRs) |
-| [get](./categories/get.md)             | JSON output for automation and scripting             |
-| [help](./categories/help.md)           | Display help information                             |
-| [init](./categories/init.md)           | Project initialization                               |
-| [pipeline](./categories/pipeline.md)   | CI/CD orchestration                                  |
-| [release](./categories/release.md)     | Release management and versioning                    |
-| [scan](./categories/scan.md)           | Security scanning (SAST, secrets, vulnerabilities)   |
-| [serve](./categories/serve.md)         | Local development servers                            |
-| [show](./categories/show.md)           | Human-readable output for interactive use            |
-| [templates](./categories/templates.md) | Template management                                  |
-| [test](./categories/test.md)           | Testing and test suite management                    |
-| [update](./categories/update.md)       | Update operations                                    |
-| [validate](./categories/validate.md)   | Contract and dependency validation                   |
-| [work](./categories/work.md)           | Workspace management (git worktrees)                 |
+| [build](../categories/build.md)         | Module building and compilation                      |
+| [create](../categories/create.md)       | AI-powered generation (commits, specs, designs, PRs) |
+| [get](../categories/get.md)             | JSON output for automation and scripting             |
+| [help](../categories/help.md)           | Display help information                             |
+| [init](../categories/init.md)           | Project initialization                               |
+| [pipeline](../categories/pipeline.md)   | CI/CD orchestration                                  |
+| [release](../categories/release.md)     | Release management and versioning                    |
+| [scan](../categories/scan.md)           | Security scanning (SAST, secrets, vulnerabilities)   |
+| [serve](../categories/serve.md)         | Local development servers                            |
+| [show](../categories/show.md)           | Human-readable output for interactive use            |
+| [templates](../categories/templates.md) | Template management                                  |
+| [test](../categories/test.md)           | Testing and test suite management                    |
+| [update](../categories/update.md)       | Update operations                                    |
+| [validate](../categories/validate.md)   | Contract and dependency validation                   |
+| [work](../categories/work.md)           | Workspace management (git worktrees)                 |
 
 ## Common Workflows
 
@@ -69,14 +69,14 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 ### New to EAC Commands?
 
 1. **Start with the basics**:
-   - [Command Taxonomy](./overview/command-taxonomy.md) - Understand how commands are organized
-   - [Naming Conventions](./overview/naming-conventions.md) - Learn command naming patterns
-   - [Common Flags](./overview/common-flags.md) - Global options all commands accept
+   - [Command Taxonomy](../overview/command-taxonomy.md) - Understand how commands are organized
+   - [Naming Conventions](../overview/naming-conventions.md) - Learn command naming patterns
+   - [Common Flags](../overview/common-flags.md) - Global options all commands accept
 
 2. **Explore by category**:
-   - Browse the [Categories Index](./categories/index.md) to find commands by function
-   - Start with [show commands](./categories/show.md) for exploration
-   - Use [get commands](./categories/get.md) for automation
+   - Browse the [Categories Index](../categories/index.md) to find commands by function
+   - Start with [show commands](../categories/show.md) for exploration
+   - Use [get commands](../categories/get.md) for automation
 
 3. **Try common commands**:
 
@@ -97,8 +97,8 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 ### Looking for a Specific Command?
 
 - **By name**: Use the search function or browse categories
-- **By purpose**: See [Command Taxonomy](./overview/command-taxonomy.md#finding-the-right-command)
-- **By output format**: See [Output Formats](./overview/output-formats.md)
+- **By purpose**: See [Command Taxonomy](../overview/command-taxonomy.md#finding-the-right-command)
+- **By output format**: See [Output Formats](../overview/output-formats.md)
 
 ## Command Reference Pages
 
@@ -143,7 +143,7 @@ $ eac get modules
 eac get modules | jq -r '.modules[].moniker'
 ```
 
-**See**: [Get Commands](./categories/get.md), [Output Formats](./overview/output-formats.md)
+**See**: [Get Commands](../categories/get.md), [Output Formats](../overview/output-formats.md)
 
 ### Formatted Output (show commands)
 
@@ -159,7 +159,7 @@ $ eac show modules
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```
 
-**See**: [Show Commands](./categories/show.md), [Output Formats](./overview/output-formats.md)
+**See**: [Show Commands](../categories/show.md), [Output Formats](../overview/output-formats.md)
 
 ## Integration Examples
 
@@ -254,7 +254,7 @@ See [How-to Guides](../../../how-to-guides/eac/commands/index.md) for practical,
 
 When adding new commands to EAC:
 
-1. Follow [Naming Conventions](./overview/naming-conventions.md)
+1. Follow [Naming Conventions](../overview/naming-conventions.md)
 2. Choose appropriate category (verb-first)
 3. Implement both `get` (JSON) and `show` (formatted) variants for information commands
 4. Add comprehensive help text
@@ -275,17 +275,17 @@ Command reference pages should include:
 
 ### Overview
 
-- [Command Taxonomy](./overview/command-taxonomy.md) - Organization and categories
-- [Naming Conventions](./overview/naming-conventions.md) - Naming rules
-- [Common Flags](./overview/common-flags.md) - Global options
-- [Output Formats](./overview/output-formats.md) - JSON vs formatted
+- [Command Taxonomy](../overview/command-taxonomy.md) - Organization and categories
+- [Naming Conventions](../overview/naming-conventions.md) - Naming rules
+- [Common Flags](../overview/common-flags.md) - Global options
+- [Output Formats](../overview/output-formats.md) - JSON vs formatted
 
 ### Categories
 
-- [All Categories](./categories/index.md) - Browse all command categories
-- [Create Commands](./categories/create.md) - AI-powered generation
-- [Get Commands](./categories/get.md) - JSON output
-- [Show Commands](./categories/show.md) - Formatted output
+- [All Categories](../categories/index.md) - Browse all command categories
+- [Create Commands](../categories/create.md) - AI-powered generation
+- [Get Commands](../categories/get.md) - JSON output
+- [Show Commands](../categories/show.md) - Formatted output
 
 ### How-to Guides
 

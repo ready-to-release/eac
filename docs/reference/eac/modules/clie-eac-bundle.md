@@ -121,16 +121,16 @@ The installer:
 
 ```bash
 # Build CLIE binaries for all platforms
-clie eac build clie --platforms linux,windows,darwin
+eac build clie --platforms linux,windows,darwin
 
 # Build EAC extension image
-clie eac build eac-ext
+eac build eac-ext
 
 # Export image to tar
 docker save eac-ext:latest -o eac-ext.tar
 
 # Package bundle
-clie eac release bundle --version 2024.02.1
+eac release bundle --version 2024.02.1
 ```
 
 ### Bundle Artifacts

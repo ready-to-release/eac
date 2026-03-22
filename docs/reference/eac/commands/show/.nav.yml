@@ -9,14 +9,17 @@ nav:
   - build-summary.md
   - build-times.md
   - changelog.md
+  - ci-results.md
   - ci-summary.md
   - component-kinds.md
+  - components.md
   - config.md
   - dependencies.md
   - dependency-ci-summary.md
   - deps-setup-summary.md
   - environments.md
   - files.md
+  - ghosts.md
   - files-changed.md
   - files-staged.md
   - help.md
@@ -33,4 +36,5 @@ nav:
   - tests.md
   - trigger-summary.md
   - valid-commands.md
+  - units.md
   - workspaces.md

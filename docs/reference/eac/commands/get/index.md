@@ -41,5 +41,5 @@ eac get changed-modules-ci
 
 ## See Also
 
-- [Category Overview](../categories/get.md)
+- [Category Overview](../../categories/get.md)
 - [show Commands](../show/index.md) - Human-readable output

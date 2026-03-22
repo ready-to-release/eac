@@ -20,5 +20,5 @@ eac help build
 
 ## See Also
 
-- [Category Overview](../categories/help.md)
-- [Command Cheat Sheet](../cheat-sheet.md)
+- [Category Overview](../../categories/help.md)
+- [Command Cheat Sheet](../../cheat-sheet.md)

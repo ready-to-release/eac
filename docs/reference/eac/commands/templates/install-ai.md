@@ -19,4 +19,4 @@ Install AI prompt templates for customization. Used by:
 
 - [get commit-message](../get/commit-message.md) - AI commit messages
 - [create spec](../create/spec.md) - AI specification generation
-- [templates Commands](../categories/templates.md)
+- [templates Commands](../../categories/templates.md)

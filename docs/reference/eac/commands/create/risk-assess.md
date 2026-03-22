@@ -5,6 +5,6 @@
 ## See Also
 
 - [create risk-profile](./risk-profile.md)
-- [scan](../categories/scan.md)
+- [scan](../../categories/scan.md)
 - [test](../test/test.md)
-- [create Commands](../categories/create.md)
+- [create Commands](../../categories/create.md)

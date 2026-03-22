@@ -3,4 +3,5 @@ nav:
   - index.md
   - sast.md
   - dast.md
+  - risk-config.md
   - supply-chain.md

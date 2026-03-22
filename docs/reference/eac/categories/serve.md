@@ -35,7 +35,7 @@ eac serve design src-auth
 
 ## See Also
 
-- [create design](../create/design.md)
-- [update design](../update/design.md)
-- [validate design](../validate/design.md)
-- [validate markdown](../validate/markdown.md)
+- [create design](../commands/create/design.md)
+- [update design](../commands/update/design.md)
+- [validate design](../commands/validate/design.md)
+- [validate markdown](../commands/validate/markdown.md)

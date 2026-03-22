@@ -318,4 +318,4 @@ eac get modules | jq -r '.modules[] | "\(.moniker): \(.type)"'
 - [Get Commands](./get.md) - JSON output for automation
 - [Output Formats](../overview/output-formats.md) - Understanding output types
 - [Command Taxonomy](../overview/command-taxonomy.md) - Command organization
-- [Show Commands Guide](../../../../how-to-guides/eac/commands/getting-started/explore-your-repository.md) - How-to guide
+- [Show Commands Guide](../../../how-to-guides/eac/commands/getting-started/explore-your-repository.md) - How-to guide

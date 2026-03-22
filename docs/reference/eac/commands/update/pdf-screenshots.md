@@ -35,4 +35,4 @@ eac update pdf-screenshots --dry-run             # Preview extraction
 
 - [update docs](./docs.md)
 - [update structurizr](./structurizr.md)
-- [update Commands](../categories/update.md)
+- [update Commands](../../categories/update.md)

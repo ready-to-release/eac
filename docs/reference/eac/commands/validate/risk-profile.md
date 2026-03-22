@@ -40,4 +40,4 @@ eac validate risk-profile templates/specs/risk-catalog/profile.json
 - [validate](./validate.md)
 - [create risk-profile](../create/risk-profile.md)
 - [validate risk-catalog](./risk-catalog.md)
-- [validate Commands](../categories/validate.md)
+- [validate Commands](../../categories/validate.md)

@@ -7,4 +7,4 @@
 - [get artifacts](./artifacts.md)
 - [show build-summary](../show/build-summary.md)
 - [build](../build/build.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

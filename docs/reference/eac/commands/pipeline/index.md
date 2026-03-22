@@ -26,5 +26,5 @@ eac pipeline status
 
 ## See Also
 
-- [Category Overview](../categories/pipeline.md)
+- [Category Overview](../../categories/pipeline.md)
 - [build](../build/build.md)

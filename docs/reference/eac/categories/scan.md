@@ -62,5 +62,5 @@ eac scan zap eac-api --target http://localhost:8080
 ## See Also
 
 - [validate Commands](./validate.md)
-- [create risk-assess](../create/risk-assess.md)
-- [validate control-tags](../validate/control-tags.md)
+- [create risk-assess](../commands/create/risk-assess.md)
+- [validate control-tags](../commands/validate/control-tags.md)

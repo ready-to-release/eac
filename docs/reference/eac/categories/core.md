@@ -18,13 +18,13 @@ These commands are invoked directly without a category prefix.
 
 | Command | Description |
 |---------|-------------|
-| [build](../build/build.md) | Build one or more modules |
-| [lint](../core/lint.md) | Run linters on modules |
-| [scan](../scan/index.md) | Run security scanners on modules |
-| [test](../test/index.md) | Run tests for modules |
-| [extension-meta](../core/extension-meta.md) | Output extension metadata for CLI integration |
-| [init](../init/index.md) | Initialize a new EAC repository |
-| [help](../help/index.md) | Display help information |
+| [build](../commands/build/build.md) | Build one or more modules |
+| [lint](../commands/lint.md) | Run linters on modules |
+| [scan](../commands/scan/index.md) | Run security scanners on modules |
+| [test](../commands/test/index.md) | Run tests for modules |
+| [extension-meta](../commands/extension-meta.md) | Output extension metadata for CLI integration |
+| [init](../commands/init/index.md) | Initialize a new EAC repository |
+| [help](../commands/help/index.md) | Display help information |
 
 ## Common Use Cases
 
@@ -46,14 +46,14 @@ The lint command automatically selects appropriate linters based on module compo
 ### Extension Metadata
 
 ```bash
-# Output extension metadata for clie CLI
+# Output extension metadata for CLIE extension host
 eac extension-meta
 ```
 
-Provides metadata about the EAC extension for CLI integration and tooling.
+Provides metadata about the EAC extension for [CLIE](../../clie/index.md) integration. See [extension-meta](../commands/extension-meta.md) for details.
 
 ## See Also
 
-- [build](../build/build.md) - Build modules
-- [test](../test/index.md) - Test modules
-- [validate](../validate/index.md) - Validate repository structure
+- [build](../commands/build/build.md) - Build modules
+- [test](../commands/test/index.md) - Test modules
+- [validate](../commands/validate/index.md) - Validate repository structure

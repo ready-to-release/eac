@@ -38,4 +38,4 @@ eac release eac-ext --tag-direct --push=false 0.0.7
 - [release clie](./clie.md)
 - [release get-version](./get-version.md)
 - [get cli-release-notes](../get/cli-release-notes.md)
-- [release Commands](../categories/release.md)
+- [release Commands](../../categories/release.md)

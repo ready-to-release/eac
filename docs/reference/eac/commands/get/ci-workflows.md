@@ -38,4 +38,4 @@ eac get ci-workflows --format json
 - [get module-ci-workflow](./module-ci-workflow.md)
 - [pipeline status](../pipeline/status.md)
 - [pipeline ci](../pipeline/ci.md)
-- [get Commands](../categories/get.md)
+- [get Commands](../../categories/get.md)

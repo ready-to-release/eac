@@ -34,5 +34,5 @@ eac test merge-results --module src-auth --version v1.2.0
 
 ## See Also
 
-- [Category Overview](../categories/test.md)
+- [Category Overview](../../categories/test.md)
 - [show test-summary](../show/test-summary.md)

@@ -40,6 +40,6 @@ eac validate
 
 ## See Also
 
-- [Getting Started Guide](../../../../tutorials/getting-started/quick-start.md)
-- [show config](../show/config.md) - View configuration
-- [validate](../validate/validate.md) - Validate configuration
+- [Getting Started Guide](../../../tutorials/getting-started/quick-start.md)
+- [show config](../commands/show/config.md) - View configuration
+- [validate](../commands/validate/validate.md) - Validate configuration

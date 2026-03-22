@@ -56,5 +56,5 @@ eac show dependencies
 
 ## See Also
 
-- [Category Overview](../categories/show.md)
+- [Category Overview](../../categories/show.md)
 - [get Commands](../get/index.md) - JSON output

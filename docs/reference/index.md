@@ -12,7 +12,7 @@ Technical reference for **EAC** (Everything-as-Code) and **CLIE** (CLI Extender)
 
 | Resource                                             | Description                              |
 | ---------------------------------------------------- | ---------------------------------------- |
-| [Command Cheat Sheet](./eac/commands/cheat-sheet.md) | Quick reference for most common commands |
+| [Command Cheat Sheet](./eac/cheat-sheet.md) | Quick reference for most common commands |
 
 ## Products
 
@@ -33,5 +33,5 @@ Technical reference for **EAC** (Everything-as-Code) and **CLIE** (CLI Extender)
 | Resource                                                  | Description                     |
 | --------------------------------------------------------- | ------------------------------- |
 | [Continuous Delivery](./eac/continuous-delivery/index.md) | CI/CD workflows and conventions |
-| [Decision Records](../architecture/decisions/index.md)       | Architectural decisions         |
+| [Decision Records](./eac/architecture/decisions/index.md)       | Architectural decisions         |
 | [Modules](./eac/modules/index.md)                         | Complete module reference       |

@@ -44,4 +44,4 @@ eac show valid-commands
 ## See Also
 
 - [Command Cheat Sheet](../cheat-sheet.md) - Quick reference
-- [show help](../show/help.md) - Display command help
+- [show help](../commands/show/help.md) - Display command help

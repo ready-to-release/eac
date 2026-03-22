@@ -5,8 +5,11 @@ nav:
   - ai-summary.md
   - cache-clear.md
   - design.md
+  - dependabot.md
   - docs.md
   - docs-manifest.md
   - evidence.md
+  - go-mod-sums.md
+  - go-tidy.md
   - pdf-screenshots.md
   - structurizr.md
