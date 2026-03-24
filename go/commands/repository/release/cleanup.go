@@ -20,7 +20,12 @@ func (c *releaseCleanupCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-cleanup",
 		Short:         "Clean up orphaned tags and partial releases after failure",
-		Long:          "Removes orphaned release artifacts when a release workflow fails.\n\nThis command deletes:\n  - Partial GitHub releases (if any exist for the tag)\n  - Git tags from the remote repository\n\nUse this in release workflow cleanup jobs to prevent orphaned tags\nfrom blocking future release attempts.\n\nExpected Output:\n  - Deletion of partial GitHub releases (if any exist for the tag)\n  - Deletion of git tags from the remote repository\n\nExample:\n  release cleanup --tag clie/1.0.0\n  release cleanup --tag eac-ext/2.0.0",
+		Long: "Removes orphaned release artifacts when a release workflow fails.\n\nThis command deletes:\n  - Partial GitHub releases (if any exist for the tag)\n  - Git tags from the remote repository\n\nUse this in release workflow cleanup jobs to prevent orphaned tags\nfrom blocking future release attempts.",
+		Notes: "Expected Output:\n  - Deletion of partial GitHub releases (if any exist for the tag)\n  - Deletion of git tags from the remote repository",
+		Examples: []string{
+			"eac release cleanup --tag clie/1.0.0",
+			"eac release cleanup --tag eac-ext/2.0.0",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "tag", Type: "string", Usage: "Tag name to clean up (e.g., clie/1.0.0)"},
 		},

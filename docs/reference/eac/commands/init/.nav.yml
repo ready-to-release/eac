@@ -1,4 +1,4 @@
 title: init
 nav:
   - index.md
-  - init.md
+  - "init": init.md

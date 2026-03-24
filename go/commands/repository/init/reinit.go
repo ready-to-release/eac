@@ -274,7 +274,7 @@ func reinitialize(deps *Deps, workspaceRoot, eacDir string, scan bool, aiProvide
 	log.Info("")
 	log.Info("📋 Next steps:")
 	log.Info("   1. Review changes: git diff .eac/repository.yml")
-	log.Info("   2. Verify modules: clie eac show modules")
+	log.Info("   2. Verify modules: eac show modules")
 	log.Info("   3. Commit updates: git add .eac/ && git commit -m \"Update EAC config\"")
 	log.Info("")
 

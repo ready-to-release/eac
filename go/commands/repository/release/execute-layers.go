@@ -24,7 +24,12 @@ func (c *releaseExecuteLayersCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-execute-layers",
 		Short:         "Execute releases layer by layer in dependency order",
-		Long:          "Executes pending releases in dependency order, processing one layer at a time.\n\nThis command takes a JSON array of release layers (from check-pending-releases)\nand processes them in order:\n  1. For each module in the current layer:\n     - Dispatches the release workflow with version info\n  2. Waits for all workflows in the layer to complete\n  3. Moves to the next layer\n\nThe release workflow is responsible for creating the git tag on success\n(via gh release create). This ensures tags only exist for successful releases.\n\nThe layers JSON format is:\n  [[{module, version, tag, type}, ...], [...], ...]\n\nExpected Output:\n  - Progress messages for each release\n  - Exit code 0 if all releases succeed\n  - Exit code 1 if any release fails\n\nExample:\n  release execute-layers --layers '[[{\"module\":\"docs\",\"version\":\"2025.0116.1430\",\"tag\":\"docs/2025.0116.1430\",\"type\":\"calver\"}]]'\n  release execute-layers --layers-file layers.json",
+		Long: "Executes pending releases in dependency order, processing one layer at a time.\n\nThis command takes a JSON array of release layers (from check-pending-releases)\nand processes them in order:\n  1. For each module in the current layer:\n     - Dispatches the release workflow with version info\n  2. Waits for all workflows in the layer to complete\n  3. Moves to the next layer\n\nThe release workflow is responsible for creating the git tag on success\n(via gh release create). This ensures tags only exist for successful releases.\n\nThe layers JSON format is:\n  [[{module, version, tag, type}, ...], [...], ...]",
+		Notes: "Expected Output:\n  - Progress messages for each release\n  - Exit code 0 if all releases succeed\n  - Exit code 1 if any release fails",
+		Examples: []string{
+			"eac release execute-layers --layers '[[{\"module\":\"docs\",\"version\":\"2025.0116.1430\",\"tag\":\"docs/2025.0116.1430\",\"type\":\"calver\"}]]'",
+			"eac release execute-layers --layers-file layers.json",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "layers", Type: "string", Usage: "JSON array of release layers"},
 			{Name: "layers-file", Type: "string", Usage: "File containing JSON array of release layers"},

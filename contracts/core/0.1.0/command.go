@@ -31,7 +31,8 @@ type CommandRequest struct {
 type CommandMetadata struct {
 	CanonicalName    string
 	Short            string
-	Long             string
+	Long             string // Description text only. No embedded sub-sections.
+	Notes            string // Expected output, caveats, notes (optional). Plain markdown.
 	Flags            []FlagSpec
 	Args             string
 	IsParent         bool
@@ -47,7 +48,6 @@ type FlagSpec struct {
 	DefaultValue string
 	Usage        string
 	Required     bool
-	Completion   []string
 }
 
 // SubcommandGroup represents a logical grouping of subcommands for help display.

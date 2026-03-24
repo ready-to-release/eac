@@ -1,14 +1,6 @@
-# Validate books
+# validate books
 
 <!-- book:cmd validate books -->
-
-Validates the `books.yml` configuration file for correctness, including book names, source definitions, commands, and navigation references.
-
-## Usage
-
-```bash
-eac validate books
-```
 
 ## What It Checks
 
@@ -17,12 +9,6 @@ eac validate books
 - **Module references** -- Reports orphaned books not referenced by any module.
 - **Command sources** -- All commands in `command` and `inline` sources reference valid EAC `show` commands.
 - **Generated navigation** -- `section` and `insert_into` fields are present; `position` values are valid (`first`, `last`, or `after:<item>`).
-
-## Examples
-
-```bash
-eac validate books
-```
 
 ## Common Errors
 
@@ -36,4 +22,4 @@ eac validate books
 - [validate](./validate.md)
 - [show books](../show/books.md)
 - [serve docs](../serve/docs.md)
-- [validate Commands](../../categories/validate.md)
+- [validate Commands](../validate/index.md)

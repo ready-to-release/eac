@@ -26,7 +26,13 @@ func (c *releaseAwaitDepsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-await-deps",
 		Short:         "Wait for dependency CI to pass before release",
-		Long:          "Verifies all transitive dependencies have passing CI runs before allowing release.\n\nFor each dependency, finds the commit where it was last changed and verifies\nthat CI passed for that commit. Waits for in-progress CI runs with configurable\ntimeout. This ensures that releasing a module won't proceed if any of its\ndependencies have failing CI.\n\nExpected Output:\n  - Exit code 0 if all dependency CI checks passed\n  - Exit code 1 if any dependency CI failed or timeout occurred\n\nExample:\n  release await-deps eac-ext                    # Check deps for eac-ext\n  release await-deps eac-ext --timeout 600     # Wait up to 10 minutes\n  release await-deps eac-ext --skip-static     # Skip static modules (default)",
+		Long: "Verifies all transitive dependencies have passing CI runs before allowing release.\n\nFor each dependency, finds the commit where it was last changed and verifies\nthat CI passed for that commit. Waits for in-progress CI runs with configurable\ntimeout. This ensures that releasing a module won't proceed if any of its\ndependencies have failing CI.",
+		Notes: "Expected Output:\n  - Exit code 0 if all dependency CI checks passed\n  - Exit code 1 if any dependency CI failed or timeout occurred",
+		Examples: []string{
+			"eac release await-deps eac-ext                # Check deps for eac-ext",
+			"eac release await-deps eac-ext --timeout 600  # Wait up to 10 minutes",
+			"eac release await-deps eac-ext --skip-static  # Skip static modules (default)",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "timeout", Type: "int", Usage: "Maximum wait time per dependency in seconds (default: 300)"},
 			{Name: "interval", Type: "int", Usage: "Poll interval in seconds (default: 15)"},

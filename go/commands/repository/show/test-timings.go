@@ -25,7 +25,8 @@ func (c *showTestTimingsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-test-timings",
 		Short:         "Display test timing metrics in tables",
-		Long:          "The show test-timings command displays test timing analysis parsed from test logs.\nShows overall statistics, breakdown by module, and the slowest individual test scenarios.\n\nExpected Output:\n- Table with overall metrics: total tests, passed/failed counts, test duration, average duration\n- Summary by module table: modules with test counts, pass/fail, total and average times\n- Top N slowest tests table showing duration, status, module name, and scenario",
+		Long: "The show test-timings command displays test timing analysis parsed from test logs.\nShows overall statistics, breakdown by module, and the slowest individual test scenarios.",
+		Notes: "Expected Output:\n- Table with overall metrics: total tests, passed/failed counts, test duration, average duration\n- Summary by module table: modules with test counts, pass/fail, total and average times\n- Top N slowest tests table showing duration, status, module name, and scenario",
 	}
 }
 

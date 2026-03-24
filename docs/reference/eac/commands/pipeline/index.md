@@ -1,6 +1,13 @@
-# pipeline Commands
+# Pipeline Commands
 
-CI/CD orchestration and diagnostics for module-aware build pipelines.
+The **pipeline** category contains commands for CI/CD orchestration and diagnostics.
+
+**Key Features**:
+
+- Module-aware build orchestration
+- GitHub Actions integration
+- CI status monitoring
+- Workflow diagnostics
 
 ## Commands in this Category
 
@@ -14,17 +21,28 @@ CI/CD orchestration and diagnostics for module-aware build pipelines.
 | [pipeline status](./status.md)                             | Show CI status for head of trunk                 |
 | [pipeline wait](./wait.md)                                 | Wait for GitHub workflow runs to complete        |
 
-## Quick Examples
+## Common Use Cases
+
+### Local Pipeline Execution
 
 ```bash
-# Run pipeline for module
 eac pipeline run src-auth
+```
 
-# Check CI status
+### CI Status Monitoring
+
+```bash
 eac pipeline status
+eac pipeline wait
+```
+
+### CI Orchestration
+
+```bash
+eac pipeline ci-dispatch-and-wait
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/pipeline.md)
 - [build](../build/build.md)
+- [test Commands](../test/index.md)

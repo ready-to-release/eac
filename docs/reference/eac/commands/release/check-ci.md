@@ -1,4 +1,4 @@
-# Release check-ci
+# release check-ci
 
 <!-- book:cmd release check-ci -->
 
@@ -18,4 +18,4 @@ Prevents releasing untested or broken code.
 
 - [release this](./this.md)
 - [pipeline status](../pipeline/status.md)
-- [release Commands](../../categories/release.md)
+- [release Commands](../release/index.md)

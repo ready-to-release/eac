@@ -96,9 +96,8 @@ func RunTestWithFramework(cmdCfg *cmdframework.CommandConfig, testCfg *TestFrame
 		AfterExecute:  testAfterExecute,
 	}
 
-	// Don't register validators - test handles them inline with custom logic
-	// cmdframework.SetArtifactValidator(nil)
-	// cmdframework.SetDepsVerifier(nil)
+	// Register deps verifier for test tools
+	cmdframework.SetDepsVerifier(testDepsVerifier)
 
 	return cmdframework.Run(cmdCfg, testWorker, hooks)
 }

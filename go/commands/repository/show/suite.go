@@ -25,7 +25,8 @@ func (c *showSuiteCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-suite",
 		Short:         "Display test suite details with all tests",
-		Long:          "The show suite command displays detailed information about a specific test suite.\nShows selection criteria, production tests with their metadata, and summary statistics.\n\nExpected Output:\n- Suite header with name, moniker, description, and test counts\n- Selection criteria section showing AnyOf/RequireAll/Exclude tag rules\n- Formatted table of production tests with columns: #, Moniker, Test Name, Type, Module, Level, Verification, System Deps\n- Statistics section with counts by type, by module, and aggregated dependencies",
+		Long: "The show suite command displays detailed information about a specific test suite.\nShows selection criteria, production tests with their metadata, and summary statistics.",
+		Notes: "Expected Output:\n- Suite header with name, moniker, description, and test counts\n- Selection criteria section showing AnyOf/RequireAll/Exclude tag rules\n- Formatted table of production tests with columns: #, Moniker, Test Name, Type, Module, Level, Verification, System Deps\n- Statistics section with counts by type, by module, and aggregated dependencies",
 	}
 }
 

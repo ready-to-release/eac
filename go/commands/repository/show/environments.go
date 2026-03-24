@@ -21,7 +21,8 @@ func (c *showEnvironmentsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-environments",
 		Short:         "Display all environment configurations",
-		Long:          "The show environments command displays all environment contracts defined in environments.yml.\nShows environment details including moniker, name, level, type, and system dependencies.\n\nExpected Output:\n- Table with environment definitions showing: Moniker, Name, Level, Type, System Dependencies\n- Summary by level (L0-L4) showing count of environments at each level\n- Summary by type showing count of environments for each type",
+		Long: "The show environments command displays all environment contracts defined in environments.yml.\nShows environment details including moniker, name, level, type, and system dependencies.",
+		Notes: "Expected Output:\n- Table with environment definitions showing: Moniker, Name, Level, Type, System Dependencies\n- Summary by level (L0-L4) showing count of environments at each level\n- Summary by type showing count of environments for each type",
 	}
 }
 

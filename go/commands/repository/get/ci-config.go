@@ -49,7 +49,7 @@ func (c *getCIConfigCommand) Metadata() core.CommandMetadata {
 			"\n" +
 			"With --format github-output, outputs KEY=value lines for $GITHUB_OUTPUT.",
 		Flags: []core.FlagSpec{
-			{Name: "module", Type: "string", Usage: "Module moniker to derive CI config for", Required: true, Completion: []string{"modules"}},
+			{Name: "module", Type: "string", Usage: "Module moniker to derive CI config for", Required: true},
 			{Name: "format", Type: "string", Usage: "Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)"},
 		},
 	}
@@ -183,6 +183,8 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 	}
 
 	// HAS_TESTS + SCANS: derive from component kinds in a single pass
+	// Skip scan derivation if the module is in security skip_modules
+	scanSkipped := cfg.Security != nil && cfg.Security.ShouldSkipModule(moniker)
 	scanSet := make(map[string]bool)
 	if cfg.ComponentKinds != nil {
 		for compName, entry := range mod.Components {
@@ -200,8 +202,10 @@ func deriveCIConfig(cfg *config.EACConfig, moniker string) (*CIConfigResult, err
 			if !result.HasTests && ct.IsTestable() {
 				result.HasTests = true
 			}
-			for _, s := range ct.GetScanners() {
-				scanSet[s] = true
+			if !scanSkipped {
+				for _, s := range ct.GetScanners() {
+					scanSet[s] = true
+				}
 			}
 		}
 	}

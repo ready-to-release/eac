@@ -34,7 +34,8 @@ func (c *updatePDFScreenshotsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "update-pdf-screenshots",
 		Short:         "Extract PDF pages as images for documentation cache",
-		Long:          "Scans out/build folders for generated PDF books and extracts\neach page as a PNG image. Images are stored in .cache/eac/pdf-screenshots/\norganized by book name with hash marker for cache invalidation.\n\nExpected Output:\n  - PNG images in .cache/eac/pdf-screenshots/ directory\n  - Organized by book name (one subdirectory per PDF)\n  - Hash marker files for cache validation",
+		Long: "Scans out/build folders for generated PDF books and extracts\neach page as a PNG image. Images are stored in .cache/eac/pdf-screenshots/\norganized by book name with hash marker for cache invalidation.",
+		Notes: "Expected Output:\n  - PNG images in .cache/eac/pdf-screenshots/ directory\n  - Organized by book name (one subdirectory per PDF)\n  - Hash marker files for cache validation",
 		Flags: []core.FlagSpec{
 			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would be done without making changes"},
 			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Regenerate all images ignoring cache"},

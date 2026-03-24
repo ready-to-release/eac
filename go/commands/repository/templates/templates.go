@@ -26,9 +26,9 @@ func (c *templatesCommand) Metadata() core.CommandMetadata {
 			{Name: "Template Types", Subcommands: []string{"install"}},
 		},
 		Examples: []string{
-			"clie templates install docs",
-			"clie templates install docs --destination ./custom-docs",
-			"clie templates install ai --debug",
+			"eac templates install docs",
+			"eac templates install docs --destination ./custom-docs",
+			"eac templates install ai --debug",
 		},
 	}
 }

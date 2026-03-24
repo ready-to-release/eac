@@ -25,7 +25,16 @@ func (c *pipelineAwaitCICommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-await-ci",
 		Short:         "Wait for CI workflows to complete for a specific commit",
-		Long:          "Wait for CI workflows to complete. Can wait by pattern+SHA or by run ID.\n\nMode 1 - Pattern+SHA (default):\n  Polls GitHub Actions for in_progress or queued CI workflow runs\n  that match the specified SHA and waits until all complete.\n\nMode 2 - Run ID:\n  Wait for a specific workflow run to complete by its run ID.\n\nSHA Detection (in order of precedence):\n  1. --sha flag (explicit override)\n  2. GITHUB_SHA environment variable (GitHub Actions)\n  3. git rev-parse HEAD (local development)\n\nExpected Output:\n  - Live progress display showing active workflow count\n  - Exit code 0 when all workflows complete successfully\n  - Exit code 1 on timeout or failure\n\nExample:\n  pipeline await-ci                              # Auto-detect SHA, all ci-*.yaml\n  pipeline await-ci --sha abc123                 # Explicit SHA\n  pipeline await-ci --pattern ci-clie.yaml    # Specific workflow\n  pipeline await-ci --run-id 12345               # Wait for specific run\n  pipeline await-ci --timeout 600                # 10 minute timeout\n  pipeline await-ci --exclude ci-foo             # Exclude workflow",
+		Long: "Wait for CI workflows to complete. Can wait by pattern+SHA or by run ID.\n\nMode 1 - Pattern+SHA (default):\n  Polls GitHub Actions for in_progress or queued CI workflow runs\n  that match the specified SHA and waits until all complete.\n\nMode 2 - Run ID:\n  Wait for a specific workflow run to complete by its run ID.\n\nSHA Detection (in order of precedence):\n  1. --sha flag (explicit override)\n  2. GITHUB_SHA environment variable (GitHub Actions)\n  3. git rev-parse HEAD (local development)",
+		Notes: "Expected Output:\n  - Live progress display showing active workflow count\n  - Exit code 0 when all workflows complete successfully\n  - Exit code 1 on timeout or failure",
+		Examples: []string{
+			"eac pipeline await-ci                         # Auto-detect SHA, all ci-*.yaml",
+			"eac pipeline await-ci --sha abc123            # Explicit SHA",
+			"eac pipeline await-ci --pattern ci-clie.yaml  # Specific workflow",
+			"eac pipeline await-ci --run-id 12345          # Wait for specific run",
+			"eac pipeline await-ci --timeout 600           # 10 minute timeout",
+			"eac pipeline await-ci --exclude ci-foo        # Exclude workflow",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "sha", Type: "string", Usage: "Commit SHA to filter runs (auto-detected if not provided)"},
 			{Name: "run-id", Type: "string", Usage: "Specific workflow run ID to wait for (alternative to pattern+sha)"},

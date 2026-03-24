@@ -94,6 +94,9 @@ func RunScanWithFramework(cmdCfg *cmdframework.CommandConfig, scanCfg *ScanFrame
 		AfterExecute: scanAfterExecute,
 	}
 
+	// Register deps verifier for scanner tools
+	cmdframework.SetDepsVerifier(scanDepsVerifier)
+
 	return cmdframework.Run(cmdCfg, nil, hooks)
 }
 
@@ -247,6 +250,9 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 		AfterResolve: multiScanAfterResolve,
 		AfterExecute: scanAfterExecute,
 	}
+
+	// Register deps verifier for scanner tools
+	cmdframework.SetDepsVerifier(scanDepsVerifier)
 
 	return cmdframework.Run(cmdCfg, nil, hooks)
 }

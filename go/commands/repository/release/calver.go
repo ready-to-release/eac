@@ -20,7 +20,13 @@ func (c *releaseGetModuleCalverCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-get-module-calver",
 		Short:         "Generate a calver tag for a module",
-		Long:          "Generates a calendar-versioned (calver) tag in the format prefix/YYYY.MMDD.HHMM.\n\nFormat follows CD Model CalVer specification:\n  - YYYY: Four-digit year\n  - MMDD: Month and day (packed, no separator)\n  - HHMM: Hour and minute in UTC (ensures uniqueness)\n  - Patch: Omitted (inferred as 0 for main branch commits)\n\nBy default, only outputs the tag name. Use --create to create the git tag.\n\nExpected Output:\n  - Tag name in format prefix/YYYY.MMDD.HHMM (default behavior)\n  - Git tag created if --create flag is specified\n\nExamples:\n  release get-module-calver docs                    # Output: docs/2025.1214.1630\n  release get-module-calver docs --create           # Create the tag locally\n  release get-module-calver docs --create --push    # Create and push the tag",
+		Long: "Generates a calendar-versioned (calver) tag in the format prefix/YYYY.MMDD.HHMM.\n\nFormat follows CD Model CalVer specification:\n  - YYYY: Four-digit year\n  - MMDD: Month and day (packed, no separator)\n  - HHMM: Hour and minute in UTC (ensures uniqueness)\n  - Patch: Omitted (inferred as 0 for main branch commits)\n\nBy default, only outputs the tag name. Use --create to create the git tag.",
+		Notes: "Expected Output:\n  - Tag name in format prefix/YYYY.MMDD.HHMM (default behavior)\n  - Git tag created if --create flag is specified",
+		Examples: []string{
+			"eac release get-module-calver docs                  # Output: docs/2025.1214.1630",
+			"eac release get-module-calver docs --create         # Create the tag locally",
+			"eac release get-module-calver docs --create --push  # Create and push the tag",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "create", Type: "bool", Usage: "Create the git tag (default: false, just output tag name)"},
 			{Name: "push", Type: "bool", Usage: "Push the tag to remote after creation (requires --create)"},

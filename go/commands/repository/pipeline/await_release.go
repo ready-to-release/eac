@@ -20,7 +20,14 @@ func (c *pipelineAwaitReleaseCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-await-release",
 		Short:         "Wait for release workflows to complete for a specific commit",
-		Long:          "Wait for release workflows (release-*.yaml) to complete for a specific commit SHA.\n\nThis command polls GitHub Actions for in_progress or queued release workflow\nruns that match the specified SHA and waits until all complete.\n\nSHA Detection (in order of precedence):\n  1. --sha flag (explicit override)\n  2. GITHUB_SHA environment variable (GitHub Actions)\n  3. origin/main HEAD after fetch (local devbox)\n\nExpected Output:\n  - Live progress display showing active workflow count\n  - Exit code 0 when all workflows complete successfully\n  - Exit code 1 on timeout or failure\n\nExample:\n  pipeline await-release                              # Auto-detect SHA\n  pipeline await-release --sha abc123                 # Explicit SHA\n  pipeline await-release --timeout 300                # 5 minute timeout\n  pipeline await-release --exclude clie-eac-bundle     # Exclude bundle workflow",
+		Long: "Wait for release workflows (release-*.yaml) to complete for a specific commit SHA.\n\nThis command polls GitHub Actions for in_progress or queued release workflow\nruns that match the specified SHA and waits until all complete.\n\nSHA Detection (in order of precedence):\n  1. --sha flag (explicit override)\n  2. GITHUB_SHA environment variable (GitHub Actions)\n  3. origin/main HEAD after fetch (local devbox)",
+		Notes: "Expected Output:\n  - Live progress display showing active workflow count\n  - Exit code 0 when all workflows complete successfully\n  - Exit code 1 on timeout or failure",
+		Examples: []string{
+			"eac pipeline await-release                            # Auto-detect SHA",
+			"eac pipeline await-release --sha abc123               # Explicit SHA",
+			"eac pipeline await-release --timeout 300              # 5 minute timeout",
+			"eac pipeline await-release --exclude clie-eac-bundle  # Exclude bundle workflow",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "sha", Type: "string", Usage: "Commit SHA to filter runs (auto-detected if not provided)"},
 			{Name: "timeout", Type: "int", DefaultValue: "600", Usage: "Maximum wait time in seconds (default: 600)"},

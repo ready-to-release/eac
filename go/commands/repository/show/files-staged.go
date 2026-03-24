@@ -22,7 +22,8 @@ func (c *showFilesStagedCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-files-staged",
 		Short:         "Show staged files with their module ownership",
-		Long:          "The show files-staged command displays staged files (git diff --cached) with their module ownership.\nUseful for identifying which modules are affected by staged changes before committing.\n\nExpected Output:\n- Table with staged file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Empty output if no files are staged",
+		Long: "The show files-staged command displays staged files (git diff --cached) with their module ownership.\nUseful for identifying which modules are affected by staged changes before committing.",
+		Notes: "Expected Output:\n- Table with staged file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Empty output if no files are staged",
 	}
 }
 

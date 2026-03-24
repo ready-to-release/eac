@@ -23,7 +23,11 @@ func (c *validateTestTagsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-test-tags",
 		Short:         "Validate that all test tags are defined in the tag contract",
-		Long:          "Validates that all tags used in test files (Gherkin features) are defined in the tag contract.\n\nThis ensures tag filtering and test selection works correctly by preventing\nthe use of undefined tags that would be silently ignored by godog.\n\nThe validation:\n  - Discovers all Gherkin feature files in the repository\n  - Extracts all tags from features, scenarios, and examples\n  - Loads the tag contract from .eac/testing-tags.yml\n  - Checks that each tag is defined in the contract\n  - Reports undefined tags with their file locations\n\nExpected Output:\n  Displays undefined tags with file locations (path:line). Tags are validated against\n  .eac/testing-tags.yml contract. Exit code 0 if all tags defined, 1 if undefined tags found.\n\nExample:\n  validate test-tags",
+		Long: "Validates that all tags used in test files (Gherkin features) are defined in the tag contract.\n\nThis ensures tag filtering and test selection works correctly by preventing\nthe use of undefined tags that would be silently ignored by godog.\n\nThe validation:\n  - Discovers all Gherkin feature files in the repository\n  - Extracts all tags from features, scenarios, and examples\n  - Loads the tag contract from .eac/testing-tags.yml\n  - Checks that each tag is defined in the contract\n  - Reports undefined tags with their file locations",
+		Notes: "Expected Output:\n  Displays undefined tags with file locations (path:line). Tags are validated against\n  .eac/testing-tags.yml contract. Exit code 0 if all tags defined, 1 if undefined tags found.",
+		Examples: []string{
+			"eac validate test-tags",
+		},
 	}
 }
 

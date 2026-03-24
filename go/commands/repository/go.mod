@@ -16,7 +16,6 @@ require (
 	github.com/ready-to-release/eac/go/adapters/ai-test v0.0.0-20260224151839-95b1d7ce9dfe
 	github.com/ready-to-release/eac/go/adapters/claude v0.0.0
 	github.com/ready-to-release/eac/go/adapters/docker v0.0.0
-	github.com/ready-to-release/eac/go/adapters/eac v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gemini v0.0.0
 	github.com/ready-to-release/eac/go/adapters/gh v0.0.0
 	github.com/ready-to-release/eac/go/adapters/godog v0.0.0
@@ -24,6 +23,7 @@ require (
 	github.com/ready-to-release/eac/go/adapters/tui v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 	github.com/ready-to-release/eac/go/commands/base v0.0.0
+	github.com/ready-to-release/eac/go/commands/build v0.0.0-20260322173922-1c0510086d6f
 	github.com/ready-to-release/eac/go/core v0.0.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
@@ -112,6 +112,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/ready-to-release/eac/contracts/scanner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/tui/0.1.0 v0.0.0 // indirect
+	github.com/ready-to-release/eac/go/adapters/eac v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
@@ -185,5 +186,6 @@ replace (
 	github.com/ready-to-release/eac/go/adapters/tui => ../../adapters/tui
 	github.com/ready-to-release/eac/go/clibase => ../../clibase
 	github.com/ready-to-release/eac/go/commands/base => ../base
+	github.com/ready-to-release/eac/go/commands/build => ../build
 	github.com/ready-to-release/eac/go/core => ../../core
 )

@@ -448,7 +448,7 @@ func mockCheckerFromStatus(mockStatus map[string]bool, headSHA string) *cache.CI
 func printCIDispatchUsage() {
 	fmt.Println("Filter modules for CI dispatch based on existing valid CI")
 	fmt.Println("")
-	fmt.Println("Usage: clie get ci-dispatch [flags]")
+	fmt.Println("Usage: eac get ci-dispatch [flags]")
 	fmt.Println("")
 	fmt.Println("Flags:")
 	fmt.Println("  --directly-changed <modules>  Space-separated list of directly changed modules")
@@ -476,20 +476,20 @@ func printCIDispatchUsage() {
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  # Normal usage in CI")
-	fmt.Println("  clie get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\"")
+	fmt.Println("  eac get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\"")
 	fmt.Println("")
 	fmt.Println("  # Shell format for workflow scripting")
-	fmt.Println("  eval $(clie get ci-dispatch --format shell --invalidated \"clie eac-ext\")")
+	fmt.Println("  eval $(eac get ci-dispatch --format shell --invalidated \"clie eac-ext\")")
 	fmt.Println("  for module in $DISPATCH; do")
 	fmt.Println("    gh workflow run \"ci-${module}.yaml\" --ref main")
 	fmt.Println("  done")
 	fmt.Println("")
 	fmt.Println("  # Local testing with mock data")
-	fmt.Println("  clie get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\" \\")
+	fmt.Println("  eac get ci-dispatch --directly-changed \"core\" --invalidated \"eac-cli docs\" \\")
 	fmt.Println("    --mock '{\"eac-cli\": true, \"docs\": false}'")
 	fmt.Println("")
 	fmt.Println("  # Output as JSON")
-	fmt.Println("  clie get ci-dispatch --as-json --directly-changed \"core\" --invalidated \"docs\"")
+	fmt.Println("  eac get ci-dispatch --as-json --directly-changed \"core\" --invalidated \"docs\"")
 }
 
 // getValidCIModules returns a set of valid CI workflow module names.

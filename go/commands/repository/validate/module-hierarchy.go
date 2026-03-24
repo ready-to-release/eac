@@ -22,7 +22,8 @@ func (c *validateModuleHierarchyCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-module-hierarchy",
 		Short:         "Validate module dependency graph structure",
-		Long:          "Validates the module dependency graph for structural integrity.\n\nExpected Output:\n  Displays structural issues in dependency graph including cycles, non-existent module\n  references, and bidirectional inconsistencies. Exit code 0 if valid, 1 if issues found.",
+		Long: "Validates the module dependency graph for structural integrity.",
+		Notes: "Expected Output:\n  Displays structural issues in dependency graph including cycles, non-existent module\n  references, and bidirectional inconsistencies. Exit code 0 if valid, 1 if issues found.",
 	}
 }
 
@@ -208,7 +209,7 @@ func printModuleHierarchyReport(report *moduleHierarchyReport) {
 func printModuleHierarchyUsage() {
 	log.Info("Validate module dependency graph structure")
 	log.Info("")
-	log.Info("Usage: clie validate module-hierarchy")
+	log.Info("Usage: eac validate module-hierarchy")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Bidirectional consistency (depends_on <-> used_by)")
@@ -218,5 +219,5 @@ func printModuleHierarchyUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate module hierarchy")
-	log.Info("  clie validate module-hierarchy")
+	log.Info("  eac validate module-hierarchy")
 }

@@ -112,8 +112,8 @@ func TestParseCommitConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work commit <args>)
-			os.Args = append([]string{"clie", "work", "commit"}, tt.args...)
+			// Set test args (simulate command: eac work commit <args>)
+			os.Args = append([]string{"eac", "work", "commit"}, tt.args...)
 
 			config, err := parseCommitConfig()
 			if err != nil {

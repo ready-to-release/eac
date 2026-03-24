@@ -21,7 +21,8 @@ func (c *showApproveSummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-approve-summary",
 		Short:         "Generate release approval summary",
-		Long:          "The show approve-summary command generates a formatted release approval summary.\nThis command is designed to be used in GitHub Actions workflows to create consistent approval summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted approval summary with check status table\n- Shows version, tag, commit, changelog, existing release, and CI check status\n- On failure, can output diagnostic link via pipeline ci summary-link",
+		Long: "The show approve-summary command generates a formatted release approval summary.\nThis command is designed to be used in GitHub Actions workflows to create consistent approval summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.",
+		Notes: "Expected Output:\n- Markdown-formatted approval summary with check status table\n- Shows version, tag, commit, changelog, existing release, and CI check status\n- On failure, can output diagnostic link via pipeline ci summary-link",
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module name (required)"},
 			{Name: "version", Type: "string", Usage: "Release version (required)"},

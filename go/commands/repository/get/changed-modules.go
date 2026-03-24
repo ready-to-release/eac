@@ -24,15 +24,13 @@ func (c *getChangedModulesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-changed-modules",
 		Short:         "Get modules affected by changed files",
-		Long: "Expected Output:\n" +
-			"YAML list of module monikers that have changes based on git diff against the specified base ref,\n" +
-			"or based on file paths read from stdin when --from-stdin is used.\n" +
-			"Only includes modules directly containing changed files.\n" +
-			"\n" +
-			"Examples:\n" +
-			"  get changed-modules                           # Use git diff HEAD\n" +
-			"  get changed-modules --base main               # Use git diff main\n" +
-			"  echo \"path/to/file.go\" | get changed-modules --from-stdin  # Read from stdin",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of module monikers that have changes based on git diff against the specified base ref,\nor based on file paths read from stdin when --from-stdin is used.\nOnly includes modules directly containing changed files.",
+		Examples: []string{
+			"eac get changed-modules                                          # Use git diff HEAD",
+			"eac get changed-modules --base main                              # Use git diff main",
+			"echo \"path/to/file.go\" | eac get changed-modules --from-stdin  # Read from stdin",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default)"},
 			{Name: "as-json", Type: "bool", Usage: "Output as JSON"},

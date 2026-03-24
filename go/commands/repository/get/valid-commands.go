@@ -23,7 +23,8 @@ func (c *getValidCommandsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-valid-commands",
 		Short:         "Get all valid commands in structured format",
-		Long:          "Expected Output:\nYAML list of all valid commands with descriptions, sorted alphabetically.\nEach entry contains the command name and its description.",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of all valid commands with descriptions, sorted alphabetically.\nEach entry contains the command name and its description.",
 	}
 }
 

@@ -40,8 +40,8 @@ func TestPrintParentHelp(t *testing.T) {
 				{Name: "Repository Structure", Subcommands: []string{"modules", "dependencies"}},
 			},
 			Examples: []string{
-				"clie get modules",
-				"clie get dependencies --format=yaml",
+				"eac get modules",
+				"eac get dependencies --format=yaml",
 			},
 		},
 	}
@@ -64,7 +64,7 @@ func TestPrintParentHelp(t *testing.T) {
 	}
 
 	// Check usage
-	if !strings.Contains(output, "Usage: clie get <subcommand>") {
+	if !strings.Contains(output, "Usage: eac get <subcommand>") {
 		t.Error("Expected usage line")
 	}
 
@@ -88,15 +88,15 @@ func TestPrintParentHelp(t *testing.T) {
 	if !strings.Contains(output, "Examples:") {
 		t.Error("Expected Examples section")
 	}
-	if !strings.Contains(output, "clie get modules") {
+	if !strings.Contains(output, "eac get modules") {
 		t.Error("Expected example 1")
 	}
-	if !strings.Contains(output, "clie get dependencies --format=yaml") {
+	if !strings.Contains(output, "eac get dependencies --format=yaml") {
 		t.Error("Expected example 2")
 	}
 
 	// Check footer
-	if !strings.Contains(output, "Use 'clie get <subcommand> --help'") {
+	if !strings.Contains(output, "Use 'eac get <subcommand> --help'") {
 		t.Error("Expected footer with help hint")
 	}
 }

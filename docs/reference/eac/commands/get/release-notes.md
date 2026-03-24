@@ -1,4 +1,4 @@
-# Get release-notes
+# get release-notes
 
 <!-- book:cmd get release-notes -->
 

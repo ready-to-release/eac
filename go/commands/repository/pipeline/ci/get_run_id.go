@@ -22,7 +22,11 @@ func (c *pipelineCIGetRunIDCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-ci-get-run-id",
 		Short:         "Get CI run ID for a workflow and commit SHA",
-		Long:          "Look up the run ID of a successful CI workflow run for a specific commit.\n\nThis command is useful for release workflows that need to download\nartifacts from a CI run at a specific commit SHA.\n\nExpected Output:\n  - Run ID on stdout (for capturing in scripts)\n  - Exit code 0 on success, 1 if no run found\n\nExample:\n  pipeline ci get-run-id --workflow ci-docs.yaml --sha abc123",
+		Long: "Look up the run ID of a successful CI workflow run for a specific commit.\n\nThis command is useful for release workflows that need to download\nartifacts from a CI run at a specific commit SHA.",
+		Notes: "Expected Output:\n  - Run ID on stdout (for capturing in scripts)\n  - Exit code 0 on success, 1 if no run found",
+		Examples: []string{
+			"eac pipeline ci get-run-id --workflow ci-docs.yaml --sha abc123",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "workflow", Type: "string", Usage: "Workflow file name to look up"},
 			{Name: "sha", Type: "string", Usage: "Commit SHA to find run for"},

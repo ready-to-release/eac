@@ -38,7 +38,7 @@ func (c *getReleaseConfigCommand) Metadata() core.CommandMetadata {
 			"  - published + go component with binary_name -> cli-binary\n" +
 			"  - internal / none -> none",
 		Flags: []core.FlagSpec{
-			{Name: "module", Type: "string", Usage: "Module moniker to derive release config for", Required: true, Completion: []string{"modules"}},
+			{Name: "module", Type: "string", Usage: "Module moniker to derive release config for", Required: true},
 			{Name: "format", Type: "string", Usage: "Output format: shell (eval-friendly) or github-output (KEY=value for $GITHUB_OUTPUT)"},
 		},
 	}

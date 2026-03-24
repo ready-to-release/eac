@@ -1,14 +1,6 @@
-# Validate module-hierarchy
+# validate module-hierarchy
 
 <!-- book:cmd validate module-hierarchy -->
-
-Validates the module dependency graph for structural integrity, ensuring there are no broken references or cycles.
-
-## Usage
-
-```bash
-eac validate module-hierarchy
-```
 
 ## What It Checks
 
@@ -16,12 +8,6 @@ eac validate module-hierarchy
 - **Bidirectional consistency** -- The `depends_on` and computed `used_by` relationships are consistent.
 - **Circular dependencies** -- No cycles in the dependency graph (e.g., A -> B -> A).
 - **Unreachable modules** -- All modules are reachable within the graph.
-
-## Examples
-
-```bash
-eac validate module-hierarchy
-```
 
 ## Common Errors
 

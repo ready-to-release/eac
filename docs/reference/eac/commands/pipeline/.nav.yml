@@ -1,19 +1,19 @@
 title: pipeline
 nav:
   - index.md
-  - pipeline.md
-  - await-ci.md
-  - await-release.md
-  - check-recent-run.md
-  - ci.md
-  - ci-dispatch-and-wait.md
-  - ci-schedule.md
-  - ci-get-run-id.md
-  - ci-summary-link.md
-  - download-evidence-artifacts.md
-  - find-run-id.md
-  - get-artifact-id.md
-  - get-tree-files.md
-  - run.md
-  - status.md
-  - wait.md
+  - "pipeline": pipeline.md
+  - "pipeline await-ci": await-ci.md
+  - "pipeline await-release": await-release.md
+  - "pipeline check-recent-run": check-recent-run.md
+  - "pipeline ci": ci.md
+  - "pipeline ci-dispatch-and-wait": ci-dispatch-and-wait.md
+  - "pipeline ci-schedule": ci-schedule.md
+  - "pipeline ci-get-run-id": ci-get-run-id.md
+  - "pipeline ci-summary-link": ci-summary-link.md
+  - "pipeline download-evidence-artifacts": download-evidence-artifacts.md
+  - "pipeline find-run-id": find-run-id.md
+  - "pipeline get-artifact-id": get-artifact-id.md
+  - "pipeline get-tree-files": get-tree-files.md
+  - "pipeline run": run.md
+  - "pipeline status": status.md
+  - "pipeline wait": wait.md

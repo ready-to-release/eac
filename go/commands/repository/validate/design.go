@@ -26,7 +26,8 @@ func (c *validateDesignCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-design",
 		Short:         "Check workspace.dsl syntax using Structurizr CLI (requires Docker)",
-		Long:          "Validates DSL files for syntax errors and structural issues using the official\nStructurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,\nand ensures the workspace can be properly rendered. Supports multiple DSL files per module -\nfiles starting with \"_\" are treated as fragments (for !include) and skipped.\nUse --all to validate all modules, or --file to validate a specific DSL file.\n\nExpected Output:\n  Displays validation results in console. Results saved to out/logs/design/validation-results.json.\n  Shows syntax errors, structural issues, and render status. Exit code 0 if valid, 1 if errors, 2 if system errors.",
+		Long: "Validates DSL files for syntax errors and structural issues using the official\nStructurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,\nand ensures the workspace can be properly rendered. Supports multiple DSL files per module -\nfiles starting with \"_\" are treated as fragments (for !include) and skipped.\nUse --all to validate all modules, or --file to validate a specific DSL file.",
+		Notes: "Expected Output:\n  Displays validation results in console. Results saved to out/logs/design/validation-results.json.\n  Shows syntax errors, structural issues, and render status. Exit code 0 if valid, 1 if errors, 2 if system errors.",
 		Flags: []core.FlagSpec{
 			{Name: "all", Shorthand: "a", Type: "bool", DefaultValue: "false", Usage: "Validate all workspace files in specs/*/.design/ directories"},
 			{Name: "file", Shorthand: "f", Type: "string", DefaultValue: "", Usage: "Validate only a specific DSL file (e.g., --file=landscape)"},
@@ -235,9 +236,9 @@ func printDesignValidateUsage() {
 	log.Info("(for !include) and skipped. Runs validation in Docker using Structurizr CLI.")
 	log.Info("")
 	log.Info("Usage:")
-	log.Info("  clie validate design <module>              Validate all DSL files in module")
-	log.Info("  clie validate design <module> --file=NAME  Validate specific DSL file")
-	log.Info("  clie validate design --all                 Validate all modules")
+	log.Info("  eac validate design <module>              Validate all DSL files in module")
+	log.Info("  eac validate design <module> --file=NAME  Validate specific DSL file")
+	log.Info("  eac validate design --all                 Validate all modules")
 	log.Info("")
 	log.Info("Flags:")
 	log.Info("  --all, -a           Validate all DSL files in specs/*/.design/")
@@ -247,11 +248,11 @@ func printDesignValidateUsage() {
 	log.Info("  --help, -h          Show this help message")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  clie validate design clie                    # All DSL files")
-	log.Info("  clie validate design clie --file=workspace   # Just workspace.dsl")
-	log.Info("  clie validate design clie --file=landscape   # Just landscape.dsl")
-	log.Info("  clie validate design eac-cli --verbose")
-	log.Info("  clie validate design --all")
+	log.Info("  eac validate design clie                    # All DSL files")
+	log.Info("  eac validate design clie --file=workspace   # Just workspace.dsl")
+	log.Info("  eac validate design clie --file=landscape   # Just landscape.dsl")
+	log.Info("  eac validate design eac-cli --verbose")
+	log.Info("  eac validate design --all")
 	log.Info("")
 	log.Info("Multi-DSL Support:")
 	log.Info("  specs/module/.design/")

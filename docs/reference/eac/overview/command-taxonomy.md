@@ -24,7 +24,7 @@ Create commands use AI to generate various artifacts including specifications, a
 
 **When to use**: During development and release preparation when you need AI assistance to generate structured documentation or content.
 
-**See also**: [Create Commands Category](../categories/create.md)
+**See also**: [Create Commands Category](../commands/create/index.md)
 
 ---
 
@@ -81,7 +81,7 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 
 **When to use**: In CI/CD pipelines, build scripts, or when you need programmatic access to repository data.
 
-**See also**: [Get Commands Category](../categories/get.md)
+**See also**: [Get Commands Category](../commands/get/index.md)
 
 ---
 
@@ -133,7 +133,7 @@ Show commands provide formatted, human-readable output designed for terminal dis
 
 **When to use**: During interactive development and troubleshooting when you need to quickly understand repository state.
 
-**See also**: [Show Commands Category](../categories/show.md)
+**See also**: [Show Commands Category](../commands/show/index.md)
 
 ---
 
@@ -181,7 +181,7 @@ Validate commands ensure repository consistency, enforce contracts, and verify q
 
 **When to use**: In pre-commit hooks, CI pipelines, and before releases to ensure quality standards are met.
 
-**See also**: [Validate Commands Category](../categories/validate.md)
+**See also**: [Validate Commands Category](../commands/validate/index.md)
 
 ---
 
@@ -202,7 +202,7 @@ Work commands manage parallel development workspaces, enabling multiple topic br
 
 **When to use**: When you need to work on multiple features simultaneously or want isolated development environments.
 
-**See also**: [Work Commands Category](../categories/work.md), [Workspace Commands Guide](../commands/work/index.md)
+**See also**: [Work Commands Category](../commands/work/index.md)
 
 ---
 
@@ -221,7 +221,7 @@ Test commands run tests, manage test suites, and analyze test results.
 
 **When to use**: During development (unit tests), in CI pipelines (all test types), and when debugging test failures.
 
-**See also**: [Test Commands Category](../categories/test.md)
+**See also**: [Test Commands Category](../commands/test/index.md)
 
 ---
 
@@ -256,7 +256,7 @@ Pipeline commands orchestrate CI/CD workflows, monitor build status, and generat
 
 **When to use**: In CI/CD workflows, when orchestrating complex builds, and when monitoring deployment status.
 
-**See also**: [Pipeline Commands Category](../categories/pipeline.md)
+**See also**: [Pipeline Commands Category](../commands/pipeline/index.md)
 
 ---
 
@@ -279,7 +279,7 @@ Release commands manage the release process from changelog generation through ta
 
 **When to use**: During release preparation and when creating versioned releases.
 
-**See also**: [Release Commands Category](../categories/release.md)
+**See also**: [Release Commands Category](../commands/release/index.md)
 
 ---
 
@@ -317,7 +317,7 @@ Serve commands start local servers for documentation and architecture visualizat
 
 **When to use**: During documentation writing and when reviewing architecture diagrams.
 
-**See also**: [Serve Commands Category](../categories/serve.md)
+**See also**: [Serve Commands Category](../commands/serve/index.md)
 
 ---
 
@@ -338,7 +338,7 @@ Templates commands install project templates for consistent documentation and sp
 
 **When to use**: When setting up new modules or generating standardized documentation.
 
-**See also**: [Templates Commands Category](../categories/templates.md)
+**See also**: [Templates Commands Category](../commands/templates/index.md)
 
 ---
 
@@ -352,7 +352,7 @@ Templates commands install project templates for consistent documentation and sp
 
 **When to use**: When refreshing architecture diagrams after code changes.
 
-**See also**: [Update Commands Category](../categories/update.md)
+**See also**: [Update Commands Category](../commands/update/index.md)
 
 ---
 
@@ -372,7 +372,7 @@ Commands that don't fit into the verb-based categorization:
 - `init`: First-time setup or when changing AI providers
 - `extension-meta`: When integrating with clie CLI
 
-**See also**: [Build Commands Category](../categories/build.md)
+**See also**: [Build Commands Category](../commands/build/index.md)
 
 ---
 
@@ -579,5 +579,5 @@ Parent-only commands provide:
 - [Naming Conventions](./naming-conventions.md) - Command naming rules and patterns
 - [Common Flags](./common-flags.md) - Global options available to commands
 - [Output Formats](./output-formats.md) - Understanding JSON vs human-readable output
-- [Categories Index](../categories/index.md) - Browse all command categories
+- [Categories Index](../commands/index.md) - Browse all command categories
 - [Main Index](../index.md) - Command reference home

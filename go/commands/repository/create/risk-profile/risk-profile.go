@@ -33,7 +33,8 @@ func (c *createRiskProfileCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "create-risk-profile",
 		Short:         "Create OSCAL profile from risk assessment using AI",
-		Long:          "The create risk-profile command analyzes a risk assessment document and generates an OSCAL profile\nselecting appropriate controls from a custom catalog. The AI extracts risks\nfrom the assessment and maps them to controls for the entire solution.\n\nThe generated profile is saved to specs/.risk-controls/risk-profile.json for version control.\nUse --debug to inspect intermediate outputs and AI reasoning.\n\nExpected Output:\n- OSCAL profile JSON file selecting controls from catalog\n- AI reasoning for control selection in debug output",
+		Long: "The create risk-profile command analyzes a risk assessment document and generates an OSCAL profile\nselecting appropriate controls from a custom catalog. The AI extracts risks\nfrom the assessment and maps them to controls for the entire solution.\n\nThe generated profile is saved to specs/.risk-controls/risk-profile.json for version control.\nUse --debug to inspect intermediate outputs and AI reasoning.",
+		Notes: "Expected Output:\n- OSCAL profile JSON file selecting controls from catalog\n- AI reasoning for control selection in debug output",
 		Args:          "file",
 		Flags: []core.FlagSpec{
 			{Name: "catalog", Type: "string", Usage: "Catalog URL for control selection and validation (default: NIST 800-53 Rev5)"},

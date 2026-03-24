@@ -21,7 +21,14 @@ func (c *showSpecsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-specs",
 		Short:         "Display specifications for a release",
-		Long:          "Shows .feature specification files that were added or modified for a release.\n\nExpected Output:\n- Version header with module and version number\n- Summary line with counts (added, modified, deleted, total scenarios)\n- Markdown table with columns: File, Status, Scenarios, Feature\n- Status icons: ✨ Added, 📝 Modified, 🗑️ Deleted\n\nExample:\n  show specs eac-ext\n  show specs eac-ext latest\n  show specs eac-ext unreleased\n  show specs eac-ext 0.0.7",
+		Long: "Shows .feature specification files that were added or modified for a release.",
+		Notes: "Expected Output:\n- Version header with module and version number\n- Summary line with counts (added, modified, deleted, total scenarios)\n- Markdown table with columns: File, Status, Scenarios, Feature\n- Status icons: ✨ Added, 📝 Modified, 🗑️ Deleted",
+		Examples: []string{
+			"eac show specs eac-ext",
+			"eac show specs eac-ext latest",
+			"eac show specs eac-ext unreleased",
+			"eac show specs eac-ext 0.0.7",
+		},
 		Args: "module [version]",
 		Flags: []core.FlagSpec{
 			{Name: "branch", Type: "string", Usage: "Branch to query (default: trunk branch from config, usually \"main\"). Use \"HEAD\" for current branch"},

@@ -21,7 +21,11 @@ func (c *validateDependabotCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-dependabot",
 		Short:         "Validate that dependabot.yml covers all dependency sources",
-		Long:          "Validates that .github/dependabot.yml includes entries for all\ndependency sources in the repository.\n\nScans for:\n  - Go modules (from go.work)\n  - npm packages (package.json)\n  - Python packages (requirements.txt)\n  - Docker base images (Dockerfile)\n  - GitHub Actions workflows\n\nExpected Output:\n  Shows missing and extra entries. Exit code 0 if all covered, 1 if gaps found.\n\nExample:\n  validate dependabot",
+		Long: "Validates that .github/dependabot.yml includes entries for all\ndependency sources in the repository.\n\nScans for:\n  - Go modules (from go.work)\n  - npm packages (package.json)\n  - Python packages (requirements.txt)\n  - Docker base images (Dockerfile)\n  - GitHub Actions workflows",
+		Notes: "Expected Output:\n  Shows missing and extra entries. Exit code 0 if all covered, 1 if gaps found.",
+		Examples: []string{
+			"eac validate dependabot",
+		},
 	}
 }
 
@@ -128,7 +132,7 @@ func summaryLines(declared, discovered, consolidated int, report *dependabot.Com
 func printDependabotUsage() {
 	log.Info("Validate that dependabot.yml covers all dependency sources")
 	log.Info("")
-	log.Info("Usage: clie validate dependabot")
+	log.Info("Usage: eac validate dependabot")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - All Go modules from go.work have gomod entries")
@@ -139,5 +143,5 @@ func printDependabotUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate dependabot coverage")
-	log.Info("  clie validate dependabot")
+	log.Info("  eac validate dependabot")
 }

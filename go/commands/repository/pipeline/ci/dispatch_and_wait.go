@@ -26,7 +26,13 @@ func (c *pipelineCIDispatchAndWaitCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-ci-dispatch-and-wait",
 		Short:         "Wait for GitHub workflow runs to complete",
-		Long:          "Dispatch a workflow and wait for it to complete, or wait for an existing run.\n\nThis command is useful for CI orchestration when you need to trigger\na workflow and wait for its completion before proceeding.\n\nExpected Output:\n  - Workflow dispatch confirmation message\n  - Live progress display with status updates\n  - Exit code 0 on success, 1 on failure\n\nExample:\n  pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main\n  pipeline ci dispatch-and-wait --run-id 12345678\n  pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main --timeout 600",
+		Long: "Dispatch a workflow and wait for it to complete, or wait for an existing run.\n\nThis command is useful for CI orchestration when you need to trigger\na workflow and wait for its completion before proceeding.",
+		Notes: "Expected Output:\n  - Workflow dispatch confirmation message\n  - Live progress display with status updates\n  - Exit code 0 on success, 1 on failure",
+		Examples: []string{
+			"eac pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main",
+			"eac pipeline ci dispatch-and-wait --run-id 12345678",
+			"eac pipeline ci dispatch-and-wait --workflow ci-clie.yaml --ref main --timeout 600",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "workflow", Type: "string", Usage: "Workflow file name to dispatch"},
 			{Name: "ref", Type: "string", Usage: "Git ref to run workflow on (default: current branch)"},

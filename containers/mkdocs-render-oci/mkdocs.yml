@@ -1,17 +1,11 @@
-# MkDocs Site Template (HTML only)
-# This template is used for building documentation sites and for `serve docs`
-# Dynamic values are injected by the Go build layer:
-#   - site_name, site_url, docs_dir are set at build time
-#   - For serve docs, docs_dir points to the repository docs/ directory
+# MkDocs Fallback Config (bundled in container image)
+# Used when a repository does not provide its own mkdocs.yml.
+# For EAC builds, the source of truth is docs/mkdocs.yml.
 
 site_name: Documentation
 site_description: Generated documentation site
 site_url: ""
 docs_dir: /workspace/docs
-
-repo_name: eac
-repo_url: https://github.com/ready-to-release/eac
-edit_uri: edit/main/docs/
 
 theme:
   name: material
@@ -19,71 +13,23 @@ theme:
     - scheme: slate
       primary: indigo
       accent: light blue
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-    - scheme: default
-      primary: indigo
-      accent: light blue
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
   features:
     - navigation.indexes
     - search.suggest
     - search.highlight
     - content.code.copy
-    - content.footnote.tooltips
 
 plugins:
   - search
-  - macros
+  - macros:
+      on_error_fail: true
   - awesome-nav
-  - drawio
-  # Mermaid diagram rendering for web (JavaScript-based)
-  - mermaid2:
-      version: '9.4.3'
-  # Note: minify_html plugin added to requirements.txt but not enabled here
-  # Enable after container image is rebuilt: - minify_html
 
 markdown_extensions:
-  - footnotes
-  - attr_list
   - tables
   - admonition
-  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:mermaid2.fence_mermaid_custom
-
-extra_css:
-  - assets/templates/web-light/styles.css
-  - assets/templates/web-dark/styles.css
-  - assets/css/diataxis-footer.css
-  - assets/css/breadcrumb.css
-
-extra_javascript:
-  # Draw.io viewer - enables interactive/clickable .drawio diagrams
-  - https://viewer.diagrams.net/js/viewer-static.min.js
+  - pymdownx.superfences
 
 dev_addr: '0.0.0.0:8000'
-
-# Validation settings
-validation:
-  nav:
-    omitted_files: warn
-    not_found: warn
-    absolute_links: warn
-  links:
-    not_found: warn
-    anchors: warn
-    absolute_links: warn
-    unrecognized_links: warn

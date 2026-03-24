@@ -1,22 +1,6 @@
-# Get release-bundle
+# get release-bundle
 
 <!-- book:cmd get release-bundle -->
-
-Returns release bundle configuration with module groupings, versioning info, and optionally resolved versions from GitHub releases. The bundle is defined in a module's `release_bundle` configuration.
-
-## Usage
-
-```bash
-eac get release-bundle [flags]
-```
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--with-versions` | bool | Resolve current versions from GitHub releases |
-| `--title-only` | bool | Output only the resolved release title (implies `--with-versions`) |
-| `--format` | string | Output format: `markdown`, `flat`, `shell`, `table` |
 
 ## Output Formats
 
@@ -50,22 +34,6 @@ ALL_RELEASED="true"
 **`--format markdown`**: Release notes with tables per category.
 
 **`--format table`**: Markdown summary table with status icons.
-
-## Examples
-
-```bash
-# Bundle structure only
-eac get release-bundle
-
-# With resolved versions
-eac get release-bundle --with-versions
-
-# Release title string
-eac get release-bundle --title-only
-
-# Shell variables for CI
-eval $(eac get release-bundle --format shell)
-```
 
 ## See Also
 

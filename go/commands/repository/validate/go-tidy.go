@@ -24,7 +24,8 @@ func (c *validateGoTidyCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-go-tidy",
 		Short:         "Validate Go module dependencies are tidy",
-		Long:          "Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.\n\nExpected Output:\n  Shows pass/fail status for 'go mod tidy' check on all Go modules.\n  Displays diff output for untidy modules. Exit code 0 if all tidy, 1 if any untidy.",
+		Long: "Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.",
+		Notes: "Expected Output:\n  Shows pass/fail status for 'go mod tidy' check on all Go modules.\n  Displays diff output for untidy modules. Exit code 0 if all tidy, 1 if any untidy.",
 	}
 }
 
@@ -182,7 +183,7 @@ func indentLines(text, prefix string) string {
 func printGoTidyUsage() {
 	log.Info("Validate Go module dependencies are tidy")
 	log.Info("")
-	log.Info("Usage: clie validate go-tidy")
+	log.Info("Usage: eac validate go-tidy")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Runs 'go mod tidy -diff' on all Go modules")
@@ -190,5 +191,5 @@ func printGoTidyUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all Go modules")
-	log.Info("  clie validate go-tidy")
+	log.Info("  eac validate go-tidy")
 }

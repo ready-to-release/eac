@@ -1,4 +1,4 @@
-# find-run-id
+# pipeline find-run-id
 
 <!-- book:cmd pipeline find-run-id -->
 
@@ -7,4 +7,4 @@
 - [pipeline ci-get-run-id](./ci-get-run-id.md)
 - [get current-sha](../get/current-sha.md)
 - [pipeline ci](./ci.md)
-- [pipeline Commands](../../categories/pipeline.md)
+- [pipeline Commands](../pipeline/index.md)

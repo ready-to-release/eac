@@ -33,7 +33,13 @@ func (c *getSquashMessageCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-squash-message",
 		Short:         "Generate squash commit message from branch commits",
-		Long:          "Analyzes all commits in the current branch compared to the base branch\nand generates a comprehensive, cohesive commit message suitable for\nsquash merges in pull requests or local branch merging.\n\nThis command examines the full commit history and cumulative diff\nto create a message that accurately represents the entire feature\nor change set, rather than individual commit details.\n\nThe generated message is designed to be copied into GitHub's PR squash\nmerge UI for use when squashing and merging pull requests.\n\nExpected Output:\n- Comprehensive commit message for squash merge\n- Suitable for GitHub PR squash merge UI\n\nExample:\n  get squash-message\n  get squash-message --base=develop\n  get squash-message --debug",
+		Long: "Analyzes all commits in the current branch compared to the base branch\nand generates a comprehensive, cohesive commit message suitable for\nsquash merges in pull requests or local branch merging.\n\nThis command examines the full commit history and cumulative diff\nto create a message that accurately represents the entire feature\nor change set, rather than individual commit details.\n\nThe generated message is designed to be copied into GitHub's PR squash\nmerge UI for use when squashing and merging pull requests.",
+		Notes: "Expected Output:\n- Comprehensive commit message for squash merge\n- Suitable for GitHub PR squash merge UI",
+		Examples: []string{
+			"eac get squash-message",
+			"eac get squash-message --base=develop",
+			"eac get squash-message --debug",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "base", Type: "string", DefaultValue: "", Usage: "Base branch for comparison (default: trunk_branch from config, or \"main\")"},
 			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug mode to save intermediate outputs"},

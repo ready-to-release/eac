@@ -10,30 +10,147 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 
 - [Language Support](../language-support.md) - Which commands work with which languages
 - [Command Taxonomy](../overview/command-taxonomy.md) - How commands are organized
-- [All Categories](../categories/index.md) - Browse by category
 - [Naming Conventions](../overview/naming-conventions.md) - Command naming patterns
 - [Common Flags](../overview/common-flags.md) - Global options
 - [Output Formats](../overview/output-formats.md) - JSON vs human-readable output
 
 ## Command Categories
 
-| Category                               | Purpose                                              |
-| -------------------------------------- | ---------------------------------------------------- |
-| [build](../categories/build.md)         | Module building and compilation                      |
-| [create](../categories/create.md)       | AI-powered generation (commits, specs, designs, PRs) |
-| [get](../categories/get.md)             | JSON output for automation and scripting             |
-| [help](../categories/help.md)           | Display help information                             |
-| [init](../categories/init.md)           | Project initialization                               |
-| [pipeline](../categories/pipeline.md)   | CI/CD orchestration                                  |
-| [release](../categories/release.md)     | Release management and versioning                    |
-| [scan](../categories/scan.md)           | Security scanning (SAST, secrets, vulnerabilities)   |
-| [serve](../categories/serve.md)         | Local development servers                            |
-| [show](../categories/show.md)           | Human-readable output for interactive use            |
-| [templates](../categories/templates.md) | Template management                                  |
-| [test](../categories/test.md)           | Testing and test suite management                    |
-| [update](../categories/update.md)       | Update operations                                    |
-| [validate](../categories/validate.md)   | Contract and dependency validation                   |
-| [work](../categories/work.md)           | Workspace management (git worktrees)                 |
+| Category                            | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| [build](./build/index.md)          | Module building and compilation                      |
+| [create](./create/index.md)        | AI-powered generation (commits, specs, designs, PRs) |
+| [get](./get/index.md)              | JSON output for automation and scripting             |
+| [help](./help/index.md)            | Display help information                             |
+| [init](./init/index.md)            | Project initialization                               |
+| [pipeline](./pipeline/index.md)    | CI/CD orchestration                                  |
+| [release](./release/index.md)      | Release management and versioning                    |
+| [scan](./scan/index.md)            | Security scanning (SAST, secrets, vulnerabilities)   |
+| [serve](./serve/index.md)          | Local development servers                            |
+| [show](./show/index.md)            | Human-readable output for interactive use            |
+| [templates](./templates/index.md)  | Template management                                  |
+| [test](./test/index.md)            | Testing and test suite management                    |
+| [update](./update/index.md)        | Update operations                                    |
+| [validate](./validate/index.md)    | Contract and dependency validation                   |
+| [work](./work/index.md)            | Workspace management (git worktrees)                 |
+
+## Core Commands
+
+Core commands are top-level commands that don't require a category prefix:
+
+| Command | Description |
+|---------|-------------|
+| [build](./build/build.md) | Build one or more modules |
+| [lint](./lint.md) | Run linters on modules |
+| [scan](./scan/scan.md) | Run security scanners on modules |
+| [test](./test/test.md) | Run tests for modules |
+| [extension-meta](./extension-meta.md) | Output extension metadata for CLI integration |
+| [init](./init/init.md) | Initialize a new EAC repository |
+| [help](./help/help.md) | Display help information |
+
+### Linting Code
+
+```bash
+# Lint all modules
+eac lint
+
+# Lint specific module
+eac lint eac-commands
+
+# Lint with auto-fix
+eac lint --fix
+```
+
+The lint command automatically selects appropriate linters based on module component types (Go, Markdown, etc.).
+
+## Finding Commands by Task
+
+### Development Tasks
+
+**I want to...**
+
+- **...see what modules exist**: [show modules](./show/modules.md)
+- **...check dependencies**: [show dependencies](./show/dependencies.md)
+- **...create a workspace**: [work create](./work/create.md)
+- **...write specifications**: [create spec](./create/spec.md)
+- **...generate diagrams**: [create design](./create/design.md)
+
+### Quality and Validation
+
+**I want to...**
+
+- **...scan for secrets**: [scan](./scan/scan.md) with `--scanner secrets`
+- **...check for vulnerabilities**: [scan](./scan/scan.md) with `--scanner vuln`
+
+### Building and Testing
+
+**I want to...**
+
+- **...build a module**: [build](./build/build.md)
+- **...run tests**: [test](./test/test.md)
+- **...run a test suite**: [test suite](./test/suite.md)
+- **...see test results**: [show test-summary](./show/test-summary.md)
+
+### Committing and PRs
+
+**I want to...**
+
+- **...commit changes**: [work commit](./work/commit.md) or [get commit-message](./get/commit-message.md)
+- **...create a PR**: [create pr](./create/pr.md)
+- **...see changed files**: [show files-changed](./show/files-changed.md)
+- **...get changed modules**: [get changed-modules](./get/changed-modules.md)
+
+### Release and Deployment
+
+**I want to...**
+
+- **...check for release changes**: [release pending](./release/pending.md)
+- **...generate changelog**: [release changelog](./release/changelog.md)
+- **...create a release**: [release this](./release/this.md)
+- **...check CI status**: [release check-ci](./release/check-ci.md)
+- **...run pipelines**: [pipeline run](./pipeline/run.md)
+
+### Documentation
+
+**I want to...**
+
+- **...serve docs locally**: [serve docs](./serve/docs.md)
+- **...view architecture diagrams**: [serve design](./serve/design.md)
+- **...manage templates**: [templates commands](./templates/index.md)
+
+## Category Patterns
+
+### Information Retrieval (get/show)
+
+Most information commands come in pairs:
+
+| get (JSON)         | show (Formatted)    | Information      |
+| ------------------ | ------------------- | ---------------- |
+| `get modules`      | `show modules`      | Module contracts |
+| `get dependencies` | `show dependencies` | Dependency graph |
+| `get files`        | `show files`        | File ownership   |
+| `get config`       | `show config`       | Configuration    |
+| `get tests`        | `show tests`        | Test information |
+
+**Rule**: Use `get` for automation, `show` for interactive and templated markdown use.
+
+### Quality Gates (validate/scan/test)
+
+Quality commands all validate different aspects:
+
+- **validate**: Repository structure and contracts
+- **scan**: Security issues and compliance
+- **test**: Functional correctness
+
+**Use in**: Pre-commit hooks, CI pipelines, release gates
+
+### Workflow (work/pipeline/release)
+
+Workflow commands manage different stages:
+
+- **work**: Local development (git worktrees)
+- **pipeline**: CI/CD execution
+- **release**: Version management
 
 ## Common Workflows
 
@@ -42,7 +159,6 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
 - [show modules](./show/modules.md) - List all modules
 - [build](./build/build.md) - Build modules
 - [test](./test/test.md) - Test modules
-
 
 ### CI/CD
 
@@ -74,9 +190,9 @@ Complete technical reference for all EAC commands (invoked as `eac <command>`).
    - [Common Flags](../overview/common-flags.md) - Global options all commands accept
 
 2. **Explore by category**:
-   - Browse the [Categories Index](../categories/index.md) to find commands by function
-   - Start with [show commands](../categories/show.md) for exploration
-   - Use [get commands](../categories/get.md) for automation
+   - Browse the [Command Categories](#command-categories) table above
+   - Start with [show commands](./show/index.md) for exploration
+   - Use [get commands](./get/index.md) for automation
 
 3. **Try common commands**:
 
@@ -143,7 +259,7 @@ $ eac get modules
 eac get modules | jq -r '.modules[].moniker'
 ```
 
-**See**: [Get Commands](../categories/get.md), [Output Formats](../overview/output-formats.md)
+**See**: [Get Commands](./get/index.md), [Output Formats](../overview/output-formats.md)
 
 ### Formatted Output (show commands)
 
@@ -159,7 +275,7 @@ $ eac show modules
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```
 
-**See**: [Show Commands](../categories/show.md), [Output Formats](../overview/output-formats.md)
+**See**: [Show Commands](./show/index.md), [Output Formats](../overview/output-formats.md)
 
 ## Integration Examples
 
@@ -279,13 +395,6 @@ Command reference pages should include:
 - [Naming Conventions](../overview/naming-conventions.md) - Naming rules
 - [Common Flags](../overview/common-flags.md) - Global options
 - [Output Formats](../overview/output-formats.md) - JSON vs formatted
-
-### Categories
-
-- [All Categories](../categories/index.md) - Browse all command categories
-- [Create Commands](../categories/create.md) - AI-powered generation
-- [Get Commands](../categories/get.md) - JSON output
-- [Show Commands](../categories/show.md) - Formatted output
 
 ### How-to Guides
 

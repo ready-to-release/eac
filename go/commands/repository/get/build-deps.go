@@ -25,10 +25,8 @@ func (c *getBuildDepsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-build-deps",
 		Short:         "Get aggregated build dependencies for a module",
-		Long: "Expected Output:\n" +
-			"YAML list of module build dependencies, aggregated from the module and all its transitive\n" +
-			"dependencies. Includes system dependencies resolved from module type capabilities (e.g., go,\n" +
-			"node, docker) and artifact-specific requirements (e.g., upx for compression).",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of module build dependencies, aggregated from the module and all its transitive\ndependencies. Includes system dependencies resolved from module type capabilities (e.g., go,\nnode, docker) and artifact-specific requirements (e.g., upx for compression).",
 		Args: "module (required) - Module moniker",
 		Flags: []core.FlagSpec{
 			{Name: "format", Type: "string", Usage: "Output format (shell, space, yaml, json)"},

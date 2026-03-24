@@ -26,4 +26,3 @@ Test results output to: `out/test/<module>/`
 - [test suite](./suite.md) - Run test suites
 - [test debug](./debug.md) - Debug failures
 - [show tests](../show/tests.md) - View test assertions
-- [test Commands](../../categories/test.md)

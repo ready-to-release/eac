@@ -26,7 +26,13 @@ func (c *validateArtifactsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-artifacts",
 		Short:         "Validate that build artifacts exist for a module and its dependencies",
-		Long:          "Validate that build artifacts exist for a module and all transitive dependencies.\n\nThis command checks that all required build artifacts are present in out/build/\nfor the specified module and all modules it depends on. This ensures that the\nbuild\u2192test flow has all necessary artifacts before running tests.\n\nThe validation includes:\n- Target module artifacts (executables, files, directories, etc.)\n- All transitive dependency artifacts (recursive check, unless --skip-depm)\n- Platform-specific artifacts for current platform (or all if built)\n- Marker files for modules with no traditional build outputs\n\nValidation failures indicate missing artifacts that must be built before testing.\n\nExpected Output:\n  Displays validation results for target module and all dependency artifacts.\n  Exit code 0 if all artifacts present, non-zero if any missing.\n  Shows detailed table with artifact counts and missing artifact paths.\n\nExample:\n  validate artifacts eac-cli\n  validate artifacts clie --os linux --arch amd64\n  validate artifacts docs --skip-depm     # Release context: skip module deps",
+		Long: "Validate that build artifacts exist for a module and all transitive dependencies.\n\nThis command checks that all required build artifacts are present in out/build/\nfor the specified module and all modules it depends on. This ensures that the\nbuild→test flow has all necessary artifacts before running tests.\n\nThe validation includes:\n- Target module artifacts (executables, files, directories, etc.)\n- All transitive dependency artifacts (recursive check, unless --skip-depm)\n- Platform-specific artifacts for current platform (or all if built)\n- Marker files for modules with no traditional build outputs\n\nValidation failures indicate missing artifacts that must be built before testing.",
+		Notes: "Expected Output:\n  Displays validation results for target module and all dependency artifacts.\n  Exit code 0 if all artifacts present, non-zero if any missing.\n  Shows detailed table with artifact counts and missing artifact paths.",
+		Examples: []string{
+			"eac validate artifacts eac-cli",
+			"eac validate artifacts clie --os linux --arch amd64",
+			"eac validate artifacts docs --skip-depm              # Release context: skip module deps",
+		},
 		Args:          "module",
 		Flags: []core.FlagSpec{
 			{Name: "skip-depm", Type: "bool", DefaultValue: "false", Usage: "Skip validation of transitive module dependencies (for release workflows)"},

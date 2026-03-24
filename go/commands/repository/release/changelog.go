@@ -21,7 +21,13 @@ func (c *releaseChangelogCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-changelog",
 		Short:         "Generate or update changelog from commits",
-		Long:          "Analyzes commits since the last release tag and generates changelog entries.\n\nThe command reads conventional commit messages (feat, fix, refactor, etc.)\nand categorizes them into changelog sections (Added, Fixed, Changed, etc.).\n\nBy default, shows a preview of the changelog entries without writing.\nUse --write to update the changelog file.\n\nExpected Output:\n  - Preview of changelog entries (default)\n  - Updated release/<module>/CHANGELOG.md file if --write flag is specified\n\nExamples:\n  release changelog clie              # Preview changelog entries\n  release changelog clie --write      # Update release/clie/CHANGELOG.md\n  release changelog clie --from v1.0  # From specific tag",
+		Long: "Analyzes commits since the last release tag and generates changelog entries.\n\nThe command reads conventional commit messages (feat, fix, refactor, etc.)\nand categorizes them into changelog sections (Added, Fixed, Changed, etc.).\n\nBy default, shows a preview of the changelog entries without writing.\nUse --write to update the changelog file.",
+		Notes: "Expected Output:\n  - Preview of changelog entries (default)\n  - Updated release/<module>/CHANGELOG.md file if --write flag is specified",
+		Examples: []string{
+			"eac release changelog clie              # Preview changelog entries",
+			"eac release changelog clie --write      # Update release/clie/CHANGELOG.md",
+			"eac release changelog clie --from v1.0  # From specific tag",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "write", Type: "bool", Usage: "Write changes to changelog file (default: preview only)"},
 			{Name: "from", Type: "string", Usage: "Start from specific tag/ref (default: latest release tag)"},

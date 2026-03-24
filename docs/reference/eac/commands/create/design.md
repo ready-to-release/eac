@@ -1,4 +1,4 @@
-# Create design
+# create design
 
 <!-- book:cmd create design -->
 
@@ -17,4 +17,4 @@ See [commit-message](../get/commit-message.md#custom-prompts) for detailed custo
 - [update design](../update/design.md)
 - [validate design](../validate/design.md)
 - [serve design](../serve/design.md)
-- [create Commands](../../categories/create.md)
+- [create Commands](../create/index.md)

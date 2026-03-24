@@ -23,7 +23,8 @@ func (c *showTestsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-tests",
 		Short:         "Display all test assertions with metadata",
-		Long:          "The show tests command displays all test assertions in the repository with their metadata.\nShows test names, modules, components, tags (type, level, verification, dependencies), with indicators for inferred values.\n\nExpected Output:\n- Table with test assertions showing: Module, Component, Assertion, Type, Level, Verify, Deps\n- Module overview table with per-module statistics (assertions, components, level breakdown, types)\n- Summary sections showing counts by type and by level\n- Legend indicating inferred tags with * and ~ symbols",
+		Long: "The show tests command displays all test assertions in the repository with their metadata.\nShows test names, modules, components, tags (type, level, verification, dependencies), with indicators for inferred values.",
+		Notes: "Expected Output:\n- Table with test assertions showing: Module, Component, Assertion, Type, Level, Verify, Deps\n- Module overview table with per-module statistics (assertions, components, level breakdown, types)\n- Summary sections showing counts by type and by level\n- Legend indicating inferred tags with * and ~ symbols",
 	}
 }
 

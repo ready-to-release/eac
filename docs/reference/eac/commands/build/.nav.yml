@@ -1,4 +1,4 @@
 title: build
 nav:
   - index.md
-  - build.md
+  - "build": build.md

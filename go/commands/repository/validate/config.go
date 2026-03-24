@@ -24,7 +24,13 @@ func (c *validateConfigCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-config",
 		Short:         "Validate effective configuration from all sources",
-		Long:          "Validate effective configuration from all sources.\n\nThis command validates the complete configuration stack:\n  1. Contract defaults (from contracts/eac-*/defaults/)\n  2. User overrides (from .eac/)\n  3. Personal overrides (from .eac/*.personal.yml)\n\nValidation phases:\n  - File Checks: All config files are readable\n  - Schema Validation: YAML matches JSON schemas\n  - Cross-Reference: Dependencies exist, component types valid\n  - Completeness: Required fields present\n\nExpected Output:\n  Shows validation status for each config layer. Reports any errors\n  or warnings found. Exit code 0 if valid, 1 if errors.\n\nExample:\n  validate config\n  validate config --strict\n  validate config --format json",
+		Long: "Validate effective configuration from all sources.\n\nThis command validates the complete configuration stack:\n  1. Contract defaults (from contracts/eac-*/defaults/)\n  2. User overrides (from .eac/)\n  3. Personal overrides (from .eac/*.personal.yml)\n\nValidation phases:\n  - File Checks: All config files are readable\n  - Schema Validation: YAML matches JSON schemas\n  - Cross-Reference: Dependencies exist, component types valid\n  - Completeness: Required fields present",
+		Notes: "Expected Output:\n  Shows validation status for each config layer. Reports any errors\n  or warnings found. Exit code 0 if valid, 1 if errors.",
+		Examples: []string{
+			"eac validate config",
+			"eac validate config --strict",
+			"eac validate config --format json",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "strict", Type: "bool", DefaultValue: "false", Usage: "Treat warnings as errors"},
 			{Name: "format", Type: "string", DefaultValue: "text", Usage: "Output format: text, json, github"},

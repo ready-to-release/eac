@@ -1,9 +1,6 @@
-# Scan sast
+# scan sast
 
 <!-- book:cmd scan --scanner sast -->
-
-Static Application Security Testing (SAST) analyzes source code for security
-vulnerabilities using Semgrep.
 
 ## See Also
 

@@ -22,14 +22,8 @@ func (c *getReleaseNotesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-release-notes",
 		Short:         "Get parsed release notes for a module",
-		Long: "Expected Output:\n" +
-			"YAML/JSON/TOML representation of release notes including:\n" +
-			"  - versions: Array of version entries\n" +
-			"    - number: Version number\n" +
-			"    - date: Release date\n" +
-			"    - sections: Array of sections with headers and content\n" +
-			"\n" +
-			"If version is specified, returns only that version's data.",
+		Long: "",
+		Notes: "Expected Output:\nYAML/JSON/TOML representation of release notes including:\n  - versions: Array of version entries\n    - number: Version number\n    - date: Release date\n    - sections: Array of sections with headers and content\n\nIf version is specified, returns only that version's data.",
 		Args: "module [version]",
 	}
 }

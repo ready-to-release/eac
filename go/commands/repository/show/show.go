@@ -43,7 +43,7 @@ func (c *showParent) Metadata() core.CommandMetadata {
 			{Name: "Release", Subcommands: []string{"release-summary", "release-notes"}},
 			{Name: "CI", Subcommands: []string{"ci-summary", "dependency-ci-summary", "deps-setup-summary", "trigger-summary"}},
 		},
-		Examples: []string{"clie show modules", "clie show files-changed", "clie show suite integration"},
+		Examples: []string{"eac show modules", "eac show files-changed", "eac show suite integration"},
 	}
 }
 

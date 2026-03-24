@@ -20,7 +20,16 @@ func (c *pipelineCISummaryLinkCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-ci-summary-link",
 		Short:         "Generate diagnostic markdown for CI summaries",
-		Long:          "Generate a markdown code block with gh CLI commands for diagnosing CI failures.\n\nThis command outputs markdown that can be piped directly into $GITHUB_STEP_SUMMARY.\nThe generated commands use the actual run ID and repository so they can be\ncopy-pasted directly.\n\nExpected Output:\n  - Markdown code block with gh CLI diagnostic commands\n  - Commands use actual run ID and repository\n  - Suitable for piping to $GITHUB_STEP_SUMMARY\n\nExample:\n  pipeline ci summary-link 12345678                    # Basic diagnostic link\n  pipeline ci summary-link 12345678 --type test       # Include artifact download\n  pipeline ci summary-link 12345678 --artifact results # Specific artifact name\n  pipeline ci summary-link 12345678 --type container   # Container-specific diagnostics\n\nIn a workflow:\n  go run ./go/cli/eac pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY",
+		Long: "Generate a markdown code block with gh CLI commands for diagnosing CI failures.\n\nThis command outputs markdown that can be piped directly into $GITHUB_STEP_SUMMARY.\nThe generated commands use the actual run ID and repository so they can be\ncopy-pasted directly.",
+		Notes: "Expected Output:\n  - Markdown code block with gh CLI diagnostic commands\n  - Commands use actual run ID and repository\n  - Suitable for piping to $GITHUB_STEP_SUMMARY",
+		Examples: []string{
+			"eac pipeline ci summary-link 12345678                     # Basic diagnostic link",
+			"eac pipeline ci summary-link 12345678 --type test         # Include artifact download",
+			"eac pipeline ci summary-link 12345678 --artifact results  # Specific artifact name",
+			"eac pipeline ci summary-link 12345678 --type container    # Container-specific diagnostics",
+			"In a workflow:",
+			"go run ./go/cli/eac pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "type", Type: "string", Usage: "Failure type: build, test, container, release, docs (default: build)"},
 			{Name: "artifact", Type: "string", Usage: "Artifact name to include in download command"},

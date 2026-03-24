@@ -1,6 +1,14 @@
-# init Commands
+# Init Commands
 
-Initialize EAC project configuration.
+Init commands set up EAC project configuration and initialize repository structure.
+
+**Key Characteristics**:
+
+- Creates required configuration files
+- Sets up directory structure
+- Initializes contracts and schemas
+
+**When to use**: When setting up a new EAC-managed repository or adding EAC to an existing project.
 
 ## Commands in this Category
 
@@ -8,17 +16,30 @@ Initialize EAC project configuration.
 | ----------------- | ------------------------------------ |
 | [init](./init.md) | Initialize EAC project configuration |
 
-## Quick Examples
+## Common Workflows
+
+### Initializing a New Project
 
 ```bash
-# Initialize a new EAC project
+# Initialize with defaults
 eac init
 
-# Initialize with specific options
+# Initialize with project name
 eac init --name my-project
+```
+
+### Verifying Initialization
+
+```bash
+# Check configuration
+eac show config
+
+# Validate setup
+eac validate
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/init.md)
 - [Getting Started Guide](../../../../tutorials/getting-started/quick-start.md)
+- [show config](../show/config.md) - View configuration
+- [validate](../validate/validate.md) - Validate configuration

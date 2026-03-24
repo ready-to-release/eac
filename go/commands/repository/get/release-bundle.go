@@ -25,31 +25,11 @@ func (c *getReleaseBundleCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-release-bundle",
 		Short:         "Get release bundle configuration and versions",
-		Long: "Expected Output:\n" +
-			"Structured release bundle configuration including:\n" +
-			"  - title_format: Template for release title (with versions resolved if --with-versions)\n" +
-			"  - headline: Map of label -> module info for title modules\n" +
-			"  - categories: Grouped modules with their details\n" +
-			"Use this in CI to create release notes without hardcoding module names.\n" +
-			"\n" +
-			"With --with-versions, each module includes:\n" +
-			"  - version: Current released version (empty if not released)\n" +
-			"  - tag: Full release tag (e.g., clie/1.0.0)\n" +
-			"  - release_url: GitHub release URL\n" +
-			"\n" +
-			"With --format markdown, outputs release notes directly:\n" +
-			"  ## Release Bundle\n" +
-			"  ### Category Name\n" +
-			"  | Module   | Version | Link                                                           |\n" +
-			"  |----------|---------|----------------------------------------------------------------|\n" +
-			"  | **Name** | `1.0.0` | [Release](https://github.com/org/repo/releases/tag/name/1.0.0) |\n" +
-			"\n" +
-			"With --format shell, outputs for eval:\n" +
-			"  RELEASE_MAP='{\"clie\":{\"tag\":\"clie/1.0.0\",\"version\":\"1.0.0\"},...}'\n" +
-			"  ALL_RELEASED=\"true\"\n" +
-			"\n" +
-			"Example:\n" +
-			"  eval $(get release-bundle --format shell)",
+		Long: "",
+		Notes: "Expected Output:\nStructured release bundle configuration including:\n  - title_format: Template for release title (with versions resolved if --with-versions)\n  - headline: Map of label -> module info for title modules\n  - categories: Grouped modules with their details\nUse this in CI to create release notes without hardcoding module names.\n\nWith --with-versions, each module includes:\n  - version: Current released version (empty if not released)\n  - tag: Full release tag (e.g., clie/1.0.0)\n  - release_url: GitHub release URL\n\nWith --format markdown, outputs release notes directly:\n  ## Release Bundle\n  ### Category Name\n  | Module   | Version | Link                                                           |\n  |----------|---------|----------------------------------------------------------------|\n  | **Name** | `1.0.0` | [Release](https://github.com/org/repo/releases/tag/name/1.0.0) |\n\nWith --format shell, outputs for eval:\n  RELEASE_MAP='{\"clie\":{\"tag\":\"clie/1.0.0\",\"version\":\"1.0.0\"},...}'\n  ALL_RELEASED=\"true\"",
+		Examples: []string{
+			"eval $(eac get release-bundle --format shell)",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "with-versions", Type: "bool", DefaultValue: "false", Usage: "Resolve current versions from GitHub releases"},
 			{Name: "title-only", Type: "bool", DefaultValue: "false", Usage: "Output only the resolved release title"},

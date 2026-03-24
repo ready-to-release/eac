@@ -20,7 +20,15 @@ func (c *validateReleaseVersionCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-release-version",
 		Short:         "Validate release version format",
-		Long:          "Validates that a version string is a valid semantic version.\n\nChecks:\n  - Must be valid semver format: MAJOR.MINOR.PATCH (e.g., 1.2.3)\n  - Must not have 'v' prefix (e.g., v1.2.3 is rejected)\n  - Major, minor, and patch must be non-negative integers\n  - No leading zeros allowed (except for 0 itself)\n\nExpected Output:\n  Exit code 0 if valid semver format, exit code 1 if invalid.\n  Error message displayed for invalid versions (v prefix, wrong format, leading zeros).\n  No output on success (silent success).\n\nExamples:\n  validate release-version 1.2.3        # Valid\n  validate release-version 0.1.0        # Valid\n  validate release-version v1.2.3       # Invalid: has 'v' prefix\n  validate release-version 1.2          # Invalid: missing patch\n  validate release-version 01.2.3       # Invalid: leading zero",
+		Long: "Validates that a version string is a valid semantic version.\n\nChecks:\n  - Must be valid semver format: MAJOR.MINOR.PATCH (e.g., 1.2.3)\n  - Must not have 'v' prefix (e.g., v1.2.3 is rejected)\n  - Major, minor, and patch must be non-negative integers\n  - No leading zeros allowed (except for 0 itself)",
+		Notes: "Expected Output:\n  Exit code 0 if valid semver format, exit code 1 if invalid.\n  Error message displayed for invalid versions (v prefix, wrong format, leading zeros).\n  No output on success (silent success).",
+		Examples: []string{
+			"eac validate release-version 1.2.3   # Valid",
+			"eac validate release-version 0.1.0   # Valid",
+			"eac validate release-version v1.2.3  # Invalid: has 'v' prefix",
+			"eac validate release-version 1.2     # Invalid: missing patch",
+			"eac validate release-version 01.2.3  # Invalid: leading zero",
+		},
 	}
 }
 
@@ -73,7 +81,7 @@ func ValidateReleaseVersion() int {
 func printReleaseVersionUsage() {
 	log.Info("Validate release version format")
 	log.Info("")
-	log.Info("Usage: clie validate release-version <version>")
+	log.Info("Usage: eac validate release-version <version>")
 	log.Info("")
 	log.Info("Validates that a version string is a valid semantic version.")
 	log.Info("")
@@ -83,8 +91,8 @@ func printReleaseVersionUsage() {
 	log.Info("  - No leading zeros (except 0 itself)")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  clie validate release-version 1.2.3      # Valid")
-	log.Info("  clie validate release-version 0.1.0      # Valid")
-	log.Info("  clie validate release-version v1.2.3     # Invalid: 'v' prefix")
-	log.Info("  clie validate release-version 1.2        # Invalid: missing patch")
+	log.Info("  eac validate release-version 1.2.3      # Valid")
+	log.Info("  eac validate release-version 0.1.0      # Valid")
+	log.Info("  eac validate release-version v1.2.3     # Invalid: 'v' prefix")
+	log.Info("  eac validate release-version 1.2        # Invalid: missing patch")
 }

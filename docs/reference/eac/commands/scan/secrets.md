@@ -1,9 +1,6 @@
-# Scan secrets
+# scan secrets
 
 <!-- book:cmd scan --scanner secrets -->
-
-Secret detection scans source code for accidentally committed credentials,
-API keys, and other sensitive information using Trivy.
 
 ## See Also
 

@@ -21,7 +21,17 @@ func (c *templatesInstallCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "templates-install",
 		Short:         "Install templates without value replacements",
-		Long:          "Install templates by copying files as-is (no variable substitution).\n\nThis command copies template files to your local project without rendering them.\nAll {{ .Variable }} placeholders remain unchanged for later customization.\n\nAvailable template types:\n  docs     - Documentation templates (outputs to docs/reference/)\n  ai       - AI prompt templates (outputs to .eac/templates/ai/)\n  reports  - Report templates (outputs to .eac/templates/reports/)\n  specs    - Specification templates (outputs to specs/risk-controls/)\n  claude   - Claude Code templates (outputs to .claude/)\n\nHow it works:\n  1. Uses local template files from repository\n  2. Copies files as-is to destination directory\n  3. Preserves all {{ .Variable }} placeholders unchanged\n\nExpected Output:\n  - Template files copied as-is to destination directory\n  - All {{ .Variable }} placeholders preserved (not replaced)\n\nUse Case:\n  Install templates once to your project, then customize them as needed.\n\nExamples:\n  templates install docs\n  templates install ai\n  templates install reports\n  templates install specs\n  templates install claude\n  templates install docs --destination ./custom-docs\n\nUse \"help templates install <template-type>\" for detailed information.",
+		Long: "Install templates by copying files as-is (no variable substitution).\n\nThis command copies template files to your local project without rendering them.\nAll {{ .Variable }} placeholders remain unchanged for later customization.\n\nAvailable template types:\n  docs     - Documentation templates (outputs to docs/reference/)\n  ai       - AI prompt templates (outputs to .eac/templates/ai/)\n  reports  - Report templates (outputs to .eac/templates/reports/)\n  specs    - Specification templates (outputs to specs/risk-controls/)\n  claude   - Claude Code templates (outputs to .claude/)\n\nHow it works:\n  1. Uses local template files from repository\n  2. Copies files as-is to destination directory\n  3. Preserves all {{ .Variable }} placeholders unchanged",
+		Notes: "Expected Output:\n  - Template files copied as-is to destination directory\n  - All {{ .Variable }} placeholders preserved (not replaced)\n\nUse Case:\n  Install templates once to your project, then customize them as needed.",
+		Examples: []string{
+			"eac templates install docs",
+			"eac templates install ai",
+			"eac templates install reports",
+			"eac templates install specs",
+			"eac templates install claude",
+			"eac templates install docs --destination ./custom-docs",
+			"Use \"help templates install <template-type>\" for detailed information.",
+		},
 	}
 }
 

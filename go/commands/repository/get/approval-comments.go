@@ -22,15 +22,8 @@ func (c *getApprovalCommentsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-approval-comments",
 		Short:         "Get PR approval comments for a module",
-		Long: "Expected Output:\n" +
-			"YAML/JSON/TOML representation of PR approval comments including:\n" +
-			"  - module: Module moniker\n" +
-			"  - version: Version number or \"Unreleased\"\n" +
-			"  - total_prs: Number of PRs with spec files\n" +
-			"  - total_approvals: Total number of approval reviews\n" +
-			"  - approvals: Array of approval reviews with PR details\n" +
-			"\n" +
-			"If version is specified, returns approvals for that version.",
+		Long: "",
+		Notes: "Expected Output:\nYAML/JSON/TOML representation of PR approval comments including:\n  - module: Module moniker\n  - version: Version number or \"Unreleased\"\n  - total_prs: Number of PRs with spec files\n  - total_approvals: Total number of approval reviews\n  - approvals: Array of approval reviews with PR details\n\nIf version is specified, returns approvals for that version.",
 		Args: "module [version]",
 		Flags: []core.FlagSpec{
 			{Name: "as-yaml", Type: "bool", Usage: "Output as YAML (default)"},

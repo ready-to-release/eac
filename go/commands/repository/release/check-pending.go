@@ -25,7 +25,12 @@ func (c *releaseCheckPendingCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-check-pending",
 		Short:         "Check for all pending releases (semver and calver)",
-		Long:          "Comprehensive release detection that combines semver (from changelog) and calver (from CI dispatch).\n\nThis command:\n  1. Checks semver modules for changelog versions without git tags\n  2. Checks calver modules with CI workflows (release when CI was dispatched)\n  3. Checks calver bundle modules (release when any dependency was dispatched)\n  4. Returns enriched layers ready for release execute-layers\n\nExpected Output:\n  - JSON object with has_pending, modules_json, layers_json, layer_count\n  - layers_json contains enriched module info [{module, version, tag, type}, ...]\n\nExamples:\n  release check-pending --dispatched \"docs books\"  # Check with dispatched modules\n  release check-pending                            # Check semver only",
+		Long: "Comprehensive release detection that combines semver (from changelog) and calver (from CI dispatch).\n\nThis command:\n  1. Checks semver modules for changelog versions without git tags\n  2. Checks calver modules with CI workflows (release when CI was dispatched)\n  3. Checks calver bundle modules (release when any dependency was dispatched)\n  4. Returns enriched layers ready for release execute-layers",
+		Notes: "Expected Output:\n  - JSON object with has_pending, modules_json, layers_json, layer_count\n  - layers_json contains enriched module info [{module, version, tag, type}, ...]",
+		Examples: []string{
+			"eac release check-pending --dispatched \"docs books\"  # Check with dispatched modules",
+			"eac release check-pending                            # Check semver only",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "dispatched", Type: "string", Usage: "Space-separated list of modules that had CI dispatched"},
 		},

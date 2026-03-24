@@ -1,10 +1,10 @@
 title: drawio
 nav:
   - index.md
-  - create.md
-  - drawio.md
-  - decode.md
-  - embed.md
-  - encode.md
-  - info.md
-  - render.md
+  - "drawio": drawio.md
+  - "drawio create": create.md
+  - "drawio decode": decode.md
+  - "drawio embed": embed.md
+  - "drawio encode": encode.md
+  - "drawio info": info.md
+  - "drawio render": render.md

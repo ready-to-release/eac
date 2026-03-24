@@ -35,10 +35,10 @@ func (c *validateCommand) Metadata() core.CommandMetadata {
 			{Name: "Artifacts", Subcommands: []string{"artifacts", "control-tags"}},
 		},
 		Examples: []string{
-			"clie validate contracts",
-			"clie validate dependencies",
-			"clie validate test-tags",
-			"clie validate module-hierarchy",
+			"eac validate contracts",
+			"eac validate dependencies",
+			"eac validate test-tags",
+			"eac validate module-hierarchy",
 		},
 	}
 }

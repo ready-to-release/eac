@@ -10,6 +10,6 @@ For the practical Claude Code setup that implements these principles in this rep
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
+| Topic                                         | Description                                                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | [ACD and the CD Model](./acd-and-cd-model.md) | How the six ACD artifacts map to this project, the eight constraints, and where expert agents fit in our pipeline |

@@ -21,8 +21,11 @@ func FormatMarkdownTable(rawMarkdown string) string {
 			continue
 		}
 
-		// Parse cells by splitting on |
-		cells := strings.Split(line, "|")
+		// Parse cells by splitting on unescaped |
+		// Temporarily replace escaped pipes so they don't interfere with splitting
+		const escapedPipeSentinel = "\x00PIPE\x00"
+		safeLine := strings.ReplaceAll(line, "\\|", escapedPipeSentinel)
+		cells := strings.Split(safeLine, "|")
 
 		// Remove empty first and last elements from split
 		if len(cells) > 0 && cells[0] == "" {
@@ -32,10 +35,11 @@ func FormatMarkdownTable(rawMarkdown string) string {
 			cells = cells[:len(cells)-1]
 		}
 
-		// Trim spaces from each cell
+		// Trim spaces from each cell and restore escaped pipes
 		var trimmedCells []string
 		for _, cell := range cells {
-			trimmedCells = append(trimmedCells, strings.TrimSpace(cell))
+			restored := strings.ReplaceAll(strings.TrimSpace(cell), escapedPipeSentinel, "\\|")
+			trimmedCells = append(trimmedCells, restored)
 		}
 
 		rows = append(rows, trimmedCells)
@@ -130,10 +134,6 @@ func formatSeparatorCell(cell string, width int) string {
 	// Check for alignment markers
 	leftAlign := strings.HasPrefix(cell, ":")
 	rightAlign := strings.HasSuffix(cell, ":")
-
-	// Remove existing alignment markers and dashes
-	cleaned := strings.ReplaceAll(cell, ":", "")
-	cleaned = strings.ReplaceAll(cleaned, "-", "")
 
 	// Build the separator with the correct width
 	// For right-aligned, the colon takes one character, so reduce dashes by 1

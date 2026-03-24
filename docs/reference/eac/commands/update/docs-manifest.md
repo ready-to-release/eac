@@ -1,8 +1,6 @@
-<!-- book:cmd update docs-manifest -->
-
 # update docs-manifest
 
-Update the documentation assets manifest.
+<!-- book:cmd update docs-manifest -->
 
 ## Synopsis
 
@@ -20,34 +18,6 @@ The manifest tracks:
 - **Usage references** - Auto-detected from markdown files
 - **File metadata** - Size, hash, last modified
 - **Statistics** - Total, used, unused by category
-
-## Flags
-
-| Flag            | Default | Description                                               |
-| --------------- | ------- | --------------------------------------------------------- |
-| `--check`       | `false` | Validate manifest is up-to-date (exits non-zero if stale) |
-| `--dry-run`     | `false` | Show what would change without writing                    |
-| `-v, --verbose` | `false` | Show detailed progress                                    |
-
-## Examples
-
-### Update manifest
-
-```bash
-eac update docs-manifest
-```
-
-### Validate in CI
-
-```bash
-eac update docs-manifest --check
-```
-
-### Preview changes
-
-```bash
-eac update docs-manifest --dry-run
-```
 
 ## Output
 

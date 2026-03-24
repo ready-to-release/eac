@@ -19,7 +19,11 @@ func (c *testListSuitesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test-list-suites",
 		Short:         "List all available test suites",
-		Long:          "List all available test suites defined in the repository.\n\nTest suites are logical groupings of tests defined in domain.\nThis command displays all configured suites, making it easy to discover\nwhat test suites are available for execution.\n\nExpected Output:\n  - List of configured test suite names (unit, integration, acceptance, etc.)\n  - Suite name, display name, and description for each suite\n\nExample:\n  test list-suites",
+		Long: "List all available test suites defined in the repository.\n\nTest suites are logical groupings of tests defined in domain.\nThis command displays all configured suites, making it easy to discover\nwhat test suites are available for execution.",
+		Notes: "Expected Output:\n  - List of configured test suite names (unit, integration, acceptance, etc.)\n  - Suite name, display name, and description for each suite",
+		Examples: []string{
+			"eac test list-suites",
+		},
 	}
 }
 

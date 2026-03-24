@@ -1,4 +1,4 @@
-# check-exists
+# release check-exists
 
 <!-- book:cmd release check-exists -->
 
@@ -7,4 +7,4 @@
 - [release pending](./pending.md)
 - [release tag-pending](./tag-pending.md)
 - [get release-status](../get/release-status.md)
-- [release Commands](../../categories/release.md)
+- [release Commands](../release/index.md)

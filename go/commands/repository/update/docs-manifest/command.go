@@ -31,7 +31,13 @@ func (c *updateDocsManifestCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "update-docs-manifest",
 		Short:         "Update the documentation assets manifest",
-		Long:          "Scans docs/assets/ for documentation assets (drawio diagrams, images)\nand updates the asset tracking files.\n\nThis command manages two files:\n  - descriptions.yml: Human-maintained descriptions and active status (git-tracked)\n  - .manifest-cache.json: Auto-generated usage and metadata (git-ignored)\n\nThe descriptions file tracks:\n  - Asset descriptions (human/LLM-authored, preserved on update)\n  - Active status flag (mark assets as deprecated with active: false)\n\nThe cache file tracks:\n  - Usage references (auto-detected from markdown files)\n  - File metadata (size, hash, last modified)\n  - Statistics (total, used, unused by category)\n\nExpected Output:\n  - Updates .manifest-cache.json with current usage\n  - Updates descriptions.yml only when new assets are discovered\n  - Reports added/removed/changed assets\n  - Lists new assets needing descriptions\n\nExample:\n  update docs-manifest              # Update manifest files\n  update docs-manifest --check      # Validate manifest is up-to-date (CI)\n  update docs-manifest --dry-run    # Show what would change",
+		Long: "Scans docs/assets/ for documentation assets (drawio diagrams, images)\nand updates the asset tracking files.\n\nThis command manages two files:\n  - descriptions.yml: Human-maintained descriptions and active status (git-tracked)\n  - .manifest-cache.json: Auto-generated usage and metadata (git-ignored)\n\nThe descriptions file tracks:\n  - Asset descriptions (human/LLM-authored, preserved on update)\n  - Active status flag (mark assets as deprecated with active: false)\n\nThe cache file tracks:\n  - Usage references (auto-detected from markdown files)\n  - File metadata (size, hash, last modified)\n  - Statistics (total, used, unused by category)",
+		Notes: "Expected Output:\n  - Updates .manifest-cache.json with current usage\n  - Updates descriptions.yml only when new assets are discovered\n  - Reports added/removed/changed assets\n  - Lists new assets needing descriptions",
+		Examples: []string{
+			"eac update docs-manifest            # Update manifest files",
+			"eac update docs-manifest --check    # Validate manifest is up-to-date (CI)",
+			"eac update docs-manifest --dry-run  # Show what would change",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "check", Type: "bool", DefaultValue: "false", Usage: "Validate manifest is up-to-date (exits non-zero if stale)"},
 			{Name: "dry-run", Type: "bool", DefaultValue: "false", Usage: "Show what would change without writing"},

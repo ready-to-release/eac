@@ -1,6 +1,13 @@
-# serve Commands
+# Serve Commands
 
-Start development servers for documentation and architecture visualization.
+Commands for starting development servers for documentation, architecture diagrams, and repository visualization.
+
+**Key Features**:
+
+- MkDocs documentation preview with live reload
+- Structurizr Lite integration for architecture diagrams
+- Docker-based diagram rendering
+- Local development workflow support
 
 ## Commands in this Category
 
@@ -9,17 +16,27 @@ Start development servers for documentation and architecture visualization.
 | [serve docs](./docs.md)     | Start or stop MkDocs server           |
 | [serve design](./design.md) | View architecture diagrams in browser |
 
-## Quick Examples
+## Common Use Cases
+
+### Documentation Server
 
 ```bash
 # Start documentation server
 eac serve docs
 
-# View architecture diagrams
+# Stop documentation server
+eac serve docs --stop
+```
+
+### Architecture Diagrams
+
+```bash
 eac serve design src-auth
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/serve.md)
 - [create design](../create/design.md)
+- [update design](../update/design.md)
+- [validate design](../validate/design.md)
+- [validate markdown](../validate/markdown.md)

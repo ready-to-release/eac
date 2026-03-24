@@ -29,7 +29,14 @@ func (c *testCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test",
 		Short:         "Test one or more modules by moniker",
-		Long:          "Test one or more modules by moniker using suite-based filtering.\n\nThis command discovers tests, applies inference rules (e.g., Go tests default to @L1),\nfilters by suite tags, and runs matching tests with consistent summary output.\n\nUse --suite to select which tests to run. The default runs suites not marked\nas extended_suite in config (typically unit + integration).\n\nExpected Output:\n  - Test execution results with pass/fail status\n  - Detailed test summary table showing modules, packages, and assertions\n  - Test logs written to out/test/<module>/ directory\n  - Exit code 0 if all tests pass, non-zero on failure\n\nExample:\n  test eac-cli                    # Test single module\n  test core clie                # Test multiple modules\n  test                                 # Test all modules\n  test eac-cli --suite acceptance # Run acceptance tests only",
+		Long: "Test one or more modules by moniker using suite-based filtering.\n\nThis command discovers tests, applies inference rules (e.g., Go tests default to @L1),\nfilters by suite tags, and runs matching tests with consistent summary output.\n\nUse --suite to select which tests to run. The default runs suites not marked\nas extended_suite in config (typically unit + integration).",
+		Notes: "Expected Output:\n  - Test execution results with pass/fail status\n  - Detailed test summary table showing modules, packages, and assertions\n  - Test logs written to out/test/<module>/ directory\n  - Exit code 0 if all tests pass, non-zero on failure",
+		Examples: []string{
+			"eac test eac-cli                     # Test single module",
+			"eac test core clie                   # Test multiple modules",
+			"eac test                             # Test all modules",
+			"eac test eac-cli --suite acceptance  # Run acceptance tests only",
+		},
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "suite", Type: "string", Usage: "Filter tests by suite (default: non-extended suites from config)"},

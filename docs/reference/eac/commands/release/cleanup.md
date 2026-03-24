@@ -1,4 +1,4 @@
-# cleanup
+# release cleanup
 
 <!-- book:cmd release cleanup -->
 
@@ -7,4 +7,4 @@
 - [release prune](./prune.md)
 - [release tag-pending](./tag-pending.md)
 - [get release-status](../get/release-status.md)
-- [release Commands](../../categories/release.md)
+- [release Commands](../release/index.md)

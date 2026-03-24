@@ -1,10 +1,10 @@
 title: test
 nav:
   - index.md
-  - test.md
-  - debug.md
-  - export-manual.md
-  - import-manual.md
-  - list-suites.md
-  - merge-results.md
-  - suite.md
+  - "test": test.md
+  - "test debug": debug.md
+  - "test export-manual": export-manual.md
+  - "test import-manual": import-manual.md
+  - "test list-suites": list-suites.md
+  - "test merge-results": merge-results.md
+  - "test suite": suite.md

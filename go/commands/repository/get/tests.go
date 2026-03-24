@@ -21,7 +21,8 @@ func (c *getTestsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-tests",
 		Short:         "Get all discovered tests with metadata",
-		Long:          "Expected Output:\nYAML list of all discovered tests with metadata, including:\n  - Test name and location (module, package, file)\n  - Test type (unit, integration, e2e, etc.)\n  - Tags and markers\n  - Total test count\n  - Aggregations by module and type",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of all discovered tests with metadata, including:\n  - Test name and location (module, package, file)\n  - Test type (unit, integration, e2e, etc.)\n  - Tags and markers\n  - Total test count\n  - Aggregations by module and type",
 	}
 }
 

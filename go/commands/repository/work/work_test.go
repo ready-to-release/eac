@@ -90,8 +90,8 @@ func TestWorkCommand_Metadata(t *testing.T) {
 	t.Run("has examples", func(t *testing.T) {
 		require.NotEmpty(t, meta.Examples, "work command should have examples")
 		for _, example := range meta.Examples {
-			assert.True(t, strings.HasPrefix(example, "clie work"),
-				"each example should start with 'clie work', got: %s", example)
+			assert.True(t, strings.HasPrefix(example, "eac work"),
+				"each example should start with 'eac work', got: %s", example)
 		}
 	})
 }

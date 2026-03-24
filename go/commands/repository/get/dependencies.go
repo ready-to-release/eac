@@ -21,7 +21,8 @@ func (c *getDependenciesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-dependencies",
 		Short:         "Get full dependency graph for all modules",
-		Long:          "Expected Output:\nYAML dependency graph showing module relationships, including:\n  - List of all module monikers\n  - Dependency edges (module -> list of dependencies)\nAlternative formats available: PlantUML diagram, Mermaid diagram.",
+		Long: "",
+		Notes: "Expected Output:\nYAML dependency graph showing module relationships, including:\n  - List of all module monikers\n  - Dependency edges (module -> list of dependencies)\nAlternative formats available: PlantUML diagram, Mermaid diagram.",
 	}
 }
 

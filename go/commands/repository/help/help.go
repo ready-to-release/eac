@@ -30,7 +30,8 @@ func (c *helpCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "help",
 		Short:         "Display help information for commands",
-		Long:          "The help command provides comprehensive documentation for all available commands.\nWhen called without arguments, it lists all commands with their short descriptions.\nWhen called with a command name, it displays detailed help including description, flags, and usage.\n\nExpected Output:\n  - NAME, SYNOPSIS, DESCRIPTION, COMMANDS, FLAGS sections\n  - Command usage examples",
+		Long: "The help command provides comprehensive documentation for all available commands.\nWhen called without arguments, it lists all commands with their short descriptions.\nWhen called with a command name, it displays detailed help including description, flags, and usage.",
+		Notes: "Expected Output:\n  - NAME, SYNOPSIS, DESCRIPTION, COMMANDS, FLAGS sections\n  - Command usage examples",
 		Flags: []core.FlagSpec{
 			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed information including all subcommands and advanced options"},
 		},

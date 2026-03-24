@@ -1,20 +1,6 @@
-# Validate risk-profile
+# validate risk-profile
 
 <!-- book:cmd validate risk-profile -->
-
-Validates an OSCAL profile document against the OSCAL 1.1.2 schema using go-oscal types.
-
-## Usage
-
-```bash
-eac validate risk-profile <file>
-```
-
-## Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `file` | Path to the OSCAL profile JSON file (required) |
 
 ## What It Checks
 
@@ -22,12 +8,6 @@ eac validate risk-profile <file>
 - Required field presence (UUID, metadata, imports).
 - Control ID format validation.
 - Import href validation.
-
-## Examples
-
-```bash
-eac validate risk-profile templates/specs/risk-catalog/profile.json
-```
 
 ## Common Errors
 
@@ -40,4 +20,4 @@ eac validate risk-profile templates/specs/risk-catalog/profile.json
 - [validate](./validate.md)
 - [create risk-profile](../create/risk-profile.md)
 - [validate risk-catalog](./risk-catalog.md)
-- [validate Commands](../../categories/validate.md)
+- [validate Commands](../validate/index.md)

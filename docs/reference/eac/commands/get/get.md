@@ -1,4 +1,4 @@
-# Get
+# get
 
 <!-- book:cmd get -->
 
@@ -6,7 +6,7 @@
 
 All get commands return JSON output for automation and scripting. Process with `jq` or pipe to other tools.
 
-See the [get Commands Category](../../categories/get.md) for complete list of subcommands.
+See the [get Commands Category](./index.md) for complete list of subcommands.
 
 ## Common Patterns
 
@@ -22,5 +22,4 @@ eac build $CHANGED
 
 ## See Also
 
-- [show Commands](../../categories/show.md) - Human-readable output
-- [get Commands Category](../../categories/get.md) - All get commands
+- [show Commands](../show/index.md) - Human-readable output

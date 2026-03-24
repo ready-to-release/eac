@@ -26,11 +26,12 @@ func (c *validateSpecsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-specs",
 		Short:         "Validate Gherkin specifications against quality contracts",
-		Long:          "The validate specs command checks existing .feature files against the specification contract,\nensuring they follow proper Gherkin syntax, and project standards.\nValidation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.\nThe command can validate a single file or recursively validate all .feature files in a directory.\nBy default, output is in human-readable text format. Use --format json for machine-readable output.\n\nExpected Output:\n  Displays validation results for Gherkin specification structure, tags, and step formatting.\n  Shows errors and warnings with line numbers. Exit code 0 if all pass, 1 if critical errors found.",
+		Long: "The validate specs command checks existing .feature files against the specification contract,\nensuring they follow proper Gherkin syntax, and project standards.\nValidation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.\nThe command can validate a single file or recursively validate all .feature files in a directory.\nBy default, output is in human-readable text format. Use --format json for machine-readable output.",
+		Notes: "Expected Output:\n  Displays validation results for Gherkin specification structure, tags, and step formatting.\n  Shows errors and warnings with line numbers. Exit code 0 if all pass, 1 if critical errors found.",
 		Flags: []core.FlagSpec{
 			{Name: "quiet", Shorthand: "q", Type: "bool", DefaultValue: "false", Usage: "Suppress success messages and show only validation errors and warnings"},
 			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed validation output including metadata and additional context"},
-			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "text", Usage: "Output format for validation results (text for human-readable, json for machine-readable)", Completion: []string{"text", "json"}},
+			{Name: "format", Shorthand: "f", Type: "string", DefaultValue: "text", Usage: "Output format for validation results (text for human-readable, json for machine-readable)"},
 		},
 	}
 }

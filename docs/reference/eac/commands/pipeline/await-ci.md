@@ -1,4 +1,4 @@
-# await-ci
+# pipeline await-ci
 
 <!-- book:cmd pipeline await-ci -->
 
@@ -7,4 +7,4 @@
 - [pipeline wait](./wait.md)
 - [pipeline status](./status.md)
 - [pipeline ci](./ci.md)
-- [pipeline Commands](../../categories/pipeline.md)
+- [pipeline Commands](../pipeline/index.md)

@@ -21,7 +21,8 @@ func (c *validateBooksCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-books",
 		Short:         "Validate books.yml configuration",
-		Long:          "Validate the books.yml file including:\n  - Book names match existing module monikers\n  - Referenced modules are type mkdocs-render-oci or pdf-oci\n  - Copy glob patterns are valid syntax\n  - Commands are valid EAC commands\n  - Navigation references are valid\n\nExpected Output:\n  Displays validation results for book names, module types, glob patterns, and commands.\n  Shows which modules reference each book and counts of copy/command/inline sources.\n  Exit code 0 if all books valid, 1 if validation errors found.",
+		Long: "Validate the books.yml file including:\n  - Book names match existing module monikers\n  - Referenced modules are type mkdocs-render-oci or pdf-oci\n  - Copy glob patterns are valid syntax\n  - Commands are valid EAC commands\n  - Navigation references are valid",
+		Notes: "Expected Output:\n  Displays validation results for book names, module types, glob patterns, and commands.\n  Shows which modules reference each book and counts of copy/command/inline sources.\n  Exit code 0 if all books valid, 1 if validation errors found.",
 	}
 }
 

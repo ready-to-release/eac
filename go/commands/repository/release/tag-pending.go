@@ -25,7 +25,12 @@ func (c *releaseTagPendingCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-tag-pending",
 		Short:         "Check for changelog versions without corresponding git tags",
-		Long:          "Scans changelog files for version entries and checks if the corresponding\ngit tag exists. Returns versions that need tagging.\n\nThis is used by CI to detect merged releases that need tags created.\n\nExpected Output:\n  - JSON list of versions needing tags, including module, version, tag, and needs_tag fields\n\nExamples:\n  release tag-pending clie        # Check single module\n  release tag-pending --all          # Check all modules with changelogs",
+		Long: "Scans changelog files for version entries and checks if the corresponding\ngit tag exists. Returns versions that need tagging.\n\nThis is used by CI to detect merged releases that need tags created.",
+		Notes: "Expected Output:\n  - JSON list of versions needing tags, including module, version, tag, and needs_tag fields",
+		Examples: []string{
+			"eac release tag-pending clie   # Check single module",
+			"eac release tag-pending --all  # Check all modules with changelogs",
+		},
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "all", Type: "bool", Usage: "Check all modules with changelogs"},

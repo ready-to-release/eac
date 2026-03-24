@@ -21,7 +21,8 @@ func (c *getEnvironmentsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-environments",
 		Short:         "Get environment definitions and configuration",
-		Long:          "Expected Output:\nYAML list of environment definitions with configuration for each environment,\nincluding environment variables, deployment targets, and environment-specific settings.",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of environment definitions with configuration for each environment,\nincluding environment variables, deployment targets, and environment-specific settings.",
 	}
 }
 

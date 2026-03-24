@@ -1,6 +1,4 @@
-# Pipeline ci schedule
-
-Schedule and dispatch CI workflows with concurrency limits and dependency-aware execution.
+# pipeline ci-schedule
 
 <!-- book:cmd pipeline ci schedule -->
 
@@ -15,47 +13,6 @@ Schedule and dispatch CI workflows with concurrency limits and dependency-aware 
 5. **Reports results** - Exits 0 when all complete successfully, 1 on any failure
 
 This is the CI-level analog of the local DependencyScheduler, handling the full dispatch lifecycle.
-
-## Usage
-
-```bash
-# Basic usage with changed modules
-pipeline ci schedule \
-  --directly-changed "core" \
-  --invalidated "eac docs" \
-  --head-sha abc123
-
-# With custom concurrency
-pipeline ci schedule \
-  --directly-changed "core auth" \
-  --max-concurrent 20 \
-  --timeout 3600
-
-# Full options
-pipeline ci schedule \
-  --directly-changed "core" \
-  --invalidated "eac" \
-  --head-sha abc123 \
-  --dispatch-ref main \
-  --max-concurrent 10 \
-  --timeout 7200 \
-  --poll-interval 60 \
-  --trigger-run-id 123456
-```
-
-## Flags
-
-| Flag                 | Type   | Default        | Description                                               |
-| -------------------- | ------ | -------------- | --------------------------------------------------------- |
-| `--directly-changed` | string | -              | Space-separated list of directly changed modules          |
-| `--invalidated`      | string | -              | Space-separated list of invalidated (dependent) modules   |
-| `--head-sha`         | string | auto-detected  | Commit SHA to dispatch CI for                             |
-| `--dispatch-ref`     | string | current branch | Git ref to dispatch workflows on                          |
-| `--max-concurrent`   | int    | 6              | Maximum number of concurrent CI dispatches                |
-| `--timeout`          | int    | 3600           | Maximum time in seconds to wait for all CI                |
-| `--poll-interval`    | int    | 30             | How often to check for completed workflows (seconds)      |
-| `--trigger-run-id`   | string | -              | Run ID of the triggering workflow (for artifact download) |
-| `--mock`             | string | -              | Mock CI cache status (JSON format) for testing            |
 
 ## Output
 
@@ -80,6 +37,7 @@ pipeline ci schedule \
 When running in GitHub Actions (`GITHUB_STEP_SUMMARY` set), writes a formatted summary:
 
 ```markdown
+
 ## CI Scheduler Results
 
 Dispatched **8** module(s) with concurrency-limited scheduling.
@@ -95,55 +53,12 @@ Dispatched **8** module(s) with concurrency-limited scheduling.
 **Total time**: 15m 42s
 ```
 
-## Examples
-
-### Standard CI Workflow
-
-```bash
-# Detect changes and schedule CI
-CHANGED=$(eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
-INVALIDATED=$(eac get changed-modules-ci | jq -r '.invalidated_modules | join(" ")')
-
-pipeline ci schedule \
-  --directly-changed "$CHANGED" \
-  --invalidated "$INVALIDATED" \
-  --head-sha $(git rev-parse HEAD)
-```
-
-### High-Concurrency Build
-
-```bash
-# Allow up to 20 concurrent workflows
-pipeline ci schedule \
-  --directly-changed "core auth api" \
-  --max-concurrent 20 \
-  --timeout 7200
-```
-
-### Long-Running Pipelines
-
-```bash
-# Increase timeout and poll interval for slow builds
-pipeline ci schedule \
-  --directly-changed "ml-model data-pipeline" \
-  --timeout 14400 \
-  --poll-interval 120
-```
-
-### Testing with Mock Cache
-
-```bash
-# Test scheduling logic with mocked CI cache
-pipeline ci schedule \
-  --directly-changed "core" \
-  --mock '{"core": {"has_ci": true, "ci_passed": true}}'
-```
-
 ## Common Workflows
 
 ### GitHub Actions Integration
 
 {% raw %}
+
 ```yaml
 name: CI Scheduler
 
@@ -173,6 +88,7 @@ jobs:
             --head-sha ${{ github.sha }} \
             --max-concurrent 10
 ```
+
 {% endraw %}
 
 ### Local Testing
@@ -249,4 +165,4 @@ pipeline ci schedule \
 - [pipeline status](./status.md) - Check pipeline status
 - [pipeline wait](./wait.md) - Wait for pipeline completion
 - [get ci-dispatch](../get/ci-dispatch.md) - Module filtering logic
-- [pipeline Commands](../../categories/pipeline.md) - All pipeline commands
+- [pipeline Commands](../pipeline/index.md) - All pipeline commands

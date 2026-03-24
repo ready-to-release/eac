@@ -24,7 +24,14 @@ func (c *workPullCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-pull",
 		Short:         "Sync workspace with latest main via rebase",
-		Long:          "Fetches the latest changes from the target branch (default: main) and rebases\nthe current branch onto it, keeping your commit history linear.\n\nThis command:\n  1. Fetches latest changes from origin/main\n  2. Rebases your commits on top of the fetched changes\n  3. Handles conflicts with clear instructions\n\nUse --autostash to automatically stash uncommitted changes before rebasing.\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - Branch rebased onto latest target\n  - Conflict instructions if conflicts occur\n\nExample:\n  work pull\n  work pull --target=develop\n  work pull --autostash\n  work pull --debug",
+		Long: "Fetches the latest changes from the target branch (default: main) and rebases\nthe current branch onto it, keeping your commit history linear.\n\nThis command:\n  1. Fetches latest changes from origin/main\n  2. Rebases your commits on top of the fetched changes\n  3. Handles conflicts with clear instructions\n\nUse --autostash to automatically stash uncommitted changes before rebasing.\nUse --debug to enable detailed logging to out/logs/work/.",
+		Notes: "Expected Output:\n  - Branch rebased onto latest target\n  - Conflict instructions if conflicts occur",
+		Examples: []string{
+			"eac work pull",
+			"eac work pull --target=develop",
+			"eac work pull --autostash",
+			"eac work pull --debug",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch to rebase onto"},
 			{Name: "autostash", Type: "bool", DefaultValue: "false", Usage: "Automatically stash and unstash uncommitted changes"},

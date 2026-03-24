@@ -26,7 +26,15 @@ func (c *releasePendingCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-pending",
 		Short:         "Check if module has pending changes for release",
-		Long:          "Analyzes commits since the last release and outputs release decision data.\n\nThis command checks the git history and changelog to determine if there\nare unreleased changes that warrant a new version.\n\nOutput includes:\n  - has_changes: whether there are releasable changes\n  - current_version: the current released version\n  - next_version: the calculated next version\n  - change_counts: breakdown by change type (added, fixed, changed, etc.)\n\nThis is designed for CI/CD pipelines to determine if a release is needed.\n\nExpected Output:\n  - JSON object containing:\n    - has_changes: boolean indicating if there are releasable changes\n    - current_version: the current released version\n    - next_version: the calculated next version\n    - change_counts: breakdown by change type (added, fixed, changed, etc.)\n\nExamples:\n  release pending clie            # Check clie for pending changes\n  release pending clie --quiet    # Exit code only (0=changes, 1=no changes)\n  release pending --all              # Check all releasable modules\n  release pending --published        # Check only published modules\n  release pending --internal         # Check only internal modules",
+		Long: "Analyzes commits since the last release and outputs release decision data.\n\nThis command checks the git history and changelog to determine if there\nare unreleased changes that warrant a new version.\n\nOutput includes:\n  - has_changes: whether there are releasable changes\n  - current_version: the current released version\n  - next_version: the calculated next version\n  - change_counts: breakdown by change type (added, fixed, changed, etc.)\n\nThis is designed for CI/CD pipelines to determine if a release is needed.",
+		Notes: "Expected Output:\n  - JSON object containing:\n    - has_changes: boolean indicating if there are releasable changes\n    - current_version: the current released version\n    - next_version: the calculated next version\n    - change_counts: breakdown by change type (added, fixed, changed, etc.)",
+		Examples: []string{
+			"eac release pending clie          # Check clie for pending changes",
+			"eac release pending clie --quiet  # Exit code only (0=changes, 1=no changes)",
+			"eac release pending --all         # Check all releasable modules",
+			"eac release pending --published   # Check only published modules",
+			"eac release pending --internal    # Check only internal modules",
+		},
 		Args: "modules",
 		Flags: []core.FlagSpec{
 			{Name: "quiet", Type: "bool", Usage: "Suppress output, use exit code only (0=has changes, 1=no changes)"},

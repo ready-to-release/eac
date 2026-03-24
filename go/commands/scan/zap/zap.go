@@ -34,7 +34,14 @@ func (c *scanZapCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "scan-zap",
 		Short:         "Dynamic Application Security Testing using OWASP ZAP",
-		Long:          "Perform Dynamic Application Security Testing (DAST) using OWASP ZAP.\n\nThis command performs black-box security testing of running web applications\nusing OWASP ZAP via Docker. It detects common vulnerabilities like XSS, SQL\ninjection, CSRF, and misconfigurations. Results are saved as timestamped\nevidence files with SHA256 integrity verification for audit compliance.\n\nNote: Unlike other security commands, ZAP scans a running application URL\nrather than module files. The module argument is used for evidence file\norganization only.\n\nExpected Output:\n  Evidence files are written to out/scan/<module>/zap/\n\nExample:\n  security zap src-api --target http://localhost:8080              # Baseline scan\n  security zap src-api --target http://localhost:8080 --scan-type full  # Full scan\n  security zap src-api --target http://localhost:8080 --scan-type api   # API scan\n  security zap src-api --target http://localhost:8080 --debug      # Debug logging",
+		Long: "Perform Dynamic Application Security Testing (DAST) using OWASP ZAP.\n\nThis command performs black-box security testing of running web applications\nusing OWASP ZAP via Docker. It detects common vulnerabilities like XSS, SQL\ninjection, CSRF, and misconfigurations. Results are saved as timestamped\nevidence files with SHA256 integrity verification for audit compliance.\n\nNote: Unlike other security commands, ZAP scans a running application URL\nrather than module files. The module argument is used for evidence file\norganization only.",
+		Notes: "Expected Output:\n  Evidence files are written to out/scan/<module>/zap/",
+		Examples: []string{
+			"eac security zap src-api --target http://localhost:8080                   # Baseline scan",
+			"eac security zap src-api --target http://localhost:8080 --scan-type full  # Full scan",
+			"eac security zap src-api --target http://localhost:8080 --scan-type api   # API scan",
+			"eac security zap src-api --target http://localhost:8080 --debug           # Debug logging",
+		},
 		Args:          "module",
 		Flags: []core.FlagSpec{
 			{Name: "target", Type: "string", Usage: "Target URL to scan (required)"},

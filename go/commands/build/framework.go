@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -490,29 +489,14 @@ func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.Art
 // Collects actual requirements from build handlers for modules in scope,
 // so only tools that are truly needed are checked (e.g., Docker is not required for Python builds).
 func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
-	status := &initsummary.DepsStatus{Verified: true}
-
-	// ModuleRegistry may not be populated yet (async deps check starts before phaseResolve).
-	// If unavailable, fall back to checking bootstrap tools (safe default).
+	// Defensive guard: ModuleRegistry should be populated (async check starts after phaseResolve).
+	// If unavailable, fall back to checking bootstrap tools.
 	if ctx.ModuleRegistry == nil {
-		registry := tool.GlobalRegistry()
-		bootstrapTools := registry.GetBootstrapTools()
-		if len(bootstrapTools) == 0 {
-			return status
+		bootstrapDeps := make(map[string]bool)
+		for _, t := range tool.GlobalRegistry().GetBootstrapTools() {
+			bootstrapDeps[t] = true
 		}
-		status.Required = bootstrapTools
-		results := registry.VerifyAll(bootstrapTools)
-		for _, result := range results {
-			status.Available = append(status.Available, initsummary.DepsResult{
-				Name:      result.ToolID,
-				Available: result.Available,
-				Version:   result.Version,
-			})
-			if !result.Available {
-				status.Missing = append(status.Missing, result.ToolID)
-			}
-		}
-		return status
+		return cmdframework.VerifyDeps(bootstrapDeps)
 	}
 
 	// Collect unique requirements from build handlers for modules in scope
@@ -532,37 +516,7 @@ func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStat
 		}
 	}
 
-	if len(depsMap) == 0 {
-		return status
-	}
-
-	// Convert to sorted slice for consistent output
-	deps := make([]string, 0, len(depsMap))
-	for dep := range depsMap {
-		deps = append(deps, dep)
-	}
-	sort.Strings(deps)
-
-	// Filter out platform-incompatible tools before verification
-	deps = tool.FilterPlatformSupported(deps)
-	status.Required = deps
-
-	// Verify dependencies using tool registry
-	registry := tool.GlobalRegistry()
-	results := registry.VerifyAll(deps)
-
-	for _, result := range results {
-		status.Available = append(status.Available, initsummary.DepsResult{
-			Name:      result.ToolID,
-			Available: result.Available,
-			Version:   result.Version,
-		})
-		if !result.Available {
-			status.Missing = append(status.Missing, result.ToolID)
-		}
-	}
-
-	return status
+	return cmdframework.VerifyDeps(depsMap)
 }
 
 // getGitCommit retrieves git commit SHA.

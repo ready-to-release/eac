@@ -21,7 +21,8 @@ func (c *showConfigCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-config",
 		Short:         "Display all loaded configurations with defaults applied",
-		Long:          "The show config command displays all EAC repository configurations\nloaded with their defaults applied. This includes modules, module types,\nenvironments, testing tags, and test suites.\n\nExpected Output:\n- Human-readable display of all configurations with summary table showing status and counts\n- Detailed tables for modules (moniker, type, root), module types, environments\n- Testing tags grouped by type, test suites with descriptions\n- Each section clearly formatted with markdown headers and tables",
+		Long: "The show config command displays all EAC repository configurations\nloaded with their defaults applied. This includes modules, module types,\nenvironments, testing tags, and test suites.",
+		Notes: "Expected Output:\n- Human-readable display of all configurations with summary table showing status and counts\n- Detailed tables for modules (moniker, type, root), module types, environments\n- Testing tags grouped by type, test suites with descriptions\n- Each section clearly formatted with markdown headers and tables",
 		Flags: []core.FlagSpec{
 			{Name: "verbose", Type: "bool", DefaultValue: "false", Usage: "Show all config source files with layers and value counts"},
 		},
@@ -218,7 +219,7 @@ func showConfigImpl() int {
 		}
 	}
 
-	fmt.Println("Use 'clie get config' for full YAML output with all fields.")
+	fmt.Println("Use 'eac get config' for full YAML output with all fields.")
 
 	return 0
 }
@@ -226,7 +227,7 @@ func showConfigImpl() int {
 func printShowConfigUsage() {
 	fmt.Println("Display all EAC configuration in human-readable format")
 	fmt.Println("")
-	fmt.Println("Usage: clie show config [flags]")
+	fmt.Println("Usage: eac show config [flags]")
 	fmt.Println("")
 	fmt.Println("Flags:")
 	fmt.Println("  --verbose, -v  Show all config source files with layers and value counts")
@@ -242,7 +243,7 @@ func printShowConfigUsage() {
 	fmt.Println("  - User configuration from .eac/")
 	fmt.Println("  - File existence status and value counts")
 	fmt.Println("")
-	fmt.Println("For full structured output, use 'clie get config'.")
+	fmt.Println("For full structured output, use 'eac get config'.")
 }
 
 // valueOrDefault returns the value if non-empty, otherwise the default.

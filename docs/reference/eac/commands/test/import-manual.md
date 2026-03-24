@@ -2,8 +2,6 @@
 
 <!-- book:cmd test import-manual -->
 
-Import manual test results from a JSON file and validate against schemas, exported scenarios, and repository configuration.
-
 ## Synopsis
 
 ```bash
@@ -23,12 +21,6 @@ The import process performs comprehensive validation to maintain data integrity 
 - Conflict detection (existing results)
 - Email format validation
 - Required field checking
-
-## Flags
-
-- `--input <file>` (required) - Path to manual test results JSON file
-- `--release <version>` (required) - Release version being tested
-- `--force` - Overwrite existing results if present
 
 ## Input Format
 
@@ -151,54 +143,24 @@ If export file exists at `manual-test-exports/<module>/<version>.json`:
 - Blocks import without `--force` flag
 - Preserves existing results unless forced
 
-## Examples
-
-### Import Manual Test Results
-
-```bash
-eac test import-manual --input results.json --release v1.2.0
-```
-
-Output:
-
-```text
-Imported manual test results for eac-commands v1.2.0
-  Location: test-results/eac-commands/v1.2.0/manual-results.json
-  Tests: 5 passed, 1 failed, 0 skipped
-```
-
-### Overwrite Existing Results
-
-```bash
-eac test import-manual --input results.json --release v1.2.0 --force
-```
-
-Output:
-
-```text
-Imported manual test results for eac-commands v1.2.0
-  Location: test-results/eac-commands/v1.2.0/manual-results.json
-  Tests: 5 passed, 1 failed, 0 skipped
-```
-
 ## Error Conditions
 
-| Exit Code | Condition                                    |
-| --------- | -------------------------------------------- |
-| 1         | Input flag missing                           |
-| 1         | Release flag missing                         |
-| 1         | Input file not found                         |
-| 1         | Invalid JSON format                          |
-| 1         | Schema validation failed                     |
-| 1         | Required field missing (e.g., tester)        |
-| 1         | Invalid email format                         |
-| 1         | Release version mismatch                     |
-| 1         | Unknown module                               |
-| 1         | Mixed modules in results                     |
-| 1         | Scenario ID not found in export              |
-| 1         | Results already exist (without --force)      |
-| 1         | Failed status without error message          |
-| 1         | Invalid status value                         |
+| Exit Code | Condition                               |
+| --------- | --------------------------------------- |
+| 1         | Input flag missing                      |
+| 1         | Release flag missing                    |
+| 1         | Input file not found                    |
+| 1         | Invalid JSON format                     |
+| 1         | Schema validation failed                |
+| 1         | Required field missing (e.g., tester)   |
+| 1         | Invalid email format                    |
+| 1         | Release version mismatch                |
+| 1         | Unknown module                          |
+| 1         | Mixed modules in results                |
+| 1         | Scenario ID not found in export         |
+| 1         | Results already exist (without --force) |
+| 1         | Failed status without error message     |
+| 1         | Invalid status value                    |
 
 ## Common Validation Errors
 
@@ -308,4 +270,4 @@ Record accurate durations for workload estimation:
 - [test export-manual](./export-manual.md) - Export manual test scenarios
 - [test merge-results](./merge-results.md) - Merge results into manifest
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide
-- [test Commands](../../categories/test.md)
+- [test Commands](../test/index.md)

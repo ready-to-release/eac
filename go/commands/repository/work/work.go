@@ -30,12 +30,12 @@ func (c *workCommand) Metadata() core.CommandMetadata {
 			{Name: "Completion", Subcommands: []string{"merge", "pr"}},
 		},
 		Examples: []string{
-			"clie work create feature/authentication",
-			"clie work commit --all",
-			"clie work pull",
-			"clie work merge",
-			"clie work pr",
-			"clie work list",
+			"eac work create feature/authentication",
+			"eac work commit --all",
+			"eac work pull",
+			"eac work merge",
+			"eac work pr",
+			"eac work list",
 		},
 	}
 }

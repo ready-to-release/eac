@@ -20,7 +20,8 @@ func (c *showValidCommandsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-valid-commands",
 		Short:         "Show all valid commands in a table",
-		Long:          "The show valid-commands command displays all registered commands in the EAC CLI.\nShows command names with their descriptions, sorted alphabetically.\n\nExpected Output:\n- Table with columns: Command, Description\n- Footer row showing total number of commands\n- Commands sorted alphabetically",
+		Long: "The show valid-commands command displays all registered commands in the EAC CLI.\nShows command names with their descriptions, sorted alphabetically.",
+		Notes: "Expected Output:\n- Table with columns: Command, Description\n- Footer row showing total number of commands\n- Commands sorted alphabetically",
 	}
 }
 

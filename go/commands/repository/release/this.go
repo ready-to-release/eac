@@ -29,7 +29,14 @@ func (c *releaseThisCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-this",
 		Short:         "Finalize changelog and prepare module for release",
-		Long:          "Updates the changelog with all commits since the last release and prepares\nthe module for release.\n\nThis command:\n  1. Analyzes commits since the last release tag\n  2. Generates changelog entries from conventional commits\n  3. Merges any manual entries from [Unreleased] section\n  4. Calculates the next version (respecting constraints from .eac/repository.yml)\n  5. Adds a new version section to the changelog\n  6. Clears the [Unreleased] section\n  7. Writes the updated changelog\n\nManual entries in [Unreleased] are preserved and merged with auto-generated\nentries. This allows team members to add changelog entries that aren't tied\nto specific commits.\n\nAfter running this command, commit the changelog and create a PR. Once merged,\nthe release-auto workflow will detect the new version and create the git tag,\nwhich triggers the module's release workflow.\n\nExpected Output:\n  - Updated changelog with new version section added\n  - [Unreleased] section cleared\n  - Changelog file ready to be committed and submitted in a pull request\n\nExamples:\n  release this clie                      # Update single module changelog\n  release this clie eac-ext              # Update multiple modules\n  release this clie eac-ext --dry-run    # Preview without writing\n  release this clie --json               # Output result as JSON",
+		Long: "Updates the changelog with all commits since the last release and prepares\nthe module for release.\n\nThis command:\n  1. Analyzes commits since the last release tag\n  2. Generates changelog entries from conventional commits\n  3. Merges any manual entries from [Unreleased] section\n  4. Calculates the next version (respecting constraints from .eac/repository.yml)\n  5. Adds a new version section to the changelog\n  6. Clears the [Unreleased] section\n  7. Writes the updated changelog\n\nManual entries in [Unreleased] are preserved and merged with auto-generated\nentries. This allows team members to add changelog entries that aren't tied\nto specific commits.\n\nAfter running this command, commit the changelog and create a PR. Once merged,\nthe release-auto workflow will detect the new version and create the git tag,\nwhich triggers the module's release workflow.",
+		Notes: "Expected Output:\n  - Updated changelog with new version section added\n  - [Unreleased] section cleared\n  - Changelog file ready to be committed and submitted in a pull request",
+		Examples: []string{
+			"eac release this clie                    # Update single module changelog",
+			"eac release this clie eac-ext            # Update multiple modules",
+			"eac release this clie eac-ext --dry-run  # Preview without writing",
+			"eac release this clie --json             # Output result as JSON",
+		},
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "dry-run", Type: "bool", Usage: "Preview changes without writing to changelog"},

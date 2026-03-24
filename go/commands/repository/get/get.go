@@ -44,10 +44,10 @@ func (c *getCommand) Metadata() core.CommandMetadata {
 			{Name: "CLI", Subcommands: []string{"cli-release-notes"}},
 		},
 		Examples: []string{
-			"clie get modules",
-			"clie get dependencies",
-			"clie get changed-modules",
-			"clie get changed-modules-ci --as-json",
+			"eac get modules",
+			"eac get dependencies",
+			"eac get changed-modules",
+			"eac get changed-modules-ci --as-json",
 		},
 	}
 }

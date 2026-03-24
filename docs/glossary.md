@@ -187,7 +187,7 @@ Commands: [create risk-profile](./reference/eac/commands/create/risk-profile.md)
 
 ### Pipeline
 
-An orchestrated sequence of build, test, and deployment steps. See [Pipeline Commands](./reference/eac/categories/pipeline.md).
+An orchestrated sequence of build, test, and deployment steps. See [Pipeline Commands](./reference/eac/commands/pipeline/index.md).
 
 ---
 
@@ -249,7 +249,7 @@ A development practice of writing tests before implementation code. See [Three-L
 
 ### Template
 
-A reusable document structure with placeholder variables for generating documentation. See [Templates Commands](./reference/eac/categories/templates.md).
+A reusable document structure with placeholder variables for generating documentation. See [Templates Commands](./reference/eac/commands/templates/index.md).
 
 ### Trunk-Based Development
 
@@ -269,7 +269,7 @@ The smallest deployable unit that delivers value independently. See [Unit of Flo
 
 ### Validation
 
-The process of checking contracts, dependencies, specifications, and code against defined rules. See [Validate Commands](./reference/eac/categories/validate.md).
+The process of checking contracts, dependencies, specifications, and code against defined rules. See [Validate Commands](./reference/eac/commands/validate/index.md).
 
 ### Value Stream Mapping
 
@@ -289,7 +289,7 @@ Commands: [work create](./reference/eac/commands/work/create.md), [work merge](.
 
 ### Workspace
 
-An EAC term for a git worktree used for feature development. Enables parallel development on multiple features. See [Work Commands](./reference/eac/categories/work.md).
+An EAC term for a git worktree used for feature development. Enables parallel development on multiple features. See [Work Commands](./reference/eac/commands/work/index.md).
 
 ---
 
@@ -380,3 +380,4 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 - [EAC and CLIE](./reference/eac/architecture/index.md) - System architecture
 - [Decision Records](./reference/eac/architecture/decisions/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy
+<\!-- test -->

@@ -49,4 +49,4 @@ eac get commit-message --debug
 - [How-to Guide](../../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md) - Quick start and common workflows
 - [work commit](../work/commit.md) - Workspace-aware commits
 - [init](../init/init.md) - Configure AI provider
-- [get Commands](../../categories/get.md)
+- [get Commands](../get/index.md)

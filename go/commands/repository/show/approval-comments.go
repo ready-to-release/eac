@@ -22,7 +22,14 @@ func (c *showApprovalCommentsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-approval-comments",
 		Short:         "Display PR approval comments in human-readable format",
-		Long:          "Display PR review approvals for specification-related PRs merged in a release.\n\nShows approvals from GitHub PRs that contain .feature specification files.\nSpecial keywords: \"unreleased\" for pending PRs, \"latest\" for most recent release.\n\nBy default, only shows APPROVED reviews. Use --include-all-reviews to see all review states.\n\nExpected Output:\n- Header with module and version\n- Summary line with PR and approval counts\n- Markdown table with columns: PR, Title, Reviewer, Review State, Reviewed At\n\nExample:\n  show approval-comments eac-ext\n  show approval-comments eac-ext latest\n  show approval-comments eac-ext unreleased\n  show approval-comments eac-ext --include-all-reviews",
+		Long: "Display PR review approvals for specification-related PRs merged in a release.\n\nShows approvals from GitHub PRs that contain .feature specification files.\nSpecial keywords: \"unreleased\" for pending PRs, \"latest\" for most recent release.\n\nBy default, only shows APPROVED reviews. Use --include-all-reviews to see all review states.",
+		Notes: "Expected Output:\n- Header with module and version\n- Summary line with PR and approval counts\n- Markdown table with columns: PR, Title, Reviewer, Review State, Reviewed At",
+		Examples: []string{
+			"eac show approval-comments eac-ext",
+			"eac show approval-comments eac-ext latest",
+			"eac show approval-comments eac-ext unreleased",
+			"eac show approval-comments eac-ext --include-all-reviews",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "include-all-reviews", Type: "bool", Usage: "Include all review states (not just APPROVED)"},
 			{Name: "branch", Type: "string", Usage: "Branch to query (default: trunk branch from config, usually \"main\"). Use \"HEAD\" for current branch"},

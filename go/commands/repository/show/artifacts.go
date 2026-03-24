@@ -25,7 +25,8 @@ func (c *showArtifactsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-artifacts",
 		Short:         "Display artifacts for a module with status",
-		Long:          "The show artifacts command displays all build artifacts for a module in a formatted table.\nShows resolved names with metadata overrides applied, existence status, and file paths.\nBy default shows artifacts for the current platform. Use --all-platforms to see all platforms.\n\nExpected Output:\n- Formatted table with artifact names, existence status (checkmark or X), and resolved file paths\n- Summary header showing module name, type, build directory, and platform\n- Breakdown of build modes (default vs --all)\n- Metadata overrides section if any metadata is defined",
+		Long: "The show artifacts command displays all build artifacts for a module in a formatted table.\nShows resolved names with metadata overrides applied, existence status, and file paths.\nBy default shows artifacts for the current platform. Use --all-platforms to see all platforms.",
+		Notes: "Expected Output:\n- Formatted table with artifact names, existence status (checkmark or X), and resolved file paths\n- Summary header showing module name, type, build directory, and platform\n- Breakdown of build modes (default vs --all)\n- Metadata overrides section if any metadata is defined",
 	}
 }
 

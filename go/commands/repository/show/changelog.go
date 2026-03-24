@@ -22,7 +22,14 @@ func (c *showChangelogCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-changelog",
 		Short:         "Display changelog entries in human-readable format",
-		Long:          "Display changelog entries from CHANGELOG.md in a formatted markdown table.\n\nShows all versions by default, or a specific version if provided.\nSpecial keywords: \"unreleased\" for pending changes, \"latest\" for most recent release.\n\nExpected Output:\n- Version header with number and date\n- Markdown table with columns: Category, Description, Commit\n- Grouped by change type (Added, Changed, Fixed, etc.)\n\nExample:\n  show changelog eac-ext\n  show changelog eac-ext 0.0.7\n  show changelog eac-ext latest\n  show changelog eac-ext unreleased",
+		Long: "Display changelog entries from CHANGELOG.md in a formatted markdown table.\n\nShows all versions by default, or a specific version if provided.\nSpecial keywords: \"unreleased\" for pending changes, \"latest\" for most recent release.",
+		Notes: "Expected Output:\n- Version header with number and date\n- Markdown table with columns: Category, Description, Commit\n- Grouped by change type (Added, Changed, Fixed, etc.)",
+		Examples: []string{
+			"eac show changelog eac-ext",
+			"eac show changelog eac-ext 0.0.7",
+			"eac show changelog eac-ext latest",
+			"eac show changelog eac-ext unreleased",
+		},
 		Args:          "module [version]",
 	}
 }

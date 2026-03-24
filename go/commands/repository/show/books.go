@@ -23,7 +23,8 @@ func (c *showBooksCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-books",
 		Short:         "Display all book configurations in a human-readable table",
-		Long:          "The show books command displays all books defined in books.yml,\nincluding each book's name, description, and source counts.\nBooks aggregate static content with dynamically-generated content\nfrom EAC commands for MkDocs documentation sites.\n\nExpected Output:\n- Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)\n- Each row shows a book with its source counts and which modules reference it",
+		Long: "The show books command displays all books defined in books.yml,\nincluding each book's name, description, and source counts.\nBooks aggregate static content with dynamically-generated content\nfrom EAC commands for MkDocs documentation sites.",
+		Notes: "Expected Output:\n- Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)\n- Each row shows a book with its source counts and which modules reference it",
 	}
 }
 

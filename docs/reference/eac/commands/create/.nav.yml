@@ -1,9 +1,9 @@
 title: create
 nav:
   - index.md
-  - create.md
-  - design.md
-  - pr.md
-  - risk-assess.md
-  - risk-profile.md
-  - spec.md
+  - "create": create.md
+  - "create design": design.md
+  - "create pr": pr.md
+  - "create risk-assess": risk-assess.md
+  - "create risk-profile": risk-profile.md
+  - "create spec": spec.md

@@ -1,4 +1,4 @@
-# Serve gource
+# serve gource
 
 <!-- book:cmd serve gource -->
 

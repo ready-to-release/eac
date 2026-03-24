@@ -389,7 +389,7 @@ import subprocess
 
 # Get module data
 result = subprocess.run(
-    ['clie', 'eac', 'get', 'modules'],
+    ['eac', 'get', 'modules'],
     capture_output=True,
     text=True
 )
@@ -702,5 +702,5 @@ Fix errors and run: eac build eac-commands
 - [Command Taxonomy](./command-taxonomy.md) - How commands are organized
 - [Naming Conventions](./naming-conventions.md) - Command naming patterns
 - [Common Flags](./common-flags.md) - Global options
-- [Get Commands Category](../categories/get.md) - All JSON commands
-- [Show Commands Category](../categories/show.md) - All formatted commands
+- [Get Commands Category](../commands/get/index.md) - All JSON commands
+- [Show Commands Category](../commands/show/index.md) - All formatted commands

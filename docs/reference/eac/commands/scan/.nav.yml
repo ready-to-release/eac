@@ -1,10 +1,10 @@
 title: scan
 nav:
   - index.md
-  - scan.md
-  - vuln.md
-  - sast.md
-  - secrets.md
-  - iac.md
-  - sbom.md
-  - compliance.md
+  - "scan": scan.md
+  - "scan vuln": vuln.md
+  - "scan sast": sast.md
+  - "scan secrets": secrets.md
+  - "scan iac": iac.md
+  - "scan sbom": sbom.md
+  - "scan compliance": compliance.md

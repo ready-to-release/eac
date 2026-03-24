@@ -24,7 +24,8 @@ func (c *showGhostsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-ghosts",
 		Short:         "Display discovered ghost entities in human-readable format",
-		Long:          "Shows ghosts grouped by module with summary statistics.\nThe report includes:\n  - Summary statistics (total, files, directories, by module)\n  - Ghosts grouped by owning module\n  - Unowned ghosts section\n\nGhost entities enable dark launching, L4 monitoring, and feature toggles.\n\nFilter Examples:\n  show ghosts                      # All ghosts\n  show ghosts --module core        # Ghosts in core module\n  show ghosts --type directory     # Only ghost directories\n\nExpected Output:\nMarkdown-formatted report with summary table and ghosts by module.",
+		Long: "Shows ghosts grouped by module with summary statistics.\nThe report includes:\n  - Summary statistics (total, files, directories, by module)\n  - Ghosts grouped by owning module\n  - Unowned ghosts section\n\nGhost entities enable dark launching, L4 monitoring, and feature toggles.\n\nFilter Examples:\n  show ghosts                      # All ghosts\n  show ghosts --module core        # Ghosts in core module\n  show ghosts --type directory     # Only ghost directories",
+		Notes: "Expected Output:\nMarkdown-formatted report with summary table and ghosts by module.",
 		Flags: []core.FlagSpec{
 			{Name: "type", Type: "string", Usage: "Filter by type (file, directory)"},
 			{Name: "module", Type: "string", Usage: "Filter to ghosts in specific module"},

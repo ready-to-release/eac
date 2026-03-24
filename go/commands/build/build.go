@@ -55,7 +55,14 @@ func (c *buildCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "build",
 		Short:         "Build one or more modules by moniker",
-		Long:          "Build one or more modules by moniker.\n\nThis command builds modules respecting their dependency order.\nIf no monikers are specified, all modules in the repository are built.\n\nExpected Output:\n  - Build logs written to 'out/build/<module>/build.log' (one per module)\n  - Build manifest at 'out/build/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed builds are clearly marked with error details\n  - Failed builds do not stop execution of remaining modules\n  - Exit code 0 indicates all builds succeeded\n  - Non-zero exit code indicates one or more builds failed\n\nExample:\n  build                           # Build all modules\n  build eac-cli              # Build a single module\n  build core clie          # Build specific modules\n  build --tidy-first eac-cli # Build with go mod tidy first",
+		Long: "Build one or more modules by moniker.\n\nThis command builds modules respecting their dependency order.\nIf no monikers are specified, all modules in the repository are built.",
+		Notes: "Expected Output:\n  - Build logs written to 'out/build/<module>/build.log' (one per module)\n  - Build manifest at 'out/build/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed builds are clearly marked with error details\n  - Failed builds do not stop execution of remaining modules\n  - Exit code 0 indicates all builds succeeded\n  - Non-zero exit code indicates one or more builds failed",
+		Examples: []string{
+			"eac build                       # Build all modules",
+			"eac build eac-cli               # Build a single module",
+			"eac build core clie             # Build specific modules",
+			"eac build --tidy-first eac-cli  # Build with go mod tidy first",
+		},
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "tidy-first", Type: "bool", Usage: "Run 'go mod tidy' before building (default for local)"},

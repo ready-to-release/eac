@@ -1,16 +1,6 @@
-# Get test-timings
+# get test-timings
 
 <!-- book:cmd get test-timings -->
-
-Returns test timing metrics parsed from `out/test/` log files. Provides per-scenario durations, pass/fail status, and aggregated statistics by module.
-
-## Usage
-
-```bash
-eac get test-timings [flags]
-```
-
-Requires a prior `eac test` run to populate timing data.
 
 ## Output Structure
 
@@ -39,13 +29,6 @@ by_module:
 ```
 
 Parses both JSON test events (from `go test -json`) and plain text logs as fallback.
-
-## Examples
-
-```bash
-eac get test-timings
-eac get test-timings --as-json
-```
 
 ## See Also
 

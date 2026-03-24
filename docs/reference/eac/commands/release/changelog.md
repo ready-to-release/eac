@@ -1,4 +1,4 @@
-# Release changelog
+# release changelog
 
 <!-- book:cmd release changelog -->
 
@@ -18,4 +18,4 @@ Used as part of the release workflow to document changes.
 
 - [release this](./this.md)
 - [validate release](../validate/release.md)
-- [release Commands](../../categories/release.md)
+- [release Commands](../release/index.md)

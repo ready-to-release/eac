@@ -32,4 +32,4 @@ echo "Modules needing rebuild: $(echo "$RESULT" | jq -r '.modules | length')"
 - [get changed-modules](./changed-modules.md) - Git-based change detection
 - [get changed-modules-ci](./changed-modules-ci.md) - CI pipeline change detection
 - [build](../build/build.md) - Build modules
-- [get Commands](../../categories/get.md)
+- [get Commands](../get/index.md)

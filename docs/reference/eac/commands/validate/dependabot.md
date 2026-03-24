@@ -1,14 +1,6 @@
-# Validate dependabot
+# validate dependabot
 
 <!-- book:cmd validate dependabot -->
-
-Validates that `.github/dependabot.yml` includes entries for all dependency sources discovered in the repository.
-
-## Usage
-
-```bash
-eac validate dependabot
-```
 
 ## What It Checks
 
@@ -21,12 +13,6 @@ Scans the repository for dependency sources and compares them against declared d
 - **GitHub Actions** -- Workflows need a `github-actions` ecosystem entry.
 
 Reports both missing entries (sources without coverage) and extra entries (no matching source found).
-
-## Examples
-
-```bash
-eac validate dependabot
-```
 
 ## Common Errors
 

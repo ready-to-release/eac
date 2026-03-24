@@ -1,6 +1,14 @@
-# release Commands
+# Release Commands
 
-Release management and version control for changelogs and tagging.
+The **release** category contains commands for release management and version control.
+
+**Key Features**:
+
+- Automated changelog generation
+- CI validation before release
+- CalVer and SemVer support
+- Tag management
+- Version validation
 
 ## Commands in this Category
 
@@ -19,20 +27,34 @@ Release management and version control for changelogs and tagging.
 | [validate release](./../validate/release.md)                  | Validate changelog format                         |
 | [validate release-version](../validate/release-version.md)    | Validate version format                           |
 
-## Quick Examples
+## Common Use Cases
+
+### Complete Release Workflow
 
 ```bash
-# Generate changelog
 eac release changelog
-
-# Check what needs releasing
-eac release pending
-
-# Create release
+eac validate release
+eac release check-ci $(git rev-parse HEAD)
 eac release this
+```
+
+### Version Management
+
+```bash
+eac release pending
+eac release tag-pending
+eac release get-version
+```
+
+### Module Release
+
+```bash
+TAG=$(eac release get-module-calver src-auth)
+git tag -a $TAG -m "Release $TAG"
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/release.md)
 - [pipeline status](../pipeline/status.md)
+- [validate release](../validate/release.md)
+- [get squash-message](../get/squash-message.md)

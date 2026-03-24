@@ -26,7 +26,14 @@ func (c *createPrCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "create-pr",
 		Short:         "Create pull request with AI-generated description",
-		Long:          "Creates a pull request for the current workspace branch with an AI-generated\ntitle and description based on all commits in the branch.\n\nThis command:\n  1. Validates the workspace is ready for PR\n  2. Pushes the branch to origin if needed\n  3. Analyzes all commits to generate PR title and description\n  4. Creates the pull request using GitHub CLI\n\nRequires GitHub CLI (gh) to be installed and authenticated.\n\nExpected Output:\n- PR created on GitHub\n- PR URL printed to stdout\n- AI-generated title and description based on commits\n\nExample:\n  create pr\n  create pr --target=develop\n  create pr --title \"Add authentication feature\"\n  create pr --debug",
+		Long: "Creates a pull request for the current workspace branch with an AI-generated\ntitle and description based on all commits in the branch.\n\nThis command:\n  1. Validates the workspace is ready for PR\n  2. Pushes the branch to origin if needed\n  3. Analyzes all commits to generate PR title and description\n  4. Creates the pull request using GitHub CLI\n\nRequires GitHub CLI (gh) to be installed and authenticated.",
+		Notes: "Expected Output:\n- PR created on GitHub\n- PR URL printed to stdout\n- AI-generated title and description based on commits",
+		Examples: []string{
+			"eac create pr",
+			"eac create pr --target=develop",
+			"eac create pr --title \"Add authentication feature\"",
+			"eac create pr --debug",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch for the pull request"},
 			{Name: "title", Type: "string", Usage: "Custom PR title (description still AI-generated)"},

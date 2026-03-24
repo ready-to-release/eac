@@ -36,7 +36,8 @@ func (c *updateEvidenceCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "update-evidence",
 		Short:         "Build evidence documentation for a module",
-		Long:          "Generates evidence PDFs from a module's evidence-book components.\nEvidence books are markdown-based documentation packages that aggregate\ntest results, security scans, and other compliance artifacts.\n\nUnlike regular books built via 'build', evidence books are built independently\nusing this command, producing PDFs in out/evidence/<module>/.\n\nExpected Output:\n  - PDF files in out/evidence/<module>/<book-name>-dark.pdf\n  - One PDF per evidence-book component configured for the module",
+		Long: "Generates evidence PDFs from a module's evidence-book components.\nEvidence books are markdown-based documentation packages that aggregate\ntest results, security scans, and other compliance artifacts.\n\nUnlike regular books built via 'build', evidence books are built independently\nusing this command, producing PDFs in out/evidence/<module>/.",
+		Notes: "Expected Output:\n  - PDF files in out/evidence/<module>/<book-name>-dark.pdf\n  - One PDF per evidence-book component configured for the module",
 		Flags: []core.FlagSpec{
 			{Name: "all", Type: "bool", DefaultValue: "false", Usage: "Build evidence for all modules with evidence-book components"},
 			{Name: "verbose", Shorthand: "v", Type: "bool", DefaultValue: "false", Usage: "Show detailed progress"},

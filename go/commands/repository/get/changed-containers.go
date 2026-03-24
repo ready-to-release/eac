@@ -41,7 +41,7 @@ func (c *getChangedContainersCommand) Metadata() core.CommandMetadata {
 			"  --format shell: shell variable assignments\n" +
 			"  default: YAML/JSON/TOML via standard get command",
 		Flags: []core.FlagSpec{
-			{Name: "module", Type: "string", Usage: "Module moniker", Required: true, Completion: []string{"modules"}},
+			{Name: "module", Type: "string", Usage: "Module moniker", Required: true},
 			{Name: "components", Type: "string", Usage: "JSON array of component objects, e.g. [{\"name\":\"drawio-oci\"}]"},
 			{Name: "head-sha", Type: "string", Usage: "HEAD commit SHA to compare against"},
 			{Name: "format", Type: "string", Usage: "Output format: github-output, shell, or standard get formats"},

@@ -30,11 +30,8 @@ func (c *getTestTimingsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-test-timings",
 		Short:         "Display test timing metrics from last test run",
-		Long: "Expected Output:\n" +
-			"YAML with test timing metrics parsed from out/test/ logs, including:\n" +
-			"  - Per-scenario timing data with duration in seconds and status (PASS/FAIL)\n" +
-			"  - Aggregated statistics by module\n" +
-			"  - Overall summary with total/passed/failed tests and average duration",
+		Long: "",
+		Notes: "Expected Output:\nYAML with test timing metrics parsed from out/test/ logs, including:\n  - Per-scenario timing data with duration in seconds and status (PASS/FAIL)\n  - Aggregated statistics by module\n  - Overall summary with total/passed/failed tests and average duration",
 	}
 }
 

@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/clibase/render"
 )
 
 // FormatSingleCommand generates markdown documentation for a single command.
 func FormatSingleCommand(ctx context.Context, workspaceRoot string, executor CommandExecutor, cmdName string) (string, error) {
-	help, err := GetCommandHelp(ctx, workspaceRoot, executor, cmdName)
-	if err != nil {
-		return "", err
-	}
-	return FormatCommandHelp(help, 2, false), nil
+	return GetCommandHelpMarkdown(ctx, workspaceRoot, executor, cmdName)
 }
 
 // FormatCommandGroup generates markdown for all subcommands of a group.
@@ -42,13 +40,12 @@ func FormatCommandGroup(ctx context.Context, workspaceRoot string, executor Comm
 	})
 
 	for i, cmd := range groupCmds {
-		help, err := GetCommandHelp(ctx, workspaceRoot, executor, cmd.Command)
+		md, err := GetCommandHelpMarkdown(ctx, workspaceRoot, executor, cmd.Command)
 		if err != nil {
 			warnf("failed to get help for '%s': %v", cmd.Command, err)
 			continue
 		}
-
-		sb.WriteString(FormatCommandHelp(help, 3, true))
+		sb.WriteString(md)
 		if i < len(groupCmds)-1 {
 			sb.WriteString("\n---\n\n")
 		}
@@ -89,11 +86,11 @@ func FormatAllCommands(ctx context.Context, workspaceRoot string, executor Comma
 		sb.WriteString(fmt.Sprintf("### %s\n\n", strings.Title(groupName))) //nolint:staticcheck
 
 		for _, cmd := range groupCmds {
-			help, err := GetCommandHelp(ctx, workspaceRoot, executor, cmd.Command)
+			md, err := GetCommandHelpMarkdown(ctx, workspaceRoot, executor, cmd.Command)
 			if err != nil {
 				continue
 			}
-			sb.WriteString(FormatCommandHelp(help, 4, true))
+			sb.WriteString(md)
 			sb.WriteString("\n---\n\n")
 		}
 	}
@@ -224,7 +221,7 @@ func FormatCategoryCommands(ctx context.Context, workspaceRoot string, executor 
 			linkPath = fmt.Sprintf("../%s/%s.md", parts[0], subCmd)
 		}
 
-		sb.WriteString(fmt.Sprintf("| [%s](%s) | %s |\n", cmd.Command, linkPath, EscapeTableCell(cmd.Description)))
+		sb.WriteString(fmt.Sprintf("| [%s](%s) | %s |\n", cmd.Command, linkPath, render.EscapeTableCell(cmd.Description)))
 	}
 
 	return sb.String(), nil

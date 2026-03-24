@@ -1,10 +1,10 @@
-# Create risk-assess
+# create risk-assess
 
 <!-- book:cmd create risk-assess -->
 
 ## See Also
 
 - [create risk-profile](./risk-profile.md)
-- [scan](../../categories/scan.md)
+- [scan](../scan/index.md)
 - [test](../test/test.md)
-- [create Commands](../../categories/create.md)
+- [create Commands](../create/index.md)

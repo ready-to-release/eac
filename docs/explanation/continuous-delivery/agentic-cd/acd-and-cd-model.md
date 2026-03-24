@@ -50,7 +50,9 @@ Feature: eac-work_work-commit
     ...
 ```
 
-The `# Intent:` and `# Architecture:` lines are the agent's brief. They communicate the problem and constraints before the scenarios provide the concrete behavior contract.
+The `# Intent:` and `# Architecture:` lines are the agent's brief.
+
+They communicate the problem and constraints before the scenarios provide the concrete behavior contract.
 
 ---
 
@@ -73,7 +75,9 @@ Each ACD constraint maps to existing mechanisms, with identified gaps:
 
 ## Expert Agents in Our Pipeline
 
-ACD defines expert agent roles that inspect changes at specific stages. The `# Intent:` and `# Architecture:` comments in the spec file are exactly the inputs these agents need — they are already versioned in the repository.
+ACD defines expert agent roles that inspect changes at specific stages.
+
+The `# Intent:` and `# Architecture:` comments in the spec file are exactly the inputs these agents need — they are already versioned in the repository.
 
 | Expert Agent Role         | Fits in our pipeline at        | Input artifact            |
 | ------------------------- | ------------------------------ | ------------------------- |

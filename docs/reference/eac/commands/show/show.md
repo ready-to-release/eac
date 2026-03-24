@@ -1,4 +1,4 @@
-# Show
+# show
 
 <!-- book:cmd show -->
 
@@ -6,7 +6,7 @@
 
 All show commands return formatted tables and text for interactive terminal use.
 
-See the [show Commands Category](../../categories/show.md) for complete list of subcommands.
+See the [show Commands Category](./index.md) for complete list of subcommands.
 
 ## Common Patterns
 
@@ -23,5 +23,4 @@ eac show dependencies | less
 
 ## See Also
 
-- [get Commands](../../categories/get.md) - JSON output for automation
-- [show Commands Category](../../categories/show.md) - All show commands
+- [get Commands](../get/index.md) - JSON output for automation

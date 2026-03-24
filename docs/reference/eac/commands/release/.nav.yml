@@ -1,21 +1,21 @@
 title: release
 nav:
   - index.md
-  - release.md
-  - this.md
-  - await-deps.md
-  - changelog.md
-  - check-ci.md
-  - check-exists.md
-  - check-pending.md
-  - cleanup.md
-  - execute-layers.md
-  - eac-ext.md
-  - extract-version.md
-  - get-module-calver.md
-  - get-version.md
-  - pending.md
-  - prune.md
-  - prune-packages.md
-  - clie.md
-  - tag-pending.md
+  - "release": release.md
+  - "release this": this.md
+  - "release await-deps": await-deps.md
+  - "release changelog": changelog.md
+  - "release check-ci": check-ci.md
+  - "release check-exists": check-exists.md
+  - "release check-pending": check-pending.md
+  - "release cleanup": cleanup.md
+  - "release execute-layers": execute-layers.md
+  - "release eac-ext": eac-ext.md
+  - "release extract-version": extract-version.md
+  - "release get-module-calver": get-module-calver.md
+  - "release get-version": get-version.md
+  - "release pending": pending.md
+  - "release prune": prune.md
+  - "release prune-packages": prune-packages.md
+  - "release clie": clie.md
+  - "release tag-pending": tag-pending.md

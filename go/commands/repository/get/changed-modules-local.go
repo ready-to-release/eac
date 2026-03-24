@@ -26,13 +26,8 @@ func (c *getChangedModulesLocalCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-changed-modules-local",
 		Short:         "Get modules requiring rebuild based on local build state",
-		Long: "Expected Output:\n" +
-			"YAML list of modules needing rebuild based on local state, including:\n" +
-			"  - Modules requiring rebuild (source files changed since last build)\n" +
-			"  - Up-to-date modules (no changes detected)\n" +
-			"  - Change reasons for each module\n" +
-			"  - Fresh build flag (true if no build state exists)\n" +
-			"  - Detection timestamp",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of modules needing rebuild based on local state, including:\n  - Modules requiring rebuild (source files changed since last build)\n  - Up-to-date modules (no changes detected)\n  - Change reasons for each module\n  - Fresh build flag (true if no build state exists)\n  - Detection timestamp",
 	}
 }
 

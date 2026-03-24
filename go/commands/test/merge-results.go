@@ -26,7 +26,11 @@ func (c *testMergeResultsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test-merge-results",
 		Short:         "Merge manual test results into test manifest",
-		Long:          "Merge manual test results from test-results/<module>/<version>/manual-results.json\ninto the test output at out/test/<module>/.\n\nThis command transforms manual test results into test entries and updates\nthe test manifest with aggregated statistics. If no manifest exists, a new\none is created. If a manual suite already exists, it is replaced.\n\nTransformation:\n  - Each ManualTestResult becomes a test entry with type \"manual\"\n  - Scenario name extracted from scenario_id (last path component)\n  - Duration converted from seconds to milliseconds\n  - Package set to \"manual\", suite set to \"manual\"\n\nExpected Output:\n  - Updated UoW manifest with manual test entries\n  - Manual suite added/updated in suites object\n  - Summary counts updated\n  - Exit code 0 on success, non-zero on error\n\nExample:\n  test merge-results --module eac --version v1.2.0",
+		Long: "Merge manual test results from test-results/<module>/<version>/manual-results.json\ninto the test output at out/test/<module>/.\n\nThis command transforms manual test results into test entries and updates\nthe test manifest with aggregated statistics. If no manifest exists, a new\none is created. If a manual suite already exists, it is replaced.\n\nTransformation:\n  - Each ManualTestResult becomes a test entry with type \"manual\"\n  - Scenario name extracted from scenario_id (last path component)\n  - Duration converted from seconds to milliseconds\n  - Package set to \"manual\", suite set to \"manual\"",
+		Notes: "Expected Output:\n  - Updated UoW manifest with manual test entries\n  - Manual suite added/updated in suites object\n  - Summary counts updated\n  - Exit code 0 on success, non-zero on error",
+		Examples: []string{
+			"eac test merge-results --module eac --version v1.2.0",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module moniker to merge results for (required)"},
 			{Name: "version", Type: "string", Usage: "Release version (required)"},

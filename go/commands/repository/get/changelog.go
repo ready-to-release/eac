@@ -22,15 +22,8 @@ func (c *getChangelogCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-changelog",
 		Short:         "Get parsed changelog data for a module",
-		Long: "Expected Output:\n" +
-			"YAML/JSON/TOML representation of changelog data including:\n" +
-			"  - module: Module moniker\n" +
-			"  - title: Changelog title\n" +
-			"  - version_type: semver or calver\n" +
-			"  - unreleased: Unreleased changes (if any)\n" +
-			"  - versions: Array of version entries with dates and changes\n" +
-			"\n" +
-			"If version is specified, returns only that version's data.",
+		Long: "",
+		Notes: "Expected Output:\nYAML/JSON/TOML representation of changelog data including:\n  - module: Module moniker\n  - title: Changelog title\n  - version_type: semver or calver\n  - unreleased: Unreleased changes (if any)\n  - versions: Array of version entries with dates and changes\n\nIf version is specified, returns only that version's data.",
 		Args: "module [version]",
 	}
 }

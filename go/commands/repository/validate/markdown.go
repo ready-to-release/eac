@@ -20,7 +20,8 @@ func (c *validateMarkdownCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-markdown",
 		Short:         "Validate markdown file syntax",
-		Long:          "Validates markdown files for proper syntax, heading hierarchy, and code block formatting.\n\nExpected Output:\n  Displays markdown syntax validation results for all markdown files in repository.\n  Shows errors for invalid syntax, heading issues, and malformed code blocks.\n  Exit code 0 if all valid, 1 if validation errors found.",
+		Long: "Validates markdown files for proper syntax, heading hierarchy, and code block formatting.",
+		Notes: "Expected Output:\n  Displays markdown syntax validation results for all markdown files in repository.\n  Shows errors for invalid syntax, heading issues, and malformed code blocks.\n  Exit code 0 if all valid, 1 if validation errors found.",
 	}
 }
 
@@ -69,7 +70,7 @@ func ValidateMarkdown() int {
 func printMarkdownUsage() {
 	log.Info("Validate markdown file syntax")
 	log.Info("")
-	log.Info("Usage: clie validate markdown")
+	log.Info("Usage: eac validate markdown")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - Valid markdown syntax")
@@ -78,5 +79,5 @@ func printMarkdownUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all markdown files")
-	log.Info("  clie validate markdown")
+	log.Info("  eac validate markdown")
 }

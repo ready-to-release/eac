@@ -1,6 +1,14 @@
-# templates Commands
+# Templates Commands
 
-Install project templates for documentation, AI prompts, reports, specifications, and Claude Code configurations.
+The **templates** category contains commands for installing project templates for documentation, AI prompts, reports, and specifications.
+
+**Key Features**:
+
+- Install documentation templates for consistent project structure
+- Install AI prompt templates for code generation commands
+- Install report templates for test and build summaries
+- Install specification templates for compliance testing
+- Debug logging support for troubleshooting
 
 ## Commands in this Category
 
@@ -82,5 +90,8 @@ Claude Code configuration templates (agents, commands, skills).
 
 ## See Also
 
-- [Category Overview](../../categories/templates.md)
-- [create spec](../create/spec.md)
+- [create design](../create/design.md) - AI architecture design
+- [create spec](../create/spec.md) - AI specification generation
+- [get commit-message](../get/commit-message.md) - AI commit messages
+- [validate markdown](../validate/markdown.md)
+- [validate books](../validate/books.md)

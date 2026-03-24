@@ -1,21 +1,6 @@
-# Validate config
+# validate config
 
 <!-- book:cmd validate config -->
-
-Validates the complete configuration stack from all sources: contract defaults, user overrides, and personal overrides. Runs three validation phases: file checks, schema validation, and cross-reference validation.
-
-## Usage
-
-```bash
-eac validate config [flags]
-```
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--strict` | bool | Treat warnings as errors |
-| `--format` | string | Output format: `text` (default), `json`, `github` |
 
 ## Validation Phases
 
@@ -28,19 +13,6 @@ eac validate config [flags]
 - **text** -- Human-readable summary with file status, errors, and warnings.
 - **json** -- Structured JSON with `valid`, `errors`, `warnings`, and `files_loaded` fields.
 - **github** -- GitHub Actions annotation format (`::error file=...::message`).
-
-## Examples
-
-```bash
-# Basic validation
-eac validate config
-
-# Strict mode (warnings become errors)
-eac validate config --strict
-
-# Machine-readable output
-eac validate config --format json
-```
 
 ## Common Errors
 

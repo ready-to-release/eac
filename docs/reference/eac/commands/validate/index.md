@@ -1,6 +1,14 @@
-# validate Commands
+# Validate Commands
 
-Validate repository contracts, dependencies, and compliance for quality gates.
+The **validate** category contains commands for validating repository contracts, dependencies, and compliance.
+
+**Key Features**:
+
+- Comprehensive validation of repository contracts
+- Go module dependency checking
+- Gherkin specification validation
+- OSCAL compliance validation
+- Design and documentation verification
 
 ## Commands in this Category
 
@@ -19,17 +27,31 @@ Validate repository contracts, dependencies, and compliance for quality gates.
 | [validate risk-profile](./risk-profile.md)         | Validate OSCAL profile documents        |
 | [validate test-tags](./test-tags.md)               | Validate test tags against contract     |
 
-## Quick Examples
+## Common Use Cases
+
+### Pre-commit Validation
 
 ```bash
-# Validate all contracts
 eac validate
+```
 
-# Validate dependencies
+### Dependency Validation
+
+```bash
 eac validate dependencies
+eac validate go-tidy
+```
+
+### Documentation Validation
+
+```bash
+eac validate specs
+eac validate markdown
+eac validate design
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/validate.md)
+- [show config](../show/config.md)
+- [get modules](../get/modules.md)
 - [scan Commands](../scan/index.md)

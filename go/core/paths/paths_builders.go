@@ -26,9 +26,11 @@ func MkDocsConfigPath(outputDir string) string {
 	return filepath.Join(outputDir, "mkdocs.yml")
 }
 
-// MkDocsSiteTemplatePath returns the path to the mkdocs-render-oci template.
+// MkDocsSiteTemplatePath returns the path to the site mkdocs.yml template.
+// This is the single source of truth for MkDocs configuration — used by both
+// `eac build` (site builds) and `eac serve docs` (dev server).
 func MkDocsSiteTemplatePath(repoRoot string) string {
-	return filepath.Join(repoRoot, "containers", "mkdocs-render-oci", "mkdocs.yml")
+	return filepath.Join(repoRoot, "docs", "mkdocs.yml")
 }
 
 // MkDocsPdfTemplatePath returns the path to the pdf-oci template.

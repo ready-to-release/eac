@@ -21,7 +21,8 @@ func (c *showDepsSetupSummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-deps-setup-summary",
 		Short:         "Generate dependencies setup summary",
-		Long:          "The show deps-setup-summary command generates a formatted summary of dependency setup results.\nThis command is designed to be used in GitHub Actions workflows to create consistent setup summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted setup summary with dependencies table\n- Shows which dependencies were installed or already available",
+		Long: "The show deps-setup-summary command generates a formatted summary of dependency setup results.\nThis command is designed to be used in GitHub Actions workflows to create consistent setup summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.",
+		Notes: "Expected Output:\n- Markdown-formatted setup summary with dependencies table\n- Shows which dependencies were installed or already available",
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module name (required)"},
 			{Name: "deps", Type: "string", Usage: "Comma-separated list of dependencies (go,node,docker,buildx,upx)"},

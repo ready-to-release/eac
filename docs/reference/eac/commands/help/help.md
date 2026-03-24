@@ -1,4 +1,4 @@
-# Help
+# help
 
 <!-- book:cmd help -->
 
@@ -8,4 +8,3 @@
 - [show help](../show/help.md) - Display help in table format
 - [show valid-commands](../show/valid-commands.md) - Show all valid commands
 - [Command Taxonomy](../../overview/command-taxonomy.md)
-- [help Commands](../../categories/help.md)

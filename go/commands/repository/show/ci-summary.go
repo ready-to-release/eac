@@ -21,7 +21,8 @@ func (c *showCISummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-ci-summary",
 		Short:         "Generate CI workflow summary for a module",
-		Long:          "The show ci-summary command generates a formatted CI workflow summary with job results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted CI summary with job results table\n- Shows build, test (Linux/Windows/macOS), container test, and scan results\n- Supports both container and binary module types",
+		Long: "The show ci-summary command generates a formatted CI workflow summary with job results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.",
+		Notes: "Expected Output:\n- Markdown-formatted CI summary with job results table\n- Shows build, test (Linux/Windows/macOS), container test, and scan results\n- Supports both container and binary module types",
 		Flags: []core.FlagSpec{
 			{Name: "build", Type: "string", Usage: "Build job result (success/failure/skipped)"},
 			{Name: "container", Type: "bool", DefaultValue: "false", Usage: "Whether this is a container module"},

@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +18,7 @@ import (
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/gh"
 	"github.com/ready-to-release/eac/go/clibase/executor"
+	"github.com/ready-to-release/eac/go/clibase/helprender"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
 	"github.com/ready-to-release/eac/go/core/environments"
@@ -121,7 +123,11 @@ func dispatch() int {
 	if found {
 		if hasHelpFlag(os.Args[1:]) {
 			cmd, _ := reg.Get(cmdName)
-			printCommandHelp(cmd, reg)
+			if getHelpFormat(os.Args[1:]) == "markdown" {
+				fmt.Print(helprender.RenderMarkdownHelp(cmd, reg))
+			} else {
+				printCommandHelp(os.Stdout, cmd, reg)
+			}
 			return 0
 		}
 		return exec.Execute(context.Background(), cmdName, os.Args[1:])
@@ -134,6 +140,14 @@ func dispatch() int {
 	if len(subs) > 0 {
 		cmd, hasCmd := reg.Get(prefix)
 		if hasCmd {
+			if hasHelpFlag(os.Args[1:]) {
+				if getHelpFormat(os.Args[1:]) == "markdown" {
+					fmt.Print(helprender.RenderMarkdownHelp(cmd, reg))
+				} else {
+					printCommandHelp(os.Stdout, cmd, reg)
+				}
+				return 0
+			}
 			if _, isSimple := cmd.(core.SimpleCommandPort); isSimple {
 				return exec.Execute(context.Background(), prefix, os.Args[1:])
 			}
@@ -171,6 +185,20 @@ func resolvePrefix(args []string) string {
 	return strings.Join(parts, " ")
 }
 
+// getHelpFormat extracts the --help-format value from args.
+// Returns "text" (default) or "markdown".
+func getHelpFormat(args []string) string {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "--help-format=") {
+			return strings.TrimPrefix(arg, "--help-format=")
+		}
+		if arg == "--help-format" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return "text"
+}
+
 // hasHelpFlag checks if --help or -h is present in args.
 func hasHelpFlag(args []string) bool {
 	for _, arg := range args {
@@ -186,58 +214,63 @@ func hasHelpFlag(args []string) bool {
 }
 
 // printCommandHelp prints help information for a command using port metadata.
-func printCommandHelp(cmd core.CommandPort, reg core.CommandRegistryPort) {
+func printCommandHelp(w io.Writer, cmd core.CommandPort, reg core.CommandRegistryPort) {
 	if cmd == nil {
-		fmt.Println("No help available.")
+		fmt.Fprintln(w, "No help available.")
 		return
 	}
 
 	meta := cmd.Metadata()
 
 	// NAME
-	fmt.Println("NAME")
-	fmt.Printf("    %s - %s\n\n", cmd.Name(), meta.Short)
+	fmt.Fprintln(w, "NAME")
+	fmt.Fprintf(w, "    %s - %s\n\n", cmd.Name(), meta.Short)
 
 	// SYNOPSIS
-	fmt.Println("SYNOPSIS")
-	synopsis := cmd.Name()
-	if len(meta.Flags) > 0 {
-		synopsis += " [flags]"
-	}
-	if meta.Args != "" {
-		synopsis += " <" + meta.Args + ">"
-	}
-	fmt.Printf("    %s\n\n", synopsis)
+	fmt.Fprintln(w, "SYNOPSIS")
+	fmt.Fprintf(w, "    %s\n\n", helprender.BuildSynopsis(cmd.Name(), meta))
 
 	// DESCRIPTION
 	if meta.Long != "" {
-		fmt.Println("DESCRIPTION")
+		fmt.Fprintln(w, "DESCRIPTION")
 		for _, line := range strings.Split(meta.Long, "\n") {
 			if line == "" {
-				fmt.Println()
+				fmt.Fprintln(w)
 			} else {
-				fmt.Printf("    %s\n", line)
+				fmt.Fprintf(w, "    %s\n", line)
 			}
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
+	}
+
+	// NOTES
+	if meta.Notes != "" {
+		fmt.Fprintln(w, "NOTES")
+		for _, line := range strings.Split(meta.Notes, "\n") {
+			if line == "" {
+				fmt.Fprintln(w)
+			} else {
+				fmt.Fprintf(w, "    %s\n", line)
+			}
+		}
+		fmt.Fprintln(w)
 	}
 
 	// COMMANDS (subcommands)
 	subs := reg.Subcommands(cmd.Name())
 	if len(subs) > 0 {
-		fmt.Println("COMMANDS")
-		for _, sub := range subs {
-			subMeta := sub.Metadata()
-			subPart := strings.TrimPrefix(sub.Name(), cmd.Name()+" ")
-			padding := strings.Repeat(" ", max(2, 24-len(subPart)))
-			fmt.Printf("    %s%s%s\n", subPart, padding, subMeta.Short)
+		fmt.Fprintln(w, "COMMANDS")
+		if len(meta.SubcommandGroups) > 0 {
+			printGroupedSubcommands(w, cmd.Name(), meta.SubcommandGroups, reg)
+		} else {
+			printFlatSubcommands(w, cmd.Name(), subs)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 
 	// FLAGS
 	if len(meta.Flags) > 0 {
-		fmt.Println("FLAGS")
+		fmt.Fprintln(w, "FLAGS")
 		for _, flag := range meta.Flags {
 			flagName := "--" + flag.Name
 			if flag.Shorthand != "" {
@@ -257,21 +290,47 @@ func printCommandHelp(cmd core.CommandPort, reg core.CommandRegistryPort) {
 				req += ", default: " + flag.DefaultValue
 			}
 
-			fmt.Printf("    %s%s (%s)\n", flagName, typeInfo, req)
+			fmt.Fprintf(w, "    %s%s (%s)\n", flagName, typeInfo, req)
 			if flag.Usage != "" {
-				fmt.Printf("        %s\n", flag.Usage)
+				fmt.Fprintf(w, "        %s\n", flag.Usage)
 			}
-			fmt.Println()
+			fmt.Fprintln(w)
 		}
 	}
 
 	// EXAMPLES
 	if len(meta.Examples) > 0 {
-		fmt.Println("EXAMPLES")
+		fmt.Fprintln(w, "EXAMPLES")
 		for _, ex := range meta.Examples {
-			fmt.Printf("    %s\n", ex)
+			fmt.Fprintf(w, "    %s\n", ex)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
+	}
+}
+
+// printGroupedSubcommands renders subcommands organized under group headers.
+func printGroupedSubcommands(w io.Writer, parentName string, groups []core.SubcommandGroup, reg core.CommandRegistryPort) {
+	for _, group := range groups {
+		fmt.Fprintf(w, "    %s:\n", group.Name)
+		for _, sub := range group.Subcommands {
+			subKey := parentName + " " + sub
+			desc := ""
+			if subCmd, ok := reg.Get(subKey); ok {
+				desc = subCmd.Metadata().Short
+			}
+			padding := strings.Repeat(" ", max(2, 24-len(sub)))
+			fmt.Fprintf(w, "        %s%s%s\n", sub, padding, desc)
+		}
+	}
+}
+
+// printFlatSubcommands renders subcommands as a flat alphabetical list.
+func printFlatSubcommands(w io.Writer, parentName string, subs []core.CommandPort) {
+	for _, sub := range subs {
+		subMeta := sub.Metadata()
+		subPart := strings.TrimPrefix(sub.Name(), parentName+" ")
+		padding := strings.Repeat(" ", max(2, 24-len(subPart)))
+		fmt.Fprintf(w, "    %s%s%s\n", subPart, padding, subMeta.Short)
 	}
 }
 

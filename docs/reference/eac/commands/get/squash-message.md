@@ -28,4 +28,4 @@ See [commit-message](./commit-message.md#custom-prompts) for detailed customizat
 - [work merge](../work/merge.md)
 - [create pr](../create/pr.md)
 - [get commit-message](./commit-message.md)
-- [get Commands](../../categories/get.md)
+- [get Commands](../get/index.md)

@@ -2,6 +2,10 @@
 
 Commands for editing DrawIO diagram files embedded in PNG images.
 
+DrawIO diagrams are stored as `.drawio.png` files - PNG images with embedded XML metadata.
+
+This enables LLM-powered diagram editing through a decode-edit-embed workflow.
+
 ## Commands
 
 - [create](create.md) - Create new .drawio.png files
@@ -10,3 +14,53 @@ Commands for editing DrawIO diagram files embedded in PNG images.
 - [encode](encode.md) - Encode human-readable XML to DrawIO format
 - [info](info.md) - Show diagram metadata
 - [render](render.md) - Render diagram to PNG image
+
+## Architecture
+
+| Command  | Purpose                                    |
+| -------- | ------------------------------------------ |
+| `decode` | Extract and decode XML to human-readable   |
+| `encode` | Encode human-readable XML to DrawIO format |
+| `embed`  | Write encoded XML into PNG file            |
+| `create` | Create new .drawio.png with blank content  |
+| `info`   | Show diagram metadata                      |
+| `render` | Render diagram XML to PNG image            |
+
+## Editing Workflow
+
+1. **Extract**: `drawio decode` extracts XML from PNG
+2. **Edit**: Modify the human-readable XML (manually or via LLM)
+3. **Encode**: `drawio encode` compresses XML to DrawIO format
+4. **Embed**: `drawio embed` writes XML back into PNG
+
+## Common Use Cases
+
+**Extract diagram for editing**:
+
+```bash
+eac drawio decode --png diagram.drawio.png --output readable.xml
+```
+
+**Create a new diagram**:
+
+```bash
+eac drawio create --output new-diagram.drawio.png
+```
+
+**Re-render after XML changes**:
+
+```bash
+eac drawio render --xml edited.xml --output diagram.drawio.png
+```
+
+## Key Features
+
+- Docker-based processing (drawio container)
+- Works with DinD (Docker-in-Docker) environments
+- Supports stdin/stdout for Unix-style piping
+- Creates PNG files if they don't exist
+
+## See Also
+
+- [create design](../create/design.md) - Generate Structurizr diagrams
+- [serve design](../serve/design.md) - View Structurizr diagrams

@@ -1,4 +1,4 @@
-# Create spec
+# create spec
 
 <!-- book:cmd create spec -->
 
@@ -28,6 +28,5 @@ See [commit-message](../get/commit-message.md#custom-prompts) for detailed custo
 
 ## See Also
 
-
 - [test](../test/test.md)
-- [create Commands](../../categories/create.md)
+- [create Commands](../create/index.md)

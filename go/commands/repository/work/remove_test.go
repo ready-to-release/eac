@@ -95,8 +95,8 @@ func TestParseRemoveConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work remove <args>)
-			os.Args = append([]string{"clie", "work", "remove"}, tt.args...)
+			// Set test args (simulate command: eac work remove <args>)
+			os.Args = append([]string{"eac", "work", "remove"}, tt.args...)
 
 			config, err := parseRemoveConfig()
 			if err != nil {

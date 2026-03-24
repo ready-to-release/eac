@@ -27,7 +27,14 @@ func (c *workMergeCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-merge",
 		Short:         "Merge workspace changes back to main (squash by default)",
-		Long:          "Merges the current workspace branch back into the target branch (default: main)\nusing squash merge to create a single, well-documented commit.\n\nBy default, this command:\n  1. Validates workspace is clean and up to date\n  2. Switches to target branch and updates it\n  3. Squash merges all workspace commits into a single commit\n  4. Uses commit to generate a comprehensive commit message\n  5. Removes the workspace after successful merge\n\nExpected Output:\n  - Squash merge commit on target branch\n  - Workspace removed (unless --keep-worktree)\n\nExample:\n  work merge\n  work merge --target=develop\n  work merge --no-squash\n  work merge --keep-worktree",
+		Long: "Merges the current workspace branch back into the target branch (default: main)\nusing squash merge to create a single, well-documented commit.\n\nBy default, this command:\n  1. Validates workspace is clean and up to date\n  2. Switches to target branch and updates it\n  3. Squash merges all workspace commits into a single commit\n  4. Uses commit to generate a comprehensive commit message\n  5. Removes the workspace after successful merge",
+		Notes: "Expected Output:\n  - Squash merge commit on target branch\n  - Workspace removed (unless --keep-worktree)",
+		Examples: []string{
+			"eac work merge",
+			"eac work merge --target=develop",
+			"eac work merge --no-squash",
+			"eac work merge --keep-worktree",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "target", Type: "string", DefaultValue: "main", Usage: "Target branch to merge into"},
 			{Name: "no-squash", Type: "bool", DefaultValue: "false", Usage: "Use regular merge instead of squash merge"},

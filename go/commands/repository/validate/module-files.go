@@ -22,7 +22,8 @@ func (c *validateModuleFilesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-module-files",
 		Short:         "Validate module file ownership",
-		Long:          "Validates that all files have proper module ownership and no files are unordered.\n\nExpected Output:\n  Displays files without proper module ownership (unordered or multi-module files).\n  Shows file paths and claiming modules. Exit code 0 if all files properly owned, 1 if issues found.",
+		Long: "Validates that all files have proper module ownership and no files are unordered.",
+		Notes: "Expected Output:\n  Displays files without proper module ownership (unordered or multi-module files).\n  Shows file paths and claiming modules. Exit code 0 if all files properly owned, 1 if issues found.",
 	}
 }
 
@@ -152,7 +153,7 @@ func printModuleFilesReport(report *moduleFilesReport) {
 func printModuleFilesUsage() {
 	log.Info("Validate module file ownership")
 	log.Info("")
-	log.Info("Usage: clie validate module-files")
+	log.Info("Usage: eac validate module-files")
 	log.Info("")
 	log.Info("Checks:")
 	log.Info("  - No files belong to the 'unordered' catch-all module")
@@ -160,5 +161,5 @@ func printModuleFilesUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate module file ownership")
-	log.Info("  clie validate module-files")
+	log.Info("  eac validate module-files")
 }

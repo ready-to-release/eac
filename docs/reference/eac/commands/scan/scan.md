@@ -1,4 +1,4 @@
-# Scan
+# scan
 
 <!-- book:cmd scan -->
 
@@ -20,41 +20,6 @@ The scan command supports multiple scanner types via the `--scanner` flag:
 
 The scan command runs security scanners with automatic detection and configuration.
 
-## Usage Examples
-
-### Run Default Scanners
-
-```bash
-# All modules with default scanners
-eac scan
-
-# Specific module with default scanners
-eac scan eac-core
-```
-
-### Run Specific Scanner Types
-
-```bash
-# Single scanner type
-eac scan --scanner vuln
-eac scan --scanner sbom
-
-# Multiple scanner types
-eac scan --scanner vuln,secrets,sbom
-
-# Specific module with specific scanners
-eac scan eac-core --scanner vuln,secrets
-```
-
-### Dynamic Testing (ZAP)
-
-ZAP is a special case requiring a URL target, so it has its own subcommand:
-
-```bash
-eac scan zap eac-api --target http://localhost:8080
-```
-
 ## See Also
 
-- [scan Commands Category](../../categories/scan.md)
 - [validate control-tags](../validate/control-tags.md) - Validate security control mappings

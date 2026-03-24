@@ -25,7 +25,8 @@ func (c *showBuildTimesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-build-times",
 		Short:         "Display build timing metrics in tables",
-		Long:          "The show build-times command displays build timing analysis parsed from build logs.\nShows overall statistics, breakdown by module type, and the slowest individual builds.\n\nExpected Output:\n- Table with overall metrics: total builds, passed/failed counts, total/average duration\n- Summary by type table: module types with build counts, pass/fail, total and average times\n- Top N slowest builds table showing duration, status, module name, and type",
+		Long: "The show build-times command displays build timing analysis parsed from build logs.\nShows overall statistics, breakdown by module type, and the slowest individual builds.",
+		Notes: "Expected Output:\n- Table with overall metrics: total builds, passed/failed counts, total/average duration\n- Summary by type table: module types with build counts, pass/fail, total and average times\n- Top N slowest builds table showing duration, status, module name, and type",
 	}
 }
 

@@ -25,7 +25,8 @@ func (c *getArtifactsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-artifacts",
 		Short:         "Get resolved artifacts for a module",
-		Long:          "The get artifacts command returns all build artifacts for a module with metadata overrides applied.\nOutput includes resolved names, paths, existence status, and which overrides were used.\nBy default, shows artifacts for the current platform. Use --all-platforms to see all platforms.\n\nExpected Output:\nYAML list of build artifacts with metadata, including:\n  - Resolved artifact names and paths\n  - Artifact existence status (exists/missing)\n  - Metadata override information showing which overrides were applied\n  - Build modes (default and all)\n  - Summary statistics (total, exists, missing, overrides)",
+		Long: "The get artifacts command returns all build artifacts for a module with metadata overrides applied.\nOutput includes resolved names, paths, existence status, and which overrides were used.\nBy default, shows artifacts for the current platform. Use --all-platforms to see all platforms.",
+		Notes: "Expected Output:\nYAML list of build artifacts with metadata, including:\n  - Resolved artifact names and paths\n  - Artifact existence status (exists/missing)\n  - Metadata override information showing which overrides were applied\n  - Build modes (default and all)\n  - Summary statistics (total, exists, missing, overrides)",
 	}
 }
 

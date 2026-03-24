@@ -87,8 +87,8 @@ func TestParsePullConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work pull <args>)
-			os.Args = append([]string{"clie", "work", "pull"}, tt.args...)
+			// Set test args (simulate command: eac work pull <args>)
+			os.Args = append([]string{"eac", "work", "pull"}, tt.args...)
 
 			config, err := parsePullConfig()
 			if err != nil {

@@ -14,10 +14,10 @@ Any module can have a changelog. The changelog location is defined in the module
 
 ```bash
 # 1. Check if there are changes to release
-clie release pending clie
+eac release pending clie
 
 # 2. Update the changelog with a new version
-clie release this clie
+eac release this clie
 
 # 3. Commit and create a PR
 git add release/clie/CHANGELOG.md
@@ -80,13 +80,13 @@ Check if a module has unreleased changes since the last release tag.
 
 ```bash
 # Check single module
-clie release pending clie
+eac release pending clie
 
 # Check all modules
-clie release pending --all
+eac release pending --all
 
 # Quiet mode (exit code only: 0=has changes, 1=no changes)
-clie release pending clie --quiet
+eac release pending clie --quiet
 ```
 
 Output includes:
@@ -102,16 +102,16 @@ Finalize the changelog and prepare a module for release.
 
 ```bash
 # Update changelog
-clie release this clie
+eac release this clie
 
 # Preview without writing
-clie release this clie --dry-run
+eac release this clie --dry-run
 
 # Output as JSON
-clie release this clie --json
+eac release this clie --json
 
 # Override release date
-clie release this clie --date 2024-01-15
+eac release this clie --date 2024-01-15
 ```
 
 This command:
@@ -128,10 +128,10 @@ Check for changelog versions that don't have corresponding git tags. Used by CI.
 
 ```bash
 # Check single module
-clie release tag-pending clie
+eac release tag-pending clie
 
 # Check all modules
-clie release tag-pending --all
+eac release tag-pending --all
 ```
 
 ### `release validate`
@@ -140,13 +140,13 @@ Validate changelog format and structure.
 
 ```bash
 # Validate single module
-clie release validate clie
+eac validate release clie
 
 # Validate all modules
-clie release validate --all
+eac validate release --all
 
 # Output as JSON
-clie release validate clie --json
+eac validate release clie --json
 ```
 
 Checks performed:
@@ -311,7 +311,7 @@ If you need to release without the automated flow:
 
 ```bash
 # 1. Update changelog manually or with release this
-clie release this clie
+eac release this clie
 
 # 2. Commit the changelog
 git add release/clie/CHANGELOG.md
@@ -343,7 +343,7 @@ Commits are filtered by module file patterns. Ensure your changes touch files ow
 
 ### Changelog validation errors
 
-Run `clie release validate <module>` to check for format issues. Common problems:
+Run `eac validate release <module>` to check for format issues. Common problems:
 
 - Invalid version format
 - Duplicate versions

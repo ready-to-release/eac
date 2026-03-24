@@ -22,7 +22,8 @@ func (c *showDependencyCISummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-dependency-ci-summary",
 		Short:         "Generate dependency CI check summary",
-		Long:          "The show dependency-ci-summary command generates a formatted summary of dependency CI check results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI check summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted dependency CI summary with metrics table\n- Shows passed and skipped counts on success\n- Shows failure message on failure",
+		Long: "The show dependency-ci-summary command generates a formatted summary of dependency CI check results.\nThis command is designed to be used in GitHub Actions workflows to create consistent CI check summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.",
+		Notes: "Expected Output:\n- Markdown-formatted dependency CI summary with metrics table\n- Shows passed and skipped counts on success\n- Shows failure message on failure",
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module name (required)"},
 			{Name: "passed", Type: "int", DefaultValue: "0", Usage: "Number of dependencies that passed CI"},

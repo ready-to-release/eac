@@ -3,10 +3,10 @@ package serve
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
+	dockerutil "github.com/ready-to-release/eac/go/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/core/tool"
 )
 
@@ -88,52 +88,37 @@ func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port in
 
 // StartDevServer starts MkDocs in live-reload development mode.
 // Uses mkdocs-dev-oci container with polling-based file watching.
-func (c *DockerClient) StartDevServer(workspaceRoot string, port int) (*docker.ServeResult, error) {
-	// Get the mkdocs-dev-oci tool definition from tool-config.yml
+// stagingDir contains pre-processed docs with expanded command markers.
+func (c *DockerClient) StartDevServer(workspaceRoot, stagingDir string, port int) (*docker.ServeResult, error) {
 	toolDef := tool.GetToolDefinition("mkdocs-dev-oci")
 	if toolDef == nil {
 		return nil, fmt.Errorf("mkdocs-dev-oci tool not found in tool-config.yml")
 	}
 
-	// Check if repository has its own mkdocs.yml
-	// Check both root and docs/ directory (common MkDocs layouts)
-	var repoConfigPath string
-	rootConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
-	docsConfig := filepath.Join(workspaceRoot, "docs", "mkdocs.yml")
-
-	if _, err := os.Stat(rootConfig); err == nil {
-		repoConfigPath = "/workspace/mkdocs.yml"
-	} else if _, err := os.Stat(docsConfig); err == nil {
-		repoConfigPath = "/workspace/docs/mkdocs.yml"
+	// Translate workspace root for secondary mount (read-only, for INHERIT config)
+	workspaceMountSource, err := dockerutil.TranslatePathForMount(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate workspace path: %w", err)
 	}
 
-	// Build environment variables for the container
-	// These are used by entrypoint.sh to configure MkDocs
-	envVars := []string{
-		"DOCS_DIR=/workspace/docs",
-	}
-	if repoConfigPath != "" {
-		// Use repository's mkdocs.yml (entrypoint will wrap with INHERIT)
-		envVars = append(envVars, "CONFIG_FILE="+repoConfigPath)
-	} else {
-		// Use container's bundled fallback config
-		envVars = append(envVars, "CONFIG_FILE=/docs/mkdocs.yml")
-	}
-
-	// Build serve config for dev mode
-	// The container's entrypoint handles polling-based file watching
-	// Mount workspace root to /workspace so docs are at /workspace/docs
+	// Primary mount: staging dir -> /workspace (has expanded docs + mkdocs.yml wrapper)
+	// Secondary mount: workspace root -> /source (read-only, for INHERIT from source mkdocs.yml)
 	serveConfig := &docker.ServeConfig{
 		Name:          c.containerName,
-		ContentPath:   workspaceRoot,   // Mount workspace root
-		ContainerPath: "/workspace",    // Mount target
+		ContentPath:   stagingDir,    // Primary mount: staging
+		ContainerPath: "/workspace",  // Mount target
 		PreferredPort: port,
 		ContainerPort: 8000,
 		RestartPolicy: "unless-stopped",
-		EnvVars:       envVars,
+		EnvVars: []string{
+			"DOCS_DIR=/workspace/docs",
+			"CONFIG_FILE=/workspace/mkdocs.yml",
+		},
+		AdditionalMounts: []string{
+			fmt.Sprintf("%s:/source:ro", dockerutil.FormatDockerVolume(workspaceMountSource)),
+		},
 	}
 
-	// Use LocalImageTag for local containers
 	if toolDef.IsLocalContainer() {
 		serveConfig.Image = toolDef.LocalImageTag()
 		contextPath := toolDef.LocalContextPath(workspaceRoot)
@@ -148,73 +133,14 @@ func (c *DockerClient) StartDevServer(workspaceRoot string, port int) (*docker.S
 	return docker.StartServe(c.ctx, serveConfig)
 }
 
-// IsDevImageStale checks if the dev server image is stale.
-// Uses configuration from the tool system (mkdocs-dev-oci tool definition).
-func (c *DockerClient) IsDevImageStale(workspaceRoot string) (bool, string, error) {
-	// Get the mkdocs-dev-oci tool definition from tool-config.yml
-	toolDef := tool.GetToolDefinition("mkdocs-dev-oci")
-	if toolDef == nil {
-		return false, "", fmt.Errorf("mkdocs-dev-oci tool not found in tool-config.yml")
-	}
-
-	// Build serve config from tool definition
-	serveConfig := &docker.ServeConfig{}
-
-	// Use LocalImageTag for local containers, or FullImage for external
-	if toolDef.IsLocalContainer() {
-		serveConfig.Image = toolDef.LocalImageTag()
-		contextPath := toolDef.LocalContextPath(workspaceRoot)
-		serveConfig.BuildInfo = &docker.BuildInfo{
-			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
-			ContextPath: contextPath,
-		}
-	} else {
-		serveConfig.Image = toolDef.FullImage()
-	}
-
-	return docker.CheckImageStale(c.ctx, serveConfig)
-}
-
 // StopContainer stops the container.
 func (c *DockerClient) StopContainer() error {
 	return docker.StopServe(c.ctx, c.containerName)
 }
 
-// IsImageStale checks if the container image is stale.
-// Uses configuration from the tool system (static-site tool definition).
-func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) {
-	// Get the static-site tool definition from tool-config.yml
-	toolDef := tool.GetToolDefinition("static-site")
-	if toolDef == nil {
-		return false, "", fmt.Errorf("static-site tool not found in tool-config.yml")
-	}
-
-	// Build serve config from tool definition
-	serveConfig := &docker.ServeConfig{}
-
-	// Use LocalImageTag for local containers, or FullImage for external
-	if toolDef.IsLocalContainer() {
-		serveConfig.Image = toolDef.LocalImageTag()
-		contextPath := toolDef.LocalContextPath(workspaceRoot)
-		serveConfig.BuildInfo = &docker.BuildInfo{
-			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
-			ContextPath: contextPath,
-		}
-	} else {
-		serveConfig.Image = toolDef.FullImage()
-	}
-
-	return docker.CheckImageStale(c.ctx, serveConfig)
-}
-
 // OpenBrowserWithFallback opens the browser.
 func (c *DockerClient) OpenBrowserWithFallback(url string) (bool, error) {
 	return docker.OpenBrowserWithFallback(url)
-}
-
-// GetRecentLogs retrieves the last N lines of container logs.
-func (c *DockerClient) GetRecentLogs(tailLines string) (string, error) {
-	return docker.GetContainerLogs(c.ctx, c.containerName, tailLines)
 }
 
 // StreamLogsCtx streams container logs to stdout/stderr using the given context.

@@ -1,8 +1,8 @@
-# Update
+# update
 
 <!-- book:cmd update -->
 
 ## See Also
 
-- [create Commands](../../categories/create.md) - Create new content
-- [validate Commands](../../categories/validate.md) - Validate content
+- [create Commands](../create/index.md) - Create new content
+- [validate Commands](../validate/index.md) - Validate content

@@ -1,4 +1,4 @@
-# get-artifact-id
+# pipeline get-artifact-id
 
 <!-- book:cmd pipeline get-artifact-id -->
 
@@ -7,4 +7,4 @@
 - [get artifacts](../get/artifacts.md)
 - [pipeline download-evidence-artifacts](./download-evidence-artifacts.md)
 - [show artifacts](../show/artifacts.md)
-- [pipeline Commands](../../categories/pipeline.md)
+- [pipeline Commands](../pipeline/index.md)

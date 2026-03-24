@@ -24,11 +24,8 @@ func (c *getBuildTimesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-build-times",
 		Short:         "Display build timing metrics from last build run",
-		Long: "Expected Output:\n" +
-			"YAML with build timing metrics parsed from per-module uow.manifest.json files:\n" +
-			"  - Per-module timing data with duration in seconds\n" +
-			"  - Aggregated statistics by module type\n" +
-			"  - Overall summary with total builds and average duration",
+		Long: "",
+		Notes: "Expected Output:\nYAML with build timing metrics parsed from per-module uow.manifest.json files:\n  - Per-module timing data with duration in seconds\n  - Aggregated statistics by module type\n  - Overall summary with total builds and average duration",
 	}
 }
 

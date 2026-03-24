@@ -23,7 +23,13 @@ func (c *pipelineRunCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-run",
 		Short:         "Execute module pipelines respecting dependencies",
-		Long:          "Execute module pipelines respecting dependencies.\n\nThis command runs the full pipeline (build, test, validate) for modules in\ndependency order. If no modules are specified, all modules are processed.\n\nUse --changed-only to run pipelines only for modules with uncommitted changes,\nwhich is useful for incremental CI/CD workflows.\n\nUse --ref to specify a git reference (branch, tag, commit) to compare against\nwhen determining which modules have changed.\n\nExpected Output:\n  - Per-module pipeline execution results (build, test, validate stages)\n  - Exit code 0 if all pipelines pass\n  - Exit code 1 if any pipeline fails\n\nExample:\n  pipeline run                    # Run all modules\n  pipeline run --changed-only     # Run only changed modules\n  pipeline run core clie   # Run specific modules",
+		Long: "Execute module pipelines respecting dependencies.\n\nThis command runs the full pipeline (build, test, validate) for modules in\ndependency order. If no modules are specified, all modules are processed.\n\nUse --changed-only to run pipelines only for modules with uncommitted changes,\nwhich is useful for incremental CI/CD workflows.\n\nUse --ref to specify a git reference (branch, tag, commit) to compare against\nwhen determining which modules have changed.",
+		Notes: "Expected Output:\n  - Per-module pipeline execution results (build, test, validate stages)\n  - Exit code 0 if all pipelines pass\n  - Exit code 1 if any pipeline fails",
+		Examples: []string{
+			"eac pipeline run                 # Run all modules",
+			"eac pipeline run --changed-only  # Run only changed modules",
+			"eac pipeline run core clie       # Run specific modules",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "changed-only", Type: "bool", Usage: "Only run pipelines for changed modules"},
 			{Name: "ref", Type: "string", Usage: "Git ref to compare against (default: current branch)"},

@@ -29,18 +29,21 @@ require (
 	github.com/ready-to-release/eac/go/commands/test v0.0.0
 	github.com/ready-to-release/eac/go/commands/update v0.0.0
 	github.com/ready-to-release/eac/go/core v0.0.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/clipperhouse/displaywidth v0.9.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/defenseunicorns/go-oscal v0.7.0 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/go-clone/generic v1.7.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/contracts/runner/0.1.0 v0.0.0 // indirect
 	github.com/ready-to-release/eac/go/adapters/eac v0.0.0 // indirect

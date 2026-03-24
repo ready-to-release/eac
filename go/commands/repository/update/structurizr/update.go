@@ -32,7 +32,8 @@ func (c *updateStructurizrCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "update-structurizr",
 		Short:         "Update Structurizr diagram cache from workspace.dsl files",
-		Long:          "Exports all Structurizr views from workspace.dsl files to SVG format\nand stores them in the .cache/eac/structurizr/ acceleration cache.\n\nExpected Output:\n  - SVG files in .cache/eac/structurizr/\n  - Cache status summary showing hits/misses",
+		Long: "Exports all Structurizr views from workspace.dsl files to SVG format\nand stores them in the .cache/eac/structurizr/ acceleration cache.",
+		Notes: "Expected Output:\n  - SVG files in .cache/eac/structurizr/\n  - Cache status summary showing hits/misses",
 		Flags: []core.FlagSpec{
 			{Name: "module", Shorthand: "m", Type: "string", Usage: "Export specific module only"},
 			{Name: "force", Shorthand: "f", Type: "bool", DefaultValue: "false", Usage: "Force re-export even if cache is current"},

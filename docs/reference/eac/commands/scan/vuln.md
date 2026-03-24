@@ -1,9 +1,6 @@
-# Scan vuln
+# scan vuln
 
 <!-- book:cmd scan --scanner vuln -->
-
-Vulnerability scanning detects known security vulnerabilities in dependencies
-using Trivy's vulnerability database.
 
 ## See Also
 

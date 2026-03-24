@@ -34,7 +34,14 @@ func (c *lintCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "lint",
 		Short:         "Lint one or more modules by moniker",
-		Long:          "Lint one or more modules by moniker using appropriate linters per module type.\n\nThis command runs linters on modules in parallel (by default).\nIf no monikers are specified, all modules in the repository are linted.\n\nExpected Output:\n  - Lint logs written to 'out/lint/<module>/lint.log' (one per module)\n  - Structured results at 'out/lint/<module>/lint.json' (linter-specific format)\n  - UoW manifests at 'out/lint/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed lints are clearly marked with error details\n  - Exit code 0 indicates no lint issues found\n  - Non-zero exit code indicates lint issues found or errors\n\nExample:\n  lint                           # Lint all modules\n  lint eac              # Lint a single module\n  lint --fix                     # Lint with auto-fix\n  lint --skip-cache              # Force full lint, ignore incremental state",
+		Long: "Lint one or more modules by moniker using appropriate linters per module type.\n\nThis command runs linters on modules in parallel (by default).\nIf no monikers are specified, all modules in the repository are linted.",
+		Notes: "Expected Output:\n  - Lint logs written to 'out/lint/<module>/lint.log' (one per module)\n  - Structured results at 'out/lint/<module>/lint.json' (linter-specific format)\n  - UoW manifests at 'out/lint/<module>/<component>/uow.manifest.json' (with timing data)\n  - Failed lints are clearly marked with error details\n  - Exit code 0 indicates no lint issues found\n  - Non-zero exit code indicates lint issues found or errors",
+		Examples: []string{
+			"eac lint               # Lint all modules",
+			"eac lint eac           # Lint a single module",
+			"eac lint --fix         # Lint with auto-fix",
+			"eac lint --skip-cache  # Force full lint, ignore incremental state",
+		},
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "fix", Type: "bool", Usage: "Auto-fix issues where possible"},

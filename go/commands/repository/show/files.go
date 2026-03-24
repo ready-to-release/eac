@@ -23,7 +23,8 @@ func (c *showFilesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-files",
 		Short:         "Display all tracked files and their owning modules",
-		Long:          "The show files command displays all tracked files in the repository with their module ownership.\nShows which files belong to which modules, helping understand repository structure.\n\nExpected Output:\n- Table with file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Sorted by module for easy grouping",
+		Long: "The show files command displays all tracked files in the repository with their module ownership.\nShows which files belong to which modules, helping understand repository structure.",
+		Notes: "Expected Output:\n- Table with file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Sorted by module for easy grouping",
 	}
 }
 

@@ -1,28 +1,6 @@
-# Validate release
+# validate release
 
 <!-- book:cmd validate release -->
-
-Validates that changelog files follow the Keep a Changelog format and contain valid version entries.
-
-## Usage
-
-```bash
-eac validate release <module> [flags]
-eac validate release --all [flags]
-```
-
-## Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `module` | Module moniker to validate (required unless `--all`) |
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--all` | bool | Validate all modules with changelogs |
-| `--json` | bool | Output results in JSON format |
 
 ## What It Checks
 
@@ -32,19 +10,6 @@ eac validate release --all [flags]
 - **No duplicates** -- No two entries share the same version number.
 - **Descending order** -- Versions are ordered newest-first (checked by date).
 - **Non-empty versions** -- Each version has at least one entry (warning).
-
-## Examples
-
-```bash
-# Single module
-eac validate release clie
-
-# All modules
-eac validate release --all
-
-# JSON output for CI
-eac validate release clie --json
-```
 
 ## Common Errors
 
@@ -57,4 +22,4 @@ eac validate release clie --json
 - [release changelog](../release/changelog.md)
 - [release this](../release/this.md)
 - [validate release-version](./release-version.md)
-- [validate Commands](../../categories/validate.md)
+- [validate Commands](../validate/index.md)

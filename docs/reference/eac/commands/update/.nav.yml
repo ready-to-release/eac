@@ -1,15 +1,15 @@
 title: update
 nav:
   - index.md
-  - update.md
-  - ai-summary.md
-  - cache-clear.md
-  - design.md
-  - dependabot.md
-  - docs.md
-  - docs-manifest.md
-  - evidence.md
-  - go-mod-sums.md
-  - go-tidy.md
-  - pdf-screenshots.md
-  - structurizr.md
+  - "update": update.md
+  - "update ai-summary": ai-summary.md
+  - "update cache-clear": cache-clear.md
+  - "update design": design.md
+  - "update dependabot": dependabot.md
+  - "update docs": docs.md
+  - "update docs-manifest": docs-manifest.md
+  - "update evidence": evidence.md
+  - "update go-mod-sums": go-mod-sums.md
+  - "update go-tidy": go-tidy.md
+  - "update pdf-screenshots": pdf-screenshots.md
+  - "update structurizr": structurizr.md

@@ -26,7 +26,8 @@ func (c *validateRiskCatalogCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-risk-catalog",
 		Short:         "Validate OSCAL catalogs against OSCAL 1.1.3 schema",
-		Long:          "The validate risk-catalog command validates OSCAL catalog documents against the official\nOSCAL 1.1.3 JSON schema from NIST.\n\nCatalogs define security control libraries (e.g., NIST 800-53) with structured control\ndefinitions, parameters, and supporting materials.\n\nValidation uses the official OSCAL JSON schema:\nhttps://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json\n\nExpected Output:\n  Displays OSCAL schema validation results for catalog document.\n  Shows missing required fields, schema violations, and structural errors.\n  Exit code 0 if valid OSCAL 1.1.3 catalog, 1 if validation errors.",
+		Long: "The validate risk-catalog command validates OSCAL catalog documents against the official\nOSCAL 1.1.3 JSON schema from NIST.\n\nCatalogs define security control libraries (e.g., NIST 800-53) with structured control\ndefinitions, parameters, and supporting materials.\n\nValidation uses the official OSCAL JSON schema:\nhttps://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json",
+		Notes: "Expected Output:\n  Displays OSCAL schema validation results for catalog document.\n  Shows missing required fields, schema violations, and structural errors.\n  Exit code 0 if valid OSCAL 1.1.3 catalog, 1 if validation errors.",
 		Args:          "file",
 	}
 }

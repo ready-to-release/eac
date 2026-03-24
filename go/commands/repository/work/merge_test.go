@@ -111,8 +111,8 @@ func TestParseMergeConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work merge <args>)
-			os.Args = append([]string{"clie", "work", "merge"}, tt.args...)
+			// Set test args (simulate command: eac work merge <args>)
+			os.Args = append([]string{"eac", "work", "merge"}, tt.args...)
 
 			config, err := parseMergeConfig()
 			if err != nil {

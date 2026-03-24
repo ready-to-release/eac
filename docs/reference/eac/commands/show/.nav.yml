@@ -1,40 +1,40 @@
 title: show
 nav:
   - index.md
-  - show.md
-  - approval-comments.md
-  - approve-summary.md
-  - artifacts.md
-  - books.md
-  - build-summary.md
-  - build-times.md
-  - changelog.md
-  - ci-results.md
-  - ci-summary.md
-  - component-kinds.md
-  - components.md
-  - config.md
-  - dependencies.md
-  - dependency-ci-summary.md
-  - deps-setup-summary.md
-  - environments.md
-  - files.md
-  - ghosts.md
-  - files-changed.md
-  - files-staged.md
-  - help.md
-  - lint-summary.md
-  - modules.md
-  - release-notes.md
-  - release-summary.md
-  - scan-summary.md
-  - specs.md
-  - suite.md
-  - test-results.md
-  - test-summary.md
-  - test-timings.md
-  - tests.md
-  - trigger-summary.md
-  - valid-commands.md
-  - units.md
-  - workspaces.md
+  - "show": show.md
+  - "show approval-comments": approval-comments.md
+  - "show approve-summary": approve-summary.md
+  - "show artifacts": artifacts.md
+  - "show books": books.md
+  - "show build-summary": build-summary.md
+  - "show build-times": build-times.md
+  - "show changelog": changelog.md
+  - "show ci-results": ci-results.md
+  - "show ci-summary": ci-summary.md
+  - "show component-kinds": component-kinds.md
+  - "show components": components.md
+  - "show config": config.md
+  - "show dependencies": dependencies.md
+  - "show dependency-ci-summary": dependency-ci-summary.md
+  - "show deps-setup-summary": deps-setup-summary.md
+  - "show environments": environments.md
+  - "show files": files.md
+  - "show ghosts": ghosts.md
+  - "show files-changed": files-changed.md
+  - "show files-staged": files-staged.md
+  - "show help": help.md
+  - "show lint-summary": lint-summary.md
+  - "show modules": modules.md
+  - "show release-notes": release-notes.md
+  - "show release-summary": release-summary.md
+  - "show scan-summary": scan-summary.md
+  - "show specs": specs.md
+  - "show suite": suite.md
+  - "show test-results": test-results.md
+  - "show test-summary": test-summary.md
+  - "show test-timings": test-timings.md
+  - "show tests": tests.md
+  - "show trigger-summary": trigger-summary.md
+  - "show valid-commands": valid-commands.md
+  - "show units": units.md
+  - "show workspaces": workspaces.md

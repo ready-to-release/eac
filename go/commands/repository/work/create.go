@@ -24,7 +24,14 @@ func (c *workCreateCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-create",
 		Short:         "Create a new workspace for parallel development",
-		Long:          "Creates a new git worktree in a sibling directory for parallel development with Claude.\n\nThe workspace is created in a sibling directory with the naming pattern:\n  <repo-name>-<branch-name>\n\nThis allows you to work on multiple features simultaneously with separate Claude Code sessions.\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - New git worktree in sibling directory\n  - Ready for parallel Claude Code session\n\nExample:\n  work create feature/authentication\n  work create bugfix/issue-123 --from=develop\n  work create feature/api --path=../custom-path\n  work create feature/test --debug",
+		Long: "Creates a new git worktree in a sibling directory for parallel development with Claude.\n\nThe workspace is created in a sibling directory with the naming pattern:\n  <repo-name>-<branch-name>\n\nThis allows you to work on multiple features simultaneously with separate Claude Code sessions.\nUse --debug to enable detailed logging to out/logs/work/.",
+		Notes: "Expected Output:\n  - New git worktree in sibling directory\n  - Ready for parallel Claude Code session",
+		Examples: []string{
+			"eac work create feature/authentication",
+			"eac work create bugfix/issue-123 --from=develop",
+			"eac work create feature/api --path=../custom-path",
+			"eac work create feature/test --debug",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "from", Type: "string", DefaultValue: "main", Usage: "Base branch to create from"},
 			{Name: "path", Type: "string", Usage: "Custom path for workspace (default: ../<repo>-<branch>)"},

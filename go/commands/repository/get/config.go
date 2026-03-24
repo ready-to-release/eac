@@ -21,7 +21,8 @@ func (c *getConfigCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-config",
 		Short:         "Get loaded repository configuration",
-		Long:          "Expected Output:\nYAML with all loaded configuration including:\n  - modules: Module contracts with moniker, type, root path, dependencies\n  - component_kinds: Component type definitions with build/test/deploy capabilities\n  - environments: Environment definitions\n  - testing: Testing configuration (tags and suites from eac-testing contract)",
+		Long: "",
+		Notes: "Expected Output:\nYAML with all loaded configuration including:\n  - modules: Module contracts with moniker, type, root path, dependencies\n  - component_kinds: Component type definitions with build/test/deploy capabilities\n  - environments: Environment definitions\n  - testing: Testing configuration (tags and suites from eac-testing contract)",
 	}
 }
 

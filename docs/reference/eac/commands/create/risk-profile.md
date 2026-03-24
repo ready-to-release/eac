@@ -1,4 +1,4 @@
-# Create risk-profile
+# create risk-profile
 
 <!-- book:cmd create risk-profile -->
 
@@ -27,5 +27,5 @@ See [commit-message](../get/commit-message.md#custom-prompts) for detailed custo
 
 - [create risk-assess](./risk-assess.md)
 - [validate risk-profile](../validate/risk-profile.md)
-- [scan](../../categories/scan.md)
-- [create Commands](../../categories/create.md)
+- [scan](../scan/index.md)
+- [create Commands](../create/index.md)

@@ -26,7 +26,8 @@ func (c *getSuiteCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-suite",
 		Short:         "Get test suite definition and configuration",
-		Long:          "Expected Output:\nYAML test suite definition and configuration, including:\n  - Suite metadata (moniker, name, description)\n  - Test selection criteria (tags, modules, patterns)\n  - Suite-level configuration and settings\n  - List of included tests with their metadata",
+		Long: "",
+		Notes: "Expected Output:\nYAML test suite definition and configuration, including:\n  - Suite metadata (moniker, name, description)\n  - Test selection criteria (tags, modules, patterns)\n  - Suite-level configuration and settings\n  - List of included tests with their metadata",
 	}
 }
 

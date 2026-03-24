@@ -1,26 +1,12 @@
-# Validate markdown
+# validate markdown
 
 <!-- book:cmd validate markdown -->
-
-Validates all markdown files in the repository for proper syntax, heading hierarchy, and code block formatting.
-
-## Usage
-
-```bash
-eac validate markdown
-```
 
 ## What It Checks
 
 - Valid markdown syntax.
 - Proper heading hierarchy (no skipped levels).
 - Valid embedded code blocks (JSON, YAML syntax).
-
-## Examples
-
-```bash
-eac validate markdown
-```
 
 ## Common Errors
 
@@ -30,4 +16,4 @@ eac validate markdown
 ## See Also
 
 - [validate](./validate.md)
-- [validate Commands](../../categories/validate.md)
+- [validate Commands](../validate/index.md)

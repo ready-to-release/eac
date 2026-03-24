@@ -22,4 +22,4 @@ eac serve docs --port 9725
 
 - [show books](../show/books.md) - List documentation books
 - [validate books](../validate/books.md) - Validate book configuration
-- [serve Commands](../../categories/serve.md)
+- [serve Commands](../serve/index.md)

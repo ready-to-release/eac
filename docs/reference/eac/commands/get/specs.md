@@ -26,4 +26,4 @@ Specifications are read from: `specs/<module>/`
 
 - [show specs](../show/specs.md) - Human-readable output
 - [get changelog](./changelog.md) - Changelog data
-- [get Commands](../../categories/get.md)
+- [get Commands](../get/index.md)

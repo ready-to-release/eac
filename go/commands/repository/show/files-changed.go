@@ -23,7 +23,8 @@ func (c *showFilesChangedCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-files-changed",
 		Short:         "Show changed (modified, unstaged) files with their module ownership",
-		Long:          "The show files-changed command displays modified files (git diff HEAD) with their module ownership.\nUseful for identifying which modules are affected by uncommitted changes.\n\nExpected Output:\n- Table with changed file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Empty output if no files are changed",
+		Long: "The show files-changed command displays modified files (git diff HEAD) with their module ownership.\nUseful for identifying which modules are affected by uncommitted changes.",
+		Notes: "Expected Output:\n- Table with changed file paths and owning modules (comma-separated if multiple)\n- Files with no module ownership shown as \"NONE\"\n- Empty output if no files are changed",
 	}
 }
 

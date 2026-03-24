@@ -21,6 +21,8 @@ func SetRegistry(reg core.CommandRegistryPort) {
 func GlobalFlags() []core.FlagSpec {
 	return []core.FlagSpec{
 		{Name: "help", Shorthand: "h", Type: "bool", Usage: "Show help for command"},
+		{Name: "help-format", Type: "string", DefaultValue: "text",
+			Usage: "Help output format: text (man-page) or markdown"},
 	}
 }
 

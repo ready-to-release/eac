@@ -1,50 +1,49 @@
 title: get
 nav:
   - index.md
-  - get.md
-  - approval-comments.md
-  - artifacts.md
-  - binary-sizes.md
-  - book-description.md
-  - build-deps.md
-  - build-times.md
-  - changed-containers.md
-  - changed-modules.md
-  - changed-modules-ci.md
-  - changed-modules-local.md
-  - changelog.md
-  - ci-config.md
-  - ci-dispatch.md
-
-  - ci-results.md
-  - ci-workflows.md
-  - cli-release-notes.md
-  - commands.md
-  - commit-message.md
-  - components.md
-  - config.md
-  - current-sha.md
-  - dependencies.md
-  - documented-commands.md
-  - environments.md
-  - evidence-ci-runs.md
-  - files.md
-  - files-by-module.md
-  - ghosts.md
-  - module-ci-workflow.md
-  - module-trigger-reason.md
-  - modules.md
-  - release-bundle.md
-  - release-config.md
-  - release-notes.md
-  - release-status.md
-  - specs.md
-  - specs-unused-steps.md
-  - squash-message.md
-  - suite.md
-  - test-results.md
-  - test-timings.md
-  - tests.md
-  - token-size.md
-  - units.md
-  - valid-commands.md
+  - "get": get.md
+  - "get approval-comments": approval-comments.md
+  - "get artifacts": artifacts.md
+  - "get binary-sizes": binary-sizes.md
+  - "get book-description": book-description.md
+  - "get build-deps": build-deps.md
+  - "get build-times": build-times.md
+  - "get changed-containers": changed-containers.md
+  - "get changed-modules": changed-modules.md
+  - "get changed-modules-ci": changed-modules-ci.md
+  - "get changed-modules-local": changed-modules-local.md
+  - "get changelog": changelog.md
+  - "get ci-config": ci-config.md
+  - "get ci-dispatch": ci-dispatch.md
+  - "get ci-results": ci-results.md
+  - "get ci-workflows": ci-workflows.md
+  - "get cli-release-notes": cli-release-notes.md
+  - "get commands": commands.md
+  - "get commit-message": commit-message.md
+  - "get components": components.md
+  - "get config": config.md
+  - "get current-sha": current-sha.md
+  - "get dependencies": dependencies.md
+  - "get documented-commands": documented-commands.md
+  - "get environments": environments.md
+  - "get evidence-ci-runs": evidence-ci-runs.md
+  - "get files": files.md
+  - "get files-by-module": files-by-module.md
+  - "get ghosts": ghosts.md
+  - "get module-ci-workflow": module-ci-workflow.md
+  - "get module-trigger-reason": module-trigger-reason.md
+  - "get modules": modules.md
+  - "get release-bundle": release-bundle.md
+  - "get release-config": release-config.md
+  - "get release-notes": release-notes.md
+  - "get release-status": release-status.md
+  - "get specs": specs.md
+  - "get specs-unused-steps": specs-unused-steps.md
+  - "get squash-message": squash-message.md
+  - "get suite": suite.md
+  - "get test-results": test-results.md
+  - "get test-timings": test-timings.md
+  - "get tests": tests.md
+  - "get token-size": token-size.md
+  - "get units": units.md
+  - "get valid-commands": valid-commands.md

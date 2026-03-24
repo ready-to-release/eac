@@ -21,7 +21,13 @@ func (c *showReleaseNotesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-release-notes",
 		Short:         "Display release notes in human-readable format",
-		Long:          "Display release notes from RELEASE-NOTES.md in formatted markdown.\n\nShows the latest version by default, or a specific version if provided.\nSpecial keyword: \"latest\" for most recent release (same as default behavior).\nDisplays all sections for the version (Conclusion on Fitness, Impact on Business Process, etc.)\n\nExpected Output:\n- Version header (## [version] - date) matching changelog format\n- All sections with headers (###) and content formatted as markdown\n\nExample:\n  show release-notes eac-ext\n  show release-notes eac-ext latest\n  show release-notes eac-ext 0.0.7",
+		Long: "Display release notes from RELEASE-NOTES.md in formatted markdown.\n\nShows the latest version by default, or a specific version if provided.\nSpecial keyword: \"latest\" for most recent release (same as default behavior).\nDisplays all sections for the version (Conclusion on Fitness, Impact on Business Process, etc.)",
+		Notes: "Expected Output:\n- Version header (## [version] - date) matching changelog format\n- All sections with headers (###) and content formatted as markdown",
+		Examples: []string{
+			"eac show release-notes eac-ext",
+			"eac show release-notes eac-ext latest",
+			"eac show release-notes eac-ext 0.0.7",
+		},
 		Args:          "module [version]",
 	}
 }

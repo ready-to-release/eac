@@ -1,33 +1,19 @@
-# Validate contracts
+# validate contracts
 
 <!-- book:cmd validate contracts -->
-
-Validates all EAC repository configuration files against their JSON schema definitions.
-
-## Usage
-
-```bash
-eac validate contracts
-```
 
 ## What It Checks
 
 Validates each contract file with schema validation enabled:
 
-| File | Validation |
-|------|------------|
-| `repository.yml` | Module definitions, component types, paths |
+| File               | Validation                                      |
+| ------------------ | ----------------------------------------------- |
+| `repository.yml`   | Module definitions, component types, paths      |
 | `environments.yml` | Environment definitions and semantic validation |
-| `testing-tags.yml` | Tag definitions and skip reasons |
-| `test-suites.yml` | Test suite definitions |
+| `testing-tags.yml` | Tag definitions and skip reasons                |
+| `test-suites.yml`  | Test suite definitions                          |
 
 Reports the number of validated items per file (modules, environments, tags, suites).
-
-## Examples
-
-```bash
-eac validate contracts
-```
 
 ## Common Errors
 

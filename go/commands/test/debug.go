@@ -26,7 +26,11 @@ func (c *testDebugCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test-debug",
 		Short:         "Parse test results and list all failures",
-		Long:          "Parse test results (Go test JSON and Cucumber JSON) in out/test directory\nand list all failed tests with their locations.\n\nThis command scans for test-results.json (Go test JSON) and .cucumber.json\nfiles, parses test results, and extracts failure information.\n\nResults are presented in a clear table format showing test failures.\n\nExpected Output:\n  - Table of failed tests with test name, package, and error details\n  - File locations (for Cucumber tests) with line numbers\n  - Parses out/test/**/*.json files (both Go test JSON and Cucumber JSON)\n  - If no failures found, displays success message\n\nExample:\n  test debug",
+		Long: "Parse test results (Go test JSON and Cucumber JSON) in out/test directory\nand list all failed tests with their locations.\n\nThis command scans for test-results.json (Go test JSON) and .cucumber.json\nfiles, parses test results, and extracts failure information.\n\nResults are presented in a clear table format showing test failures.",
+		Notes: "Expected Output:\n  - Table of failed tests with test name, package, and error details\n  - File locations (for Cucumber tests) with line numbers\n  - Parses out/test/**/*.json files (both Go test JSON and Cucumber JSON)\n  - If no failures found, displays success message",
+		Examples: []string{
+			"eac test debug",
+		},
 	}
 }
 

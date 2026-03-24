@@ -1,4 +1,4 @@
-# Get dependencies
+# get dependencies
 
 <!-- book:cmd get dependencies -->
 

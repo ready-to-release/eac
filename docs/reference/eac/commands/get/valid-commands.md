@@ -1,14 +1,6 @@
-# Get valid-commands
+# get valid-commands
 
 <!-- book:cmd get valid-commands -->
-
-Returns all registered commands with their descriptions, sorted alphabetically. Includes both leaf commands and inferred parent commands (e.g., `pipeline` is inferred from `pipeline await-ci`).
-
-## Usage
-
-```bash
-eac get valid-commands [flags]
-```
 
 ## Output Structure
 
@@ -19,13 +11,6 @@ eac get valid-commands [flags]
   description: Get resolved artifacts for a module
 - command: pipeline
   description: Parent command for pipeline subcommands
-```
-
-## Examples
-
-```bash
-eac get valid-commands
-eac get valid-commands --as-json
 ```
 
 ## See Also

@@ -1,14 +1,6 @@
-# Validate test-tags
+# validate test-tags
 
 <!-- book:cmd validate test-tags -->
-
-Validates that all tags used in Gherkin feature files are defined in the tag contract (`.eac/testing-tags.yml`). Prevents undefined tags that would be silently ignored by godog.
-
-## Usage
-
-```bash
-eac validate test-tags
-```
 
 ## What It Checks
 
@@ -16,16 +8,10 @@ eac validate test-tags
 - Extracts all `@` tags from features, scenarios, and example tables.
 - Checks each tag against the tag contract definitions.
 - Validates pattern tags with additional rules:
-    - `@skip:<reason>` -- reason must be a defined skip reason.
-    - `@deps:<name>` -- name must be a registered tool or OS platform (`linux`, `macos`, `windows`).
-    - `@env:<moniker>` -- moniker must be a defined environment.
-    - `@depm:<module>` -- module must be a defined module.
-
-## Examples
-
-```bash
-eac validate test-tags
-```
+  - `@skip:<reason>` -- reason must be a defined skip reason.
+  - `@deps:<name>` -- name must be a registered tool or OS platform (`linux`, `macos`, `windows`).
+  - `@env:<moniker>` -- moniker must be a defined environment.
+  - `@depm:<module>` -- module must be a defined module.
 
 ## Common Errors
 
@@ -36,4 +22,4 @@ eac validate test-tags
 ## See Also
 
 - [validate](./validate.md)
-- [validate Commands](../../categories/validate.md)
+- [validate Commands](../validate/index.md)

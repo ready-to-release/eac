@@ -1,22 +1,6 @@
-# Get changed-modules-ci
+# get changed-modules-ci
 
 <!-- book:cmd get changed-modules-ci -->
-
-Returns modules requiring CI rebuild using per-module change detection. For each module with a `ci-{module}.yaml` workflow, queries its last successful CI run and determines whether files affecting that module have changed since.
-
-## Usage
-
-```bash
-eac get changed-modules-ci [flags]
-```
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--pr-base` | string | Base SHA for PR comparison |
-| `--filter-workflows` | bool | Only include modules with a `ci-{module}.yaml` workflow file |
-| `--format` | string | Output format: `shell` for eval-friendly variables, otherwise standard YAML/JSON/TOML |
 
 ## Detection Logic
 
@@ -59,19 +43,6 @@ INVALIDATED="clie"
 BASE_SHA="per-module"
 IS_BOOTSTRAP="false"
 CHANGED_FILE_COUNT="5"
-```
-
-## Examples
-
-```bash
-# Standard detection
-eac get changed-modules-ci
-
-# For PR pipelines
-eac get changed-modules-ci --pr-base abc1234
-
-# Shell output for CI scripts
-eval $(eac get changed-modules-ci --format shell)
 ```
 
 ## See Also

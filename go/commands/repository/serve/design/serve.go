@@ -33,7 +33,8 @@ func (c *serveDesignCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "serve-design",
 		Short:         "View architecture diagrams in browser using Structurizr Lite (Docker)",
-		Long:          "Launches a Docker container running Structurizr Lite web viewer and opens your default browser.\nThe viewer provides interactive C4 model diagrams (system context, containers, components) defined\nin workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files\nThe viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.\n\nExpected Output:\n  - Docker container running Structurizr Lite on port 9000-9999\n  - Browser opens automatically to http://localhost:<port>\n  - Live updates when workspace.dsl file changes\n  - Generated workspace.json and .structurizr/ directory (git-ignored)",
+		Long: "Launches a Docker container running Structurizr Lite web viewer and opens your default browser.\nThe viewer provides interactive C4 model diagrams (system context, containers, components) defined\nin workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files\nThe viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.",
+		Notes: "Expected Output:\n  - Docker container running Structurizr Lite on port 9000-9999\n  - Browser opens automatically to http://localhost:<port>\n  - Live updates when workspace.dsl file changes\n  - Generated workspace.json and .structurizr/ directory (git-ignored)",
 	}
 }
 

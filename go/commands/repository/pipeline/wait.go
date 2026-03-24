@@ -25,7 +25,13 @@ func (c *pipelineWaitCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "pipeline-wait",
 		Short:         "Wait for GitHub workflow runs to complete",
-		Long:          "Wait for GitHub workflow runs to complete with live progress display.\n\nThis command monitors one or more GitHub Actions workflow runs and displays\ntheir status in a compact, updating format. It exits with code 0 if all\nworkflows succeed, or code 1 if any fail.\n\nExpected Output:\n  - Live progress display with status icons (\u2713, \u2717, \u25d0, \u25cb)\n  - Exit code 0 if all workflows succeed\n  - Exit code 1 if any workflow fails\n\nExample:\n  pipeline wait 12345 12346 12347    # Wait for specific run IDs\n  pipeline wait --timeout 600        # Wait up to 10 minutes (default: 30 min)\n  pipeline wait --interval 5         # Poll every 5 seconds (default: 10)",
+		Long: "Wait for GitHub workflow runs to complete with live progress display.\n\nThis command monitors one or more GitHub Actions workflow runs and displays\ntheir status in a compact, updating format. It exits with code 0 if all\nworkflows succeed, or code 1 if any fail.",
+		Notes: "Expected Output:\n  - Live progress display with status icons (✓, ✗, ◐, ○)\n  - Exit code 0 if all workflows succeed\n  - Exit code 1 if any workflow fails",
+		Examples: []string{
+			"eac pipeline wait 12345 12346 12347  # Wait for specific run IDs",
+			"eac pipeline wait --timeout 600      # Wait up to 10 minutes (default: 30 min)",
+			"eac pipeline wait --interval 5       # Poll every 5 seconds (default: 10)",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "timeout", Type: "int", Usage: "Maximum wait time in seconds (default: 1800)"},
 			{Name: "interval", Type: "int", Usage: "Poll interval in seconds (default: 10)"},

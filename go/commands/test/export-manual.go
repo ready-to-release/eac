@@ -29,7 +29,13 @@ func (c *testExportManualCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test-export-manual",
 		Short:         "Export manual test scenarios for human execution",
-		Long:          "Export manual test scenarios (tagged with @Manual) from Gherkin specifications\nfor human execution and evidence collection.\n\nThis command scans module specifications, extracts scenarios tagged with @Manual,\ngenerates stable scenario IDs, and exports them in JSON, CSV, or Markdown format.\n\nThe exported file includes scenario metadata (name, tags, steps), feature context,\nand release information for traceability.\n\nExpected Output:\n  - manual-test-scenarios.{json,csv,md} file created\n  - Scenarios validated against manual-test-export.schema.json\n  - Exit code 0 on success, non-zero on error\n\nExample:\n  test export-manual --module eac --release v1.2.0 --format json\n  test export-manual --module eac --release v1.2.0 --format csv\n  test export-manual --module eac --release v1.2.0 --format markdown",
+		Long: "Export manual test scenarios (tagged with @Manual) from Gherkin specifications\nfor human execution and evidence collection.\n\nThis command scans module specifications, extracts scenarios tagged with @Manual,\ngenerates stable scenario IDs, and exports them in JSON, CSV, or Markdown format.\n\nThe exported file includes scenario metadata (name, tags, steps), feature context,\nand release information for traceability.",
+		Notes: "Expected Output:\n  - manual-test-scenarios.{json,csv,md} file created\n  - Scenarios validated against manual-test-export.schema.json\n  - Exit code 0 on success, non-zero on error",
+		Examples: []string{
+			"eac test export-manual --module eac --release v1.2.0 --format json",
+			"eac test export-manual --module eac --release v1.2.0 --format csv",
+			"eac test export-manual --module eac --release v1.2.0 --format markdown",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module moniker to export manual tests from (required)"},
 			{Name: "release", Type: "string", Usage: "Release version being tested (required)"},

@@ -23,7 +23,8 @@ func (c *getModulesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-modules",
 		Short:         "Get module contracts with optional filtering",
-		Long:          "Expected Output:\nYAML list of all module contracts, each containing:\n  - moniker: Unique module identifier\n  - type: Module type (e.g., go, container, typescript, static)\n  - root: Root path relative to repository\n  - depends_on: List of dependency module monikers\n  - Additional metadata (books, files, etc.)\n\nFilter Examples:\n  get modules --calver --with-ci     # CalVer modules that auto-release on CI pass\n  get modules --calver --bundle      # CalVer bundle modules (release when deps change)\n  get modules --semver               # Traditional versioned modules",
+		Long: "",
+		Notes: "Expected Output:\nYAML list of all module contracts, each containing:\n  - moniker: Unique module identifier\n  - type: Module type (e.g., go, container, typescript, static)\n  - root: Root path relative to repository\n  - depends_on: List of dependency module monikers\n  - Additional metadata (books, files, etc.)\n\nFilter Examples:\n  get modules --calver --with-ci     # CalVer modules that auto-release on CI pass\n  get modules --calver --bundle      # CalVer bundle modules (release when deps change)\n  get modules --semver               # Traditional versioned modules",
 		Flags: []core.FlagSpec{
 			{Name: "calver", Type: "bool", DefaultValue: "false", Usage: "Filter to only CalVer versioned modules"},
 			{Name: "semver", Type: "bool", DefaultValue: "false", Usage: "Filter to only SemVer versioned modules"},

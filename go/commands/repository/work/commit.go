@@ -25,7 +25,14 @@ func (c *workCommitCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-commit",
 		Short:         "Commit changes with AI-generated commit messages",
-		Long:          "Commits changes in the current workspace using AI to generate semantic commit messages.\n\nBy default, commits only staged changes. Use --all to stage all changes before committing.\nUses the commit command internally to generate high-quality commit messages that follow\nproject conventions and include module-specific details.\n\nExpected Output:\n  - Git commit created with AI-generated or custom message\n\nExample:\n  work commit\n  work commit --all\n  work commit --message \"fix: resolve authentication bug\"\n  work commit -m \"feat: add new feature\"",
+		Long: "Commits changes in the current workspace using AI to generate semantic commit messages.\n\nBy default, commits only staged changes. Use --all to stage all changes before committing.\nUses the commit command internally to generate high-quality commit messages that follow\nproject conventions and include module-specific details.",
+		Notes: "Expected Output:\n  - Git commit created with AI-generated or custom message",
+		Examples: []string{
+			"eac work commit",
+			"eac work commit --all",
+			"eac work commit --message \"fix: resolve authentication bug\"",
+			"eac work commit -m \"feat: add new feature\"",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "all", Type: "bool", Shorthand: "a", DefaultValue: "false", Usage: "Stage all changes before committing"},
 			{Name: "message", Type: "string", Shorthand: "m", Usage: "Custom commit message (skips AI generation)"},

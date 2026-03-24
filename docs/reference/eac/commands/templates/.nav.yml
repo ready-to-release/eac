@@ -1,10 +1,10 @@
 title: templates
 nav:
   - index.md
-  - templates.md
-  - install.md
-  - install-ai.md
-  - install-claude.md
-  - install-docs.md
-  - install-reports.md
-  - install-specs.md
+  - "templates": templates.md
+  - "templates install": install.md
+  - "templates install-ai": install-ai.md
+  - "templates install-claude": install-claude.md
+  - "templates install-docs": install-docs.md
+  - "templates install-reports": install-reports.md
+  - "templates install-specs": install-specs.md

@@ -12,7 +12,6 @@ import (
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
 	"github.com/ready-to-release/eac/go/adapters/docker"
-	eac "github.com/ready-to-release/eac/go/adapters/eac"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/clibase/services"
@@ -61,11 +60,8 @@ func DocsFlags() []core.FlagSpec {
 		{Name: "no-browser", Type: "bool", DefaultValue: "false", Usage: "Don't open browser after starting server"},
 		{Name: "port", Shorthand: "p", Type: "int", DefaultValue: "9000", Usage: "Port number for server (auto-allocated from 9000-9999 if not specified)"},
 		{Name: "stop", Type: "bool", DefaultValue: "false", Usage: "Stop the running server"},
-		{Name: "reload", Type: "bool", DefaultValue: "false", Usage: "Force reload (auto-detects container config changes)"},
 		{Name: "debug", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
-		{Name: "rebuild", Type: "bool", DefaultValue: "false", Usage: "Force rebuild before serving"},
-		{Name: "book", Shorthand: "b", Type: "string", Usage: "Named book to serve (defaults to first 'site' book, or first book if no site)"},
-		{Name: "build-actual-site", Type: "bool", DefaultValue: "false", Usage: "Build full site before serving (disables live-reload dev mode)"},
+		{Name: "static", Type: "bool", DefaultValue: "false", Usage: "Serve pre-built site (requires 'eac build docs' first)"},
 	}
 }
 
@@ -73,15 +69,12 @@ var log = logging.C()
 
 // serveFlags holds all parsed command-line flags for the serve command.
 type serveFlags struct {
-	moduleMoniker  string
-	noBrowser      bool
-	port           int
-	stop           bool
-	reload         bool
-	debug          bool
-	rebuild        bool
-	namedBook      string
-	buildActualSite bool
+	moduleMoniker string
+	noBrowser     bool
+	port          int
+	stop          bool
+	debug         bool
+	static        bool
 }
 
 // parseServeFlags parses and validates the command-line arguments for serve.
@@ -100,12 +93,10 @@ func parseServeFlags(args []string) (*serveFlags, error) {
 			f.noBrowser = true
 		case "--stop":
 			f.stop = true
-		case "--reload":
-			f.reload = true
-		case "--rebuild":
-			f.rebuild = true
 		case "--debug":
 			f.debug = true
+		case "--static":
+			f.static = true
 		case "--port", "-p":
 			if i+1 < len(args) {
 				i++
@@ -117,20 +108,10 @@ func parseServeFlags(args []string) (*serveFlags, error) {
 			} else {
 				return nil, fmt.Errorf("--port requires a value")
 			}
-		case "--book", "-b":
-			if i+1 < len(args) {
-				i++
-				f.namedBook = args[i]
-			} else {
-				return nil, fmt.Errorf("--book requires a value")
-			}
-		case "--build-actual-site":
-			f.buildActualSite = true
 		default:
 			if strings.HasPrefix(arg, "-") {
 				return nil, fmt.Errorf("unknown flag: %s", arg)
 			}
-			// First non-flag argument is module name
 			if f.moduleMoniker == "" {
 				f.moduleMoniker = arg
 			}
@@ -161,98 +142,58 @@ func initServeServices(debug bool) (*services.Services, string, error) {
 	return svc, workspaceRoot, nil
 }
 
-// handleRunningContainer checks a running container and decides whether to restart it.
-// Returns:
-//   - shouldContinue: true if Serve should proceed to start a new container
-//   - exitCode: the exit code if shouldContinue is false (container already handled)
-//   - port: potentially updated port (preserved from running container on restart)
-func handleRunningContainer(dockerClient *DockerClient, workspaceRoot, moduleMoniker string, moduleConfig *ModuleServeConfig, f *serveFlags) (shouldContinue bool, exitCode int, port int) {
-	port = f.port
-
-	running, info, err := dockerClient.IsRunning()
-	if err != nil {
-		log.Errorf("Failed to check container status: %v", err)
-		return false, 1, port
-	}
-
-	if !running || info == nil {
-		return true, 0, port
-	}
-
-	// Check if image is stale - auto-reload if so
-	imageStale, staleReason, staleErr := dockerClient.IsImageStale(workspaceRoot)
-	if staleErr != nil {
-		imageStale = false // Assume not stale on error
-	}
-	needsRestart := f.reload || f.rebuild || imageStale
-
-	if !needsRestart {
-		log.Infof("%s server is already running", moduleMoniker)
-		log.Infof("URL: %s", info.URL)
-		if !f.noBrowser {
-			_, _ = dockerClient.OpenBrowserWithFallback(info.URL) //nolint:errcheck // best-effort browser open
-		}
-		return false, 0, port
-	}
-
-	if imageStale {
-		log.Infof("Container config changed: %s", staleReason)
-	}
-	log.Info("Reloading server...")
-
-	if port == 0 {
-		port = info.HostPort
-	}
-
-	if err := dockerClient.StopContainer(); err != nil {
-		log.Errorf("Failed to stop container: %v", err)
-		return false, 1, port
-	}
-
-	if f.rebuild {
-		if !rebuildModule(workspaceRoot, moduleMoniker, moduleConfig.ComponentName) {
-			return false, 1, port
-		}
-	}
-
-	return true, 0, port
-}
-
-// startAndReportContainer starts the Docker container and prints status info.
-// Returns 0 on success, 1 on failure.
-func startAndReportContainer(dockerClient *DockerClient, workspaceRoot string, moduleConfig *ModuleServeConfig, moduleMoniker string, port int, noBrowser, debug bool) int {
-	// Check staleness and auto-rebuild if needed
-	if !rebuildIfNeeded(workspaceRoot, moduleConfig, false, moduleConfig.ComponentName) {
+// serveStatic serves a pre-built site via nginx. Fails if the build output doesn't exist.
+func serveStatic(workspaceRoot string, moduleConfig *ModuleServeConfig, f *serveFlags) int {
+	// Verify build output exists
+	indexPath := filepath.Join(moduleConfig.ContentPath, "index.html")
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		log.Errorf("No built site found at %s", moduleConfig.ContentPath)
+		log.Error("Run 'eac build docs' first, then 'eac serve docs --static'.")
 		return 1
 	}
 
-	log.Infof("Starting %s server...", moduleMoniker)
-	info, err := dockerClient.StartContainer(workspaceRoot, moduleConfig.ContentPath, port)
+	containerName := fmt.Sprintf("cli-serve-%s", f.moduleMoniker)
+
+	dockerClient, err := NewDockerClient(containerName)
+	if err != nil {
+		log.Errorf("Failed to initialize Docker: %v", err)
+		return 1
+	}
+	defer dockerClient.Close()
+
+	// Check if already running
+	running, info, checkErr := dockerClient.IsRunning()
+	if checkErr != nil {
+		log.Errorf("Failed to check container status: %v", checkErr)
+		return 1
+	}
+	if running && info != nil {
+		log.Infof("%s static server is already running", f.moduleMoniker)
+		log.Infof("URL: %s", info.URL)
+		if !f.noBrowser {
+			_, _ = dockerClient.OpenBrowserWithFallback(info.URL)
+		}
+		return 0
+	}
+
+	log.Infof("Starting %s static server...", f.moduleMoniker)
+	info, err = dockerClient.StartContainer(workspaceRoot, moduleConfig.ContentPath, f.port)
 	if err != nil {
 		log.Errorf("Failed to start container: %v", err)
 		return 1
 	}
 
-	log.Info("")
-	log.Infof("%s server is running", moduleMoniker)
-	log.Infof("URL: %s", info.URL)
+	log.Infof("Static server running: %s", info.URL)
+	log.Infof("Stop with: eac serve %s --stop", f.moduleMoniker)
 
-	if !noBrowser {
-		_, _ = dockerClient.OpenBrowserWithFallback(info.URL) //nolint:errcheck // best-effort browser open
+	if !f.noBrowser {
+		_, _ = dockerClient.OpenBrowserWithFallback(info.URL)
 	}
-
-	if !debug {
-		log.Info("")
-		log.Infof("Stop with: eac serve %s --stop", moduleMoniker)
-	}
-
-	if debug {
-		log.Info("")
+	if f.debug {
 		log.Info("Debug mode: Streaming container logs (Press Ctrl+C to exit)")
-		_ = dockerClient.StreamLogs() //nolint:errcheck // best-effort log streaming
+		_ = dockerClient.StreamLogs()
 	}
 
-	log.Debugf("Serve completed: module=%s, url=%s", moduleMoniker, info.URL)
 	return 0
 }
 
@@ -282,42 +223,25 @@ func Serve() int {
 	}
 
 	// Resolve module configuration
-	moduleConfig, err := resolveModuleConfigFromEAC(svc.RawConfig(), workspaceRoot, f.moduleMoniker, f.namedBook)
+	moduleConfig, err := resolveModuleConfigFromEAC(svc.RawConfig(), workspaceRoot, f.moduleMoniker, "")
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	containerName := fmt.Sprintf("cli-serve-%s", f.moduleMoniker)
-
 	// Handle --stop flag
 	if f.stop {
 		devContainerName := fmt.Sprintf("cli-serve-dev-%s", f.moduleMoniker)
 		_ = handleStop(workspaceRoot, devContainerName, f.moduleMoniker)
+		containerName := fmt.Sprintf("cli-serve-%s", f.moduleMoniker)
 		return handleStop(workspaceRoot, containerName, f.moduleMoniker)
 	}
 
-	// Branch: dev mode vs build-then-serve mode
-	if !f.buildActualSite && moduleConfig.IsSite {
-		return serveDevMode(svc, f.moduleMoniker, f.port, f.noBrowser, f.debug, f.reload)
+	// Branch: --static serves pre-built output, default is live-reload dev mode
+	if f.static {
+		return serveStatic(workspaceRoot, moduleConfig, f)
 	}
-
-	// Get Docker client
-	dockerClient, err := NewDockerClient(containerName)
-	if err != nil {
-		log.Errorf("Failed to initialize Docker: %v", err)
-		return 1
-	}
-	defer dockerClient.Close()
-
-	// Handle already-running container (reload/rebuild/already-served)
-	shouldContinue, exitCode, port := handleRunningContainer(dockerClient, workspaceRoot, f.moduleMoniker, moduleConfig, f)
-	if !shouldContinue {
-		return exitCode
-	}
-
-	// Start container and report status
-	return startAndReportContainer(dockerClient, workspaceRoot, moduleConfig, f.moduleMoniker, port, f.noBrowser, f.debug)
+	return serveDevMode(svc, f.moduleMoniker, f.port, f.noBrowser, f.debug)
 }
 
 // ModuleServeConfig holds configuration for serving a module.
@@ -469,64 +393,6 @@ func getServableItems(module *config.Module) []servableItem {
 	return items
 }
 
-// rebuildModule triggers a build for the module.
-// Returns true if successful, false otherwise.
-// Optional components filter which components to build.
-func rebuildModule(workspaceRoot, moduleMoniker string, components ...string) bool {
-	log.Infof("Rebuilding %s...", moduleMoniker)
-	if err := runBuild(workspaceRoot, moduleMoniker, components...); err != nil {
-		log.Errorf("Build failed: %v", err)
-		return false
-	}
-	return true
-}
-
-// rebuildIfNeeded triggers a rebuild if forceRebuild is true or build is stale.
-// Returns true if we should continue (no build needed or build succeeded).
-// Returns false if build was needed and failed.
-// Optional components filter which components to build.
-func rebuildIfNeeded(workspaceRoot string, moduleConfig *ModuleServeConfig, forceRebuild bool, components ...string) bool {
-	if forceRebuild {
-		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker, components...)
-	}
-
-	needsBuild, reason := checkStaleness(workspaceRoot, moduleConfig)
-	if needsBuild {
-		log.Infof("Build is stale: %s", reason)
-		return rebuildModule(workspaceRoot, moduleConfig.ModuleMoniker, components...)
-	}
-	return true
-}
-
-// checkStaleness checks if the module build is stale.
-func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool, string) {
-	// Check if content directory exists
-	if _, err := os.Stat(moduleConfig.ContentPath); os.IsNotExist(err) {
-		return true, "content directory does not exist"
-	}
-
-	if moduleConfig.IsSite {
-		// For sites, check if index.html exists
-		indexPath := filepath.Join(moduleConfig.ContentPath, "index.html")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			return true, "index.html missing"
-		}
-	} else {
-		// For PDF directories, check if any PDF files exist
-		pdfs, globErr := filepath.Glob(filepath.Join(moduleConfig.ContentPath, "*.pdf"))
-		if globErr != nil || len(pdfs) == 0 {
-			return true, "no PDF files found"
-		}
-	}
-
-	// Check for UoW manifests to determine if module has been built
-	reader := coreoutput.NewReader(workspaceRoot)
-	if !reader.HasManifests(core.ActionBuild, moduleConfig.ModuleMoniker) {
-		return true, moduleConfig.ModuleMoniker + " module not built (no UoW manifests)"
-	}
-
-	return false, ""
-}
 
 // resolveComponentBuildDir finds the actual build output directory for a component.
 // Build directories use component_tool naming (e.g., "site_site" for component=site, tool=site).
@@ -548,32 +414,6 @@ func resolveComponentBuildDir(workspaceRoot, moduleMoniker, componentName string
 	return componentName
 }
 
-// runBuild executes the build command for a module.
-// Optional components filter which components to build (e.g., "site").
-func runBuild(workspaceRoot, moduleMoniker string, components ...string) error {
-	log.Debugf("Running build command: module=%s, components=%v", moduleMoniker, components)
-
-	args := []string{"build", moduleMoniker, "--no-tui"}
-	for _, c := range components {
-		if c != "" {
-			args = append(args, "--component="+c)
-		}
-	}
-
-	port := eac.New(workspaceRoot, tool.GlobalRegistry(), tool.GlobalExecutor())
-	result, err := port.Execute(context.Background(), args, &eac.ExecConfig{
-		WorkspaceRoot: workspaceRoot,
-		StdoutWriter:  os.Stdout,
-		StderrWriter:  os.Stderr,
-	})
-	if err != nil {
-		return err
-	}
-	if !result.Success() {
-		return fmt.Errorf("build command failed with exit code %d", result.ExitCode)
-	}
-	return nil
-}
 
 // handleStop stops the running server.
 func handleStop(_, containerName, moduleMoniker string) int {
@@ -640,63 +480,12 @@ func waitForServerReady(url string, timeout time.Duration) error {
 	return fmt.Errorf("server did not become ready within %v", timeout)
 }
 
-// handleRunningDevContainer checks a running dev container and decides whether to restart it.
-// Returns:
-//   - shouldContinue: true if serveDevMode should proceed to start a new container
-//   - exitCode: the exit code if shouldContinue is false
-//   - port: potentially updated port (preserved from running container on restart)
-func handleRunningDevContainer(dockerClient *DockerClient, workspaceRoot, moduleMoniker string, port int, noBrowser, reload bool) (shouldContinue bool, exitCode int, updatedPort int) {
-	updatedPort = port
-
-	running, info, err := dockerClient.IsRunning()
-	if err != nil {
-		log.Errorf("Failed to check container status: %v", err)
-		return false, 1, updatedPort
-	}
-
-	if !running || info == nil {
-		return true, 0, updatedPort
-	}
-
-	// Check if image is stale - auto-reload if so
-	imageStale, staleReason, staleErr := dockerClient.IsDevImageStale(workspaceRoot)
-	if staleErr != nil {
-		imageStale = false // Assume not stale on error
-	}
-	needsRestart := reload || imageStale
-
-	if !needsRestart {
-		log.Infof("Development server already running for %s", moduleMoniker)
-		log.Infof("URL: %s", info.URL)
-		if !noBrowser {
-			_, _ = dockerClient.OpenBrowserWithFallback(info.URL)
-		}
-		return false, 0, updatedPort
-	}
-
-	if imageStale {
-		log.Infof("Container config changed: %s", staleReason)
-	}
-	log.Info("Reloading development server...")
-
-	if updatedPort == 0 {
-		updatedPort = info.HostPort
-	}
-
-	if err := dockerClient.StopContainer(); err != nil {
-		log.Errorf("Failed to stop container: %v", err)
-		return false, 1, updatedPort
-	}
-
-	return true, 0, updatedPort
-}
-
 // startDevServerContainer starts the MkDocs dev server container and waits for it to be ready.
 // Streams container logs in real-time so build errors are immediately visible.
 // Returns the container info on success, or an error.
-func startDevServerContainer(dockerClient *DockerClient, workspaceRoot, containerName string, port int) (*docker.ServeResult, error) {
+func startDevServerContainer(dockerClient *DockerClient, workspaceRoot, stagingDir string, port int) (*docker.ServeResult, error) {
 	log.Info("Initializing container...")
-	info, err := dockerClient.StartDevServer(workspaceRoot, port)
+	info, err := dockerClient.StartDevServer(workspaceRoot, stagingDir, port)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start dev server: %v", err)
 	}
@@ -737,19 +526,29 @@ func printDevServerStatus(moduleMoniker string, url string) {
 	log.Info("")
 	log.Info("File watching uses polling (works on Windows/macOS Docker Desktop)")
 	log.Info("")
-	log.Infof("For full site build: eac serve %s --build-actual-site", moduleMoniker)
+	log.Infof("For full site build: eac serve %s --static", moduleMoniker)
 	log.Infof("Stop with: eac serve %s --stop", moduleMoniker)
 }
 
 // serveDevMode starts MkDocs in live-reload development mode.
-// This is the new default behavior - no build required.
-func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrowser, debug, reload bool) int {
+// Pre-processes command markers into a staging directory, then serves via MkDocs container.
+func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrowser, debug bool) int {
 	workspaceRoot := svc.WorkspaceRoot()
 
 	// Verify docs directory exists
 	docsPath := filepath.Join(workspaceRoot, "docs")
 	if _, err := os.Stat(docsPath); os.IsNotExist(err) {
 		log.Errorf("Error: docs directory not found: %s", docsPath)
+		return 1
+	}
+
+	// Prepare staging directory (mirror docs + expand command markers)
+	log.Info("Preparing documentation staging...")
+	stagingDir, err := PrepareDevStaging(context.Background(), workspaceRoot, moduleMoniker, func(format string, args ...any) {
+		log.Infof(format, args...)
+	})
+	if err != nil {
+		log.Errorf("Failed to prepare staging: %v", err)
 		return 1
 	}
 
@@ -772,18 +571,18 @@ func serveDevMode(svc *services.Services, moduleMoniker string, port int, noBrow
 	}
 	defer dockerClient.Close()
 
-	// Handle already-running container
-	shouldContinue, exitCode, port := handleRunningDevContainer(dockerClient, workspaceRoot, moduleMoniker, port, noBrowser, reload)
-	if !shouldContinue {
-		return exitCode
+	// Stop existing dev container if running (staging has been refreshed)
+	if running, _, _ := dockerClient.IsRunning(); running {
+		log.Info("Stopping existing dev server for refresh...")
+		_ = dockerClient.StopContainer()
 	}
 
 	// Start MkDocs dev server
-	log.Infof("Starting development server for %s...", moduleMoniker)
+	log.Info("Starting development server...")
 	log.Info("Mode: Live-reload (changes reflect immediately)")
 	log.Info("")
 
-	info, err := startDevServerContainer(dockerClient, workspaceRoot, containerName, port)
+	info, err := startDevServerContainer(dockerClient, workspaceRoot, stagingDir, port)
 	if err != nil {
 		log.Errorf("%v", err)
 		return 1

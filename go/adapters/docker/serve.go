@@ -62,6 +62,10 @@ type ServeConfig struct {
 
 	// Output is the writer for status messages (nil defaults to os.Stdout)
 	Output io.Writer
+
+	// AdditionalMounts are extra volume bind mounts (format: "host:container[:options]").
+	// These are appended to the primary ContentPath mount.
+	AdditionalMounts []string
 }
 
 // output returns the configured output writer, defaulting to os.Stdout.
@@ -155,6 +159,10 @@ func StartServe(ctx context.Context, config *ServeConfig) (*ServeResult, error) 
 
 	// Start container
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+		// Clean up the created-but-not-started container to avoid orphans
+		timeout := 0
+		_ = cli.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &timeout})
+		_ = cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true})
 		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
 
@@ -189,10 +197,9 @@ func StopServe(ctx context.Context, namePattern string) error {
 	found := false
 	for i := range containers {
 		for _, name := range containers[i].Names {
-			cleanName := strings.TrimPrefix(name, "/")
-			// Match exact name or name with port suffix
-			if cleanName == namePattern || strings.HasPrefix(cleanName, namePattern+"-") {
+			if matchesContainerName(name, namePattern) {
 				found = true
+				cleanName := strings.TrimPrefix(name, "/")
 				timeout := 10
 				if err := cli.ContainerStop(ctx, containers[i].ID, container.StopOptions{Timeout: &timeout}); err != nil {
 					return fmt.Errorf("failed to stop container %s: %w", cleanName, err)
@@ -227,23 +234,8 @@ func IsServing(ctx context.Context, namePattern string) (*ServeResult, bool, err
 
 	for i := range containers {
 		for _, name := range containers[i].Names {
-			cleanName := strings.TrimPrefix(name, "/")
-			if cleanName == namePattern || strings.HasPrefix(cleanName, namePattern+"-") {
-				// Extract port from container ports
-				var hostPort int
-				for _, p := range containers[i].Ports {
-					if p.PublicPort != 0 {
-						hostPort = int(p.PublicPort)
-						break
-					}
-				}
-
-				return &ServeResult{
-					ContainerID:   containers[i].ID,
-					ContainerName: cleanName,
-					HostPort:      hostPort,
-					URL:           fmt.Sprintf("http://localhost:%d", hostPort),
-				}, true, nil
+			if matchesContainerName(name, namePattern) {
+				return containerToServeResult(containers[i]), true, nil
 			}
 		}
 	}
@@ -310,27 +302,41 @@ func ListServing(ctx context.Context, namePattern string) ([]*ServeResult, error
 	var results []*ServeResult
 	for i := range containers {
 		for _, name := range containers[i].Names {
-			cleanName := strings.TrimPrefix(name, "/")
-			if cleanName == namePattern || strings.HasPrefix(cleanName, namePattern+"-") {
-				var hostPort int
-				for _, p := range containers[i].Ports {
-					if p.PublicPort != 0 {
-						hostPort = int(p.PublicPort)
-						break
-					}
-				}
-
-				results = append(results, &ServeResult{
-					ContainerID:   containers[i].ID,
-					ContainerName: cleanName,
-					HostPort:      hostPort,
-					URL:           fmt.Sprintf("http://localhost:%d", hostPort),
-				})
+			if matchesContainerName(name, namePattern) {
+				results = append(results, containerToServeResult(containers[i]))
 			}
 		}
 	}
 
 	return results, nil
+}
+
+// matchesContainerName checks if a container name matches the pattern.
+// Matches exact name or name with port suffix (e.g., "cli-serve-docs-9801").
+func matchesContainerName(containerName, pattern string) bool {
+	cleanName := strings.TrimPrefix(containerName, "/")
+	return cleanName == pattern || strings.HasPrefix(cleanName, pattern+"-")
+}
+
+// containerToServeResult extracts a ServeResult from a Docker container.
+func containerToServeResult(c types.Container) *ServeResult {
+	var hostPort int
+	for _, p := range c.Ports {
+		if p.PublicPort != 0 {
+			hostPort = int(p.PublicPort)
+			break
+		}
+	}
+	cleanName := ""
+	if len(c.Names) > 0 {
+		cleanName = strings.TrimPrefix(c.Names[0], "/")
+	}
+	return &ServeResult{
+		ContainerID:   c.ID,
+		ContainerName: cleanName,
+		HostPort:      hostPort,
+		URL:           fmt.Sprintf("http://localhost:%d", hostPort),
+	}
 }
 
 // createDockerClient is a variable holding the Docker client factory function.
@@ -350,20 +356,7 @@ func isContainerRunning(ctx context.Context, cli DockerClient, containerName str
 		for _, name := range containers[i].Names {
 			if strings.TrimPrefix(name, "/") == containerName {
 				if containers[i].State == "running" {
-					var hostPort int
-					for _, p := range containers[i].Ports {
-						if p.PublicPort != 0 {
-							hostPort = int(p.PublicPort)
-							break
-						}
-					}
-
-					return true, &ServeResult{
-						ContainerID:   containers[i].ID,
-						ContainerName: containerName,
-						HostPort:      hostPort,
-						URL:           fmt.Sprintf("http://localhost:%d", hostPort),
-					}, nil
+					return true, containerToServeResult(containers[i]), nil
 				}
 				return false, nil, nil
 			}
@@ -649,9 +642,10 @@ func createContainer(ctx context.Context, cli DockerClient, config *ServeConfig,
 				},
 			},
 		},
-		Binds: []string{
-			fmt.Sprintf("%s:%s", mountSource, config.ContainerPath),
-		},
+		Binds: append(
+			[]string{fmt.Sprintf("%s:%s", mountSource, config.ContainerPath)},
+			config.AdditionalMounts...,
+		),
 		RestartPolicy: container.RestartPolicy{
 			Name: container.RestartPolicyMode(restartPolicy),
 		},
@@ -685,11 +679,9 @@ func GetContainerLogs(ctx context.Context, containerNamePrefix string, tailLines
 
 	var containerID string
 	for i := range containers {
-		c := &containers[i]
-		for _, name := range c.Names {
-			cleanName := strings.TrimPrefix(name, "/")
-			if cleanName == containerNamePrefix || strings.HasPrefix(cleanName, containerNamePrefix+"-") {
-				containerID = c.ID
+		for _, name := range containers[i].Names {
+			if matchesContainerName(name, containerNamePrefix) {
+				containerID = containers[i].ID
 				break
 			}
 		}
@@ -740,11 +732,9 @@ func StreamContainerLogs(ctx context.Context, containerNamePrefix string) error 
 
 	var containerID string
 	for i := range containers {
-		c := &containers[i]
-		for _, name := range c.Names {
-			cleanName := strings.TrimPrefix(name, "/")
-			if cleanName == containerNamePrefix || strings.HasPrefix(cleanName, containerNamePrefix+"-") {
-				containerID = c.ID
+		for _, name := range containers[i].Names {
+			if matchesContainerName(name, containerNamePrefix) {
+				containerID = containers[i].ID
 				break
 			}
 		}

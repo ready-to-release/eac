@@ -1,4 +1,4 @@
-# Create pr
+# create pr
 
 <!-- book:cmd create pr -->
 
@@ -18,4 +18,4 @@ Automates PR creation with detailed descriptions.
 
 - [get squash-message](../get/squash-message.md)
 - [work merge](../work/merge.md)
-- [create Commands](../../categories/create.md)
+- [create Commands](../create/index.md)

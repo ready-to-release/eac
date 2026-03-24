@@ -76,6 +76,12 @@ func phaseResolve(ctx *ExecutionContext) error {
 
 	log.Debugf("Resolved %d modules in scope: %v", len(scopeMonikers), scopeMonikers)
 
+	// Start async dependency verification now that ModuleRegistry and scope are populated.
+	// The verifier inspects actual handler requirements for modules in scope,
+	// so only truly needed tools are checked (e.g., Python builds need "python", not "docker").
+	// Runs concurrently with phaseVerify.
+	ctx.asyncDepsResult = startAsyncDepsCheck(ctx)
+
 	return nil
 }
 

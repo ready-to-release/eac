@@ -21,7 +21,8 @@ func (c *showTriggerSummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-trigger-summary",
 		Short:         "Generate release trigger summary",
-		Long:          "The show trigger-summary command generates a formatted summary when a release workflow is triggered.\nThis command is designed to be used in GitHub Actions workflows to create consistent trigger summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.\n\nExpected Output:\n- Markdown-formatted trigger summary with workflow and property tables\n- Shows workflow name and description\n- Shows version, run IDs, branch, and commit information",
+		Long: "The show trigger-summary command generates a formatted summary when a release workflow is triggered.\nThis command is designed to be used in GitHub Actions workflows to create consistent trigger summaries.\nThe output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.",
+		Notes: "Expected Output:\n- Markdown-formatted trigger summary with workflow and property tables\n- Shows workflow name and description\n- Shows version, run IDs, branch, and commit information",
 		Flags: []core.FlagSpec{
 			{Name: "module", Type: "string", Usage: "Module name (required)"},
 			{Name: "workflow", Type: "string", Usage: "Workflow filename (required)"},

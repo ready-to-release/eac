@@ -22,7 +22,8 @@ func (c *getSpecsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-specs",
 		Short:         "Get specification files and status for a module",
-		Long:          "Expected Output:\nYAML/JSON/TOML representation of specifications including:\n  - module: Module moniker\n  - version: Version number or \"Unreleased\"\n  - spec_files: Array of specification files with status and metadata\n  - added_count: Number of added specs\n  - modified_count: Number of modified specs\n  - deleted_count: Number of deleted specs\n  - total_scenarios: Total scenario count across all specs\n\nIf version is specified, returns specs for that version.",
+		Long: "",
+		Notes: "Expected Output:\nYAML/JSON/TOML representation of specifications including:\n  - module: Module moniker\n  - version: Version number or \"Unreleased\"\n  - spec_files: Array of specification files with status and metadata\n  - added_count: Number of added specs\n  - modified_count: Number of modified specs\n  - deleted_count: Number of deleted specs\n  - total_scenarios: Total scenario count across all specs\n\nIf version is specified, returns specs for that version.",
 		Args:          "module [version]",
 	}
 }

@@ -1,16 +1,6 @@
-# Get build-times
+# get build-times
 
 <!-- book:cmd get build-times -->
-
-Returns build timing metrics parsed from UoW manifest files in `out/build/`. Provides per-module durations, pass/fail status, and aggregated statistics by module type.
-
-## Usage
-
-```bash
-eac get build-times [flags]
-```
-
-Requires a prior `eac build` run to populate timing data.
 
 ## Output Structure
 
@@ -32,13 +22,6 @@ by_type:
     total_duration_seconds: 120.0
     avg_duration_seconds: 15.0
     modules: [...]
-```
-
-## Examples
-
-```bash
-eac get build-times
-eac get build-times --as-json
 ```
 
 ## See Also

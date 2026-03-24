@@ -22,7 +22,11 @@ func (c *showDependenciesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-dependencies",
 		Short:         "Show module dependency graph in a human-readable table format",
-		Long:          "Show module dependency graph in a human-readable table format.\n\nThis command displays the dependency relationships between modules in the repository.\nThe output shows which modules depend on which other modules, helping you understand\nthe module architecture and plan changes that respect dependencies.\n\nThe table format makes it easy to see the full dependency graph at a glance.\n\nExpected Output:\n- Markdown table showing module dependencies with columns: Module, Depends On, Used By\n- Statistics table with metrics like total modules, total dependencies, root/leaf modules\n- Display order table showing modules ordered by depth, group, and declaration order\n\nExample:\n  show dependencies",
+		Long: "Show module dependency graph in a human-readable table format.\n\nThis command displays the dependency relationships between modules in the repository.\nThe output shows which modules depend on which other modules, helping you understand\nthe module architecture and plan changes that respect dependencies.\n\nThe table format makes it easy to see the full dependency graph at a glance.",
+		Notes: "Expected Output:\n- Markdown table showing module dependencies with columns: Module, Depends On, Used By\n- Statistics table with metrics like total modules, total dependencies, root/leaf modules\n- Display order table showing modules ordered by depth, group, and declaration order",
+		Examples: []string{
+			"eac show dependencies",
+		},
 	}
 }
 

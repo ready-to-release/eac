@@ -1,4 +1,4 @@
-# Get token-size
+# get token-size
 
 <!-- book:cmd get token-size -->
 
@@ -49,21 +49,21 @@ eac get token-size "go/core/**/*.go" --as-json
 
 ## Output Fields (JSON)
 
-| Field | Description |
-|-------|-------------|
-| `file_path` | Relative path to file |
-| `tokens` | Estimated token count (chars/4) |
-| `characters` | Character count |
-| `bytes` | File size in bytes |
-| `lines` | Line count |
-| `method` | Estimation method used (`char/4`) |
+| Field        | Description                       |
+| ------------ | --------------------------------- |
+| `file_path`  | Relative path to file             |
+| `tokens`     | Estimated token count (chars/4)   |
+| `characters` | Character count                   |
+| `bytes`      | File size in bytes                |
+| `lines`      | Line count                        |
+| `method`     | Estimation method used (`char/4`) |
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | No files exceed threshold (or no threshold set) |
-| 1 | One or more files exceed threshold |
+| Code | Meaning                                         |
+| ---- | ----------------------------------------------- |
+| 0    | No files exceed threshold (or no threshold set) |
+| 1    | One or more files exceed threshold              |
 
 ## See Also
 

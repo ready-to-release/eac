@@ -10,4 +10,4 @@ Reads from: `release/<module>/RELEASE-NOTES.md`
 
 - [get release-notes](../get/release-notes.md) - JSON/YAML output
 - [show changelog](./changelog.md) - Changelog
-- [show Commands](../../categories/show.md)
+- [show Commands](../show/index.md)

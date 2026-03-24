@@ -105,8 +105,8 @@ func TestParsePRConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work pr <args>)
-			os.Args = append([]string{"clie", "work", "pr"}, tt.args...)
+			// Set test args (simulate command: eac work pr <args>)
+			os.Args = append([]string{"eac", "work", "pr"}, tt.args...)
 
 			config, err := parsePRConfig()
 			if err != nil {

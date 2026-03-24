@@ -21,7 +21,13 @@ func (c *releasePruneCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-prune",
 		Short:         "Remove old pre-releases and their tags, keeping only the newest N",
-		Long:          "Prunes old pre-releases for a module, keeping only the specified number of newest releases.\n\nThis command:\n  - Lists all releases matching the module prefix (e.g., docs/*)\n  - Keeps the newest N releases (default: 3)\n  - Deletes older releases and their associated git tags\n\nUse this after successful releases to maintain a clean release history.\n\nExpected Output:\n  - Count of releases found\n  - List of releases deleted (if any)\n  - Summary of cleanup results\n\nExample:\n  release prune docs              # Keep 3 newest docs/* releases\n  release prune books --keep 5    # Keep 5 newest books/* releases\n  release prune --all --keep 3    # Prune all modules",
+		Long: "Prunes old pre-releases for a module, keeping only the specified number of newest releases.\n\nThis command:\n  - Lists all releases matching the module prefix (e.g., docs/*)\n  - Keeps the newest N releases (default: 3)\n  - Deletes older releases and their associated git tags\n\nUse this after successful releases to maintain a clean release history.",
+		Notes: "Expected Output:\n  - Count of releases found\n  - List of releases deleted (if any)\n  - Summary of cleanup results",
+		Examples: []string{
+			"eac release prune docs            # Keep 3 newest docs/* releases",
+			"eac release prune books --keep 5  # Keep 5 newest books/* releases",
+			"eac release prune --all --keep 3  # Prune all modules",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "keep", Type: "int", DefaultValue: "1", Usage: "Number of releases to keep per module"},
 			{Name: "all", Type: "bool", Usage: "Prune all modules with releases"},

@@ -1,4 +1,4 @@
-# templates install claude
+# templates install-claude
 
 <!-- book:cmd templates install claude -->
 

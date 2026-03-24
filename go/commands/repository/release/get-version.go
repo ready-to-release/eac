@@ -23,7 +23,14 @@ func (c *releaseGetVersionCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-get-version",
 		Short:         "Extract latest version from changelog",
-		Long:          "Reads the CHANGELOG.md file for a module and outputs the latest version.\n\nThis command is designed for use in CI/CD pipelines where the changelog\nis the source of truth for versioning.\n\nExpected Output:\n  - Version string (e.g., 0.0.14) by default\n  - Tag format (e.g., clie/0.0.14) if --tag flag is specified\n\nExamples:\n  release get-version clie              # Output: 0.0.14\n  release get-version docs                 # Output: 2025.12.01\n  release get-version clie --tag        # Output: clie/0.0.14\n  release get-version clie --json       # Output JSON format",
+		Long: "Reads the CHANGELOG.md file for a module and outputs the latest version.\n\nThis command is designed for use in CI/CD pipelines where the changelog\nis the source of truth for versioning.",
+		Notes: "Expected Output:\n  - Version string (e.g., 0.0.14) by default\n  - Tag format (e.g., clie/0.0.14) if --tag flag is specified",
+		Examples: []string{
+			"eac release get-version clie         # Output: 0.0.14",
+			"eac release get-version docs         # Output: 2025.12.01",
+			"eac release get-version clie --tag   # Output: clie/0.0.14",
+			"eac release get-version clie --json  # Output JSON format",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "tag", Type: "bool", Usage: "Output as git tag format (module/version)"},
 			{Name: "json", Type: "bool", Usage: "Output in JSON format"},

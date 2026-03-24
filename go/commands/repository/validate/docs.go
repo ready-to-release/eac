@@ -24,7 +24,8 @@ func (c *validateDocsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-docs",
 		Short:         "Validate documentation for obsolete references",
-		Long:          "Validates documentation files for references to obsolete or deleted configuration files.\n\nThis command helps maintain documentation accuracy by detecting references to files\nthat no longer exist in the codebase, such as module-types.yml and system-dependencies.yml.\n\nExpected Output:\n  Lists files containing obsolete references.\n  Shows line numbers and the obsolete reference found.\n  Exit code 0 if no issues, 1 if validation errors found.",
+		Long: "Validates documentation files for references to obsolete or deleted configuration files.\n\nThis command helps maintain documentation accuracy by detecting references to files\nthat no longer exist in the codebase, such as module-types.yml and system-dependencies.yml.",
+		Notes: "Expected Output:\n  Lists files containing obsolete references.\n  Shows line numbers and the obsolete reference found.\n  Exit code 0 if no issues, 1 if validation errors found.",
 	}
 }
 
@@ -252,7 +253,7 @@ func ValidateDocs() int {
 func printDocsUsage() {
 	log.Info("Validate documentation for obsolete references")
 	log.Info("")
-	log.Info("Usage: clie validate docs [docs-directory]")
+	log.Info("Usage: eac validate docs [docs-directory]")
 	log.Info("")
 	log.Info("Checks for:")
 	log.Info("  - References to deleted files (module-types.yml)")
@@ -260,8 +261,8 @@ func printDocsUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all documentation files")
-	log.Info("  clie validate docs")
+	log.Info("  eac validate docs")
 	log.Info("")
 	log.Info("  # Validate specific directory")
-	log.Info("  clie validate docs docs/reference")
+	log.Info("  eac validate docs docs/reference")
 }

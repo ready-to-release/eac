@@ -33,7 +33,8 @@ func (c *createRiskAssessCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "create-risk-assess",
 		Short:         "Create OSCAL assessment-results from existing test and security evidence",
-		Long:          "The create risk-assess command creates OSCAL assessment-results for modules\nby reading existing test results and security scan evidence. It maps @control tags in\nfeature files to OSCAL control IDs and determines satisfied/not-satisfied status.\n\nThis command does NOT run tests or scans. It only reads existing evidence.\nThe command will warn (but continue) if:\n- Evidence is missing\n- Evidence is older than max-evidence-age (default: 24h)\n\nEvidence is collected from:\n- Test results: out/test/<module>/*.json\n- Security scans: out/scan/<module>/**/*.json\n\nExpected Output:\n- OSCAL assessment-results JSON file\n- Control status (satisfied/not-satisfied) based on test results\n- Risk assessment reports in Markdown format",
+		Long: "The create risk-assess command creates OSCAL assessment-results for modules\nby reading existing test results and security scan evidence. It maps @control tags in\nfeature files to OSCAL control IDs and determines satisfied/not-satisfied status.\n\nThis command does NOT run tests or scans. It only reads existing evidence.\nThe command will warn (but continue) if:\n- Evidence is missing\n- Evidence is older than max-evidence-age (default: 24h)\n\nEvidence is collected from:\n- Test results: out/test/<module>/*.json\n- Security scans: out/scan/<module>/**/*.json",
+		Notes: "Expected Output:\n- OSCAL assessment-results JSON file\n- Control status (satisfied/not-satisfied) based on test results\n- Risk assessment reports in Markdown format",
 		Args:          "modules",
 		Flags: []core.FlagSpec{
 			{Name: "profile", Shorthand: "p", Type: "string", Required: true, Usage: "Path to OSCAL profile JSON file"},

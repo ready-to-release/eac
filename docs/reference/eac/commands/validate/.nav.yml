@@ -1,24 +1,24 @@
 title: validate
 nav:
   - index.md
-  - validate.md
-  - artifacts.md
-  - books.md
-  - config.md
-  - contracts.md
-  - control-tags.md
-  - dependabot.md
-  - dependencies.md
-  - design.md
-  - docs.md
-  - go-tidy.md
-  - markdown.md
-  - module-files.md
-  - module-hierarchy.md
-  - release.md
-  - release-version.md
-  - risk-catalog.md
-  - risk-profile.md
-  - specs.md
-  - test-tags.md
-  - version.md
+  - "validate": validate.md
+  - "validate artifacts": artifacts.md
+  - "validate books": books.md
+  - "validate config": config.md
+  - "validate contracts": contracts.md
+  - "validate control-tags": control-tags.md
+  - "validate dependabot": dependabot.md
+  - "validate dependencies": dependencies.md
+  - "validate design": design.md
+  - "validate docs": docs.md
+  - "validate go-tidy": go-tidy.md
+  - "validate markdown": markdown.md
+  - "validate module-files": module-files.md
+  - "validate module-hierarchy": module-hierarchy.md
+  - "validate release": release.md
+  - "validate release-version": release-version.md
+  - "validate risk-catalog": risk-catalog.md
+  - "validate risk-profile": risk-profile.md
+  - "validate specs": specs.md
+  - "validate test-tags": test-tags.md
+  - "validate version": version.md

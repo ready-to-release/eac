@@ -1,7 +1,7 @@
 title: serve
 nav:
   - index.md
-  - serve.md
-  - docs.md
-  - design.md
-  - gource.md
+  - "serve": serve.md
+  - "serve docs": docs.md
+  - "serve design": design.md
+  - "serve gource": gource.md

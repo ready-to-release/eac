@@ -1,9 +1,9 @@
 title: work
 nav:
   - index.md
-  - work.md
-  - commit.md
-  - create.md
-  - merge.md
-  - pull.md
-  - remove.md
+  - "work": work.md
+  - "work commit": commit.md
+  - "work create": create.md
+  - "work merge": merge.md
+  - "work pull": pull.md
+  - "work remove": remove.md

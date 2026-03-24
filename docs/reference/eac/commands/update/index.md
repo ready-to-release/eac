@@ -1,6 +1,12 @@
-# update Commands
+# Update Commands
 
-Update existing documentation and architecture diagrams.
+The **update** category contains commands for updating existing documentation and architecture diagrams.
+
+**Key Features**:
+
+- AI-powered documentation updates
+- Preserves existing structure while enhancing content
+- Integration with Structurizr workspace files
 
 ## Commands in this Category
 
@@ -19,15 +25,17 @@ Update existing documentation and architecture diagrams.
 | [update pdf-screenshots](./pdf-screenshots.md)   | Update PDF screenshots                         |
 | [update structurizr](./structurizr.md)           | Update Structurizr diagrams                    |
 
-## Quick Examples
+## Common Use Cases
+
+### Update Architecture Documentation
 
 ```bash
-# Update architecture documentation
 eac update design src-auth
 ```
 
 ## See Also
 
-- [Category Overview](../../categories/update.md)
 - [create design](../create/design.md)
+- [serve design](../serve/design.md)
+- [validate design](../validate/design.md)
 - [build Commands](../build/index.md)

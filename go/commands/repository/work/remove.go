@@ -27,7 +27,16 @@ func (c *workRemoveCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-remove",
 		Short:         "Remove workspace and optionally delete associated branches",
-		Long:          "Removes a workspace and optionally deletes the associated local and remote branches.\n\nBy default, this command:\n  1. Validates the workspace can be safely removed\n  2. Switches to main branch (if in the workspace being removed)\n  3. Removes the workspace from git tracking\n  4. Deletes the local branch\n  5. Preserves the remote branch\n  6. Informs you if the workspace folder still exists for manual deletion\n\nUse --debug to enable detailed logging to out/logs/work/.\n\nExpected Output:\n  - Workspace removed from git tracking\n  - Local branch deleted (unless --keep-branch)\n  - Information about manual folder deletion if needed\n\nExample:\n  work remove                              # Remove current workspace\n  work remove feature/old-feature          # Remove specific workspace\n  work remove --keep-branch                # Keep local branch\n  work remove --delete-remote              # Delete remote branch too\n  work remove --force                      # Remove even with uncommitted changes\n  work remove --debug                      # Enable debug logging",
+		Long: "Removes a workspace and optionally deletes the associated local and remote branches.\n\nBy default, this command:\n  1. Validates the workspace can be safely removed\n  2. Switches to main branch (if in the workspace being removed)\n  3. Removes the workspace from git tracking\n  4. Deletes the local branch\n  5. Preserves the remote branch\n  6. Informs you if the workspace folder still exists for manual deletion\n\nUse --debug to enable detailed logging to out/logs/work/.",
+		Notes: "Expected Output:\n  - Workspace removed from git tracking\n  - Local branch deleted (unless --keep-branch)\n  - Information about manual folder deletion if needed",
+		Examples: []string{
+			"eac work remove                      # Remove current workspace",
+			"eac work remove feature/old-feature  # Remove specific workspace",
+			"eac work remove --keep-branch        # Keep local branch",
+			"eac work remove --delete-remote      # Delete remote branch too",
+			"eac work remove --force              # Remove even with uncommitted changes",
+			"eac work remove --debug              # Enable debug logging",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "keep-branch", Type: "bool", DefaultValue: "false", Usage: "Keep local branch after removing workspace"},
 			{Name: "delete-remote", Type: "bool", DefaultValue: "false", Usage: "Delete remote branch as well"},

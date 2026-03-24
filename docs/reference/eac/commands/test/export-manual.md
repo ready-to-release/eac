@@ -2,8 +2,6 @@
 
 <!-- book:cmd test export-manual -->
 
-Export manual test scenarios (tagged with `@Manual`) from Gherkin specifications for human execution and evidence collection.
-
 ## Synopsis
 
 ```bash
@@ -21,12 +19,6 @@ Manual test scenarios are tests that require human verification, judgment, or in
 - Accessibility testing
 - Exploratory testing
 - Regulatory compliance testing
-
-## Flags
-
-- `--module <moniker>` (required) - Module moniker to export manual tests from
-- `--release <version>` (required) - Release version being tested
-- `--format <format>` - Export format: `json`, `csv`, `markdown` (default: `json`)
 
 ## Output
 
@@ -83,6 +75,7 @@ eac-commands/feature1/manual-test-scenario,eac-commands_feature1,Manual test sce
 Human-readable format with H2 sections per scenario:
 
 ```markdown
+
 # Manual Test Scenarios
 
 **Module**: eac-commands
@@ -138,32 +131,6 @@ JSON exports are automatically validated against the schema:
 - Minimum 1 scenario
 - All scenario fields present
 
-## Examples
-
-### Export as JSON
-
-```bash
-eac test export-manual --module eac-commands --release v1.2.0
-```
-
-Output: `manual-test-scenarios.json` in current directory
-
-### Export as CSV
-
-```bash
-eac test export-manual --module eac-commands --release v1.2.0 --format csv
-```
-
-Output: `manual-test-scenarios.csv`
-
-### Export as Markdown
-
-```bash
-eac test export-manual --module eac-commands --release v1.2.0 --format markdown
-```
-
-Output: `manual-test-scenarios.md`
-
 ## Error Conditions
 
 | Exit Code | Condition                             |
@@ -190,4 +157,4 @@ This command is the first step in the manual testing workflow:
 - [test import-manual](./import-manual.md) - Import manual test results
 - [test merge-results](./merge-results.md) - Merge results into manifest
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide
-- [test Commands](../../categories/test.md)
+- [test Commands](../test/index.md)

@@ -1,14 +1,6 @@
-# Validate dependencies
+# validate dependencies
 
 <!-- book:cmd validate dependencies -->
-
-Validates that actual dependencies in `go.mod` files match the dependencies declared in module contracts. Helps ensure consistency between contract definitions and implementation.
-
-## Usage
-
-```bash
-eac validate dependencies
-```
 
 ## What It Checks
 
@@ -16,12 +8,6 @@ eac validate dependencies
 - Builds a dependency graph from all `go.mod` files (excluding `out/`, `vendor/`, `.git/`, `node_modules/`, `tools/`, `templates/`).
 - Compares the actual Go module dependencies against declared contract dependencies.
 - Reports extra or missing dependencies.
-
-## Examples
-
-```bash
-eac validate dependencies
-```
 
 ## Common Errors
 

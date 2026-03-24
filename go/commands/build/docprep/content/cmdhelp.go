@@ -17,23 +17,6 @@ import (
 // ErrCommandNotFound indicates a command marker references a non-existent command.
 var ErrCommandNotFound = errors.New("command not found")
 
-// CommandHelp represents parsed help output for a command.
-type CommandHelp struct {
-	Name        string
-	Description string
-	Usage       string
-	Arguments   []FlagArg
-	Flags       []FlagArg
-	Notes       string
-	Examples    string
-}
-
-// FlagArg represents a flag or argument with description.
-type FlagArg struct {
-	Name        string
-	Description string
-}
-
 // CommandInfo represents a command from get valid-commands.
 type CommandInfo struct {
 	Command     string `yaml:"command"`
@@ -46,9 +29,6 @@ type CategoryStats struct {
 	Description  string
 	CommandCount int
 }
-
-// flagSplitPattern splits flag lines on 2+ spaces.
-var flagSplitPattern = regexp.MustCompile(`\s{2,}`)
 
 // cmdMarkerPatterns matches command markers in markdown.
 var cmdMarkerPatterns = map[string]*regexp.Regexp{

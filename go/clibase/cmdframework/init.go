@@ -226,10 +226,9 @@ func phaseInitDeferred(ctx *ExecutionContext) error {
 	}
 	ctx.AddCleanup(func() { logging.CloseLogging() })
 
-	// Start async dependency verification (e.g., `docker info`) in background.
-	// This overlaps with module resolution and change detection (~1-3s),
-	// hiding the Docker check latency (~100-500ms) from the critical path.
-	ctx.asyncDepsResult = startAsyncDepsCheck(ctx)
+	// NOTE: Async dependency verification is started at end of phaseResolve (after
+	// ModuleRegistry and scope are populated) so the verifier can inspect actual
+	// handler requirements instead of falling back to bootstrap tools.
 
 	log.Debugf("%s logging configured: debugMode=%v, useTUI=%v",
 		ctx.Config.ActionVerb(), ctx.Config.DebugMode, ctx.Config.UseTUI)

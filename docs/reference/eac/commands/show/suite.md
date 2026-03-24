@@ -1,20 +1,6 @@
-# Show Suite
+# show suite
 
 <!-- book:cmd show suite -->
-
-Displays detailed information about a specific test suite, including selection criteria, all production tests with metadata, and summary statistics.
-
-## Usage
-
-```bash
-eac show suite <suite-moniker>
-```
-
-## Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `<suite-moniker>` | Test suite identifier (required). Available suites listed on error. |
 
 ## Output Sections
 
@@ -24,16 +10,6 @@ eac show suite <suite-moniker>
 4. **Statistics** - Counts by Type (e.g., gherkin, gotest), counts by Module, and aggregated system and module dependencies.
 
 Validation warnings are printed to stderr if any tests have issues. Framework tests are excluded from the display.
-
-## Examples
-
-```bash
-# Show the unit test suite
-eac show suite unit
-
-# Show the integration test suite
-eac show suite integration
-```
 
 ## See Also
 

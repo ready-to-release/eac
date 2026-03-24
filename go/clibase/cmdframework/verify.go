@@ -2,6 +2,7 @@ package cmdframework
 
 import (
 	"os"
+	"sort"
 	"strings"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
@@ -10,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/environments"
 	"github.com/ready-to-release/eac/go/core/logging"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -149,6 +151,38 @@ func SetArtifactValidator(v ArtifactValidator) {
 // SetUoWCountProvider sets the global UoW count provider function.
 func SetUoWCountProvider(p UoWCountProvider) {
 	uowCountProvider = p
+}
+
+// VerifyDeps takes a set of required tool names, filters for platform support,
+// verifies availability via the tool registry, and returns a populated DepsStatus.
+// Use this from command-specific deps verifiers after collecting requirements into depsMap.
+func VerifyDeps(depsMap map[string]bool) *initsummary.DepsStatus {
+	status := &initsummary.DepsStatus{Verified: true}
+	if len(depsMap) == 0 {
+		return status
+	}
+
+	deps := make([]string, 0, len(depsMap))
+	for dep := range depsMap {
+		deps = append(deps, dep)
+	}
+	sort.Strings(deps)
+
+	deps = tool.FilterPlatformSupported(deps)
+	status.Required = deps
+
+	results := tool.GlobalRegistry().VerifyAll(deps)
+	for _, result := range results {
+		status.Available = append(status.Available, initsummary.DepsResult{
+			Name:      result.ToolID,
+			Available: result.Available,
+			Version:   result.Version,
+		})
+		if !result.Available {
+			status.Missing = append(status.Missing, result.ToolID)
+		}
+	}
+	return status
 }
 
 // displayInitSummary outputs the initialization summary to console.

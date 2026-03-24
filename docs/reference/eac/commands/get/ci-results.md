@@ -1,34 +1,6 @@
-# Get ci-results
+# get ci-results
 
 <!-- book:cmd get ci-results -->
-
-Returns CI workflow run results from GitHub Actions, including job details, artifacts, and diagnostic links. Queries are enriched with job-level durations and downloadable artifact info.
-
-## Usage
-
-```bash
-eac get ci-results [sha-or-run-id] [module...] [flags]
-```
-
-## Arguments
-
-The first positional argument is auto-classified:
-
-| Input | Detection |
-|-------|-----------|
-| 40-char hex or 7+ hex prefix | Commit SHA |
-| Numeric value | GitHub Actions run ID |
-| Omitted | Auto-detect (GITHUB_SHA, origin/main, or HEAD) |
-
-Remaining positional arguments filter to specific modules.
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--as-yaml` | bool | Output as YAML (default) |
-| `--as-json` | bool | Output as JSON |
-| `--as-toml` | bool | Output as TOML |
 
 ## Output Structure
 
@@ -64,23 +36,3 @@ total_runs: 5
 passed: 4
 failed: 1
 ```
-
-## Examples
-
-```bash
-# Current HEAD
-eac get ci-results
-
-# Specific commit
-eac get ci-results abc1234
-
-# Specific modules at a commit
-eac get ci-results abc1234 core clibase
-
-# Specific run ID
-eac get ci-results 12345678
-
-# JSON output
-eac get ci-results --as-json
-```
-

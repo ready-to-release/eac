@@ -24,7 +24,12 @@ func (c *testImportManualCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "test-import-manual",
 		Short:         "Import manual test results for a module release",
-		Long:          "Import manual test results from a JSON file and validate against schemas,\nexported scenarios, and repository configuration.\n\nThis command validates manual test results, checks for conflicts, and stores\nthem in the repository for later merging into test manifests.\n\nValidation includes:\n- JSON schema compliance\n- Release version matching\n- Module validation\n- Scenario ID cross-validation against exports\n- Conflict detection (existing results)\n\nExpected Output:\n  - Results stored in test-results/<module>/<version>/manual-results.json\n  - Exit code 0 on success, non-zero on error\n\nExample:\n  test import-manual --input results.json --release v1.2.0\n  test import-manual --input results.json --release v1.2.0 --force",
+		Long: "Import manual test results from a JSON file and validate against schemas,\nexported scenarios, and repository configuration.\n\nThis command validates manual test results, checks for conflicts, and stores\nthem in the repository for later merging into test manifests.\n\nValidation includes:\n- JSON schema compliance\n- Release version matching\n- Module validation\n- Scenario ID cross-validation against exports\n- Conflict detection (existing results)",
+		Notes: "Expected Output:\n  - Results stored in test-results/<module>/<version>/manual-results.json\n  - Exit code 0 on success, non-zero on error",
+		Examples: []string{
+			"eac test import-manual --input results.json --release v1.2.0",
+			"eac test import-manual --input results.json --release v1.2.0 --force",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "input", Type: "string", Usage: "Path to manual test results JSON file (required)"},
 			{Name: "release", Type: "string", Usage: "Release version being tested (required)"},

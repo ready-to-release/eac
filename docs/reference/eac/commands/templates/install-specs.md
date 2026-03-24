@@ -1,4 +1,4 @@
-# templates install specs
+# templates install-specs
 
 <!-- book:cmd templates install specs -->
 
@@ -19,4 +19,4 @@ Install specification templates for compliance testing:
 
 - [create spec](../create/spec.md) - AI specification generation
 
-- [templates Commands](../../categories/templates.md)
+- [templates Commands](../templates/index.md)

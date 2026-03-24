@@ -1,20 +1,6 @@
-# Show Config
+# show config
 
 <!-- book:cmd show config -->
-
-Displays all loaded EAC repository configurations with defaults applied, including modules, component types, environments, and testing configuration.
-
-## Usage
-
-```bash
-eac show config [flags]
-```
-
-## Flags
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--verbose`, `-v` | bool | Show all config source files with layers and value counts |
 
 ## Output Sections
 
@@ -27,16 +13,6 @@ eac show config [flags]
 7. **Test Suites** - Table with columns: Moniker, Name, Description.
 
 With `--verbose`, an additional **Configuration Sources** section appears first, showing layered config files (contract, user, personal) with their load status and value counts.
-
-## Examples
-
-```bash
-# Show config summary
-eac show config
-
-# Show config with source file details
-eac show config --verbose
-```
 
 ## See Also
 

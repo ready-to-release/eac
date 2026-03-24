@@ -1,8 +1,6 @@
+# release prune-packages
+
 <!-- book:cmd release prune-packages -->
-
-# prune-packages
-
-Remove old container image versions from GitHub Container Registry (GHCR), keeping the newest N versions while protecting released packages.
 
 ## Synopsis
 
@@ -32,16 +30,6 @@ The `prune-packages` command cleans up old container image versions from GHCR. I
 
 To manually delete a released package, use the GitHub UI or `gh api` directly.
 
-## Flags
-
-| Flag        | Type | Description                                                   |
-| ----------- | ---- | ------------------------------------------------------------- |
-| `--keep`    | int  | Override the number of versions to keep (default from config) |
-| `--all`     | bool | Prune all configured packages                                 |
-| `--force`   | bool | Actually delete versions (default is dry-run)                 |
-| `--verbose` | bool | Show protected versions with reasons                          |
-| `--json`    | bool | Output results in JSON format                                 |
-
 ## Configuration
 
 Configure in `.eac/repository.yml`:
@@ -69,70 +57,6 @@ registries:
         tag_format: "{module}/{version}"  # e.g., eac-ext/1.0.0
 ```
 
-## Examples
-
-### Dry-run (default)
-
-Show what would be deleted without actually deleting:
-
-```bash
-eac release prune-packages eac-ext
-```
-
-Output:
-
-```text
-Processing package: eac-ext
-  Total versions: 45
-  Protected: 12
-  Prunable: 33 (keeping 10)
-  Versions to delete: 23
-  Would delete: sha256:abc12345 [sha-abc1234]
-  Would delete: sha256:def67890 [sha-def6789]
-  ...
-DRY RUN complete. Would delete 23 versions.
-Use --force to actually delete.
-```
-
-### Actually delete
-
-```bash
-eac release prune-packages eac-ext --force
-```
-
-### Prune all packages
-
-```bash
-eac release prune-packages --all --force
-```
-
-### Override keep count
-
-```bash
-eac release prune-packages eac-ext --keep 5 --force
-```
-
-### Show protected versions
-
-```bash
-eac release prune-packages eac-ext --verbose
-```
-
-Output includes:
-
-```text
-Protected versions:
-  - sha256:123abc [v1.0.0]: tag matches preserve pattern
-  - sha256:456def [eac-ext/2.0.0]: associated with GitHub release
-  - sha256:789ghi [sha-recent]: created less than min_age_days ago
-```
-
-### JSON output
-
-```bash
-eac release prune-packages eac-ext --json
-```
-
 ## Understanding Tags
 
 This command works with two different types of tags:
@@ -140,7 +64,7 @@ This command works with two different types of tags:
 | Type             | Source                          | Examples                          | Purpose                            |
 | ---------------- | ------------------------------- | --------------------------------- | ---------------------------------- |
 | **Image Tags**   | Container registry (OCI/Docker) | `sha-abc1234`, `v1.0.0`, `latest` | Identify specific container images |
-| **Release Tags** | GitHub Releases API             | `eac-ext/1.0.0`, `clie/2.0.0`  | Mark official releases             |
+| **Release Tags** | GitHub Releases API             | `eac-ext/1.0.0`, `clie/2.0.0`     | Mark official releases             |
 
 The `image_tags` configuration controls which container image tags to preserve or prune.
 The `github_releases` configuration correlates container images with GitHub Releases.

@@ -27,7 +27,11 @@ func (c *validateControlTagsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-control-tags",
 		Short:         "Validate @control tags against OSCAL catalog",
-		Long:          "Validates that all @control and @controls tags in feature files reference\nvalid control IDs from the OSCAL catalog.\n\nThis ensures:\n  - Control IDs use correct format (e.g., ac-2, au-3(1))\n  - Control IDs exist in the OSCAL catalog\n  - Evidence collection can find these controls during assessment\n\nThe validation:\n  - Discovers all Gherkin feature files in the repository\n  - Extracts all @control: and @controls: tags\n  - Loads the OSCAL catalog from templates/specs/risk-catalog/\n  - Checks that each control ID exists in the catalog\n  - Reports invalid or missing control IDs with file locations\n\nExpected Output:\n  Displays invalid or missing control IDs with file locations (path:line).\n  Groups errors by control ID. Exit code 0 if all tags valid, 1 if invalid tags found.\n\nExample:\n  validate control-tags",
+		Long: "Validates that all @control and @controls tags in feature files reference\nvalid control IDs from the OSCAL catalog.\n\nThis ensures:\n  - Control IDs use correct format (e.g., ac-2, au-3(1))\n  - Control IDs exist in the OSCAL catalog\n  - Evidence collection can find these controls during assessment\n\nThe validation:\n  - Discovers all Gherkin feature files in the repository\n  - Extracts all @control: and @controls: tags\n  - Loads the OSCAL catalog from templates/specs/risk-catalog/\n  - Checks that each control ID exists in the catalog\n  - Reports invalid or missing control IDs with file locations",
+		Notes: "Expected Output:\n  Displays invalid or missing control IDs with file locations (path:line).\n  Groups errors by control ID. Exit code 0 if all tags valid, 1 if invalid tags found.",
+		Examples: []string{
+			"eac validate control-tags",
+		},
 	}
 }
 

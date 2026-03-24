@@ -26,4 +26,3 @@ eac build clie
 
 - [get build-deps](../get/build-deps.md) - Build dependencies
 - [show artifacts](../show/artifacts.md) - Verify artifacts
-- [build Commands](../../categories/build.md)

@@ -2,8 +2,6 @@
 
 <!-- book:cmd test merge-results -->
 
-Merge manual test results from `test-results/<module>/<version>/manual-results.json` into the test output at `out/test/<module>/`.
-
 ## Synopsis
 
 ```bash
@@ -15,11 +13,6 @@ test merge-results --module <module> --version <version>
 Transforms manual test results into test entries and writes them as a UoW manifest with a `manual-tests.json` artifact. If a manual UoW already exists, it is replaced with the new results.
 
 This command integrates manual test results into the same UoW-based output structure used for automated tests, providing a unified view of all test results across automated and manual testing efforts.
-
-## Flags
-
-- `--module <moniker>` (required) - Module moniker to merge results for
-- `--version <version>` (required) - Release version
 
 ## Input
 
@@ -73,60 +66,34 @@ Each `ManualTestResult` becomes a `TestEntry` in the manifest:
 
 ### Field Mappings
 
-| Source Field          | Target Field   | Transformation                           |
-| --------------------- | -------------- | ---------------------------------------- |
-| scenario_id           | name           | Extract last path component              |
-| status                | status         | Direct copy (passed/failed/skipped)      |
-| duration_seconds      | duration_ms    | Convert seconds to milliseconds          |
-| error                 | error          | Direct copy (if present)                 |
-| notes                 | (not stored)   | Not preserved in manifest                |
-| evidence              | (not stored)   | Not preserved in manifest                |
-| -                     | package        | Set to "manual"                          |
-| -                     | type           | Set to "manual"                          |
-| -                     | suite          | Set to "manual"                          |
-| -                     | tags           | Empty array                              |
-| -                     | file_path      | Empty string                             |
+| Source Field     | Target Field | Transformation                      |
+| ---------------- | ------------ | ----------------------------------- |
+| scenario_id      | name         | Extract last path component         |
+| status           | status       | Direct copy (passed/failed/skipped) |
+| duration_seconds | duration_ms  | Convert seconds to milliseconds     |
+| error            | error        | Direct copy (if present)            |
+| notes            | (not stored) | Not preserved in manifest           |
+| evidence         | (not stored) | Not preserved in manifest           |
+| -                | package      | Set to "manual"                     |
+| -                | type         | Set to "manual"                     |
+| -                | suite        | Set to "manual"                     |
+| -                | tags         | Empty array                         |
+| -                | file_path    | Empty string                        |
 
 ## UoW Manifest Output
 
 The command writes a UoW manifest at `out/test/<module>/manual-merge/uow.manifest.json` with a `manual-tests.json` artifact containing the manual test entries. The `testview` aggregation system reads this alongside automated test UoW manifests to provide unified test summaries.
 
-## Examples
-
-### Merge Manual Test Results
-
-```bash
-eac test merge-results --module eac-commands --version v1.2.0
-```
-
-Output:
-
-```text
-Merged manual test results for eac-commands v1.2.0
-  Location: out/test/eac-commands/manual-merge/
-  Manual tests: 5 passed, 1 failed, 0 skipped
-```
-
-### Verify Merged Results
-
-```bash
-# View test summary
-eac show test-summary eac-commands
-
-# View manual suite details
-eac show suite manual --module eac-commands
-```
-
 ## Error Conditions
 
-| Exit Code | Condition                                   |
-| --------- | ------------------------------------------- |
-| 1         | Module flag missing                         |
-| 1         | Version flag missing                        |
-| 1         | Manual results file not found               |
-| 1         | Invalid JSON in results file                |
-| 1         | Unknown module                              |
-| 1         | Invalid version format                      |
+| Exit Code | Condition                     |
+| --------- | ----------------------------- |
+| 1         | Module flag missing           |
+| 1         | Version flag missing          |
+| 1         | Manual results file not found |
+| 1         | Invalid JSON in results file  |
+| 1         | Unknown module                |
+| 1         | Invalid version format        |
 
 ## Version Format Validation
 
@@ -308,4 +275,4 @@ invalid version format: version must be in semver (v1.2.3) or calver (v2024.01.1
 - [test import-manual](./import-manual.md) - Import manual test results
 - [show test-summary](../show/test-summary.md) - View aggregated results
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide
-- [test Commands](../../categories/test.md)
+- [test Commands](../test/index.md)

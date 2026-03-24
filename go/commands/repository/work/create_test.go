@@ -64,8 +64,8 @@ func TestParseCreateConfig(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			// Set test args (simulate command: clie work create <args>)
-			os.Args = append([]string{"clie", "work", "create"}, tt.args...)
+			// Set test args (simulate command: eac work create <args>)
+			os.Args = append([]string{"eac", "work", "create"}, tt.args...)
 
 			config, err := parseCreateConfig()
 

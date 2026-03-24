@@ -28,23 +28,8 @@ func (c *getEvidenceCIRunsCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-evidence-ci-runs",
 		Short:         "Get CI run IDs for a module and its dependencies (for evidence building)",
-		Long: "Returns a list of {module, workflow, run_id} for downloading test/scan artifacts.\n" +
-			"Uses per-module change detection to find the appropriate CI run for each dependency.\n" +
-			"Fails if any dependency with a ci-{module}.yaml workflow has no successful CI.\n" +
-			"\n" +
-			"Expected Output:\n" +
-			"YAML/JSON list of CI runs containing:\n" +
-			"  - module: the dependency module moniker\n" +
-			"  - workflow: the ci-{module}.yaml workflow name\n" +
-			"  - run_id: the GitHub Actions run ID to download artifacts from\n" +
-			"\n" +
-			"Example usage in CI:\n" +
-			"  CI_RUNS=$(commands get evidence-ci-runs clie --format json)\n" +
-			"  echo \"$CI_RUNS\" | jq -c '.[]' | while read entry; do\n" +
-			"    module=$(echo \"$entry\" | jq -r '.module')\n" +
-			"    run_id=$(echo \"$entry\" | jq -r '.run_id')\n" +
-			"    gh run download \"$run_id\" --pattern \"test-results-${module}*\"\n" +
-			"  done",
+		Long: "Returns a list of {module, workflow, run_id} for downloading test/scan artifacts.\nUses per-module change detection to find the appropriate CI run for each dependency.\nFails if any dependency with a ci-{module}.yaml workflow has no successful CI.",
+		Notes: "Expected Output:\nYAML/JSON list of CI runs containing:\n  - module: the dependency module moniker\n  - workflow: the ci-{module}.yaml workflow name\n  - run_id: the GitHub Actions run ID to download artifacts from\n\nExample usage in CI:\n  CI_RUNS=$(commands get evidence-ci-runs clie --format json)\n  echo \"$CI_RUNS\" | jq -c '.[]' | while read entry; do\n    module=$(echo \"$entry\" | jq -r '.module')\n    run_id=$(echo \"$entry\" | jq -r '.run_id')\n    gh run download \"$run_id\" --pattern \"test-results-${module}*\"\n  done",
 		Args: "module (required) - Module moniker to get evidence CI runs for",
 		Flags: []core.FlagSpec{
 			{Name: "format", Type: "string", Usage: "Output format (json outputs JSON array for shell parsing; otherwise uses standard get command formats)"},

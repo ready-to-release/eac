@@ -26,9 +26,9 @@ func PrintHelp(w io.Writer, cmd core.CommandPort, reg core.CommandRegistryPort) 
 
 	// Print usage
 	if meta.IsParent {
-		fmt.Fprintf(w, "Usage: clie %s <subcommand> [args...]\n", cmd.Name())
+		fmt.Fprintf(w, "Usage: eac %s <subcommand> [args...]\n", cmd.Name())
 	} else {
-		fmt.Fprintf(w, "Usage: clie %s [flags]\n", cmd.Name())
+		fmt.Fprintf(w, "Usage: eac %s [flags]\n", cmd.Name())
 	}
 	fmt.Fprintln(w)
 
@@ -105,6 +105,6 @@ func PrintHelp(w io.Writer, cmd core.CommandPort, reg core.CommandRegistryPort) 
 
 	// Print footer for parent commands
 	if meta.IsParent {
-		fmt.Fprintf(w, "Use 'clie %s <subcommand> --help' for more information about a command.\n", cmd.Name())
+		fmt.Fprintf(w, "Use 'eac %s <subcommand> --help' for more information about a command.\n", cmd.Name())
 	}
 }

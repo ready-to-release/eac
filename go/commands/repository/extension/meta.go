@@ -30,7 +30,8 @@ func (c *extensionMetaCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "extension-meta",
 		Short:         "Output extension metadata for clie CLI",
-		Long:          "Outputs YAML-formatted metadata describing the extension's capabilities,\ncommands, requirements, and configuration for integration with the clie CLI.\nThis command is used by clie CLI to discover and configure extensions.\n\nExpected Output:\n  - YAML-formatted metadata describing extension capabilities\n  - Commands, requirements, and configuration for clie CLI integration",
+		Long: "Outputs YAML-formatted metadata describing the extension's capabilities,\ncommands, requirements, and configuration for integration with the clie CLI.\nThis command is used by clie CLI to discover and configure extensions.",
+		Notes: "Expected Output:\n  - YAML-formatted metadata describing extension capabilities\n  - Commands, requirements, and configuration for clie CLI integration",
 	}
 }
 

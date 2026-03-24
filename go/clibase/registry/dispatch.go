@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -62,5 +63,8 @@ func (r *CommandRegistry) Subcommands(parentName string) []core.CommandPort {
 			}
 		}
 	}
+	slices.SortFunc(result, func(a, b core.CommandPort) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
 	return result
 }

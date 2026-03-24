@@ -21,7 +21,11 @@ func (c *validateDependenciesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "validate-dependencies",
 		Short:         "Validate module dependencies from go.mod files against contracts",
-		Long:          "Validate module dependencies from go.mod files against domain.\n\nThis command checks that actual dependencies in go.mod files match the dependencies\ndeclared in module domain. It helps ensure consistency between contract definitions\nand actual implementation dependencies.\n\nValidation failures indicate mismatches that should be resolved by either updating\nthe contract or fixing the go.mod file.\n\nExpected Output:\n  Displays mismatches between module contracts and actual go.mod dependencies.\n  Shows modules with extra or missing dependencies. Exit code 0 if all match, 1 if discrepancies found.\n\nExample:\n  validate dependencies",
+		Long: "Validate module dependencies from go.mod files against domain.\n\nThis command checks that actual dependencies in go.mod files match the dependencies\ndeclared in module domain. It helps ensure consistency between contract definitions\nand actual implementation dependencies.\n\nValidation failures indicate mismatches that should be resolved by either updating\nthe contract or fixing the go.mod file.",
+		Notes: "Expected Output:\n  Displays mismatches between module contracts and actual go.mod dependencies.\n  Shows modules with extra or missing dependencies. Exit code 0 if all match, 1 if discrepancies found.",
+		Examples: []string{
+			"eac validate dependencies",
+		},
 	}
 }
 

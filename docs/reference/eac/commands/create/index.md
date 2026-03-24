@@ -1,6 +1,6 @@
-# create Commands
+# Create Commands
 
-AI-powered content generation commands for creating commits, specifications, PRs, and documentation.
+The **create** category contains commands for AI-powered content generation and documentation creation.
 
 ## Commands in this Category
 
@@ -12,17 +12,64 @@ AI-powered content generation commands for creating commits, specifications, PRs
 | [create risk-profile](./risk-profile.md)     | Create OSCAL profile from risk assessment             |
 | [create risk-assess](./risk-assess.md)       | Update OSCAL assessment-results with evidence         |
 
-## Quick Examples
+## How AI Generation Works
+
+All create commands use structured AI generation with format-specific validation:
+
+### Supported Output Formats
+
+Each command generates content in a specific structured format:
+
+| Command          | Output Format                    | Validation                                      |
+| ---------------- | -------------------------------- | ----------------------------------------------- |
+| `commit-message` | Plaintext (conventional commits) | Format validation and retry                     |
+| `spec`           | Gherkin (.feature files)         | Syntax, step definitions, and quality standards |
+| `design`         | Structurizr DSL (workspace.dsl)  | DSL syntax validation via Structurizr CLI       |
+| `pr`             | Markdown (GitHub PR format)      | Format validation and retry                     |
+| `risk-profile`   | OSCAL Profile JSON               | JSON schema validation                          |
+| `risk-assess`    | OSCAL Assessment Results JSON    | JSON schema validation                          |
+| `squash-message` | Plaintext (commit messages)      | Format validation and retry                     |
+
+### Generation Process
+
+1. **AI Generation**: AI generates content following the specified output format
+2. **Validation**: Output is validated against format-specific rules (syntax, schema, standards)
+3. **Automatic Retry**: If validation fails, AI receives error feedback and regenerates improved output
+4. **Quality Assurance**: Validated output is ready to use without manual syntax corrections
+
+This architecture ensures all generated content is syntactically correct and follows best practices.
+
+## Common Use Cases
+
+**Pull Request Creation**:
 
 ```bash
-# Create pull request
 eac create pr
-
-# Generate specification
-eac create spec "User can login"
 ```
+
+**Specification Generation**:
+
+```bash
+eac create spec "User can login with email and password"
+```
+
+**Architecture Documentation**:
+
+```bash
+eac create design src-auth
+```
+
+## Key Features
+
+- AI-powered content generation using configured providers
+- Integration with Git workflows
+- BDD specification support
+- OSCAL compliance documentation
+- Architecture diagram generation
 
 ## See Also
 
-- [Category Overview](../../categories/create.md)
+- [AI Configuration](../init/init.md)
+- [update Commands](../update/index.md)
+- [templates Commands](../templates/index.md)
 - [Command Reference Index](../index.md)

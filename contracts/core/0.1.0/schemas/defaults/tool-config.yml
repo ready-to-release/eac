@@ -594,7 +594,7 @@ container-tools:
   structurizr-lite:
     description: "Structurizr diagram server"
     image: structurizr/lite
-    tag: "2025.11.09"
+    tag: "2025.11.08"
     mounts:
       - source: "{content}"
         target: /usr/local/structurizr

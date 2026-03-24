@@ -25,7 +25,13 @@ func (c *releaseCheckCICommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "release-check-ci",
 		Short:         "Check CI status for a commit before releasing",
-		Long:          "Waits for a successful CI workflow run on a specific commit.\n\nThis command polls GitHub Actions to verify that a CI workflow has\ncompleted successfully for the given commit SHA. It's used by release\nworkflows to ensure code is tested before releasing.\n\nExpected Output:\n  - Exit code 0 if CI workflow succeeded\n  - Exit code 1 if CI workflow failed or timeout occurred\n\nExit codes:\n  0 - CI workflow succeeded\n  1 - CI workflow failed or timeout\n\nExample:\n  release check-ci --workflow ci-clie.yaml --commit abc123\n  release check-ci --workflow ci-eac-ext.yaml --commit abc123 --timeout 600\n  release check-ci --workflow ci-clie.yaml --commit abc123 --strict",
+		Long: "Waits for a successful CI workflow run on a specific commit.\n\nThis command polls GitHub Actions to verify that a CI workflow has\ncompleted successfully for the given commit SHA. It's used by release\nworkflows to ensure code is tested before releasing.",
+		Notes: "Expected Output:\n  - Exit code 0 if CI workflow succeeded\n  - Exit code 1 if CI workflow failed or timeout occurred\n\nExit codes:\n  0 - CI workflow succeeded\n  1 - CI workflow failed or timeout",
+		Examples: []string{
+			"eac release check-ci --workflow ci-clie.yaml --commit abc123",
+			"eac release check-ci --workflow ci-eac-ext.yaml --commit abc123 --timeout 600",
+			"eac release check-ci --workflow ci-clie.yaml --commit abc123 --strict",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "workflow", Type: "string", Usage: "CI workflow filename (e.g., ci-clie.yaml)"},
 			{Name: "commit", Type: "string", Usage: "Commit SHA to check"},

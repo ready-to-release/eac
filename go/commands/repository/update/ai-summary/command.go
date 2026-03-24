@@ -34,7 +34,13 @@ func (c *updateAISummaryCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "update-ai-summary",
 		Short:         "Generate AI-powered analysis summaries for modules",
-		Long:          "Analyzes modules using AI to generate comprehensive status summaries.\nThe analysis covers architecture (DSL), specifications (Gherkin),\nsource code, and documentation. Each analysis type produces a\nseparate status file in the output directory.\n\nAnalysis types:\n  - ai-dsl: Analyzes Structurizr DSL architecture files\n  - ai-specs: Analyzes Gherkin BDD specifications\n  - ai-source: Analyzes source code (depends on dsl and specs)\n  - ai-docs: Analyzes documentation files\n\nExpected Output:\n  - out/ai-summary/<module>/dsl-status.md\n  - out/ai-summary/<module>/specs-status.md\n  - out/ai-summary/<module>/source-status.md\n  - out/ai-summary/<module>/docs-status.md\n\nExample:\n  update ai-summary                  # Analyze all modules\n  update ai-summary eac          # Analyze single module\n  update ai-summary --type=dsl core  # Analyze only DSL for core",
+		Long: "Analyzes modules using AI to generate comprehensive status summaries.\nThe analysis covers architecture (DSL), specifications (Gherkin),\nsource code, and documentation. Each analysis type produces a\nseparate status file in the output directory.\n\nAnalysis types:\n  - ai-dsl: Analyzes Structurizr DSL architecture files\n  - ai-specs: Analyzes Gherkin BDD specifications\n  - ai-source: Analyzes source code (depends on dsl and specs)\n  - ai-docs: Analyzes documentation files",
+		Notes: "Expected Output:\n  - out/ai-summary/<module>/dsl-status.md\n  - out/ai-summary/<module>/specs-status.md\n  - out/ai-summary/<module>/source-status.md\n  - out/ai-summary/<module>/docs-status.md",
+		Examples: []string{
+			"eac update ai-summary                  # Analyze all modules",
+			"eac update ai-summary eac              # Analyze single module",
+			"eac update ai-summary --type=dsl core  # Analyze only DSL for core",
+		},
 		Flags: []core.FlagSpec{
 			{Name: "debug", Shorthand: "d", Type: "bool", DefaultValue: "false", Usage: "Enable debug logging"},
 			{Name: "type", Shorthand: "t", Type: "string", Usage: "Specific analysis type (dsl, specs, source, docs)"},

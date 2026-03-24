@@ -22,15 +22,13 @@ func (c *getDependenciesModuleCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "get-dependencies",
 		Short:         "Get direct dependencies of a module",
-		Long: "Returns the direct dependencies of a module.\n" +
-			"\n" +
-			"Expected Output:\n" +
-			"  - List of module monikers this module depends on\n" +
-			"\n" +
-			"Examples:\n" +
-			"  get dependencies clie                    # YAML list\n" +
-			"  get dependencies clie --format space     # Space-separated: \"dep1 dep2 dep3\"\n" +
-			"  get dependencies clie --format list      # One per line",
+		Long: "Returns the direct dependencies of a module.",
+		Notes: "Expected Output:\n  - List of module monikers this module depends on",
+		Examples: []string{
+			"eac get dependencies clie                 # YAML list",
+			"eac get dependencies clie --format space  # Space-separated: \"dep1 dep2 dep3\"",
+			"eac get dependencies clie --format list   # One per line",
+		},
 		Args: "<module>",
 		Flags: []core.FlagSpec{
 			{Name: "format", Type: "string", Usage: "Output format (list, space, json)"},
