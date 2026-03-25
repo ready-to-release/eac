@@ -5,6 +5,8 @@ import (
 )
 
 // Register adds a command to the registry. Returns ErrDuplicateCommand if the name is taken.
+// If the command declares aliases in its metadata, each alias is registered as an additional
+// lookup key pointing to the same command instance.
 func (r *CommandRegistry) Register(cmd core.CommandPort) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -13,6 +15,17 @@ func (r *CommandRegistry) Register(cmd core.CommandPort) error {
 		return &ErrDuplicateCommand{Name: name}
 	}
 	r.commands[name] = cmd
+
+	// Register aliases as additional lookup keys pointing to the same command.
+	for _, alias := range cmd.Metadata().Aliases {
+		if alias == name {
+			return &ErrDuplicateCommand{Name: alias}
+		}
+		if _, exists := r.commands[alias]; exists {
+			return &ErrDuplicateCommand{Name: alias}
+		}
+		r.commands[alias] = cmd
+	}
 	return nil
 }
 

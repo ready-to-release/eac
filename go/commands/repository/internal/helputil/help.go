@@ -49,6 +49,11 @@ func PrintHelp(w io.Writer, cmd core.CommandPort, reg core.CommandRegistryPort) 
 					subKey := cmd.Name() + " " + sub
 					if subCmd, ok := reg.Get(subKey); ok {
 						desc = subCmd.Metadata().Short
+						// If the lookup key differs from the command's primary name,
+						// this subcommand is being viewed through an alias.
+						if subKey != subCmd.Name() {
+							desc = desc + " (-> " + subCmd.Name() + ")"
+						}
 					}
 				}
 				if desc != "" {

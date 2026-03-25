@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -113,11 +114,16 @@ func GetCommands() int {
 }
 
 func buildCommandTree() CommandTree {
+	return buildCommandTreeFrom(registry.Global())
+}
+
+// buildCommandTreeFrom builds a CommandTree from the given registry.
+// Separated from buildCommandTree for testability.
+func buildCommandTreeFrom(reg core.CommandRegistryPort) CommandTree {
 	var infos []CommandInfo
 	treeMap := make(map[string][]string)
 
 	// Process all registered commands
-	reg := registry.Global()
 	for _, cmd := range reg.All() {
 		cmdName := cmd.Name()
 		meta := cmd.Metadata()
@@ -150,6 +156,25 @@ func buildCommandTree() CommandTree {
 		}
 
 		infos = append(infos, info)
+	}
+
+	// Inject alias paths into the tree only (not into the commands list).
+	// This enables tab completion for alias names without duplicating command entries.
+	for _, cmd := range reg.All() {
+		for _, alias := range cmd.Metadata().Aliases {
+			aliasParts := strings.Fields(alias)
+			if len(aliasParts) < 2 {
+				continue // root alias, skip (no parent key)
+			}
+			aliasParent := strings.Join(aliasParts[:len(aliasParts)-1], " ")
+			aliasLeaf := aliasParts[len(aliasParts)-1]
+			if _, exists := treeMap[aliasParent]; !exists {
+				treeMap[aliasParent] = []string{}
+			}
+			if !slices.Contains(treeMap[aliasParent], aliasLeaf) {
+				treeMap[aliasParent] = append(treeMap[aliasParent], aliasLeaf)
+			}
+		}
 	}
 
 	// Load module monikers for completion

@@ -31,7 +31,8 @@ func (r *mockRegistry) Get(name string) (core.CommandPort, bool) {
 func (r *mockRegistry) GetByCanonical(_ string) (core.CommandPort, bool) { return nil, false }
 func (r *mockRegistry) All() []core.CommandPort                          { return nil }
 func (r *mockRegistry) Names() []string                                  { return nil }
-func (r *mockRegistry) Subcommands(_ string) []core.CommandPort          { return nil }
+func (r *mockRegistry) Subcommands(_ string) []core.CommandPort                { return nil }
+func (r *mockRegistry) SubcommandEntries(_ string) []core.SubcommandEntry { return nil }
 
 // mockSimpleCommand implements core.SimpleCommandPort (executable command).
 type mockSimpleCommand struct {

@@ -25,6 +25,7 @@ func (c *showWorkspacesCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "show-workspaces",
 		Short:         "List all workspaces and their status",
+		Aliases:       []string{"work list"},
 		Long:          "Lists all git worktrees (workspaces) in a formatted table showing their path, branch, and status.\n\nThe status column indicates whether the worktree has uncommitted changes:\n  - clean: No uncommitted changes\n  - dirty: Has uncommitted changes\n\nUse --verbose to see additional information including commit SHA.\nUse --debug to enable detailed logging to out/commands.log.\n\nExample:\n  show workspaces\n  show workspaces --verbose\n  show workspaces -v\n  show workspaces --debug",
 		Flags: []core.FlagSpec{
 			{Name: "verbose", Type: "bool", Shorthand: "v", DefaultValue: "false", Usage: "Show detailed information including commit SHA"},

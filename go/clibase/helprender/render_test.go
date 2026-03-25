@@ -58,6 +58,16 @@ func (r *stubRegistry) Subcommands(parentName string) []core.CommandPort {
 	return subs
 }
 
+func (r *stubRegistry) SubcommandEntries(parentName string) []core.SubcommandEntry {
+	var entries []core.SubcommandEntry
+	for name, cmd := range r.commands {
+		if strings.HasPrefix(name, parentName+" ") {
+			entries = append(entries, core.SubcommandEntry{Key: name, Cmd: cmd})
+		}
+	}
+	return entries
+}
+
 func TestRenderMarkdownHelp_NilCommand(t *testing.T) {
 	result := RenderMarkdownHelp(nil, nil)
 	assert.Equal(t, "", result)

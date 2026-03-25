@@ -149,6 +149,17 @@ func (r *stubReg) Subcommands(parentName string) []core.CommandPort {
 	return subs
 }
 
+func (r *stubReg) SubcommandEntries(parentName string) []core.SubcommandEntry {
+	var entries []core.SubcommandEntry
+	prefix := parentName + " "
+	for name, cmd := range r.commands {
+		if strings.HasPrefix(name, prefix) && !strings.Contains(name[len(prefix):], " ") {
+			entries = append(entries, core.SubcommandEntry{Key: name, Cmd: cmd})
+		}
+	}
+	return entries
+}
+
 func TestPrintCommandHelp_Nil(t *testing.T) {
 	var buf strings.Builder
 	printCommandHelp(&buf, nil, &stubReg{commands: map[string]core.CommandPort{}})
@@ -281,4 +292,151 @@ func TestPrintCommandHelp_FallbackToFlat(t *testing.T) {
 	assert.Contains(t, out, "Get configuration")
 	// Should NOT contain group header syntax (indented colon)
 	assert.NotRegexp(t, `    \w+:$`, out)
+}
+
+// --- Alias integration tests ---
+
+func TestResolveCommand_AliasResolution(t *testing.T) {
+	// Build registry with aliased command
+	reg := registry.NewCommandRegistry()
+	reg.MustRegister(&stubCmd{name: "show workspaces", meta: core.CommandMetadata{
+		Short: "List workspaces", Aliases: []string{"work list"},
+	}})
+	reg.MustRegister(&stubCmd{name: "create pr", meta: core.CommandMetadata{
+		Short: "Create PR", Aliases: []string{"work pr"},
+	}})
+	reg.MustRegister(&stubCmd{name: "work", meta: core.CommandMetadata{
+		Short: "Workspace management", IsParent: true,
+	}})
+	reg.MustRegister(&stubCmd{name: "show", meta: core.CommandMetadata{
+		Short: "Show information", IsParent: true,
+	}})
+
+	tests := []struct {
+		name      string
+		args      []string
+		wantCmd   string
+		wantFound bool
+	}{
+		{
+			name:      "alias resolves: work list",
+			args:      []string{"work", "list"},
+			wantCmd:   "work list",
+			wantFound: true,
+		},
+		{
+			name:      "alias resolves: work pr",
+			args:      []string{"work", "pr"},
+			wantCmd:   "work pr",
+			wantFound: true,
+		},
+		{
+			name:      "primary resolves: show workspaces",
+			args:      []string{"show", "workspaces"},
+			wantCmd:   "show workspaces",
+			wantFound: true,
+		},
+		{
+			name:      "primary resolves: create pr",
+			args:      []string{"create", "pr"},
+			wantCmd:   "create pr",
+			wantFound: true,
+		},
+		{
+			name:      "alias with flags: work list --verbose",
+			args:      []string{"work", "list", "--verbose"},
+			wantCmd:   "work list",
+			wantFound: true,
+		},
+		{
+			name:      "parent only: work",
+			args:      []string{"work"},
+			wantCmd:   "work",
+			wantFound: true,
+		},
+		{
+			name:      "unknown subcommand: work unknown",
+			args:      []string{"work", "unknown"},
+			wantCmd:   "work",
+			wantFound: true, // resolves to parent "work"
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmdName, found := resolveCommand(tt.args, reg)
+			assert.Equal(t, tt.wantFound, found)
+			assert.Equal(t, tt.wantCmd, cmdName)
+		})
+	}
+}
+
+func TestPrintCommandHelp_GroupedSubcommands_AliasIndicator(t *testing.T) {
+	// Build registry with aliased command using real registry (not stub)
+	// so alias map entries exist
+	reg := registry.NewCommandRegistry()
+	workCmd := &stubCmd{name: "work", meta: core.CommandMetadata{
+		Short:    "Workspace management",
+		IsParent: true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Lifecycle", Subcommands: []string{"create", "list"}},
+			{Name: "Completion", Subcommands: []string{"pr"}},
+		},
+	}}
+	reg.MustRegister(workCmd)
+	reg.MustRegister(&stubCmd{name: "work create", meta: core.CommandMetadata{Short: "Create workspace"}})
+	reg.MustRegister(&stubCmd{name: "show workspaces", meta: core.CommandMetadata{
+		Short: "List all workspaces", Aliases: []string{"work list"},
+	}})
+	reg.MustRegister(&stubCmd{name: "create pr", meta: core.CommandMetadata{
+		Short: "Create pull request", Aliases: []string{"work pr"},
+	}})
+
+	var buf strings.Builder
+	printCommandHelp(&buf, workCmd, reg)
+	out := buf.String()
+
+	// Alias entries should show indicator
+	assert.Contains(t, out, "(-> show workspaces)",
+		"alias 'list' under 'work' should show indicator pointing to primary command")
+	assert.Contains(t, out, "(-> create pr)",
+		"alias 'pr' under 'work' should show indicator pointing to primary command")
+
+	// Primary entry should NOT show indicator
+	assert.Contains(t, out, "create")
+	// "Create workspace" should appear without indicator
+	createLine := ""
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "Create workspace") {
+			createLine = line
+			break
+		}
+	}
+	assert.NotContains(t, createLine, "(->",
+		"primary 'create' entry must not show alias indicator")
+}
+
+func TestPrintCommandHelp_ShowParent_NoAliasIndicator(t *testing.T) {
+	// Under "show", "workspaces" is the primary key — no indicator
+	reg := registry.NewCommandRegistry()
+	showCmd := &stubCmd{name: "show", meta: core.CommandMetadata{
+		Short:    "Show information",
+		IsParent: true,
+		SubcommandGroups: []core.SubcommandGroup{
+			{Name: "Information", Subcommands: []string{"workspaces"}},
+		},
+	}}
+	reg.MustRegister(showCmd)
+	reg.MustRegister(&stubCmd{name: "show workspaces", meta: core.CommandMetadata{
+		Short: "List all workspaces", Aliases: []string{"work list"},
+	}})
+
+	var buf strings.Builder
+	printCommandHelp(&buf, showCmd, reg)
+	out := buf.String()
+
+	assert.Contains(t, out, "workspaces")
+	assert.Contains(t, out, "List all workspaces")
+	assert.NotContains(t, out, "(->",
+		"primary view under 'show' must not show alias indicator")
 }

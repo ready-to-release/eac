@@ -55,18 +55,22 @@ func BuildSynopsis(name string, meta core.CommandMetadata) string {
 }
 
 // formatSubcommands renders subcommand groups as a markdown table with a --- separator.
-func formatSubcommands(subs []core.CommandPort, parentName string) string {
-	if len(subs) == 0 {
+// Uses SubcommandEntry keys for correct labels (handles aliases).
+func formatSubcommands(entries []core.SubcommandEntry, parentName string) string {
+	if len(entries) == 0 {
 		return ""
 	}
 
 	tb := render.NewTableBuilder().
 		WithMarkdown().
 		WithHeaders("Command", "Description")
-	for _, sub := range subs {
-		subMeta := sub.Metadata()
-		subPart := strings.TrimPrefix(sub.Name(), parentName+" ")
-		tb.AddRow(fmt.Sprintf("`%s`", subPart), subMeta.Short)
+	for _, entry := range entries {
+		subPart := strings.TrimPrefix(entry.Key, parentName+" ")
+		desc := entry.Cmd.Metadata().Short
+		if entry.Key != entry.Cmd.Name() {
+			desc = desc + " (-> " + entry.Cmd.Name() + ")"
+		}
+		tb.AddRow(fmt.Sprintf("`%s`", subPart), desc)
 	}
 
 	return fmt.Sprintf("\n---\n\n%s\n\n", tb.BuildMarkdown())

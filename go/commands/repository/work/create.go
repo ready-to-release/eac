@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
-	"github.com/ready-to-release/eac/go/commands/repository/work/internal"
 	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/commands/repository/work/internal"
 )
 
 type workCreateCommand struct{}
@@ -24,8 +24,8 @@ func (c *workCreateCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "work-create",
 		Short:         "Create a new workspace for parallel development",
-		Long: "Creates a new git worktree in a sibling directory for parallel development with Claude.\n\nThe workspace is created in a sibling directory with the naming pattern:\n  <repo-name>-<branch-name>\n\nThis allows you to work on multiple features simultaneously with separate Claude Code sessions.\nUse --debug to enable detailed logging to out/logs/work/.",
-		Notes: "Expected Output:\n  - New git worktree in sibling directory\n  - Ready for parallel Claude Code session",
+		Long:          "Creates a new git worktree in a sibling directory for parallel development with Claude.\n\nThe workspace is created in a sibling directory with the naming pattern:\n  <repo-name>-<branch-name>\n\nThis allows you to work on multiple features simultaneously with separate Claude Code sessions.\nUse --debug to enable detailed logging to out/logs/work/.",
+		Notes:         "Expected Output:\n  - New git worktree in sibling directory\n  - Ready for parallel Claude Code session",
 		Examples: []string{
 			"eac work create feature/authentication",
 			"eac work create bugfix/issue-123 --from=develop",
@@ -362,5 +362,5 @@ func outputCreateSuccess(worktreePath, branchName string) {
 
 	// Convert to forward slashes for cross-platform compatibility
 	displayPath := filepath.ToSlash(worktreePath)
-	log.Infof("  cd %s && claude-code", displayPath)
+	log.Infof("  cd %s && claude", displayPath)
 }

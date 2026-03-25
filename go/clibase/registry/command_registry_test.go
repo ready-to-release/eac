@@ -311,6 +311,141 @@ func TestCommandRegistry_SubcommandsExcludesParentItself(t *testing.T) {
 	}
 }
 
+// --- Alias tests ---
+
+func newMockCommandWithAliases(name, canonical, short string, aliases []string) *mockCommand {
+	return &mockCommand{
+		name: name,
+		metadata: core.CommandMetadata{
+			CanonicalName: canonical,
+			Short:         short,
+			Aliases:       aliases,
+		},
+	}
+}
+
+func TestCommandRegistry_RegisterAlias(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+
+	require.NoError(t, reg.Register(cmd))
+
+	// Primary name works
+	got, ok := reg.Get("show workspaces")
+	require.True(t, ok)
+	assert.Equal(t, "show workspaces", got.Name())
+
+	// Alias resolves and returns the same command
+	got2, ok := reg.Get("work list")
+	require.True(t, ok)
+	assert.Equal(t, "show workspaces", got2.Name()) // Name() is always primary
+	assert.Same(t, got, got2)                       // same pointer
+}
+
+func TestCommandRegistry_AliasesExcludedFromAll(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.Register(cmd))
+
+	all := reg.All()
+	assert.Len(t, all, 1, "alias must not appear as a separate entry in All()")
+	assert.Equal(t, "show workspaces", all[0].Name())
+}
+
+func TestCommandRegistry_AliasesExcludedFromNames(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.Register(cmd))
+
+	names := reg.Names()
+	assert.Equal(t, []string{"show workspaces"}, names)
+	assert.NotContains(t, names, "work list")
+}
+
+func TestCommandRegistry_SubcommandEntries_AliasKey(t *testing.T) {
+	reg := NewCommandRegistry()
+	parent := newMockParentCommand("work", "work", "Workspace management")
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.RegisterAll(parent, cmd))
+
+	entries := reg.SubcommandEntries("work")
+	require.Len(t, entries, 1)
+	assert.Equal(t, "work list", entries[0].Key,
+		"entry key must be the alias key, not the primary name")
+	assert.Equal(t, "show workspaces", entries[0].Cmd.Name(),
+		"entry Cmd.Name() is still the primary name")
+}
+
+func TestCommandRegistry_SubcommandEntries_PrimaryKey(t *testing.T) {
+	reg := NewCommandRegistry()
+	parent := newMockParentCommand("show", "show", "Show information")
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.RegisterAll(parent, cmd))
+
+	entries := reg.SubcommandEntries("show")
+	require.Len(t, entries, 1)
+	assert.Equal(t, "show workspaces", entries[0].Key,
+		"primary key is returned when looking up under 'show'")
+}
+
+func TestCommandRegistry_SubcommandEntries_NoDuplicates(t *testing.T) {
+	reg := NewCommandRegistry()
+	parent1 := newMockParentCommand("show", "show", "Show things")
+	parent2 := newMockParentCommand("work", "work", "Work things")
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.RegisterAll(parent1, parent2, cmd))
+
+	showSubs := reg.SubcommandEntries("show")
+	workSubs := reg.SubcommandEntries("work")
+	assert.Len(t, showSubs, 1, "show has one child: 'show workspaces'")
+	assert.Len(t, workSubs, 1, "work has one child: 'work list' (alias)")
+	// Both entries resolve to the same command instance
+	assert.Same(t, showSubs[0].Cmd, workSubs[0].Cmd)
+}
+
+func TestCommandRegistry_DuplicateAliasRejected(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd1 := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	cmd2 := newMockCommandWithAliases("other command", "other-command",
+		"Another command", []string{"work list"}) // collision
+
+	require.NoError(t, reg.Register(cmd1))
+	err := reg.Register(cmd2)
+	require.Error(t, err)
+
+	var dupErr *ErrDuplicateCommand
+	require.ErrorAs(t, err, &dupErr)
+	assert.Equal(t, "work list", dupErr.Name)
+}
+
+func TestCommandRegistry_AliasSameAsPrimaryRejected(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"show workspaces"}) // alias = primary
+
+	err := reg.Register(cmd)
+	require.Error(t, err, "alias that equals primary name must be rejected")
+}
+
+func TestCommandRegistry_AliasResolvedByGetByCanonical(t *testing.T) {
+	reg := NewCommandRegistry()
+	cmd := newMockCommandWithAliases("show workspaces", "show-workspaces",
+		"List workspaces", []string{"work list"})
+	require.NoError(t, reg.Register(cmd))
+
+	// "work-list" → spaces → "work list" → found via alias
+	got, ok := reg.GetByCanonical("work-list")
+	require.True(t, ok)
+	assert.Equal(t, "show workspaces", got.Name())
+}
+
 func TestErrDuplicateCommand_Error(t *testing.T) {
 	err := &ErrDuplicateCommand{Name: "build"}
 	assert.Equal(t, `duplicate command definition: "build"`, err.Error())

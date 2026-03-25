@@ -11,10 +11,10 @@ cannot decrypt them even when the `.azure` directory is volume-mounted.
 
 There are two solutions:
 
-| Option | How it authenticates | Prerequisite |
-|---|---|---|
-| **A — Service Principal** (recommended on Windows) | Four env vars passed to the container | An Azure service principal |
-| **B — WSL credential store** | Unencrypted credential files mounted into the container | Ubuntu/Debian WSL distro with `az` installed |
+| Option                                             | How it authenticates                                    | Prerequisite                                 |
+| -------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------- |
+| **A — Service Principal** (recommended on Windows) | Four env vars passed to the container                   | An Azure service principal                   |
+| **B — WSL credential store**                       | Unencrypted credential files mounted into the container | Ubuntu/Debian WSL distro with `az` installed |
 
 > **Note**: Docker Desktop ships with a minimal `docker-desktop` WSL distro that
 > has no bash and no `az`. Option B requires a **separate** Ubuntu or Debian WSL
@@ -186,12 +186,12 @@ The container uses `DefaultAzureCredential`, which checks sources in this order:
 2. Mounted `.azure` directory with valid token cache → **Option B**
 3. Managed Identity (when running on Azure infrastructure)
 
-| Scenario | Recommended option |
-|---|---|
-| Windows, Docker Desktop only | Option A (Service Principal) |
-| Windows, Ubuntu WSL installed | Option A or B |
-| Linux / macOS | Option B (plain `~/.azure` mount, no WSL needed) |
-| CI / GitHub Actions | Option A (SP credentials as secrets) |
+| Scenario                      | Recommended option                               |
+| ----------------------------- | ------------------------------------------------ |
+| Windows, Docker Desktop only  | Option A (Service Principal)                     |
+| Windows, Ubuntu WSL installed | Option A or B                                    |
+| Linux / macOS                 | Option B (plain `~/.azure` mount, no WSL needed) |
+| CI / GitHub Actions           | Option A (SP credentials as secrets)             |
 
 ---
 

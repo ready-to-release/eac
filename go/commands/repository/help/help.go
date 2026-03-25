@@ -176,11 +176,11 @@ func showCommandHelp(commandName string, verbose bool) int {
 	cmdPort, found := reg.Get(commandName)
 
 	// Check for subcommands even if the parent command doesn't exist
-	subcommands := getSubcommands(commandName)
+	subEntries := getSubcommandEntries(commandName)
 
 	if !found {
 		// If command not found, check if it has subcommands
-		if len(subcommands) > 0 {
+		if len(subEntries) > 0 {
 			// Display help for command category with subcommands
 			log.Info("NAME")
 			log.Infof("    %s - Command category\n", commandName)
@@ -189,11 +189,14 @@ func showCommandHelp(commandName string, verbose bool) int {
 			log.Infof("    The '%s' command category contains the following subcommands:\n", commandName)
 
 			log.Info("COMMANDS")
-			for _, subcmd := range subcommands {
-				desc := subcmd.Metadata().Short
+			for _, entry := range subEntries {
+				desc := entry.Cmd.Metadata().Short
+				if entry.Key != entry.Cmd.Name() {
+					desc = desc + " (-> " + entry.Cmd.Name() + ")"
+				}
 
 				// Extract just the subcommand part (e.g., "risk-profile" from "create risk-profile")
-				subPart := strings.TrimPrefix(subcmd.Name(), commandName+" ")
+				subPart := strings.TrimPrefix(entry.Key, commandName+" ")
 
 				// Format with padding
 				padding := strings.Repeat(" ", max(2, 30-len(subPart)))
@@ -237,13 +240,16 @@ func showCommandHelp(commandName string, verbose bool) int {
 	}
 
 	// Display COMMANDS section (subcommands)
-	if len(subcommands) > 0 {
+	if len(subEntries) > 0 {
 		log.Info("COMMANDS")
-		for _, subcmd := range subcommands {
-			desc := subcmd.Metadata().Short
+		for _, entry := range subEntries {
+			desc := entry.Cmd.Metadata().Short
+			if entry.Key != entry.Cmd.Name() {
+				desc = desc + " (-> " + entry.Cmd.Name() + ")"
+			}
 
 			// Extract just the subcommand part (e.g., "create" from "work create")
-			subPart := strings.TrimPrefix(subcmd.Name(), commandName+" ")
+			subPart := strings.TrimPrefix(entry.Key, commandName+" ")
 
 			// Format with padding
 			padding := strings.Repeat(" ", max(2, 20-len(subPart)))
@@ -357,16 +363,9 @@ func wrapText(text string, width int) []string {
 	return lines
 }
 
-// getSubcommands returns all direct subcommands for a given parent command.
-func getSubcommands(parentCommand string) []core.CommandPort {
-	subcmds := registry.Global().Subcommands(parentCommand)
-
-	// Sort by name
-	sort.Slice(subcmds, func(i, j int) bool {
-		return subcmds[i].Name() < subcmds[j].Name()
-	})
-
-	return subcmds
+// getSubcommandEntries returns all direct subcommand entries for a given parent command.
+func getSubcommandEntries(parentCommand string) []core.SubcommandEntry {
+	return registry.Global().SubcommandEntries(parentCommand)
 }
 
 // max returns the maximum of two integers.

@@ -39,8 +39,8 @@ func RenderMarkdownHelp(cmd core.CommandPort, reg core.CommandRegistryPort) stri
 
 	// Subcommands (if parent command with registry)
 	if reg != nil {
-		subs := reg.Subcommands(name)
-		sb.WriteString(formatSubcommands(subs, name))
+		entries := reg.SubcommandEntries(name)
+		sb.WriteString(formatSubcommands(entries, name))
 	}
 
 	// Arguments (from meta.Args)

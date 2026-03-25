@@ -109,17 +109,20 @@ if (Test-Path $ClieBinary) {
 function global:clie {
     & "$ClieBinary" `$args
 }
-function global:eac {
-    & "$ClieBinary" run eac `$args
-}
 "@
     Invoke-Expression $funcDef
     Write-Host "✅ clie alias created -> $ClieBinary <args>" -ForegroundColor Green
-    Write-Host "✅ eac alias created -> clie eac <args>" -ForegroundColor Green
 } else {
     Write-Host "⚠️  clie binary not found at: $ClieBinary" -ForegroundColor Yellow
     Write-Host "   Run 'build clie' or 'go run ./go/cli/eac build clie' to build it" -ForegroundColor Gray
 }
+
+# Create eac alias that goes through Invoke-GoSrcCommand (same as other top-level aliases)
+# This ensures the eac binary is rebuilt when stale, just like show/build/test etc.
+function global:eac {
+    Invoke-GoSrcCommand @args
+}
+Write-Host "✅ eac alias created -> eac binary (via Invoke-GoSrcCommand)" -ForegroundColor Green
 
 # Create top-level command aliases unless -NoAlias specified
 if (-not $NoAlias) {

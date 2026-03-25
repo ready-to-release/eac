@@ -140,9 +140,9 @@ func showCommandHelp(commandName string, verbose bool) int {
 	cmdPort, found := reg.Get(commandName)
 	if !found {
 		// Check if this is a parent prefix with subcommands
-		subcommands := getSubcommands(commandName)
-		if len(subcommands) > 0 {
-			return showParentHelp(commandName, subcommands, verbose)
+		subEntries := getSubcommandEntries(commandName)
+		if len(subEntries) > 0 {
+			return showParentHelp(commandName, subcommandKeys(subEntries), verbose)
 		}
 
 		log.Errorf("Error: unknown command '%s'", commandName)
@@ -177,19 +177,17 @@ func showCommandHelp(commandName string, verbose bool) int {
 	}
 
 	// Display COMMANDS section (subcommands)
-	subcommands := getSubcommands(commandName)
-	if len(subcommands) > 0 {
+	subEntries := getSubcommandEntries(commandName)
+	if len(subEntries) > 0 {
 		log.Info("COMMANDS")
-		for _, subcmd := range subcommands {
-			subcmdPort, ok := reg.Get(subcmd)
-
-			desc := ""
-			if ok {
-				desc = subcmdPort.Metadata().Short
+		for _, entry := range subEntries {
+			desc := entry.Cmd.Metadata().Short
+			if entry.Key != entry.Cmd.Name() {
+				desc = desc + " (-> " + entry.Cmd.Name() + ")"
 			}
 
 			// Extract just the subcommand part (e.g., "create" from "work create")
-			subPart := strings.TrimPrefix(subcmd, commandName+" ")
+			subPart := strings.TrimPrefix(entry.Key, commandName+" ")
 
 			// Format with padding
 			padding := strings.Repeat(" ", max(2, 20-len(subPart)))
@@ -285,18 +283,18 @@ func displayFlag(flag core.FlagSpec) {
 	log.Info("")
 }
 
-// getSubcommands returns all subcommands for a given parent command as sorted name strings.
-func getSubcommands(parentCommand string) []string {
-	subcmds := registry.Global().Subcommands(parentCommand)
+// getSubcommandEntries returns all direct subcommand entries for a given parent command.
+func getSubcommandEntries(parentCommand string) []core.SubcommandEntry {
+	return registry.Global().SubcommandEntries(parentCommand)
+}
 
-	// Extract names and sort
-	names := make([]string, 0, len(subcmds))
-	for _, cmd := range subcmds {
-		names = append(names, cmd.Name())
+// subcommandKeys extracts the registry keys from entries for use as string identifiers.
+func subcommandKeys(entries []core.SubcommandEntry) []string {
+	keys := make([]string, len(entries))
+	for i, e := range entries {
+		keys[i] = e.Key
 	}
-	sort.Strings(names)
-
-	return names
+	return keys
 }
 
 // max returns the maximum of two integers.

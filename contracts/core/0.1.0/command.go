@@ -38,6 +38,7 @@ type CommandMetadata struct {
 	IsParent         bool
 	SubcommandGroups []SubcommandGroup
 	Examples         []string
+	Aliases          []string // Additional lookup names, e.g. ["work list"]
 }
 
 // FlagSpec defines a command flag.
@@ -56,6 +57,14 @@ type SubcommandGroup struct {
 	Subcommands []string
 }
 
+// SubcommandEntry pairs a registry key with the command it resolves to.
+// The Key is the exact string used to look up the command (may be an alias),
+// which is the correct label for the subcommand within its parent context.
+type SubcommandEntry struct {
+	Key string      // e.g. "work list" — the alias key under this parent
+	Cmd CommandPort // the command (Cmd.Name() may be "show workspaces")
+}
+
 // CommandRegistryPort provides read access to registered commands.
 type CommandRegistryPort interface {
 	Get(name string) (CommandPort, bool)
@@ -63,4 +72,8 @@ type CommandRegistryPort interface {
 	All() []CommandPort
 	Names() []string
 	Subcommands(parentName string) []CommandPort
+	// SubcommandEntries returns (key, command) pairs for direct children of parentName.
+	// Key is the map key used to look up the command, which may be an alias.
+	// Use Key (not Cmd.Name()) for display labels when listing children of a parent.
+	SubcommandEntries(parentName string) []SubcommandEntry
 }

@@ -26,6 +26,7 @@ func (c *createPrCommand) Metadata() core.CommandMetadata {
 	return core.CommandMetadata{
 		CanonicalName: "create-pr",
 		Short:         "Create pull request with AI-generated description",
+		Aliases:       []string{"work pr"},
 		Long: "Creates a pull request for the current workspace branch with an AI-generated\ntitle and description based on all commits in the branch.\n\nThis command:\n  1. Validates the workspace is ready for PR\n  2. Pushes the branch to origin if needed\n  3. Analyzes all commits to generate PR title and description\n  4. Creates the pull request using GitHub CLI\n\nRequires GitHub CLI (gh) to be installed and authenticated.",
 		Notes: "Expected Output:\n- PR created on GitHub\n- PR URL printed to stdout\n- AI-generated title and description based on commits",
 		Examples: []string{

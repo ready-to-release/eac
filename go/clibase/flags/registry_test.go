@@ -1,10 +1,12 @@
 package flags
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	core "github.com/ready-to-release/eac/contracts/core/0.1.0"
+	"github.com/ready-to-release/eac/go/clibase/registry"
 )
 
 func TestLevenshteinDistance(t *testing.T) {
@@ -225,5 +227,152 @@ func TestValidateFlags(t *testing.T) {
 				t.Errorf("ValidateFlags() unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+// --- Alias flag validation tests ---
+
+// mockCommandPort implements core.CommandPort for testing.
+type mockCommandPort struct {
+	name     string
+	metadata core.CommandMetadata
+}
+
+func (c *mockCommandPort) Name() string                  { return c.name }
+func (c *mockCommandPort) Metadata() core.CommandMetadata { return c.metadata }
+
+func TestResolveCommandFromArgs_AliasPath(t *testing.T) {
+	// Set up a registry with an aliased command
+	reg := registry.NewCommandRegistry()
+	cmd := &mockCommandPort{
+		name: "show workspaces",
+		metadata: core.CommandMetadata{
+			CanonicalName: "show-workspaces",
+			Short:         "List workspaces",
+			Aliases:       []string{"work list"},
+			Flags: []core.FlagSpec{
+				{Name: "verbose", Shorthand: "v", Type: "bool"},
+			},
+		},
+	}
+	reg.MustRegister(cmd)
+	SetRegistry(reg)
+	defer SetRegistry(nil)
+
+	// Simulate: eac work list --verbose
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+	os.Args = []string{"eac", "work", "list", "--verbose"}
+
+	// resolveCommandFromArgs should find "work list" via alias
+	resolved := resolveCommandFromArgs()
+	if resolved != "work list" {
+		t.Errorf("resolveCommandFromArgs() = %q; want %q", resolved, "work list")
+	}
+}
+
+func TestValidateFlagsFromRegistry_AliasCommand(t *testing.T) {
+	// Set up a registry with an aliased command
+	reg := registry.NewCommandRegistry()
+	cmd := &mockCommandPort{
+		name: "show workspaces",
+		metadata: core.CommandMetadata{
+			CanonicalName: "show-workspaces",
+			Short:         "List workspaces",
+			Aliases:       []string{"work list"},
+			Flags: []core.FlagSpec{
+				{Name: "verbose", Shorthand: "v", Type: "bool"},
+				{Name: "debug", Shorthand: "d", Type: "bool"},
+			},
+		},
+	}
+	reg.MustRegister(cmd)
+	SetRegistry(reg)
+	defer SetRegistry(nil)
+
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	tests := []struct {
+		name        string
+		osArgs      []string
+		flagArgs    []string
+		expectError bool
+	}{
+		{
+			name:        "alias path with valid flag",
+			osArgs:      []string{"eac", "work", "list", "--verbose"},
+			flagArgs:    []string{"list", "--verbose"},
+			expectError: false,
+		},
+		{
+			name:        "alias path with unknown flag",
+			osArgs:      []string{"eac", "work", "list", "--unknown"},
+			flagArgs:    []string{"list", "--unknown"},
+			expectError: true,
+		},
+		{
+			name:        "primary path with valid flag",
+			osArgs:      []string{"eac", "show", "workspaces", "--verbose"},
+			flagArgs:    []string{"workspaces", "--verbose"},
+			expectError: false,
+		},
+		{
+			name:        "alias path with shorthand",
+			osArgs:      []string{"eac", "work", "list", "-v"},
+			flagArgs:    []string{"list", "-v"},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Args = tt.osArgs
+			err := ValidateFlagsFromRegistry(tt.flagArgs)
+			if tt.expectError && err == nil {
+				t.Errorf("ValidateFlagsFromRegistry() expected error; got nil")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("ValidateFlagsFromRegistry() unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateFlagsForCommand_AliasName(t *testing.T) {
+	// ValidateFlagsForCommand uses the command name directly (not os.Args).
+	// Verify it works with alias names.
+	reg := registry.NewCommandRegistry()
+	cmd := &mockCommandPort{
+		name: "show workspaces",
+		metadata: core.CommandMetadata{
+			CanonicalName: "show-workspaces",
+			Short:         "List workspaces",
+			Aliases:       []string{"work list"},
+			Flags: []core.FlagSpec{
+				{Name: "verbose", Type: "bool"},
+			},
+		},
+	}
+	reg.MustRegister(cmd)
+	SetRegistry(reg)
+	defer SetRegistry(nil)
+
+	// Using the alias name should resolve and validate correctly
+	err := ValidateFlagsForCommand([]string{"--verbose"}, "work list")
+	if err != nil {
+		t.Errorf("ValidateFlagsForCommand with alias name: unexpected error: %v", err)
+	}
+
+	// Using the primary name should also work
+	err = ValidateFlagsForCommand([]string{"--verbose"}, "show workspaces")
+	if err != nil {
+		t.Errorf("ValidateFlagsForCommand with primary name: unexpected error: %v", err)
+	}
+
+	// Unknown flag should fail regardless of which name is used
+	err = ValidateFlagsForCommand([]string{"--unknown"}, "work list")
+	if err == nil {
+		t.Error("ValidateFlagsForCommand with unknown flag: expected error; got nil")
 	}
 }
