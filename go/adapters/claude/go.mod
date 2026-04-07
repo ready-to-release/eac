@@ -3,7 +3,7 @@ module github.com/ready-to-release/eac/go/adapters/claude
 go 1.25.0
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.19.0
+	github.com/anthropics/anthropic-sdk-go v1.27.1
 	github.com/ready-to-release/eac/contracts/ai-provider/0.1.0 v0.0.0
 	github.com/ready-to-release/eac/go/clibase v0.0.0
 )
@@ -18,8 +18,10 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
