@@ -78,7 +78,7 @@ jobs:
 
       - name: Apply Module Labels
         if: steps.detect.outputs.modules != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           MODULES: ${{ steps.detect.outputs.modules }}
         with:
@@ -147,7 +147,7 @@ jobs:
       # Custom Labels: Apply release labels for changelog changes
       - name: Apply Release Labels
         if: steps.changelogs.outputs.release_modules != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RELEASE_MODULES: ${{ steps.changelogs.outputs.release_modules }}
         with:
