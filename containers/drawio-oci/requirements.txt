@@ -8,4 +8,4 @@ lxml>=5.0.0
 cairosvg>=2.7.0
 
 # Image optimization (resize to max width)
-Pillow>=10.0.0
+Pillow>=12.2.0
