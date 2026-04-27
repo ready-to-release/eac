@@ -13,7 +13,7 @@ mkdocs-awesome-nav>=3.3.0
 pymdown-extensions
 
 # Mermaid diagrams (client-side JS rendering)
-mkdocs-mermaid2-plugin>=1.1.0
+mkdocs-mermaid2-plugin>=1.2.3
 
 # Macros for dynamic content generation
 mkdocs-macros-plugin>=1.0.0
