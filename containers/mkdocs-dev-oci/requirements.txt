@@ -1,5 +1,5 @@
 # MkDocs core
-mkdocs>=1.5,<2.0
+mkdocs>=1.6.1,<2.0
 mkdocs-material>=9.4
 
 # Pin click to fix file watching (click>=8.3.0 breaks mkdocs serve --dirty)
