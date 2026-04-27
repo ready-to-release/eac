@@ -9,7 +9,7 @@ mkdocs-awesome-nav>=3.3.0
 pymdown-extensions
 
 # Mermaid diagrams (client-side JS for HTML)
-mkdocs-mermaid2-plugin>=1.1.0
+mkdocs-mermaid2-plugin>=1.2.3
 
 # PDF generation (Playwright-based, better scaling for large docs)
 # Using local fork with parallel merge optimization - see python/mkdocs-exporter-fork
