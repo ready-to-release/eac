@@ -1,6 +1,6 @@
 # MkDocs core
 mkdocs>=1.5,<2.0
-mkdocs-material>=9.4
+mkdocs-material>=9.7.6
 
 # Navigation
 mkdocs-awesome-nav>=3.3.0
